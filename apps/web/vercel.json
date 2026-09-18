@@ -1,0 +1,9 @@
+{
+  "framework": "nextjs",
+  "rewrites": [
+    { "source": "/balance", "destination": "/" },
+    { "source": "/balance/", "destination": "/" },
+    { "source": "/blog", "destination": "https://blog-gg7kncvcq-sundayvibes.vercel.app/blog" },
+    { "source": "/blog/(.*)", "destination": "https://blog-gg7kncvcq-sundayvibes.vercel.app/blog/$1" }
+  ]
+}
