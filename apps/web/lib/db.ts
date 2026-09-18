@@ -2,7 +2,7 @@ import { createClient } from '@libsql/client';
 
 const client = createClient({
   url: 'libsql://fud-balance-anvxxr.aws-ap-northeast-1.turso.io',
-  authToken: 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODk1MDM3NzksImlkIjoiMDFhMGE2YmMtM2UwMS03ZDk2LWJhODEtMjU5Y2M2ZDFmNzVmIiwia2lkIjoiZ2ZVaHh1Ym1BazlTeDl0Yjcwd05CbTJaNUcxb3R4YVQyNnlmZF9hekF2dyIsInJpZCI6IjhjMmYwY2FjLWY0OTEtNDllMi1hZGYxLTllNGViYzlkNGQwNCJ9.TJKFDoWzia5mRQ7-aPGU70WD10O-PoOm1DMTpp2944JikbHoZ7ADWKy29hm4GQ4npL1vwMD5VrSKgKhKV7oVCg',
+  authToken: process.env.TURSO_AUTH_TOKEN || '',
 });
 
 export async function query(sql: string, args: any[] = []) {

@@ -6,6 +6,7 @@ import DashboardPage from './components/DashboardPage';
 import PortfolioPage from './components/PortfolioPage';
 import WalletPage from './components/WalletPage';
 import TransactionPage from './components/TransactionPage';
+import ReconciliationPage from './components/ReconciliationPage';
 import CoinPage from './components/CoinPage';
 import TrenchPage from './components/TrenchPage';
 import TrackerPage from './components/TrackerPage';
@@ -17,6 +18,8 @@ type DbData = {
   coinTotal: number;
   wallets: Wallet[];
   transactions: any[];
+  reconRows: any[];
+  reconWallets: Wallet[];
   period?: string;
   net_worth?: number;
 };
@@ -34,16 +37,18 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const [allRes, wRes, coinsRes] = await Promise.all([
+      const [allRes, wRes, coinsRes, reconRes] = await Promise.all([
         fetch('/api/all', { cache: 'no-store' }),
         fetch('/api/wallets', { cache: 'no-store' }),
         fetch('/api/coins', { cache: 'no-store' }),
+        fetch('/api/reconcile', { cache: 'no-store' }),
       ]);
       if (!allRes.ok) throw new Error('api/all HTTP ' + allRes.status);
 
       const allData = await allRes.json();
       const wallets: Wallet[] = wRes.ok ? await wRes.json() : [];
       const coinsData = coinsRes.ok ? await coinsRes.json() : { coins: [], total: 0 };
+      const reconData = reconRes.ok ? await reconRes.json() : { rows: [], wallets: [] };
 
       setDb({
         assets: allData.assets || [],
@@ -53,6 +58,8 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
         transactions: allData.transactions || [],
         period: allData.period,
         net_worth: allData.net_worth,
+        reconRows: reconData.rows || [],
+        reconWallets: reconData.wallets || [],
       });
       setLastSync(new Date().toLocaleTimeString('id-ID', { hour12: false }));
       setError(null);
@@ -90,6 +97,7 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
     { key: 'coin', label: 'Coin' },
     { key: 'wallets', label: `Wallets (${wallets.length})` },
     { key: 'transactions', label: `Transactions (${db?.transactions.length || 0})` },
+    { key: 'reconciliation', label: 'Reconciliation' },
     { key: 'trench', label: 'Trench' },
     { key: 'tracker', label: 'Tracker' },
     { key: 'news', label: 'News' },
@@ -146,6 +154,9 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
       )}
       {page === 'transactions' && (
         <TransactionPage transactions={db?.transactions || []} refreshTx={refreshTx} load={load} />
+      )}
+      {page === 'reconciliation' && db?.reconRows && db?.reconWallets && (
+        <ReconciliationPage rows={db.reconRows} wallets={db.reconWallets} />
       )}
       {page === 'trench' && <TrenchPage />}
       {page === 'tracker' && <TrackerPage />}
