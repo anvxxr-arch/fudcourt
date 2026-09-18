@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { C, Wallet, CHAIN_COLOR, groupBy, groupSum } from '../../lib/ui/shared';
+import { C, Wallet, groupBy, groupSum } from '../../lib/ui/shared';
 import { Card } from './ui';
 
-type Row = {
+type ReconRow = {
   wallet: string;
   asset: string;
   current: number;
@@ -15,7 +15,7 @@ type Row = {
 };
 
 type Props = {
-  rows: Row[];
+  rows: ReconRow[];
   wallets: Wallet[];
 };
 
@@ -90,39 +90,15 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
             borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none', flex: 1, minWidth: 200,
           }}
         />
-        <button
-          onClick={() => setFilter('diff')}
-          style={{
-            background: filter === 'diff' ? C.accent : C.card,
-            color: filter === 'diff' ? '#04140f' : C.white,
-            border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 16px',
-            cursor: 'pointer', fontSize: 12, fontWeight: 600,
-          }}
-        >
+        <FilterBtn active={filter === 'diff'} onClick={() => setFilter('diff')} color={C.red}>
           Suspicious ({rows.filter(r => Math.abs(r.diff) >= 0.01).length})
-        </button>
-        <button
-          onClick={() => setFilter('ok')}
-          style={{
-            background: filter === 'ok' ? C.accent : C.card,
-            color: filter === 'ok' ? '#04140f' : C.white,
-            border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 16px',
-            cursor: 'pointer', fontSize: 12, fontWeight: 600,
-          }}
-        >
+        </FilterBtn>
+        <FilterBtn active={filter === 'ok'} onClick={() => setFilter('ok')} color={C.green}>
           Balanced ({rows.filter(r => Math.abs(r.diff) < 0.01).length})
-        </button>
-        <button
-          onClick={() => setFilter('all')}
-          style={{
-            background: filter === 'all' ? C.accent : C.card,
-            color: filter === 'all' ? '#04140f' : C.white,
-            border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 16px',
-            cursor: 'pointer', fontSize: 12, fontWeight: 600,
-          }}
-        >
+        </FilterBtn>
+        <FilterBtn active={filter === 'all'} onClick={() => setFilter('all')} color={C.accent}>
           All ({rows.length})
-        </button>
+        </FilterBtn>
       </div>
 
       {filtered.length === 0 ? (
@@ -193,6 +169,26 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
   );
 }
 
+function FilterBtn({ active, onClick, children, color }: { active: boolean; onClick: () => void; children: React.ReactNode; color: string }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: active ? color : C.card,
+        color: active ? '#04140f' : C.white,
+        border: `1px solid ${C.border}`,
+        borderRadius: 8,
+        padding: '8px 16px',
+        cursor: 'pointer',
+        fontSize: 12,
+        fontWeight: 600,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
   return (
     <th style={{ padding: 8, textAlign: align, color: C.dim, fontSize: 11, fontWeight: 600, letterSpacing: 0.5 }}>
@@ -201,18 +197,6 @@ function Th({ children, align = 'left' }: { children: React.ReactNode; align?: '
   );
 }
 
-function Td({
-  children,
-  align = 'left',
-  style,
-}: {
-  children: React.ReactNode;
-  align?: 'left' | 'right';
-  style?: React.CSSProperties;
-}) {
-  return (
-    <td style={{ padding: 8, textAlign: align, ...style }}>
-      {children}
-    </td>
-  );
+function Td({ children, align = 'left', style }: { children: React.ReactNode; align?: 'left' | 'right'; style?: React.CSSProperties }) {
+  return <td style={{ padding: 8, textAlign: align, ...style }}>{children}</td>;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { C, Wallet, buildWalletMap, getAlias, getColor, groupSum } from '../lib/ui/shared';
+import { C, Wallet, Asset, buildWalletMap, getAlias, getColor, groupSum } from '../lib/ui/shared';
 import DashboardPage from './components/DashboardPage';
 import PortfolioPage from './components/PortfolioPage';
 import WalletPage from './components/WalletPage';
@@ -13,12 +13,12 @@ import TrackerPage from './components/TrackerPage';
 import NewsPage from './components/NewsPage';
 
 type DbData = {
-  assets: any[];
-  coins: any[];
+  assets: Asset[];
+  coins: { asset: string; total_usd: number; total_qty: number; chains: number; wallets: number }[];
   coinTotal: number;
   wallets: Wallet[];
-  transactions: any[];
-  reconRows: any[];
+  transactions: { id: number; date: string; chain: string; asset: string; event: string; amount_usd: number; direction: string; memo: string | null; wallet_to: string | null; hash: string | null; url: string | null; source: string; venue_id: string | null; trade_id: string | null }[];
+  reconRows: { wallet: string; asset: string; current: number; in_sum: number; out_sum: number; expected: number; diff: number }[];
   reconWallets: Wallet[];
   period?: string;
   net_worth?: number;

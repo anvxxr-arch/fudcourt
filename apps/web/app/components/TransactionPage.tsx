@@ -4,7 +4,22 @@ import { useState, useMemo, useCallback } from 'react';
 import { C, EVENT_PRESETS, CHAIN_COLOR } from '../../lib/ui/shared';
 import { Button, Input, Select, Modal, Label } from './ui';
 
-type Tx = any;
+type Tx = {
+  id: number;
+  date: string;
+  chain: string;
+  asset: string;
+  event: string;
+  amount_usd: number;
+  direction: string;
+  memo: string | null;
+  wallet_to: string | null;
+  hash: string | null;
+  url: string | null;
+  source: string;
+  venue_id: string | null;
+  trade_id: string | null;
+};
 
 type Props = {
   transactions: Tx[];
@@ -62,12 +77,12 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
     setSelected([]); refresh();
   };
 
-  const save = async (tx: any) => {
+  const save = async (tx: Partial<Tx>) => {
     await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tx) });
     setShowAdd(false); refresh();
   };
 
-  const patch = async (id: number, u: any) => {
+  const patch = async (id: number, u: Partial<Tx>) => {
     await fetch(`/api/transactions/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(u) });
     setEdit(null); refresh();
   };
