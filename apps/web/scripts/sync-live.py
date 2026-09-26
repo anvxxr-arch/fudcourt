@@ -10,15 +10,20 @@ from pathlib import Path
 
 # ---------- config ----------
 def load_env():
-    """Load .env from fudcourt root."""
-    env_path = Path(__file__).resolve().parent.parent.parent / '.env'
-    if env_path.exists():
-        for line in env_path.read_text().splitlines():
-            line = line.strip()
-            if not line or line.startswith('#') or '=' not in line:
-                continue
-            k, v = line.split('=', 1)
-            os.environ.setdefault(k.strip(), v.strip().strip('\'"'))
+    """Load .env, walking up from this file to the repo root."""
+    here = Path(__file__).resolve().parent
+    for d in [here, *here.parents]:
+        env_path = d / '.env'
+        if env_path.exists():
+            break
+    else:
+        return
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        k, v = line.split('=', 1)
+        os.environ.setdefault(k.strip(), v.strip().strip('\'"'))
 
 load_env()
 

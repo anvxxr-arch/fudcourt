@@ -2,8 +2,6 @@
   "framework": "nextjs",
   "rewrites": [
     { "source": "/portfolio", "destination": "/" },
-    { "source": "/portfolio/(.*)", "destination": "/$1" },
-    { "source": "/blog", "destination": "https://blog-gg7kncvcq-sundayvibes.vercel.app/blog" },
-    { "source": "/blog/(.*)", "destination": "https://blog-gg7kncvcq-sundayvibes.vercel.app/blog/$1" }
+    { "source": "/portfolio/(.*)", "destination": "/$1" }
   ]
 }
