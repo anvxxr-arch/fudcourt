@@ -95,7 +95,19 @@ export type SignalPayload = {
   rows: SignalRow[];
 };
 
-const CHAINS = new Set(['solana', 'robinhood']);
+// Upstream chain support is NOT uniform:
+//   /api/index   -> solana | robinhood only (chain=all returns 400)
+//   /api/feed    -> solana | robinhood | all  (all = merged, counts split rh/sol)
+//   /api/page    -> solana | robinhood | all
+// So `all` is allowed per-mode rather than globally, or a valid `all` request
+// gets a 400 from our own validator that the upstream would have served.
+const CHAIN_BY_MODE: Record<string, Set<string>> = {
+  index: new Set(['solana', 'robinhood']),
+  feed: new Set(['solana', 'robinhood', 'all']),
+  page: new Set(['solana', 'robinhood', 'all']),
+  scoreboard: new Set(['solana', 'robinhood']),
+};
+
 const MODES = new Set(['index', 'feed', 'page', 'scoreboard']);
 
 // Upstream /api/page rejects n<2 and n>pages with 4xx -- clamp instead of
@@ -109,11 +121,17 @@ export async function GET(req: Request) {
   const chain = (url.searchParams.get('chain') || 'solana').toLowerCase();
   const mode = (url.searchParams.get('type') || 'index').toLowerCase();
 
-  if (!CHAINS.has(chain)) {
-    return NextResponse.json({ error: 'chain must be robinhood or solana' }, { status: 400 });
-  }
+  // Validate `mode` first: the chain allowlist is looked up by mode, so an
+  // unknown mode must not silently fall back to the index rules.
   if (!MODES.has(mode)) {
     return NextResponse.json({ error: `type must be one of ${Array.from(MODES).join(', ')}` }, { status: 400 });
+  }
+  const allowed = CHAIN_BY_MODE[mode];
+  if (!allowed.has(chain)) {
+    return NextResponse.json(
+      { error: `chain must be one of ${Array.from(allowed).join(', ')} for type=${mode}` },
+      { status: 400 }
+    );
   }
 
   const target = new URL(`/api/${mode}`, UPSTREAM);

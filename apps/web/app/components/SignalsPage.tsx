@@ -50,12 +50,18 @@ type Payload = {
 const CHAINS = [
   { key: 'solana', label: '◎ Solana', color: '#14f195' },
   { key: 'robinhood', label: '🪶 Robinhood Chain', color: '#3ddc97' },
+  { key: 'all', label: '⧉ Both', color: '#ffd166' },
 ] as const;
 type ChainKey = (typeof CHAINS)[number]['key'];
 
+// chain=all is a merged view, so its per-row breakdown comes from the row's
+// own `chain` field -- the header counts (rh/sol) are the reliable totals.
+const MERGED: ChainKey[] = ['all'];
+
 const MODES = [
-  { key: 'index', label: '168h index', hint: 'full 168h screening window. Carries only mcap/liq/score/decision — holders, top-holder % and sightings are absent on every row.' },
-  { key: 'feed', label: '24h feed', hint: 'last 24h, 500 newest rows. Richer per row, but still sparse: measured 213/500 carry holders + top-holder %, 483/500 carry sightings/price/ageMin.' },
+  { key: 'index', label: '168h index', hint: 'full 168h screening window. Carries only mcap/liq/score/decision — holders, top-holder % and sightings are absent on every row. chain=all is not offered upstream for this mode.', chains: ['solana', 'robinhood'] as ChainKey[] },
+  { key: 'feed', label: '24h feed', hint: 'last 24h, 500 newest rows. Richer per row, but still sparse: measured 213/500 carry holders + top-holder %, 483/500 carry sightings/price/ageMin.', chains: ['solana', 'robinhood', 'all'] as ChainKey[] },
+  { key: 'page', label: 'paged', hint: 'same data as the feed, paged 500 rows at a time. Upstream serves pages 2..10 only — page 1 is the feed.', chains: ['solana', 'robinhood', 'all'] as ChainKey[] },
 ] as const;
 type Mode = (typeof MODES)[number]['key'];
 
@@ -94,17 +100,29 @@ function shortAddr(a: string) {
 export default function SignalsPage() {
   const [chain, setChain] = useState<ChainKey>('solana');
   const [mode, setMode] = useState<Mode>('index');
+  const [page, setPage] = useState(2);
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
   const [onlyDecision, setOnlyDecision] = useState('');
 
+  const activeMode = MODES.find(m => m.key === mode) || MODES[0];
+  const chainAllowed = activeMode.chains.includes(chain);
+
+  // Switching to a mode that does not serve the current chain must reset the
+  // chain, or the next load 400s against upstream.
+  useEffect(() => {
+    if (!chainAllowed) setChain(activeMode.chains[0]);
+  }, [chainAllowed, activeMode]);
+
   const load = useCallback(async () => {
+    if (!chainAllowed) return;
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/signals?chain=${chain}&type=${mode}`, { cache: 'no-store' });
+      const suffix = mode === 'page' ? `&n=${page}` : '';
+      const res = await fetch(`/api/signals?chain=${chain}&type=${mode}${suffix}`, { cache: 'no-store' });
       const json: Payload = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       setData(json);
@@ -113,7 +131,7 @@ export default function SignalsPage() {
     } finally {
       setLoading(false);
     }
-  }, [chain, mode]);
+  }, [chain, mode, page, chainAllowed]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -171,20 +189,27 @@ export default function SignalsPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-        {CHAINS.map(c => (
-          <button
-            key={c.key}
-            onClick={() => setChain(c.key)}
-            style={{
-              background: chain === c.key ? c.color : C.card,
-              color: chain === c.key ? '#04140f' : C.dim,
-              border: `1px solid ${C.border}`,
-              padding: '6px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer', fontWeight: 700,
-            }}
-          >
-            {c.label}
-          </button>
-        ))}
+        {CHAINS.map(c => {
+          const allowed = activeMode.chains.includes(c.key);
+          return (
+            <button
+              key={c.key}
+              onClick={() => allowed && setChain(c.key)}
+              disabled={!allowed}
+              title={allowed ? c.label : `${c.label} is not served by the ${activeMode.label} endpoint`}
+              style={{
+                background: chain === c.key ? c.color : C.card,
+                color: chain === c.key ? '#04140f' : allowed ? C.dim : 'rgba(107,143,130,0.35)',
+                border: `1px solid ${C.border}`,
+                padding: '6px 12px', borderRadius: 6, fontSize: 11,
+                cursor: allowed ? 'pointer' : 'not-allowed',
+                fontWeight: 700, textDecoration: allowed ? 'none' : 'line-through',
+              }}
+            >
+              {c.label}
+            </button>
+          );
+        })}
 
         <input
           value={q}
@@ -222,10 +247,42 @@ export default function SignalsPage() {
             {m.label}
           </button>
         ))}
+        {mode === 'page' && data?.pages && (
+          <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center', marginLeft: 6 }}>
+            <button
+              onClick={() => setPage(p => Math.max(2, p - 1))}
+              disabled={page <= 2}
+              style={{
+                background: C.card, color: page <= 2 ? 'rgba(107,143,130,0.35)' : C.white,
+                border: `1px solid ${C.border}`, padding: '5px 10px', borderRadius: 6,
+                fontSize: 10, cursor: page <= 2 ? 'not-allowed' : 'pointer', fontWeight: 700,
+              }}
+            >
+              ← prev
+            </button>
+            <span style={{ color: C.accent, fontSize: 10, fontWeight: 700 }}>
+              page {data.page ?? page} / {data.pages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(data.pages || 10, p + 1))}
+              disabled={page >= (data.pages || 10)}
+              style={{
+                background: C.card, color: page >= (data.pages || 10) ? 'rgba(107,143,130,0.35)' : C.white,
+                border: `1px solid ${C.border}`, padding: '5px 10px', borderRadius: 6,
+                fontSize: 10, cursor: page >= (data.pages || 10) ? 'not-allowed' : 'pointer', fontWeight: 700,
+              }}
+            >
+              next →
+            </button>
+            <span style={{ color: C.dim, fontSize: 10 }}>page 1 = feed</span>
+          </span>
+        )}
         {data?.windowH !== undefined && (
           <span style={{ color: C.dim, fontSize: 10, alignSelf: 'center' }}>
             window {data.windowH}h · {stats.liqCoverage}% liq coverage
             {stats.holderCoverage < 100 && ` · ${stats.holderCoverage}% holders`}
+            {MERGED.includes(chain) && data.counts.rh !== undefined && data.counts.sol !== undefined &&
+              ` · ${data.counts.rh} rh / ${data.counts.sol} sol`}
           </span>
         )}
       </div>
@@ -261,7 +318,7 @@ export default function SignalsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
             <thead>
               <tr style={{ color: C.dim, textAlign: 'left', borderBottom: `1px solid ${C.border}` }}>
-                {['age', 'token', 'decision', 'score', 'mcap', 'liq', 'price', 'holders', 'top%', 'sight', 'src', 'kind'].map(h => (
+                {['age', ...(MERGED.includes(chain) ? ['chain'] : []), 'token', 'decision', 'score', 'mcap', 'liq', 'price', 'holders', 'top%', 'sight', 'src', 'kind'].map(h => (
                   <th key={h} style={{ padding: '6px 8px', fontWeight: 500, whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -276,6 +333,11 @@ export default function SignalsPage() {
                   onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <td style={{ padding: '6px 8px', color: C.dim, whiteSpace: 'nowrap' }}>{ago(r.ts)}</td>
+                  {MERGED.includes(chain) && (
+                    <td style={{ padding: '6px 8px', color: r.chain === 'robinhood' ? C.accent : '#14f195', whiteSpace: 'nowrap' }}>
+                      {r.chain === 'robinhood' ? '🪶 rh' : r.chain === 'solana' ? '◎ sol' : r.chain || '—'}
+                    </td>
+                  )}
                   <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {r.image
