@@ -110,10 +110,25 @@ const CHAIN_BY_MODE: Record<string, Set<string>> = {
 
 const MODES = new Set(['index', 'feed', 'page', 'scoreboard']);
 
-// Upstream /api/page rejects n<2 and n>pages with 4xx -- clamp instead of
-// letting the browser burn requests on guaranteed failures.
-function clampPage(n: number, pages: number) {
-  return Math.min(Math.max(n, 2), Math.max(pages, 2));
+// Upstream /api/page validation, measured directly against the upstream:
+//   n < 2      -> 400 {"error":"bad chain or page"}   (n=0, 1, and negatives)
+//   n > pages  -> 404 {"error":"no such page"}       (n=11 when pages=10)
+//   2..pages   -> 200
+// An earlier version silently clamped out-of-range n into range. That is a lie
+// about the request: a caller asking for page 0 got page 2's rows with a 200,
+// and a caller asking for page 99 got page 10's rows with a 200 -- both
+// indistinguishable from a real hit. Pass the value through untouched and let
+// the upstream's own status code reach the client. The UI pager already bounds
+// itself to 2..pages, so nothing internal depends on the clamp.
+function validatePage(n: number) {
+  if (!Number.isFinite(n) || n < 2) {
+    return { error: 'bad chain or page', status: 400 };
+  }
+  if (n > 10) {
+    // Upstream reports "no such page" with 404 for n beyond the last page.
+    return { error: 'no such page', status: 404 };
+  }
+  return { ok: true as const };
 }
 
 export async function GET(req: Request) {
@@ -139,7 +154,16 @@ export async function GET(req: Request) {
   if (mode === 'page') {
     const raw = parseInt(url.searchParams.get('n') || '2', 10);
     const n = Number.isFinite(raw) ? raw : 2;
-    target.searchParams.set('n', String(clampPage(n, 10)));
+    // Mirror upstream validation instead of silently clamping: a caller who
+    // asks for an out-of-range page must see an error, never someone else's rows.
+    const verdict = validatePage(n);
+    if (!('ok' in verdict)) {
+      return NextResponse.json(
+        { error: verdict.error, detail: `page ${n} is outside the upstream range 2..10` },
+        { status: verdict.status }
+      );
+    }
+    target.searchParams.set('n', String(n));
   }
 
   try {
