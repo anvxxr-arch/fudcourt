@@ -10,6 +10,7 @@ import ReconciliationPage from './components/ReconciliationPage';
 import CoinPage from './components/CoinPage';
 import TrenchPage from './components/TrenchPage';
 import SignalsPage from './components/SignalsPage';
+import ScoreboardPage from './components/ScoreboardPage';
 import TrackerPage from './components/TrackerPage';
 import NewsPage from './components/NewsPage';
 
@@ -75,7 +76,7 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const path = page === 'coin' ? '/coin' : page === 'trench' ? '/trench' : page === 'signals' ? '/signals' : page === 'tracker' ? '/tracker' : page === 'news' ? '/news' : page === 'dashboard' ? '/balance' : `/${page}`;
+      const path = page === 'coin' ? '/coin' : page === 'trench' ? '/trench' : page === 'signals' ? '/signals' : page === 'scoreboard' ? '/scoreboard' : page === 'tracker' ? '/tracker' : page === 'news' ? '/news' : page === 'dashboard' ? '/balance' : `/${page}`;
       window.history.replaceState(null, '', path);
     }
   }, [page]);
@@ -101,6 +102,7 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
     { key: 'reconciliation', label: 'Reconciliation' },
     { key: 'trench', label: 'Trench' },
     { key: 'signals', label: 'Signals' },
+    { key: 'scoreboard', label: 'Scoreboard' },
     { key: 'tracker', label: 'Tracker' },
     { key: 'news', label: 'News' },
   ];
@@ -124,7 +126,7 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
         {tabs.map(t => (
           <a
             key={t.key}
-            href={t.key === 'coin' ? '/coin' : t.key === 'trench' ? '/trench' : t.key === 'signals' ? '/signals' : t.key === 'tracker' ? '/tracker' : t.key === 'news' ? '/news' : t.key === 'dashboard' ? '/balance' : `/${t.key}`}
+            href={t.key === 'coin' ? '/coin' : t.key === 'trench' ? '/trench' : t.key === 'signals' ? '/signals' : t.key === 'scoreboard' ? '/scoreboard' : t.key === 'tracker' ? '/tracker' : t.key === 'news' ? '/news' : t.key === 'dashboard' ? '/balance' : `/${t.key}`}
             onClick={(e) => { e.preventDefault(); setPage(t.key); }}
             style={{
               background: page === t.key ? C.accent : C.card,
@@ -162,6 +164,7 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
       )}
       {page === 'trench' && <TrenchPage />}
       {page === 'signals' && <SignalsPage />}
+      {page === 'scoreboard' && <ScoreboardPage />}
       {page === 'tracker' && <TrackerPage />}
       {page === 'news' && <NewsPage />}
 

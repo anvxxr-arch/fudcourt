@@ -36,6 +36,41 @@ export type SignalRow = {
   socials?: { type: string; url: string }[];
 };
 
+export type ScoreboardBucket = {
+  day: string;
+  n: number;
+  run: number;
+  flat: number;
+  dump: number;
+  unknown: number;
+};
+
+export type ScoreboardCatch = {
+  mint: string;
+  symbol: string;
+  score: number;
+  decision: string;
+  peak24: number;
+  chain: string;
+  day: string;
+  x24h?: number;
+};
+
+export type ScoreboardChain = {
+  latest: ScoreboardBucket;
+  cohortDays: number;
+  series: ScoreboardBucket[];
+  catches: ScoreboardCatch[];
+};
+
+export type ScoreboardPayload = {
+  v: number;
+  kind: 'scoreboard';
+  generatedAt: number;
+  cohortDays: number;
+  chains: Record<string, ScoreboardChain>;
+};
+
 export type SignalCounts = {
   rows?: number;
   rh?: number;
@@ -61,7 +96,7 @@ export type SignalPayload = {
 };
 
 const CHAINS = new Set(['solana', 'robinhood']);
-const MODES = new Set(['index', 'feed', 'page']);
+const MODES = new Set(['index', 'feed', 'page', 'scoreboard']);
 
 // Upstream /api/page rejects n<2 and n>pages with 4xx -- clamp instead of
 // letting the browser burn requests on guaranteed failures.
@@ -105,13 +140,31 @@ export async function GET(req: Request) {
       );
     }
 
-    const data = (await res.json()) as SignalPayload;
+    const data = (await res.json()) as SignalPayload | ScoreboardPayload;
+
+    // The scoreboard is a different payload family (buckets + catches, no
+    // `rows`), so it gets its own branch. Feeding it through the row
+    // normalizer would return rows: [] and counts: {} -- a plausible-looking
+    // but entirely fabricated "no signals" answer.
+    if (mode === 'scoreboard') {
+      const sb = data as ScoreboardPayload;
+      return NextResponse.json({
+        ...sb,
+        kind: 'scoreboard',
+        generatedAt: sb.generatedAt ?? Math.floor(Date.now() / 1000),
+        cohortDays: sb.cohortDays ?? 0,
+        chains: sb.chains && typeof sb.chains === 'object' ? sb.chains : {},
+        upstream: target.toString(),
+      });
+    }
+
+    const sig = data as SignalPayload;
     return NextResponse.json({
-      ...data,
-      chain: data.chain ?? chain,
-      generatedAt: data.generatedAt ?? Math.floor(Date.now() / 1000),
-      counts: data.counts ?? {},
-      rows: Array.isArray(data.rows) ? data.rows : [],
+      ...sig,
+      chain: sig.chain ?? chain,
+      generatedAt: sig.generatedAt ?? Math.floor(Date.now() / 1000),
+      counts: sig.counts ?? {},
+      rows: Array.isArray(sig.rows) ? sig.rows : [],
       upstream: target.toString(),
     });
   } catch (err) {

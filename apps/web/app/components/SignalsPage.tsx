@@ -51,8 +51,13 @@ const CHAINS = [
   { key: 'solana', label: '◎ Solana', color: '#14f195' },
   { key: 'robinhood', label: '🪶 Robinhood Chain', color: '#3ddc97' },
 ] as const;
-
 type ChainKey = (typeof CHAINS)[number]['key'];
+
+const MODES = [
+  { key: 'index', label: '168h index', hint: 'full 168h screening window. Carries only mcap/liq/score/decision — holders, top-holder % and sightings are absent on every row.' },
+  { key: 'feed', label: '24h feed', hint: 'last 24h, 500 newest rows. Richer per row, but still sparse: measured 213/500 carry holders + top-holder %, 483/500 carry sightings/price/ageMin.' },
+] as const;
+type Mode = (typeof MODES)[number]['key'];
 
 const DECISION_COLOR: Record<string, string> = {
   surfaced: C.green,
@@ -88,7 +93,7 @@ function shortAddr(a: string) {
 
 export default function SignalsPage() {
   const [chain, setChain] = useState<ChainKey>('solana');
-  const [page, setPage] = useState(2);
+  const [mode, setMode] = useState<Mode>('index');
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -99,7 +104,7 @@ export default function SignalsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/signals?chain=${chain}&type=index`, { cache: 'no-store' });
+      const res = await fetch(`/api/signals?chain=${chain}&type=${mode}`, { cache: 'no-store' });
       const json: Payload = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       setData(json);
@@ -108,7 +113,7 @@ export default function SignalsPage() {
     } finally {
       setLoading(false);
     }
-  }, [chain]);
+  }, [chain, mode]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -136,12 +141,16 @@ export default function SignalsPage() {
     const scored = all.filter(r => typeof r.score === 'number');
     const surfaced = all.filter(r => r.decision === 'surfaced');
     const withLiq = all.filter(r => typeof r.liq === 'number');
+    const withHolders = all.filter(r => typeof r.holdersCount === 'number');
+    const withSightings = all.filter(r => !!r.sightings);
     return {
       total: all.length,
       avgScore: scored.length ? scored.reduce((s, r) => s + (r.score as number), 0) / scored.length : null,
       surfaced: surfaced.length,
       vetoed: all.filter(r => r.decision === 'vetoed').length,
       liqCoverage: all.length ? Math.round((withLiq.length / all.length) * 100) : 0,
+      holderCoverage: all.length ? Math.round((withHolders.length / all.length) * 100) : 0,
+      sightingCoverage: all.length ? Math.round((withSightings.length / all.length) * 100) : 0,
     };
   }, [data]);
 
@@ -165,7 +174,7 @@ export default function SignalsPage() {
         {CHAINS.map(c => (
           <button
             key={c.key}
-            onClick={() => { setChain(c.key); setPage(2); }}
+            onClick={() => setChain(c.key)}
             style={{
               background: chain === c.key ? c.color : C.card,
               color: chain === c.key ? '#04140f' : C.dim,
@@ -195,6 +204,30 @@ export default function SignalsPage() {
           <option value="">all decisions</option>
           {decisions.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+        {MODES.map(m => (
+          <button
+            key={m.key}
+            onClick={() => setMode(m.key)}
+            title={m.hint}
+            style={{
+              background: mode === m.key ? C.accent : C.card,
+              color: mode === m.key ? '#04140f' : C.dim,
+              border: `1px solid ${C.border}`, padding: '5px 10px', borderRadius: 6,
+              fontSize: 10, cursor: 'pointer', fontWeight: 700,
+            }}
+          >
+            {m.label}
+          </button>
+        ))}
+        {data?.windowH !== undefined && (
+          <span style={{ color: C.dim, fontSize: 10, alignSelf: 'center' }}>
+            window {data.windowH}h · {stats.liqCoverage}% liq coverage
+            {stats.holderCoverage < 100 && ` · ${stats.holderCoverage}% holders`}
+          </span>
+        )}
       </div>
 
       {error && (
