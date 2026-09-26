@@ -313,7 +313,25 @@ export default function SignalsPage() {
 
       {loading ? (
         <p style={{ color: C.dim, fontSize: 12 }}>loading signals…</p>
-      ) : (
+      ) : error && !data ? (
+        // A failed fetch with nothing cached must NOT render as a zero-row
+        // table. An empty grid with "no rows match filter" reads as a
+        // legitimate empty result, which is exactly the silent fake this
+        // project must never produce.
+        <p style={{ color: C.red, fontSize: 12 }}>
+          no data loaded — the table is withheld because the upstream fetch failed.
+        </p>
+      ) : error && data ? (
+        // Stale-but-real data is still worth showing, provided it is labelled
+        // with the timestamp it was actually generated at.
+        <p style={{ color: '#ff9f43', fontSize: 11, marginBottom: 8 }}>
+          ⚠ stale — showing the last successful load from{' '}
+          {new Date(data.generatedAt * 1000).toISOString().replace('T', ' ').slice(0, 16)}
+          , not live data. Refresh failed: {error}
+        </p>
+      ) : null}
+
+      {!loading && data && (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
             <thead>
@@ -368,7 +386,9 @@ export default function SignalsPage() {
             </tbody>
           </table>
           {rows.length === 0 && !loading && (
-            <p style={{ color: C.dim, fontSize: 12, marginTop: 10 }}>no rows match filter</p>
+            <p style={{ color: C.dim, fontSize: 12, marginTop: 10 }}>
+              {error ? 'upstream failed — row list withheld, not empty' : 'no rows match filter'}
+            </p>
           )}
           {rows.length > 300 && (
             <p style={{ color: C.dim, fontSize: 10, marginTop: 8 }}>

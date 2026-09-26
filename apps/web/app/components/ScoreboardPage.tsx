@@ -126,6 +126,13 @@ export default function ScoreboardPage() {
 
       {loading ? (
         <p style={{ color: C.dim, fontSize: 12 }}>loading scoreboard…</p>
+      ) : error ? (
+        // Same rule as SignalsPage: a failed fetch must never fall through to
+        // the "no data for this chain" branch, which reads as a real empty
+        // result rather than a dead upstream.
+        <p style={{ color: C.red, fontSize: 12 }}>
+          no data loaded — cohorts and catches withheld because the upstream fetch failed.
+        </p>
       ) : !board ? (
         <p style={{ color: C.dim, fontSize: 12 }}>no scoreboard data for this chain</p>
       ) : (
