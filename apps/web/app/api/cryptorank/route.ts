@@ -3,17 +3,18 @@ import { execFile } from 'node:child_process';
 import path from 'node:path';
 import {
   CR_BASE,
+  CR_DISABLED,
+  CR_DISABLED_REASON,
   CR_MODES,
   CR_MODE_ARGS,
   CR_MODE_UPSTREAM,
   type CrCoin,
   type CrEnvelope,
-  type CrFundingBoardRow,
-  type CrFundingRound,
   type CrGlobal,
+  type CrLiveMode,
   type CrMode,
+  type CrFundingRound,
   type CrTrendingRow,
-  type CrUnlockRow,
   type CrUpcomingIco,
 } from '../../../lib/cryptorank';
 
@@ -25,6 +26,11 @@ import {
  *
  * Failure policy (house rule): upstream wall -> 502 with the real upstream
  * status and the helper's own error string. Nothing is ever substituted.
+ *
+ * Data-integrity policy: modes listed in CR_DISABLED are REFUSED with 503 +
+ * the measured reason -- upstream's /_next/data class serves synthetic decoy
+ * (nonexistent slugs -> 200 fabricated payloads, prices off ground truth by
+ * 30%, measured 2026-09-27). We never forward a payload we cannot trust.
  */
 
 export const dynamic = 'force-dynamic';
@@ -172,37 +178,6 @@ function shapeIco(r: Record<string, unknown>): CrUpcomingIco {
   };
 }
 
-function shapeFundingBoard(r: RawCoin): CrFundingBoardRow {
-  return {
-    date: asStr(r.date),
-    name: asStrOrDash(r.name),
-    symbol: asStrOrDash(r.symbol),
-    key: asStr(r.key),
-    image: asStr(r.icon) ?? asStr(r.image),
-    twitterScore: asNum(r.twitterScore),
-  };
-}
-
-function shapeUnlock(r: RawCoin): CrUnlockRow {
-  const nextArr = Array.isArray(r.nextUnlocks) ? (r.nextUnlocks as RawCoin[]) : [];
-  const next = nextArr.length ? nextArr[0] : null;
-  return {
-    date: asStr(r.date),
-    name: asStrOrDash(r.name),
-    symbol: asStrOrDash(r.symbol),
-    key: asStr(r.key),
-    image: asStr(r.image),
-    priceUsd: asNum(r.price),
-    change24h: asNum(r.chg24h),
-    marketCap: asNumLoose(r.marketCap),
-    nextUnlockPct: asNum(r.nextUnlockPercent),
-    nextUnlockTokens: next ? asNum(next.tokens) : null,
-    nextAllocation: next ? asStrOrDash(next.allocationName) : null,
-    lockedPct: asNum(r.lockedTokensPercent),
-    unlockedPct: asNum(r.unlockedTokensPercent),
-  };
-}
-
 function shapeTrending(r: RawCoin): CrTrendingRow {
   return {
     rank: asNum(r.rank),
@@ -219,7 +194,7 @@ function shapeTrending(r: RawCoin): CrTrendingRow {
   };
 }
 
-function envelope(kind: CrMode, h: HelperOut): CrEnvelope {
+function envelope(kind: CrLiveMode, h: HelperOut): CrEnvelope {
   const pp = (h.pageProps ?? {}) as Record<string, unknown>;
   const base = {
     kind,
@@ -242,39 +217,6 @@ function envelope(kind: CrMode, h: HelperOut): CrEnvelope {
       global: shapeGlobal(pp),
       fundingRounds: fundingRaw.map(shapeFunding),
       upcomingIco: icoRaw.map(shapeIco),
-    };
-  }
-
-  if (kind === 'funding') {
-    const fr = (pp.fallbackRounds ?? {}) as Record<string, unknown>;
-    const rows = Array.isArray(fr.data) ? (fr.data as RawCoin[]) : [];
-    const total = asNum(fr.total);
-    return {
-      ...base,
-      dataRoute: CR_MODE_ARGS.funding[1],
-      count: rows.length,
-      upstreamTotal: total,
-      slice:
-        `SSR sample: ${rows.length} rows, upstream total ${total ?? 'unreported'} ` +
-        '(total & ordering vary between fetches; full pagination is client-API-gated)',
-      rows: rows.map(shapeFundingBoard),
-    };
-  }
-
-  if (kind === 'unlocks') {
-    const td = (pp.fallbackData ?? {}) as Record<string, unknown>;
-    const rows = Array.isArray(td.data) ? (td.data as RawCoin[]) : [];
-    const total = asNum(td.total);
-    return {
-      ...base,
-      dataRoute: CR_MODE_ARGS.unlocks[1],
-      count: rows.length,
-      upstreamTotal: total,
-      changeSource: 'direct',
-      slice:
-        `SSR sample: ${rows.length} of ~${total ?? '?'} upcoming unlocks ` +
-        '(rolling window — executed events drop off; totals vary between fetches)',
-      rows: rows.map(shapeUnlock),
     };
   }
 
@@ -324,6 +266,22 @@ export async function GET(req: NextRequest) {
   }
 
   const fresh = req.nextUrl.searchParams.get('fresh') === '1';
+
+  // Data-integrity refusal: these modes' upstream class serves synthetic
+  // decoy (see CR_DISABLED_REASON). Loud 503, never a forwarded payload.
+  if (mode === 'funding' || mode === 'unlocks') {
+    return NextResponse.json(
+      {
+        error: CR_DISABLED_REASON,
+        kind: mode,
+        disabled: true,
+        upstream: CR_MODE_UPSTREAM[mode],
+        reverify: 'scripts/verify-cryptorank.py (nonexistent-slug must 404 + independent ground-truth match)',
+      },
+      { status: 503 },
+    );
+  }
+
   const h = await runHelper(mode, fresh);
   if (!h.ok) {
     // Real failure, real detail: upstream wall status or helper crash text.

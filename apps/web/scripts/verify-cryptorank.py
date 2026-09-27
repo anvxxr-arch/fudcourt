@@ -4,22 +4,30 @@ verify-cryptorank.py -- executable contract for the CryptoRank integration.
 
     route:      GET http://127.0.0.1:3100/api/cryptorank?mode=<mode>
     modes:      home | coins | trending | losers | gainers   (400 on anything else)
+                funding | unlocks -> 503 REFUSED (upstream /_next/data class
+                serves synthetic decoy; see lib/cryptorank.ts CR_DISABLED)
     data path:  route -> scripts/cr_fetch.py (venv curl_cffi) -> cryptorank.io
                 market-page __NEXT_DATA__ SSR payload (see lib/cryptorank.ts header
                 for the measured access matrix: API host challenged, market pages
                 readable, fundraising tree walled).
 
 Checks:
-  1. every mode 200 + envelope invariants (upstream, fetchedAt, counts)
+  1. every live mode 200 + envelope invariants (upstream, fetchedAt, counts)
   2. shape/semantics per mode (monotonic gainers, direct vs derived change,
-     homepage slices labelled, global sanity ranges)
+     homepage slices labelled + date-recency, global sanity ranges)
   3. ANTI-FAKE PARITY: an independent venv-side fetch of the same upstream page
      must yield the same first-row identity + price as the proxy (tolerance 0.5%
      for the live-price gap between the two fetches)
-  4. 400 on unknown mode; helper unit: disallowed path exits 5, cache HIT works
-  5. informational: /funding-rounds still walled (403/interstitial) -- if it ever
-     returns 200+__NEXT_DATA__ the note says to wire a full funding mode
-  6. UI wiring: tab, wrapper, component fetch, mode lists match
+  4. GROUND TRUTH: proxy BTC/ETH prices must sit within 3% of coins.llama.fi
+     (independent source). Parity alone cannot detect upstream fabrication --
+     this check is what caught the synthetic decoy on 2026-09-27 (served
+     BTC 57k-67k while truth was 84.5k).
+  5. DISABLED MODES: funding/unlocks must 503 with the reason; never data.
+  6. DECOY DETECTOR (informational): nonexistent slug on the /_next/data class.
+     200 = decoy still active (modes stay disabled); 404 = re-verify before
+     any re-enable (see lib header for the two-step re-enable gate).
+  7. 400 on unknown mode; helper unit: disallowed path exits 5, cache HIT works
+  8. UI wiring: disabled sections ABSENT, homepage-slice cards present
 
 Usage: python3 scripts/verify-cryptorank.py [--base http://127.0.0.1:3100]
 Exit 0 = all required checks pass (informational checks never fail the run).
@@ -82,9 +90,11 @@ def get(base: str, mode: str, fresh: bool = False) -> tuple[int, dict | None, di
         return r.status_code, None, dict(r.headers)
 
 
-def independent_data_route(path: str) -> dict:
-    """Fetch a Next.js DATA route ourselves (own buildId resolution) and pull
-    the first row + total. Used for parity on funding/unlocks."""
+def data_route_probe(path: str) -> dict:
+    """Fetch a Next.js DATA route ourselves (own buildId resolution) and report
+    status + body size. Used by the DECOY DETECTOR: an honest Next server 404s
+    unknown slugs; upstream instead serves a 200 with a fabricated payload
+    (measured 2026-09-27 -- /price/zzznoexist9999.json ships a fake coin)."""
     script = f"""
 import json, re, sys
 from curl_cffi import requests as rq
@@ -94,18 +104,7 @@ if not m:
     print(json.dumps({{"ok": False, "error": "no buildId"}})); sys.exit(0)
 r = rq.get(f"https://cryptorank.io/_next/data/{{m.group(1)}}{path}.json",
            impersonate="chrome131", timeout=30)
-if r.status_code != 200:
-    print(json.dumps({{"ok": False, "status": r.status_code}})); sys.exit(0)
-pp = r.json().get("pageProps") or {{}}
-fr = pp.get("fallbackRounds") or {{}}
-td = pp.get("fallbackData") or {{}}
-block = fr or td
-rows = block.get("data") or []
-first = rows[0] if rows else {{}}
-print(json.dumps({{"ok": True, "n": len(rows), "total": block.get("total"),
-                  "name": first.get("name"), "id": first.get("id"),
-                  "date": first.get("date"),
-                  "set": [[x.get("name"), x.get("date")] for x in rows]}}))
+print(json.dumps({{"ok": True, "status": r.status_code, "bytes": len(r.text)}}))
 """
     out = subprocess.run(
         [CR_VENV_PY, "-c", script],
@@ -117,38 +116,21 @@ print(json.dumps({{"ok": True, "n": len(rows), "total": block.get("total"),
         return {"ok": False, "error": (out.stderr or out.stdout)[-300:]}
 
 
-def parity_backtoback(base: str, label: str, path: str, mode: str) -> None:
-    """Anti-fake parity for the data-route boards. Their SSR sample is stable
-    within an ~8s window but reshuffles after it (and intermittently ships
-    empty), so we fetch INDEPENDENTLY first, then immediately hit the proxy
-    with fresh=1 (cache bypass) -- both should be the same upstream response:
-    row1 must match exactly. Empty upstream on every try = INCONCLUSIVE
-    (printed as INFO, never silently green)."""
-    saw_rows = False
-    for attempt in range(2):
-        up = independent_data_route(path)
-        rows_set = up.get("set") or []
-        if not rows_set:
-            time.sleep(2)
-            continue
-        saw_rows = True
-        st, body, _hdr = get(base, mode, fresh=True)
-        body = body or {}
-        rows = body.get("rows") or []
-        mine = rows[0] if rows else {}
-        probe_key = (mine.get("name"), mine.get("date"))
-        if st == 200 and probe_key and probe_key == tuple(rows_set[0]):
-            check(f"{label}: fresh proxy row1 == independent upstream row1",
-                  True, f"row1={probe_key} attempt={attempt + 1}")
-            return
-        time.sleep(2)
-    if saw_rows:
-        check(f"{label}: fresh proxy row1 == independent upstream row1", False,
-              f"last proxy={probe_key!r} vs upstream={rows_set[0]!r}")
-    else:
-        info(f"{label} parity",
-             "data route returned empty rows twice (upstream degraded at check time); "
-             "proxy data unverified this run")
+def ground_truth_prices() -> dict:
+    """Independent price source (DefiLlama coins API, no key). Parity against
+    cryptorank itself proves only self-consistency; THIS proves truth."""
+    try:
+        r = requests.get(
+            "https://coins.llama.fi/prices/current/coingecko:bitcoin,coingecko:ethereum",
+            timeout=30,
+        )
+        coins = (r.json() or {}).get("coins") or {}
+        return {
+            "BTC": (coins.get("coingecko:bitcoin") or {}).get("price"),
+            "ETH": (coins.get("coingecko:ethereum") or {}).get("price"),
+        }
+    except Exception as e:  # noqa: BLE001
+            return {"error": f"{type(e).__name__}: {e}"}
 
 
 def independent_upstream_page(path: str) -> dict:
@@ -197,6 +179,7 @@ def main() -> int:
     # --- home
     st, body, hdr = get(base, "home")
     body = body or {}
+    home = body
     if check("home: HTTP 200", st == 200, f"got {st} {json.dumps(body)[:200] if body else ''}"):
         g = body.get("global") or {}
         mcap = g.get("totalMarketCap")
@@ -311,57 +294,83 @@ def main() -> int:
             first_ok = (vals[0] > 0) if positive else (vals[0] < 0)
             check(f"{mode}: sign of top row", first_ok, f"top={vals[0]}")
 
-    # --- funding board (data-route bypass)
-    st, body, hdr = get(base, "funding")
-    body = body or {}
-    if check("funding: HTTP 200 (via _next/data bypass)", st == 200, f"got {st} {json.dumps(body)[:160]}"):
-        rows = body.get("rows") or []
-        check("funding: 20-row sample", len(rows) >= 10, f"n={len(rows)}")
-        total = body.get("upstreamTotal")
-        check("funding: upstream total sane", total is not None and total >= 10,
-              f"total={total} (load-dependent upstream: measured 98-3383 within one hour)")
-        check("funding: sample labelled (never 'latest N of M')",
-              isinstance(body.get("slice"), str) and "sample" in body["slice"],
-              str(body.get("slice"))[:130])
-        check("funding: dataRoute disclosed", body.get("dataRoute") == "/funding-rounds",
-              str(body.get("dataRoute")))
-        if rows:
-            row = rows[0]
-            check("funding: row shape (date+name)",
-                  bool(row.get("date")) and bool(row.get("name")),
-                  json.dumps(row, default=str)[:140])
-        # anti-fake parity: fresh proxy vs independent back-to-back
-        parity_backtoback(base, "funding", "/funding-rounds", "funding")
+    # --- disabled modes: LOUD REFUSAL (upstream /_next/data serves decoy)
+    for mode in ("funding", "unlocks"):
+        st, body, hdr = get(base, mode)
+        body = body or {}
+        check(
+            f"{mode}: REFUSED 503 (synthetic upstream)",
+            st == 503 and body.get("disabled") is True,
+            f"got {st} {json.dumps(body)[:170]}",
+        )
+        if st == 503:
+            err = str(body.get("error", ""))
+            check(
+                f"{mode}: refusal states the measured reason",
+                "synthetic" in err and "nonexistent" in err,
+                err[:150],
+            )
+            check(
+                f"{mode}: refusal names the re-verify gate",
+                isinstance(body.get("reverify"), str) and "verify-cryptorank" in body["reverify"],
+                str(body.get("reverify"))[:120],
+            )
 
-    # --- token unlocks (data-route bypass)
-    st, body, hdr = get(base, "unlocks")
-    body = body or {}
-    if check("unlocks: HTTP 200 (via _next/data bypass)", st == 200, f"got {st} {json.dumps(body)[:160]}"):
-        rows = body.get("rows") or []
-        check("unlocks: 20-row sample", len(rows) >= 10, f"n={len(rows)}")
-        total = body.get("upstreamTotal")
-        check("unlocks: upstream total sane", total is not None and total >= 10,
-              f"total={total} (load-dependent upstream: measured 98-769 within one hour)")
-        check("unlocks: sample labelled", isinstance(body.get("slice"), str) and "sample" in body["slice"],
-              str(body.get("slice"))[:130])
-        check("unlocks: changeSource direct", body.get("changeSource") == "direct",
-              str(body.get("changeSource")))
-        if rows:
-            row = rows[0]
-            check("unlocks: row shape (date+name+unlock fields)",
-                  bool(row.get("date")) and bool(row.get("name"))
-                  and row.get("nextUnlockPct") is not None
-                  and (row.get("lockedPct") is None or 0 <= row["lockedPct"] <= 100),
-                  json.dumps(row, default=str)[:170])
-            check("unlocks: marketCap numeric (shipped as string upstream)",
-                  row.get("marketCap") is None or isinstance(row["marketCap"], (int, float)),
-                  f"marketCap={row.get('marketCap')!r}")
-            # locked + unlocked should complement to ~100% where both present
-            both = [r for r in rows if r.get("lockedPct") is not None and r.get("unlockedPct") is not None]
-            bad = [r for r in both if abs(r["lockedPct"] + r["unlockedPct"] - 100) > 1.0]
-            check("unlocks: locked+unlocked ~= 100%", len(bad) <= max(1, 0.2 * len(both)),
-                  f"{len(bad)}/{len(both)} off")
-        parity_backtoback(base, "unlocks", "/token-unlock", "unlocks")
+    # --- ground truth: proxy prices vs independent source (>=3% = fabrication)
+    note("ground truth (independent source vs proxy)")
+    gt = ground_truth_prices()
+    if check("ground truth: independent fetch ok", isinstance(gt.get("BTC"), float),
+             json.dumps(gt)[:200]) and coins:
+        btc = next((r for r in coins if r.get("key") == "bitcoin"), None)
+        eth = next((r for r in coins if r.get("key") == "ethereum"), None)
+        for label, row, truth in (("BTC", btc, gt.get("BTC")), ("ETH", eth, gt.get("ETH"))):
+            price = row.get("priceUsd") if row else None
+            if price and truth:
+                diff = abs(price - truth) / truth * 100
+                check(
+                    f"ground truth: {label} within 3% of coins.llama.fi",
+                    diff <= 3.0,
+                    f"proxy={price} truth={truth} diff={diff:.2f}%",
+                )
+            else:
+                check(f"ground truth: {label} present in both", False,
+                      f"proxy={price} truth={truth}")
+
+    # --- homepage slice recency (dates must be near-real, not generated)
+    if home is not None:
+        fr_dates = [r.get("date") for r in (home.get("fundingRounds") or [])]
+        ages = []
+        now_ms = time.time() * 1000
+        for d in fr_dates:
+            try:
+                ages.append((now_ms - __import__("datetime").datetime.fromisoformat(
+                    str(d).replace("Z", "+00:00")).timestamp() * 1000) / 86400000)
+            except Exception:  # noqa: BLE001
+                ages.append(9999)
+        check(
+            "home: funding slice dates within last 45 days",
+            bool(ages) and max(ages) <= 45,
+            f"age_days={[round(a, 1) for a in ages]}",
+        )
+
+    # --- decoy detector (informational): data-route class honesty
+    note("decoy detector (informational: upstream /_next/data class)")
+    probe = data_route_probe("/price/zzznoexist9999")
+    if probe.get("ok") and probe.get("status") == 200:
+        info(
+            "decoy detector",
+            f"nonexistent slug still returns 200 ({probe.get('bytes')}B fabricated payload) -> "
+            "funding/unlocks stay REFUSED; re-enable gate: slug must 404 AND content must match "
+            "an independent source (see lib/cryptorank.ts CR_DISABLED)",
+        )
+    elif probe.get("ok") and probe.get("status") == 404:
+        info(
+            "decoy detector",
+            "nonexistent slug now 404s (upstream stopped fabricating) -- re-run the two-step "
+            "re-enable verification before wiring data-route modes again",
+        )
+    else:
+        info("decoy detector", f"probe inconclusive: {json.dumps(probe)[:200]}")
 
     # ---------------------------------------------------------------- cache
     note("cache behaviour")
@@ -418,21 +427,23 @@ def main() -> int:
     )
 
     # ---------------------------------------------------------------- 5
-    note("per-ico detail (informational: measured unstable, not wired)")
-    ico = independent_data_route("/ico/jumper-exchange")
-    if ico.get("ok"):
+    note("per-ico detail (informational: synthetic, not wired)")
+    ico = data_route_probe("/ico/jumper-exchange")
+    if ico.get("ok") and ico.get("status") == 200:
         info(
             "per-ico detail",
-            "reachable but totals shift between fetches (measured 47.5M -> 27.7M for the same "
-            "project within 20min) -> deliberately not wired to any mode; re-evaluate if upstream stabilises",
+            "200 with payload, but this class fabricates (nonexistent ico slug also 200s; "
+            "/ico/dac-chain disagrees with the homepage's own dac-chain record: different name+icon) "
+            "-> never wired; homepage upcomingIco slice is the only ICO source",
         )
     else:
         info("per-ico detail", f"data route answered {ico} -> not wired")
 
     info(
         "upstream totals",
-        "cryptorank's SSR totals are load-dependent (funding 98-3383, unlocks 98-769 measured "
-        "within one hour) -- proxy passes them through stamped, UI labels them 'SSR sample'",
+        "the earlier 'load-dependent totals' (funding 98-3383, unlocks 98-769 within one hour) "
+        "are now understood as decoy churn, not upstream variance -- funding/unlocks modes are "
+        "REFUSED (503); only homepage slices (press-verified) ship fundraising data",
     )
 
     note("upstream wall (informational)")
@@ -461,8 +472,16 @@ def main() -> int:
     comp = read("app/components/CryptorankPage.tsx")
     check("component: fetches /api/cryptorank", "/api/cryptorank?mode=" in comp, "")
     check("component: em-dash never 0 for absent", "'—'" in comp, "")
-    check("component: unlocks section", "Upcoming token unlocks" in comp, "")
-    check("component: funding board section", "Funding board" in comp, "")
+    check("component: unlocks section ABSENT (synthetic upstream)",
+          "Upcoming token unlocks" not in comp, "")
+    check("component: funding board section ABSENT (synthetic upstream)",
+          "Funding board" not in comp, "")
+    check("component: homepage-slice funding card present",
+          "Recent funding rounds" in comp, "")
+    check("component: homepage-slice ico card present",
+          "Upcoming IDO / IEO" in comp, "")
+    check("component: refusal documented in footer",
+          "SYNTHETIC decoy" in comp, "")
     helper_src = read("scripts/cr_fetch.py")
     check("helper: data-route mode present", "--data-route" in helper_src
           and "_next/data" in helper_src, "")
@@ -475,6 +494,12 @@ def main() -> int:
         "lib modes == proxy modes (7)",
         lib_modes == {"home", "coins", "trending", "gainers", "losers", "funding", "unlocks"},
         str(sorted(lib_modes)),
+    )
+    check(
+        "lib: CR_DISABLED covers data-route modes",
+          "CR_DISABLED = ['funding', 'unlocks']" in lib
+          and "CR_DISABLED_REASON" in lib,
+        "",
     )
     check("route: force-dynamic", "force-dynamic" in read("app/api/cryptorank/route.ts"), "")
     check("helper exists", os.path.exists(HELPER), HELPER)

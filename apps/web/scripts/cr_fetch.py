@@ -14,12 +14,19 @@ Why both exist (measured 2026-09-27):
   - The MARKET pages return 200 via curl_cffi with the full Next.js SSR
     payload in <script id="__NEXT_DATA__"> (mode: --path).
   - The FUNDRAISING tree (/funding-rounds, /token-unlock, /ico*, /funds*)
-    403s as HTML to EVERY client -- BUT the same pages' data routes
-    /_next/data/<buildId>/....json answer 200 with the full pageProps
-    (fallbackRounds / fallbackData / coinTokenSales). Different path class,
-    so the WAF rule misses them (mode: --data-route).
+    403s as HTML to EVERY client, and their data routes
+    /_next/data/<buildId>/....json answer 200 -- but with SYNTHETIC decoy
+    payloads (measured 2026-09-27: nonexistent slugs also return 200 with
+    fabricated content, prices 30% off ground truth, template-generated
+    names). The API REFUSES those modes (lib CR_DISABLED); --data-route is
+    kept ONLY so verify-cryptorank.py can detect when upstream stops
+    fabricating (re-enable gate: nonexistent slug must 404).
   - buildId rotates on deploys: resolved from the homepage, refreshed
     automatically once on any 404.
+  - KNOWN TRAP: a STALE buildId can still get 200 from edge caches serving
+    ancient snapshots (measured: BTC prices from months ago). This helper
+    refreshes hourly + on 404; always cross-check prices against an
+    independent source (harness ground-truth check does).
 
 Usage:
     cr_fetch.py --path /all-coins-list [--ttl 60]
