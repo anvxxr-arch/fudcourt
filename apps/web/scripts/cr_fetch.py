@@ -80,12 +80,18 @@ HTML_ALLOWED = {
     "/active-nodesale",
     "/news",
     "/tags",
+    "/ecosystems",
+    "/rwa",
+    "/charts/quarterly-returns",
+    "/prediction-markets",
 }
 HTML_ALLOWED_RE = (
     re.compile(r"^/price/[a-z0-9][a-z0-9-]{0,63}$"),
     re.compile(r"^/categories/[a-z0-9][a-z0-9-]{0,63}$"),
     re.compile(r"^/blockchains/[a-z0-9][a-z0-9-]{0,63}$"),
     re.compile(r"^/tags/[a-z0-9][a-z0-9-]{0,63}$"),
+    re.compile(r"^/ecosystems/[a-z0-9][a-z0-9-]{0,63}$"),
+    re.compile(r"^/rwa/(bonds|commodities|etfs|stocks)/[a-z0-9][a-z0-9-]{0,63}$"),
 )
 
 # Data-route allowlist: exact paths + regex for keyed detail routes.

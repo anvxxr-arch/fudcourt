@@ -988,6 +988,140 @@ def main() -> int:
             str(body.get("slice"))[:170],
         )
 
+    # --- ecosystems index + keyed detail (GATE1 404 / GATE2 price parity)
+    st, body, hdr = get(base, "ecosystems")
+    body = body or {}
+    if check("ecosystems: HTTP 200", st == 200, f"got {st}"):
+        eor = body.get("ecosystemRows") or []
+        check(
+            "ecosystems: rows + honest of-N",
+            len(eor) >= 10 and (body.get("upstreamTotal") or 0) > len(eor),
+            f"n={len(eor)} total={body.get('upstreamTotal')}",
+        )
+        eth_row = next((x for x in eor if x.get("key") == "ethereum"), None)
+        check(
+            "ecosystems: ethereum row w/ mcap + tvl",
+            bool(eth_row)
+            and isinstance(eth_row.get("marketCapUsd"), (int, float))
+            and isinstance(eth_row.get("tvlUsd"), (int, float)),
+            json.dumps(eth_row)[:150] if eth_row else "missing",
+        )
+    st, body, hdr = get(base, "ecosystem")
+    body = body or {}
+    if check("ecosystem: HTTP 200 (default ethereum)", st == 200, f"got {st}"):
+        eco_info = body.get("ecosystem") or {}
+        coin = eco_info.get("coin") or {}
+        t_eth = truth.get("ETH")
+        if coin.get("priceUsd") and t_eth:
+            d = abs(coin["priceUsd"] - t_eth) / t_eth * 100
+            check("ecosystem: native coin price matches ground truth (<=0.5%)",
+                  d <= 0.5,
+                  f"mine={coin['priceUsd']} truth={t_eth} diff={d:.4f}%")
+        else:
+            check("ecosystem: native coin price for ground truth", False,
+                  f"coin={coin} truth={t_eth}")
+        check(
+            "ecosystem: coins + changeSource unavailable (no price upstream)",
+            len(body.get("rows") or []) >= 10
+            and body.get("changeSource") == "unavailable",
+            f"rows={len(body.get('rows') or [])} src={body.get('changeSource')}",
+        )
+    st, body, hdr = get(base, "ecosystem", key="zzznoexist9999")
+    check("ecosystem: unknown slug -> 404 passthrough", st == 404, f"got {st}")
+    st, body, hdr = get(base, "ecosystem", key="BAD SLUG")
+    check("ecosystem: malformed key -> 400 (never clamped)", st == 400, f"got {st}")
+
+    # --- rwa index + keyed type/slug detail
+    st, body, hdr = get(base, "rwa")
+    body = body or {}
+    if check("rwa: HTTP 200", st == 200, f"got {st}"):
+        rwr = body.get("rwaRows") or []
+        check(
+            "rwa: rows + honest of-N",
+            len(rwr) >= 10 and (body.get("upstreamTotal") or 0) > len(rwr),
+            f"n={len(rwr)} total={body.get('upstreamTotal')}",
+        )
+        gold = next((x for x in rwr if x.get("detailKey") == "commodities/gold"), None)
+        check(
+            "rwa: gold row w/ plural detailKey + price",
+            bool(gold) and isinstance(gold.get("priceUsd"), (int, float))
+            and gold.get("priceUsd", 0) > 1000,
+            json.dumps(gold)[:150] if gold else "missing gold",
+        )
+    st, body, hdr = get(base, "rwaasset")
+    body = body or {}
+    if check("rwaasset: HTTP 200 (default stocks/wendy-s)", st == 200, f"got {st}"):
+        ra = body.get("rwaAsset") or {}
+        check(
+            "rwaasset: price + quote timestamp + exchange metadata",
+            isinstance(ra.get("priceUsd"), (int, float))
+            and bool(ra.get("quoteUpdatedAt"))
+            and bool(ra.get("exchange")),
+            json.dumps(ra)[:170],
+        )
+    st, body, hdr = get(base, "rwaasset", key="commodities/gold")
+    body = body or {}
+    if check("rwaasset?commodities/gold: HTTP 200", st == 200, f"got {st}"):
+        check("rwaasset: gold commodity type echoes key",
+              (body.get("rwaAsset") or {}).get("type") == "commodity",
+              str((body.get("rwaAsset") or {}).get("type")))
+    st, body, hdr = get(base, "rwaasset", key="stocks/zzznoexist9999")
+    check("rwaasset: unknown slug -> 404 passthrough", st == 404, f"got {st}")
+    st, body, hdr = get(base, "rwaasset", key="zzz/wendy-s")
+    check("rwaasset: bad type prefix -> 400 (never clamped)", st == 400, f"got {st}")
+
+    # --- quarterly returns (in-progress quarter vs live ground truth)
+    st, body, hdr = get(base, "quarterly")
+    body = body or {}
+    if check("quarterly: HTTP 200", st == 200, f"got {st}"):
+        qb = body.get("quarterlyBtc") or []
+        qe = body.get("quarterlyEth") or []
+        check("quarterly: BTC >=15 years + ETH >=10 years",
+              len(qb) >= 15 and len(qe) >= 10, f"btc={len(qb)} eth={len(qe)}")
+        y26 = next((y for y in qb if y.get("year") == 2026), None)
+        q3 = (y26 or {}).get("q3") or {}
+        t_btc = truth.get("BTC")
+        if q3.get("closeUsd") and t_btc:
+            d = abs(q3["closeUsd"] - t_btc) / t_btc * 100
+            check("quarterly: in-progress Q3 close near live BTC (<=3%)",
+                  d <= 3, f"mine={q3['closeUsd']} truth={t_btc} diff={d:.3f}%")
+        else:
+            check("quarterly: 2026 Q3 close present", False, str(q3))
+        q2 = (y26 or {}).get("q2") or {}
+        if q2.get("closeUsd") and q3.get("openUsd"):
+            d = abs(q3["openUsd"] - q2["closeUsd"]) / q2["closeUsd"] * 100
+            check("quarterly: Q2 close ~ Q3 open (roll continuity <1%)",
+                  d < 1, f"q2close={q2['closeUsd']} q3open={q3['openUsd']} diff={d:.3f}%")
+
+    # --- prediction markets (internal coherence + honest window label)
+    st, body, hdr = get(base, "prediction")
+    body = body or {}
+    if check("prediction: HTTP 200", st == 200, f"got {st}"):
+        pa = body.get("prediction") or {}
+        prow = body.get("predictionRows") or []
+        check("prediction: markets table rows w/ external links",
+              len(prow) >= 10
+              and all(r0.get("externalUrl") for r0 in prow[:10]),
+              f"n={len(prow)}")
+        check(
+            "prediction: row volume24h present (explicit 24h)",
+            all(isinstance(r0.get("volume24hUsd"), (int, float)) for r0 in prow[:10]),
+            str([r0.get("volume24hUsd") for r0 in prow[:5]]),
+        )
+        plats = pa.get("platforms") or []
+        s_vol = sum(p0.get("volumeUsd") or 0 for p0 in plats)
+        check(
+            "prediction: platform volumes sum == upstream total (coherent)",
+            pa.get("totalVolumeUsd") is not None
+            and abs(s_vol - pa["totalVolumeUsd"]) < 2,
+            f"sum={s_vol} total={pa.get('totalVolumeUsd')}",
+        )
+        check(
+            "prediction: slice discloses undisclosed window",
+            "window NOT disclosed" in (body.get("slice") or ""),
+            str(body.get("slice"))[:170],
+        )
+
     # ---------------------------------------------------------------- 4
     note("error contract")
     st, body, hdr = get(base, "hack")
@@ -995,7 +1129,7 @@ def main() -> int:
     check("unknown mode -> 400", st == 400, f"got {st}")
     check(
         "400 lists allowed modes",
-        isinstance(body.get("modes"), list) and len(body["modes"]) == 18,
+        isinstance(body.get("modes"), list) and len(body["modes"]) == 24,
         str(body.get("modes")),
     )
 
@@ -1105,6 +1239,18 @@ def main() -> int:
           and "Reserves" in comp, "")
     check("component: launchpool active toggle wired",
           "'active', 'Active'" in comp, "")
+    check("component: ecosystems wired",
+          "loadMode('ecosystems'" in comp and "loadMode('ecosystem'" in comp
+          and "setEcoSlug" in comp and "Ecosystem" in comp, "")
+    check("component: rwa wired",
+          "loadMode('rwa'" in comp and "loadMode('rwaasset'" in comp
+          and "setRwaKey" in comp and "RWA" in comp, "")
+    check("component: quarterly wired",
+          "loadMode('quarterly'" in comp and "setQtrSide" in comp
+          and "Quarterly returns" in comp and "quarterlyBtc" in comp, "")
+    check("component: prediction wired",
+          "loadMode('prediction'" in comp and "Prediction markets" in comp
+          and "predictionRows" in comp, "")
     check("component: news feed wired",
           "loadMode('news'" in comp and "Latest news" in comp and "newsRows" in comp, "")
     check("component: tag board wired",
@@ -1116,13 +1262,14 @@ def main() -> int:
           and "buildid.txt" in helper_src, "")
     lib = read("lib/cryptorank.ts")
     lib_modes = set(re.findall(
-        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool|nodesale|news|tags|tag)'", lib))
+        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool|nodesale|news|tags|tag|ecosystems|ecosystem|rwa|rwaasset|quarterly|prediction)'", lib))
     check(
-        "lib modes == proxy modes (18)",
+        "lib modes == proxy modes (24)",
         lib_modes == {"home", "coins", "trending", "gainers", "losers", "funding",
                       "unlocks", "categories", "exchanges", "coin", "listings",
                       "blockchains", "chain", "launchpool", "nodesale", "news",
-                      "tags", "tag"},
+                      "tags", "tag", "ecosystems", "ecosystem", "rwa", "rwaasset",
+                      "quarterly", "prediction"},
         str(sorted(lib_modes)),
     )
     check(

@@ -147,6 +147,23 @@ export default function CryptorankPage() {
   const [nd, setNd] = useState<CrEnvelope | null>(null);
   const [ndErr, setNdErr] = useState('');
 
+  const [ecoSlug, setEcoSlug] = useState<string>('ethereum');
+  const [ecoIdx, setEcoIdx] = useState<CrEnvelope | null>(null);
+  const [eco, setEco] = useState<CrEnvelope | null>(null);
+  const [ecoErr, setEcoErr] = useState('');
+
+  const [rwaKey, setRwaKey] = useState<string>('stocks/wendy-s');
+  const [rwa, setRwa] = useState<CrEnvelope | null>(null);
+  const [rwaDet, setRwaDet] = useState<CrEnvelope | null>(null);
+  const [rwaErr, setRwaErr] = useState('');
+
+  const [qtrSide, setQtrSide] = useState<'btc' | 'eth'>('btc');
+  const [qtr, setQtr] = useState<CrEnvelope | null>(null);
+  const [qtrErr, setQtrErr] = useState('');
+
+  const [pred, setPred] = useState<CrEnvelope | null>(null);
+  const [predErr, setPredErr] = useState('');
+
   const [news, setNews] = useState<CrEnvelope | null>(null);
   const [newsErr, setNewsErr] = useState('');
 
@@ -263,6 +280,72 @@ export default function CryptorankPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const fetchEcoIdx = useCallback(async (fresh = false) => {
+    try {
+      const env = await loadMode('ecosystems', fresh);
+      setEcoIdx(env);
+      setEcoErr('');
+    } catch (e) {
+      setEcoErr(e instanceof Error ? e.message : String(e));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchEco = useCallback(async (key: string, fresh = false) => {
+    try {
+      const env = await loadMode('ecosystem', fresh, key);
+      setEco(env);
+      setEcoErr('');
+    } catch (e) {
+      setEcoErr(e instanceof Error ? e.message : String(e));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchRwaIdx = useCallback(async (fresh = false) => {
+    try {
+      const env = await loadMode('rwa', fresh);
+      setRwa(env);
+      setRwaErr('');
+    } catch (e) {
+      setRwaErr(e instanceof Error ? e.message : String(e));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchRwaDet = useCallback(async (key: string, fresh = false) => {
+    try {
+      const env = await loadMode('rwaasset', fresh, key);
+      setRwaDet(env);
+      setRwaErr('');
+    } catch (e) {
+      setRwaErr(e instanceof Error ? e.message : String(e));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchQtr = useCallback(async (fresh = false) => {
+    try {
+      const env = await loadMode('quarterly', fresh);
+      setQtr(env);
+      setQtrErr('');
+    } catch (e) {
+      setQtrErr(e instanceof Error ? e.message : String(e));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchPred = useCallback(async (fresh = false) => {
+    try {
+      const env = await loadMode('prediction', fresh);
+      setPred(env);
+      setPredErr('');
+    } catch (e) {
+      setPredErr(e instanceof Error ? e.message : String(e));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fetchTagIndex = useCallback(async (fresh = false) => {
     try {
       const env = await loadMode('tags', fresh);
@@ -358,6 +441,24 @@ export default function CryptorankPage() {
     void fetchNd(ndKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ndKey]);
+
+  useEffect(() => {
+    void fetchEcoIdx();
+    void fetchRwaIdx();
+    void fetchQtr();
+    void fetchPred();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    void fetchEco(ecoSlug);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ecoSlug]);
+
+  useEffect(() => {
+    void fetchRwaDet(rwaKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rwaKey]);
 
   useEffect(() => {
     void fetchTag(tagSlug);
@@ -1241,6 +1342,336 @@ export default function CryptorankPage() {
           <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
             {nd?.slice ?? ''}
           </div>
+        </div>
+
+        {/* ecosystems (index selector + keyed detail) */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+              Ecosystem{eco?.ecosystem ? `: ${eco.ecosystem.name}` : ''}
+            </div>
+            <select
+              value={ecoSlug}
+              onChange={(e) => setEcoSlug(e.target.value)}
+              style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, maxWidth: 190,
+                       background: C.bg, color: C.white, border: `1px solid ${C.border}` }}
+            >
+              {(ecoIdx?.ecosystemRows ?? []).map((er) => (
+                <option key={er.key} value={er.key}>{er.name}</option>
+              ))}
+            </select>
+            <div style={{ fontSize: 10, color: C.dim }}>
+              {eco ? (eco.upstreamTotal != null ? `${eco.count} of ${eco.upstreamTotal} coins` : `${eco.count} coins`) : '—'}
+            </div>
+          </div>
+          {ecoErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ ecosystem error: {ecoErr} — nothing faked</div>
+          )}
+          <div style={{ fontSize: 11, color: C.dim, marginBottom: 6 }}>
+            {eco?.ecosystem
+              ? [
+                  eco.ecosystem.blockchain ? `chain: ${eco.ecosystem.blockchain.name}` : null,
+                  eco.ecosystem.coin
+                    ? `native: ${eco.ecosystem.coin.symbol} ${moneyCompact(eco.ecosystem.coin.priceUsd)}${
+                        eco.ecosystem.coin.change24h != null
+                          ? ` (${eco.ecosystem.coin.change24h >= 0 ? '+' : ''}${eco.ecosystem.coin.change24h.toFixed(2)}%)`
+                          : ''}`
+                    : null,
+                  (() => {
+                    const er = (ecoIdx?.ecosystemRows ?? []).find((x) => x.key === ecoSlug);
+                    if (!er) return null;
+                    const bits: string[] = [];
+                    if (er.marketCapUsd != null) bits.push(`mcap ${moneyCompact(er.marketCapUsd)}`);
+                    if (er.tvlUsd != null) bits.push(`tvl ${moneyCompact(er.tvlUsd)}`);
+                    if (er.projects != null) bits.push(`${er.projects} projects`);
+                    return bits.length ? bits.join(' · ') : null;
+                  })(),
+                ]
+                  .filter(Boolean)
+                  .join(' · ') || 'loading…'
+              : 'loading…'}
+          </div>
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Project</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Symbol</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!eco && !ecoErr && (
+                  <tr><td colSpan={2} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                )}
+                {((eco?.rows ?? []) as CrCoin[]).map((c0) => (
+                  <tr key={c0.key} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <td style={{ padding: '5px 6px', color: C.white }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        {c0.image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={c0.image} alt="" width={16} height={16} style={{ borderRadius: '50%' }} />
+                        )}
+                        {c0.name}
+                      </div>
+                    </td>
+                    <td style={{ padding: '5px 6px', color: C.dim }}>{c0.symbol ?? '—'}</td>
+                  </tr>
+                ))}
+                {eco && (eco.rows ?? []).length === 0 && (
+                  <tr><td colSpan={2} style={{ padding: 10, color: C.dim }}>upstream shipped no coins — nothing faked</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{eco?.slice ?? ''}</div>
+        </div>
+
+        {/* RWA assets (index + keyed type/slug detail) */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+              RWA{rwaDet?.rwaAsset ? `: ${rwaDet.rwaAsset.name}` : ''}
+            </div>
+            <select
+              value={rwaKey}
+              onChange={(e) => setRwaKey(e.target.value)}
+              style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, maxWidth: 210,
+                       background: C.bg, color: C.white, border: `1px solid ${C.border}` }}
+            >
+              {(rwa?.rwaRows ?? []).map((rr) => (
+                <option key={rr.detailKey} value={rr.detailKey}>{rr.ticker} — {rr.name}</option>
+              ))}
+            </select>
+            <div style={{ fontSize: 10, color: C.dim }}>
+              {rwa ? (rwa.upstreamTotal != null ? `${rwa.count} of ${rwa.upstreamTotal}` : `${rwa.count}`) : '—'} assets
+            </div>
+          </div>
+          {rwaErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ rwa error: {rwaErr} — nothing faked</div>
+          )}
+          {rwaDet?.rwaAsset && (
+            <div style={{ fontSize: 11, color: C.dim, marginBottom: 6 }}>
+              {moneyCompact(rwaDet.rwaAsset.priceUsd)}
+              {rwaDet.rwaAsset.change24h != null && (
+                <span style={{ color: rwaDet.rwaAsset.change24h >= 0 ? C.green ?? '#4ade80' : C.red }}>
+                  {' '}({rwaDet.rwaAsset.change24h >= 0 ? '+' : ''}{(rwaDet.rwaAsset.change24h * 100).toFixed(2)}%)
+                </span>
+              )}
+              {' · '}{rwaDet.rwaAsset.type}
+              {rwaDet.rwaAsset.exchange ? ` · ${rwaDet.rwaAsset.exchange}` : ''}
+              {rwaDet.rwaAsset.sector ? ` · ${rwaDet.rwaAsset.sector}` : ''}
+              {rwaDet.rwaAsset.country ? ` · ${rwaDet.rwaAsset.country}` : ''}
+              {rwaDet.rwaAsset.quoteUpdatedAt ? ` · quote ${rwaDet.rwaAsset.quoteUpdatedAt.slice(0, 16).replace('T', ' ')} UTC` : ''}
+              {rwaDet.rwaAsset.website && (
+                <>
+                  {' · '}
+                  <a href={rwaDet.rwaAsset.website} target="_blank" rel="noreferrer" style={{ color: C.accent }}>
+                    site ↗
+                  </a>
+                </>
+              )}
+            </div>
+          )}
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Asset</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Type</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Price</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>24h</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!rwa && !rwaErr && (
+                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                )}
+                {(rwa?.rwaRows ?? []).map((rr) => (
+                  <tr
+                    key={rr.detailKey}
+                    onClick={() => setRwaKey(rr.detailKey)}
+                    style={{ borderBottom: `1px solid ${C.border}`, cursor: 'pointer',
+                             background: rwaKey === rr.detailKey ? 'rgba(255,255,255,0.05)' : 'transparent' }}
+                  >
+                    <td style={{ padding: '5px 6px', color: C.dim, width: 26 }}>{rr.rank ?? '—'}</td>
+                    <td style={{ padding: '5px 6px' }}>
+                      <span style={{ color: C.white }}>{rr.name}</span>
+                      <span style={{ color: C.dim, marginLeft: 6, fontSize: 10 }}>{rr.ticker}</span>
+                    </td>
+                    <td style={{ padding: '5px 6px', color: C.dim, fontSize: 11 }}>{rr.type ?? '—'}</td>
+                    <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>{moneyCompact(rr.priceUsd)}</td>
+                    <td style={{ padding: '5px 6px', whiteSpace: 'nowrap',
+                                 color: rr.change24h == null ? C.dim : rr.change24h >= 0 ? '#4ade80' : C.red }}>
+                      {rr.change24h != null ? `${rr.change24h >= 0 ? '+' : ''}${(rr.change24h * 100).toFixed(2)}%` : '—'}
+                    </td>
+                  </tr>
+                ))}
+                {rwa && (rwa.rwaRows ?? []).length === 0 && (
+                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{rwa?.slice ?? ''}</div>
+        </div>
+
+        {/* quarterly returns (BTC/ETH toggle; % computed from upstream O/C) */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+              Quarterly returns ({qtrSide.toUpperCase()})
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {([['btc', 'BTC'], ['eth', 'ETH']] as const).map(([k, l]) => (
+                <button
+                  key={k}
+                  onClick={() => setQtrSide(k)}
+                  style={{
+                    fontSize: 10, padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
+                    border: `1px solid ${qtrSide === k ? C.accent : C.border}`,
+                    background: qtrSide === k ? C.accent : 'transparent',
+                    color: qtrSide === k ? C.bg : C.dim,
+                    fontWeight: qtrSide === k ? 700 : 400,
+                  }}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: 10, color: C.dim }}>
+              {qtr ? `${(qtrSide === 'btc' ? qtr.quarterlyBtc : qtr.quarterlyEth)?.length ?? 0} years` : '—'}
+            </div>
+          </div>
+          {qtrErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ quarterly error: {qtrErr} — nothing faked</div>
+          )}
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Year</th>
+                  {['Q1', 'Q2', 'Q3', 'Q4'].map((q) => (
+                    <th key={q} style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600, textAlign: 'right' }}>{q}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {!qtr && !qtrErr && (
+                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                )}
+                {((qtrSide === 'btc' ? qtr?.quarterlyBtc : qtr?.quarterlyEth) ?? []).map((y) => (
+                  <tr key={y.year ?? Math.random()} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <td style={{ padding: '5px 6px', color: C.white }}>{y.year ?? '—'}</td>
+                    {(['q1', 'q2', 'q3', 'q4'] as const).map((qk) => {
+                      const q = y[qk];
+                      const v = q && q.openUsd != null && q.closeUsd != null && q.openUsd !== 0
+                        ? ((q.closeUsd - q.openUsd) / q.openUsd) * 100
+                        : null;
+                      return (
+                        <td key={qk} style={{
+                          padding: '5px 6px', textAlign: 'right', whiteSpace: 'nowrap',
+                          color: v == null ? C.dim : v >= 0 ? '#4ade80' : C.red,
+                        }}>
+                          {v == null ? '—' : `${q && !q.isFull ? '~' : ''}${v >= 0 ? '+' : ''}${v.toFixed(1)}%`}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+                {qtr && ((qtrSide === 'btc' ? qtr.quarterlyBtc : qtr.quarterlyEth) ?? []).length === 0 && (
+                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{qtr?.slice ?? ''}</div>
+        </div>
+
+        {/* prediction markets (aggregates + markets table) */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Prediction markets</div>
+            <div style={{ fontSize: 10, color: C.dim }}>
+              {pred ? `${pred.count} of ${pred.upstreamTotal ?? '—'} markets` : '—'}
+            </div>
+          </div>
+          {predErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ prediction error: {predErr} — nothing faked</div>
+          )}
+          {pred?.prediction && (
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 11, color: C.dim, marginBottom: 8 }}>
+              <div>
+                volume <span style={{ color: C.white }}>{moneyCompact(pred.prediction.totalVolumeUsd)}</span>
+                {pred.prediction.volumeChangePct != null && (
+                  <span style={{ color: pred.prediction.volumeChangePct >= 0 ? '#4ade80' : C.red }}>
+                    {' '}({pred.prediction.volumeChangePct >= 0 ? '+' : ''}{pred.prediction.volumeChangePct.toFixed(1)}%)
+                  </span>
+                )}
+              </div>
+              <div>
+                markets <span style={{ color: C.white }}>{pred.prediction.marketsCount ?? '—'}</span>
+                {pred.prediction.marketsChangePct != null && (
+                  <span style={{ color: pred.prediction.marketsChangePct >= 0 ? '#4ade80' : C.red }}>
+                    {' '}({pred.prediction.marketsChangePct >= 0 ? '+' : ''}{pred.prediction.marketsChangePct.toFixed(1)}%)
+                  </span>
+                )}
+              </div>
+              <div>
+                OI <span style={{ color: C.white }}>{moneyCompact(pred.prediction.openInterestUsd)}</span>
+                {pred.prediction.oiChangePct != null && (
+                  <span style={{ color: pred.prediction.oiChangePct >= 0 ? '#4ade80' : C.red }}>
+                    {' '}({pred.prediction.oiChangePct >= 0 ? '+' : ''}{pred.prediction.oiChangePct.toFixed(1)}%)
+                  </span>
+                )}
+              </div>
+              <div>
+                {pred.prediction.platforms
+                  .map((p) => `${p.platform}: ${moneyCompact(p.volumeUsd ?? p.openInterestUsd)}`)
+                  .join(' · ')}
+              </div>
+            </div>
+          )}
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Market</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Platform</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>24h vol</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Bid/Ask</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {!pred && !predErr && (
+                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                )}
+                {(pred?.predictionRows ?? []).map((m) => (
+                  <tr key={m.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <td style={{ padding: '5px 6px' }}>
+                      <span style={{ color: C.white }}>{m.title}</span>
+                      {m.category && <div style={{ fontSize: 10, color: C.dim }}>{m.category}{m.endDate ? ` · ends ${m.endDate}` : ''}</div>}
+                    </td>
+                    <td style={{ padding: '5px 6px', color: C.dim }}>{m.platform ?? '—'}</td>
+                    <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>{moneyCompact(m.volume24hUsd)}</td>
+                    <td style={{ padding: '5px 6px', color: C.dim, whiteSpace: 'nowrap' }}>
+                      {m.bid != null ? m.bid.toFixed(2) : '—'} / {m.ask != null ? m.ask.toFixed(2) : '—'}
+                    </td>
+                    <td style={{ padding: '5px 6px' }}>
+                      {m.externalUrl && (
+                        <a href={m.externalUrl} target="_blank" rel="noreferrer" style={{ color: C.accent, fontSize: 11 }}>↗</a>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {pred && (pred.predictionRows ?? []).length === 0 && (
+                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{pred?.slice ?? ''}</div>
         </div>
       </div>
 

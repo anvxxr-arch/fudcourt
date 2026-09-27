@@ -14,6 +14,7 @@ import {
   CR_KEYED_PATHS,
   CR_LP_LISTS,
   CR_ND_LISTS,
+  CR_RWA_KEY_RE,
   CR_MODES,
   CR_MODE_ARGS,
   CR_MODE_UPSTREAM,
@@ -22,6 +23,8 @@ import {
   type CrChainRow,
   type CrCoin,
   type CrCoinDetail,
+  type CrEcosystemInfo,
+  type CrEcosystemRow,
   type CrEnvelope,
   type CrExchangeRow,
   type CrGlobal,
@@ -31,6 +34,12 @@ import {
   type CrFundingRound,
   type CrNewsRow,
   type CrNodeSaleRow,
+  type CrPredictionAgg,
+  type CrPredictionRow,
+  type CrQuarterlyYear,
+  type CrQuarterQ,
+  type CrRwaAsset,
+  type CrRwaRow,
   type CrTagInfo,
   type CrTagRow,
   type CrTrendingRow,
@@ -543,6 +552,125 @@ function envelope(
     };
   }
 
+  if (kind === 'ecosystems') {
+    const fe = pp.fallbackEcosystems as { data?: unknown; count?: unknown } | null;
+    if (!fe || !Array.isArray(fe.data)) {
+      throw new Error('ecosystems: missing fallbackEcosystems.data');
+    }
+    const ecoRows = (fe.data as Record<string, unknown>[]).map(shapeEcosystemRow);
+    const count = typeof fe.count === 'number' ? fe.count : null;
+    return {
+      ...base,
+      count: ecoRows.length,
+      upstreamTotal: count,
+      slice:
+        `ecosystem index — ${ecoRows.length} of ${count ?? '?'} ecosystems ` +
+        '(SSR ships page 1 only); mcap/tvl/change figures are cryptorank\'s OWN ' +
+        'ecosystem aggregates (their methodology)',
+      ecosystemRows: ecoRows,
+    };
+  }
+
+  if (kind === 'ecosystem') {
+    const fc = pp.fallbackCoins as { data?: unknown; count?: unknown } | null;
+    if (!fc || !Array.isArray(fc.data)) {
+      throw new Error('ecosystem: missing fallbackCoins.data');
+    }
+    const info = shapeEcosystemInfo(pp, opts.key ?? 'ethereum');
+    const coinRows = (fc.data as Record<string, unknown>[]).map((r) =>
+      shapeCoin(r, null),
+    );
+    const count = typeof fc.count === 'number' ? fc.count : null;
+    return {
+      ...base,
+      count: coinRows.length,
+      upstreamTotal: count,
+      slice:
+        `'${info.name}' ecosystem — ${coinRows.length} of ${count ?? '?'} coins ` +
+        '(SSR page 1); eco rows carry NO price upstream -> chg columns null, never ' +
+        'faked; native coin quote above is upstream\'s own',
+      changeSource: 'unavailable',
+      ecosystem: info,
+      rows: coinRows,
+    };
+  }
+
+  if (kind === 'rwa') {
+    const af = pp.assetsFallback as { data?: unknown; total?: unknown } | null;
+    if (!af || !Array.isArray(af.data)) {
+      throw new Error('rwa: missing assetsFallback.data');
+    }
+    const rows = (af.data as Record<string, unknown>[]).map(shapeRwaRow);
+    const total = typeof af.total === 'number' ? af.total : null;
+    return {
+      ...base,
+      count: rows.length,
+      upstreamTotal: total,
+      slice:
+        `RWA assets — ${rows.length} of ${total ?? '?'} upstream (SSR page 1); ` +
+        'price = upstream quote (marketState may be CLOSED = last session close); ' +
+        'tokenized* = cryptorank tokenized-asset metrics (their methodology)',
+      rwaRows: rows,
+    };
+  }
+
+  if (kind === 'rwaasset') {
+    const af = pp.assetFallback as { data?: unknown } | null;
+    if (!af || !af.data || typeof af.data !== 'object') {
+      throw new Error('rwaasset: missing assetFallback.data');
+    }
+    const asset = shapeRwaAsset(
+      af.data as Record<string, unknown>,
+      opts.key ?? '',
+    );
+    return {
+      ...base,
+      count: 1,
+      slice:
+        `asset detail '${asset.ticker || asset.slug}' — upstream quote at ` +
+        `${asset.quoteUpdatedAt ?? 'unknown time'} (marketState ${asset.marketState ?? '?'}); ` +
+        'exchange/sector = upstream metadata',
+      rwaAsset: asset,
+    };
+  }
+
+  if (kind === 'quarterly') {
+    const btc = pp.initialQuarterlyReturnsBtc;
+    const eth = pp.initialQuarterlyReturnsEth;
+    if (!Array.isArray(btc) || !Array.isArray(eth)) {
+      throw new Error('quarterly: missing initialQuarterlyReturnsBtc/Eth');
+    }
+    return {
+      ...base,
+      count: btc.length + eth.length,
+      slice:
+        `BTC (${btc.length} years) + ETH (${eth.length} years) quarterly open/close — ` +
+        'upstream values; return% is computed in the UI from these numbers (labelled); ' +
+        'isFull=false = quarter in progress; 2026 closes verified vs independent ' +
+        'daily history (0.03-0.40% on 2026-09-27)',
+      quarterlyBtc: btc.map(shapeQuarterYear),
+      quarterlyEth: eth.map(shapeQuarterYear),
+    };
+  }
+
+  if (kind === 'prediction') {
+    const { agg, rows } = shapePrediction(pp);
+    const tb = pp.tableFallbackData as { total?: unknown } | null;
+    const total = tb && typeof tb.total === 'number' ? tb.total : null;
+    return {
+      ...base,
+      count: rows.length,
+      upstreamTotal: total,
+      prediction: agg,
+      predictionRows: rows,
+      slice:
+        `prediction markets — ${rows.length} of ${total ?? '?'} listings (SSR page 1); ` +
+        'volume/markets/OI aggregates + platform split are upstream figures (window NOT ' +
+        'disclosed upstream); row volume24h is explicitly 24h; external links go to ' +
+        'the venue (kalshi/polymarket)',
+    };
+  }
+
   if (kind === 'news') {
     const list = pp.news;
     if (!Array.isArray(list)) {
@@ -663,6 +791,200 @@ function shapeNodesaleRow(r: Record<string, unknown>): CrNodeSaleRow {
   };
 }
 
+/** Ecosystem index row: upstream aggregate fields (mcap/tvl are THEIR math). */
+function shapeEcosystemRow(r: Record<string, unknown>): CrEcosystemRow {
+  const tags = Array.isArray(r.tags)
+    ? (r.tags as unknown[])
+        .map((t) => (typeof t === 'string' ? t : asStr((t as Record<string, unknown>)?.name)))
+        .filter((t): t is string => t !== null && t !== undefined && t !== '')
+    : [];
+  return {
+    key: asStr(r.key) ?? '',
+    name: asStr(r.name) ?? '',
+    logo: asStr(r.logo),
+    projects: asNum(r.projects),
+    projectsChange3m: asNum(r.projectsChange3M),
+    marketCapUsd: asNum(r.marketCap),
+    marketCapChange24hPct: asNum(r.marketCapChangePercent24H),
+    tvlUsd: asNum(r.tvl),
+    tvlChange24hPct: asNum(r.tvlChangePercent24H),
+    tags,
+  };
+}
+
+function shapeEcosystemInfo(
+  pp: Record<string, unknown>,
+  slug: string,
+): CrEcosystemInfo {
+  const info = (pp.ecosystemData ?? {}) as Record<string, unknown>;
+  const bc = info.blockchain as { key?: unknown; name?: unknown } | null | undefined;
+  const coin = info.coin as Record<string, unknown> | null | undefined;
+  return {
+    slug,
+    name: asStr(info.name) ?? slug,
+    description: asStr(info.description),
+    blockchain:
+      bc && asStr(bc.key) !== null
+        ? { key: asStr(bc.key) ?? '', name: asStr(bc.name) ?? asStr(bc.key) ?? '' }
+        : null,
+    coin:
+      coin && asStr(coin.key) !== null
+        ? {
+            key: asStr(coin.key) ?? '',
+            name: asStr(coin.name) ?? '',
+            symbol: asStr(coin.symbol) ?? '',
+            priceUsd: asNum(coin.priceUSD),
+            change24h: asNum(coin.priceChangePercent24H),
+          }
+        : null,
+  };
+}
+
+/** upstream detail path needs the PLURAL type segment (commodity -> commodities). */
+function rwaDetailKey(type: string, slug: string): string {
+  const plural =
+    type === 'commodity' ? 'commodities'
+    : type === 'stock' ? 'stocks'
+    : type === 'etf' ? 'etfs'
+    : type === 'bond' ? 'bonds'
+    : `${type}s`;
+  return `${plural}/${slug}`;
+}
+
+function shapeRwaRow(r: Record<string, unknown>): CrRwaRow {
+  const slug = asStr(r.slug) ?? '';
+  const type = asStr(r.type) ?? '';
+  return {
+    rank: asNum(r.rank),
+    slug,
+    detailKey: slug && type ? rwaDetailKey(type, slug) : '',
+    ticker: asStr(r.ticker) ?? '',
+    name: asStr(r.name) ?? '',
+    type,
+    image: asStr(r.image),
+    priceUsd: asNum(r.price),
+    change24h: asNum(r.change24h),
+    change7d: asNum(r.change7d),
+    marketCapUsd: asNum(r.marketCap),
+    volume24hUsd: asNum(r.volume24h),
+    tokenizedPriceUsd: asNum(r.tokenizedPrice),
+    tokenizedMcapUsd: asNum(r.tokenizedMarketCap),
+    tokenizedVolume24hUsd: asNum(r.tokenizedVolume24h),
+    isLeveraged: r.isLeveraged === true,
+    marketState: asStr(r.marketState),
+    mainTokenKey: asStr(r.mainTokenKey),
+  };
+}
+
+function shapeRwaAsset(d: Record<string, unknown>, detailKey: string): CrRwaAsset {
+  const info = (d.info ?? {}) as Record<string, unknown>;
+  const slug = asStr(d.slug) ?? detailKey.split('/').pop() ?? '';
+  const type = asStr(d.type) ?? '';
+  return {
+    slug,
+    detailKey,
+    ticker: asStr(d.ticker) ?? '',
+    name: asStr(d.name) ?? '',
+    type,
+    image: asStr(d.image),
+    priceUsd: asNum(d.price),
+    change24h: asNum(d.change24h),
+    change24hAbs: asNum(d.change24hAbs),
+    marketState: asStr(d.marketState),
+    currency: asStr(d.currency),
+    quoteUpdatedAt: asStr(d.quoteUpdatedAt),
+    isLeveraged: d.isLeveraged === true,
+    country: asStr(info.country),
+    exchange: asStr(info.exchange),
+    sector: asStr(info.sector),
+    industry: asStr(info.industry),
+    website: asStr(info.website),
+  };
+}
+
+function shapeQuarterQ(q: unknown): CrQuarterQ | null {
+  if (!q || typeof q !== 'object') return null;
+  const q0 = q as Record<string, unknown>;
+  return {
+    openUsd: asNum(q0.openUSD),
+    closeUsd: asNum(q0.closeUSD),
+    isFull: q0.isFull !== false,
+  };
+}
+
+function shapeQuarterYear(y: unknown): CrQuarterlyYear {
+  const y0 = (y ?? {}) as Record<string, unknown>;
+  return {
+    year: asNum(y0.year),
+    q1: shapeQuarterQ(y0.q1),
+    q2: shapeQuarterQ(y0.q2),
+    q3: shapeQuarterQ(y0.q3),
+    q4: shapeQuarterQ(y0.q4),
+  };
+}
+
+/** Prediction aggregates: 3 responses, platformData merged by platform name. */
+function shapePrediction(
+  pp: Record<string, unknown>,
+): { agg: CrPredictionAgg; rows: CrPredictionRow[] } {
+  const tv = (pp.totalVolumeResponse ?? {}) as Record<string, unknown>;
+  const mk = (pp.marketsResponse ?? {}) as Record<string, unknown>;
+  const oi = (pp.openInterestResponse ?? {}) as Record<string, unknown>;
+  const byPlat: Record<string, CrPredictionAgg['platforms'][number]> = {};
+  const addPlat = (
+    list: unknown,
+    field: 'volumeUsd' | 'marketsCount' | 'openInterestUsd',
+    src: 'volume' | 'marketsCount' | 'openInterest',
+  ) => {
+    if (!Array.isArray(list)) return;
+    for (const p of list as Record<string, unknown>[]) {
+      const name = asStr(p.platform);
+      if (!name) continue;
+      const row = (byPlat[name] ??= {
+        platform: name,
+        volumeUsd: null,
+        marketsCount: null,
+        openInterestUsd: null,
+      });
+      const v = asNum(p[src]);
+      if (field === 'volumeUsd') row.volumeUsd = v;
+      else if (field === 'marketsCount') row.marketsCount = v;
+      else row.openInterestUsd = v;
+    }
+  };
+  addPlat(tv.platformData, 'volumeUsd', 'volume');
+  addPlat(mk.platformData, 'marketsCount', 'marketsCount');
+  addPlat(oi.platformData, 'openInterestUsd', 'openInterest');
+  const agg: CrPredictionAgg = {
+    totalVolumeUsd: asNum(tv.totalVolume),
+    volumeChangePct: asNum(tv.changePercent),
+    marketsCount: asNum(mk.totalMarketsCount),
+    marketsChangePct: asNum(mk.changePercent),
+    openInterestUsd: asNum(oi.totalOpenInterest),
+    oiChangePct: asNum(oi.changePercent),
+    platforms: Object.values(byPlat),
+  };
+  const tb = (pp.tableFallbackData ?? {}) as { data?: unknown };
+  const rows: CrPredictionRow[] = (Array.isArray(tb.data) ? tb.data : []).map(
+    (raw) => {
+      const r = raw as Record<string, unknown>;
+      return {
+        id: asStr(r.id) ?? '',
+        title: asStr(r.title) ?? '',
+        platform: asStr(r.platform),
+        category: asStr(r.categoryName),
+        endDate: asStr(r.endDate),
+        volume24hUsd: asNum(r.volume24h),
+        bid: asNum(r.bid),
+        ask: asNum(r.ask),
+        spread: asNum(r.spread),
+        externalUrl: asStr(r.externalUrl),
+      };
+    },
+  );
+  return { agg, rows };
+}
+
 /** News row: date is epoch MILLISECONDS upstream (null = pinned promo slot). */
 function shapeNewsRow(r: Record<string, unknown>): CrNewsRow {
   const ms = typeof r.date === 'number' && r.date > 1e12 ? r.date : null;
@@ -762,11 +1084,14 @@ export async function GET(req: NextRequest) {
     const keyed = mode as keyof typeof CR_KEYED_PATHS;
     const raw = req.nextUrl.searchParams.get('key');
     key = raw === null || raw === '' ? CR_DEFAULT_KEYS[keyed] : raw;
-    if (!CR_KEY_RE.test(key)) {
+    const keyRe = keyed === 'rwaasset' ? CR_RWA_KEY_RE : CR_KEY_RE;
+    if (!keyRe.test(key)) {
       return NextResponse.json(
         {
           error: 'invalid key',
-          detail: `key must match ${CR_KEY_RE} (lowercase alnum + dashes, 1-64)`,
+          detail: keyed === 'rwaasset'
+            ? `key must be <plural-type>/<slug>, plural-type in bonds|commodities|etfs|stocks (never clamped)`
+            : `key must match ${CR_KEY_RE} (lowercase alnum + dashes, 1-64)`,
           mode,
           key,
         },
