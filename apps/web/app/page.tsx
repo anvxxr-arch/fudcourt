@@ -12,6 +12,7 @@ import TrenchPage from './components/TrenchPage';
 import DexPage from './components/DexPage';
 import SignalsPage from './components/SignalsPage';
 import ScoreboardPage from './components/ScoreboardPage';
+import ChainrankPage from './components/ChainrankPage';
 import TrackerPage from './components/TrackerPage';
 import NewsPage from './components/NewsPage';
 
@@ -105,6 +106,7 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
     { key: 'dex', label: 'Dex' },
     { key: 'signals', label: 'Signals' },
     { key: 'scoreboard', label: 'Scoreboard' },
+    { key: 'chainrank', label: 'Chainrank' },
     { key: 'tracker', label: 'Tracker' },
     { key: 'news', label: 'News' },
   ];
@@ -168,6 +170,7 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
       {page === 'dex' && <DexPage />}
       {page === 'signals' && <SignalsPage />}
       {page === 'scoreboard' && <ScoreboardPage />}
+      {page === 'chainrank' && <ChainrankPage />}
       {page === 'tracker' && <TrackerPage />}
       {page === 'news' && <NewsPage />}
 
