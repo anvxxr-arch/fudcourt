@@ -13,6 +13,7 @@ import DexPage from './components/DexPage';
 import SignalsPage from './components/SignalsPage';
 import ScoreboardPage from './components/ScoreboardPage';
 import ChainrankPage from './components/ChainrankPage';
+import LlamaPage from './components/LlamaPage';
 import TrackerPage from './components/TrackerPage';
 import NewsPage from './components/NewsPage';
 
@@ -107,6 +108,7 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
     { key: 'signals', label: 'Signals' },
     { key: 'scoreboard', label: 'Scoreboard' },
     { key: 'chainrank', label: 'Chainrank' },
+    { key: 'llama', label: 'Llama' },
     { key: 'tracker', label: 'Tracker' },
     { key: 'news', label: 'News' },
   ];
@@ -171,6 +173,7 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
       {page === 'signals' && <SignalsPage />}
       {page === 'scoreboard' && <ScoreboardPage />}
       {page === 'chainrank' && <ChainrankPage />}
+      {page === 'llama' && <LlamaPage />}
       {page === 'tracker' && <TrackerPage />}
       {page === 'news' && <NewsPage />}
 
