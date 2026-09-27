@@ -15,6 +15,7 @@ export const DEX_TYPES = [
   'boosts-top',
   'search',
   'tokens',
+  'tokens-v1',
   'token-pairs',
   'orders',
 ] as const;
@@ -28,6 +29,9 @@ export const DEX_CHAINS = [
   'base',
   'arbitrum',
   'polygon',
+  // measured 2026-09-26: search returns these too, so they must be selectable
+  'robinhood', 'cronos', 'ton', 'aptos', 'celo', 'ink', 'linea', 'scroll',
+  'mantle', 'metis', 'manta', 'soneium', 'arc', 'flowevm', 'pulsechain', 'xrpl',
 ] as const;
 
 export type DexChain = (typeof DEX_CHAINS)[number];

@@ -2,7 +2,9 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { C } from '../../lib/ui/shared';
-import type { DexPair, DexProfile } from '../../lib/dex';
+import { DEX_CHAINS, type DexPair, type DexProfile } from '../../lib/dex';
+
+const SEARCH_CHAINS = DEX_CHAINS as readonly string[];
 
 type Mode = 'pairs' | 'profiles' | 'boosts' | 'search' | 'mint';
 
@@ -55,13 +57,27 @@ function win<T>(o: Record<string, T> | undefined, k: string): T | undefined {
 export default function DexPage() {
   const [mode, setMode] = useState<Mode>('pairs');
   const [chain, setChain] = useState('solana');
+  // Search has no server-side chain filter upstream, so this narrows locally.
+  const [searchChain, setSearchChain] = useState('');
+  // token-pairs lists every market for a mint; tokens-v1 returns only the
+  // deepest single pair. Both measured working, so expose the choice.
+  const [deepestOnly, setDeepestOnly] = useState(false);
   const [q, setQ] = useState('');
   const [addr, setAddr] = useState('');
   const [rows, setRows] = useState<DexPair[]>([]);
   const [profiles, setProfiles] = useState<DexProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [meta, setMeta] = useState<{ upstream?: string; returned?: number; total?: number; fetchedAt?: number }>({});
+  const [meta, setMeta] = useState<{
+    upstream?: string;
+    returned?: number;
+    total?: number;
+    fetchedAt?: number;
+    chainsSeen?: Record<string, number>;
+    filteredBy?: string;
+    upstreamTotal?: number;
+    note?: string;
+  }>({});
   const [filter, setFilter] = useState('');
 
   const load = useCallback(async () => {
@@ -69,22 +85,28 @@ export default function DexPage() {
     setError('');
     try {
       let url = '/api/dex?limit=30';
-      if (mode === 'pairs' || mode === 'mint') {
-        if (mode === 'pairs') {
-          // Join: take fresh profile mints, then resolve their markets.
-          const pRes = await fetch('/api/dex?type=profiles&limit=10', { cache: 'no-store' });
-          if (!pRes.ok) throw new Error(`profiles HTTP ${pRes.status}`);
-          const pJson = await pRes.json();
-          const addrs = (pJson.data || []).map((x: DexProfile) => x.address).filter(Boolean);
-          if (addrs.length === 0) throw new Error('no fresh profile mints to resolve');
-          url = `/api/dex?type=tokens&addresses=${encodeURIComponent(addrs.join(','))}&limit=30`;
-        } else {
-          if (!addr.trim()) throw new Error('enter a mint address');
-          url = `/api/dex?type=token-pairs&address=${encodeURIComponent(addr.trim())}&chain=${chain}`;
-        }
+      if (mode === 'pairs') {
+        // Join: take fresh profile mints, then resolve their markets.
+        const pRes = await fetch('/api/dex?type=profiles&limit=10', { cache: 'no-store' });
+        if (!pRes.ok) throw new Error(`profiles HTTP ${pRes.status}`);
+        const pJson = await pRes.json();
+        const addrs = (pJson.data || []).map((x: DexProfile) => x.address).filter(Boolean);
+        if (addrs.length === 0) throw new Error('no fresh profile mints to resolve');
+        url = `/api/dex?type=tokens&addresses=${encodeURIComponent(addrs.join(','))}&limit=30`;
+      } else if (mode === 'mint') {
+        if (!addr.trim()) throw new Error('enter a mint address');
+        // tokens-v1 resolves only the single deepest pair; token-pairs lists all
+        // markets for the mint. Both are real endpoints, so the choice is the
+        // user's rather than a guess.
+        const endpoint = deepestOnly ? 'tokens-v1' : 'token-pairs';
+        url = `/api/dex?type=${endpoint}&address=${encodeURIComponent(addr.trim())}&chain=${chain}`;
       } else if (mode === 'search') {
         if (!q.trim()) throw new Error('enter a search term');
-        url = `/api/dex?type=search&q=${encodeURIComponent(q.trim())}&limit=30`;
+        // DexScreener has no server-side chain filter, so the chain select
+        // narrows the result locally. The API reports the true spread so the
+        // UI can say what the query actually covered.
+        const chainQ = searchChain ? `&chain=${encodeURIComponent(searchChain)}` : '';
+        url = `/api/dex?type=search&q=${encodeURIComponent(q.trim())}&limit=30${chainQ}`;
       } else {
         url = `/api/dex?type=${mode === 'boosts' ? 'boosts' : 'profiles'}&limit=30`;
       }
@@ -99,7 +121,16 @@ export default function DexPage() {
         setRows(json.data || []);
         setProfiles([]);
       }
-      setMeta({ upstream: json.upstream, returned: json.returned, total: json.total, fetchedAt: json.fetchedAt });
+      setMeta({
+        upstream: json.upstream,
+        returned: json.returned,
+        total: json.total,
+        fetchedAt: json.fetchedAt,
+        chainsSeen: json.chainsSeen,
+        filteredBy: json.filteredBy,
+        upstreamTotal: json.upstreamTotal,
+        note: json.note,
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
@@ -110,7 +141,7 @@ export default function DexPage() {
     } finally {
       setLoading(false);
     }
-  }, [mode, chain, q, addr]);
+  }, [mode, chain, q, addr, searchChain, deepestOnly]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -152,8 +183,15 @@ export default function DexPage() {
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         {mode === 'search' && (
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="symbol, name or address…"
-            style={{ background: C.card, border: `1px solid ${C.border}`, color: C.white, padding: '6px 10px', borderRadius: 6, fontSize: 11, width: 260 }} />
+          <>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="symbol, name or address…"
+              style={{ background: C.card, border: `1px solid ${C.border}`, color: C.white, padding: '6px 10px', borderRadius: 6, fontSize: 11, width: 260 }} />
+            <select value={searchChain} onChange={(e) => setSearchChain(e.target.value)}
+              style={{ background: C.card, border: `1px solid ${C.border}`, color: C.white, padding: '6px 8px', borderRadius: 6, fontSize: 11 }}>
+              <option value="">all chains (upstream default)</option>
+              {SEARCH_CHAINS.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </>
         )}
         {mode === 'mint' && (
           <>
@@ -161,8 +199,12 @@ export default function DexPage() {
               style={{ background: C.card, border: `1px solid ${C.border}`, color: C.white, padding: '6px 10px', borderRadius: 6, fontSize: 11, width: 340 }} />
             <select value={chain} onChange={(e) => setChain(e.target.value)}
               style={{ background: C.card, border: `1px solid ${C.border}`, color: C.white, padding: '6px 8px', borderRadius: 6, fontSize: 11 }}>
-              {['solana', 'ethereum', 'bsc', 'base', 'arbitrum', 'polygon'].map((c) => <option key={c} value={c}>{c}</option>)}
+              {SEARCH_CHAINS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
+            <label style={{ color: C.dim, fontSize: 10, display: 'inline-flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}>
+              <input type="checkbox" checked={deepestOnly} onChange={(e) => setDeepestOnly(e.target.checked)} />
+              deepest pair only (tokens/v1)
+            </label>
           </>
         )}
         {rows.length > 0 && (
@@ -186,10 +228,25 @@ export default function DexPage() {
       ) : (
         <>
           {meta.upstream && (
-            <p style={{ color: C.dim, fontSize: 10, margin: '0 0 8px' }}>
+            <p style={{ color: C.dim, fontSize: 10, margin: '0 0 4px' }}>
               {meta.returned} shown{meta.total != null && meta.total !== meta.returned ? ` of ${meta.total}` : ''}
               {rows.length > 0 && ` · liq coverage ${cov('liquidity')} · labels ${cov('labels')} · txns ${cov('txns')}`}
             </p>
+          )}
+          {/* DexScreener has no server-side chain filter. Say what the query
+              actually spanned instead of letting a filtered view imply the
+              upstream request was scoped. */}
+          {meta.chainsSeen && Object.keys(meta.chainsSeen).length > 0 && (
+            <p style={{ color: C.dim, fontSize: 10, margin: '0 0 4px' }}>
+              upstream matched {meta.upstreamTotal ?? meta.total} pairs across{' '}
+              <span style={{ color: C.accent }}>{Object.keys(meta.chainsSeen).length} chains</span>
+              {meta.filteredBy
+                ? ` — narrowed locally to '${meta.filteredBy}' (upstream ignores a chain param)`
+                : `: ${Object.entries(meta.chainsSeen).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join(', ')}`}
+            </p>
+          )}
+          {meta.note && (
+            <p style={{ color: '#fbbf24', fontSize: 10, margin: '0 0 8px', fontWeight: 700 }}>⚠ {meta.note}</p>
           )}
 
           {/* profiles / boosts */}

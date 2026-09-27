@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { DEX, DEX_TYPES, type DexType, type DexPair, type DexProfile, isMint } from '../../../lib/dex';
+import { DEX, DEX_TYPES, DEX_CHAINS, type DexType, type DexChain, type DexPair, type DexProfile, isMint } from '../../../lib/dex';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -93,8 +93,19 @@ export async function GET(req: Request) {
   const limit = clampLimit(url.searchParams.get('limit'));
   const p = (k: string) => url.searchParams.get(k) ?? '';
 
+  // An unknown chain must fail as an unknown CHAIN. Left unchecked it produced
+  // "unknown type 'search?q=weth'" -- because the raw param had been read into
+  // `type` -- which points the caller at the wrong field entirely.
+  const wantedChain = p('chain').trim();
+  if (wantedChain && !DEX_CHAINS.includes(wantedChain as DexChain)) {
+    return fail(`unknown chain '${wantedChain}'`, 400, `expected one of ${DEX_CHAINS.join(', ')}`);
+  }
+
   let upstreamPath = '';
   let kind = '';
+  // Set only for search: DexScreener ignores a server-side chain filter, so the
+  // narrowing happens here and the full spread is reported alongside it.
+  let filterChain = '';
 
   switch (type) {
     case 'profiles':
@@ -112,7 +123,27 @@ export async function GET(req: Request) {
     case 'search': {
       const q = p('q').trim();
       if (!q) return fail('search needs a non-empty `q`', 400);
+      // DexScreener search has NO chain filter -- `q=weth` returns pairs across
+      // 16 chains (measured). `chain` is therefore applied locally, as a filter
+      // over the returned set, and echoed back as `chainsSeen` so the UI can
+      // show what a query actually spans instead of implying it was scoped.
+      const wantChain = wantedChain;
       upstreamPath = `/latest/dex/search?q=${encodeURIComponent(q)}`;
+      kind = 'pairs';
+      filterChain = wantChain || '';
+      break;
+    }
+    case 'tokens-v1': {
+      // /tokens/v1/{chain}/{addr} is a DISTINCT endpoint from token-pairs/v1:
+      // it is single-token and returns the deepest single pair. Kept separate
+      // because its 200-with-empty-list behaviour on a bad mint is identical,
+      // and it is the cheapest way to resolve ONE market.
+      const addr = p('address').trim();
+      if (!isMint(addr)) {
+        return fail('`address` is not a valid mint', 400, 'expected 32-44 base58 chars');
+      }
+      const chain = wantedChain || 'solana';
+      upstreamPath = `/tokens/v1/${chain}/${addr}`;
       kind = 'pairs';
       break;
     }
@@ -139,7 +170,7 @@ export async function GET(req: Request) {
       if (!isMint(addr)) {
         return fail('`address` is not a valid mint', 400, 'expected 32-44 base58 chars');
       }
-      const chain = p('chain') || 'solana';
+      const chain = wantedChain || 'solana';
       upstreamPath = `/token-pairs/v1/${chain}/${addr}`;
       kind = 'pairs';
       break;
@@ -149,7 +180,7 @@ export async function GET(req: Request) {
       if (!isMint(addr)) {
         return fail('`address` is not a valid mint', 400, 'expected 32-44 base58 chars');
       }
-      const chain = p('chain') || 'solana';
+      const chain = wantedChain || 'solana';
       upstreamPath = `/orders/v1/${chain}/${addr}`;
       kind = 'orders';
       break;
@@ -206,13 +237,48 @@ export async function GET(req: Request) {
   if (pairs === null) {
     return fail(`upstream ${type} returned an unrecognised shape`, 502);
   }
-  const rows = pairs.slice(0, limit);
+
+  // Report what the query actually spanned BEFORE any local narrowing, so the
+  // UI can say "23 pairs across 7 chains" instead of implying the query was
+  // chain-scoped upstream when it never was.
+  const seen: Record<string, number> = {};
+  for (const pr of pairs) {
+    if (pr?.chainId) seen[pr.chainId] = (seen[pr.chainId] || 0) + 1;
+  }
+  const matched = filterChain
+    ? pairs.filter((pr) => pr?.chainId === filterChain)
+    : pairs;
+
+  if (filterChain && matched.length === 0) {
+    // A filter that excludes everything is a real answer, but it must not be
+    // reported as though the chain had no pairs at all upstream.
+    return NextResponse.json({
+      kind: 'pairs',
+      type,
+      data: [],
+      returned: 0,
+      total: pairs.length,
+      filteredBy: filterChain,
+      chainsSeen: seen,
+      note: `upstream returned ${pairs.length} pairs across ${Object.keys(seen).length} chains; none on '${filterChain}'`,
+      upstream: DEX + upstreamPath,
+      fetchedAt: Math.floor(Date.now() / 1000),
+    });
+  }
+
+  const rows = matched.slice(0, limit);
   return NextResponse.json({
     kind: 'pairs',
     type,
     data: rows,
     returned: rows.length,
-    total: pairs.length,
+    total: matched.length,
+    // unfiltered total, so a caller can tell "30 rows" from "30 of 240"
+    upstreamTotal: pairs.length,
+    // Always report the spread. An unfiltered search that silently omitted this
+    // made a 16-chain result look like a single-chain one.
+    chainsSeen: seen,
+    ...(filterChain ? { filteredBy: filterChain } : {}),
     upstream: DEX + upstreamPath,
     fetchedAt: Math.floor(Date.now() / 1000),
   });

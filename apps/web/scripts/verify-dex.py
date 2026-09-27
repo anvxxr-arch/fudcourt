@@ -39,6 +39,7 @@ TYPES = {
     "boosts-top": ("profiles", {}),
     "search": ("pairs", {"q": "SOL"}),
     "tokens": ("pairs", {"addresses": WSOL}),
+    "tokens-v1": ("pairs", {"address": WSOL, "chain": "solana"}),
     "token-pairs": ("pairs", {"address": WSOL, "chain": "solana"}),
     "orders": ("orders", {"address": WSOL}),
 }
@@ -48,9 +49,15 @@ REJECTIONS = [
     ("unknown type", "type=bogus", 400),
     ("empty search", "type=search&q=", 400),
     ("invalid mint (tokens)", "type=tokens&addresses=notarealmint", 400),
+    ("invalid mint (tokens-v1)", "type=tokens-v1&address=zzz", 400),
     ("invalid mint (token-pairs)", "type=token-pairs&address=zzz", 400),
     ("invalid mint (orders)", "type=orders&address=zzz", 400),
     ("too many addresses", "type=tokens&addresses=" + ",".join([WSOL] * 31), 400),
+    # An unknown chain must fail as an unknown CHAIN. Before this was validated
+    # it produced "unknown type 'search?q=weth'" -- because the raw query string
+    # had leaked into `type` -- which points the caller at the wrong field.
+    ("unknown chain (search)", "type=search&q=SOL&chain=hedera", 400),
+    ("unknown chain (token-pairs)", f"type=token-pairs&address={WSOL}&chain=nope", 400),
 ]
 
 # Fields a mature pair is measured to always carry.
@@ -268,7 +275,53 @@ def verify_search(base):
     time.sleep(0.8)
 
 
-# --- 7. the proxy is honest about upstream --------------------------------
+# --- 7. search chain semantics (the no-op-param trap) ---------------------
+def verify_search_chain(base):
+    section("search chain filter is honest about being local")
+    # Measured: DexScreener search has NO server-side chain filter -- `q=weth`
+    # spans 16 chains. So a filtered view must not imply the upstream request
+    # was scoped, and the true spread must be reported either way.
+    status, body = get(f"{base}/api/dex?type=search&q=weth&limit=30")
+    d, why = require(status, body)
+    if why:
+        check(False, "unfiltered weth search", why)
+        return
+    seen = d.get("chainsSeen")
+    check(isinstance(seen, dict) and len(seen) > 1,
+          "unfiltered search reports the true chain spread",
+          note(f"{len(seen or {})} chains"))
+    check("filteredBy" not in d, "unfiltered search claims no filter was applied")
+
+    time.sleep(1.0)
+    status, body = get(f"{base}/api/dex?type=search&q=weth&limit=30&chain=solana")
+    d2, why = require(status, body)
+    if why:
+        check(False, "chain=solana search", why)
+        return
+    rows = d2.get("data") or []
+    check(all(p.get("chainId") == "solana" for p in rows),
+          "every filtered row is on the requested chain",
+          f"{sum(1 for p in rows if p.get('chainId') != 'solana')} off-chain")
+    check(d2.get("filteredBy") == "solana", "response names the applied filter")
+    check(d2.get("upstreamTotal", 0) >= d2.get("total", 0),
+          "upstreamTotal >= total, so the filter's cost is visible",
+          note(d2.get("upstreamTotal"), ">=", d2.get("total")))
+    check(isinstance(d2.get("chainsSeen"), dict) and d2["chainsSeen"],
+          "filtered response still reports what upstream spanned")
+
+    # A valid filter that matches nothing must say so, not read as "no pairs".
+    time.sleep(1.0)
+    status, body = get(f"{base}/api/dex?type=search&q=zzzznotarealtokenqq&limit=30&chain=solana")
+    d3, why = require(status, body)
+    if why:
+        check(False, "zero-match search", why)
+        return
+    check(d3.get("returned") == 0 and isinstance(d3.get("note"), str),
+          "zero matches returns an explanatory note, not a silent empty set",
+          note("note:", d3.get("note")))
+
+
+# --- 8. the proxy is honest about upstream --------------------------------
 def verify_upstream_honesty(base):
     section("proxy echoes the real upstream, not invented text")
     status, body = get(f"{base}/api/dex?type=search&q=SOL&limit=1")
@@ -298,6 +351,7 @@ def main():
     verify_pair_shape(base)
     verify_sparsity(base)
     verify_search(base)
+    verify_search_chain(base)
     verify_upstream_honesty(base)
 
     passed = sum(1 for ok, _, _ in results if ok)
