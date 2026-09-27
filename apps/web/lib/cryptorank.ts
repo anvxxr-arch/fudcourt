@@ -29,9 +29,12 @@
  *    within a cache window -- parity alone cannot detect fabrication.
  *    Re-enable only after: (1) nonexistent slug -> 404, (2) content matches
  *    an independent source (price feed / searchable event).
- *  - Fundraising data on the board therefore comes ONLY from the homepage
- *    slices (fallbackRecentFundingRounds + upcomingIco) via mode 'home',
- *    labelled as slices (6 rows each, partial by design).
+ *  - Fundraising data on the board comes from the homepage slices
+ *    (fallbackRecentFundingRounds + upcomingIco via mode 'home', labelled as
+ *    slices, 6 rows each) PLUS mode 'launchpool' (/past-launchpool +
+ *    /upcoming-launchpool HTML, gated 2026-09-27: nonexistent path -> 404,
+ *    past/upcoming date windows coherent, and the gno-land window matches
+ *    KuCoin's official GemPool announcement 2026-09-16 -> 2026-09-26).
  *
  * Absent upstream metric -> null -> renders an em-dash. Never 0, never faked.
  */
@@ -44,6 +47,7 @@ export const CR_MODES = [
   'categories', 'exchanges', 'coin', // live HTML class, 3-gate verified
   'listings',                      // /listings HTML, gate2 majors 0.7%
   'blockchains', 'chain',          // chain index (278) + keyed ecosystem detail
+  'launchpool',                    // event lists: /past-launchpool + /upcoming-launchpool
 ] as const;
 export type CrMode = (typeof CR_MODES)[number];
 
@@ -70,6 +74,12 @@ export const CR_DEFAULT_KEYS: Record<CrKeyedMode, string> = {
 export const CR_EXCHANGE_LISTS = ['cex/spot', 'dex/spot', 'perpetuals'] as const;
 export type CrExchangeKey = (typeof CR_EXCHANGE_LISTS)[number];
 export const CR_DEFAULT_EXCHANGE: CrExchangeKey = 'cex/spot';
+
+/** launchpool event lists (paths contain no slug; strict whitelist). */
+export const CR_LP_LISTS = ['past', 'upcoming'] as const;
+export type CrLpKey = (typeof CR_LP_LISTS)[number];
+export const CR_DEFAULT_LP: CrLpKey = 'past';
+
 export const CR_KEY_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 /** 28 overview categories (sitemap: 84 URLs = these x {overview,ath,performance}). */
@@ -112,6 +122,7 @@ export const CR_MODE_ARGS: Record<CrMode, [flag: '--path' | '--data-route', valu
   listings: ['--path', '/listings'],
   blockchains: ['--path', '/blockchains'],
   chain: ['--path', '/blockchains/ethereum'],        // default key; route overrides
+  launchpool: ['--path', '/past-launchpool'],        // default variant; route overrides
 };
 
 /** Canonical HTML URL of what a mode's data represents (for the envelope). */
@@ -129,6 +140,7 @@ export const CR_MODE_UPSTREAM: Record<CrMode, string> = {
   listings: `${CR_BASE}/listings`,
   blockchains: `${CR_BASE}/blockchains`,
   chain: `${CR_BASE}/blockchains/ethereum`,
+  launchpool: `${CR_BASE}/past-launchpool`,
 };
 
 export interface CrGlobal {
@@ -259,6 +271,24 @@ export interface CrChainInfo {
   ecosystem: string | null;
 }
 
+/**
+ * Launchpool event row (/past-launchpool | /upcoming-launchpool HTML).
+ * when/till = upstream ISO window; null upstream = not announced -> em-dash.
+ * SSR ships the first page only (?page= is NOT honored upstream -> honest
+ * 'of N' label, never a page param that silently no-ops).
+ */
+export interface CrLaunchpoolRow {
+  key: string;
+  name: string;
+  symbol: string;
+  category: string | null;
+  totalRaiseUsd: number | null;
+  priceUsd: number | null;
+  launchpads: string[];
+  when: string | null;
+  till: string | null;
+}
+
 /** Category header (categories/<slug> HTML). */
 export interface CrCategoryInfo {
   slug: string;
@@ -296,5 +326,7 @@ export interface CrEnvelope {
     mostSearched: CrCoin[];
     mostVisited: CrCoin[];
   };
+  /** launchpool mode: event rows (50-of-527 past / full upcoming). */
+  launchpoolRows?: CrLaunchpoolRow[];
   rows?: (CrCoin | CrTrendingRow | CrExchangeRow)[];
 }

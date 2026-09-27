@@ -71,6 +71,8 @@ HTML_ALLOWED = {
     "/exchanges/cex/spot",
     "/exchanges/dex/spot",
     "/exchanges/perpetuals",
+    "/past-launchpool",
+    "/upcoming-launchpool",
 }
 HTML_ALLOWED_RE = (
     re.compile(r"^/price/[a-z0-9][a-z0-9-]{0,63}$"),

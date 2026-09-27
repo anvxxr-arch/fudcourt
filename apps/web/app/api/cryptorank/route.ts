@@ -7,9 +7,11 @@ import {
   CR_DISABLED_REASON,
   CR_DEFAULT_EXCHANGE,
   CR_DEFAULT_KEYS,
+  CR_DEFAULT_LP,
   CR_EXCHANGE_LISTS,
   CR_KEY_RE,
   CR_KEYED_PATHS,
+  CR_LP_LISTS,
   CR_MODES,
   CR_MODE_ARGS,
   CR_MODE_UPSTREAM,
@@ -21,6 +23,7 @@ import {
   type CrEnvelope,
   type CrExchangeRow,
   type CrGlobal,
+  type CrLaunchpoolRow,
   type CrLiveMode,
   type CrMode,
   type CrFundingRound,
@@ -461,6 +464,26 @@ function envelope(
     };
   }
 
+  if (kind === 'launchpool') {
+    const fd = pp.fallbackData as { data?: unknown; total?: unknown } | null;
+    if (!fd || !Array.isArray(fd.data)) {
+      throw new Error('launchpool: missing fallbackData.data');
+    }
+    const lpRows = (fd.data as Record<string, unknown>[]).map(shapeLaunchpoolRow);
+    const total = typeof fd.total === 'number' ? fd.total : null;
+    const variant = opts.key === 'upcoming' ? 'upcoming' : 'past';
+    return {
+      ...base,
+      count: lpRows.length,
+      upstreamTotal: total,
+      slice:
+        `${variant} launchpool events — ${lpRows.length} rows shown` +
+        (total ? ` of ${total} upstream (SSR ships page 1 only; upstream ignores ?page=)` : '') +
+        '; windows are upstream ISO dates, null = not announced (em-dash)',
+      launchpoolRows: lpRows,
+    };
+  }
+
   // gainers / losers -- same upstream row shape, change derived from anchor
   const rows = Array.isArray(pp.fallbackData) ? (pp.fallbackData as RawCoin[]) : [];
   return {
@@ -469,6 +492,34 @@ function envelope(
     upstreamTotal: rows.length,
     changeSource: 'derived-from-histPrices-24H',
     rows: rows.map((r) => shapeCoin(r, changeFromAnchor(r))),
+  };
+}
+
+/**
+ * Launchpool event row: upstream ships price as a STRING (coerce) and the
+ * window as ISO strings (null = not announced -> null -> em-dash).
+ */
+function shapeLaunchpoolRow(r: Record<string, unknown>): CrLaunchpoolRow {
+  const cat = r.category as { name?: unknown } | null | undefined;
+  const pads = Array.isArray(r.launchpads)
+    ? (r.launchpads as { name?: unknown }[])
+        .map((p) => asStr(p.name))
+        .filter((n): n is string => n !== null)
+    : [];
+  const pv =
+    typeof r.price === 'string' || typeof r.price === 'number'
+      ? Number(r.price)
+      : NaN;
+  return {
+    key: asStr(r.key) ?? '',
+    name: asStr(r.name) ?? '',
+    symbol: asStr(r.symbol) ?? '',
+    category: cat ? asStr(cat.name) : null,
+    totalRaiseUsd: asNum(r.totalRaise),
+    priceUsd: Number.isFinite(pv) ? pv : null,
+    launchpads: pads,
+    when: asStr(r.when),
+    till: asStr(r.till),
   };
 }
 
@@ -540,6 +591,23 @@ export async function GET(req: NextRequest) {
       );
     }
     value = `/exchanges/${key}`;
+    upstream = `${CR_BASE}${value}`;
+  } else if (mode === 'launchpool') {
+    const raw = req.nextUrl.searchParams.get('key');
+    key = raw === null || raw === '' ? CR_DEFAULT_LP : raw;
+    if (!(CR_LP_LISTS as readonly string[]).includes(key)) {
+      return NextResponse.json(
+        {
+          error: 'invalid launchpool list',
+          detail: 'key must be one of the whitelisted event lists (never clamped)',
+          allowed: CR_LP_LISTS,
+          mode,
+          key,
+        },
+        { status: 400 },
+      );
+    }
+    value = key === 'upcoming' ? '/upcoming-launchpool' : '/past-launchpool';
     upstream = `${CR_BASE}${value}`;
   }
 

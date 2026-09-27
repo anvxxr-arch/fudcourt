@@ -702,6 +702,68 @@ def main() -> int:
     st, body, hdr = get(base, "chain", key="zzznoexist9999")
     check("chain: unknown slug -> 404 (upstream passthrough)", st == 404, f"got {st}")
 
+    # --- launchpool event lists (3-gate: 404 / date coherence / KuCoin truth)
+    st, body, hdr = get(base, "launchpool")
+    body = body or {}
+    if check("launchpool: HTTP 200 (default past)", st == 200, f"got {st}"):
+        rows = body.get("launchpoolRows") or []
+        check("launchpool past: full page of rows", len(rows) >= 40, f"n={len(rows)}")
+        total = body.get("upstreamTotal")
+        check(
+            "launchpool past: honest of-N (upstreamTotal > count)",
+            isinstance(total, int) and total >= len(rows) > 0,
+            f"total={total} count={body.get('count')}",
+        )
+        now_s = time.strftime("%Y-%m-%dT%H:%M", time.gmtime())
+        n_started = sum(
+            1 for r in rows
+            if isinstance(r.get("when"), str) and r["when"][:16] <= now_s
+        )
+        check(
+            "launchpool past: >=90% rows already started (date coherence)",
+            rows and n_started / len(rows) >= 0.9,
+            f"started={n_started}/{len(rows)} (page says 'past')",
+        )
+        gno = next((r for r in rows if r.get("key") == "gno-land"), None)
+        if gno:
+            check(
+                "launchpool: gno-land window == KuCoin official GemPool dates (ground truth)",
+                str(gno.get("when", "")).startswith("2026-09-16")
+                and str(gno.get("till", "")).startswith("2026-09-26"),
+                f"when={gno.get('when')} till={gno.get('till')}",
+            )
+        else:
+            info("launchpool: gno-land window",
+                 "row rotated off page 1 -> ground-truth date check skipped this run")
+        check(
+            "launchpool: slice labels of-N + page-1 limitation",
+            "of" in (body.get("slice") or "") and "page" in (body.get("slice") or ""),
+            str(body.get("slice"))[:150],
+        )
+
+    st, body, hdr = get(base, "launchpool", key="upcoming")
+    body = body or {}
+    if check("launchpool?upcoming: HTTP 200", st == 200, f"got {st}"):
+        rows = body.get("launchpoolRows") or []
+        check(
+            "launchpool?upcoming: upstreamTotal == count (whole list ships)",
+            body.get("upstreamTotal") == body.get("count") == len(rows),
+            f"total={body.get('upstreamTotal')} count={body.get('count')} n={len(rows)}",
+        )
+        yday = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 86400))
+        coherent = all(
+            not isinstance(r.get("when"), str) or r["when"][:10] >= yday
+            for r in rows
+        )
+        check(
+            "launchpool?upcoming: no window in the past (TBA or future)",
+            coherent,
+            str([(r.get("name"), r.get("when")) for r in rows])[:160],
+        )
+
+    st, body, hdr = get(base, "launchpool", key="zzz")
+    check("launchpool: bad variant -> 400 (never clamped)", st == 400, f"got {st}")
+
     # ---------------------------------------------------------------- 4
     note("error contract")
     st, body, hdr = get(base, "hack")
@@ -709,7 +771,7 @@ def main() -> int:
     check("unknown mode -> 400", st == 400, f"got {st}")
     check(
         "400 lists allowed modes",
-        isinstance(body.get("modes"), list) and len(body["modes"]) == 13,
+        isinstance(body.get("modes"), list) and len(body["modes"]) == 14,
         str(body.get("modes")),
     )
 
@@ -751,12 +813,14 @@ def main() -> int:
     )
     info(
         "gated out: /performance",
-        "SSR payload carries NO period data (histPrices=0/100 rows, interest=null, initData=global only) "
-        "while the page's columns are 7D/30D/3M/6M/YTD -> would render all em-dash under an ROI heading",
+        "rendered table ships literal N/A in EVERY ROI cell (even BTC/ETH), SSR payload has no period data, "
+        "data-route performance.json is 602B rows=0, 53 mined JS chunks expose no data endpoint, and "
+        "headless+headful HAR captures both hit the CF interstitial -> no honest ROI source exists",
     )
     info(
         "gated out: /funds/*, /upcoming-ico, /active-ico, /funding-analytics",
-        "403 Cloudflare interstitial to direct fetch (same wall as /funding-rounds) -> not wired",
+        "403 Cloudflare interstitial to direct fetch AND to headless/headful Chrome HAR captures "
+        "(2 browser attempts, Turnstile light never cleared) -> policy wall, not wired",
     )
 
     note("upstream wall (informational)")
@@ -807,6 +871,8 @@ def main() -> int:
           "dex/spot" in comp and "perpetuals" in comp and "setExKey" in comp, "")
     check("component: chain board wired",
           "loadMode('chain'" in comp and "fetchChainIndex" in comp and "ecosystem tokens" in comp, "")
+    check("component: launchpool wired",
+          "loadMode('launchpool'" in comp and "setLpKey" in comp and "Launchpool" in comp, "")
     helper_src = read("scripts/cr_fetch.py")
     check("helper: data-route mode present", "--data-route" in helper_src
           and "_next/data" in helper_src, "")
@@ -814,12 +880,12 @@ def main() -> int:
           and "buildid.txt" in helper_src, "")
     lib = read("lib/cryptorank.ts")
     lib_modes = set(re.findall(
-        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain)'", lib))
+        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool)'", lib))
     check(
-        "lib modes == proxy modes (13)",
+        "lib modes == proxy modes (14)",
         lib_modes == {"home", "coins", "trending", "gainers", "losers", "funding",
                       "unlocks", "categories", "exchanges", "coin", "listings",
-                      "blockchains", "chain"},
+                      "blockchains", "chain", "launchpool"},
         str(sorted(lib_modes)),
     )
     check(

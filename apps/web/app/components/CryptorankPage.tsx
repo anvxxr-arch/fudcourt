@@ -138,6 +138,10 @@ export default function CryptorankPage() {
   const [listings, setListings] = useState<CrEnvelope | null>(null);
   const [listingsErr, setListingsErr] = useState('');
 
+  const [lpKey, setLpKey] = useState<string>('past');
+  const [lp, setLp] = useState<CrEnvelope | null>(null);
+  const [lpErr, setLpErr] = useState('');
+
   // chain board (index-fed selector + keyed ecosystem detail)
   const [chainRows, setChainRows] = useState<CrChainRow[]>([]);
   const [chainSlug, setChainSlug] = useState<string>('ethereum');
@@ -222,6 +226,18 @@ export default function CryptorankPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const fetchLp = useCallback(async (key = 'past', fresh = false) => {
+    try {
+      const env = await loadMode('launchpool', fresh, key);
+      setLp(env);
+      setLpErr('');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setLpErr(msg);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fetchChainIndex = useCallback(async (fresh = false) => {
     try {
       const env = await loadMode('blockchains', fresh);
@@ -270,6 +286,11 @@ export default function CryptorankPage() {
     void fetchChain(chainSlug);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chainSlug]);
+
+  useEffect(() => {
+    void fetchLp(lpKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lpKey]);
 
   useEffect(() => {
     void fetchCat(catSlug);
@@ -856,12 +877,84 @@ export default function CryptorankPage() {
             </tbody>
           </table>
         </div>
+
+        {/* launchpool events (past / upcoming — 3-gate verified 2026-09-27) */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+              Launchpool{lpKey === 'upcoming' ? ' (upcoming)' : ' (past)'}
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {([['past', 'Past'], ['upcoming', 'Upcoming']] as const).map(([k, l]) => (
+                <button
+                  key={k}
+                  onClick={() => setLpKey(k)}
+                  style={{
+                    fontSize: 10, padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
+                    border: `1px solid ${lpKey === k ? C.accent : C.border}`,
+                    background: lpKey === k ? C.accent : 'transparent',
+                    color: lpKey === k ? C.bg : C.dim,
+                    fontWeight: lpKey === k ? 700 : 400,
+                  }}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: 10, color: C.dim }}>
+              {lp ? (lp.upstreamTotal != null ? `${lp.count} of ${lp.upstreamTotal}` : `${lp.count}`) : '—'} events
+            </div>
+          </div>
+          {lpErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ launchpool error: {lpErr} — nothing faked</div>
+          )}
+          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Project</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Launchpad</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Window</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Raise</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!lp && !lpErr && (
+                  <tr><td colSpan={4} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                )}
+                {(lp?.launchpoolRows ?? []).map((r0) => (
+                  <tr key={r0.key} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <td style={{ padding: '5px 6px' }}>
+                      <span style={{ color: C.white }}>{r0.name}</span>
+                      <span style={{ color: C.dim, marginLeft: 6, fontSize: 10 }}>{r0.symbol}</span>
+                      {r0.category && <div style={{ fontSize: 10, color: C.dim }}>{r0.category}</div>}
+                    </td>
+                    <td style={{ padding: '5px 6px', color: C.dim }}>{r0.launchpads.join(', ') || '—'}</td>
+                    <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>
+                      {r0.when ? shortDate(r0.when) : '—'}{r0.when || r0.till ? ` → ${r0.till ? shortDate(r0.till) : '—'}` : ''}
+                    </td>
+                    <td style={{ padding: '5px 6px', color: C.white, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {moneyCompact(r0.totalRaiseUsd)}
+                    </td>
+                  </tr>
+                ))}
+                {lp && (lp.launchpoolRows ?? []).length === 0 && (
+                  <tr><td colSpan={4} style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+            {lp?.slice ?? ''}
+          </div>
+        </div>
       </div>
 
       <div style={{ fontSize: 10, color: C.dim, marginTop: 8 }}>
-        {home?.slice ?? ''} — fundraising rows above come from the homepage slice only (6 rounds + 6 IDOs,
-        partial by design and press-verified: CoinGlass/CoinMarketCap 2026-09-25 matches the GlobeNewswire
-        release). The /funding-rounds and /token-unlock HTML paths answer a Cloudflare interstitial to every
+        {home?.slice ?? ''} — funding rounds + IDO rows come from the homepage slice only (6 + 6, partial by
+        design and press-verified: CoinGlass/CoinMarketCap 2026-09-25 matches the GlobeNewswire release);
+        Launchpool rows are full event lists (past 50 of 527 / all upcoming) with windows verified against
+        KuCoin's official GemPool dates (gno-land 2026-09-16 → 09-26). The /funding-rounds and /token-unlock HTML paths answer a Cloudflare interstitial to every
         client tried, and their Next.js data routes serve SYNTHETIC decoy (nonexistent slugs return 200
         fabricated payloads; measured 2026-09-27) — those modes are refused by the API with a 503, never
         rendered. Contract + decoy detector: scripts/verify-cryptorank.py.
