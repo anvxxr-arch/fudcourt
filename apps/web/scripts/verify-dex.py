@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -458,6 +459,37 @@ def verify_address_families(base: str) -> None:
         check(status == 400, f"malformed {bad!r} is still rejected 400", note("got", status))
 
 
+def verify_ui_wiring(base: str) -> None:
+    """Every proxy type must be reachable from the UI, not just from curl.
+
+    Measured 2026-09-27: boosts-top and orders were served (200 in the type
+    matrix) but no component requested them -- dead API surface. The proxy can
+    drift back into that state with any refactor that drops a mode, so the
+    component source is checked against DEX_TYPES here.
+    """
+    section("every proxy type is reachable from the UI")
+
+    comp = os.path.join(os.path.dirname(__file__), "..", "app", "components", "DexPage.tsx")
+    with open(comp, encoding="utf-8") as fh:
+        src = fh.read()
+
+    # 'tokens-v1' and 'token-pairs' are chosen via a variable in mint mode, but
+    # their literals still live in the source; a mode key like 'boosts-top' must
+    # appear as a MODES entry. A bare substring is enough -- the failure mode we
+    # are guarding against is a mode being deleted outright.
+    for t in TYPES:
+        check(t in src, f"type '{t}' has a UI path", note("DexPage.tsx"))
+
+    # And the reverse: no UI mode may point at a type the proxy does not serve.
+    # 'pairs' is the profiles->tokens join and 'mint' picks tokens-v1/token-pairs
+    # from a toggle -- both internal, neither is a direct type name.
+    keys = re.findall(r"\{ key: '([a-z0-9-]+)',", src)
+    internal = ("pairs", "mint")
+    unknown = [k for k in keys if k not in internal and k not in TYPES]
+    check(not unknown, "every UI mode maps to a served type or an internal join",
+          note("unmapped:", unknown) if unknown else f"{len(keys)} modes")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default=DEFAULT_BASE)
@@ -476,6 +508,7 @@ def main():
     verify_upstream_honesty(base)
     verify_burst(base)
     verify_address_families(base)
+    verify_ui_wiring(base)
 
     passed = sum(1 for ok, _, _ in results if ok)
     failed = len(results) - passed

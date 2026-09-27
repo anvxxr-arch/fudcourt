@@ -6,13 +6,15 @@ import { DEX_CHAINS, isMint, type DexPair, type DexProfile } from '../../lib/dex
 
 const SEARCH_CHAINS = DEX_CHAINS as readonly string[];
 
-type Mode = 'pairs' | 'profiles' | 'boosts' | 'search' | 'mint';
+type Mode = 'pairs' | 'profiles' | 'boosts' | 'boosts-top' | 'search' | 'mint' | 'orders';
 
 const MODES: { key: Mode; label: string; hint: string }[] = [
   { key: 'profiles', label: 'new profiles', hint: 'tokens that just published a profile on DexScreener. Carries marketing metadata only -- no price, no volume, no liquidity. Joining one to its markets is what enriches it.' },
   { key: 'boosts', label: 'paid boosts', hint: 'tokens with active paid promotion. `amount`/`totalAmount` are the paid spend in USD; a large totalAmount with a tiny amount is an old campaign topping up, not a fresh pump.' },
+  { key: 'boosts-top', label: 'top boosts', hint: 'the most-boosted tokens right now (token-boosts/top/v1). Same profile family as paid boosts -- marketing metadata only, no price/volume. `totalAmount` is lifetime paid spend; compare it against `amount` to spot a campaign topping up vs a fresh push.' },
   { key: 'pairs', label: 'top pairs', hint: 'the busiest Solana markets by volume, via the profiles->pairs join. Measured on this feed: liquidity is present on only 1 in 4 of a fresh cohort and labels on 0 in 4, so those cells render as an em-dash, never 0.' },
   { key: 'search', label: 'search', hint: 'DexScreener search by symbol or address. Case-insensitive substring match on the returned set; the API caps at 30 pairs per query.' },
+  { key: 'orders', label: 'token orders', hint: 'DexScreener orders for one token: profile/boost payments with their status (orders/v1). Empty lists are shown as empty -- upstream really returned none. Useful for checking whether a token actually PAID for its profile or boost.' },
   { key: 'mint', label: 'mint lookup', hint: 'exact on-chain address lookup. A malformed address is rejected locally with a 400 -- upstream answers 200 with an empty list, which would make a typo look exactly like a token with no markets. Base58 mints, 0x EVM addresses and NEAR names are all accepted; the live profile feed is not base58-only.' },
 ];
 
@@ -79,6 +81,7 @@ export default function DexPage() {
     note?: string;
   }>({});
   const [filter, setFilter] = useState('');
+  const [orderData, setOrderData] = useState<{ orders: Record<string, unknown>[]; boosts: Record<string, unknown>[] } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -116,6 +119,12 @@ export default function DexPage() {
         // user's rather than a guess.
         const endpoint = deepestOnly ? 'tokens-v1' : 'token-pairs';
         url = `/api/dex?type=${endpoint}&address=${encodeURIComponent(addr.trim())}&chain=${chain}`;
+      } else if (mode === 'orders') {
+        if (!addr.trim()) throw new Error('enter a token address');
+        // orders/v1 answers {orders, boosts}: payment records for one token.
+        // Same local validation as mint lookup -- upstream would 200 an empty
+        // object for garbage and a typo would read as "this token paid nothing".
+        url = `/api/dex?type=orders&address=${encodeURIComponent(addr.trim())}&chain=${chain}`;
       } else if (mode === 'search') {
         if (!q.trim()) throw new Error('enter a search term');
         // DexScreener has no server-side chain filter, so the chain select
@@ -124,7 +133,7 @@ export default function DexPage() {
         const chainQ = searchChain ? `&chain=${encodeURIComponent(searchChain)}` : '';
         url = `/api/dex?type=search&q=${encodeURIComponent(q.trim())}&limit=30${chainQ}`;
       } else {
-        url = `/api/dex?type=${mode === 'boosts' ? 'boosts' : 'profiles'}&limit=30`;
+        url = `/api/dex?type=${mode === 'boosts' ? 'boosts' : mode === 'boosts-top' ? 'boosts-top' : 'profiles'}&limit=30`;
       }
 
       const res = await fetch(url, { cache: 'no-store' });
@@ -133,9 +142,15 @@ export default function DexPage() {
       if (json.kind === 'profiles') {
         setProfiles(json.data || []);
         setRows([]);
+        setOrderData(null);
+      } else if (json.kind === 'orders') {
+        setOrderData({ orders: json.orders || [], boosts: json.boosts || [] });
+        setRows([]);
+        setProfiles([]);
       } else {
         setRows(json.data || []);
         setProfiles([]);
+        setOrderData(null);
       }
       // Merge, do not replace: the join may have already recorded addresses it
       // had to skip, and a bare setMeta here silently dropped that note -- the
@@ -157,6 +172,7 @@ export default function DexPage() {
       // stale rows under an error banner read as current data.
       setRows([]);
       setProfiles([]);
+      setOrderData(null);
     } finally {
       setLoading(false);
     }
@@ -166,7 +182,7 @@ export default function DexPage() {
   // The server-side limiter protects it too, but debouncing here is the cheaper
   // fix for the common case: typing a 44-char mint should cost one request, not
   // forty-four. A mode toggle is instant; a text field waits for a pause.
-  const textDriven = mode === 'search' || mode === 'mint';
+  const textDriven = mode === 'search' || mode === 'mint' || mode === 'orders';
   useEffect(() => {
     if (!textDriven) { load(); return; }
     if (!q.trim() && !addr.trim()) return;
@@ -222,18 +238,20 @@ export default function DexPage() {
             </select>
           </>
         )}
-        {mode === 'mint' && (
+        {(mode === 'mint' || mode === 'orders') && (
           <>
-            <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="base58 mint address…"
+            <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="token address (base58 / 0x / name)…"
               style={{ background: C.card, border: `1px solid ${C.border}`, color: C.white, padding: '6px 10px', borderRadius: 6, fontSize: 11, width: 340 }} />
             <select value={chain} onChange={(e) => setChain(e.target.value)}
               style={{ background: C.card, border: `1px solid ${C.border}`, color: C.white, padding: '6px 8px', borderRadius: 6, fontSize: 11 }}>
               {SEARCH_CHAINS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
-            <label style={{ color: C.dim, fontSize: 10, display: 'inline-flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}>
-              <input type="checkbox" checked={deepestOnly} onChange={(e) => setDeepestOnly(e.target.checked)} />
-              deepest pair only (tokens/v1)
-            </label>
+            {mode === 'mint' && (
+              <label style={{ color: C.dim, fontSize: 10, display: 'inline-flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}>
+                <input type="checkbox" checked={deepestOnly} onChange={(e) => setDeepestOnly(e.target.checked)} />
+                deepest pair only (tokens/v1)
+              </label>
+            )}
           </>
         )}
         {rows.length > 0 && (
@@ -256,7 +274,7 @@ export default function DexPage() {
         <p style={{ color: C.dim, fontSize: 12 }}>row list withheld — the request above failed.</p>
       ) : (
         <>
-          {meta.upstream && (
+          {meta.upstream && meta.returned != null && (
             <p style={{ color: C.dim, fontSize: 10, margin: '0 0 4px' }}>
               {meta.returned} shown{meta.total != null && meta.total !== meta.returned ? ` of ${meta.total}` : ''}
               {rows.length > 0 && ` · liq coverage ${cov('liquidity')} · labels ${cov('labels')} · txns ${cov('txns')}`}
@@ -279,7 +297,7 @@ export default function DexPage() {
           )}
 
           {/* profiles / boosts */}
-          {(mode === 'profiles' || mode === 'boosts') && (
+          {(mode === 'profiles' || mode === 'boosts' || mode === 'boosts-top') && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 8 }}>
               {profiles.length === 0 && <p style={{ color: C.dim, fontSize: 12 }}>upstream returned no profiles.</p>}
               {profiles.map((p, i) => (
@@ -309,6 +327,60 @@ export default function DexPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* orders: payment records for one token (orders/v1). Both lists are
+              always present upstream, so an empty list here is a real empty
+              result, not an absent field -- rendered as text saying exactly
+              that, never as 0 rows implying a failure. */}
+          {mode === 'orders' && orderData && (
+            <div>
+              {orderData.orders.length === 0 && orderData.boosts.length === 0 && (
+                <p style={{ color: C.dim, fontSize: 12 }}>
+                  upstream returned no orders and no boosts for this token — genuinely none, nothing faked.
+                </p>
+              )}
+              {orderData.orders.length > 0 && (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, marginBottom: 10 }}>
+                  <thead>
+                    <tr style={{ color: C.dim, textAlign: 'left' }}>
+                      <th style={{ padding: '4px 8px' }}>order</th>
+                      <th style={{ padding: '4px 8px' }}>status</th>
+                      <th style={{ padding: '4px 8px' }}>paid</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderData.orders.map((o, i) => (
+                      <tr key={String(o.paymentTimestamp ?? i)} style={{ borderTop: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '5px 8px', color: C.white }}>{String(o.type ?? '—')}</td>
+                        <td style={{ padding: '5px 8px', color: o.status === 'approved' ? C.green : '#fbbf24' }}>{String(o.status ?? '—')}</td>
+                        <td style={{ padding: '5px 8px', color: C.dim }}>{age(typeof o.paymentTimestamp === 'number' ? o.paymentTimestamp : null)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {orderData.boosts.length > 0 && (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                  <thead>
+                    <tr style={{ color: C.dim, textAlign: 'left' }}>
+                      <th style={{ padding: '4px 8px' }}>boost payment</th>
+                      <th style={{ padding: '4px 8px' }}>amount</th>
+                      <th style={{ padding: '4px 8px' }}>paid</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderData.boosts.map((b, i) => (
+                      <tr key={String(b.id ?? i)} style={{ borderTop: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '5px 8px', color: C.white }}>{String(b.tokenAddress ?? '—').slice(0, 10)}…</td>
+                        <td style={{ padding: '5px 8px', color: C.white }}>{money(typeof b.amount === 'number' ? b.amount : null)}</td>
+                        <td style={{ padding: '5px 8px', color: C.dim }}>{age(typeof b.paymentTimestamp === 'number' ? b.paymentTimestamp : null)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
 
