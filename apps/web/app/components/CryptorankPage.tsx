@@ -128,9 +128,14 @@ export default function CryptorankPage() {
   const [cat, setCat] = useState<CrEnvelope | null>(null);
   const [catErr, setCatErr] = useState('');
 
-  // exchange board (fixed spot CEX list)
+  // exchange board (keyed: cex/spot | dex/spot | perpetuals)
+  const [exKey, setExKey] = useState<string>('cex/spot');
   const [ex, setEx] = useState<CrEnvelope | null>(null);
   const [exErr, setExErr] = useState('');
+
+  // listings board (three /listings widgets)
+  const [listings, setListings] = useState<CrEnvelope | null>(null);
+  const [listingsErr, setListingsErr] = useState('');
 
   const [tab, setTab] = useState<MarketTab>('coins');
   const [market, setMarket] = useState<CrEnvelope | null>(null);
@@ -198,9 +203,9 @@ export default function CryptorankPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchEx = useCallback(async (fresh = false) => {
+  const fetchEx = useCallback(async (key = 'cex/spot', fresh = false) => {
     try {
-      const env = await loadMode('exchanges', fresh);
+      const env = await loadMode('exchanges', fresh, key);
       setEx(env);
       setExErr('');
     } catch (e) {
@@ -210,10 +215,23 @@ export default function CryptorankPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const fetchListings = useCallback(async (fresh = false) => {
+    try {
+      const env = await loadMode('listings', fresh);
+      setListings(env);
+      setListingsErr('');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setListingsErr(msg);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     void fetchHome();
     void fetchDetail('bitcoin');
-    void fetchEx();
+    void fetchEx(exKey);
+    void fetchListings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -221,6 +239,11 @@ export default function CryptorankPage() {
     void fetchCat(catSlug);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catSlug]);
+
+  useEffect(() => {
+    void fetchEx(exKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exKey]);
 
   useEffect(() => {
     void fetchMarket(tab);
@@ -253,7 +276,8 @@ export default function CryptorankPage() {
             void fetchMarket(tab, true);
             void fetchDetail(coinKey, true);
             void fetchCat(catSlug, true);
-            void fetchEx(true);
+            void fetchEx(exKey, true);
+            void fetchListings(true);
           }}
           style={{
             marginLeft: 'auto', fontSize: 11, color: C.bg, background: C.accent,
@@ -459,6 +483,62 @@ export default function CryptorankPage() {
           `source: /${tab} SSR payload · chg 24h derived from upstream histPrices["24H"] anchor (150-row upstream list)`}
       </div>
 
+      {/* -------------------------- listings ------------------------------ */}
+      {listingsErr && (
+        <div style={{ fontSize: 12, color: C.red, marginTop: 14 }}>
+          ⚠ listings error: {listingsErr} — nothing faked
+        </div>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 10, marginTop: 16 }}>
+        {([
+          ['Recently added', listings?.listings?.recentlyAdded, true],
+          ['Most searched', listings?.listings?.mostSearched, false],
+          ['Most visited', listings?.listings?.mostVisited, false],
+        ] as const).map(([title, rowsL, showDate]) => (
+          <div key={title} style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+              <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>{title}</div>
+              <div style={{ fontSize: 10, color: C.dim }}>{rowsL?.length ?? '—'} coins</div>
+            </div>
+            <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                    <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
+                    <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Coin</th>
+                    <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Price</th>
+                    <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Chg 24h</th>
+                    <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Chg 7d</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!listings && !listingsErr && (
+                    <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  )}
+                  {(rowsL ?? []).map((c) => (
+                    <tr key={`${c.key}-${c.rank}`} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '5px 5px', color: C.dim, width: 24 }}>{c.rank ?? '—'}</td>
+                      <td style={{ padding: '5px 5px' }}>
+                        <div style={{ color: C.white }}>{c.name}</div>
+                        <div style={{ color: C.dim, fontSize: 10 }}>
+                          {c.symbol}{showDate && c.listingDate ? ` · ${shortDate(c.listingDate)}` : ''}
+                        </div>
+                      </td>
+                      <td style={{ padding: '5px 5px', color: C.white }}>{money(c.priceUsd)}</td>
+                      <td style={{ padding: '5px 5px', color: chgColor(c.change24h) }}>{pct(c.change24h)}</td>
+                      <td style={{ padding: '5px 5px', color: chgColor(c.change7d ?? null)}}>{pct(c.change7d ?? null)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+        {listings?.slice ?? 'source: /listings SSR payload'}
+      </div>
+
       {/* ------------------- sectors + exchanges --------------------------- */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, marginTop: 16 }}>
         {/* sectors (categories, keyed) */}
@@ -530,9 +610,28 @@ export default function CryptorankPage() {
 
         {/* exchanges (spot CEX list) */}
         <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Top CEX (spot)</div>
-            <div style={{ fontSize: 10, color: C.dim }}>{ex?.count ?? '—'} exchanges</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+              Exchanges{exKey === 'dex/spot' ? ' (DEX spot)' : exKey === 'perpetuals' ? ' (perpetuals)' : ' (CEX spot)'}
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {([['cex/spot', 'CEX'], ['dex/spot', 'DEX'], ['perpetuals', 'Perps']] as const).map(([k, l]) => (
+                <button
+                  key={k}
+                  onClick={() => setExKey(k)}
+                  style={{
+                    fontSize: 10, padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
+                    border: `1px solid ${exKey === k ? C.accent : C.border}`,
+                    background: exKey === k ? C.accent : 'transparent',
+                    color: exKey === k ? C.bg : C.dim,
+                    fontWeight: exKey === k ? 700 : 400,
+                  }}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: 10, color: C.dim }}>{ex?.count ?? '—'} venues</div>
           </div>
           {exErr && (
             <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ exchanges error: {exErr} — nothing faked</div>

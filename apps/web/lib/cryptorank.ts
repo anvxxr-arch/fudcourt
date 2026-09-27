@@ -42,6 +42,7 @@ export const CR_MODES = [
   'home', 'coins', 'trending', 'gainers', 'losers',
   'funding', 'unlocks',            // REFUSED (synthetic data-route class)
   'categories', 'exchanges', 'coin', // live HTML class, 3-gate verified
+  'listings',                      // /listings HTML, gate2 majors 0.7%
 ] as const;
 export type CrMode = (typeof CR_MODES)[number];
 
@@ -61,6 +62,11 @@ export const CR_DEFAULT_KEYS: Record<CrKeyedMode, string> = {
   categories: 'chain',
   coin: 'bitcoin',
 };
+
+/** exchanges takes a STRICT whitelist key (paths contain '/', regex won't do). */
+export const CR_EXCHANGE_LISTS = ['cex/spot', 'dex/spot', 'perpetuals'] as const;
+export type CrExchangeKey = (typeof CR_EXCHANGE_LISTS)[number];
+export const CR_DEFAULT_EXCHANGE: CrExchangeKey = 'cex/spot';
 export const CR_KEY_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 /** 28 overview categories (sitemap: 84 URLs = these x {overview,ath,performance}). */
@@ -98,8 +104,9 @@ export const CR_MODE_ARGS: Record<CrMode, [flag: '--path' | '--data-route', valu
   funding: ['--data-route', '/funding-rounds'],
   unlocks: ['--data-route', '/token-unlock'],
   categories: ['--path', '/categories/chain'],      // default key; route overrides
-  exchanges: ['--path', '/exchanges/cex/spot'],
+  exchanges: ['--path', '/exchanges/cex/spot'],     // default key; route overrides
   coin: ['--path', '/price/bitcoin'],               // default key; route overrides
+  listings: ['--path', '/listings'],
 };
 
 /** Canonical HTML URL of what a mode's data represents (for the envelope). */
@@ -114,6 +121,7 @@ export const CR_MODE_UPSTREAM: Record<CrMode, string> = {
   categories: `${CR_BASE}/categories/chain`,
   exchanges: `${CR_BASE}/exchanges/cex/spot`,
   coin: `${CR_BASE}/price/bitcoin`,
+  listings: `${CR_BASE}/listings`,
 };
 
 export interface CrGlobal {
@@ -144,6 +152,8 @@ export interface CrCoin {
   lifeCycle: string | null;
   athUsd: number | null;
   change24h: number | null;
+  /** listings widget only: derived from histPrices['7D'] anchor. */
+  change7d?: number | null;
 }
 
 export interface CrTrendingRow {
@@ -250,5 +260,11 @@ export interface CrEnvelope {
   upcomingIco?: CrUpcomingIco[];
   category?: CrCategoryInfo;
   detail?: CrCoinDetail;
+  /** listings mode: three independent 20-row widgets. */
+  listings?: {
+    recentlyAdded: CrCoin[];
+    mostSearched: CrCoin[];
+    mostVisited: CrCoin[];
+  };
   rows?: (CrCoin | CrTrendingRow | CrExchangeRow)[];
 }

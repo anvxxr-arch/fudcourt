@@ -3,9 +3,11 @@
 verify-cryptorank.py -- executable contract for the CryptoRank integration.
 
     route:      GET http://127.0.0.1:3100/api/cryptorank?mode=<mode>
-    modes:      home | coins | trending | losers | gainers
-                categories | exchanges | coin   (coin/categories take ?key=,
-                validated CR_KEY_RE: bad format 400, honest upstream miss 404)
+    modes:      home | coins | trending | losers | gainers | listings
+                categories | coin   (?key=, validated CR_KEY_RE: bad format
+                400, honest upstream miss 404)
+                exchanges          (?key= strict whitelist: cex/spot,
+                dex/spot, perpetuals; else 400)
                 funding | unlocks   (503 loud refusal -- synthetic data-route)
                 funding | unlocks -> 503 REFUSED (upstream /_next/data class
                 serves synthetic decoy; see lib/cryptorank.ts CR_DISABLED)
@@ -547,6 +549,88 @@ def main() -> int:
     st, body, hdr = get(base, "coin", key="zzznoexist9999")
     check("key contract: unknown coin -> 404 (upstream passthrough)", st == 404, f"got {st}")
 
+    # --- exchange variants (strict whitelist key)
+    st, body, hdr = get(base, "exchanges", key="dex/spot")
+    body = body or {}
+    if check("exchanges?dex: HTTP 200", st == 200, f"got {st}"):
+        rows = body.get("rows") or []
+        check("exchanges?dex: >=40 venues", len(rows) >= 40, f"n={len(rows)}")
+        check(
+            "exchanges?dex: top venue uniswap",
+            bool(rows) and "uniswap" in (rows[0].get("key") or ""),
+            str(rows[0].get("key") if rows else None),
+        )
+        check(
+            "exchanges?dex: DEX variant labelled",
+            "DEX spot" in (body.get("slice") or ""),
+            str(body.get("slice"))[:100],
+        )
+    st, body, hdr = get(base, "exchanges", key="perpetuals")
+    body = body or {}
+    if check("exchanges?perp: HTTP 200", st == 200, f"got {st}"):
+        rows = body.get("rows") or []
+        check("exchanges?perp: >=40 venues", len(rows) >= 40, f"n={len(rows)}")
+        check(
+            "exchanges?perp: top venue binance futures",
+            bool(rows) and "binance" in (rows[0].get("key") or ""),
+            str(rows[0].get("key") if rows else None),
+        )
+        vols = [r.get("dayVolUsd") for r in rows if isinstance(r.get("dayVolUsd"), (int, float))]
+        check(
+            "exchanges?perp: day-volume sum plausible (10B..10T)",
+            bool(vols) and 1e10 <= sum(vols) <= 1e13,
+            f"sum={sum(vols):.3g}",
+        )
+    st, body, hdr = get(base, "exchanges", key="bogus/list")
+    check("exchanges: non-whitelisted key -> 400", st == 400, f"got {st}")
+
+    # --- listings (three widgets)
+    st, body, hdr = get(base, "listings")
+    body = body or {}
+    if check("listings: HTTP 200", st == 200, f"got {st}"):
+        li = body.get("listings") or {}
+        ra, ms, mv = li.get("recentlyAdded") or [], li.get("mostSearched") or [], li.get("mostVisited") or []
+        check("listings: three widgets x20", len(ra) == 20 and len(ms) == 20 and len(mv) == 20,
+              f"ra={len(ra)} ms={len(ms)} mv={len(mv)}")
+        check("listings: count == sum of widgets",
+              body.get("count") == len(ra) + len(ms) + len(mv),
+              f"count={body.get('count')}")
+        check(
+            "listings: changeSource derived (labelled)",
+            body.get("changeSource") == "derived-from-histPrices-24H",
+            str(body.get("changeSource")),
+        )
+        # recentlyAdded: anchor coverage is MIXED (row0 ships no 24h hist, most
+        # rows do) -> derived where present, em-dash where absent, never faked
+        n24 = sum(1 for r in ra if r.get("change24h") is not None)
+        check("listings: recentlyAdded chg24h derived where anchor ships (>=14/20)",
+              n24 >= 14, f"non-null={n24}/{len(ra)}")
+        wild = [r.get("change24h") for r in ra
+                if isinstance(r.get("change24h"), (int, float))
+                and abs(r["change24h"]) > 300]
+        check("listings: recentlyAdded chg24h plausible (|chg|<=300%)",
+              not wild, f"wild={wild[:3]}")
+        n24s = sum(1 for r in ms if r.get("change24h") is not None)
+        check("listings: mostSearched chg24h derived (>=14/20)",
+              n24s >= 14, f"non-null={n24s}/{len(ms)}")
+        n7 = sum(1 for r in ra if r.get("change7d") is not None)
+        check("listings: recentlyAdded chg7d derived (>=14/20)",
+              n7 >= 14, f"non-null={n7}/{len(ra)}")
+        # ground truth: BTC row in mostVisited
+        btc = next((r for r in mv if r.get("symbol") == "BTC"), None)
+        if btc and isinstance(btc_t, (int, float)) and btc.get("priceUsd"):
+            diff = abs(btc["priceUsd"] - btc_t) / btc_t * 100
+            check("listings: BTC matches independent ground truth (<=3%)",
+                  diff <= 3,
+                  f"mine={btc['priceUsd']} truth={btc_t} diff={diff:.3f}%")
+        else:
+            check("listings: BTC row for ground truth", False, f"btc={btc and btc.get('priceUsd')}")
+        check(
+            "listings: slice provenance labelled",
+            "widgets" in (body.get("slice") or ""),
+            str(body.get("slice"))[:140],
+        )
+
     # ---------------------------------------------------------------- 4
     note("error contract")
     st, body, hdr = get(base, "hack")
@@ -554,7 +638,7 @@ def main() -> int:
     check("unknown mode -> 400", st == 400, f"got {st}")
     check(
         "400 lists allowed modes",
-        isinstance(body.get("modes"), list) and len(body["modes"]) == 10,
+        isinstance(body.get("modes"), list) and len(body["modes"]) == 11,
         str(body.get("modes")),
     )
 
@@ -587,6 +671,21 @@ def main() -> int:
         "the earlier 'load-dependent totals' (funding 98-3383, unlocks 98-769 within one hour) "
         "are now understood as decoy churn, not upstream variance -- funding/unlocks modes are "
         "REFUSED (503); only homepage slices (press-verified) ship fundraising data",
+    )
+
+    info(
+        "gated out: /ath",
+        "micro-cap prices bit-frozen over 15s, 8% gap vs the same coin's /price page, "
+        "and no truth source reachable (CoinGecko 403, llama lags micro-caps) -> not wired",
+    )
+    info(
+        "gated out: /performance",
+        "SSR payload carries NO period data (histPrices=0/100 rows, interest=null, initData=global only) "
+        "while the page's columns are 7D/30D/3M/6M/YTD -> would render all em-dash under an ROI heading",
+    )
+    info(
+        "gated out: /funds/*, /upcoming-ico, /active-ico, /funding-analytics",
+        "403 Cloudflare interstitial to direct fetch (same wall as /funding-rounds) -> not wired",
     )
 
     note("upstream wall (informational)")
@@ -628,9 +727,13 @@ def main() -> int:
     check("component: coin spotlight wired",
           "Coin spotlight" in comp and "loadMode('coin'" in comp, "")
     check("component: sectors board wired",
-          "Top CEX (spot)" in comp and "CR_CATEGORY_SLUGS" in comp, "")
+          "Sectors" in comp and "CR_CATEGORY_SLUGS" in comp, "")
     check("component: keyed loadMode",
           "key=${encodeURIComponent" in comp, "")
+    check("component: listings wired",
+          "loadMode('listings'" in comp and "Recently added" in comp, "")
+    check("component: exchange variants wired",
+          "dex/spot" in comp and "perpetuals" in comp and "setExKey" in comp, "")
     helper_src = read("scripts/cr_fetch.py")
     check("helper: data-route mode present", "--data-route" in helper_src
           and "_next/data" in helper_src, "")
@@ -638,11 +741,11 @@ def main() -> int:
           and "buildid.txt" in helper_src, "")
     lib = read("lib/cryptorank.ts")
     lib_modes = set(re.findall(
-        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin)'", lib))
+        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings)'", lib))
     check(
-        "lib modes == proxy modes (10)",
+        "lib modes == proxy modes (11)",
         lib_modes == {"home", "coins", "trending", "gainers", "losers", "funding",
-                      "unlocks", "categories", "exchanges", "coin"},
+                      "unlocks", "categories", "exchanges", "coin", "listings"},
         str(sorted(lib_modes)),
     )
     check(

@@ -66,7 +66,10 @@ HTML_ALLOWED = {
     "/trending",
     "/gainers",
     "/losers",
+    "/listings",
     "/exchanges/cex/spot",
+    "/exchanges/dex/spot",
+    "/exchanges/perpetuals",
 }
 HTML_ALLOWED_RE = (
     re.compile(r"^/price/[a-z0-9][a-z0-9-]{0,63}$"),

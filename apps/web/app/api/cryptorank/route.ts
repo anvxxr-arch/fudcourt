@@ -5,7 +5,9 @@ import {
   CR_BASE,
   CR_DISABLED,
   CR_DISABLED_REASON,
+  CR_DEFAULT_EXCHANGE,
   CR_DEFAULT_KEYS,
+  CR_EXCHANGE_LISTS,
   CR_KEY_RE,
   CR_KEYED_PATHS,
   CR_MODES,
@@ -134,6 +136,18 @@ function changeFromAnchor(r: RawCoin): number | null {
   const n = asNum(now);
   if (a == null || n == null || a === 0) return null;
   return ((n - a) / a) * 100;
+}
+
+/** listings widgets: priceUsd may sit only in price.USD or only in priceUsd;
+ * chg24h/chg7d derived from histPrices anchors where shipped, else null. */
+function shapeListing(r: RawCoin): CrCoin {
+  const price = asPriceUsd(r.price) ?? asNum(r.priceUsd);
+  const hist = (r.histPrices ?? {}) as Record<string, Record<string, unknown> | undefined>;
+  const chg = (period: string): number | null => {
+    const a = asNum(hist[period]?.USD);
+    return a !== null && price !== null && a !== 0 ? ((price - a) / a) * 100 : null;
+  };
+  return { ...shapeCoin(r, null), priceUsd: price, change24h: chg('24H'), change7d: chg('7D') };
 }
 
 function shapeGlobal(pp: Record<string, unknown>): CrGlobal {
@@ -343,11 +357,35 @@ function envelope(
       throw new Error('exchanges: missing fallbackData');
     }
     const exRows = fd.map((r, i) => shapeExchange(r, i));
+    const variant =
+      opts.key === 'dex/spot' ? 'DEX spot' : opts.key === 'perpetuals' ? 'perpetuals (futures)' : 'spot CEX';
     return {
       ...base,
       count: exRows.length,
-      slice: `spot CEX top ${exRows.length} — cryptorank's OWN reported 24h volume (their methodology, not independent); per-row % share of listed total`,
+      slice: `top ${exRows.length} ${variant} — cryptorank's OWN reported 24h volume (their methodology, not independent); per-row % share of listed total`,
       rows: exRows,
+    };
+  }
+
+  if (kind === 'listings') {
+    const ra = pp.recentlyAddedCoins;
+    const ms = pp.mostSearchedCoins;
+    const mv = pp.mostVisitedCoins;
+    if (!Array.isArray(ra) || !Array.isArray(ms) || !Array.isArray(mv)) {
+      throw new Error('listings: missing widget arrays');
+    }
+    return {
+      ...base,
+      count: ra.length + ms.length + mv.length,
+      slice:
+        `three /listings widgets: ${ra.length} recently added + ${ms.length} most searched + ${mv.length} most visited; ` +
+        'chg24h/chg7d derived from histPrices["24H"]/["7D"] anchors where the widget ships them, em-dash otherwise',
+      changeSource: 'derived-from-histPrices-24H',
+      listings: {
+        recentlyAdded: ra.map(shapeListing),
+        mostSearched: ms.map(shapeListing),
+        mostVisited: mv.map(shapeListing),
+      },
     };
   }
 
@@ -427,6 +465,23 @@ export async function GET(req: NextRequest) {
       );
     }
     value = CR_KEYED_PATHS[keyed](key);
+    upstream = `${CR_BASE}${value}`;
+  } else if (mode === 'exchanges') {
+    const raw = req.nextUrl.searchParams.get('key');
+    key = raw === null || raw === '' ? CR_DEFAULT_EXCHANGE : raw;
+    if (!(CR_EXCHANGE_LISTS as readonly string[]).includes(key)) {
+      return NextResponse.json(
+        {
+          error: 'invalid exchange list',
+          detail: 'key must be one of the whitelisted venue lists (never clamped)',
+          allowed: CR_EXCHANGE_LISTS,
+          mode,
+          key,
+        },
+        { status: 400 },
+      );
+    }
+    value = `/exchanges/${key}`;
     upstream = `${CR_BASE}${value}`;
   }
 
