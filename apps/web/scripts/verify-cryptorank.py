@@ -178,6 +178,31 @@ print(json.dumps({{
         return {"ok": False, "error": (out.stderr or out.stdout)[-300:]}
 
 
+def fetch_publisher_title(url: str) -> dict:
+    """Fetch a publisher page in the cr venv (system python has no curl_cffi;
+    same subprocess pattern as data_route_probe / independent_upstream_page)
+    and return its normalized <title> for ground-truth comparison."""
+    script = f"""
+import json, re, sys
+from curl_cffi import requests as rq
+try:
+    r = rq.get({url!r}, impersonate="chrome131", timeout=25)
+except Exception as e:
+    print(json.dumps({{"ok": False, "error": type(e).__name__ + ": " + str(e)}})); sys.exit(0)
+m = re.search(r"<title[^>]*>(.*?)</title>", r.text, re.S | re.I)
+t = " ".join((m.group(1) if m else "").split()).lower()
+print(json.dumps({{"ok": True, "status": r.status_code, "title": t}}))
+"""
+    out = subprocess.run(
+        [CR_VENV_PY, "-c", script],
+        capture_output=True, text=True, timeout=60,
+    )
+    try:
+        return json.loads(out.stdout.strip().splitlines()[-1])
+    except Exception:  # noqa: BLE001
+        return {"ok": False, "error": (out.stderr or out.stdout)[-300:]}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://127.0.0.1:3100")
@@ -764,6 +789,75 @@ def main() -> int:
     st, body, hdr = get(base, "launchpool", key="zzz")
     check("launchpool: bad variant -> 400 (never clamped)", st == 400, f"got {st}")
 
+    # --- news feed (3-gate: 404 / price parity / publisher <title> match)
+    up = independent_upstream_page("/news/zzznoexist9999")
+    check("news: nonexistent slug -> 404 (independent fetch)",
+          up.get("status") == 404, str(up)[:120])
+
+    st, body, hdr = get(base, "news")
+    body = body or {}
+    if check("news: HTTP 200", st == 200, f"got {st}"):
+        rows = body.get("newsRows") or []
+        check("news: full page of rows", len(rows) >= 8, f"n={len(rows)}")
+        check(
+            "news: titles + publisher URLs intact",
+            all(r.get("title") and str(r.get("url", "")).startswith("http") for r in rows),
+            str([(r.get("title"), r.get("url")) for r in rows[:2]])[:180],
+        )
+        week_ago = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 7 * 86400))
+        dates = [r["date"][:10] for r in rows if isinstance(r.get("date"), str)]
+        check(
+            "news: dates ISO, newest within 7 days",
+            bool(dates) and all(len(d) == 10 for d in dates) and max(dates) >= week_ago,
+            f"newest={max(dates) if dates else None}",
+        )
+        check(
+            "news: sentiment tags only bullish/bearish/null",
+            all(r.get("status") in ("bullish", "bearish", None) for r in rows),
+            str(sorted({str(r.get("status")) for r in rows})),
+        )
+        check(
+            "news: ?page= no-op labelled in slice",
+            "?page" in (body.get("slice") or ""),
+            str(body.get("slice"))[:170],
+        )
+        # GATE2: relatedCoins snapshot vs llama, mapped by truth-keyed symbol
+        rc = [
+            c for r in rows for c in (r.get("relatedCoins") or [])
+            if c.get("symbol") in truth and isinstance(c.get("priceUsd"), (int, float))
+        ]
+        if rc:
+            c0 = rc[0]
+            t = truth[c0["symbol"]]
+            diff = abs(c0["priceUsd"] - t) / t * 100
+            check("news: relatedCoin price matches ground truth (<=3%)",
+                  diff <= 3,
+                  f"{c0['symbol']} mine={c0['priceUsd']} truth={t} diff={diff:.3f}%")
+        else:
+            info("news: relatedCoin price gate",
+                 "no truth-keyed coin in this batch -> price gate skipped this run")
+
+        # GATE3: the publisher's own <title> must match the row we ship
+        norm = lambda s: re.sub(r"\s+", " ", s or "").strip().lower()  # noqa: E731
+        matched = False
+        last_err = ""
+        cands = [x for x in rows if x.get("url") and "cryptorank" not in str(x.get("url"))][:3]
+        for r0 in cands:
+            res = fetch_publisher_title(r0["url"])
+            if not res.get("ok"):
+                last_err = str(res)[:140]
+                continue
+            pub = norm(res.get("title") or "")
+            mine = norm(r0.get("title"))
+            if pub and (pub[:50] == mine[:50] or pub.startswith(mine[:50])
+                        or mine.startswith(pub[:50])):
+                matched = True
+                last_err = f"matched: {str(r0.get('url'))[:90]}"
+                break
+            last_err = f"status={res.get('status')} pub={pub[:60]!r} vs {mine[:60]!r}"
+        check("news: publisher <title> matches shipped row (ground truth)",
+              matched, last_err or "no candidate rows")
+
     # ---------------------------------------------------------------- 4
     note("error contract")
     st, body, hdr = get(base, "hack")
@@ -771,7 +865,7 @@ def main() -> int:
     check("unknown mode -> 400", st == 400, f"got {st}")
     check(
         "400 lists allowed modes",
-        isinstance(body.get("modes"), list) and len(body["modes"]) == 14,
+        isinstance(body.get("modes"), list) and len(body["modes"]) == 15,
         str(body.get("modes")),
     )
 
@@ -873,6 +967,8 @@ def main() -> int:
           "loadMode('chain'" in comp and "fetchChainIndex" in comp and "ecosystem tokens" in comp, "")
     check("component: launchpool wired",
           "loadMode('launchpool'" in comp and "setLpKey" in comp and "Launchpool" in comp, "")
+    check("component: news feed wired",
+          "loadMode('news'" in comp and "Latest news" in comp and "newsRows" in comp, "")
     helper_src = read("scripts/cr_fetch.py")
     check("helper: data-route mode present", "--data-route" in helper_src
           and "_next/data" in helper_src, "")
@@ -880,12 +976,12 @@ def main() -> int:
           and "buildid.txt" in helper_src, "")
     lib = read("lib/cryptorank.ts")
     lib_modes = set(re.findall(
-        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool)'", lib))
+        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool|news)'", lib))
     check(
-        "lib modes == proxy modes (14)",
+        "lib modes == proxy modes (15)",
         lib_modes == {"home", "coins", "trending", "gainers", "losers", "funding",
                       "unlocks", "categories", "exchanges", "coin", "listings",
-                      "blockchains", "chain", "launchpool"},
+                      "blockchains", "chain", "launchpool", "news"},
         str(sorted(lib_modes)),
     )
     check(

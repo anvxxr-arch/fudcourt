@@ -27,6 +27,7 @@ import {
   type CrLiveMode,
   type CrMode,
   type CrFundingRound,
+  type CrNewsRow,
   type CrTrendingRow,
   type CrUpcomingIco,
 } from '../../../lib/cryptorank';
@@ -484,6 +485,23 @@ function envelope(
     };
   }
 
+  if (kind === 'news') {
+    const list = pp.news;
+    if (!Array.isArray(list)) {
+      throw new Error('news: missing news array');
+    }
+    const newsRows = list.map(shapeNewsRow);
+    return {
+      ...base,
+      count: newsRows.length,
+      slice:
+        `${newsRows.length} latest items — links out to the original publishers; ` +
+        'upstream ships the first page only (?page= is a no-op upstream); ' +
+        'date null = pinned promo slot (em-dash); status = upstream sentiment tag',
+      newsRows,
+    };
+  }
+
   // gainers / losers -- same upstream row shape, change derived from anchor
   const rows = Array.isArray(pp.fallbackData) ? (pp.fallbackData as RawCoin[]) : [];
   return {
@@ -520,6 +538,40 @@ function shapeLaunchpoolRow(r: Record<string, unknown>): CrLaunchpoolRow {
     launchpads: pads,
     when: asStr(r.when),
     till: asStr(r.till),
+  };
+}
+
+/** News row: date is epoch MILLISECONDS upstream (null = pinned promo slot). */
+function shapeNewsRow(r: Record<string, unknown>): CrNewsRow {
+  const ms = typeof r.date === 'number' && r.date > 1e12 ? r.date : null;
+  const src = r.source as unknown;
+  const status =
+    r.status === 'bullish' || r.status === 'bearish' ? r.status : null;
+  const rc = Array.isArray(r.relatedCoins)
+    ? (r.relatedCoins as Record<string, unknown>[])
+        .filter((c) => typeof c.symbol === 'string')
+        .slice(0, 6)
+        .map((c) => ({
+          symbol: String(c.symbol),
+          priceUsd: typeof c.price === 'number' ? c.price : null,
+          change24h: typeof c.priceChange === 'number' ? c.priceChange : null,
+        }))
+    : [];
+  return {
+    id: typeof r.id === 'number' ? r.id : null,
+    title: asStr(r.title) ?? '',
+    url: asStr(r.url),
+    source:
+      typeof src === 'string'
+        ? src
+        : src && typeof src === 'object'
+          ? asStr((src as { name?: unknown }).name)
+          : null,
+    date: ms === null ? null : new Date(ms).toISOString(),
+    status,
+    readingMinutes: asNum(r.readingTimeMinutes),
+    isAdvertisement: r.isAdvertisement === true,
+    relatedCoins: rc,
   };
 }
 

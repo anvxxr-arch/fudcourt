@@ -48,6 +48,7 @@ export const CR_MODES = [
   'listings',                      // /listings HTML, gate2 majors 0.7%
   'blockchains', 'chain',          // chain index (278) + keyed ecosystem detail
   'launchpool',                    // event lists: /past-launchpool + /upcoming-launchpool
+  'news',                           // /news aggregator feed (links out to publishers)
 ] as const;
 export type CrMode = (typeof CR_MODES)[number];
 
@@ -123,6 +124,7 @@ export const CR_MODE_ARGS: Record<CrMode, [flag: '--path' | '--data-route', valu
   blockchains: ['--path', '/blockchains'],
   chain: ['--path', '/blockchains/ethereum'],        // default key; route overrides
   launchpool: ['--path', '/past-launchpool'],        // default variant; route overrides
+  news: ['--path', '/news'],
 };
 
 /** Canonical HTML URL of what a mode's data represents (for the envelope). */
@@ -141,6 +143,7 @@ export const CR_MODE_UPSTREAM: Record<CrMode, string> = {
   blockchains: `${CR_BASE}/blockchains`,
   chain: `${CR_BASE}/blockchains/ethereum`,
   launchpool: `${CR_BASE}/past-launchpool`,
+  news: `${CR_BASE}/news`,
 };
 
 export interface CrGlobal {
@@ -272,6 +275,25 @@ export interface CrChainInfo {
 }
 
 /**
+ * News feed row (/news HTML: aggregator; every row links OUT to the original
+ * publisher, verified against the publisher's own <title>). date = epoch-ms
+ * upstream, ISO here; null upstream = pinned promo slot -> em-dash.
+ */
+export interface CrNewsRow {
+  id: number | null;
+  title: string;
+  url: string | null;
+  source: string | null;
+  date: string | null;
+  /** upstream sentiment tag. */
+  status: 'bullish' | 'bearish' | null;
+  readingMinutes: number | null;
+  isAdvertisement: boolean;
+  /** relatedCoins snapshot: symbol + upstream live price (llama-verified). */
+  relatedCoins: { symbol: string; priceUsd: number | null; change24h: number | null }[];
+}
+
+/**
  * Launchpool event row (/past-launchpool | /upcoming-launchpool HTML).
  * when/till = upstream ISO window; null upstream = not announced -> em-dash.
  * SSR ships the first page only (?page= is NOT honored upstream -> honest
@@ -328,5 +350,7 @@ export interface CrEnvelope {
   };
   /** launchpool mode: event rows (50-of-527 past / full upcoming). */
   launchpoolRows?: CrLaunchpoolRow[];
+  /** news mode: latest items (first page only; ?page= is a no-op upstream). */
+  newsRows?: CrNewsRow[];
   rows?: (CrCoin | CrTrendingRow | CrExchangeRow)[];
 }

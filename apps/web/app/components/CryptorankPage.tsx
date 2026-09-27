@@ -142,6 +142,9 @@ export default function CryptorankPage() {
   const [lp, setLp] = useState<CrEnvelope | null>(null);
   const [lpErr, setLpErr] = useState('');
 
+  const [news, setNews] = useState<CrEnvelope | null>(null);
+  const [newsErr, setNewsErr] = useState('');
+
   // chain board (index-fed selector + keyed ecosystem detail)
   const [chainRows, setChainRows] = useState<CrChainRow[]>([]);
   const [chainSlug, setChainSlug] = useState<string>('ethereum');
@@ -238,6 +241,18 @@ export default function CryptorankPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const fetchNews = useCallback(async (fresh = false) => {
+    try {
+      const env = await loadMode('news', fresh);
+      setNews(env);
+      setNewsErr('');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setNewsErr(msg);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fetchChainIndex = useCallback(async (fresh = false) => {
     try {
       const env = await loadMode('blockchains', fresh);
@@ -279,6 +294,7 @@ export default function CryptorankPage() {
     void fetchListings();
     void fetchChainIndex();
     void fetchChain('ethereum');
+    void fetchNews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -811,6 +827,58 @@ export default function CryptorankPage() {
               ? `showing ${Math.min(100, chain.count)} of ${chain.count} ecosystem tokens · ${chain.slice ?? ''}`
               : ''}
           </div>
+        </div>
+      </div>
+
+      {/* -------------------------- news feed ------------------------------- */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, marginTop: 16 }}>
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Latest news</div>
+            <div style={{ fontSize: 10, color: C.dim }}>
+              {news ? `${news.count} items` : '—'} · links out to original publishers
+            </div>
+          </div>
+          {newsErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ news error: {newsErr} — nothing faked</div>
+          )}
+          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+            {(news?.newsRows ?? []).map((n0) => (
+              <div key={n0.id ?? n0.title} style={{ padding: '7px 2px', borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5,
+                    color: n0.status === 'bullish' ? '#3fb950' : n0.status === 'bearish' ? C.red : C.dim,
+                    minWidth: 46,
+                  }}>
+                    {n0.status ?? '—'}
+                  </span>
+                  <a
+                    href={n0.url ?? undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: C.white, fontSize: 12, textDecoration: 'none', flex: 1 }}
+                  >
+                    {n0.title}{n0.url ? ' ↗' : ''}
+                  </a>
+                </div>
+                <div style={{ fontSize: 10, color: C.dim, marginLeft: 54, marginTop: 2 }}>
+                  {n0.source ?? '—'} · {n0.date ? shortDate(n0.date) : '—'}
+                  {n0.readingMinutes != null ? ` · ${n0.readingMinutes.toFixed(1)} min` : ''}
+                  {n0.relatedCoins.length
+                    ? ` · ${n0.relatedCoins.slice(0, 3).map((c) => `${c.symbol} ${money(c.priceUsd)}`).join(' · ')}`
+                    : ''}
+                </div>
+              </div>
+            ))}
+            {!news && !newsErr && (
+              <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>loading…</div>
+            )}
+            {news && (news.newsRows ?? []).length === 0 && (
+              <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>upstream shipped no rows — nothing faked</div>
+            )}
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{news?.slice ?? ''}</div>
         </div>
       </div>
 
