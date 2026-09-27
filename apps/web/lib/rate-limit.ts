@@ -21,12 +21,18 @@
 
 const MIN_GAP_MS = 200; // <= 5 upstream requests/sec
 const CACHE_TTL_MS = 15_000;
+/** Hard cap on retained bodies. The TTL alone does NOT bound memory: an entry is
+ *  only ever ignored once it is stale, never removed, and a search box mints a
+ *  fresh distinct key per query. Steady-state growth would track DISTINCT
+ *  QUERIES EVER MADE. This makes it bounded instead. */
+const CACHE_MAX_ENTRIES = 300;
 
 type Entry = { at: number; body: unknown };
 /** What a coalesced group shares: the body text plus enough of the response to
  *  rebuild an equivalent Response per caller. */
 type Shared = { text: string; status: number; contentType: string };
 
+/** Insertion-ordered, so the first key is the least recently used. */
 const cache = new Map<string, Entry>();
 /** In-flight upstream calls, keyed by URL, so identical concurrent requests
  *  share one round-trip. Without this, 10 simultaneous requests for the same
@@ -36,6 +42,33 @@ let chain: Promise<unknown> = Promise.resolve();
 let lastAt = 0;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Read a live entry, promoting it to most-recently-used. Returns undefined for
+ *  a miss or a stale entry -- and drops the stale one on the way out, so an
+ *  expired body does not sit in memory until the key is evicted by pressure. */
+function takeLive(url: string, ttl: number): Entry | undefined {
+  const hit = cache.get(url);
+  if (!hit) return undefined;
+  if (Date.now() - hit.at >= ttl) {
+    cache.delete(url);
+    return undefined;
+  }
+  // Re-insert to move this key to the end (Map preserves insertion order).
+  cache.delete(url);
+  cache.set(url, hit);
+  return hit;
+}
+
+/** Insert, evicting least-recently-used entries past the cap. */
+function store(url: string, entry: Entry) {
+  cache.delete(url);
+  cache.set(url, entry);
+  while (cache.size > CACHE_MAX_ENTRIES) {
+    const oldest = cache.keys().next();
+    if (oldest.done) break;
+    cache.delete(oldest.value);
+  }
+}
 
 /** Serialise access so callers queue rather than bursting. */
 function enqueue<T>(fn: () => Promise<T>): Promise<T> {
@@ -67,8 +100,8 @@ export async function limitedFetch(
   opts: { ttlMs?: number } = {}
 ): Promise<Response> {
   const ttl = opts.ttlMs ?? CACHE_TTL_MS;
-  const hit = cache.get(url);
-  if (hit && Date.now() - hit.at < ttl) {
+  const hit = takeLive(url, ttl);
+  if (hit) {
     return new Response(JSON.stringify(hit.body), {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
@@ -104,7 +137,7 @@ export async function limitedFetch(
     const contentType = res.headers.get('Content-Type') ?? 'application/json';
     if (res.ok) {
       try {
-        cache.set(url, { at: Date.now(), body: JSON.parse(text) });
+        store(url, { at: Date.now(), body: JSON.parse(text) });
       } catch {
         /* a non-JSON 200 is not cacheable; just skip it */
       }
@@ -130,4 +163,11 @@ export function __resetLimiter() {
   inflight.clear();
   lastAt = 0;
   chain = Promise.resolve();
+}
+
+/** Test seam: what the cache currently retains. Exists so the LRU bound is
+ *  assertable from outside instead of taken on trust -- an eviction policy with
+ *  no observable is an eviction policy nobody ever verifies. */
+export function __cacheStats() {
+  return { size: cache.size, cap: CACHE_MAX_ENTRIES, inflight: inflight.size };
 }
