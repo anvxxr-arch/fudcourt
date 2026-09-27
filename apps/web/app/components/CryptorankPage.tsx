@@ -167,6 +167,19 @@ export default function CryptorankPage() {
   const [news, setNews] = useState<CrEnvelope | null>(null);
   const [newsErr, setNewsErr] = useState('');
 
+  const [conv, setConv] = useState<CrEnvelope | null>(null);
+  const [convErr, setConvErr] = useState('');
+
+  const [media, setMedia] = useState<CrEnvelope | null>(null);
+  const [mediaErr, setMediaErr] = useState('');
+
+  const [ntagSlug, setNtagSlug] = useState<string>('defi');
+  const [ntag, setNtag] = useState<CrEnvelope | null>(null);
+  const [ntagErr, setNtagErr] = useState('');
+
+  const [aiOv, setAiOv] = useState<CrEnvelope | null>(null);
+  const [aiOvErr, setAiOvErr] = useState('');
+
   const [tagRows, setTagRows] = useState<CrTagRow[]>([]);
   const [tagSlug, setTagSlug] = useState<string>('layer-1');
   const [tag, setTag] = useState<CrEnvelope | null>(null);
@@ -346,6 +359,50 @@ export default function CryptorankPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const fetchConv = useCallback(async (fresh = false) => {
+    try {
+      const env = await loadMode('converter', fresh);
+      setConv(env);
+      setConvErr('');
+    } catch (e) {
+      setConvErr(e instanceof Error ? e.message : String(e));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchMedia = useCallback(async (fresh = false) => {
+    try {
+      const env = await loadMode('media', fresh);
+      setMedia(env);
+      setMediaErr('');
+    } catch (e) {
+      setMediaErr(e instanceof Error ? e.message : String(e));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchNewsTag = useCallback(async (slug: string, fresh = false) => {
+    try {
+      const env = await loadMode('newstag', fresh, slug);
+      setNtag(env);
+      setNtagErr('');
+    } catch (e) {
+      setNtagErr(e instanceof Error ? e.message : String(e));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchAiOv = useCallback(async (fresh = false) => {
+    try {
+      const env = await loadMode('aioverview', fresh);
+      setAiOv(env);
+      setAiOvErr('');
+    } catch (e) {
+      setAiOvErr(e instanceof Error ? e.message : String(e));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fetchTagIndex = useCallback(async (fresh = false) => {
     try {
       const env = await loadMode('tags', fresh);
@@ -447,8 +504,16 @@ export default function CryptorankPage() {
     void fetchRwaIdx();
     void fetchQtr();
     void fetchPred();
+    void fetchConv();
+    void fetchMedia();
+    void fetchAiOv();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    void fetchNewsTag(ntagSlug);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ntagSlug]);
 
   useEffect(() => {
     void fetchEco(ecoSlug);
@@ -1672,6 +1737,217 @@ export default function CryptorankPage() {
             </table>
           </div>
           <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{pred?.slice ?? ''}</div>
+        </div>
+
+        {/* ---------------- full price list (converter payload) ------------- */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Full price list</div>
+            <div style={{ fontSize: 10, color: C.dim }}>{conv ? `${conv.count} coins` : '—'} · price only (no 24h change upstream)</div>
+          </div>
+          {convErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ price list error: {convErr} — nothing faked</div>
+          )}
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Coin</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Symbol</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600, textAlign: 'right' }}>Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!conv && !convErr && (
+                  <tr><td colSpan={3} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                )}
+                {(conv?.converterRows ?? []).slice(0, 50).map((r0) => (
+                  <tr key={r0.key} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <td style={{ padding: '5px 6px', color: C.white }}>{r0.name}</td>
+                    <td style={{ padding: '5px 6px', color: C.dim }}>{r0.symbol}</td>
+                    <td style={{ padding: '5px 6px', color: C.white, textAlign: 'right', whiteSpace: 'nowrap' }}>{money(r0.priceUsd)}</td>
+                  </tr>
+                ))}
+                {conv && (conv.converterRows ?? []).length === 0 && (
+                  <tr><td colSpan={3} style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+            {conv ? `first 50 of ${conv.count} · ${conv.slice ?? ''}` : ''}
+          </div>
+        </div>
+
+        {/* ---------------- media feed (YouTube-backed) --------------------- */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Media feed</div>
+            <div style={{ fontSize: 10, color: C.dim }}>
+              {media ? `${media.count} of ${media.upstreamTotal ?? '—'} videos` : '—'} · ids ground-truthed via YouTube oembed
+            </div>
+          </div>
+          {mediaErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ media error: {mediaErr} — nothing faked</div>
+          )}
+          <div style={{ maxHeight: 280, overflowY: 'auto' }}>
+            {(media?.mediaRows ?? []).map((m) => (
+              <div key={m.id} style={{ padding: '7px 2px', borderBottom: `1px solid ${C.border}` }}>
+                <a
+                  href={m.id ? `https://www.youtube.com/watch?v=${m.id}` : undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: C.white, fontSize: 12, textDecoration: 'none' }}
+                >
+                  {m.title}{m.id ? ' ↗' : ''}
+                </a>
+                <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>
+                  {m.channelTitle ?? '—'} · {shortDate(m.publishedAt)}
+                  {m.durationSeconds != null
+                    ? ` · ${Math.floor(m.durationSeconds / 60)}:${String(m.durationSeconds % 60).padStart(2, '0')}`
+                    : ''}
+                </div>
+              </div>
+            ))}
+            {!media && !mediaErr && (
+              <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>loading…</div>
+            )}
+            {media && (media.mediaRows ?? []).length === 0 && (
+              <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>upstream shipped no rows — nothing faked</div>
+            )}
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{media?.slice ?? ''}</div>
+        </div>
+
+        {/* ---------------- tagged news (news/tag feed) --------------------- */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+              Tagged news{ntag?.tag ? `: ${ntag.tag.name}` : ''}
+            </div>
+            <div style={{ fontSize: 10, color: C.dim }}>{ntag ? `${ntag.count} items` : '—'} · unknown tag → 404 (never unfiltered)</div>
+          </div>
+          {(ntag?.relatedTags ?? []).length > 0 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+              {(ntag?.relatedTags ?? []).slice(0, 12).map((t) => (
+                <button
+                  key={t.slug}
+                  onClick={() => setNtagSlug(t.slug)}
+                  style={{
+                    border: `1px solid ${ntagSlug === t.slug ? C.accent : C.border}`,
+                    borderRadius: 999, background: C.card, color: ntagSlug === t.slug ? C.white : C.dim,
+                    fontSize: 10, padding: '3px 9px', cursor: 'pointer',
+                  }}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          )}
+          {ntagErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ tagged news error: {ntagErr} — nothing faked</div>
+          )}
+          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+            {(ntag?.newsRows ?? []).map((n0) => (
+              <div key={n0.id ?? n0.title} style={{ padding: '7px 2px', borderBottom: `1px solid ${C.border}` }}>
+                <a
+                  href={n0.url ?? undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: C.white, fontSize: 12, textDecoration: 'none' }}
+                >
+                  {n0.title}{n0.url ? ' ↗' : ''}
+                </a>
+                <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>
+                  {n0.source ?? '—'} · {n0.date ? shortDate(n0.date) : '—'}
+                  {n0.relatedCoins.length
+                    ? ` · ${n0.relatedCoins.slice(0, 3).map((c) => `${c.symbol} ${money(c.priceUsd)}`).join(' · ')}`
+                    : ''}
+                </div>
+              </div>
+            ))}
+            {!ntag && !ntagErr && (
+              <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>loading…</div>
+            )}
+            {ntag && (ntag.newsRows ?? []).length === 0 && (
+              <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>upstream shipped no rows — nothing faked</div>
+            )}
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{ntag?.slice ?? ''}</div>
+        </div>
+
+        {/* ---------------- AI market overview (upstream digest) ------------- */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>AI market overview</div>
+            <div style={{ fontSize: 10, color: C.dim }}>upstream AI-generated text (their words) · coherence vs home gated in harness</div>
+          </div>
+          {aiOvErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ ai overview error: {aiOvErr} — nothing faked</div>
+          )}
+          {!aiOv && !aiOvErr && (
+            <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>loading…</div>
+          )}
+          {aiOv?.aiOverview && (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {aiOv.aiOverview.market.summary && (
+                <div style={{ fontSize: 12, color: C.white, lineHeight: 1.5 }}>
+                  {aiOv.aiOverview.market.summary}
+                  <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>updated {stamp(Date.parse(aiOv.aiOverview.market.updatedAt ?? '') / 1000 || null)}</div>
+                </div>
+              )}
+              {aiOv.aiOverview.news.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 10, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Top stories (upstream picks)</div>
+                  {aiOv.aiOverview.news.map((n0) => (
+                    <div key={n0.id ?? n0.title} style={{ fontSize: 12, color: C.white, padding: '3px 0', borderBottom: `1px solid ${C.border}` }}>
+                      <span style={{ color: n0.isBullish === true ? '#3fb950' : n0.isBullish === false ? C.red : C.dim, fontSize: 10, marginRight: 6 }}>
+                        {n0.isBullish === null ? '—' : n0.isBullish ? 'bullish' : 'bearish'}
+                      </span>
+                      {n0.title}
+                      <span style={{ color: C.dim, fontSize: 10 }}> · {shortDate(n0.date)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+                {aiOv.aiOverview.funding.summary && (
+                  <div>
+                    <div style={{ fontSize: 10, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.5 }}>Funding</div>
+                    <div style={{ fontSize: 11, color: C.white }}>{aiOv.aiOverview.funding.summary}</div>
+                    {aiOv.aiOverview.funding.rounds.map((r0) => (
+                      <div key={r0.key ?? r0.name} style={{ fontSize: 11, color: C.dim, paddingTop: 2 }}>
+                        {r0.name}{r0.stage ? ` · ${r0.stage}` : ''}{r0.raisedUsd != null ? ` · ${moneyCompact(r0.raisedUsd)}` : ''}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {aiOv.aiOverview.dropHunting.summary && (
+                  <div>
+                    <div style={{ fontSize: 10, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.5 }}>Drop hunting</div>
+                    <div style={{ fontSize: 11, color: C.white }}>{aiOv.aiOverview.dropHunting.summary}</div>
+                    {aiOv.aiOverview.dropHunting.activities.map((a) => (
+                      <div key={a.key} style={{ fontSize: 11, color: C.dim, paddingTop: 2 }}>
+                        {a.coinName ?? a.key}{a.type ? ` · ${a.type}` : ''}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {aiOv.aiOverview.vesting.summary && (
+                  <div>
+                    <div style={{ fontSize: 10, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.5 }}>Vesting</div>
+                    <div style={{ fontSize: 11, color: C.white }}>{aiOv.aiOverview.vesting.summary}</div>
+                    {aiOv.aiOverview.vesting.unlocks.map((u, i) => (
+                      <div key={`${u.coinName ?? 'x'}-${i}`} style={{ fontSize: 11, color: C.dim, paddingTop: 2 }}>
+                        {u.coinName ?? '—'}{u.date ? ` · ${u.date.slice(0, 10)}` : ''}{u.unlockPercent != null ? ` · ${u.unlockPercent.toFixed(2)}%` : ''}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{aiOv?.slice ?? ''}</div>
         </div>
       </div>
 

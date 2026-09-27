@@ -84,6 +84,9 @@ HTML_ALLOWED = {
     "/rwa",
     "/charts/quarterly-returns",
     "/prediction-markets",
+    "/converter",
+    "/media",
+    "/ai-market-overview",
 }
 HTML_ALLOWED_RE = (
     re.compile(r"^/price/[a-z0-9][a-z0-9-]{0,63}$"),
@@ -92,6 +95,9 @@ HTML_ALLOWED_RE = (
     re.compile(r"^/tags/[a-z0-9][a-z0-9-]{0,63}$"),
     re.compile(r"^/ecosystems/[a-z0-9][a-z0-9-]{0,63}$"),
     re.compile(r"^/rwa/(bonds|commodities|etfs|stocks)/[a-z0-9][a-z0-9-]{0,63}$"),
+    # news/tag pages are 200 + tag:null upstream (soft-404); the route turns
+    # that marker into a real 404 instead of forwarding the unfiltered feed.
+    re.compile(r"^/news/tag/[a-z0-9][a-z0-9-]{0,63}$"),
 )
 
 # Data-route allowlist: exact paths + regex for keyed detail routes.

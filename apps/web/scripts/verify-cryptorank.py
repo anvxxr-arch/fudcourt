@@ -88,14 +88,25 @@ def get(base: str, mode: str, fresh: bool = False, key: str | None = None) -> tu
         params["fresh"] = "1"
     if key:
         params["key"] = key
-    try:
-        r = requests.get(f"{base}/api/cryptorank", params=params, timeout=120)
-    except Exception as e:  # noqa: BLE001
-        return 0, None, {"error": f"{type(e).__name__}: {e}"}
-    try:
-        return r.status_code, r.json(), dict(r.headers)
-    except Exception:  # noqa: BLE001
-        return r.status_code, None, dict(r.headers)
+    last: tuple[int, dict | None, dict] = (0, None, {})
+    for attempt in range(3):
+        try:
+            r = requests.get(f"{base}/api/cryptorank", params=params, timeout=120)
+        except Exception as e:  # noqa: BLE001
+            return 0, None, {"error": f"{type(e).__name__}: {e}"}
+        try:
+            body = r.json()
+        except Exception:  # noqa: BLE001
+            body = None
+        # Transient CF rate-limit surfaces as our loud 502 passthrough
+        # ("upstream HTTP 429"): back off and retry the SAME request — a gate
+        # may only fail on data, never on a burst wall.
+        if r.status_code == 502 and body and "429" in str(body.get("error", "")):
+            last = (r.status_code, body, dict(r.headers))
+            time.sleep(5 * (attempt + 1))
+            continue
+        return r.status_code, body, dict(r.headers)
+    return last
 
 
 def data_route_probe(path: str) -> dict:
@@ -168,14 +179,23 @@ print(json.dumps({{
     "top_gainer_change": None,
 }}))
 """
-    out = subprocess.run(
-        [CR_VENV_PY, "-c", script],
-        capture_output=True, text=True, timeout=90,
-    )
-    try:
-        return json.loads(out.stdout.strip().splitlines()[-1])
-    except Exception:  # noqa: BLE001
-        return {"ok": False, "error": (out.stderr or out.stdout)[-300:]}
+    res: dict = {"ok": False, "error": "no output"}
+    for attempt in range(3):
+        out = subprocess.run(
+            [CR_VENV_PY, "-c", script],
+            capture_output=True, text=True, timeout=90,
+        )
+        try:
+            res = json.loads(out.stdout.strip().splitlines()[-1])
+        except Exception:  # noqa: BLE001
+            res = {"ok": False, "error": (out.stderr or out.stdout)[-300:]}
+        # transient CF burst wall -> back off, retry the SAME fetch (a gate
+        # may only fail on data, never on a rate-limit hiccup)
+        if res.get("status") == 429:
+            time.sleep(5 * (attempt + 1))
+            continue
+        return res
+    return res
 
 
 def fetch_publisher_title(url: str) -> dict:
@@ -192,6 +212,60 @@ except Exception as e:
 m = re.search(r"<title[^>]*>(.*?)</title>", r.text, re.S | re.I)
 t = " ".join((m.group(1) if m else "").split()).lower()
 print(json.dumps({{"ok": True, "status": r.status_code, "title": t}}))
+"""
+    out = subprocess.run(
+        [CR_VENV_PY, "-c", script],
+        capture_output=True, text=True, timeout=60,
+    )
+    try:
+        return json.loads(out.stdout.strip().splitlines()[-1])
+    except Exception:  # noqa: BLE001
+        return {"ok": False, "error": (out.stderr or out.stdout)[-300:]}
+
+
+def fetch_oembed(video_id: str) -> dict:
+    """YouTube oembed in the cr venv (media GATE3: the platform itself must
+    echo the exact title + channel we ship for that video id)."""
+    script = f"""
+import json, sys
+from curl_cffi import requests as rq
+try:
+    r = rq.get("https://www.youtube.com/oembed",
+               params={{"url": "https://www.youtube.com/watch?v={video_id}", "format": "json"}},
+               impersonate="chrome131", timeout=25)
+except Exception as e:
+    print(json.dumps({{"ok": False, "error": type(e).__name__ + ": " + str(e)}})); sys.exit(0)
+if r.status_code != 200:
+    print(json.dumps({{"ok": False, "status": r.status_code}})); sys.exit(0)
+d = r.json()
+print(json.dumps({{"ok": True, "title": d.get("title"), "author": d.get("author_name")}}))
+"""
+    out = subprocess.run(
+        [CR_VENV_PY, "-c", script],
+        capture_output=True, text=True, timeout=60,
+    )
+    try:
+        return json.loads(out.stdout.strip().splitlines()[-1])
+    except Exception:  # noqa: BLE001
+        return {"ok": False, "error": (out.stderr or out.stdout)[-300:]}
+
+
+def fetch_cg_global() -> dict:
+    """CoinGecko global totals in the cr venv (aioverview GATE3: independent
+    aggregator sanity band for the market-cap figure in the digest)."""
+    script = """
+import json, sys
+from curl_cffi import requests as rq
+try:
+    r = rq.get("https://api.coingecko.com/api/v3/global", impersonate="chrome131", timeout=25)
+except Exception as e:
+    print(json.dumps({"ok": False, "error": type(e).__name__ + ": " + str(e)})); sys.exit(0)
+if r.status_code != 200:
+    print(json.dumps({"ok": False, "status": r.status_code})); sys.exit(0)
+d = r.json().get("data") or {}
+print(json.dumps({"ok": True,
+                  "mcap": (d.get("total_market_cap") or {}).get("usd"),
+                  "dom": d.get("market_cap_percentage")}))
 """
     out = subprocess.run(
         [CR_VENV_PY, "-c", script],
@@ -1122,6 +1196,183 @@ def main() -> int:
             str(body.get("slice"))[:170],
         )
 
+    # --- converter (full price list: the only no-key surface with ALL coins)
+    st, body, hdr = get(base, "converter")
+    body = body or {}
+    if check("converter: HTTP 200", st == 200, f"got {st}"):
+        crw = body.get("converterRows") or []
+        check("converter: full coverage (>=4900 rows)", len(crw) >= 4900, f"n={len(crw)}")
+        cb = next((r0 for r0 in crw if r0.get("key") == "bitcoin"), None)
+        t_btc = truth.get("BTC")
+        if cb and isinstance(cb.get("priceUsd"), (int, float)) and t_btc:
+            d = abs(cb["priceUsd"] - t_btc) / t_btc * 100
+            check("converter: BTC price matches ground truth (<=3%)",
+                  d <= 3, f"mine={cb['priceUsd']} truth={t_btc} diff={d:.4f}%")
+        else:
+            check("converter: BTC price matches ground truth (<=3%)",
+                  False, f"row={cb} truth={t_btc}")
+        check("converter: sampled prices strictly positive",
+              all(isinstance(r0.get("priceUsd"), (int, float)) and r0["priceUsd"] > 0
+                  for r0 in crw[:300]),
+              f"bad={sum(1 for r0 in crw[:300] if not (isinstance(r0.get('priceUsd'), (int, float)) and r0['priceUsd'] > 0))}")
+        check("converter: no fake 24h (changeSource unavailable)",
+              body.get("changeSource") == "unavailable",
+              str(body.get("changeSource")))
+
+    # --- media (GATE3 = YouTube oembed echoes our title+channel per video id)
+    st, body, hdr = get(base, "media")
+    body = body or {}
+    if check("media: HTTP 200", st == 200, f"got {st}"):
+        mrows = body.get("mediaRows") or []
+        check("media: 10 rows of 468 (SSR page-1 slice)",
+              len(mrows) == 10 and body.get("upstreamTotal") == 468,
+              f"n={len(mrows)} total={body.get('upstreamTotal')}")
+        check("media: YouTube-shaped ids",
+              all(re.fullmatch(r"[A-Za-z0-9_-]{6,20}", r0.get("id") or "") for r0 in mrows),
+              str([r0.get("id") for r0 in mrows[:4]]))
+        check("media: slice discloses oembed ground truth",
+              "oembed" in (body.get("slice") or ""), str(body.get("slice"))[:170])
+        oem_ok, oem_last = False, ""
+        for m0 in mrows[:3]:
+            res = fetch_oembed(m0["id"])
+            if not res.get("ok"):
+                oem_last = str(res)[:140]
+                continue
+            tt = (res.get("title") or "").lower()
+            mine = (m0.get("title") or "").lower()
+            auth = (res.get("author") or "").lower()
+            chan = (m0.get("channelTitle") or "").lower()
+            if (tt[:40] == mine[:40] or tt.startswith(mine[:40]) or mine.startswith(tt[:40])) \
+                    and auth == chan:
+                oem_ok, oem_last = True, f"{m0['id']}: {res.get('title')[:70]!r} / {res.get('author')!r}"
+                break
+            oem_last = f"{m0['id']}: pub={res.get('title')[:50]!r} vs {mine[:50]!r}"
+        check("media: YouTube oembed title+channel match (ground truth)",
+              oem_ok, oem_last)
+
+    # --- newstag (soft-404 -> local 404; GATE2 price; GATE3 publisher title)
+    st, body, hdr = get(base, "newstag", key="defi")
+    body = body or {}
+    if check("newstag: HTTP 200 (default defi)", st == 200, f"got {st}"):
+        nti = body.get("tag") or {}
+        check("newstag: tag meta echoes key",
+              nti.get("slug") == "defi" and bool(nti.get("name")),
+              json.dumps(nti)[:150])
+        nrows = body.get("newsRows") or []
+        check("newstag: filtered rows shipped", 1 <= len(nrows) <= 8, f"n={len(nrows)}")
+        check("newstag: related-tag chips for navigation",
+              len(body.get("relatedTags") or []) >= 10,
+              f"n={len(body.get('relatedTags') or [])}")
+        check("newstag: slice discloses 404 derivation",
+              "404" in (body.get("slice") or ""),
+              str(body.get("slice"))[:170])
+        # filter actually varies: ids must NOT equal the general feed
+        st2, body2, _ = get(base, "news")
+        gen_ids = {r0.get("id") for r0 in ((body2 or {}).get("newsRows") or [])
+                   if r0.get("id")}
+        tag_ids = {r0.get("id") for r0 in nrows if r0.get("id")}
+        check("newstag: feed differs from general news (real filter)",
+              bool(tag_ids) and tag_ids != gen_ids,
+              f"overlap={len(tag_ids & gen_ids)}/{len(tag_ids)}")
+        # GATE2: relatedCoins snapshot vs llama
+        rc = [
+            c for r0 in nrows for c in (r0.get("relatedCoins") or [])
+            if c.get("symbol") in truth and isinstance(c.get("priceUsd"), (int, float))
+        ]
+        if rc:
+            c0 = rc[0]
+            t = truth[c0["symbol"]]
+            d = abs(c0["priceUsd"] - t) / t * 100
+            check("newstag: relatedCoin price matches ground truth (<=3%)",
+                  d <= 3, f"{c0['symbol']} mine={c0['priceUsd']} truth={t} diff={d:.3f}%")
+        else:
+            info("newstag: relatedCoin price gate",
+                 "no truth-keyed coin in this batch -> price gate skipped this run")
+        # GATE3: publisher <title> of a shipped article (same pool as news)
+        norm = lambda s: re.sub(r"\s+", " ", s or "").strip().lower()  # noqa: E731
+        matched, last_err = False, ""
+        cands = [x for x in nrows if x.get("url") and "cryptorank" not in str(x.get("url"))][:6]
+        for r0 in cands:
+            res = fetch_publisher_title(r0["url"])
+            if not res.get("ok"):
+                last_err = str(res)[:140]
+                continue
+            pub = norm(res.get("title") or "")
+            mine = norm(r0.get("title"))
+            if pub and (pub[:50] == mine[:50] or pub.startswith(mine[:50])
+                        or mine.startswith(pub[:50])):
+                matched, last_err = True, f"matched: {str(r0.get('url'))[:90]}"
+                break
+            last_err = f"status={res.get('status')} pub={pub[:60]!r} vs {mine[:60]!r}"
+        check("newstag: publisher <title> matches shipped row (ground truth)",
+              matched, last_err or "no candidate rows")
+    st, body, hdr = get(base, "newstag", key="zzznoexist9999")
+    check("newstag: unknown slug -> 404 (soft-404 derived, not unfiltered)",
+          st == 404 and "tag:null" in str((body or {}).get("error")),
+          f"got {st} {str((body or {}).get('error'))[:90]}")
+    st, body, hdr = get(base, "newstag", key="BAD KEY")
+    check("newstag: malformed key -> 400", st == 400, f"got {st}")
+
+    # --- aioverview (cross-surface coherence vs home + CoinGecko sanity band)
+    st, body, hdr = get(base, "aioverview")
+    body = body or {}
+    if check("aioverview: HTTP 200", st == 200, f"got {st}"):
+        ov = body.get("aiOverview") or {}
+        mkt = ov.get("market") or {}
+        check("aioverview: market summary + timestamp shipped",
+              bool(mkt.get("summary")) and bool(mkt.get("updatedAt")),
+              json.dumps(mkt)[:150])
+        check("aioverview: structured slices shipped",
+              len(ov.get("news") or []) >= 1
+              and len((ov.get("funding") or {}).get("rounds") or []) >= 1
+              and len((ov.get("vesting") or {}).get("unlocks") or []) >= 1,
+              f"news={len(ov.get('news') or [])}")
+        check("aioverview: slice labels digest as upstream's own words",
+              "their words" in (body.get("slice") or ""),
+              str(body.get("slice"))[:170])
+        txt = mkt.get("summary") or ""
+        m = re.findall(r"to \$([\d,]+)", txt)
+        g = (home or {}).get("global") or {}
+        if len(m) >= 2 and g.get("totalMarketCap"):
+            ai_mcap, ai_vol = int(m[0].replace(",", "")), int(m[1].replace(",", ""))
+            dm = abs(ai_mcap - g["totalMarketCap"]) / g["totalMarketCap"] * 100
+            check("aioverview: digest mcap coherent with home global (<=1%)",
+                  dm <= 1, f"ai={ai_mcap} home={g['totalMarketCap']} diff={dm:.4f}%")
+            if g.get("totalVolume24h"):
+                dv = abs(ai_vol - g["totalVolume24h"]) / g["totalVolume24h"] * 100
+                # 24h volume churns hard intraday (measured 2.9% in 10 min):
+                # 5% band absorbs fetch skew, still far from decoy magnitude.
+                check("aioverview: digest volume coherent with home global (<=5%)",
+                      dv <= 5, f"ai={ai_vol} home={g['totalVolume24h']} diff={dv:.4f}%")
+        else:
+            check("aioverview: digest mcap+volume parsed", False, txt[:150])
+        md = re.search(r"dominance[^0-9]{0,40}([\d.]+)%", txt)
+        if md and g.get("btcDominance"):
+            ai_dom = float(md.group(1))
+            dd = abs(ai_dom - g["btcDominance"]) / g["btcDominance"] * 100
+            check("aioverview: digest dominance coherent with home (<=1%)",
+                  dd <= 1, f"ai={ai_dom} home={g['btcDominance']} diff={dd:.4f}%")
+        else:
+            check("aioverview: digest dominance coherent with home (<=1%)",
+                  False, f"parsed={md.group(1) if md else None}")
+        # GATE3: CoinGecko independent total-cap band (methodology diverges;
+        # measured 3.55% at wire time -> 5% band, disclosed)
+        cg = fetch_cg_global()
+        if cg.get("ok") and cg.get("mcap") and len(m) >= 1:
+            ai_mcap = int(m[0].replace(",", ""))
+            dcg = abs(ai_mcap - cg["mcap"]) / cg["mcap"] * 100
+            check("aioverview: CoinGecko total-cap sanity band (<=5%)",
+                  dcg <= 5, f"ai={ai_mcap} cg={cg['mcap']} diff={dcg:.3f}%")
+        else:
+            check("aioverview: CoinGecko total-cap sanity band (<=5%)",
+                  False, str(cg)[:140])
+
+    info("avg-roi-by-sector: REJECTED (not wired)",
+         "page ships only per-sector ICO/IEO/IDO aggregates (n=146, last 12m) with NO "
+         "constituents disclosed -> no falsifiable claim path; offering-type filter is "
+         "broken upstream (?type=ico/ieo/ido -> 500, ?offeringType ignored byte-identical); "
+         "kept out of CR_MODES (unknown mode -> 400), same class as /ath and /performance")
+
     # ---------------------------------------------------------------- 4
     note("error contract")
     st, body, hdr = get(base, "hack")
@@ -1129,7 +1380,7 @@ def main() -> int:
     check("unknown mode -> 400", st == 400, f"got {st}")
     check(
         "400 lists allowed modes",
-        isinstance(body.get("modes"), list) and len(body["modes"]) == 24,
+        isinstance(body.get("modes"), list) and len(body["modes"]) == 28,
         str(body.get("modes")),
     )
 
@@ -1255,6 +1506,18 @@ def main() -> int:
           "loadMode('news'" in comp and "Latest news" in comp and "newsRows" in comp, "")
     check("component: tag board wired",
           "loadMode('tag'" in comp and "fetchTagIndex" in comp and "tagRows" in comp, "")
+    check("component: converter board wired",
+          "loadMode('converter'" in comp and "converterRows" in comp
+          and "Full price list" in comp, "")
+    check("component: media board wired",
+          "loadMode('media'" in comp and "mediaRows" in comp
+          and "Media feed" in comp, "")
+    check("component: tagged news wired",
+          "loadMode('newstag'" in comp and "relatedTags" in comp
+          and "Tagged news" in comp, "")
+    check("component: ai overview wired",
+          "loadMode('aioverview'" in comp and "aiOverview" in comp
+          and "AI market overview" in comp, "")
     helper_src = read("scripts/cr_fetch.py")
     check("helper: data-route mode present", "--data-route" in helper_src
           and "_next/data" in helper_src, "")
@@ -1262,14 +1525,15 @@ def main() -> int:
           and "buildid.txt" in helper_src, "")
     lib = read("lib/cryptorank.ts")
     lib_modes = set(re.findall(
-        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool|nodesale|news|tags|tag|ecosystems|ecosystem|rwa|rwaasset|quarterly|prediction)'", lib))
+        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool|nodesale|news|tags|tag|ecosystems|ecosystem|rwa|rwaasset|quarterly|prediction|converter|media|newstag|aioverview)'", lib))
     check(
-        "lib modes == proxy modes (24)",
+        "lib modes == proxy modes (28)",
         lib_modes == {"home", "coins", "trending", "gainers", "losers", "funding",
                       "unlocks", "categories", "exchanges", "coin", "listings",
                       "blockchains", "chain", "launchpool", "nodesale", "news",
                       "tags", "tag", "ecosystems", "ecosystem", "rwa", "rwaasset",
-                      "quarterly", "prediction"},
+                      "quarterly", "prediction", "converter", "media", "newstag",
+                      "aioverview"},
         str(sorted(lib_modes)),
     )
     check(

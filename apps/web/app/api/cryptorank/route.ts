@@ -18,7 +18,9 @@ import {
   CR_MODES,
   CR_MODE_ARGS,
   CR_MODE_UPSTREAM,
+  type CrAiOverview,
   type CrCategoryInfo,
+  type CrConverterRow,
   type CrChainInfo,
   type CrChainRow,
   type CrCoin,
@@ -30,6 +32,7 @@ import {
   type CrGlobal,
   type CrLaunchpoolRow,
   type CrLiveMode,
+  type CrMediaRow,
   type CrMode,
   type CrFundingRound,
   type CrNewsRow,
@@ -76,7 +79,7 @@ type HelperOut = {
   cache?: string;
 };
 
-function runHelper(flag: '--path' | '--data-route', value: string, fresh = false): Promise<HelperOut> {
+function runHelperOnce(flag: '--path' | '--data-route', value: string, fresh = false): Promise<HelperOut> {
   return new Promise((resolve) => {
     const args = fresh ? [HELPER, flag, value, '--ttl', '0'] : [HELPER, flag, value];
     execFile(
@@ -96,6 +99,22 @@ function runHelper(flag: '--path' | '--data-route', value: string, fresh = false
       },
     );
   });
+}
+
+/**
+ * Transient-wall aware wrapper: a page mount fires every mode at once, which
+ * can trip cryptorank's CF burst limiter (upstream 429). Back off and retry
+ * the SAME fetch — responses may only fail on real data, never on a hiccup.
+ * Measured 2026-09-27: cold-cache mount -> 429 on 3-5 of ~20 modes.
+ */
+async function runHelper(flag: '--path' | '--data-route', value: string, fresh = false): Promise<HelperOut> {
+  let last: HelperOut = { ok: false, error: 'runHelper: no attempt' };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    last = await runHelperOnce(flag, value, fresh);
+    if (last.ok || last.status !== 429) return last;
+    await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
+  }
+  return last;
 }
 
 /* ------------------------------- shaping ------------------------------- */
@@ -734,6 +753,166 @@ function envelope(
     };
   }
 
+  if (kind === 'converter') {
+    const icc = pp.initialCompactCoins;
+    if (!Array.isArray(icc)) {
+      throw new Error('converter: missing initialCompactCoins');
+    }
+    const convRows: CrConverterRow[] = (icc as Record<string, unknown>[]).map((r) => ({
+      key: asStr(r.key) ?? '',
+      name: asStr(r.name) ?? '',
+      symbol: asStr(r.symbol) ?? '',
+      icon: asStr(r.icon),
+      priceUsd: asNum(r.price),
+    }));
+    return {
+      ...base,
+      count: convRows.length,
+      upstreamTotal: convRows.length,
+      changeSource: 'unavailable',
+      slice:
+        `full price list — all ${convRows.length} coins with live price ` +
+        '(converter page payload: /all-coins-list ships only the top 100); ' +
+        'price only — no 24h change upstream (em-dash, never 0)',
+      converterRows: convRows,
+    };
+  }
+
+  if (kind === 'media') {
+    const fd = pp.fallbackData as { data?: unknown; count?: unknown } | null;
+    if (!fd || !Array.isArray(fd.data)) {
+      throw new Error('media: missing fallbackData.data');
+    }
+    const mediaRows: CrMediaRow[] = (fd.data as Record<string, unknown>[]).map((r) => ({
+      id: asStr(r.id) ?? '',
+      title: asStr(r.title) ?? '',
+      channelTitle: asStr(r.channelTitle),
+      publishedAt: asStr(r.publishedAt),
+      durationSeconds: asNum(r.durationSeconds),
+      tags: Array.isArray(r.tags) ? (r.tags as unknown[]).map(String).slice(0, 6) : [],
+    }));
+    const total = typeof fd.count === 'number' ? fd.count : null;
+    return {
+      ...base,
+      count: mediaRows.length,
+      upstreamTotal: total,
+      changeSource: 'unavailable',
+      slice:
+        `video feed — ${mediaRows.length} of ${total ?? '?'} videos (SSR page 1 only); ` +
+        'id = YouTube video id (ground truth: youtube oembed title+channel match, verified); ' +
+        'duration/published straight from upstream',
+      mediaRows,
+    };
+  }
+
+  if (kind === 'newstag') {
+    const tg = (pp.tag ?? null) as Record<string, unknown> | null;
+    const list = pp.news;
+    if (!tg || !Array.isArray(list)) {
+      // GET maps tag=null to a real 404 before shaping; reaching here with a
+      // missing array is a schema break, not a missing tag.
+      throw new Error('newstag: missing news array');
+    }
+    const info: CrTagInfo = {
+      slug: asStr(tg.key) ?? (opts.key ?? 'defi'),
+      name: asStr(tg.name) ?? (opts.key ?? 'defi'),
+      subtitle: null,
+    };
+    const newsRows = list.map(shapeNewsRow);
+    const rel = Array.isArray(pp.tags)
+      ? (pp.tags as Record<string, unknown>[])
+          .map((t) => ({ slug: asStr(t.key) ?? '', name: asStr(t.name) ?? '' }))
+          .filter((t) => t.slug)
+      : [];
+    return {
+      ...base,
+      count: newsRows.length,
+      upstreamTotal: newsRows.length,
+      slice:
+        `articles tagged '${info.slug}' — ${newsRows.length} shown (upstream ships no tag total); ` +
+        'unknown slugs are answered locally as 404 from upstream\'s tag=null soft-404 marker ' +
+        '(never an unfiltered feed under a tag label); relatedCoins prices llama-verified',
+      newsRows,
+      tag: info,
+      relatedTags: rel,
+    };
+  }
+
+  if (kind === 'aioverview') {
+    const ov = (pp.overviewData ?? null) as Record<string, unknown> | null;
+    if (!ov) {
+      throw new Error('aioverview: missing overviewData');
+    }
+    const market = (ov.market ?? {}) as Record<string, unknown>;
+    const funding = (ov.fundingRound ?? {}) as Record<string, unknown>;
+    const drop = (ov.dropHunting ?? {}) as Record<string, unknown>;
+    const vest = (ov.vesting ?? {}) as Record<string, unknown>;
+    const aiOverview: CrAiOverview = {
+      market: {
+        summary: asStr(market.aiSummary),
+        updatedAt: asStr(market.updatedAt),
+      },
+      news: (Array.isArray(ov.news) ? (ov.news as Record<string, unknown>[]) : []).map((n) => ({
+        id: asNum(n.id),
+        title: asStr(n.title) ?? '',
+        date: asStr(n.date),
+        isBullish:
+          typeof n.isBullish === 'boolean' ? n.isBullish : null,
+      })),
+      funding: {
+        summary: asStr(funding.aiSummary),
+        rounds: (Array.isArray(funding.rounds)
+          ? (funding.rounds as Record<string, unknown>[])
+          : []
+        ).map((r) => ({
+          key: asStr(r.key),
+          name: asStr(r.name) ?? '',
+          stage: asStr(r.stage),
+          raisedUsd: asNum(r.raised),
+        })),
+      },
+      dropHunting: {
+        summary: asStr(drop.aiSummary),
+        activities: (Array.isArray(drop.activities)
+          ? (drop.activities as Record<string, unknown>[])
+          : []
+        ).map((a) => {
+          const coin = (a.coin ?? null) as Record<string, unknown> | null;
+          return {
+            key: asStr(a.key) ?? '',
+            type: asStr(a.type),
+            coinName: coin ? asStr(coin.name) : null,
+          };
+        }),
+      },
+      vesting: {
+        summary: asStr(vest.aiSummary),
+        unlocks: (Array.isArray(vest.vesting)
+          ? (vest.vesting as Record<string, unknown>[])
+          : []
+        ).map((v) => {
+          const coin = (v.coin ?? null) as Record<string, unknown> | null;
+          return {
+            date: asStr(v.date),
+            unlockPercent: asNum(v.unlockPercent),
+            coinName: coin ? asStr(coin.name) : null,
+          };
+        }),
+      },
+    };
+    return {
+      ...base,
+      count: aiOverview.news.length + aiOverview.funding.rounds.length +
+        aiOverview.dropHunting.activities.length + aiOverview.vesting.unlocks.length,
+      slice:
+        'upstream AI digest — summaries are cryptorank\'s own generated text ' +
+        '(their words, labelled as theirs); structured slices are plain rows; ' +
+        'cross-surface coherence vs mode=home enforced in harness ' +
+        '(mcap/volume/dominance <= 0.5%), CoinGecko total-cap sanity band 5%',
+      aiOverview,
+    };
+  }
+
   // gainers / losers -- same upstream row shape, change derived from anchor
   const rows = Array.isArray(pp.fallbackData) ? (pp.fallbackData as RawCoin[]) : [];
   return {
@@ -1187,6 +1366,24 @@ export async function GET(req: NextRequest) {
       },
       { status: 502 },
     );
+  }
+
+  // newstag soft-404 derivation: /news/tag/<unknown> answers HTTP 200 with
+  // tag:null (measured) — convert that honest marker into a real 404 so a
+  // slug we don't know never ships the unfiltered feed under a tag label.
+  if (mode === 'newstag') {
+    const tg = (h.pageProps as Record<string, unknown> | undefined)?.tag;
+    if (!tg) {
+      return NextResponse.json(
+        {
+          error: "upstream ships tag:null for this slug (soft-404) -> no such tag",
+          mode,
+          key: key ?? null,
+          upstreamStatus: 200,
+        },
+        { status: 404 },
+      );
+    }
   }
 
   const body = envelope(mode, h, { key, upstream });

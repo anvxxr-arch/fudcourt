@@ -58,6 +58,10 @@ export const CR_MODES = [
   'rwa', 'rwaasset',                // RWA index (209) + keyed type/slug detail
   'quarterly',                      // BTC/ETH quarterly returns (GATE2 vs CG daily)
   'prediction',                     // prediction-market aggregates + markets table
+  'converter',                      // full price list: /converter (4,975 coins, price only)
+  'media',                          // /media video aggregator (GATE3 = YT oembed match)
+  'newstag',                        // /news/tag/<slug> filtered feed (soft-404 -> local 404)
+  'aioverview',                     // /ai-market-overview upstream AI digest (coherence-gated)
 ] as const;
 export type CrMode = (typeof CR_MODES)[number];
 
@@ -75,6 +79,7 @@ export const CR_KEYED_PATHS = {
   tag: (key: string) => `/tags/${key}`,
   ecosystem: (key: string) => `/ecosystems/${key}`,
   rwaasset: (key: string) => `/rwa/${key}`,   // key = '<plural-type>/<slug>'
+  newstag: (key: string) => `/news/tag/${key}`, // soft-404: tag=null -> local 404, never unfiltered
 } as const;
 export type CrKeyedMode = keyof typeof CR_KEYED_PATHS;
 export const CR_DEFAULT_KEYS: Record<CrKeyedMode, string> = {
@@ -84,6 +89,7 @@ export const CR_DEFAULT_KEYS: Record<CrKeyedMode, string> = {
   tag: 'layer-1',
   ecosystem: 'ethereum',
   rwaasset: 'stocks/wendy-s',
+  newstag: 'defi',
 };
 
 /** exchanges takes a STRICT whitelist key (paths contain '/', regex won't do). */
@@ -168,6 +174,10 @@ export const CR_MODE_ARGS: Record<CrMode, [flag: '--path' | '--data-route', valu
   rwaasset: ['--path', '/rwa/stocks/wendy-s'],    // default key; route overrides
   quarterly: ['--path', '/charts/quarterly-returns'],
   prediction: ['--path', '/prediction-markets'],
+  converter: ['--path', '/converter'],
+  media: ['--path', '/media'],
+  newstag: ['--path', '/news/tag/defi'],      // default key; route overrides
+  aioverview: ['--path', '/ai-market-overview'],
 };
 
 /** Canonical HTML URL of what a mode's data represents (for the envelope). */
@@ -196,6 +206,10 @@ export const CR_MODE_UPSTREAM: Record<CrMode, string> = {
   rwaasset: `${CR_BASE}/rwa/stocks/wendy-s`,
   quarterly: `${CR_BASE}/charts/quarterly-returns`,
   prediction: `${CR_BASE}/prediction-markets`,
+  converter: `${CR_BASE}/converter`,
+  media: `${CR_BASE}/media`,
+  newstag: `${CR_BASE}/news/tag/defi`,
+  aioverview: `${CR_BASE}/ai-market-overview`,
 };
 
 export interface CrGlobal {
@@ -543,6 +557,53 @@ export interface CrTagInfo {
   subtitle: string | null;
 }
 
+/**
+ * Converter list row (/converter initialCompactCoins): the ONLY no-key
+ * surface shipping live price for ALL ~5k coins (top-100 covered by mode
+ * 'coins'). Upstream field is `price`; renamed here. No 24h change ships.
+ */
+export interface CrConverterRow {
+  key: string;
+  name: string;
+  symbol: string;
+  icon: string | null;
+  priceUsd: number | null;
+}
+
+/** Media aggregator row (/media, 10 of 468): id = YouTube video id. */
+export interface CrMediaRow {
+  id: string;
+  title: string;
+  channelTitle: string | null;
+  /** ISO8601 as shipped. */
+  publishedAt: string | null;
+  durationSeconds: number | null;
+  tags: string[];
+}
+
+/**
+ * /ai-market-overview digest: summaries are cryptorank's OWN generated text
+ * (labelled as theirs, never presented as ours). Structured slices (news/
+ * rounds/activities/unlocks) are plain upstream rows. Coherence-gated in the
+ * harness against mode 'home' (mcap/volume/dominance <= 0.5%).
+ */
+export interface CrAiOverview {
+  market: { summary: string | null; updatedAt: string | null };
+  news: { id: number | null; title: string; date: string | null; isBullish: boolean | null }[];
+  funding: {
+    summary: string | null;
+    rounds: { key: string | null; name: string; stage: string | null; raisedUsd: number | null }[];
+  };
+  dropHunting: {
+    summary: string | null;
+    activities: { key: string; type: string | null; coinName: string | null }[];
+  };
+  vesting: {
+    summary: string | null;
+    unlocks: { date: string | null; unlockPercent: number | null; coinName: string | null }[];
+  };
+}
+
 /** Category header (categories/<slug> HTML). */
 export interface CrCategoryInfo {
   slug: string;
@@ -604,5 +665,13 @@ export interface CrEnvelope {
   predictionRows?: CrPredictionRow[];
   /** news mode: latest items (first page only; ?page= is a no-op upstream). */
   newsRows?: CrNewsRow[];
+  /** converter mode: full price list (all coins with live price, price only). */
+  converterRows?: CrConverterRow[];
+  /** media mode: video rows (10 of 468 SSR slice; id = YouTube video id). */
+  mediaRows?: CrMediaRow[];
+  /** newstag mode: related-tag chips shipped on the tag page. */
+  relatedTags?: { slug: string; name: string }[];
+  /** aioverview mode: upstream AI digest sections (their generated text). */
+  aiOverview?: CrAiOverview;
   rows?: (CrCoin | CrTrendingRow | CrExchangeRow)[];
 }
