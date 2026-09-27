@@ -12,6 +12,7 @@ import {
   type CrExchangeRow,
   type CrGlobal,
   type CrMode,
+  type CrTagRow,
   type CrTrendingRow,
 } from '../../lib/cryptorank';
 
@@ -145,6 +146,11 @@ export default function CryptorankPage() {
   const [news, setNews] = useState<CrEnvelope | null>(null);
   const [newsErr, setNewsErr] = useState('');
 
+  const [tagRows, setTagRows] = useState<CrTagRow[]>([]);
+  const [tagSlug, setTagSlug] = useState<string>('layer-1');
+  const [tag, setTag] = useState<CrEnvelope | null>(null);
+  const [tagErr, setTagErr] = useState('');
+
   // chain board (index-fed selector + keyed ecosystem detail)
   const [chainRows, setChainRows] = useState<CrChainRow[]>([]);
   const [chainSlug, setChainSlug] = useState<string>('ethereum');
@@ -241,6 +247,28 @@ export default function CryptorankPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const fetchTagIndex = useCallback(async (fresh = false) => {
+    try {
+      const env = await loadMode('tags', fresh);
+      setTagRows(env.tagRows ?? []);
+    } catch {
+      setTagRows([]); // selector falls back to the current slug only
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchTag = useCallback(async (slug: string, fresh = false) => {
+    try {
+      const env = await loadMode('tag', fresh, slug);
+      setTag(env);
+      setTagErr('');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setTagErr(msg);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fetchNews = useCallback(async (fresh = false) => {
     try {
       const env = await loadMode('news', fresh);
@@ -295,6 +323,8 @@ export default function CryptorankPage() {
     void fetchChainIndex();
     void fetchChain('ethereum');
     void fetchNews();
+    void fetchTagIndex();
+    void fetchTag('layer-1');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -307,6 +337,11 @@ export default function CryptorankPage() {
     void fetchLp(lpKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lpKey]);
+
+  useEffect(() => {
+    void fetchTag(tagSlug);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tagSlug]);
 
   useEffect(() => {
     void fetchCat(catSlug);
@@ -825,6 +860,74 @@ export default function CryptorankPage() {
           <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
             {chain
               ? `showing ${Math.min(100, chain.count)} of ${chain.count} ecosystem tokens · ${chain.slice ?? ''}`
+              : ''}
+          </div>
+        </div>
+
+        {/* tag taxonomy (index-fed selector + keyed coin list) */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8 }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+              Tag{tag?.tag ? `: ${tag.tag.name}` : ''}
+            </div>
+            <select
+              value={tagSlug}
+              onChange={(e) => setTagSlug(e.target.value)}
+              style={{
+                fontSize: 11, padding: '3px 6px', borderRadius: 6, maxWidth: 170,
+                border: `1px solid ${C.border}`, background: C.bg, color: C.white,
+              }}
+            >
+              {(tagRows.length
+                ? tagRows
+                : [{ slug: tagSlug, name: tagSlug } as CrTagRow]
+              ).map((t0) => (
+                <option key={t0.slug} value={t0.slug}>{t0.name || t0.slug}</option>
+              ))}
+            </select>
+          </div>
+          {tag?.tag && (
+            <div style={{ fontSize: 10, color: C.dim, marginBottom: 6 }}>
+              {tag.tag.subtitle ?? '—'}
+            </div>
+          )}
+          {tagErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ tag '{tagSlug}' error: {tagErr} — nothing faked</div>
+          )}
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
+                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Token</th>
+                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Price</th>
+                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Mcap</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!tag && !tagErr && (
+                  <tr><td colSpan={4} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                )}
+                {(tag?.rows ?? []).slice(0, 100).map((r0) => {
+                  const c = r0 as CrCoin;
+                  return (
+                    <tr key={`${c.key}-${c.rank}`} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '5px 5px', color: C.dim, width: 26 }}>{c.rank ?? '—'}</td>
+                      <td style={{ padding: '5px 5px' }}>
+                        <span style={{ color: C.white }}>{c.name}</span>
+                        <span style={{ color: C.dim, marginLeft: 5, fontSize: 10 }}>{c.symbol}</span>
+                      </td>
+                      <td style={{ padding: '5px 5px', color: C.white }}>{money(c.priceUsd)}</td>
+                      <td style={{ padding: '5px 5px', color: C.white }}>{money(c.marketCap)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+            {tag
+              ? `showing ${Math.min(100, tag.count)} of ${tag.count} tagged coins · ${tag.slice ?? ''}`
               : ''}
           </div>
         </div>

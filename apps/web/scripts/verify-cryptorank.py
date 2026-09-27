@@ -858,6 +858,64 @@ def main() -> int:
         check("news: publisher <title> matches shipped row (ground truth)",
               matched, last_err or "no candidate rows")
 
+    # --- tags index + keyed tag detail (3-gate: 404 / price parity / cross-surface)
+    st, body, hdr = get(base, "tags")
+    body = body or {}
+    if check("tags: HTTP 200", st == 200, f"got {st}"):
+        trows = body.get("tagRows") or []
+        check("tags: >=180 tag rows", len(trows) >= 180, f"n={len(trows)}")
+        check(
+            "tags: slugs well-formed",
+            all(re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", t.get("slug") or "")
+                for t in trows[:60]),
+            str([t.get("slug") for t in trows[:5]]),
+        )
+        l1 = next((t for t in trows if t.get("slug") == "layer-1"), None)
+        check(
+            "tags: layer-1 row with mcap + avgPriceChange24h",
+            bool(l1) and isinstance(l1.get("marketCap"), (int, float))
+            and isinstance(l1.get("change24h"), (int, float)),
+            json.dumps(l1)[:170] if l1 else "missing layer-1",
+        )
+
+    st, body, hdr = get(base, "tag")
+    body = body or {}
+    if check("tag: HTTP 200 (default layer-1)", st == 200, f"got {st}"):
+        ti = body.get("tag") or {}
+        check(
+            "tag: meta echoes key",
+            ti.get("slug") == "layer-1" and bool(ti.get("name")),
+            json.dumps(ti)[:150],
+        )
+        rows_t = body.get("rows") or []
+        check("tag: >=100 coin rows", len(rows_t) >= 100, f"n={len(rows_t)}")
+        check(
+            "tag: changeSource unavailable (measured 0/N ship chg upstream)",
+            body.get("changeSource") == "unavailable",
+            str(body.get("changeSource")),
+        )
+        bt = next((r for r in rows_t if r.get("symbol") == "BTC"), None)
+        t_btc = truth.get("BTC")
+        if bt and t_btc and bt.get("priceUsd"):
+            d = abs(bt["priceUsd"] - t_btc) / t_btc * 100
+            check("tag: BTC matches independent ground truth (<=3%)",
+                  d <= 3, f"mine={bt['priceUsd']} truth={t_btc} diff={d:.3f}%")
+        else:
+            check("tag: BTC row for ground truth", False,
+                  f"row={bt and bt.get('priceUsd')} truth={t_btc}")
+        check(
+            "tag: slice labels breadth + chg absence",
+            "gainers" in (body.get("slice") or "")
+            and "never faked" in (body.get("slice") or ""),
+            str(body.get("slice"))[:170],
+        )
+
+    st, body, hdr = get(base, "tag", key="zzznoexist9999")
+    check("tag: unknown slug -> 404 (upstream passthrough)", st == 404, f"got {st}")
+
+    st, body, hdr = get(base, "tag", key="BAD SLUG")
+    check("tag: malformed key -> 400 (never clamped)", st == 400, f"got {st}")
+
     # ---------------------------------------------------------------- 4
     note("error contract")
     st, body, hdr = get(base, "hack")
@@ -865,7 +923,7 @@ def main() -> int:
     check("unknown mode -> 400", st == 400, f"got {st}")
     check(
         "400 lists allowed modes",
-        isinstance(body.get("modes"), list) and len(body["modes"]) == 15,
+        isinstance(body.get("modes"), list) and len(body["modes"]) == 17,
         str(body.get("modes")),
     )
 
@@ -969,6 +1027,8 @@ def main() -> int:
           "loadMode('launchpool'" in comp and "setLpKey" in comp and "Launchpool" in comp, "")
     check("component: news feed wired",
           "loadMode('news'" in comp and "Latest news" in comp and "newsRows" in comp, "")
+    check("component: tag board wired",
+          "loadMode('tag'" in comp and "fetchTagIndex" in comp and "tagRows" in comp, "")
     helper_src = read("scripts/cr_fetch.py")
     check("helper: data-route mode present", "--data-route" in helper_src
           and "_next/data" in helper_src, "")
@@ -976,12 +1036,12 @@ def main() -> int:
           and "buildid.txt" in helper_src, "")
     lib = read("lib/cryptorank.ts")
     lib_modes = set(re.findall(
-        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool|news)'", lib))
+        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool|news|tags|tag)'", lib))
     check(
-        "lib modes == proxy modes (15)",
+        "lib modes == proxy modes (17)",
         lib_modes == {"home", "coins", "trending", "gainers", "losers", "funding",
                       "unlocks", "categories", "exchanges", "coin", "listings",
-                      "blockchains", "chain", "launchpool", "news"},
+                      "blockchains", "chain", "launchpool", "news", "tags", "tag"},
         str(sorted(lib_modes)),
     )
     check(

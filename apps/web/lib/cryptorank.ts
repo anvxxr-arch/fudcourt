@@ -49,6 +49,7 @@ export const CR_MODES = [
   'blockchains', 'chain',          // chain index (278) + keyed ecosystem detail
   'launchpool',                    // event lists: /past-launchpool + /upcoming-launchpool
   'news',                           // /news aggregator feed (links out to publishers)
+  'tags', 'tag',                    // tag taxonomy index (182) + keyed coin detail
 ] as const;
 export type CrMode = (typeof CR_MODES)[number];
 
@@ -63,12 +64,14 @@ export const CR_KEYED_PATHS = {
   categories: (key: string) => `/categories/${key}`,
   coin: (key: string) => `/price/${key}`,
   chain: (key: string) => `/blockchains/${key}`,
+  tag: (key: string) => `/tags/${key}`,
 } as const;
 export type CrKeyedMode = keyof typeof CR_KEYED_PATHS;
 export const CR_DEFAULT_KEYS: Record<CrKeyedMode, string> = {
   categories: 'chain',
   coin: 'bitcoin',
   chain: 'ethereum',
+  tag: 'layer-1',
 };
 
 /** exchanges takes a STRICT whitelist key (paths contain '/', regex won't do). */
@@ -125,6 +128,8 @@ export const CR_MODE_ARGS: Record<CrMode, [flag: '--path' | '--data-route', valu
   chain: ['--path', '/blockchains/ethereum'],        // default key; route overrides
   launchpool: ['--path', '/past-launchpool'],        // default variant; route overrides
   news: ['--path', '/news'],
+  tags: ['--path', '/tags'],
+  tag: ['--path', '/tags/layer-1'],              // default key; route overrides
 };
 
 /** Canonical HTML URL of what a mode's data represents (for the envelope). */
@@ -144,6 +149,8 @@ export const CR_MODE_UPSTREAM: Record<CrMode, string> = {
   chain: `${CR_BASE}/blockchains/ethereum`,
   launchpool: `${CR_BASE}/past-launchpool`,
   news: `${CR_BASE}/news`,
+  tags: `${CR_BASE}/tags`,
+  tag: `${CR_BASE}/tags/layer-1`,
 };
 
 export interface CrGlobal {
@@ -311,6 +318,34 @@ export interface CrLaunchpoolRow {
   till: string | null;
 }
 
+/**
+ * Tag index row (/tags HTML, 182 rows) — taxonomy DISTINCT from categories
+ * (Layer 1 / PoW / Bitcoin Runes …): upstream ships per-tag breadth stats
+ * plus avgPriceChange periods (their own tag average, not derived here).
+ */
+export interface CrTagRow {
+  id: number | null;
+  slug: string;
+  name: string;
+  description: string | null;
+  marketCap: number | null;
+  volume24h: number | null;
+  dominance: number | null;
+  gainers: number | null;
+  losers: number | null;
+  /** avgPriceChange['24H'] — upstream's own tag average. */
+  change24h: number | null;
+  /** top coins shown on the index card. */
+  rankedCoins: { name: string; key: string | null }[];
+}
+
+/** Tag detail header (tags/<slug> HTML). */
+export interface CrTagInfo {
+  slug: string;
+  name: string;
+  subtitle: string | null;
+}
+
 /** Category header (categories/<slug> HTML). */
 export interface CrCategoryInfo {
   slug: string;
@@ -338,6 +373,10 @@ export interface CrEnvelope {
   fundingRounds?: CrFundingRound[];
   upcomingIco?: CrUpcomingIco[];
   category?: CrCategoryInfo;
+  /** tags index mode: full upstream tag list (feeds the selector). */
+  tagRows?: CrTagRow[];
+  /** tag detail mode: tag header. */
+  tag?: CrTagInfo;
   detail?: CrCoinDetail;
   chain?: CrChainInfo;
   /** blockchains index mode: full upstream chain list. */

@@ -28,6 +28,8 @@ import {
   type CrMode,
   type CrFundingRound,
   type CrNewsRow,
+  type CrTagInfo,
+  type CrTagRow,
   type CrTrendingRow,
   type CrUpcomingIco,
 } from '../../../lib/cryptorank';
@@ -502,6 +504,52 @@ function envelope(
     };
   }
 
+  if (kind === 'tags') {
+    const list = pp.tags;
+    if (!Array.isArray(list)) {
+      throw new Error('tags: missing tags array');
+    }
+    const tagRows = list.map(shapeTagRow);
+    return {
+      ...base,
+      count: tagRows.length,
+      upstreamTotal: tagRows.length,
+      slice:
+        `${tagRows.length} tags (topic taxonomy, distinct from categories) — ` +
+        'breadth stats + avgPriceChange are upstream tag averages; rankedCoins = index-card top coins',
+      tagRows,
+    };
+  }
+
+  if (kind === 'tag') {
+    const tg = (pp.tag ?? null) as Record<string, unknown> | null;
+    const coins = pp.coins;
+    const gl = (pp.gainersLosersData ?? {}) as Record<string, number>;
+    if (!tg || !Array.isArray(coins)) {
+      throw new Error('tag: missing tag/coins');
+    }
+    const info: CrTagInfo = {
+      slug: asStr(tg.slug) ?? (opts.key ?? 'layer-1'),
+      name: asStr(tg.name) ?? (opts.key ?? 'layer-1'),
+      subtitle: asStr(tg.subtitle),
+    };
+    const tagCoins = (coins as RawCoin[]).map((r) => shapeCoin(r, null));
+    // change24h: measured 0/65 rows ship histPrices or priceChange24h on this
+    // surface -> every row renders null and the board labels it upstream-absent.
+    return {
+      ...base,
+      count: tagCoins.length,
+      upstreamTotal: tagCoins.length,
+      changeSource: 'unavailable',
+      slice:
+        `tag '${info.slug}' — ${tagCoins.length} coins by mcap; ` +
+        `breadth ${gl.gainers ?? '—'} gainers / ${gl.losers ?? '—'} losers; ` +
+        'chg columns absent upstream (measured), never faked',
+      tag: info,
+      rows: tagCoins,
+    };
+  }
+
   // gainers / losers -- same upstream row shape, change derived from anchor
   const rows = Array.isArray(pp.fallbackData) ? (pp.fallbackData as RawCoin[]) : [];
   return {
@@ -572,6 +620,32 @@ function shapeNewsRow(r: Record<string, unknown>): CrNewsRow {
     readingMinutes: asNum(r.readingTimeMinutes),
     isAdvertisement: r.isAdvertisement === true,
     relatedCoins: rc,
+  };
+}
+
+/** Tag index row: avgPriceChange is upstream's own per-tag average. */
+function shapeTagRow(r: Record<string, unknown>): CrTagRow {
+  const apc = (r.avgPriceChange ?? null) as Record<string, unknown> | null;
+  const rc = Array.isArray(r.rankedCoins)
+    ? (r.rankedCoins as Record<string, unknown>[])
+        .slice(0, 4)
+        .map((c) => ({
+          name: asStr(c.name) ?? '',
+          key: asStr(c.key),
+        }))
+    : [];
+  return {
+    id: typeof r.id === 'number' ? r.id : null,
+    slug: asStr(r.slug) ?? '',
+    name: asStr(r.name) ?? (asStr(r.slug) ?? ''),
+    description: asStr(r.description),
+    marketCap: asNum(r.marketCap),
+    volume24h: asNum(r.volume24h),
+    dominance: asNum(r.dominance),
+    gainers: asNum(r.gainers),
+    losers: asNum(r.losers),
+    change24h: apc ? asNum(apc['24H']) : null,
+    rankedCoins: rc,
   };
 }
 
