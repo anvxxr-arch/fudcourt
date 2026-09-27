@@ -30,7 +30,8 @@ Why both exist (measured 2026-09-27):
 
 Usage:
     cr_fetch.py --path /all-coins-list [--ttl 60]
-    cr_fetch.py --data-route /funding-rounds [--ttl 60]
+    cr_fetch.py --path /price/bitcoin [--ttl 60]        (keyed, regex-allowlisted)
+    cr_fetch.py --data-route /funding-rounds [--ttl 60]  (detector only)
 
 Output: ONE JSON object on stdout:
     {"ok": true,  "path": ..., "status": 200, "pageProps": {...},
@@ -55,13 +56,22 @@ import time
 from typing import NoReturn
 
 # HTML-page allowlist -- the route only ever passes one of these; defense in depth.
+# The keyed families (price/categories) are regex-allowlisted: their HTML class
+# passed the 3-gate decoy detector (nonexistent slug -> 404, prices within
+# 0.002-0.25% of coins.llama.fi, cross-surface agreement) -- unlike the
+# /_next/data class, which fabricates (see header).
 HTML_ALLOWED = {
     "/",
     "/all-coins-list",
     "/trending",
     "/gainers",
     "/losers",
+    "/exchanges/cex/spot",
 }
+HTML_ALLOWED_RE = (
+    re.compile(r"^/price/[a-z0-9][a-z0-9-]{0,63}$"),
+    re.compile(r"^/categories/[a-z0-9][a-z0-9-]{0,63}$"),
+)
 
 # Data-route allowlist: exact paths + regex for keyed detail routes.
 DATA_ALLOWED_EXACT = {
@@ -146,7 +156,9 @@ def main() -> None:
         emit({"ok": False, "error": "exactly one of --path / --data-route required"}, 2)
 
     if args.path:
-        if args.path not in HTML_ALLOWED:
+        if args.path not in HTML_ALLOWED and not any(
+            rx.match(args.path) for rx in HTML_ALLOWED_RE
+        ):
             emit({"ok": False, "path": args.path, "error": "path not allowed"}, 5)
         route_kind = "html"
         target = args.path

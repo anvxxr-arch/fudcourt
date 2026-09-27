@@ -3,7 +3,10 @@
 verify-cryptorank.py -- executable contract for the CryptoRank integration.
 
     route:      GET http://127.0.0.1:3100/api/cryptorank?mode=<mode>
-    modes:      home | coins | trending | losers | gainers   (400 on anything else)
+    modes:      home | coins | trending | losers | gainers
+                categories | exchanges | coin   (coin/categories take ?key=,
+                validated CR_KEY_RE: bad format 400, honest upstream miss 404)
+                funding | unlocks   (503 loud refusal -- synthetic data-route)
                 funding | unlocks -> 503 REFUSED (upstream /_next/data class
                 serves synthetic decoy; see lib/cryptorank.ts CR_DISABLED)
     data path:  route -> scripts/cr_fetch.py (venv curl_cffi) -> cryptorank.io
@@ -76,10 +79,12 @@ def info(name: str, detail: str) -> None:
     NOTES.append(f"{name}: {detail}")
 
 
-def get(base: str, mode: str, fresh: bool = False) -> tuple[int, dict | None, dict]:
+def get(base: str, mode: str, fresh: bool = False, key: str | None = None) -> tuple[int, dict | None, dict]:
     params: dict = {"mode": mode}
     if fresh:
         params["fresh"] = "1"
+    if key:
+        params["key"] = key
     try:
         r = requests.get(f"{base}/api/cryptorank", params=params, timeout=120)
     except Exception as e:  # noqa: BLE001
@@ -404,6 +409,144 @@ def main() -> int:
                     f"proxy={mine['priceUsd']} upstream={up['price']} diff={diff:.3f}%",
                 )
 
+    # ------------------------------------------- 3b HTML board modes (gated)
+    note("HTML board modes: categories / exchanges / coin (3-gate verified)")
+
+    truth = ground_truth_prices()
+    eth_t, btc_t = truth.get("ETH"), truth.get("BTC")
+    check(
+        "board: ground truth available",
+        isinstance(eth_t, (int, float)) and isinstance(btc_t, (int, float)),
+        str(truth),
+    )
+
+    # --- exchanges (fixed /exchanges/cex/spot HTML)
+    st, body, hdr = get(base, "exchanges")
+    body = body or {}
+    if check("exchanges: HTTP 200", st == 200, f"got {st}"):
+        rows = body.get("rows") or []
+        check("exchanges: 50 rows", len(rows) == 50, f"n={len(rows)}")
+        check(
+            "exchanges: top row is binance",
+            bool(rows) and rows[0].get("key") == "binance",
+            str(rows[0].get("key") if rows else None),
+        )
+        vols = [r.get("dayVolUsd") for r in rows if isinstance(r.get("dayVolUsd"), (int, float))]
+        vsum = sum(vols) if vols else 0
+        check(
+            "exchanges: day-volume sum plausible (5B..1T)",
+            5e9 <= vsum <= 1e12,
+            f"sum={vsum:.3g} n={len(vols)}",
+        )
+        p0 = rows[0].get("percentVolume") if rows else None
+        check(
+            "exchanges: binance share 10-45%",
+            isinstance(p0, (int, float)) and 10 <= p0 <= 45,
+            f"pct={p0}",
+        )
+        check(
+            "exchanges: methodology labelled (reported, not independent)",
+            "reported" in (body.get("slice") or ""),
+            str(body.get("slice"))[:120],
+        )
+
+    # --- categories (default key=chain)
+    st, body, hdr = get(base, "categories")
+    body = body or {}
+    if check("categories: HTTP 200", st == 200, f"got {st}"):
+        rows = body.get("rows") or []
+        check("categories: >=90 rows", len(rows) >= 90, f"n={len(rows)}")
+        cat = body.get("category") or {}
+        check(
+            "categories: name + breadth present",
+            bool(cat.get("name")) and cat.get("gainers") is not None and cat.get("losers") is not None,
+            json.dumps(cat)[:160],
+        )
+        check(
+            "categories: changeSource unavailable (no fake changes)",
+            body.get("changeSource") == "unavailable",
+            str(body.get("changeSource")),
+        )
+        eth = next((r for r in rows if r.get("symbol") == "ETH"), None)
+        if eth and isinstance(eth_t, (int, float)) and eth.get("priceUsd"):
+            diff = abs(eth["priceUsd"] - eth_t) / eth_t * 100
+            check(
+                "categories: ETH matches independent ground truth (<=3%)",
+                diff <= 3,
+                f"mine={eth['priceUsd']} truth={eth_t} diff={diff:.3f}%",
+            )
+        else:
+            check("categories: ETH row for ground truth", False, f"eth={eth}")
+
+    # --- categories keyed (stablecoin)
+    st, body, hdr = get(base, "categories", key="stablecoin")
+    body = body or {}
+    if check("categories?stablecoin: HTTP 200", st == 200, f"got {st}"):
+        check(
+            "categories?stablecoin: key echoed in category.slug",
+            (body.get("category") or {}).get("slug") == "stablecoin",
+            json.dumps(body.get("category"))[:120],
+        )
+        usdt = next(
+            (r for r in (body.get("rows") or []) if r.get("symbol") == "USDT"), None
+        )
+        check(
+            "categories?stablecoin: USDT ~1.00 (peg, 0.97-1.03)",
+            bool(usdt) and isinstance(usdt.get("priceUsd"), (int, float))
+            and 0.97 <= usdt["priceUsd"] <= 1.03,
+            f"usdt={usdt.get('priceUsd') if usdt else None}",
+        )
+
+    # --- coin detail (default key=bitcoin)
+    st, body, hdr = get(base, "coin")
+    body = body or {}
+    if check("coin: HTTP 200", st == 200, f"got {st}"):
+        d = body.get("detail") or {}
+        check("coin: bitcoin detail name", d.get("name") == "Bitcoin", str(d.get("name")))
+        check(
+            "coin: change24h derived (non-null)",
+            d.get("change24h") is not None,
+            str(d.get("change24h")),
+        )
+        check(
+            "coin: ath above price",
+            isinstance(d.get("athUsd"), (int, float))
+            and isinstance(d.get("priceUsd"), (int, float))
+            and d["athUsd"] > d["priceUsd"],
+            f"ath={d.get('athUsd')} price={d.get('priceUsd')}",
+        )
+        if isinstance(btc_t, (int, float)) and d.get("priceUsd"):
+            diff = abs(d["priceUsd"] - btc_t) / btc_t * 100
+            check(
+                "coin: BTC matches independent ground truth (<=3%)",
+                diff <= 3,
+                f"mine={d['priceUsd']} truth={btc_t} diff={diff:.3f}%",
+            )
+        check(
+            "coin: envelope labels derived change",
+            body.get("changeSource") == "derived-from-histPrices-24H",
+            str(body.get("changeSource")),
+        )
+
+    # --- coin keyed (ethereum)
+    st, body, hdr = get(base, "coin", key="ethereum")
+    body = body or {}
+    if check("coin?ethereum: HTTP 200", st == 200, f"got {st}"):
+        d = body.get("detail") or {}
+        if isinstance(eth_t, (int, float)) and d.get("priceUsd"):
+            diff = abs(d["priceUsd"] - eth_t) / eth_t * 100
+            check(
+                "coin?ethereum: matches independent ground truth (<=3%)",
+                diff <= 3,
+                f"mine={d['priceUsd']} truth={eth_t} diff={diff:.3f}%",
+            )
+
+    # --- key contract: bad format -> 400, honest miss -> upstream 404
+    st, body, hdr = get(base, "coin", key="../../etc")
+    check("key contract: invalid format -> 400", st == 400, f"got {st}")
+    st, body, hdr = get(base, "coin", key="zzznoexist9999")
+    check("key contract: unknown coin -> 404 (upstream passthrough)", st == 404, f"got {st}")
+
     # ---------------------------------------------------------------- 4
     note("error contract")
     st, body, hdr = get(base, "hack")
@@ -411,7 +554,7 @@ def main() -> int:
     check("unknown mode -> 400", st == 400, f"got {st}")
     check(
         "400 lists allowed modes",
-        isinstance(body.get("modes"), list) and len(body["modes"]) == 7,
+        isinstance(body.get("modes"), list) and len(body["modes"]) == 10,
         str(body.get("modes")),
     )
 
@@ -482,6 +625,12 @@ def main() -> int:
           "Upcoming IDO / IEO" in comp, "")
     check("component: refusal documented in footer",
           "SYNTHETIC decoy" in comp, "")
+    check("component: coin spotlight wired",
+          "Coin spotlight" in comp and "loadMode('coin'" in comp, "")
+    check("component: sectors board wired",
+          "Top CEX (spot)" in comp and "CR_CATEGORY_SLUGS" in comp, "")
+    check("component: keyed loadMode",
+          "key=${encodeURIComponent" in comp, "")
     helper_src = read("scripts/cr_fetch.py")
     check("helper: data-route mode present", "--data-route" in helper_src
           and "_next/data" in helper_src, "")
@@ -489,11 +638,17 @@ def main() -> int:
           and "buildid.txt" in helper_src, "")
     lib = read("lib/cryptorank.ts")
     lib_modes = set(re.findall(
-        r"'(home|coins|trending|gainers|losers|funding|unlocks)'", lib))
+        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin)'", lib))
     check(
-        "lib modes == proxy modes (7)",
-        lib_modes == {"home", "coins", "trending", "gainers", "losers", "funding", "unlocks"},
+        "lib modes == proxy modes (10)",
+        lib_modes == {"home", "coins", "trending", "gainers", "losers", "funding",
+                      "unlocks", "categories", "exchanges", "coin"},
         str(sorted(lib_modes)),
+    )
+    check(
+        "lib: keyed-path machinery present",
+        "CR_KEYED_PATHS" in lib and "CR_KEY_RE" in lib and "CR_CATEGORY_SLUGS" in lib,
+        "",
     )
     check(
         "lib: CR_DISABLED covers data-route modes",

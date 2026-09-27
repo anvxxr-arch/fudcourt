@@ -4,8 +4,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { C } from '../../lib/ui/shared';
 import {
   CR_BASE,
+  CR_CATEGORY_SLUGS,
   type CrCoin,
+  type CrCoinDetail,
   type CrEnvelope,
+  type CrExchangeRow,
   type CrGlobal,
   type CrMode,
   type CrTrendingRow,
@@ -33,6 +36,17 @@ function money(v: number | null | undefined): string {
   if (a >= 0.0001) return `$${v.toFixed(6)}`;
   if (a >= 1e-8) return `$${v.toFixed(8)}`; // sub-cent (SHIB/PEPE) readable, never 1.2e-6
   return `$${v.toExponential(2)}`;
+}
+
+/** Supply in COIN units (never $): 19900000 BTC -> 19.90M BTC, null -> em-dash. */
+function supply(v: number | null | undefined, symbol?: string): string {
+  if (v == null) return '—';
+  const s = symbol ? ` ${symbol}` : '';
+  const a = Math.abs(v);
+  if (a >= 1e9) return `${(v / 1e9).toFixed(2)}B${s}`;
+  if (a >= 1e6) return `${(v / 1e6).toFixed(2)}M${s}`;
+  if (a >= 1e3) return `${(v / 1e3).toFixed(2)}K${s}`;
+  return `${v.toFixed(2)}${s}`;
 }
 
 /** Money for volumes/raises: adds a K tier so 600000 -> $600.00K, not $600000.00. */
@@ -83,8 +97,9 @@ const MARKET_TABS: { key: MarketTab; label: string }[] = [
   { key: 'losers', label: 'Losers' },
 ];
 
-async function loadMode(mode: CrMode, fresh = false): Promise<CrEnvelope> {
-  const res = await fetch(`/api/cryptorank?mode=${mode}${fresh ? '&fresh=1' : ''}`, { cache: 'no-store' });
+async function loadMode(mode: CrMode, fresh = false, key?: string): Promise<CrEnvelope> {
+  const keyQ = key ? `&key=${encodeURIComponent(key)}` : '';
+  const res = await fetch(`/api/cryptorank?mode=${mode}${keyQ}${fresh ? '&fresh=1' : ''}`, { cache: 'no-store' });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     const detail = body?.error ?? `HTTP ${res.status}`;
@@ -101,6 +116,21 @@ export default function CryptorankPage() {
   const [homeErr, setHomeErr] = useState('');
   const [homeStale, setHomeStale] = useState(false);
   const [homeAt, setHomeAt] = useState<number | null>(null);
+
+  // spotlight coin detail (keyed mode; default bitcoin)
+  const [coinKey, setCoinKey] = useState('bitcoin');
+  const [coinInput, setCoinInput] = useState('bitcoin');
+  const [detail, setDetail] = useState<CrCoinDetail | null>(null);
+  const [detailErr, setDetailErr] = useState('');
+
+  // sector board (keyed: category slug)
+  const [catSlug, setCatSlug] = useState<string>('chain');
+  const [cat, setCat] = useState<CrEnvelope | null>(null);
+  const [catErr, setCatErr] = useState('');
+
+  // exchange board (fixed spot CEX list)
+  const [ex, setEx] = useState<CrEnvelope | null>(null);
+  const [exErr, setExErr] = useState('');
 
   const [tab, setTab] = useState<MarketTab>('coins');
   const [market, setMarket] = useState<CrEnvelope | null>(null);
@@ -144,10 +174,53 @@ export default function CryptorankPage() {
     [market],
   );
 
-  useEffect(() => {
-    void fetchHome();
+  const fetchDetail = useCallback(async (key: string, fresh = false) => {
+    try {
+      const env = await loadMode('coin', fresh, key);
+      setDetail(env.detail ?? null);
+      setDetailErr(env.detail ? '' : 'upstream shipped no detail object — nothing faked');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setDetailErr(msg);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchCat = useCallback(async (slug: string, fresh = false) => {
+    try {
+      const env = await loadMode('categories', fresh, slug);
+      setCat(env);
+      setCatErr('');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setCatErr(msg);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchEx = useCallback(async (fresh = false) => {
+    try {
+      const env = await loadMode('exchanges', fresh);
+      setEx(env);
+      setExErr('');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setExErr(msg);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    void fetchHome();
+    void fetchDetail('bitcoin');
+    void fetchEx();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    void fetchCat(catSlug);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catSlug]);
 
   useEffect(() => {
     void fetchMarket(tab);
@@ -178,6 +251,9 @@ export default function CryptorankPage() {
           onClick={() => {
             void fetchHome(true);
             void fetchMarket(tab, true);
+            void fetchDetail(coinKey, true);
+            void fetchCat(catSlug, true);
+            void fetchEx(true);
           }}
           style={{
             marginLeft: 'auto', fontSize: 11, color: C.bg, background: C.accent,
@@ -208,6 +284,89 @@ export default function CryptorankPage() {
         <Stat label="ETH dominance" value={global?.ethDominance != null ? `${global.ethDominance.toFixed(1)}%` : '—'} sub={pct(global?.ethDominanceChangePercent)} subColor={chgColor(global?.ethDominanceChangePercent)} />
         <Stat label="Tracked assets" value={global?.allCurrencies != null ? global.allCurrencies.toLocaleString('en-US') : '—'} sub="" subColor={C.dim} />
         <Stat label="Gas (avg)" value={global?.gasGwei != null ? `${global.gasGwei.toFixed(1)} gwei` : '—'} sub="" subColor={C.dim} />
+      </div>
+
+      {/* ------------------------ spotlight coin --------------------------- */}
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12, marginBottom: 14 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+          <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Coin spotlight</div>
+          <input
+            value={coinInput}
+            onChange={(e) => setCoinInput(e.target.value.toLowerCase())}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setCoinKey(coinInput.trim());
+                void fetchDetail(coinInput.trim());
+              }
+            }}
+            placeholder="coin key (e.g. bitcoin)"
+            style={{
+              fontSize: 12, padding: '4px 8px', borderRadius: 6, width: 180,
+              border: `1px solid ${C.border}`, background: C.bg, color: C.white,
+            }}
+          />
+          <button
+            onClick={() => {
+              setCoinKey(coinInput.trim());
+              void fetchDetail(coinInput.trim());
+            }}
+            style={{
+              fontSize: 11, padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
+              border: `1px solid ${C.accent}`, background: 'transparent', color: C.accent, fontWeight: 700,
+            }}
+          >
+            load
+          </button>
+          {detail && (
+            <a
+              href={`${CR_BASE}/price/${detail.key}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{ fontSize: 11, color: C.accent, marginLeft: 'auto' }}
+            >
+              {detail.name} ({detail.symbol}) ↗
+            </a>
+          )}
+        </div>
+        {detailErr && (
+          <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>
+            ⚠ coin '{coinKey}' error: {detailErr} — nothing faked
+          </div>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
+          <Stat label="Price" value={money(detail?.priceUsd)} sub="" subColor={C.dim} />
+          <Stat
+            label="Chg 24h (derived)"
+            value={detail?.change24h != null ? pct(detail.change24h) : '—'}
+            sub=""
+            subColor={chgColor(detail?.change24h ?? null)}
+          />
+          <Stat label="Market cap" value={money(detail?.marketCap)} sub={detail?.rank != null ? `rank #${detail.rank}` : ''} subColor={C.dim} />
+          <Stat label="Volume 24h" value={money(detail?.volume24h)} sub="" subColor={C.dim} />
+          <Stat
+            label="ATH"
+            value={money(detail?.athUsd)}
+            sub={shortDate(detail?.athDate ?? null)}
+            subColor={C.dim}
+          />
+          <Stat
+            label="From ATL"
+            value={detail?.fromAtlPct != null ? pct(detail.fromAtlPct) : '—'}
+            sub={shortDate(detail?.atlDate ?? null)}
+            subColor={C.dim}
+          />
+          <Stat
+            label="Circulating"
+            value={supply(detail?.availableSupply, detail?.symbol)}
+            sub={detail?.circulatingPct != null ? `${detail.circulatingPct.toFixed(1)}% of total` : ''}
+            subColor={C.dim}
+          />
+          <Stat label="Max supply" value={detail?.maxSupply != null ? detail.maxSupply.toLocaleString('en-US') : '—'} sub="" subColor={C.dim} />
+        </div>
+        <div style={{ fontSize: 10, color: C.dim, marginTop: 6 }}>
+          source: /price/{coinKey} SSR payload (3-gate verified) · chg24h derived from histPrices["24H"] anchor ·
+          sparse fields render em-dash, never 0
+        </div>
       </div>
 
       {/* --------------------------- market table --------------------------- */}
@@ -298,6 +457,127 @@ export default function CryptorankPage() {
         {tab === 'trending' && 'source: /trending SSR payload · chg 24h is an upstream field'}
         {(tab === 'gainers' || tab === 'losers') &&
           `source: /${tab} SSR payload · chg 24h derived from upstream histPrices["24H"] anchor (150-row upstream list)`}
+      </div>
+
+      {/* ------------------- sectors + exchanges --------------------------- */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, marginTop: 16 }}>
+        {/* sectors (categories, keyed) */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8 }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+              Sectors{cat?.category ? `: ${cat.category.name}` : ''}
+            </div>
+            <select
+              value={catSlug}
+              onChange={(e) => setCatSlug(e.target.value)}
+              style={{
+                fontSize: 11, padding: '3px 6px', borderRadius: 6,
+                border: `1px solid ${C.border}`, background: C.bg, color: C.white,
+              }}
+            >
+              {CR_CATEGORY_SLUGS.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          {cat?.category && (
+            <div style={{ fontSize: 10, color: C.dim, marginBottom: 6 }}>
+              breadth: <span style={{ color: C.green }}>{cat.category.gainers ?? '—'} gainers</span>
+              {' / '}
+              <span style={{ color: C.red }}>{cat.category.losers ?? '—'} losers</span>
+            </div>
+          )}
+          {catErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ sector '{catSlug}' error: {catErr} — nothing faked</div>
+          )}
+          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Coin</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Price</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Mcap</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Vol 24h</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!cat && !catErr && (
+                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                )}
+                {(cat?.rows ?? []).map((r0) => {
+                  const c = r0 as CrCoin;
+                  return (
+                    <tr key={`${c.key}-${c.rank}`} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '5px 6px', color: C.dim, width: 28 }}>{c.rank ?? '—'}</td>
+                      <td style={{ padding: '5px 6px' }}>
+                        <span style={{ color: C.white }}>{c.name}</span>
+                        <span style={{ color: C.dim, marginLeft: 5, fontSize: 10 }}>{c.symbol}</span>
+                      </td>
+                      <td style={{ padding: '5px 6px', color: C.white }}>{money(c.priceUsd)}</td>
+                      <td style={{ padding: '5px 6px', color: C.white }}>{money(c.marketCap)}</td>
+                      <td style={{ padding: '5px 6px', color: C.white }}>{moneyCompact(c.volume24hUsd)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+            {cat?.slice ?? ''} · chg24h ships nowhere on this surface → column omitted upstream, not faked
+          </div>
+        </div>
+
+        {/* exchanges (spot CEX list) */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Top CEX (spot)</div>
+            <div style={{ fontSize: 10, color: C.dim }}>{ex?.count ?? '—'} exchanges</div>
+          </div>
+          {exErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ exchanges error: {exErr} — nothing faked</div>
+          )}
+          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Exchange</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>24h vol</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Share</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Pairs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!ex && !exErr && (
+                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                )}
+                {((ex?.rows ?? []) as CrExchangeRow[]).map((e0) => (
+                  <tr key={e0.key} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <td style={{ padding: '5px 6px', color: C.dim, width: 28 }}>{e0.rank ?? '—'}</td>
+                    <td style={{ padding: '5px 6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        {e0.image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={e0.image} alt="" width={16} height={16} style={{ borderRadius: '50%' }} />
+                        )}
+                        <span style={{ color: C.white }}>{e0.name}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: '5px 6px', color: C.white }}>{moneyCompact(e0.dayVolUsd)}</td>
+                    <td style={{ padding: '5px 6px', color: C.accent, whiteSpace: 'nowrap' }}>
+                      {e0.percentVolume != null ? `${e0.percentVolume.toFixed(1)}%` : '—'}
+                    </td>
+                    <td style={{ padding: '5px 6px', color: C.dim }}>{e0.pairsCount ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+            {ex?.slice ?? ''}
+          </div>
+        </div>
       </div>
 
       {/* -------------------------- fundraising ----------------------------- */}

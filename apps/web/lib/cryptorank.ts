@@ -38,8 +38,40 @@
 
 export const CR_BASE = 'https://cryptorank.io';
 
-export const CR_MODES = ['home', 'coins', 'trending', 'gainers', 'losers', 'funding', 'unlocks'] as const;
+export const CR_MODES = [
+  'home', 'coins', 'trending', 'gainers', 'losers',
+  'funding', 'unlocks',            // REFUSED (synthetic data-route class)
+  'categories', 'exchanges', 'coin', // live HTML class, 3-gate verified
+] as const;
 export type CrMode = (typeof CR_MODES)[number];
+
+/**
+ * Keyed live modes: the route takes ?key=<slug> (validated CR_KEY_RE, never
+ * clamped -- bad format 400, honest upstream miss 404 passthrough).
+ * All three keyed families passed the 3-gate decoy detector on 2026-09-27:
+ * nonexistent slug -> 404, prices within 0.002-0.25% of coins.llama.fi,
+ * cross-surface agreement with the homepage.
+ */
+export const CR_KEYED_PATHS = {
+  categories: (key: string) => `/categories/${key}`,
+  coin: (key: string) => `/price/${key}`,
+} as const;
+export type CrKeyedMode = keyof typeof CR_KEYED_PATHS;
+export const CR_DEFAULT_KEYS: Record<CrKeyedMode, string> = {
+  categories: 'chain',
+  coin: 'bitcoin',
+};
+export const CR_KEY_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
+/** 28 overview categories (sitemap: 84 URLs = these x {overview,ath,performance}). */
+export const CR_CATEGORY_SLUGS = [
+  'predictionmarkets', 'blockchain-infrastructure', 'chain', 'blockchain-service',
+  'gamefi', 'social', 'stablecoin', 'currency', 'defi', 'exchange',
+  'non-fungible-tokens-nft', 'meme', 'ce-fi', 'payments', 'wallet',
+  'tokenizedassets', 'rwa', 'depin', 'launchpad', 'interoperability',
+  'miningandcompute', 'compliance', 'dataanalytics', 'ai', 'liquidstaking',
+  'brokerage', 'treasure', 'privacy',
+] as const;
 
 /** Modes the route REFUSES (503) because upstream serves synthetic decoy. */
 export const CR_DISABLED = ['funding', 'unlocks'] as const;
@@ -65,6 +97,9 @@ export const CR_MODE_ARGS: Record<CrMode, [flag: '--path' | '--data-route', valu
   losers: ['--path', '/losers'],
   funding: ['--data-route', '/funding-rounds'],
   unlocks: ['--data-route', '/token-unlock'],
+  categories: ['--path', '/categories/chain'],      // default key; route overrides
+  exchanges: ['--path', '/exchanges/cex/spot'],
+  coin: ['--path', '/price/bitcoin'],               // default key; route overrides
 };
 
 /** Canonical HTML URL of what a mode's data represents (for the envelope). */
@@ -76,6 +111,9 @@ export const CR_MODE_UPSTREAM: Record<CrMode, string> = {
   losers: `${CR_BASE}/losers`,
   funding: `${CR_BASE}/funding-rounds`,
   unlocks: `${CR_BASE}/token-unlock`,
+  categories: `${CR_BASE}/categories/chain`,
+  exchanges: `${CR_BASE}/exchanges/cex/spot`,
+  coin: `${CR_BASE}/price/bitcoin`,
 };
 
 export interface CrGlobal {
@@ -142,6 +180,56 @@ export interface CrUpcomingIco {
   date: string | null;
 }
 
+/** Exchange ranking row (exchanges/cex/spot HTML: 50 rows, reported volume). */
+export interface CrExchangeRow {
+  rank: number | null;
+  key: string;
+  name: string;
+  image: string | null;
+  dayVolUsd: number | null;
+  weekVolUsd: number | null;
+  monthVolUsd: number | null;
+  percentVolume: number | null;
+  pairsCount: number | null;
+  currenciesCount: number | null;
+  exchangeType: string | null;
+}
+
+/** Per-coin detail card (/price/<key> HTML: coin + priceStatistics). */
+export interface CrCoinDetail {
+  key: string;
+  name: string;
+  symbol: string;
+  image: string | null;
+  priceUsd: number | null;
+  /** Derived from histPrices['24H'].USD anchor; labelled in envelope. */
+  change24h: number | null;
+  marketCap: number | null;
+  fullyDilutedMarketCap: number | null;
+  volume24h: number | null;
+  availableSupply: number | null;
+  totalSupply: number | null;
+  maxSupply: number | null;
+  circulatingPct: number | null;
+  athUsd: number | null;
+  athDate: string | null;
+  atlUsd: number | null;
+  atlDate: string | null;
+  fromAthPct: number | null;
+  fromAtlPct: number | null;
+  listingDate: string | null;
+  lifeCycle: string | null;
+  rank: number | null;
+}
+
+/** Category header (categories/<slug> HTML). */
+export interface CrCategoryInfo {
+  slug: string;
+  name: string;
+  gainers: number | null;
+  losers: number | null;
+}
+
 export interface CrEnvelope {
   kind: CrMode;
   upstream: string;
@@ -160,5 +248,7 @@ export interface CrEnvelope {
   global?: CrGlobal;
   fundingRounds?: CrFundingRound[];
   upcomingIco?: CrUpcomingIco[];
-  rows?: (CrCoin | CrTrendingRow)[];
+  category?: CrCategoryInfo;
+  detail?: CrCoinDetail;
+  rows?: (CrCoin | CrTrendingRow | CrExchangeRow)[];
 }

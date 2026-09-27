@@ -5,11 +5,17 @@ import {
   CR_BASE,
   CR_DISABLED,
   CR_DISABLED_REASON,
+  CR_DEFAULT_KEYS,
+  CR_KEY_RE,
+  CR_KEYED_PATHS,
   CR_MODES,
   CR_MODE_ARGS,
   CR_MODE_UPSTREAM,
+  type CrCategoryInfo,
   type CrCoin,
+  type CrCoinDetail,
   type CrEnvelope,
+  type CrExchangeRow,
   type CrGlobal,
   type CrLiveMode,
   type CrMode,
@@ -48,9 +54,8 @@ type HelperOut = {
   cache?: string;
 };
 
-function runHelper(mode: CrMode, fresh = false): Promise<HelperOut> {
+function runHelper(flag: '--path' | '--data-route', value: string, fresh = false): Promise<HelperOut> {
   return new Promise((resolve) => {
-    const [flag, value] = CR_MODE_ARGS[mode];
     const args = fresh ? [HELPER, flag, value, '--ttl', '0'] : [HELPER, flag, value];
     execFile(
       PYTHON,
@@ -194,11 +199,74 @@ function shapeTrending(r: RawCoin): CrTrendingRow {
   };
 }
 
-function envelope(kind: CrLiveMode, h: HelperOut): CrEnvelope {
+/** exchanges/cex/spot HTML: fallbackData, 50 rows, cryptorank REPORTED volume. */
+function shapeExchange(r: Record<string, unknown>, i: number): CrExchangeRow {
+  const volumes = (r.volumes ?? {}) as Record<string, Record<string, number>>;
+  const day = (volumes.day ?? {}) as Record<string, number>;
+  const week = (volumes.week ?? {}) as Record<string, number>;
+  const month = (volumes.month ?? {}) as Record<string, number>;
+  return {
+    rank: i + 1,
+    key: typeof r.key === 'string' ? r.key : '',
+    name: typeof r.name === 'string' ? r.name : '',
+    image: typeof r.icon === 'string' ? r.icon : null,
+    dayVolUsd: asNum(day.toUSD),
+    weekVolUsd: asNum(week.toUSD),
+    monthVolUsd: asNum(month.toUSD),
+    percentVolume: asNum(r.percentVolume),
+    pairsCount: asNum(r.pairsCount),
+    currenciesCount: asNum(r.currenciesCount),
+    exchangeType: typeof r.exchangeType === 'string' ? r.exchangeType : null,
+  };
+}
+
+/** /price/<key> HTML: coin + priceStatistics + histPrices anchor for 24h. */
+function shapeCoinDetail(pp: Record<string, unknown>, key: string): CrCoinDetail {
+  const coin = (pp.coin ?? {}) as Record<string, unknown>;
+  const stats = (pp.priceStatistics ?? {}) as Record<string, unknown>;
+  const hist = (coin.histPrices ?? {}) as Record<string, { USD?: number } | undefined>;
+  const hist24 = hist['24H'];
+  const p24 = asNum(hist24?.USD);
+  const price = asPriceUsd(coin.price);
+  const change24h =
+    p24 !== null && price !== null && p24 !== 0 ? ((price - p24) / p24) * 100 : null;
+  const ath = asPriceUsd(stats.athPrice);
+  const atl = asPriceUsd(stats.atlPrice);
+  return {
+    key,
+    name: typeof coin.name === 'string' ? coin.name : '',
+    symbol: typeof coin.symbol === 'string' ? coin.symbol : '',
+    image: typeof coin.image === 'string' ? coin.image : null,
+    priceUsd: price,
+    change24h,
+    marketCap: asNum(stats.marketCap ?? coin.marketCap),
+    fullyDilutedMarketCap: asNum(stats.fullyDilutedMarketCap),
+    volume24h: asNum(stats.volume24h ?? coin.volume24h),
+    availableSupply: asNum(stats.availableSupply),
+    totalSupply: asNum(stats.totalSupply),
+    maxSupply: asNum(stats.maxSupply),
+    circulatingPct: asNum(stats.availableSupplyPercent),
+    athUsd: ath,
+    athDate: typeof stats.athPriceDate === 'string' ? stats.athPriceDate : null,
+    atlUsd: atl,
+    atlDate: typeof stats.atlPriceDate === 'string' ? stats.atlPriceDate : null,
+    fromAthPct: asNum(stats.fromAthPrice),
+    fromAtlPct: asNum(stats.fromAtlPrice),
+    listingDate: typeof stats.listingDate === 'string' ? stats.listingDate : null,
+    lifeCycle: typeof coin.lifeCycle === 'string' ? coin.lifeCycle : null,
+    rank: asNum(coin.rank ?? coin.cRank),
+  };
+}
+
+function envelope(
+  kind: CrLiveMode,
+  h: HelperOut,
+  opts: { key?: string; upstream?: string } = {},
+): CrEnvelope {
   const pp = (h.pageProps ?? {}) as Record<string, unknown>;
   const base = {
     kind,
-    upstream: CR_MODE_UPSTREAM[kind],
+    upstream: opts.upstream ?? CR_MODE_UPSTREAM[kind],
     fetchedAt: h.fetchedAt ?? Math.floor(Date.now() / 1000),
     cache: h.cache ?? 'MISS',
   };
@@ -243,6 +311,60 @@ function envelope(kind: CrLiveMode, h: HelperOut): CrEnvelope {
     };
   }
 
+  if (kind === 'categories') {
+    const fallbackCoins = pp.fallbackCoins;
+    if (!Array.isArray(fallbackCoins)) {
+      throw new Error('categories: missing fallbackCoins');
+    }
+    const cat = (pp.category ?? {}) as Record<string, unknown>;
+    const gl = (pp.gainersLosersData ?? {}) as Record<string, number>;
+    const info: CrCategoryInfo = {
+      slug: opts.key ?? 'chain',
+      name: typeof cat.name === 'string' ? cat.name : (opts.key ?? 'chain'),
+      gainers: asNum(gl.gainers),
+      losers: asNum(gl.losers),
+    };
+    const catRows = fallbackCoins.map((r) => shapeCoin(r, null));
+    // change24h: category fallbackCoins carry NO hist anchor -> unavailable
+    // upstream, so every row renders null and the board labels it.
+    return {
+      ...base,
+      count: catRows.length,
+      slice: `category '${info.slug}' overview — ${catRows.length} coins by mcap; category breadth gainers ${info.gainers ?? '—'} / losers ${info.losers ?? '—'}`,
+      changeSource: 'unavailable',
+      category: info,
+      rows: catRows,
+    };
+  }
+
+  if (kind === 'exchanges') {
+    const fd = pp.fallbackData;
+    if (!Array.isArray(fd)) {
+      throw new Error('exchanges: missing fallbackData');
+    }
+    const exRows = fd.map((r, i) => shapeExchange(r, i));
+    return {
+      ...base,
+      count: exRows.length,
+      slice: `spot CEX top ${exRows.length} — cryptorank's OWN reported 24h volume (their methodology, not independent); per-row % share of listed total`,
+      rows: exRows,
+    };
+  }
+
+  if (kind === 'coin') {
+    if (!pp.coin) {
+      throw new Error('coin: missing pageProps.coin');
+    }
+    const detail = shapeCoinDetail(pp, opts.key ?? 'bitcoin');
+    return {
+      ...base,
+      count: 1,
+      slice: `coin detail '${detail.key}' — price from page payload; change24h derived from histPrices['24H'] anchor`,
+      changeSource: 'derived-from-histPrices-24H',
+      detail,
+    };
+  }
+
   // gainers / losers -- same upstream row shape, change derived from anchor
   const rows = Array.isArray(pp.fallbackData) ? (pp.fallbackData as RawCoin[]) : [];
   return {
@@ -282,21 +404,59 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const h = await runHelper(mode, fresh);
+  // Keyed live modes (categories/coin): ?key=<slug> -- validated, NEVER
+  // clamped (bad format = 400; an honest upstream miss forwards its real 404
+  // instead of fabricating a row).
+  let flag: '--path' | '--data-route' = CR_MODE_ARGS[mode][0];
+  let value: string = CR_MODE_ARGS[mode][1];
+  let key: string | undefined;
+  let upstream = CR_MODE_UPSTREAM[mode];
+  if (mode in CR_KEYED_PATHS) {
+    const keyed = mode as keyof typeof CR_KEYED_PATHS;
+    const raw = req.nextUrl.searchParams.get('key');
+    key = raw === null || raw === '' ? CR_DEFAULT_KEYS[keyed] : raw;
+    if (!CR_KEY_RE.test(key)) {
+      return NextResponse.json(
+        {
+          error: 'invalid key',
+          detail: `key must match ${CR_KEY_RE} (lowercase alnum + dashes, 1-64)`,
+          mode,
+          key,
+        },
+        { status: 400 },
+      );
+    }
+    value = CR_KEYED_PATHS[keyed](key);
+    upstream = `${CR_BASE}${value}`;
+  }
+
+  const h = await runHelper(flag, value, fresh);
   if (!h.ok) {
+    if (h.status === 404) {
+      // Honest upstream miss (e.g. /price/zzznoexist) -> real 404.
+      return NextResponse.json(
+        {
+          error: 'upstream 404: no such resource',
+          mode,
+          key: key ?? null,
+          upstreamStatus: 404,
+        },
+        { status: 404 },
+      );
+    }
     // Real failure, real detail: upstream wall status or helper crash text.
     return NextResponse.json(
       {
         error: h.error ?? 'cryptorank helper failed',
         upstreamStatus: h.status ?? null,
-        upstream: CR_MODE_UPSTREAM[mode],
+        upstream,
         kind: mode,
       },
       { status: 502 },
     );
   }
 
-  const body = envelope(mode, h);
+  const body = envelope(mode, h, { key, upstream });
   return NextResponse.json(body, {
     headers: {
       'X-CR-Upstream': body.upstream,
