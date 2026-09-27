@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { DEX, DEX_TYPES, DEX_CHAINS, type DexType, type DexChain, type DexPair, type DexProfile, isMint } from '../../../lib/dex';
+import { limitedFetch } from '../../../lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -37,17 +38,25 @@ function fail(message: string, status: number, detail?: string) {
 }
 
 /** Fetch upstream, converting a non-2xx into a loud proxy error. */
-async function upstream(path: string, label: string) {
+type CacheState = 'HIT' | 'MISS' | 'COALESCED';
+type UpstreamOk = { json: unknown; cache: CacheState };
+type UpstreamErr = { error: NextResponse };
+async function upstream(path: string, label: string): Promise<UpstreamOk | UpstreamErr> {
   let res: Response;
+  let cacheState: CacheState = 'MISS';
   try {
-    res = await fetch(DEX + path, {
+    // Routed through the shared limiter/cache: DexScreener answers bursts with
+    // 429 (Cloudflare 1015), and the UI fires on every keystroke and toggle.
+    res = await limitedFetch(DEX + path, {
       cache: 'no-store',
       headers: { 'User-Agent': 'fudcourt-web/1.0', Accept: 'application/json' },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
+    const mark = res.headers.get('X-Cache');
+    cacheState = mark === 'HIT' || mark === 'COALESCED' ? mark : 'MISS';
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return { error: fail(`upstream ${label} unreachable: ${msg}`, 502) } as const;
+    return { error: fail(`upstream ${label} unreachable: ${msg}`, 502) };
   }
 
   if (!res.ok) {
@@ -55,15 +64,26 @@ async function upstream(path: string, label: string) {
     // detail and report the real status -- never substitute our own wording for
     // what upstream actually said.
     const body = await res.text().catch(() => '');
+    if (res.status === 429) {
+      // Cloudflare 1015. Say so plainly and name the cause, because the fix is
+      // "slow down" and a bare 429 reads as a broken server.
+      return {
+        error: fail(
+          `upstream ${label} rate limited (HTTP 429, Cloudflare 1015) — too many requests in a short window`,
+          429,
+          body.slice(0, 200) || 'no retry-after header'
+        ),
+      };
+    }
     return {
       error: fail(`upstream ${label} HTTP ${res.status}`, res.status, body.slice(0, 200)),
-    } as const;
+    };
   }
 
   try {
-    return { json: (await res.json()) as unknown } as const;
+    return { json: (await res.json()) as unknown, cache: cacheState };
   } catch {
-    return { error: fail(`upstream ${label} returned a non-JSON body`, 502) } as const;
+    return { error: fail(`upstream ${label} returned a non-JSON body`, 502) };
   }
 }
 
@@ -140,7 +160,7 @@ export async function GET(req: Request) {
       // and it is the cheapest way to resolve ONE market.
       const addr = p('address').trim();
       if (!isMint(addr)) {
-        return fail('`address` is not a valid mint', 400, 'expected 32-44 base58 chars');
+        return fail('`address` is not a valid token address', 400, 'expected a base58 mint, a 0x EVM address, or a dotted name');
       }
       const chain = wantedChain || 'solana';
       upstreamPath = `/tokens/v1/${chain}/${addr}`;
@@ -168,7 +188,7 @@ export async function GET(req: Request) {
     case 'token-pairs': {
       const addr = p('address').trim();
       if (!isMint(addr)) {
-        return fail('`address` is not a valid mint', 400, 'expected 32-44 base58 chars');
+        return fail('`address` is not a valid token address', 400, 'expected a base58 mint, a 0x EVM address, or a dotted name');
       }
       const chain = wantedChain || 'solana';
       upstreamPath = `/token-pairs/v1/${chain}/${addr}`;
@@ -178,7 +198,7 @@ export async function GET(req: Request) {
     case 'orders': {
       const addr = p('address').trim();
       if (!isMint(addr)) {
-        return fail('`address` is not a valid mint', 400, 'expected 32-44 base58 chars');
+        return fail('`address` is not a valid token address', 400, 'expected a base58 mint, a 0x EVM address, or a dotted name');
       }
       const chain = wantedChain || 'solana';
       upstreamPath = `/orders/v1/${chain}/${addr}`;
@@ -187,9 +207,16 @@ export async function GET(req: Request) {
     }
   }
 
-  const r = await upstream(upstreamPath, type);
-  if ('error' in r) return r.error;
-  const json = r.json;
+  const up = await upstream(upstreamPath, type);
+  if ('error' in up) return up.error;
+  const json = up.json;
+  // Surfaced so the limiter is observable from outside: a HIT and a MISS return
+  // byte-identical bodies, and without this header a 0.005s cached response is
+  // indistinguishable from a real upstream round-trip. Measured 0.53s -> 0.005s.
+  // COALESCED means "shared a call that was already in flight" -- distinct from
+  // both, and reported as such rather than rounded down to MISS.
+  const cacheState = up.cache;
+  const cacheHeaders = { 'X-Cache': cacheState };
 
   // --- profiles / boosts: list of profile records, passed through trimmed ---
   if (kind === 'profiles') {
@@ -217,7 +244,7 @@ export async function GET(req: Request) {
       total: all.length,
       upstream: DEX + upstreamPath,
       fetchedAt: Math.floor(Date.now() / 1000),
-    });
+    }, { headers: cacheHeaders });
   }
 
   // --- orders: its own payload family (orders + boosts, no pairs) ---
@@ -229,7 +256,7 @@ export async function GET(req: Request) {
       boosts: Array.isArray(o.boosts) ? o.boosts : [],
       upstream: DEX + upstreamPath,
       fetchedAt: Math.floor(Date.now() / 1000),
-    });
+    }, { headers: cacheHeaders });
   }
 
   // --- pairs: {schemaVersion, pairs} envelope or a bare array ---
@@ -263,7 +290,7 @@ export async function GET(req: Request) {
       note: `upstream returned ${pairs.length} pairs across ${Object.keys(seen).length} chains; none on '${filterChain}'`,
       upstream: DEX + upstreamPath,
       fetchedAt: Math.floor(Date.now() / 1000),
-    });
+    }, { headers: cacheHeaders });
   }
 
   const rows = matched.slice(0, limit);
@@ -281,5 +308,5 @@ export async function GET(req: Request) {
     ...(filterChain ? { filteredBy: filterChain } : {}),
     upstream: DEX + upstreamPath,
     fetchedAt: Math.floor(Date.now() / 1000),
-  });
+  }, { headers: cacheHeaders });
 }

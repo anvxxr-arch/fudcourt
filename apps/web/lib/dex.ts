@@ -32,15 +32,42 @@ export const DEX_CHAINS = [
   // measured 2026-09-26: search returns these too, so they must be selectable
   'robinhood', 'cronos', 'ton', 'aptos', 'celo', 'ink', 'linea', 'scroll',
   'mantle', 'metis', 'manta', 'soneium', 'arc', 'flowevm', 'pulsechain', 'xrpl',
+  // measured 2026-09-27: the live profile feed serves NEAR tokens, and
+  // /token-pairs/v1/near/<name> answers 200. Without this the chain select
+  // could not reach a real market that upstream is happy to serve.
+  'near',
 ] as const;
 
 export type DexChain = (typeof DEX_CHAINS)[number];
 
-/** Measured: a base58 mint is 32-44 chars. Anything else is a typo, not a token. */
+/**
+ * A token address, per chain family. Measured against the live
+ * `token-profiles/latest/v1` feed, which is NOT base58-only: as of 2026-09-27
+ * 6 of its 30 records are `0x…` (robinhood, bsc) or a NEAR name
+ * (`rust-334.meme-cooking.near`). A validator that only accepts base58 rejects
+ * real tokens, and -- worse -- caused the profiles->pairs join to abort the
+ * entire request.
+ *
+ *   base58  solana-style mints, 32-44 chars
+ *   hex     0x-prefixed EVM addresses, exactly 40 hex digits
+ *   name    NEAR-style dotted names (`segment.segment`)
+ */
 export const MINT_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+export const HEX_RE = /^0x[0-9a-fA-F]{40}$/;
+export const NAME_RE = /^[a-z0-9][a-z0-9._-]*\.[a-z0-9][a-z0-9._-]*$/i;
 
 export function isMint(v: string) {
-  return MINT_RE.test(v);
+  const s = v.trim();
+  return MINT_RE.test(s) || HEX_RE.test(s) || NAME_RE.test(s);
+}
+
+/** Which address family this is, or null. Used to report honestly. */
+export function addressKind(v: string): 'base58' | 'hex' | 'name' | null {
+  const s = v.trim();
+  if (HEX_RE.test(s)) return 'hex';
+  if (MINT_RE.test(s)) return 'base58';
+  if (NAME_RE.test(s)) return 'name';
+  return null;
 }
 
 export type DexToken = { address: string; name: string; symbol: string };

@@ -24,6 +24,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 
 DEFAULT_BASE = "http://127.0.0.1:3100"
 
@@ -58,6 +59,17 @@ REJECTIONS = [
     # had leaked into `type` -- which points the caller at the wrong field.
     ("unknown chain (search)", "type=search&q=SOL&chain=hedera", 400),
     ("unknown chain (token-pairs)", f"type=token-pairs&address={WSOL}&chain=nope", 400),
+]
+
+# Address families DexScreener really serves. Measured on
+# token-profiles/latest/v1: 6 of 30 records were NOT base58 -- robinhood/bsc
+# 0x… addresses and a NEAR name. A base58-only validator rejected real tokens
+# and aborted the whole profiles->pairs join, so this is a contract, not trivia.
+# format -> (address, chain)
+ADDRESS_FAMILIES = [
+    ("base58 solana", WSOL, "solana"),
+    ("hex EVM (bsc)", "0x2259D0Fc599a4cD2CF4861cae52C4F0D65537777", "bsc"),
+    ("near name", "rust-334.meme-cooking.near", "near"),
 ]
 
 # Fields a mature pair is measured to always carry.
@@ -337,6 +349,115 @@ def verify_upstream_honesty(base):
           "fetchedAt is a real unix timestamp", note("got", ts))
 
 
+def verify_burst(base: str) -> None:
+    """A burst must never be answered 429.
+
+    DexScreener sits behind Cloudflare and answers 10 concurrent requests with
+    10x `429 {"type":".../error-1015/","title":"Error 1015: You are being rate
+    limited"}`. Measured before the limiter existed; it has to stay 200 after.
+    """
+    section("a burst is never answered 429 (Cloudflare 1015)")
+
+    qs = f"type=search&q=burst{int(time.time())}&limit=5"
+    codes: list[int] = []
+    cache_marks: list[str] = []
+
+    def one(_) -> tuple[int, str]:
+        req = urllib.request.Request(f"{base}/api/dex?{qs}", headers={"User-Agent": "fudcourt-verify/1.0"})
+        try:
+            with urllib.request.urlopen(req, timeout=45) as r:
+                return r.status, r.headers.get("X-Cache", "-")
+        except urllib.error.HTTPError as e:
+            return e.code, "-"
+        except Exception as e:
+            return 0, type(e).__name__
+
+    with ThreadPoolExecutor(max_workers=10) as ex:
+        for code, mark in ex.map(one, range(10)):
+            codes.append(code)
+            cache_marks.append(mark)
+
+    check(all(c == 200 for c in codes),
+          "10 concurrent identical requests all answer 200",
+          note("codes:", sorted(set(codes))))
+
+    # Single-flight: exactly one request may reach upstream, the rest must be
+    # marked COALESCED. Ten MISS would mean ten real round-trips -- the exact
+    # burst that triggered 1015.
+    n_miss = cache_marks.count("MISS")
+    n_coal = cache_marks.count("COALESCED")
+    check(n_miss == 1,
+          "only one of the 10 reaches upstream (single-flight)",
+          note("MISS:", n_miss, "COALESCED:", n_coal))
+    check(n_miss + n_coal == 10,
+          "every coalesced caller is labelled, not left ambiguous",
+          note(sorted(set(cache_marks))))
+
+    # A warm repeat must be a HIT and materially faster than a cold fetch.
+    t0 = time.time()
+    st, _ = get(f"{base}/api/dex?{qs}")
+    warm = time.time() - t0
+    req = urllib.request.Request(f"{base}/api/dex?{qs}", headers={"User-Agent": "fudcourt-verify/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=45) as r:
+            mark = r.headers.get("X-Cache", "-")
+    except urllib.error.HTTPError:
+        mark = "-"
+    check(mark == "HIT", "an identical repeat within the TTL is served from cache",
+          note("x-cache:", mark, f"{warm*1000:.0f}ms"))
+    check(st == 200 and warm < 0.25,
+          "a cache hit is fast enough to be a cache hit",
+          note(f"{warm*1000:.0f}ms (cold measured ~530ms)"))
+
+    # Distinct queries must NOT collapse: a cache keyed too coarsely would
+    # serve one token's data under another's name.
+    distinct = [f"type=search&q=dist{i}{int(time.time())}&limit=5" for i in range(6)]
+    marks2: list[str] = []
+    def one_distinct(q: str) -> str:
+        req = urllib.request.Request(f"{base}/api/dex?{q}", headers={"User-Agent": "fudcourt-verify/1.0"})
+        try:
+            with urllib.request.urlopen(req, timeout=45) as r:
+                return r.headers.get("X-Cache", "-")
+        except urllib.error.HTTPError:
+            return "HTTPError"
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        marks2 = list(ex.map(one_distinct, distinct))
+    check(all(m == "MISS" for m in marks2),
+          "6 distinct queries are not collapsed into one cached body",
+          note(sorted(set(marks2))))
+
+
+def verify_address_families(base: str) -> None:
+    """The proxy must accept every address family DexScreener actually serves.
+
+    Measured on token-profiles/latest/v1: 6 of 30 records were not base58 --
+    robinhood/bsc 0x… addresses and one NEAR name. A base58-only validator made
+    the profiles->pairs join abort with "2 address(es) are not valid mints" and
+    showed an error page instead of 16 real markets. The UI is only as good as
+    the widest address the API will take.
+    """
+    section("every address family DexScreener serves is accepted, not just base58")
+
+    for label, addr, chain in ADDRESS_FAMILIES:
+        qs = urllib.parse.urlencode({"type": "token-pairs", "address": addr, "chain": chain})
+        status, body = get(f"{base}/api/dex?{qs}")
+        d, why = require(status, body)
+        if why:
+            check(False, f"{label} address is accepted", why)
+            continue
+        check(status == 200, f"{label} address is accepted", note("got", status))
+        check(d.get("returned", 0) >= 1,
+              f"{label} address resolves to at least one market",
+              note("returned", d.get("returned")))
+
+    # And the rejection path must still be loud: widening the validator must not
+    # have turned "malformed" into "empty result".
+    for bad in ("notarealmint", "zzz", "0x123", "0xZZZZ" + "a" * 36):
+        qs = urllib.parse.urlencode({"type": "token-pairs", "address": bad, "chain": "solana"})
+        status, body = get(f"{base}/api/dex?{qs}")
+        check(status == 400, f"malformed {bad!r} is still rejected 400", note("got", status))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default=DEFAULT_BASE)
@@ -353,6 +474,8 @@ def main():
     verify_search(base)
     verify_search_chain(base)
     verify_upstream_honesty(base)
+    verify_burst(base)
+    verify_address_families(base)
 
     passed = sum(1 for ok, _, _ in results if ok)
     failed = len(results) - passed

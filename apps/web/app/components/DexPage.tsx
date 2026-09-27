@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { C } from '../../lib/ui/shared';
-import { DEX_CHAINS, type DexPair, type DexProfile } from '../../lib/dex';
+import { DEX_CHAINS, isMint, type DexPair, type DexProfile } from '../../lib/dex';
 
 const SEARCH_CHAINS = DEX_CHAINS as readonly string[];
 
@@ -13,7 +13,7 @@ const MODES: { key: Mode; label: string; hint: string }[] = [
   { key: 'boosts', label: 'paid boosts', hint: 'tokens with active paid promotion. `amount`/`totalAmount` are the paid spend in USD; a large totalAmount with a tiny amount is an old campaign topping up, not a fresh pump.' },
   { key: 'pairs', label: 'top pairs', hint: 'the busiest Solana markets by volume, via the profiles->pairs join. Measured on this feed: liquidity is present on only 1 in 4 of a fresh cohort and labels on 0 in 4, so those cells render as an em-dash, never 0.' },
   { key: 'search', label: 'search', hint: 'DexScreener search by symbol or address. Case-insensitive substring match on the returned set; the API caps at 30 pairs per query.' },
-  { key: 'mint', label: 'mint lookup', hint: 'exact on-chain address lookup. An address that is not a valid base58 mint is rejected locally with a 400 -- upstream answers 200 with an empty list, which would make a typo look exactly like a token with no markets.' },
+  { key: 'mint', label: 'mint lookup', hint: 'exact on-chain address lookup. A malformed address is rejected locally with a 400 -- upstream answers 200 with an empty list, which would make a typo look exactly like a token with no markets. Base58 mints, 0x EVM addresses and NEAR names are all accepted; the live profile feed is not base58-only.' },
 ];
 
 /** Present-but-null is NOT zero. Every formatter here returns an em-dash. */
@@ -90,9 +90,25 @@ export default function DexPage() {
         const pRes = await fetch('/api/dex?type=profiles&limit=10', { cache: 'no-store' });
         if (!pRes.ok) throw new Error(`profiles HTTP ${pRes.status}`);
         const pJson = await pRes.json();
-        const addrs = (pJson.data || []).map((x: DexProfile) => x.address).filter(Boolean);
-        if (addrs.length === 0) throw new Error('no fresh profile mints to resolve');
-        url = `/api/dex?type=tokens&addresses=${encodeURIComponent(addrs.join(','))}&limit=30`;
+        const all = (pJson.data || []).map((x: DexProfile) => x.address).filter(Boolean);
+        if (all.length === 0) throw new Error('no fresh profile mints to resolve');
+        // The profile feed is not base58-only -- measured 6 of 30 upstream
+        // records are 0x… EVM addresses or a NEAR name. Send only the ones this
+        // proxy will accept, and REPORT the rest rather than dropping them
+        // silently: a join that quietly discards a fifth of its cohort looks
+        // identical to a join that found nothing for them.
+        const usable = all.filter(isMint);
+        const skipped = all.filter((a) => !isMint(a));
+        if (skipped.length) {
+          setMeta((m) => ({
+            ...m,
+            note: `${skipped.length} of ${all.length} fresh profile addresses were not resolvable by this proxy and were skipped: ${skipped.slice(0, 3).join(', ')}${skipped.length > 3 ? '…' : ''}`,
+          }));
+        }
+        if (usable.length === 0) {
+          throw new Error(`none of the ${all.length} fresh profile addresses could be resolved`);
+        }
+        url = `/api/dex?type=tokens&addresses=${encodeURIComponent(usable.join(','))}&limit=30`;
       } else if (mode === 'mint') {
         if (!addr.trim()) throw new Error('enter a mint address');
         // tokens-v1 resolves only the single deepest pair; token-pairs lists all
@@ -121,16 +137,19 @@ export default function DexPage() {
         setRows(json.data || []);
         setProfiles([]);
       }
-      setMeta({
-        upstream: json.upstream,
+      // Merge, do not replace: the join may have already recorded addresses it
+      // had to skip, and a bare setMeta here silently dropped that note -- the
+      // UI would then look like it had resolved the whole cohort.
+      setMeta((m) => ({
+        upstream: json.upstream ?? m.upstream,
         returned: json.returned,
         total: json.total,
         fetchedAt: json.fetchedAt,
         chainsSeen: json.chainsSeen,
         filteredBy: json.filteredBy,
         upstreamTotal: json.upstreamTotal,
-        note: json.note,
-      });
+        note: json.note || m.note,
+      }));
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
@@ -143,7 +162,17 @@ export default function DexPage() {
     }
   }, [mode, chain, q, addr, searchChain, deepestOnly]);
 
-  useEffect(() => { load(); }, [load]);
+  // The upstream sits behind Cloudflare and answers bursts with 429 (error-1015).
+  // The server-side limiter protects it too, but debouncing here is the cheaper
+  // fix for the common case: typing a 44-char mint should cost one request, not
+  // forty-four. A mode toggle is instant; a text field waits for a pause.
+  const textDriven = mode === 'search' || mode === 'mint';
+  useEffect(() => {
+    if (!textDriven) { load(); return; }
+    if (!q.trim() && !addr.trim()) return;
+    const t = setTimeout(load, 450);
+    return () => clearTimeout(t);
+  }, [load, textDriven]);
 
   const active = MODES.find((m) => m.key === mode)!;
   const needle = filter.trim().toLowerCase();
