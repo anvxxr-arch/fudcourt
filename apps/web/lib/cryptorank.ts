@@ -12,25 +12,52 @@
  *    return 200 via curl_cffi with the full Next.js SSR payload, which is
  *    exactly what their frontend hydrates from.
  *  - The FUNDRAISING tree (/funding-rounds, /ico*, /token-unlock, /funds*,
- *    /insights, /drophunting) 403s behind the interstitial to every client
- *    including real browsers -> full boards stay out; only the homepage
- *    6-row slices are reachable and are labelled as slices, never as totals.
+ *    /insights, /drophunting) 403s as HTML to every client including real
+ *    browsers -- BUT their Next.js data routes
+ *    /_next/data/<buildId>/funding-rounds.json and .../token-unlock.json
+ *    answer 200 with the full pageProps (fallbackRounds / fallbackData).
+ *    Those power the 'funding' and 'unlocks' modes; each ships a 20-row
+ *    SSR sample whose total/ordering varies between fetches upstream, so the
+ *    envelope labels them as samples and stamps fetchedAt -- never "the
+ *    latest N of exactly M".
+ *  - /ico/<key> data routes exist but their investor/valuation totals shift
+ *    between fetches (measured 47.5M -> 27.7M for the same project) ->
+ *    deliberately NOT wired to any mode (see scripts/verify-cryptorank.py
+ *    informational probe).
  *
  * Absent upstream metric -> null -> renders an em-dash. Never 0, never faked.
  */
 
 export const CR_BASE = 'https://cryptorank.io';
 
-export const CR_MODES = ['home', 'coins', 'trending', 'gainers', 'losers'] as const;
+export const CR_MODES = ['home', 'coins', 'trending', 'gainers', 'losers', 'funding', 'unlocks'] as const;
 export type CrMode = (typeof CR_MODES)[number];
 
-/** Route -> upstream path. The client never passes a raw path (mode only). */
-export const CR_MODE_PATHS: Record<CrMode, string> = {
-  home: '/',
-  coins: '/all-coins-list',
-  trending: '/trending',
-  gainers: '/gainers',
-  losers: '/losers',
+/**
+ * Mode -> helper invocation. The client never passes a raw path (mode only);
+ * 'funding'/'unlocks' go through the Next.js DATA route
+ * /_next/data/<buildId>/... because their HTML paths 403 to every client
+ * while the data routes answer 200 (measured 2026-09-27).
+ */
+export const CR_MODE_ARGS: Record<CrMode, [flag: '--path' | '--data-route', value: string]> = {
+  home: ['--path', '/'],
+  coins: ['--path', '/all-coins-list'],
+  trending: ['--path', '/trending'],
+  gainers: ['--path', '/gainers'],
+  losers: ['--path', '/losers'],
+  funding: ['--data-route', '/funding-rounds'],
+  unlocks: ['--data-route', '/token-unlock'],
+};
+
+/** Canonical HTML URL of what a mode's data represents (for the envelope). */
+export const CR_MODE_UPSTREAM: Record<CrMode, string> = {
+  home: `${CR_BASE}/`,
+  coins: `${CR_BASE}/all-coins-list`,
+  trending: `${CR_BASE}/trending`,
+  gainers: `${CR_BASE}/gainers`,
+  losers: `${CR_BASE}/losers`,
+  funding: `${CR_BASE}/funding-rounds`,
+  unlocks: `${CR_BASE}/token-unlock`,
 };
 
 export interface CrGlobal {
@@ -97,9 +124,39 @@ export interface CrUpcomingIco {
   date: string | null;
 }
 
+/** Funding-board row (20-row SSR sample; slim: no amounts upstream-side). */
+export interface CrFundingBoardRow {
+  date: string | null;
+  name: string | null;
+  symbol: string | null;
+  key: string | null;
+  image: string | null;
+  twitterScore: number | null;
+}
+
+/** Token-unlock row (20-row SSR sample of the upcoming-unlock schedule). */
+export interface CrUnlockRow {
+  date: string | null;
+  name: string | null;
+  symbol: string | null;
+  key: string | null;
+  image: string | null;
+  priceUsd: number | null;
+  change24h: number | null;
+  marketCap: number | null;
+  /** % of supply unlocking next event. */
+  nextUnlockPct: number | null;
+  nextUnlockTokens: number | null;
+  nextAllocation: string | null;
+  lockedPct: number | null;
+  unlockedPct: number | null;
+}
+
 export interface CrEnvelope {
   kind: CrMode;
   upstream: string;
+  /** Actual data route fetched (funding/unlocks only; HTML modes omit it). */
+  dataRoute?: string;
   fetchedAt: number;
   cache: string;
   /** Row count in this payload. */
@@ -113,5 +170,5 @@ export interface CrEnvelope {
   global?: CrGlobal;
   fundingRounds?: CrFundingRound[];
   upcomingIco?: CrUpcomingIco[];
-  rows?: (CrCoin | CrTrendingRow)[];
+  rows?: (CrCoin | CrTrendingRow | CrFundingBoardRow | CrUnlockRow)[];
 }

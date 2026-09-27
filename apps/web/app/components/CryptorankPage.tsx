@@ -4,12 +4,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { C } from '../../lib/ui/shared';
 import {
   CR_BASE,
-  CR_MODES,
   type CrCoin,
   type CrEnvelope,
+  type CrFundingBoardRow,
   type CrGlobal,
   type CrMode,
   type CrTrendingRow,
+  type CrUnlockRow,
 } from '../../lib/cryptorank';
 
 /**
@@ -43,6 +44,24 @@ function moneyCompact(v: number | null | undefined): string {
   if (a >= 1e6) return money(v);
   if (a >= 1e3) return `$${(v / 1e3).toFixed(2)}K`;
   return `$${v.toFixed(2)}`;
+}
+
+/** Token quantity (NOT money): 1.35M tokens, 472.7K tokens... */
+function qty(v: number | null | undefined): string {
+  if (v == null) return '—';
+  const a = Math.abs(v);
+  if (a >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
+  if (a >= 1e6) return `${(v / 1e6).toFixed(2)}M`;
+  if (a >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
+  return v.toLocaleString('en-US');
+}
+
+/** Unlock events are datetimes; show "MM-DD HH:mm" and mark UTC in the header. */
+function utcTime(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return '—';
+  return new Date(t).toISOString().slice(5, 16).replace('T', ' ');
 }
 
 function pct(v: number | null | undefined): string {
@@ -84,8 +103,10 @@ const MARKET_TABS: { key: MarketTab; label: string }[] = [
   { key: 'losers', label: 'Losers' },
 ];
 
-async function loadMode(mode: CrMode): Promise<CrEnvelope> {
-  const res = await fetch(`/api/cryptorank?mode=${mode}`, { cache: 'no-store' });
+const errMsg = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+async function loadMode(mode: CrMode, fresh = false): Promise<CrEnvelope> {
+  const res = await fetch(`/api/cryptorank?mode=${mode}${fresh ? '&fresh=1' : ''}`, { cache: 'no-store' });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     const detail = body?.error ?? `HTTP ${res.status}`;
@@ -103,6 +124,11 @@ export default function CryptorankPage() {
   const [homeStale, setHomeStale] = useState(false);
   const [homeAt, setHomeAt] = useState<number | null>(null);
 
+  const [unlocks, setUnlocks] = useState<CrEnvelope | null>(null);
+  const [unlocksErr, setUnlocksErr] = useState('');
+  const [funding, setFunding] = useState<CrEnvelope | null>(null);
+  const [fundingErr, setFundingErr] = useState('');
+
   const [tab, setTab] = useState<MarketTab>('coins');
   const [market, setMarket] = useState<CrEnvelope | null>(null);
   const [marketErr, setMarketErr] = useState('');
@@ -110,9 +136,9 @@ export default function CryptorankPage() {
   const [marketAt, setMarketAt] = useState<number | null>(null);
   const [loadingMarket, setLoadingMarket] = useState(true);
 
-  const fetchHome = useCallback(async () => {
+  const fetchHome = useCallback(async (fresh = false) => {
     try {
-      const env = await loadMode('home');
+      const env = await loadMode('home', fresh);
       setHome(env);
       setHomeErr('');
       setHomeStale(false);
@@ -126,10 +152,10 @@ export default function CryptorankPage() {
   }, [home]);
 
   const fetchMarket = useCallback(
-    async (m: MarketTab) => {
+    async (m: MarketTab, fresh = false) => {
       setLoadingMarket(true);
       try {
-        const env = await loadMode(m);
+        const env = await loadMode(m, fresh);
         setMarket(env);
         setMarketErr('');
         setMarketStale(false);
@@ -145,8 +171,24 @@ export default function CryptorankPage() {
     [market],
   );
 
+  const fetchExtra = useCallback((fresh = false) => {
+    void loadMode('unlocks', fresh)
+      .then((env) => {
+        setUnlocks(env);
+        setUnlocksErr('');
+      })
+      .catch((e) => setUnlocksErr(errMsg(e)));
+    void loadMode('funding', fresh)
+      .then((env) => {
+        setFunding(env);
+        setFundingErr('');
+      })
+      .catch((e) => setFundingErr(errMsg(e)));
+  }, []);
+
   useEffect(() => {
     void fetchHome();
+    fetchExtra();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -177,8 +219,9 @@ export default function CryptorankPage() {
         </div>
         <button
           onClick={() => {
-            void fetchHome();
-            void fetchMarket(tab);
+            void fetchHome(true);
+            void fetchMarket(tab, true);
+            fetchExtra(true);
           }}
           style={{
             marginLeft: 'auto', fontSize: 11, color: C.bg, background: C.accent,
@@ -301,6 +344,64 @@ export default function CryptorankPage() {
           `source: /${tab} SSR payload · chg 24h derived from upstream histPrices["24H"] anchor (150-row upstream list)`}
       </div>
 
+      {/* -------------------------- token unlocks --------------------------- */}
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12, marginTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Upcoming token unlocks</div>
+          <div style={{ fontSize: 10, color: C.dim }}>
+            {unlocks
+              ? `${unlocks.count} rows · upstream total ${unlocks.upstreamTotal ?? '—'} · SSR sample`
+              : '—'}
+          </div>
+        </div>
+        {unlocksErr && (
+          <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>
+            ⚠ cryptorank unlocks error: {unlocksErr} — no data faked
+          </div>
+        )}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                {['Time (UTC)', 'Coin', 'Price', 'Chg 24h', 'Next unlock', 'Locked'].map((h) => (
+                  <th key={h} style={{ padding: '7px 8px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {!unlocks && !unlocksErr && (
+                <tr><td colSpan={6} style={{ padding: 14, color: C.dim }}>loading…</td></tr>
+              )}
+              {unlocks && (unlocks.rows ?? []).length === 0 && (
+                <tr><td colSpan={6} style={{ padding: 14, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+              )}
+              {((unlocks?.rows ?? []) as CrUnlockRow[]).map((u) => (
+                <tr key={`${u.key}-${u.date}`} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <td style={{ padding: '6px 8px', color: C.white, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{utcTime(u.date)}</td>
+                  <td style={{ padding: '6px 8px' }}>
+                    <span style={{ color: C.white }}>{u.name ?? '—'}</span>
+                    <span style={{ color: C.dim, marginLeft: 6, fontSize: 11 }}>{u.symbol ?? ''}</span>
+                  </td>
+                  <td style={{ padding: '6px 8px', color: C.white }}>{money(u.priceUsd)}</td>
+                  <td style={{ padding: '6px 8px', color: chgColor(u.change24h) }}>{pct(u.change24h)}</td>
+                  <td style={{ padding: '6px 8px' }}>
+                    <span style={{ color: C.white }}>{qty(u.nextUnlockTokens)}</span>
+                    <span style={{ color: C.dim, fontSize: 11, marginLeft: 6 }}>
+                      {u.nextUnlockPct != null ? `${u.nextUnlockPct.toFixed(2)}%` : '—'}
+                      {u.nextAllocation ? ` · ${u.nextAllocation}` : ''}
+                    </span>
+                  </td>
+                  <td style={{ padding: '6px 8px', color: C.dim }}>
+                    {u.lockedPct != null ? `${u.lockedPct.toFixed(1)}%` : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{unlocks?.slice ?? ''}</div>
+      </div>
+
       {/* -------------------------- fundraising ----------------------------- */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, marginTop: 16 }}>
         <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
@@ -366,9 +467,60 @@ export default function CryptorankPage() {
         </div>
       </div>
 
+      {/* -------------------------- funding board --------------------------- */}
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12, marginTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Funding board</div>
+          <div style={{ fontSize: 10, color: C.dim }}>
+            {funding
+              ? `${funding.count} rows · upstream total ${funding.upstreamTotal ?? '—'} · SSR sample`
+              : '—'}
+          </div>
+        </div>
+        {fundingErr && (
+          <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>
+            ⚠ cryptorank funding error: {fundingErr} — no data faked
+          </div>
+        )}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                {['Date', 'Project', 'Symbol', 'Twitter score'].map((h) => (
+                  <th key={h} style={{ padding: '7px 8px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {!funding && !fundingErr && (
+                <tr><td colSpan={4} style={{ padding: 14, color: C.dim }}>loading…</td></tr>
+              )}
+              {funding && (funding.rows ?? []).length === 0 && (
+                <tr><td colSpan={4} style={{ padding: 14, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+              )}
+              {((funding?.rows ?? []) as CrFundingBoardRow[]).map((f, i) => (
+                <tr key={`${f.key}-${f.date}-${i}`} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <td style={{ padding: '6px 8px', color: C.dim, whiteSpace: 'nowrap' }}>{shortDate(f.date)}</td>
+                  <td style={{ padding: '6px 8px' }}>
+                    <span style={{ color: C.white }}>{f.name ?? '—'}</span>
+                  </td>
+                  <td style={{ padding: '6px 8px', color: C.dim }}>{f.symbol ?? '—'}</td>
+                  <td style={{ padding: '6px 8px', color: C.accent, fontVariantNumeric: 'tabular-nums' }}>
+                    {f.twitterScore != null ? f.twitterScore.toLocaleString('en-US') : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{funding?.slice ?? ''}</div>
+      </div>
+
       <div style={{ fontSize: 10, color: C.dim, marginTop: 8 }}>
-        {home?.slice ?? ''} — full boards (/funding-rounds, /ico*, /token-unlock, /funds*) answer a Cloudflare
-        interstitial to every client tried; reachable surface = market pages + homepage slices. Contract: scripts/verify-cryptorank.py.
+        {home?.slice ?? ''} — HTML paths for /funding-rounds, /token-unlock, /ico*, /funds* answer a Cloudflare
+        interstitial to every client tried; the funding/unlocks boards above come through their Next.js data routes
+        (/_next/data/&lt;buildId&gt;/…) instead. /ico/&lt;key&gt; details exist but their totals shift between fetches —
+        deliberately not wired. Contract: scripts/verify-cryptorank.py.
       </div>
     </div>
   );

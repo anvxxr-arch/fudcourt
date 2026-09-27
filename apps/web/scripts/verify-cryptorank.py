@@ -68,15 +68,87 @@ def info(name: str, detail: str) -> None:
     NOTES.append(f"{name}: {detail}")
 
 
-def get(base: str, mode: str) -> tuple[int, dict | None, dict]:
+def get(base: str, mode: str, fresh: bool = False) -> tuple[int, dict | None, dict]:
+    params: dict = {"mode": mode}
+    if fresh:
+        params["fresh"] = "1"
     try:
-        r = requests.get(f"{base}/api/cryptorank", params={"mode": mode}, timeout=120)
+        r = requests.get(f"{base}/api/cryptorank", params=params, timeout=120)
     except Exception as e:  # noqa: BLE001
         return 0, None, {"error": f"{type(e).__name__}: {e}"}
     try:
         return r.status_code, r.json(), dict(r.headers)
     except Exception:  # noqa: BLE001
         return r.status_code, None, dict(r.headers)
+
+
+def independent_data_route(path: str) -> dict:
+    """Fetch a Next.js DATA route ourselves (own buildId resolution) and pull
+    the first row + total. Used for parity on funding/unlocks."""
+    script = f"""
+import json, re, sys
+from curl_cffi import requests as rq
+h = rq.get("https://cryptorank.io/", impersonate="chrome131", timeout=30)
+m = re.search(r'"buildId"\\s*:\\s*"([0-9a-f]+)"', h.text)
+if not m:
+    print(json.dumps({{"ok": False, "error": "no buildId"}})); sys.exit(0)
+r = rq.get(f"https://cryptorank.io/_next/data/{{m.group(1)}}{path}.json",
+           impersonate="chrome131", timeout=30)
+if r.status_code != 200:
+    print(json.dumps({{"ok": False, "status": r.status_code}})); sys.exit(0)
+pp = r.json().get("pageProps") or {{}}
+fr = pp.get("fallbackRounds") or {{}}
+td = pp.get("fallbackData") or {{}}
+block = fr or td
+rows = block.get("data") or []
+first = rows[0] if rows else {{}}
+print(json.dumps({{"ok": True, "n": len(rows), "total": block.get("total"),
+                  "name": first.get("name"), "id": first.get("id"),
+                  "date": first.get("date"),
+                  "set": [[x.get("name"), x.get("date")] for x in rows]}}))
+"""
+    out = subprocess.run(
+        [CR_VENV_PY, "-c", script],
+        capture_output=True, text=True, timeout=90,
+    )
+    try:
+        return json.loads(out.stdout.strip().splitlines()[-1])
+    except Exception:  # noqa: BLE001
+        return {"ok": False, "error": (out.stderr or out.stdout)[-300:]}
+
+
+def parity_backtoback(base: str, label: str, path: str, mode: str) -> None:
+    """Anti-fake parity for the data-route boards. Their SSR sample is stable
+    within an ~8s window but reshuffles after it (and intermittently ships
+    empty), so we fetch INDEPENDENTLY first, then immediately hit the proxy
+    with fresh=1 (cache bypass) -- both should be the same upstream response:
+    row1 must match exactly. Empty upstream on every try = INCONCLUSIVE
+    (printed as INFO, never silently green)."""
+    saw_rows = False
+    for attempt in range(2):
+        up = independent_data_route(path)
+        rows_set = up.get("set") or []
+        if not rows_set:
+            time.sleep(2)
+            continue
+        saw_rows = True
+        st, body, _hdr = get(base, mode, fresh=True)
+        body = body or {}
+        rows = body.get("rows") or []
+        mine = rows[0] if rows else {}
+        probe_key = (mine.get("name"), mine.get("date"))
+        if st == 200 and probe_key and probe_key == tuple(rows_set[0]):
+            check(f"{label}: fresh proxy row1 == independent upstream row1",
+                  True, f"row1={probe_key} attempt={attempt + 1}")
+            return
+        time.sleep(2)
+    if saw_rows:
+        check(f"{label}: fresh proxy row1 == independent upstream row1", False,
+              f"last proxy={probe_key!r} vs upstream={rows_set[0]!r}")
+    else:
+        info(f"{label} parity",
+             "data route returned empty rows twice (upstream degraded at check time); "
+             "proxy data unverified this run")
 
 
 def independent_upstream_page(path: str) -> dict:
@@ -239,6 +311,58 @@ def main() -> int:
             first_ok = (vals[0] > 0) if positive else (vals[0] < 0)
             check(f"{mode}: sign of top row", first_ok, f"top={vals[0]}")
 
+    # --- funding board (data-route bypass)
+    st, body, hdr = get(base, "funding")
+    body = body or {}
+    if check("funding: HTTP 200 (via _next/data bypass)", st == 200, f"got {st} {json.dumps(body)[:160]}"):
+        rows = body.get("rows") or []
+        check("funding: 20-row sample", len(rows) >= 10, f"n={len(rows)}")
+        total = body.get("upstreamTotal")
+        check("funding: upstream total sane", total is not None and total >= 10,
+              f"total={total} (load-dependent upstream: measured 98-3383 within one hour)")
+        check("funding: sample labelled (never 'latest N of M')",
+              isinstance(body.get("slice"), str) and "sample" in body["slice"],
+              str(body.get("slice"))[:130])
+        check("funding: dataRoute disclosed", body.get("dataRoute") == "/funding-rounds",
+              str(body.get("dataRoute")))
+        if rows:
+            row = rows[0]
+            check("funding: row shape (date+name)",
+                  bool(row.get("date")) and bool(row.get("name")),
+                  json.dumps(row, default=str)[:140])
+        # anti-fake parity: fresh proxy vs independent back-to-back
+        parity_backtoback(base, "funding", "/funding-rounds", "funding")
+
+    # --- token unlocks (data-route bypass)
+    st, body, hdr = get(base, "unlocks")
+    body = body or {}
+    if check("unlocks: HTTP 200 (via _next/data bypass)", st == 200, f"got {st} {json.dumps(body)[:160]}"):
+        rows = body.get("rows") or []
+        check("unlocks: 20-row sample", len(rows) >= 10, f"n={len(rows)}")
+        total = body.get("upstreamTotal")
+        check("unlocks: upstream total sane", total is not None and total >= 10,
+              f"total={total} (load-dependent upstream: measured 98-769 within one hour)")
+        check("unlocks: sample labelled", isinstance(body.get("slice"), str) and "sample" in body["slice"],
+              str(body.get("slice"))[:130])
+        check("unlocks: changeSource direct", body.get("changeSource") == "direct",
+              str(body.get("changeSource")))
+        if rows:
+            row = rows[0]
+            check("unlocks: row shape (date+name+unlock fields)",
+                  bool(row.get("date")) and bool(row.get("name"))
+                  and row.get("nextUnlockPct") is not None
+                  and (row.get("lockedPct") is None or 0 <= row["lockedPct"] <= 100),
+                  json.dumps(row, default=str)[:170])
+            check("unlocks: marketCap numeric (shipped as string upstream)",
+                  row.get("marketCap") is None or isinstance(row["marketCap"], (int, float)),
+                  f"marketCap={row.get('marketCap')!r}")
+            # locked + unlocked should complement to ~100% where both present
+            both = [r for r in rows if r.get("lockedPct") is not None and r.get("unlockedPct") is not None]
+            bad = [r for r in both if abs(r["lockedPct"] + r["unlockedPct"] - 100) > 1.0]
+            check("unlocks: locked+unlocked ~= 100%", len(bad) <= max(1, 0.2 * len(both)),
+                  f"{len(bad)}/{len(both)} off")
+        parity_backtoback(base, "unlocks", "/token-unlock", "unlocks")
+
     # ---------------------------------------------------------------- cache
     note("cache behaviour")
     st1, b1, h1 = get(base, "trending")
@@ -278,7 +402,7 @@ def main() -> int:
     check("unknown mode -> 400", st == 400, f"got {st}")
     check(
         "400 lists allowed modes",
-        isinstance(body.get("modes"), list) and len(body["modes"]) == 5,
+        isinstance(body.get("modes"), list) and len(body["modes"]) == 7,
         str(body.get("modes")),
     )
 
@@ -294,6 +418,23 @@ def main() -> int:
     )
 
     # ---------------------------------------------------------------- 5
+    note("per-ico detail (informational: measured unstable, not wired)")
+    ico = independent_data_route("/ico/jumper-exchange")
+    if ico.get("ok"):
+        info(
+            "per-ico detail",
+            "reachable but totals shift between fetches (measured 47.5M -> 27.7M for the same "
+            "project within 20min) -> deliberately not wired to any mode; re-evaluate if upstream stabilises",
+        )
+    else:
+        info("per-ico detail", f"data route answered {ico} -> not wired")
+
+    info(
+        "upstream totals",
+        "cryptorank's SSR totals are load-dependent (funding 98-3383, unlocks 98-769 measured "
+        "within one hour) -- proxy passes them through stamped, UI labels them 'SSR sample'",
+    )
+
     note("upstream wall (informational)")
     wall = independent_upstream_page("/funding-rounds")
     if wall.get("ok"):
@@ -320,11 +461,19 @@ def main() -> int:
     comp = read("app/components/CryptorankPage.tsx")
     check("component: fetches /api/cryptorank", "/api/cryptorank?mode=" in comp, "")
     check("component: em-dash never 0 for absent", "'—'" in comp, "")
+    check("component: unlocks section", "Upcoming token unlocks" in comp, "")
+    check("component: funding board section", "Funding board" in comp, "")
+    helper_src = read("scripts/cr_fetch.py")
+    check("helper: data-route mode present", "--data-route" in helper_src
+          and "_next/data" in helper_src, "")
+    check("helper: buildId rotation handled", "force=True" in helper_src
+          and "buildid.txt" in helper_src, "")
     lib = read("lib/cryptorank.ts")
-    lib_modes = set(re.findall(r"'(home|coins|trending|gainers|losers)'", lib))
+    lib_modes = set(re.findall(
+        r"'(home|coins|trending|gainers|losers|funding|unlocks)'", lib))
     check(
-        "lib modes == proxy modes (5)",
-        lib_modes == {"home", "coins", "trending", "gainers", "losers"},
+        "lib modes == proxy modes (7)",
+        lib_modes == {"home", "coins", "trending", "gainers", "losers", "funding", "unlocks"},
         str(sorted(lib_modes)),
     )
     check("route: force-dynamic", "force-dynamic" in read("app/api/cryptorank/route.ts"), "")

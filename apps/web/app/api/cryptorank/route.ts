@@ -4,13 +4,16 @@ import path from 'node:path';
 import {
   CR_BASE,
   CR_MODES,
-  CR_MODE_PATHS,
+  CR_MODE_ARGS,
+  CR_MODE_UPSTREAM,
   type CrCoin,
   type CrEnvelope,
+  type CrFundingBoardRow,
   type CrFundingRound,
   type CrGlobal,
   type CrMode,
   type CrTrendingRow,
+  type CrUnlockRow,
   type CrUpcomingIco,
 } from '../../../lib/cryptorank';
 
@@ -39,11 +42,13 @@ type HelperOut = {
   cache?: string;
 };
 
-function runHelper(mode: CrMode): Promise<HelperOut> {
+function runHelper(mode: CrMode, fresh = false): Promise<HelperOut> {
   return new Promise((resolve) => {
+    const [flag, value] = CR_MODE_ARGS[mode];
+    const args = fresh ? [HELPER, flag, value, '--ttl', '0'] : [HELPER, flag, value];
     execFile(
       PYTHON,
-      [HELPER, '--path', CR_MODE_PATHS[mode]],
+      args,
       { timeout: 45_000, maxBuffer: 8 * 1024 * 1024 },
       (err, stdout, stderr) => {
         try {
@@ -64,6 +69,15 @@ function runHelper(mode: CrMode): Promise<HelperOut> {
 
 const asNum = (v: unknown): number | null =>
   typeof v === 'number' && Number.isFinite(v) ? v : null;
+/** Upstream ships some numerics as strings (token-unlock marketCap). */
+const asNumLoose = (v: unknown): number | null => {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  if (typeof v === 'string' && v.trim() !== '') {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+};
 const asStr = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
 /** Upstream marks undisclosed names/types as '~'; render as absent (em-dash), not as a tilde. */
 const asStrOrDash = (v: unknown): string | null => {
@@ -158,6 +172,37 @@ function shapeIco(r: Record<string, unknown>): CrUpcomingIco {
   };
 }
 
+function shapeFundingBoard(r: RawCoin): CrFundingBoardRow {
+  return {
+    date: asStr(r.date),
+    name: asStrOrDash(r.name),
+    symbol: asStrOrDash(r.symbol),
+    key: asStr(r.key),
+    image: asStr(r.icon) ?? asStr(r.image),
+    twitterScore: asNum(r.twitterScore),
+  };
+}
+
+function shapeUnlock(r: RawCoin): CrUnlockRow {
+  const nextArr = Array.isArray(r.nextUnlocks) ? (r.nextUnlocks as RawCoin[]) : [];
+  const next = nextArr.length ? nextArr[0] : null;
+  return {
+    date: asStr(r.date),
+    name: asStrOrDash(r.name),
+    symbol: asStrOrDash(r.symbol),
+    key: asStr(r.key),
+    image: asStr(r.image),
+    priceUsd: asNum(r.price),
+    change24h: asNum(r.chg24h),
+    marketCap: asNumLoose(r.marketCap),
+    nextUnlockPct: asNum(r.nextUnlockPercent),
+    nextUnlockTokens: next ? asNum(next.tokens) : null,
+    nextAllocation: next ? asStrOrDash(next.allocationName) : null,
+    lockedPct: asNum(r.lockedTokensPercent),
+    unlockedPct: asNum(r.unlockedTokensPercent),
+  };
+}
+
 function shapeTrending(r: RawCoin): CrTrendingRow {
   return {
     rank: asNum(r.rank),
@@ -178,7 +223,7 @@ function envelope(kind: CrMode, h: HelperOut): CrEnvelope {
   const pp = (h.pageProps ?? {}) as Record<string, unknown>;
   const base = {
     kind,
-    upstream: `${CR_BASE}${CR_MODE_PATHS[kind]}`,
+    upstream: CR_MODE_UPSTREAM[kind],
     fetchedAt: h.fetchedAt ?? Math.floor(Date.now() / 1000),
     cache: h.cache ?? 'MISS',
   };
@@ -197,6 +242,39 @@ function envelope(kind: CrMode, h: HelperOut): CrEnvelope {
       global: shapeGlobal(pp),
       fundingRounds: fundingRaw.map(shapeFunding),
       upcomingIco: icoRaw.map(shapeIco),
+    };
+  }
+
+  if (kind === 'funding') {
+    const fr = (pp.fallbackRounds ?? {}) as Record<string, unknown>;
+    const rows = Array.isArray(fr.data) ? (fr.data as RawCoin[]) : [];
+    const total = asNum(fr.total);
+    return {
+      ...base,
+      dataRoute: CR_MODE_ARGS.funding[1],
+      count: rows.length,
+      upstreamTotal: total,
+      slice:
+        `SSR sample: ${rows.length} rows, upstream total ${total ?? 'unreported'} ` +
+        '(total & ordering vary between fetches; full pagination is client-API-gated)',
+      rows: rows.map(shapeFundingBoard),
+    };
+  }
+
+  if (kind === 'unlocks') {
+    const td = (pp.fallbackData ?? {}) as Record<string, unknown>;
+    const rows = Array.isArray(td.data) ? (td.data as RawCoin[]) : [];
+    const total = asNum(td.total);
+    return {
+      ...base,
+      dataRoute: CR_MODE_ARGS.unlocks[1],
+      count: rows.length,
+      upstreamTotal: total,
+      changeSource: 'direct',
+      slice:
+        `SSR sample: ${rows.length} of ~${total ?? '?'} upcoming unlocks ` +
+        '(rolling window — executed events drop off; totals vary between fetches)',
+      rows: rows.map(shapeUnlock),
     };
   }
 
@@ -245,14 +323,15 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const h = await runHelper(mode);
+  const fresh = req.nextUrl.searchParams.get('fresh') === '1';
+  const h = await runHelper(mode, fresh);
   if (!h.ok) {
     // Real failure, real detail: upstream wall status or helper crash text.
     return NextResponse.json(
       {
         error: h.error ?? 'cryptorank helper failed',
         upstreamStatus: h.status ?? null,
-        upstream: `${CR_BASE}${CR_MODE_PATHS[mode]}`,
+        upstream: CR_MODE_UPSTREAM[mode],
         kind: mode,
       },
       { status: 502 },
