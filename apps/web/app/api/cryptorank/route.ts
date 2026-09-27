@@ -8,10 +8,12 @@ import {
   CR_DEFAULT_EXCHANGE,
   CR_DEFAULT_KEYS,
   CR_DEFAULT_LP,
+  CR_DEFAULT_ND,
   CR_EXCHANGE_LISTS,
   CR_KEY_RE,
   CR_KEYED_PATHS,
   CR_LP_LISTS,
+  CR_ND_LISTS,
   CR_MODES,
   CR_MODE_ARGS,
   CR_MODE_UPSTREAM,
@@ -28,6 +30,7 @@ import {
   type CrMode,
   type CrFundingRound,
   type CrNewsRow,
+  type CrNodeSaleRow,
   type CrTagInfo,
   type CrTagRow,
   type CrTrendingRow,
@@ -377,6 +380,35 @@ function envelope(
     if (!Array.isArray(fd)) {
       throw new Error('exchanges: missing fallbackData');
     }
+    if (opts.key === 'cex-transparency') {
+      // Reserve-transparency rows carry NO volume fields (different schema):
+      // volume stays null (honest), reserves map to their own columns.
+      const trRows: CrExchangeRow[] = fd.map((r, i) => ({
+        rank: i + 1,
+        key: asStr(r.key) ?? '',
+        name: asStr(r.name) ?? '',
+        image: asStr(r.icon),
+        dayVolUsd: null,
+        weekVolUsd: null,
+        monthVolUsd: null,
+        percentVolume: null,
+        pairsCount: null,
+        currenciesCount: null,
+        exchangeType: null,
+        reservesUsd: asNum(r.reserves),
+        cleanReservesUsd: asNum(r.cleanReserves),
+        stablecoinsPercent: asNum(r.stablecoinsPercent),
+        walletsCount: asNum(r.walletsCount),
+        auditorName: asStr(r.auditorName),
+        auditDate: asStr(r.auditDate),
+      }));
+      return {
+        ...base,
+        count: trRows.length,
+        slice: `${trRows.length} exchanges with published reserve wallets — cryptorank reported proof-of-reserves (their aggregation, NOT an independent attestation); 12/14 keys cross-check against their own spot list; volume absent on this surface (null, never 0)`,
+        rows: trRows,
+      };
+    }
     const exRows = fd.map((r, i) => shapeExchange(r, i));
     const variant =
       opts.key === 'dex/spot' ? 'DEX spot' : opts.key === 'perpetuals' ? 'perpetuals (futures)' : 'spot CEX';
@@ -474,7 +506,7 @@ function envelope(
     }
     const lpRows = (fd.data as Record<string, unknown>[]).map(shapeLaunchpoolRow);
     const total = typeof fd.total === 'number' ? fd.total : null;
-    const variant = opts.key === 'upcoming' ? 'upcoming' : 'past';
+    const variant = opts.key === 'upcoming' ? 'upcoming' : opts.key === 'active' ? 'active' : 'past';
     return {
       ...base,
       count: lpRows.length,
@@ -484,6 +516,30 @@ function envelope(
         (total ? ` of ${total} upstream (SSR ships page 1 only; upstream ignores ?page=)` : '') +
         '; windows are upstream ISO dates, null = not announced (em-dash)',
       launchpoolRows: lpRows,
+    };
+  }
+
+  if (kind === 'nodesale') {
+    // nodesale pages ship `initialData` (launchpool uses `fallbackData`).
+    const fd = (pp.initialData ?? pp.fallbackData) as {
+      data?: unknown;
+      total?: unknown;
+    } | null;
+    if (!fd || !Array.isArray(fd.data)) {
+      throw new Error('nodesale: missing initialData/fallbackData.data');
+    }
+    const ndRows = (fd.data as Record<string, unknown>[]).map(shapeNodesaleRow);
+    const total = typeof fd.total === 'number' ? fd.total : null;
+    const variant = opts.key === 'upcoming' ? 'upcoming' : opts.key === 'active' ? 'active' : 'past';
+    return {
+      ...base,
+      count: ndRows.length,
+      upstreamTotal: total,
+      slice:
+        `${variant} node sales — ${ndRows.length} rows shown` +
+        (total ? ` of ${total} upstream (SSR ships page 1 only; upstream ignores ?page=)` : '') +
+        '; node prices are upstream tier ranges in USD (never market price); windows null = not announced (em-dash)',
+      nodesaleRows: ndRows,
     };
   }
 
@@ -586,6 +642,24 @@ function shapeLaunchpoolRow(r: Record<string, unknown>): CrLaunchpoolRow {
     launchpads: pads,
     when: asStr(r.when),
     till: asStr(r.till),
+  };
+}
+
+/** Node sale row: nodePriceFrom/To = upstream tier range USD (not market price). */
+function shapeNodesaleRow(r: Record<string, unknown>): CrNodeSaleRow {
+  const cat = r.category as { name?: unknown } | null | undefined;
+  return {
+    key: asStr(r.key) ?? '',
+    name: asStr(r.name) ?? '',
+    symbol: asStr(r.symbol) ?? '',
+    image: asStr(r.image),
+    category: cat ? asStr(cat.name) : null,
+    when: asStr(r.when),
+    till: asStr(r.till),
+    nodePriceFromUsd: asNum(r.nodePriceFrom),
+    nodePriceToUsd: asNum(r.nodePriceTo),
+    raiseUsd: asNum(r.raise),
+    totalRaiseUsd: asNum(r.totalRaise),
   };
 }
 
@@ -733,7 +807,34 @@ export async function GET(req: NextRequest) {
         { status: 400 },
       );
     }
-    value = key === 'upcoming' ? '/upcoming-launchpool' : '/past-launchpool';
+    value =
+      key === 'upcoming'
+        ? '/upcoming-launchpool'
+        : key === 'active'
+          ? '/active-launchpool'
+          : '/past-launchpool';
+    upstream = `${CR_BASE}${value}`;
+  } else if (mode === 'nodesale') {
+    const raw = req.nextUrl.searchParams.get('key');
+    key = raw === null || raw === '' ? CR_DEFAULT_ND : raw;
+    if (!(CR_ND_LISTS as readonly string[]).includes(key)) {
+      return NextResponse.json(
+        {
+          error: 'invalid nodesale list',
+          detail: 'key must be one of the whitelisted node sale lists (never clamped)',
+          allowed: CR_ND_LISTS,
+          mode,
+          key,
+        },
+        { status: 400 },
+      );
+    }
+    value =
+      key === 'upcoming'
+        ? '/upcoming-nodesale'
+        : key === 'active'
+          ? '/active-nodesale'
+          : '/past-nodesale';
     upstream = `${CR_BASE}${value}`;
   }
 

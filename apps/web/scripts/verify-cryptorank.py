@@ -841,7 +841,9 @@ def main() -> int:
         norm = lambda s: re.sub(r"\s+", " ", s or "").strip().lower()  # noqa: E731
         matched = False
         last_err = ""
-        cands = [x for x in rows if x.get("url") and "cryptorank" not in str(x.get("url"))][:3]
+        # publisher rows rotate live; some publishers sit behind CF -> widen
+        # the candidate pool (the title-match requirement itself is unchanged)
+        cands = [x for x in rows if x.get("url") and "cryptorank" not in str(x.get("url"))][:6]
         for r0 in cands:
             res = fetch_publisher_title(r0["url"])
             if not res.get("ok"):
@@ -916,6 +918,76 @@ def main() -> int:
     st, body, hdr = get(base, "tag", key="BAD SLUG")
     check("tag: malformed key -> 400 (never clamped)", st == 400, f"got {st}")
 
+    # --- node sales (3-gate: 404 / cross-surface keys / Fuse GATE3 date)
+    st, body, hdr = get(base, "nodesale")
+    body = body or {}
+    if check("nodesale: HTTP 200 (default past)", st == 200, f"got {st}"):
+        ndrows = body.get("nodesaleRows") or []
+        check(
+            "nodesale: past rows + honest of-N (upstreamTotal > count)",
+            len(ndrows) >= 10
+            and isinstance(body.get("upstreamTotal"), int)
+            and (body.get("upstreamTotal") or 0) > len(ndrows),
+            f"n={len(ndrows)} total={body.get('upstreamTotal')}",
+        )
+        check(
+            "nodesale: row schema (node price range + windows)",
+            all("nodePriceFromUsd" in r0 and "when" in r0 for r0 in ndrows[:5]),
+            json.dumps(ndrows[0])[:150] if ndrows else "no rows",
+        )
+        check(
+            "nodesale: cross-surface key (MST Blockchain == /price/mst-blockchain)",
+            any(r0.get("key") == "mst-blockchain" and r0.get("name") == "MST Blockchain"
+                for r0 in ndrows),
+            "mst-blockchain row missing",
+        )
+    st, body, hdr = get(base, "nodesale", key="active")
+    body = body or {}
+    if check("nodesale?active: HTTP 200", st == 200, f"got {st}"):
+        nda = body.get("nodesaleRows") or []
+        check("nodesale?active: rows present", len(nda) >= 1, f"n={len(nda)}")
+    st, body, hdr = get(base, "nodesale", key="zzz")
+    check("nodesale: bad variant -> 400 (never clamped)", st == 400, f"got {st}")
+
+    # launchpool ACTIVE window: every row must contain today
+    st, body, hdr = get(base, "launchpool", key="active")
+    body = body or {}
+    if check("launchpool?active: HTTP 200", st == 200, f"got {st}"):
+        lpa = body.get("launchpoolRows") or []
+        today = time.strftime("%Y-%m-%d")
+        okw = sum(
+            1 for rw in lpa
+            if rw.get("when") and rw.get("till")
+            and str(rw["when"])[:10] <= today <= str(rw["till"])[:10]
+        )
+        check(
+            "launchpool?active: every window contains now",
+            len(lpa) >= 1 and okw == len(lpa),
+            f"{okw}/{len(lpa)} today={today}",
+        )
+
+    # exchange reserve-transparency variant (volume columns absent -> null)
+    st, body, hdr = get(base, "exchanges", key="cex-transparency")
+    body = body or {}
+    if check("exchanges?transparency: HTTP 200", st == 200, f"got {st}"):
+        trs = body.get("rows") or []
+        check(
+            "exchanges?transparency: >=10 rows, all with reported reserves",
+            len(trs) >= 10
+            and all(isinstance(r0.get("reservesUsd"), (int, float)) for r0 in trs),
+            f"n={len(trs)} reserves={[r0.get('reservesUsd') for r0 in trs[:4]]}",
+        )
+        check(
+            "exchanges?transparency: volume null (absent upstream, never 0)",
+            all(r0.get("dayVolUsd") is None for r0 in trs),
+            str([r0.get("dayVolUsd") for r0 in trs[:6]]),
+        )
+        check(
+            "exchanges?transparency: slice flags non-attestation",
+            "not an independent attestation" in (body.get("slice") or "").lower(),
+            str(body.get("slice"))[:170],
+        )
+
     # ---------------------------------------------------------------- 4
     note("error contract")
     st, body, hdr = get(base, "hack")
@@ -923,7 +995,7 @@ def main() -> int:
     check("unknown mode -> 400", st == 400, f"got {st}")
     check(
         "400 lists allowed modes",
-        isinstance(body.get("modes"), list) and len(body["modes"]) == 17,
+        isinstance(body.get("modes"), list) and len(body["modes"]) == 18,
         str(body.get("modes")),
     )
 
@@ -1025,6 +1097,14 @@ def main() -> int:
           "loadMode('chain'" in comp and "fetchChainIndex" in comp and "ecosystem tokens" in comp, "")
     check("component: launchpool wired",
           "loadMode('launchpool'" in comp and "setLpKey" in comp and "Launchpool" in comp, "")
+    check("component: nodesale wired",
+          "loadMode('nodesale'" in comp and "setNdKey" in comp and "Nodesale" in comp
+          and "nodesaleRows" in comp, "")
+    check("component: exchanges transparency variant wired",
+          "cex-transparency" in comp and "reservesUsd" in comp
+          and "Reserves" in comp, "")
+    check("component: launchpool active toggle wired",
+          "'active', 'Active'" in comp, "")
     check("component: news feed wired",
           "loadMode('news'" in comp and "Latest news" in comp and "newsRows" in comp, "")
     check("component: tag board wired",
@@ -1036,12 +1116,13 @@ def main() -> int:
           and "buildid.txt" in helper_src, "")
     lib = read("lib/cryptorank.ts")
     lib_modes = set(re.findall(
-        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool|news|tags|tag)'", lib))
+        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool|nodesale|news|tags|tag)'", lib))
     check(
-        "lib modes == proxy modes (17)",
+        "lib modes == proxy modes (18)",
         lib_modes == {"home", "coins", "trending", "gainers", "losers", "funding",
                       "unlocks", "categories", "exchanges", "coin", "listings",
-                      "blockchains", "chain", "launchpool", "news", "tags", "tag"},
+                      "blockchains", "chain", "launchpool", "nodesale", "news",
+                      "tags", "tag"},
         str(sorted(lib_modes)),
     )
     check(

@@ -71,8 +71,13 @@ HTML_ALLOWED = {
     "/exchanges/cex/spot",
     "/exchanges/dex/spot",
     "/exchanges/perpetuals",
+    "/exchanges/cex-transparency",
     "/past-launchpool",
     "/upcoming-launchpool",
+    "/active-launchpool",
+    "/past-nodesale",
+    "/upcoming-nodesale",
+    "/active-nodesale",
     "/news",
     "/tags",
 }

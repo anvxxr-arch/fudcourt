@@ -31,10 +31,13 @@
  *    an independent source (price feed / searchable event).
  *  - Fundraising data on the board comes from the homepage slices
  *    (fallbackRecentFundingRounds + upcomingIco via mode 'home', labelled as
- *    slices, 6 rows each) PLUS mode 'launchpool' (/past-launchpool +
- *    /upcoming-launchpool HTML, gated 2026-09-27: nonexistent path -> 404,
- *    past/upcoming date windows coherent, and the gno-land window matches
- *    KuCoin's official GemPool announcement 2026-09-16 -> 2026-09-26).
+ *    slices, 6 rows each) PLUS mode 'launchpool' (/past|/active|/upcoming-
+ *    launchpool HTML, gated 2026-09-27: nonexistent path -> 404, past/
+ *    upcoming date windows coherent, active windows all contain now, and
+ *    the gno-land window matches KuCoin's official GemPool announcement
+ *    2026-09-16 -> 2026-09-26) PLUS mode 'nodesale' (/past|/active|/
+ *    /upcoming-nodesale: nonexistent -> 404, keys 3/3 match /price/<key>
+ *    name+symbol, Fuse ember presale 2025-02-11 == Chainwire+Bitget).
  *
  * Absent upstream metric -> null -> renders an em-dash. Never 0, never faked.
  */
@@ -47,7 +50,8 @@ export const CR_MODES = [
   'categories', 'exchanges', 'coin', // live HTML class, 3-gate verified
   'listings',                      // /listings HTML, gate2 majors 0.7%
   'blockchains', 'chain',          // chain index (278) + keyed ecosystem detail
-  'launchpool',                    // event lists: /past-launchpool + /upcoming-launchpool
+  'launchpool',                    // event lists: /past|/active|/upcoming-launchpool
+  'nodesale',                      // node sale lists: /past|/active|/upcoming-nodesale
   'news',                           // /news aggregator feed (links out to publishers)
   'tags', 'tag',                    // tag taxonomy index (182) + keyed coin detail
 ] as const;
@@ -75,14 +79,24 @@ export const CR_DEFAULT_KEYS: Record<CrKeyedMode, string> = {
 };
 
 /** exchanges takes a STRICT whitelist key (paths contain '/', regex won't do). */
-export const CR_EXCHANGE_LISTS = ['cex/spot', 'dex/spot', 'perpetuals'] as const;
+export const CR_EXCHANGE_LISTS = ['cex/spot', 'dex/spot', 'perpetuals', 'cex-transparency'] as const;
 export type CrExchangeKey = (typeof CR_EXCHANGE_LISTS)[number];
 export const CR_DEFAULT_EXCHANGE: CrExchangeKey = 'cex/spot';
 
 /** launchpool event lists (paths contain no slug; strict whitelist). */
-export const CR_LP_LISTS = ['past', 'upcoming'] as const;
+export const CR_LP_LISTS = ['past', 'upcoming', 'active'] as const;
 export type CrLpKey = (typeof CR_LP_LISTS)[number];
 export const CR_DEFAULT_LP: CrLpKey = 'past';
+
+/**
+ * Node sale event lists (paths contain no slug; strict whitelist).
+ * Gates 2026-09-27: GATE1 /past-nodesale/zzz -> 404; cross-surface 3/3
+ * keys match /price/<key> name+symbol; GATE3 = Chainwire+Bitget Fuse
+ * Ember presale 2025-02-11 == row when=2025-02-11.
+ */
+export const CR_ND_LISTS = ['past', 'active', 'upcoming'] as const;
+export type CrNdKey = (typeof CR_ND_LISTS)[number];
+export const CR_DEFAULT_ND: CrNdKey = 'past';
 
 export const CR_KEY_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
@@ -127,6 +141,7 @@ export const CR_MODE_ARGS: Record<CrMode, [flag: '--path' | '--data-route', valu
   blockchains: ['--path', '/blockchains'],
   chain: ['--path', '/blockchains/ethereum'],        // default key; route overrides
   launchpool: ['--path', '/past-launchpool'],        // default variant; route overrides
+  nodesale: ['--path', '/past-nodesale'],            // default variant; route overrides
   news: ['--path', '/news'],
   tags: ['--path', '/tags'],
   tag: ['--path', '/tags/layer-1'],              // default key; route overrides
@@ -148,6 +163,7 @@ export const CR_MODE_UPSTREAM: Record<CrMode, string> = {
   blockchains: `${CR_BASE}/blockchains`,
   chain: `${CR_BASE}/blockchains/ethereum`,
   launchpool: `${CR_BASE}/past-launchpool`,
+  nodesale: `${CR_BASE}/past-nodesale`,
   news: `${CR_BASE}/news`,
   tags: `${CR_BASE}/tags`,
   tag: `${CR_BASE}/tags/layer-1`,
@@ -232,6 +248,13 @@ export interface CrExchangeRow {
   pairsCount: number | null;
   currenciesCount: number | null;
   exchangeType: string | null;
+  /** cex-transparency variant only: reported proof-of-reserves (null elsewhere). */
+  reservesUsd?: number | null;
+  cleanReservesUsd?: number | null;
+  stablecoinsPercent?: number | null;
+  walletsCount?: number | null;
+  auditorName?: string | null;
+  auditDate?: string | null;
 }
 
 /** Per-coin detail card (/price/<key> HTML: coin + priceStatistics). */
@@ -319,6 +342,26 @@ export interface CrLaunchpoolRow {
 }
 
 /**
+ * Node sale row (/past|/active|/upcoming-nodesale HTML).
+ * when/till = upstream ISO window (null = not announced/ongoing -> em-dash);
+ * nodePriceFrom/To = upstream node tier price range in USD (NOT market price).
+ * SSR ships one page only, upstream ignores ?page= -> honest 'of N' label.
+ */
+export interface CrNodeSaleRow {
+  key: string;
+  name: string;
+  symbol: string;
+  image: string | null;
+  category: string | null;
+  when: string | null;
+  till: string | null;
+  nodePriceFromUsd: number | null;
+  nodePriceToUsd: number | null;
+  raiseUsd: number | null;
+  totalRaiseUsd: number | null;
+}
+
+/**
  * Tag index row (/tags HTML, 182 rows) — taxonomy DISTINCT from categories
  * (Layer 1 / PoW / Bitcoin Runes …): upstream ships per-tag breadth stats
  * plus avgPriceChange periods (their own tag average, not derived here).
@@ -389,6 +432,8 @@ export interface CrEnvelope {
   };
   /** launchpool mode: event rows (50-of-527 past / full upcoming). */
   launchpoolRows?: CrLaunchpoolRow[];
+  /** nodesale mode: node sale rows (66 past / 5 active / 1 upcoming slice). */
+  nodesaleRows?: CrNodeSaleRow[];
   /** news mode: latest items (first page only; ?page= is a no-op upstream). */
   newsRows?: CrNewsRow[];
   rows?: (CrCoin | CrTrendingRow | CrExchangeRow)[];

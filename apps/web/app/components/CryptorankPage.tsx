@@ -143,6 +143,10 @@ export default function CryptorankPage() {
   const [lp, setLp] = useState<CrEnvelope | null>(null);
   const [lpErr, setLpErr] = useState('');
 
+  const [ndKey, setNdKey] = useState<string>('past');
+  const [nd, setNd] = useState<CrEnvelope | null>(null);
+  const [ndErr, setNdErr] = useState('');
+
   const [news, setNews] = useState<CrEnvelope | null>(null);
   const [newsErr, setNewsErr] = useState('');
 
@@ -247,6 +251,18 @@ export default function CryptorankPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const fetchNd = useCallback(async (key = 'past', fresh = false) => {
+    try {
+      const env = await loadMode('nodesale', fresh, key);
+      setNd(env);
+      setNdErr('');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setNdErr(msg);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fetchTagIndex = useCallback(async (fresh = false) => {
     try {
       const env = await loadMode('tags', fresh);
@@ -337,6 +353,11 @@ export default function CryptorankPage() {
     void fetchLp(lpKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lpKey]);
+
+  useEffect(() => {
+    void fetchNd(ndKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ndKey]);
 
   useEffect(() => {
     void fetchTag(tagSlug);
@@ -722,10 +743,10 @@ export default function CryptorankPage() {
         <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
             <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
-              Exchanges{exKey === 'dex/spot' ? ' (DEX spot)' : exKey === 'perpetuals' ? ' (perpetuals)' : ' (CEX spot)'}
+              Exchanges{exKey === 'dex/spot' ? ' (DEX spot)' : exKey === 'perpetuals' ? ' (perpetuals)' : exKey === 'cex-transparency' ? ' (reserve transparency)' : ' (CEX spot)'}
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
-              {([['cex/spot', 'CEX'], ['dex/spot', 'DEX'], ['perpetuals', 'Perps']] as const).map(([k, l]) => (
+              {([['cex/spot', 'CEX'], ['dex/spot', 'DEX'], ['perpetuals', 'Perps'], ['cex-transparency', 'Reserves']] as const).map(([k, l]) => (
                 <button
                   key={k}
                   onClick={() => setExKey(k)}
@@ -752,14 +773,25 @@ export default function CryptorankPage() {
                 <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
                   <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
                   <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Exchange</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>24h vol</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Share</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Pairs</th>
+                  {exKey === 'cex-transparency' ? (
+                    <>
+                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Reserves</th>
+                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Clean</th>
+                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Stable %</th>
+                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Wallets</th>
+                    </>
+                  ) : (
+                    <>
+                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>24h vol</th>
+                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Share</th>
+                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Pairs</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {!ex && !exErr && (
-                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  <tr><td colSpan={exKey === 'cex-transparency' ? 6 : 5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
                 )}
                 {((ex?.rows ?? []) as CrExchangeRow[]).map((e0) => (
                   <tr key={e0.key} style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -773,11 +805,24 @@ export default function CryptorankPage() {
                         <span style={{ color: C.white }}>{e0.name}</span>
                       </div>
                     </td>
-                    <td style={{ padding: '5px 6px', color: C.white }}>{moneyCompact(e0.dayVolUsd)}</td>
-                    <td style={{ padding: '5px 6px', color: C.accent, whiteSpace: 'nowrap' }}>
-                      {e0.percentVolume != null ? `${e0.percentVolume.toFixed(1)}%` : '—'}
-                    </td>
-                    <td style={{ padding: '5px 6px', color: C.dim }}>{e0.pairsCount ?? '—'}</td>
+                    {exKey === 'cex-transparency' ? (
+                      <>
+                        <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>{moneyCompact(e0.reservesUsd)}</td>
+                        <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>{moneyCompact(e0.cleanReservesUsd)}</td>
+                        <td style={{ padding: '5px 6px', color: C.accent, whiteSpace: 'nowrap' }}>
+                          {e0.stablecoinsPercent != null ? `${e0.stablecoinsPercent.toFixed(1)}%` : '—'}
+                        </td>
+                        <td style={{ padding: '5px 6px', color: C.dim }}>{e0.walletsCount ?? '—'}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={{ padding: '5px 6px', color: C.white }}>{moneyCompact(e0.dayVolUsd)}</td>
+                        <td style={{ padding: '5px 6px', color: C.accent, whiteSpace: 'nowrap' }}>
+                          {e0.percentVolume != null ? `${e0.percentVolume.toFixed(1)}%` : '—'}
+                        </td>
+                        <td style={{ padding: '5px 6px', color: C.dim }}>{e0.pairsCount ?? '—'}</td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -1053,10 +1098,10 @@ export default function CryptorankPage() {
         <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
             <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
-              Launchpool{lpKey === 'upcoming' ? ' (upcoming)' : ' (past)'}
+              Launchpool{lpKey === 'upcoming' ? ' (upcoming)' : lpKey === 'active' ? ' (active now)' : ' (past)'}
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
-              {([['past', 'Past'], ['upcoming', 'Upcoming']] as const).map(([k, l]) => (
+              {([['past', 'Past'], ['active', 'Active'], ['upcoming', 'Upcoming']] as const).map(([k, l]) => (
                 <button
                   key={k}
                   onClick={() => setLpKey(k)}
@@ -1117,6 +1162,84 @@ export default function CryptorankPage() {
           </div>
           <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
             {lp?.slice ?? ''}
+          </div>
+        </div>
+
+        {/* node sales (past / active / upcoming — gated 2026-09-27) */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+              Nodesale{ndKey === 'upcoming' ? ' (upcoming)' : ndKey === 'active' ? ' (active)' : ' (past)'}
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {([['past', 'Past'], ['active', 'Active'], ['upcoming', 'Upcoming']] as const).map(([k, l]) => (
+                <button
+                  key={k}
+                  onClick={() => setNdKey(k)}
+                  style={{
+                    fontSize: 10, padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
+                    border: `1px solid ${ndKey === k ? C.accent : C.border}`,
+                    background: ndKey === k ? C.accent : 'transparent',
+                    color: ndKey === k ? C.bg : C.dim,
+                    fontWeight: ndKey === k ? 700 : 400,
+                  }}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: 10, color: C.dim }}>
+              {nd ? (nd.upstreamTotal != null ? `${nd.count} of ${nd.upstreamTotal}` : `${nd.count}`) : '—'} nodesales
+            </div>
+          </div>
+          {ndErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ nodesale error: {ndErr} — nothing faked</div>
+          )}
+          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Project</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Window</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Node price</th>
+                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Raised</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!nd && !ndErr && (
+                  <tr><td colSpan={4} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                )}
+                {(nd?.nodesaleRows ?? []).map((r0) => (
+                  <tr key={r0.key} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <td style={{ padding: '5px 6px' }}>
+                      <span style={{ color: C.white }}>{r0.name}</span>
+                      <span style={{ color: C.dim, marginLeft: 6, fontSize: 10 }}>{r0.symbol}</span>
+                      {r0.category && <div style={{ fontSize: 10, color: C.dim }}>{r0.category}</div>}
+                    </td>
+                    <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>
+                      {r0.when ? shortDate(r0.when) : '—'}{r0.when || r0.till ? ` → ${r0.till ? shortDate(r0.till) : '—'}` : ''}
+                    </td>
+                    <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>
+                      {r0.nodePriceFromUsd != null && r0.nodePriceToUsd != null
+                        ? `${moneyCompact(r0.nodePriceFromUsd)} → ${moneyCompact(r0.nodePriceToUsd)}`
+                        : '—'}
+                    </td>
+                    <td style={{ padding: '5px 6px', color: C.white, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {moneyCompact(r0.raiseUsd)}
+                      {r0.totalRaiseUsd != null && (
+                        <div style={{ fontSize: 10, color: C.dim }}>cap {moneyCompact(r0.totalRaiseUsd)}</div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {nd && (nd.nodesaleRows ?? []).length === 0 && (
+                  <tr><td colSpan={4} style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+            {nd?.slice ?? ''}
           </div>
         </div>
       </div>
