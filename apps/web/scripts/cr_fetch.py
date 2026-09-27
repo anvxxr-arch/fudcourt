@@ -67,6 +67,7 @@ HTML_ALLOWED = {
     "/gainers",
     "/losers",
     "/listings",
+    "/blockchains",
     "/exchanges/cex/spot",
     "/exchanges/dex/spot",
     "/exchanges/perpetuals",
@@ -74,6 +75,7 @@ HTML_ALLOWED = {
 HTML_ALLOWED_RE = (
     re.compile(r"^/price/[a-z0-9][a-z0-9-]{0,63}$"),
     re.compile(r"^/categories/[a-z0-9][a-z0-9-]{0,63}$"),
+    re.compile(r"^/blockchains/[a-z0-9][a-z0-9-]{0,63}$"),
 )
 
 # Data-route allowlist: exact paths + regex for keyed detail routes.

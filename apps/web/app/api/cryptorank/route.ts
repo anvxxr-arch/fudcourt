@@ -14,6 +14,8 @@ import {
   CR_MODE_ARGS,
   CR_MODE_UPSTREAM,
   type CrCategoryInfo,
+  type CrChainInfo,
+  type CrChainRow,
   type CrCoin,
   type CrCoinDetail,
   type CrEnvelope,
@@ -148,6 +150,19 @@ function shapeListing(r: RawCoin): CrCoin {
     return a !== null && price !== null && a !== 0 ? ((price - a) / a) * 100 : null;
   };
   return { ...shapeCoin(r, null), priceUsd: price, change24h: chg('24H'), change7d: chg('7D') };
+}
+
+/** /blockchains index row: slug/name/images/network/explorer. */
+function shapeChainRow(r: RawCoin): CrChainRow {
+  const images = (r.images ?? {}) as Record<string, unknown>;
+  return {
+    slug: asStr(r.slug) ?? asStr(r.key) ?? '',
+    name: asStr(r.name) ?? '',
+    image: asStr(images.x60) ?? asStr(r.image),
+    network: asStr(r.tokenPlatformName) ?? asStr(r.network),
+    explorerUrl: asStr(r.explorerUrl),
+    marketCap: asNum(r.marketCap),
+  };
 }
 
 function shapeGlobal(pp: Record<string, unknown>): CrGlobal {
@@ -400,6 +415,49 @@ function envelope(
       slice: `coin detail '${detail.key}' — price from page payload; change24h derived from histPrices['24H'] anchor`,
       changeSource: 'derived-from-histPrices-24H',
       detail,
+    };
+  }
+
+  if (kind === 'blockchains') {
+    const chains = pp.blockchains;
+    if (!Array.isArray(chains)) {
+      throw new Error('blockchains: missing blockchains array');
+    }
+    const chainRows = chains.map((r) => shapeChainRow(r));
+    return {
+      ...base,
+      count: chainRows.length,
+      slice: `chain directory from /blockchains — ${chainRows.length} chains (slug feed for ?key= chain detail); explorer links are upstream's own`,
+      chainRows,
+    };
+  }
+
+  if (kind === 'chain') {
+    const bc = (pp.blockchain ?? null) as Record<string, unknown> | null;
+    const fc = pp.fallbackCoins;
+    if (!bc || !Array.isArray(fc)) {
+      throw new Error('chain: missing blockchain/fallbackCoins');
+    }
+    const info: CrChainInfo = {
+      slug: opts.key ?? 'ethereum',
+      name: asStr(bc.name) ?? (opts.key ?? 'ethereum'),
+      network: asStr(bc.network),
+      marketCap: asNum(bc.marketCap),
+      explorerUrl: asStr(bc.explorerUrl),
+      ecosystem: asStr(bc.ecosystem),
+    };
+    const chainCoins = fc.map((r) => shapeCoin(r, null));
+    // change24h: ecosystem rows ship no hist anchor on this surface -> null
+    return {
+      ...base,
+      count: chainCoins.length,
+      upstreamTotal: chainCoins.length,
+      slice:
+        `chain '${info.slug}' ecosystem — ${chainCoins.length} tokens by mcap ` +
+        '(native coin lives outside the ecosystem list upstream); chg columns unavailable, never faked',
+      changeSource: 'unavailable',
+      chain: info,
+      rows: chainCoins,
     };
   }
 

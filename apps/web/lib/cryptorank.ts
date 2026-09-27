@@ -43,6 +43,7 @@ export const CR_MODES = [
   'funding', 'unlocks',            // REFUSED (synthetic data-route class)
   'categories', 'exchanges', 'coin', // live HTML class, 3-gate verified
   'listings',                      // /listings HTML, gate2 majors 0.7%
+  'blockchains', 'chain',          // chain index (278) + keyed ecosystem detail
 ] as const;
 export type CrMode = (typeof CR_MODES)[number];
 
@@ -56,11 +57,13 @@ export type CrMode = (typeof CR_MODES)[number];
 export const CR_KEYED_PATHS = {
   categories: (key: string) => `/categories/${key}`,
   coin: (key: string) => `/price/${key}`,
+  chain: (key: string) => `/blockchains/${key}`,
 } as const;
 export type CrKeyedMode = keyof typeof CR_KEYED_PATHS;
 export const CR_DEFAULT_KEYS: Record<CrKeyedMode, string> = {
   categories: 'chain',
   coin: 'bitcoin',
+  chain: 'ethereum',
 };
 
 /** exchanges takes a STRICT whitelist key (paths contain '/', regex won't do). */
@@ -107,6 +110,8 @@ export const CR_MODE_ARGS: Record<CrMode, [flag: '--path' | '--data-route', valu
   exchanges: ['--path', '/exchanges/cex/spot'],     // default key; route overrides
   coin: ['--path', '/price/bitcoin'],               // default key; route overrides
   listings: ['--path', '/listings'],
+  blockchains: ['--path', '/blockchains'],
+  chain: ['--path', '/blockchains/ethereum'],        // default key; route overrides
 };
 
 /** Canonical HTML URL of what a mode's data represents (for the envelope). */
@@ -122,6 +127,8 @@ export const CR_MODE_UPSTREAM: Record<CrMode, string> = {
   exchanges: `${CR_BASE}/exchanges/cex/spot`,
   coin: `${CR_BASE}/price/bitcoin`,
   listings: `${CR_BASE}/listings`,
+  blockchains: `${CR_BASE}/blockchains`,
+  chain: `${CR_BASE}/blockchains/ethereum`,
 };
 
 export interface CrGlobal {
@@ -232,6 +239,26 @@ export interface CrCoinDetail {
   rank: number | null;
 }
 
+/** Chain index row (/blockchains HTML: 278 chains). */
+export interface CrChainRow {
+  slug: string;
+  name: string;
+  image: string | null;
+  network: string | null;
+  explorerUrl: string | null;
+  marketCap: number | null;
+}
+
+/** Chain detail meta (blockchains/<slug> HTML: blockchain dict). */
+export interface CrChainInfo {
+  slug: string;
+  name: string;
+  network: string | null;
+  marketCap: number | null;
+  explorerUrl: string | null;
+  ecosystem: string | null;
+}
+
 /** Category header (categories/<slug> HTML). */
 export interface CrCategoryInfo {
   slug: string;
@@ -260,6 +287,9 @@ export interface CrEnvelope {
   upcomingIco?: CrUpcomingIco[];
   category?: CrCategoryInfo;
   detail?: CrCoinDetail;
+  chain?: CrChainInfo;
+  /** blockchains index mode: full upstream chain list. */
+  chainRows?: CrChainRow[];
   /** listings mode: three independent 20-row widgets. */
   listings?: {
     recentlyAdded: CrCoin[];

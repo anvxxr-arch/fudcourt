@@ -4,8 +4,9 @@ verify-cryptorank.py -- executable contract for the CryptoRank integration.
 
     route:      GET http://127.0.0.1:3100/api/cryptorank?mode=<mode>
     modes:      home | coins | trending | losers | gainers | listings
-                categories | coin   (?key=, validated CR_KEY_RE: bad format
-                400, honest upstream miss 404)
+                blockchains         (chain directory, feeds chain selector)
+                categories | coin | chain   (?key=, validated CR_KEY_RE:
+                bad format 400, honest upstream miss 404)
                 exchanges          (?key= strict whitelist: cex/spot,
                 dex/spot, perpetuals; else 400)
                 funding | unlocks   (503 loud refusal -- synthetic data-route)
@@ -128,13 +129,17 @@ def ground_truth_prices() -> dict:
     cryptorank itself proves only self-consistency; THIS proves truth."""
     try:
         r = requests.get(
-            "https://coins.llama.fi/prices/current/coingecko:bitcoin,coingecko:ethereum",
+            "https://coins.llama.fi/prices/current/coingecko:bitcoin,coingecko:ethereum,"
+            "coingecko:tether,coingecko:usd-coin,coingecko:chainlink",
             timeout=30,
         )
         coins = (r.json() or {}).get("coins") or {}
         return {
             "BTC": (coins.get("coingecko:bitcoin") or {}).get("price"),
             "ETH": (coins.get("coingecko:ethereum") or {}).get("price"),
+            "USDT": (coins.get("coingecko:tether") or {}).get("price"),
+            "USDC": (coins.get("coingecko:usd-coin") or {}).get("price"),
+            "LINK": (coins.get("coingecko:chainlink") or {}).get("price"),
         }
     except Exception as e:  # noqa: BLE001
             return {"error": f"{type(e).__name__}: {e}"}
@@ -631,6 +636,72 @@ def main() -> int:
             str(body.get("slice"))[:140],
         )
 
+    # --- chain index + keyed ecosystem detail
+    st, body, hdr = get(base, "blockchains")
+    body = body or {}
+    if check("blockchains: HTTP 200", st == 200, f"got {st}"):
+        cr = body.get("chainRows") or []
+        check("blockchains: >=270 chain rows", len(cr) >= 270, f"n={len(cr)}")
+        eth = next((c for c in cr if c.get("slug") == "ethereum"), None)
+        check(
+            "blockchains: ethereum row with slug+name",
+            bool(eth) and eth.get("name") == "Ethereum",
+            str(eth)[:120],
+        )
+        check(
+            "blockchains: slugs well-formed",
+            all(re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", c.get("slug") or "") for c in cr[:50]),
+            str([c.get("slug") for c in cr[:5]]),
+        )
+
+    st, body, hdr = get(base, "chain")
+    body = body or {}
+    if check("chain: HTTP 200 (default ethereum)", st == 200, f"got {st}"):
+        ci = body.get("chain") or {}
+        check(
+            "chain: meta name + network",
+            ci.get("name") == "Ethereum" and ci.get("network") is not None,
+            json.dumps(ci)[:160],
+        )
+        rows = body.get("rows") or []
+        check("chain: >=100 ecosystem tokens", len(rows) >= 100, f"n={len(rows)}")
+        check(
+            "chain: changeSource unavailable (no fake chg col)",
+            body.get("changeSource") == "unavailable",
+            str(body.get("changeSource")),
+        )
+        check(
+            "chain: native-coin note in slice",
+            "ecosystem" in (body.get("slice") or ""),
+            str(body.get("slice"))[:140],
+        )
+        for sym in ("USDT", "USDC", "LINK"):
+            t = truth.get(sym)
+            row = next((r for r in rows if r.get("symbol") == sym), None)
+            if t and row and row.get("priceUsd"):
+                diff = abs(row["priceUsd"] - t) / t * 100
+                check(
+                    f"chain: {sym} matches independent ground truth (<=3%)",
+                    diff <= 3,
+                    f"mine={row['priceUsd']} truth={t} diff={diff:.3f}%",
+                )
+            else:
+                check(f"chain: {sym} row for ground truth", False,
+                      f"row={row and row.get('priceUsd')} truth={t}")
+
+    st, body, hdr = get(base, "chain", key="solana")
+    body = body or {}
+    if check("chain?solana: HTTP 200", st == 200, f"got {st}"):
+        ci = body.get("chain") or {}
+        check(
+            "chain?solana: meta echoes key",
+            ci.get("slug") == "solana" and ci.get("name") == "Solana",
+            json.dumps(ci)[:160],
+        )
+
+    st, body, hdr = get(base, "chain", key="zzznoexist9999")
+    check("chain: unknown slug -> 404 (upstream passthrough)", st == 404, f"got {st}")
+
     # ---------------------------------------------------------------- 4
     note("error contract")
     st, body, hdr = get(base, "hack")
@@ -638,7 +709,7 @@ def main() -> int:
     check("unknown mode -> 400", st == 400, f"got {st}")
     check(
         "400 lists allowed modes",
-        isinstance(body.get("modes"), list) and len(body["modes"]) == 11,
+        isinstance(body.get("modes"), list) and len(body["modes"]) == 13,
         str(body.get("modes")),
     )
 
@@ -734,6 +805,8 @@ def main() -> int:
           "loadMode('listings'" in comp and "Recently added" in comp, "")
     check("component: exchange variants wired",
           "dex/spot" in comp and "perpetuals" in comp and "setExKey" in comp, "")
+    check("component: chain board wired",
+          "loadMode('chain'" in comp and "fetchChainIndex" in comp and "ecosystem tokens" in comp, "")
     helper_src = read("scripts/cr_fetch.py")
     check("helper: data-route mode present", "--data-route" in helper_src
           and "_next/data" in helper_src, "")
@@ -741,11 +814,12 @@ def main() -> int:
           and "buildid.txt" in helper_src, "")
     lib = read("lib/cryptorank.ts")
     lib_modes = set(re.findall(
-        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings)'", lib))
+        r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain)'", lib))
     check(
-        "lib modes == proxy modes (11)",
+        "lib modes == proxy modes (13)",
         lib_modes == {"home", "coins", "trending", "gainers", "losers", "funding",
-                      "unlocks", "categories", "exchanges", "coin", "listings"},
+                      "unlocks", "categories", "exchanges", "coin", "listings",
+                      "blockchains", "chain"},
         str(sorted(lib_modes)),
     )
     check(

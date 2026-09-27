@@ -5,6 +5,7 @@ import { C } from '../../lib/ui/shared';
 import {
   CR_BASE,
   CR_CATEGORY_SLUGS,
+  type CrChainRow,
   type CrCoin,
   type CrCoinDetail,
   type CrEnvelope,
@@ -137,6 +138,12 @@ export default function CryptorankPage() {
   const [listings, setListings] = useState<CrEnvelope | null>(null);
   const [listingsErr, setListingsErr] = useState('');
 
+  // chain board (index-fed selector + keyed ecosystem detail)
+  const [chainRows, setChainRows] = useState<CrChainRow[]>([]);
+  const [chainSlug, setChainSlug] = useState<string>('ethereum');
+  const [chain, setChain] = useState<CrEnvelope | null>(null);
+  const [chainErr, setChainErr] = useState('');
+
   const [tab, setTab] = useState<MarketTab>('coins');
   const [market, setMarket] = useState<CrEnvelope | null>(null);
   const [marketErr, setMarketErr] = useState('');
@@ -215,6 +222,28 @@ export default function CryptorankPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const fetchChainIndex = useCallback(async (fresh = false) => {
+    try {
+      const env = await loadMode('blockchains', fresh);
+      setChainRows(env.chainRows ?? []);
+    } catch {
+      setChainRows([]); // selector falls back to the current slug only
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchChain = useCallback(async (slug: string, fresh = false) => {
+    try {
+      const env = await loadMode('chain', fresh, slug);
+      setChain(env);
+      setChainErr('');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setChainErr(msg);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fetchListings = useCallback(async (fresh = false) => {
     try {
       const env = await loadMode('listings', fresh);
@@ -232,8 +261,15 @@ export default function CryptorankPage() {
     void fetchDetail('bitcoin');
     void fetchEx(exKey);
     void fetchListings();
+    void fetchChainIndex();
+    void fetchChain('ethereum');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    void fetchChain(chainSlug);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chainSlug]);
 
   useEffect(() => {
     void fetchCat(catSlug);
@@ -278,6 +314,8 @@ export default function CryptorankPage() {
             void fetchCat(catSlug, true);
             void fetchEx(exKey, true);
             void fetchListings(true);
+            void fetchChainIndex(true);
+            void fetchChain(chainSlug, true);
           }}
           style={{
             marginLeft: 'auto', fontSize: 11, color: C.bg, background: C.accent,
@@ -675,6 +713,82 @@ export default function CryptorankPage() {
           </div>
           <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
             {ex?.slice ?? ''}
+          </div>
+        </div>
+
+        {/* chain ecosystem (indexed selector + keyed detail) */}
+        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8 }}>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+              Chain{chain?.chain ? `: ${chain.chain.name}` : ''}
+            </div>
+            <select
+              value={chainSlug}
+              onChange={(e) => setChainSlug(e.target.value)}
+              style={{
+                fontSize: 11, padding: '3px 6px', borderRadius: 6, maxWidth: 170,
+                border: `1px solid ${C.border}`, background: C.bg, color: C.white,
+              }}
+            >
+              {(chainRows.length
+                ? chainRows
+                : [{ slug: chainSlug, name: chainSlug } as CrChainRow]
+              ).map((c) => (
+                <option key={c.slug} value={c.slug}>{c.name || c.slug}</option>
+              ))}
+            </select>
+          </div>
+          {chain?.chain && (
+            <div style={{ fontSize: 10, color: C.dim, marginBottom: 6 }}>
+              network {chain.chain.network ?? '—'} · mcap {money(chain.chain.marketCap)}
+              {chain.chain.explorerUrl && (
+                <>
+                  {' · '}
+                  <a href={chain.chain.explorerUrl} target="_blank" rel="noreferrer" style={{ color: C.accent }}>
+                    explorer ↗
+                  </a>
+                </>
+              )}
+            </div>
+          )}
+          {chainErr && (
+            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ chain '{chainSlug}' error: {chainErr} — nothing faked</div>
+          )}
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
+                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Token</th>
+                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Price</th>
+                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Mcap</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!chain && !chainErr && (
+                  <tr><td colSpan={4} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                )}
+                {(chain?.rows ?? []).slice(0, 100).map((r0) => {
+                  const c = r0 as CrCoin;
+                  return (
+                    <tr key={`${c.key}-${c.rank}`} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '5px 5px', color: C.dim, width: 26 }}>{c.rank ?? '—'}</td>
+                      <td style={{ padding: '5px 5px' }}>
+                        <span style={{ color: C.white }}>{c.name}</span>
+                        <span style={{ color: C.dim, marginLeft: 5, fontSize: 10 }}>{c.symbol}</span>
+                      </td>
+                      <td style={{ padding: '5px 5px', color: C.white }}>{money(c.priceUsd)}</td>
+                      <td style={{ padding: '5px 5px', color: C.white }}>{money(c.marketCap)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+            {chain
+              ? `showing ${Math.min(100, chain.count)} of ${chain.count} ecosystem tokens · ${chain.slice ?? ''}`
+              : ''}
           </div>
         </div>
       </div>
