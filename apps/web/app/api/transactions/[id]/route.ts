@@ -5,12 +5,12 @@ import { requireMutationAuth } from '../../../../lib/mutation-auth';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const denied = requireMutationAuth(req);
   if (denied) return denied;
   try {
     const body = await req.json();
-    const id = parseInt(params.id);
+    const id = parseInt((await params).id); // Next 15+: route params are a Promise
     if (isNaN(id)) return NextResponse.json({ error: 'invalid id' }, { status: 400 });
 
     const sets: string[] = [];
@@ -42,12 +42,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const denied = requireMutationAuth(req);
   if (denied) return denied;
   try {
     const body = await req.json();
-    const id = parseInt(params.id);
+    const id = parseInt((await params).id); // Next 15+: route params are a Promise
     if (isNaN(id)) return NextResponse.json({ error: 'invalid id' }, { status: 400 });
 
     const sets: string[] = [];
@@ -79,11 +79,11 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const denied = requireMutationAuth(req);
   if (denied) return denied;
   try {
-    const id = parseInt(params.id);
+    const id = parseInt((await params).id); // Next 15+: route params are a Promise
     if (isNaN(id)) return NextResponse.json({ error: 'invalid id' }, { status: 400 });
 
     const before = await query('SELECT * FROM transactions WHERE id = ?', [id]);

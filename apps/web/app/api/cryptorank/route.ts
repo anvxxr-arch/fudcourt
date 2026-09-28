@@ -82,7 +82,7 @@ type HelperOut = {
 function runHelperOnce(flag: '--path' | '--data-route', value: string, fresh = false): Promise<HelperOut> {
   return new Promise((resolve) => {
     const args = fresh ? [HELPER, flag, value, '--ttl', '0'] : [HELPER, flag, value];
-    execFile(
+    execFile(/*turbopackIgnore: true*/
       PYTHON,
       args,
       { timeout: 45_000, maxBuffer: 8 * 1024 * 1024 },
