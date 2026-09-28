@@ -63,7 +63,7 @@ Browser/agent  ──►  /api/cryptorank?mode=…        (Next route, mode-only
                         ▼
                  cryptorank.io  <script id="__NEXT_DATA__"> SSR payload
                         ▼
-                 route shapers → CrEnvelope JSON  →  UI panels
+                 lib/shapers.ts (pure) → CrEnvelope JSON  →  UI panels
 ```
 
 - **Why HTML RE:** `api.cryptorank.io` answers a Cloudflare managed challenge to
@@ -72,6 +72,11 @@ Browser/agent  ──►  /api/cryptorank?mode=…        (Next route, mode-only
   coins.llama.fi + CoinGecko + publisher-title/oembed GATE3), plus Playwright DOM
   audit (109 checks), plus sibling harnesses `verify-{llama,chainrank,dex,signals}.py`
   and `verify-limiter.mts`.
+- **Offline shaper tests:** `npm run test:shapers` (node --test, 56 checks, ~0.5s)
+  runs `lib/shapers.ts` against 26 recorded upstream payloads in
+  `scripts/fixtures/` (gzipped, sha256-pinned in `MANIFEST.json`, re-record with
+  `npm run record:fixtures`). Wired into the pre-push hook and the CI web job, so
+  upstream template drift is a red test instead of a silent UI change.
 
 ## 6. External data sources (independent truth)
 
