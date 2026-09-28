@@ -96,3 +96,12 @@ measured 2026-09-28.
   build-time inlining is host-independent.
 - Managed data services (Turso, Neon) are unchanged — this decision is about
   compute hosting only.
+
+**Follow-up (same day): published at `https://fc.dwirijal.my.id`.** Owner:
+"Publish aja di fc.dwirijal.my.id untuk sementara." The existing Cloudflare
+tunnel (`39bdfeef…`, config `~/.cloudflared/config.yml`) gained an ingress
+`fc.dwirijal.my.id → http://127.0.0.1:3100` plus a proxied CNAME in zone
+`dwirijal.my.id`. Origin stays loopback-only; verified over the public
+hostname: `/` 200, `/cryptorank` 200 (real upstream JSON), `/portfolio` 200,
+`DELETE /api/transactions/1` without token → **401** (fail-closed holds in
+public), tunnel regression `ai.karepmuwes.my.id` + `zura.dwirijal.my.id` 200.

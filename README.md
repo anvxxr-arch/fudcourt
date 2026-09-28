@@ -12,7 +12,9 @@ never as fabricated rows.
 
 > **Hosting:** self-hosted on the homeserver — production = the systemd units
 > (`fudcourt-web` :3100, `fudcourt-blog` :3001, `fudcourt-sync.timer`), **no
-> third-party deploy target** ([DR-002](docs/DECISIONS.md)).
+> third-party deploy target** ([DR-002](docs/DECISIONS.md)). Public entry:
+> **https://fc.dwirijal.my.id** (Cloudflare Tunnel → loopback origin,
+> mutation API fail-closed).
 
 ## Run
 

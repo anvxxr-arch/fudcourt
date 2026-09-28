@@ -74,10 +74,12 @@ Production == this homeserver:
 - **Vercel-side parity is moot by decision**, not "unverified": the audit
   question is retired with DR-002. If the projects are ever wanted, the only
   required env names are exactly the §1 rows.
-- **Exposure today is LAN/loopback.** Reads and writes are reachable only from
-  this network; if a public exposure is wanted later it goes through the
-  existing Cloudflare tunnel with mutation auth staying fail-closed — a new
-  decision, not an implicit one.
+- **Exposure: public via Cloudflare Tunnel, origin stays loopback.** The units
+  bind `127.0.0.1` only; the sole path in is the tunnel ingress
+  `fc.dwirijal.my.id → http://127.0.0.1:3100` (proxied CNAME, zone
+  `dwirijal.my.id`). Verified public: page 200, cryptorank 200 with real
+  upstream JSON, mutation without token → **401** (fail-closed holds on the
+  public hostname).
 
 ## 4. Runtime surfaces
 
