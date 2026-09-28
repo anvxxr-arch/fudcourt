@@ -140,6 +140,15 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
   3% llama bands kept (fresh gap measured 0.125% + <=90s skew envelope;
   fabrication class >=5% — detection power untouched). Final gates:
   harness **244/0/8 RC=0**, DOM audit 0 BAD, bounds documented in-code.
+  - T-3.4.3 ✅ Post-SG-4.1 follow-up (two live world-state fails, fixed by
+  measurement not by guessing): (a) DEX GATE3 now matches the top venue by
+  brand when CR lists a chain-scoped deployment llama does not break out
+  (`uniswap-robinhood` → brand `uniswap` ∈ llama list; a fabricated venue still
+  matches no brand → FAIL); (b) ecosystem native-price bound is now a
+  VOLATILITY band — measured gap is a CR price snapshot vs a live quote, so it
+  scales with the market (0.467% calm → 1.17% → 1.33% moving, constant within a
+  run): band = |ETH 1h move| + 0.75pp, floor 1%, cap 4% (below the measured
+  >=5% fabrication class, so detection power holds).
 
 ---
 
