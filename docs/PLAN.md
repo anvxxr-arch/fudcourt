@@ -47,7 +47,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
   - T-1.2.5 ✅ `ANALYSIS.md` (architecture, reasoning log, evidence, risks K-1…K-9)
   - T-1.2.6 ✅ `RECOMMENDATIONS.md` (R-1…R-11 + anti-goals)
   - T-1.2.7 ✅ `PLAN.md` (this file)
-- SG-1.3 ⬜ Commit + push the docs set to origin/main
+- SG-1.3 ✅ Commit + push the docs set to origin/main (`d2447a5`)
 
 ---
 
