@@ -27,19 +27,21 @@ def load_env():
 
 load_env()
 
-TURSO = os.environ.get('TURSO_AUTH_TOKEN', '')
-if not TURSO:
-    # fallback: parse from db.ts
-    db_ts = Path(__file__).resolve().parent.parent / 'lib' / 'db.ts'
-    if db_ts.exists():
-        _d = db_ts.read_bytes()
-        _s = _d.find(b"'", _d.find(b'authToken')) + 1
-        _e = _d.find(b"'", _s)
-        TURSO = _d[_s:_e].decode()
+def require_env(name: str) -> str:
+    """A missing credential must STOP the sync loudly. The old fallbacks (parse
+    lib/db.ts for a token, a hardcoded Alchemy default) could only ever yield
+    garbage or a key that lives in git history -- a failed RPC must never
+    become fake data, and neither may a fake credential."""
+    v = os.environ.get(name, '').strip()
+    if not v:
+        raise RuntimeError(
+            f'missing {name} (set it in the repo-root .env; rotation runbook: docs/SECRETS.md)'
+        )
+    return v
 
+TURSO = require_env('TURSO_AUTH_TOKEN')
 TURL = 'https://fud-balance-anvxxr.aws-ap-northeast-1.turso.io/v2/pipeline'
-ALCHEMY = os.environ.get('ALCHEMY_KEY', 'RWwP0wKxdtABmUNcxTmuH')
-
+ALCHEMY = require_env('ALCHEMY_KEY')
 def db(sql, args=None):
     H = {'Authorization': f'Bearer {TURSO}', 'Content-Type': 'application/json'}
     stmt = {'sql': sql}

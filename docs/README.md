@@ -19,11 +19,13 @@ Payload CMS blog — both in one npm-workspaces monorepo.
 | [ANALYSIS.md](./ANALYSIS.md) | Fully comprehensive analysis: architecture, reasoning, evidence, risks |
 | [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) | Ranked recommendations with impact/effort |
 | [PLAN.md](./PLAN.md) | Goal → subgoal → task → subtask breakdown with status |
+| [DECISIONS.md](./DECISIONS.md) | Decision records (DR-xxx): context, options, gate evidence, outcome |
+| [SECRETS.md](./SECRETS.md) | Secret inventory, Vercel/local parity audit, rotation runbook (SG-4.2) |
 
 ## One-line map of the repo
 
 ```
 apps/
-  web/    Next.js 14 portfolio OS (12 pages, 12 API routes) + verify harnesses
+  web/    Next.js 16.3.6 portfolio OS (12 pages, 12 API routes) + verify harnesses
   blog/   Next.js 16 + Payload CMS 3.89 (posts/media/categories/users on Neon)
 ```

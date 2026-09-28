@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 
-const KEY = 'RWwP0wKxdtABmUNcxTmuH';
+const KEY = process.env.ALCHEMY_KEY ?? '';
 const CHAINS = {
   eth: 'https://eth-mainnet.g.alchemy.com/v2/',
   bsc: 'https://bnb-mainnet.g.alchemy.com/v2/',

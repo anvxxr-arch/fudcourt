@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 
-const BSC_KEY = 'RWwP0wKxdtABmUNcxTmuH';
+const BSC_KEY = process.env.ALCHEMY_KEY ?? '';
 const BSC_URL = `https://bnb-mainnet.g.alchemy.com/v2/${BSC_KEY}`;
 const SOL_KEY = 'ag2w7MCM9NnR6DmG9p6n2f3vX8q1K7yL'; // placeholder
 const SOL_URL = `https://solana-mainnet.g.alchemy.com/v2/${SOL_KEY}`;

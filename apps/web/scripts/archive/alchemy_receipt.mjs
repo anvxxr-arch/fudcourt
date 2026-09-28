@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 
-const KEY = 'RWwP0wKxdtABmUNcxTmuH';
+const KEY = process.env.ALCHEMY_KEY ?? '';
 const URL = `https://bnb-mainnet.g.alchemy.com/v2/${KEY}`;
 
 function call(m, p) {

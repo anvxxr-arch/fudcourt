@@ -168,7 +168,20 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
   pre-push hook + CI web job. Gate evidence: zero behavior change —
   tsc 0, `next build` 0, contract OK (28 modes), live harness **244/0**,
   route sweep **107/107** after restart.
-- SG-4.2 ⬜ Secret rotation runbook + Vercel/local env parity audit (R-9)
+- SG-4.2 ✅ Secret rotation runbook + Vercel/local env parity audit (R-9) →
+  `docs/SECRETS.md`. Findings fixed in-tree: Alchemy key literal removed from
+  `sync-live.py` (now `require_env`, loud stop) **and scrubbed from 14 tracked
+  `scripts/archive/*.mjs`** (node --check green) — the literal predates commit
+  `3678b10`, i.e. **it is in git history → R1 rotation is mandatory** (human
+  step: Alchemy dashboard, procedure in SECRETS §5); dead Turso fallback that
+  sliced quote-bytes out of `lib/db.ts` removed (could only produce garbage
+  credentials). Verified: no `.env` ever committed (history scan), CI needs
+  zero secrets, sync timer RC 0 after the fix. Parity verdict is honest:
+  **unverifiable today** — Vercel CLI unauthenticated (whoami hangs for OAuth)
+  and `fudcourt.vercel.app` → `DEPLOYMENT_NOT_FOUND`; §6 checklist turns each
+  inventory row into yes/no at the next deploy. Local-only by design:
+  `CR_PYTHON` (helper can't exist on serverless → loud 502) and fail-closed
+  mutation auth.
 - SG-4.3 ⬜ Root `README.md` entry point linking `docs/` (R-10)
 - SG-4.4 ⬜ Revisit official CryptoRank key **only if** R-4 reports RE breakage (R-11)
 

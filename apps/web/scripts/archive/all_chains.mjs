@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 
-const KEY = 'RWwP0wKxdtABmUNcxTmuH';
+const KEY = process.env.ALCHEMY_KEY ?? '';
 
 // Chain RPC endpoints
 const CHAINS = {
