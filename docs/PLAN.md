@@ -78,9 +78,15 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 
 ## G3 — ⬜ Near-term product (P1)
 
-### SG-3.1 ⬜ Upstream monitoring (R-4)
-- T-3.1.1 ⬜ `monitor.sh`: 5-check smoke every 15 min (systemd timer)
-- T-3.1.2 ⬜ Deviation → notification (Telegram bot already in stack)
+### SG-3.1 ✅ Upstream monitoring (R-4)
+- T-3.1.1 ✅ `apps/web/scripts/monitor.py` — 7-check smoke (unit, board, home
+  non-empty+upstream, coins, converter, newstag keyed, funding-must-503),
+  concurrent (wall = slowest check, ~1-2s warm), deterministic output
+  (byte-stable = silent tick), retry only 429/5xx. Deployed to
+  `~/.hermes/scripts/monitor-cryptorank.py` as a thin wrapper (repo = source).
+- T-3.1.2 ✅ Deviation → agent wakes + notifies via Hermes cron `monitor-cryptorank`
+  (job `f191fe6df16c`, every 15m, deliver=origin). Note: implemented as a Hermes
+  cron monitor instead of a systemd timer — same intent, built-in dedup+delivery.
 
 ### SG-3.2 ⬜ Blog content bootstrapping (R-5)
 - T-3.2.1 ⬜ Seed 3 posts via Payload REST (methodology, decoy post-mortem, sync rules)
