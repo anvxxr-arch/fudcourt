@@ -10,6 +10,10 @@ never as fabricated rows.
 (PRD, schema, architecture/analysis, ranked recommendations, PLAN status board,
 [DECISIONS](docs/DECISIONS.md) records, [SECRETS](docs/SECRETS.md) runbook).
 
+> **Hosting:** self-hosted on the homeserver — production = the systemd units
+> (`fudcourt-web` :3100, `fudcourt-blog` :3001, `fudcourt-sync.timer`), **no
+> third-party deploy target** ([DR-002](docs/DECISIONS.md)).
+
 ## Run
 
 ```bash

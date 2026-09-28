@@ -4,20 +4,22 @@
 commands only.** Length checks are done with `wc -c`, never by printing.
 
 Audit date: 2026-09-28. Scope: `apps/web`, `apps/blog`, repo root, GitHub
-Actions CI, Vercel projects (`fudcourt`, `web`, `blog` — team `team_YpBtudy…`).
+Actions CI, and the **self-hosted production** on the homeserver
+(`192.168.100.6`, systemd user units). Hosting model: **DR-002 — no Vercel
+deploy**; see [DECISIONS.md](./DECISIONS.md).
 
 ## 1. Inventory
 
-| Name | Consumers (first-party) | Local home | Vercel side | CI needs it? |
-|------|------------------------|------------|-------------|--------------|
-| `TURSO_AUTH_TOKEN` | `apps/web/lib/db.ts`, `scripts/sync-live.py`, `scripts/dump-schema.mjs` | `./.env` (root) + `apps/web/.env.local` | `web` + `fudcourt` (expected) | no |
-| `ALCHEMY_KEY` | `apps/web/scripts/sync-live.py` (live ETH RPC) + `scripts/archive/*.mjs` (forensic one-offs) | `./.env` (root) | no | no |
-| `FUD_MUTATION_TOKEN` | `apps/web/lib/mutation-auth.ts` (server, fail-closed `x-fud-token`) | `apps/web/.env.local` | `web` (expected) | no |
-| `NEXT_PUBLIC_FUD_MUTATION_TOKEN` | client guard — **inlined at build time** | `apps/web/.env.local` | `web` (expected, needs deploy) | no |
-| `DATABASE_URL` (Neon) | Payload blog (`apps/blog/src`) | `apps/blog/.env` | `blog` (expected) | no (build works without it — verified) |
-| `PAYLOAD_SECRET` | Payload blog (sessions/cookies) | `apps/blog/.env` | `blog` (expected) | no |
-| `CR_PYTHON` | cryptorank route helper interpreter path | machine default in code | **N/A — local only** (see §4) | no |
-| `VERCEL_OIDC_TOKEN` | Vercel OIDC federation (transient) | `apps/web/.env.local` | auto-issued | no |
+| Name | Consumers (first-party) | Home (file) | Production consumer | CI needs it? |
+|------|------------------------|-------------|---------------------|--------------|
+| `TURSO_AUTH_TOKEN` | `apps/web/lib/db.ts`, `scripts/sync-live.py`, `scripts/dump-schema.mjs` | `./.env` (root) + `apps/web/.env.local` | `fudcourt-web` (:3100) + `fudcourt-sync.timer` (both read the repo-root `.env` via `load_env()`) | no |
+| `ALCHEMY_KEY` | `apps/web/scripts/sync-live.py` (live ETH RPC) + `apps/web/scripts/archive/*.mjs` (forensic one-offs) | `./.env` (root) | `fudcourt-sync.timer` | no |
+| `FUD_MUTATION_TOKEN` | `apps/web/lib/mutation-auth.ts` (server, fail-closed `x-fud-token`) | `apps/web/.env.local` | `fudcourt-web` (read at build+run; restart after change) | no |
+| `NEXT_PUBLIC_FUD_MUTATION_TOKEN` | client guard — **inlined at build time** | `apps/web/.env.local` | `fudcourt-web` (build must be re-run) | no |
+| `DATABASE_URL` (Neon) | Payload blog (`apps/blog/src`) | `apps/blog/.env` | `fudcourt-blog` (:3001) | no (build works without it — verified) |
+| `PAYLOAD_SECRET` | Payload blog (sessions/cookies) | `apps/blog/.env` | `fudcourt-blog` | no |
+| `CR_PYTHON` | cryptorank route helper interpreter path | code default (`~/.venvs/crfetch/bin/python`) | `fudcourt-web` (the venv lives on this host) | no |
+| `VERCEL_OIDC_TOKEN` (legacy residue) | — none anymore — | `apps/web/.env.local` | — | no — **safe to delete this line** |
 
 `./apps/blog/.next/standalone/…/.env` is a *build artifact copy* on local disk
 (`.next/` is git-ignored) — re-created on every build, never edit it.
@@ -53,32 +55,38 @@ Actions CI, Vercel projects (`fudcourt`, `web`, `blog` — team `team_YpBtudy…
    the repo-root `.env`. Rotation therefore needs only the `.env` edit + the
    next 5-minute tick.
 
-## 3. Vercel / local parity audit
+## 3. Production model (self-hosted, DR-002)
 
-Projects located: root `fudcourt` (`prj_uJv1ed…`), `web` (`prj_HXP2Vf…`),
-`blog` (`prj_YVUh9D…`) in the same team; `.vercel/project.json` present per app.
+Production == this homeserver:
 
-| Check | Result | Evidence |
-|-------|--------|----------|
-| Vercel CLI listable from this machine | **NO** | `vercel whoami` → waits for OAuth login (non-interactive hang; needs `vercel login` or `VERCEL_TOKEN`) |
-| Live prod reachable for behavioral parity | **NO** | `https://fudcourt.vercel.app/*` → `404 DEPLOYMENT_NOT_FOUND` (project exists, no active deployment) |
-| Therefore: per-var Vercel presence | **UNVERIFIABLE today** | re-run §6 checklist at the next deploy |
-| Local inventory complete | **YES** | §1 (every first-party `process.env` read is mapped to a home) |
+| Surface | Unit | Bind | Credential source |
+|---------|------|------|-------------------|
+| Board + CryptoRank proxy (`apps/web`) | `fudcourt-web.service` | `127.0.0.1:3100` | `apps/web/.env.local` (+ repo-root `.env` for shared vars) |
+| Blog / Payload (`apps/blog`) | `fudcourt-blog.service` (enabled) | `127.0.0.1:3001` | `apps/blog/.env` |
+| Live balance sync | `fudcourt-sync.timer` (5 min) | — (outbound only) | repo-root `.env` via `load_env()` |
 
-Honest status: **parity is not proven — it is unprovable right now**, because
-there is no live deployment to probe and the CLI is unauthenticated. Nothing in
-§1 is claimed as "present on Vercel" without that evidence; the checklist in §6
-converts each row into a yes/no at deploy time.
+- **No third-party deploy target.** The `fudcourt.vercel.app` domain answers
+  `404 DEPLOYMENT_NOT_FOUND` (measured 2026-09-28) — there is nothing deployed
+  and nothing to keep in parity. Residual `.vercel/` directories and the
+  `VERCEL_OIDC_TOKEN` line are leftovers: optional cleanup, no functional use
+  (the tracked `apps/web/vercel.json` was removed; its `/portfolio` rewrite now
+  lives in `apps/web/next.config.js`, so the path works on any host).
+- **Vercel-side parity is moot by decision**, not "unverified": the audit
+  question is retired with DR-002. If the projects are ever wanted, the only
+  required env names are exactly the §1 rows.
+- **Exposure today is LAN/loopback.** Reads and writes are reachable only from
+  this network; if a public exposure is wanted later it goes through the
+  existing Cloudflare tunnel with mutation auth staying fail-closed — a new
+  decision, not an implicit one.
 
-## 4. Local-only surfaces (by design, not a gap)
+## 4. Runtime surfaces
 
-- `CR_PYTHON` points at the curl_cffi venv; the cryptorank helper is a spawned
-  process. On Vercel serverless the helper cannot exist, so that family fails
-  **loud 502 by design** (never a substituted payload). Re-confirm on next
-  deploy: `curl -o /dev/null -w '%{http_code}' 'https://<prod>/api/cryptorank?mode=home'`
-  → expect 502 with `error` carrying the helper text, not 200-with-phantom-data.
-- Mutation auth is **fail-closed**: if `FUD_MUTATION_TOKEN` is absent on Vercel,
-  every write is refused (401) rather than open — absence degrades to safe.
+- `CR_PYTHON` points at the curl_cffi venv **on this host**; the cryptorank
+  helper is a spawned process and works in production because production *is*
+  this host (no serverless sandbox in the path).
+- Mutation auth is **fail-closed**: if `FUD_MUTATION_TOKEN` is absent, every
+  write is refused (401) rather than open — absence degrades to safe, on LAN
+  and on any future public exposure alike.
 
 ## 5. Rotation procedures (run in order; verify after each)
 
@@ -99,20 +107,15 @@ converts each row into a yes/no at deploy time.
    `python3 scripts/sync-live.py` (RC 0); then `systemctl --user restart
    fudcourt-web` and `curl -s -o /dev/null -w '%{http_code}'
    http://127.0.0.1:3100/cryptorank` → 200.
-4. Vercel: `cd apps/web && vercel env rm TURSO_AUTH_TOKEN && vercel env add
-   TURSO_AUTH_TOKEN production` (paste at the prompt — the CLI never echoes it),
-   redeploy.
 
 **R3. `FUD_MUTATION_TOKEN` + `NEXT_PUBLIC_FUD_MUTATION_TOKEN` (always paired).**
 1. Generate: `openssl rand -hex 32` (local shell, do not paste into chat).
 2. Put the SAME value in both lines of `apps/web/.env.local` (server reads the
    private name; the client bundle inlines the `NEXT_PUBLIC_` name **at build**,
    so a one-sided change bricks writes on that side — fail-closed, not open).
-3. `systemctl --user restart fudcourt-web`; verify locally: a `DELETE
-   /api/transactions/<id>` **without** the header → 401 (proves the guard is
-   live; never run it *with* the token against a real row).
-4. Vercel: update both names under the `web` project, **redeploy** (build-time
-   inlining), then verify prod: no-header mutation → 401.
+3. Rebuild + restart (`npm run build`, `systemctl --user restart fudcourt-web`);
+   verify: a `DELETE /api/transactions/<id>` **without** the header → 401 (proves
+   the guard is live; never run it *with* the token against a real row).
 
 **R4. `DATABASE_URL` (Neon) and `PAYLOAD_SECRET` (blog).**
 1. Neon → Reset password (or a new connection string); update
@@ -122,28 +125,25 @@ converts each row into a yes/no at deploy time.
 3. Verify: `systemctl --user restart fudcourt-blog` then
    `curl -s -o /dev/null -w '%{http_code}'
    'http://127.0.0.1:3001/api/posts?limit=1&depth=0'` → 200.
-4. Vercel: add both to the `blog` project, redeploy, verify the same endpoint
-   through the prod domain.
 
-**R5. `VERCEL_OIDC_TOKEN`** — transient, re-issued by Vercel; stale values in
-`apps/web/.env.local` may simply be deleted. Never rotated by hand.
+**R5. `VERCEL_OIDC_TOKEN`** — legacy residue from the retired Vercel target;
+delete the line from `apps/web/.env.local`. Nothing reads it.
 
-## 6. Parity checklist (run at the next deploy — turns §3 into yes/no)
+## 6. Production verification checklist (self-hosted)
 
 ```bash
-vercel whoami                                   # must print the account, not hang
-cd apps/web  && vercel env ls                   # expect: TURSO_AUTH_TOKEN,
-cd apps/blog && vercel env ls                   #   FUD_MUTATION_TOKEN,
-                                                #   NEXT_PUBLIC_FUD_MUTATION_TOKEN,
-                                                #   DATABASE_URL, PAYLOAD_SECRET
-curl -s -o /dev/null -w '%{http_code}\n' 'https://<prod>/api/transactions'          # 200, rows present -> Turso live
-curl -s -o /dev/null -w '%{http_code}\n' 'https://<prod>/blog/api/posts?limit=1'    # 200 -> Neon live
-curl -s -o /dev/null -w '%{http_code}\n' 'https://<prod>/api/cryptorank?mode=home'  # 502 loud -> helper local-only, as designed
-curl -s -o /dev/null -X DELETE -w '%{http_code}\n' 'https://<prod>/api/transactions/1' # 401 -> fail-closed live (NO token used here)
+systemctl --user is-active fudcourt-web fudcourt-blog      # both: active
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3100/cryptorank      # 200
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3100/portfolio       # 200 (rewrite kept)
+curl -s -o /dev/null -w '%{http_code}\n' 'http://127.0.0.1:3001/api/posts?limit=1&depth=0'  # 200 -> Neon live
+curl -s -o /dev/null -w '%{http_code}\n' 'http://127.0.0.1:3100/api/transactions'           # 200, rows -> Turso live
+curl -s -o /dev/null -X DELETE -w '%{http_code}\n' 'http://127.0.0.1:3100/api/transactions/1'  # 401 -> fail-closed (NO token used here)
+cd apps/web && python3 scripts/check-contract.py && npm run test:shapers        # offline gates
 ```
 
-Any row that is `present locally` but `missing on Vercel` is a parity defect:
-fix it with the matching §5 step (redeploy for every `NEXT_PUBLIC_*`).
+A var that is set in the §1 home file but missing at runtime shows up as one of
+these checks failing loudly — fix with the matching §5 step (rebuild for every
+`NEXT_PUBLIC_*`).
 
 ## 7. Standing rules
 

@@ -66,7 +66,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 - T-2.2.1 ✅ `scripts/githooks/pre-push` (`core.hooksPath` configured): tsc for touched app + py syntax
 - T-2.2.2 ✅ Offline contract gate `check-contract.py` (CR_MODES lib↔sweep consistency + mutation-guard audit)
 - T-2.2.3 ✅ GitHub Action `.github/workflows/ci.yml` (3 jobs, green run `36393193712`):
-  per-app `npm ci` (root has no workspaces field — apps install standalone, as Vercel builds them),
+  per-app `npm ci` (root has no workspaces field — each app installs standalone with its own lockfile),
   contract gate + tsc + builds for web/blog, `bash -n` on the hook
 
 ### SG-2.3 ✅ Mutation authentication (R-6, K-5)
@@ -168,7 +168,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
   pre-push hook + CI web job. Gate evidence: zero behavior change —
   tsc 0, `next build` 0, contract OK (28 modes), live harness **244/0**,
   route sweep **107/107** after restart.
-- SG-4.2 ✅ Secret rotation runbook + Vercel/local env parity audit (R-9) →
+- SG-4.2 ✅ Secret rotation runbook + Vercel/local env parity audit (R-9; Vercel half later retired by DR-002 self-hosting) →
   `docs/SECRETS.md`. Findings fixed in-tree: Alchemy key literal removed from
   `sync-live.py` (now `require_env`, loud stop) **and scrubbed from 14 tracked
   `scripts/archive/*.mjs`** (node --check green) — the literal predates commit

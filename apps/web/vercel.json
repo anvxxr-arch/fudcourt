@@ -1,7 +1,0 @@
-{
-  "framework": "nextjs",
-  "rewrites": [
-    { "source": "/portfolio", "destination": "/" },
-    { "source": "/portfolio/(.*)", "destination": "/$1" }
-  ]
-}

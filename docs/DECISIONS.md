@@ -56,3 +56,43 @@ checkout never ran a half-upgraded tree.
 - `next@16.3.6` exact-pinned (repo convention; `^` auto-written by npm
   was corrected back to exact).
 - Blog and web now share one Next major → one patch train.
+
+---
+
+## DR-002 — Hosting: self-hosted on the homeserver; no Vercel publish (2026-09-28)
+
+**Context.** `docs/SECRETS.md` was auditing "Vercel ↔ local env parity" when
+both probes came back negative: the CLI is unauthenticated and
+`fudcourt.vercel.app` answers `404 DEPLOYMENT_NOT_FOUND` — a project shell with
+no deployment. Owner decision (dwizzy): **"We don't publish on Vercel, let's
+self hosting."**
+
+**Options.** (a) Keep Vercel as a deploy target and finish the parity audit
+when credentials exist; (b) hybrid — board stays on the homeserver, only the
+public reader goes to Vercel; (c) drop Vercel entirely, production = this
+homeserver.
+
+**Decision. (c).** Production is the homeserver stack that already runs:
+`fudcourt-web` (`127.0.0.1:3100`), `fudcourt-blog` (`127.0.0.1:3001`),
+`fudcourt-sync.timer`. The tracked `apps/web/vercel.json` is deleted and its
+`/portfolio` rewrite moves into `apps/web/next.config.js` (host-independent).
+Exposure stays LAN/loopback today; publishing through the existing Cloudflare
+tunnel would be a separate, explicit decision (mutation auth stays fail-closed
+whenever it happens).
+
+**Evidence.** Units active; board `200`; blog `200`; CI is gates-only (no
+deploy step), so nothing in CI referenced Vercel; `DEPLOYMENT_NOT_FOUND`
+measured 2026-09-28.
+
+**Consequences.**
+
+- The Vercel half of `docs/SECRETS.md` §3/§5/§6 is retired — parity questions
+  are moot by decision, not "unverified"; the runbook now documents the
+  self-hosted units (SECRETS §3/§6 rewritten).
+- Residual cleanup (optional, human): delete the three Vercel projects
+  (`fudcourt`, `web`, `blog`) and the `.vercel/` dirs + the
+  `VERCEL_OIDC_TOKEN` line in `apps/web/.env.local`.
+- `NEXT_PUBLIC_FUD_MUTATION_TOKEN` still requires a rebuild after rotation —
+  build-time inlining is host-independent.
+- Managed data services (Turso, Neon) are unchanged — this decision is about
+  compute hosting only.

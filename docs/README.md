@@ -7,7 +7,9 @@ Payload CMS blog — both in one npm-workspaces monorepo.
 
 - Repo: `github.com/anvxxr-arch/fudcourt` · remote head at time of writing: `957836d`
 - Local stack: `fudcourt-web` (`:3100`), `fudcourt-blog` (`:3001`), `fudcourt-sync.timer` (5 min)
-- Deployed: `apps/web` → Vercel (`fudcourt.vercel.app`, `/portfolio` rewrite)
+- Hosting: **self-hosted** on the homeserver (DR-002) — no third-party deploy
+  target; production = the systemd units above (`/portfolio` rewrite lives in
+  `apps/web/next.config.js`)
 
 ## Documents
 
@@ -20,7 +22,7 @@ Payload CMS blog — both in one npm-workspaces monorepo.
 | [RECOMMENDATIONS.md](./RECOMMENDATIONS.md) | Ranked recommendations with impact/effort |
 | [PLAN.md](./PLAN.md) | Goal → subgoal → task → subtask breakdown with status |
 | [DECISIONS.md](./DECISIONS.md) | Decision records (DR-xxx): context, options, gate evidence, outcome |
-| [SECRETS.md](./SECRETS.md) | Secret inventory, Vercel/local parity audit, rotation runbook (SG-4.2) |
+| [SECRETS.md](./SECRETS.md) | Secret inventory, production (self-hosted) env model, rotation runbook (SG-4.2; Vercel half retired by DR-002) |
 
 ## One-line map of the repo
 

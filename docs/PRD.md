@@ -21,7 +21,7 @@ One private surface where the owner can answer, at any moment:
 | Persona | Need |
 |---------|------|
 | **Owner (Dwi)** — sole daily user | Fast local board (`:3100`), live sync every 5 min, zero fabricated numbers |
-| **Public reader** | Vercel-deployed portfolio view (`/portfolio`) + blog posts |
+| **Public reader** | Portfolio view (`/portfolio`, self-hosted DR-002) + blog posts |
 | **The agent (Fox)** | Machine-checkable contracts: harnesses, gates, loud failures |
 
 ## 3. Functional requirements
@@ -82,8 +82,9 @@ One private surface where the owner can answer, at any moment:
 ### NFR-4 — Security posture
 - Blog: Payload access control (403 on user list), introspection off, playground prod-off.
 - Web API mutations: fail-closed `x-fud-token` auth on all 7 write handlers ✅ 2026-09-28
-  (`lib/mutation-auth.ts`, env `FUD_MUTATION_TOKEN`); builds without the env — public
-  Vercel — reject every mutation with 401. Reads stay open on the LAN deployment.
+  (`lib/mutation-auth.ts`, env `FUD_MUTATION_TOKEN`); builds without the env — fail-closed
+  — reject every mutation with 401 (holds on LAN today and under any future public
+  exposure; DR-002 self-hosting). Reads stay open on the LAN deployment.
 - Web API: LAN-facing (`127.0.0.1:3100`), rate-limit helper present (`lib/rate-limit.ts`).
 - Secrets never printed; `.env` values redacted in all tooling output.
 

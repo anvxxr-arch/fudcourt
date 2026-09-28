@@ -14,7 +14,7 @@ Analyzed at remote head `957836d` (2026-09-27), local `main` identical
                        │ portfolio OS       │ Payload CMS 3.89      │
                        └─────┬──────────────┴──────────┬────────────┘
                  systemd :3100│                        │systemd :3001
-                 Vercel (main deploy)                 │
+                 self-hosted only (DR-002)             │
                              │                        │
         ┌────────────────────┼──────────┐             │
         ▼                    ▼          ▼             ▼
@@ -112,7 +112,7 @@ mode. A gate may fail on *data*, never on a *hiccup*.
 | K-2 | **No CI / pre-merge verification** | High→Med | Partial: `pre-push` hook (contract check + tsc + py syntax) live 2026-09-28; GitHub Action still open (PLAN T-2.2.3). |
 | K-3 | **Dual Next majors (14 web / 16 blog)** | Medium | Two React majors (18/19), divergent TS versions; upgrade path and shared-code future are constrained. |
 | K-4 | **Upstream coupling (CF 429 / Turnstile)** | Medium | CryptoRank HTML RE can break without notice; mitigated by loud failures + harness, but there is no alerting — breakage is discovered on next run. |
-| K-5 | ~~Web API unauthenticated~~ ✅ **closed 2026-09-28** | Med→Low | Fail-closed `x-fud-token` auth on all 7 write handlers; public Vercel build has no token ⇒ mutations 401 by construction (R-6). Residual: LAN peers can read the token from the local bundle (accepted — same trust boundary). |
+| K-5 | ~~Web API unauthenticated~~ ✅ **closed 2026-09-28** | Med→Low | Fail-closed `x-fud-token` auth on all 7 write handlers; no build ships a token ⇒ mutations 401 by construction (R-6); production is self-hosted LAN (DR-002). Residual: LAN peers can read the token from the local bundle (accepted — same trust boundary). |
 | K-6 | **No tests for UI logic** | Medium | Rendering proven by DOM audit *script*, not by unit tests; shaper logic tested only through live upstream (flaky-by-nature). |
 | K-7 | **Cloud DB single-credentials** | Low-Med | Turso token + Neon URL are single secrets; rotation story is manual. |
 | K-8 | **Zero onboarding docs (before this set)** | Low | No README/PRD/schema existed at remote head — now addressed by `docs/`. |
