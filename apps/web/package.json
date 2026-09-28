@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start -p 3000"
+    "start": "next start -p 3000",
+    "test:shapers": "tsc lib/shapers.ts lib/cryptorank.ts scripts/shaper-tests.ts --outDir .shaper-tests --module commonjs --moduleResolution node --target es2020 --esModuleInterop --skipLibCheck --types node --noEmitOnError && node --test .shaper-tests/scripts/shaper-tests.js",
+    "record:fixtures": "tsc lib/cryptorank.ts scripts/record-fixtures.ts --outDir .shaper-tests --module commonjs --moduleResolution node --target es2020 --esModuleInterop --skipLibCheck --types node --noEmitOnError && node .shaper-tests/scripts/record-fixtures.js"
   },
   "dependencies": {
     "@libsql/client": "0.18.0",

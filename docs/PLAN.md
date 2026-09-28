@@ -143,9 +143,22 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 
 ---
 
-## G4 — ⬜ Later (P2)
+## G4 — 🔄 In progress (P2)
 
-- SG-4.1 ⬜ Shaper unit tests from recorded `__NEXT_DATA__` fixtures (R-8)
+- SG-4.1 ✅ Shaper unit tests from recorded upstream fixtures (R-8) — pure
+  shapers extracted verbatim to `lib/shapers.ts` (route keeps fetch/auth/refusals);
+  `scripts/record-fixtures.ts` records the helper's raw stdout per live mode
+  (26/26, gzipped 7.87 MB -> 1.76 MB, sha256 over the RAW payload in
+  `fixtures/MANIFEST.json` = hand-edited fixture fails the tamper check);
+  `scripts/shaper-tests.ts` (`npm run test:shapers`, node --test, offline ~0.5s,
+  **56/56**): JSON round-trip identity, no NaN/undefined/Infinity anywhere,
+  `count === rows.length`, never-0-for-absent, recorder/route upstream-path
+  cross-check, and a fabrication probe per mode (empty upstream -> empty
+  envelope OR a loud refusal naming the withheld data — measured: 20 of 26
+  modes refuse loudly, 6 tolerate empty; none fabricate). Wired into the
+  pre-push hook + CI web job. Gate evidence: zero behavior change —
+  tsc 0, `next build` 0, contract OK (28 modes), live harness **244/0**,
+  route sweep **107/107** after restart.
 - SG-4.2 ⬜ Secret rotation runbook + Vercel/local env parity audit (R-9)
 - SG-4.3 ⬜ Root `README.md` entry point linking `docs/` (R-10)
 - SG-4.4 ⬜ Revisit official CryptoRank key **only if** R-4 reports RE breakage (R-11)

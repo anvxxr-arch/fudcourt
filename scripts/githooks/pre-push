@@ -1,6 +1,7 @@
 #!/bin/bash
 # fudcourt pre-push hook (PLAN T-2.2.1, R-2) — fast, offline only.
 #   - offline contract check (CR_MODES consistency + mutation-auth guards)
+#   - shaper fixture tests (offline, recorded upstream payloads) - SG-4.1
 #   - tsc --noEmit when apps/web TypeScript changed
 #   - python syntax check for changed harness scripts
 # Full harnesses (network) stay manual: scripts/verify-*.py
@@ -19,6 +20,10 @@ if echo "$changed" | grep -q '^apps/web/'; then
   echo "[pre-push] tsc --noEmit (apps/web)..."
   if ! (cd apps/web && unset NODE_ENV && npx tsc --noEmit); then
     echo "[pre-push] TYPECHECK FAILED"; rc=1
+  fi
+  echo "[pre-push] shaper fixture tests (offline)..."
+  if ! (cd apps/web && unset NODE_ENV && npm run test:shapers > /tmp/fudcourt-shaper-tests.log 2>&1); then
+    echo "[pre-push] SHAPER TESTS FAILED"; tail -20 /tmp/fudcourt-shaper-tests.log; rc=1
   fi
 fi
 

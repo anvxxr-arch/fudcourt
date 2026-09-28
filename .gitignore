@@ -19,6 +19,9 @@ tsconfig.tsbuildinfo
 apps/blog/media/
 apps/blog/.payload/
 
+# test build output
+.shaper-tests/
+
 # logs
 *.log
 
