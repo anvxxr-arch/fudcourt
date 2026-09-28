@@ -1,5 +1,10 @@
 name: CI
 
+# Install strategy: per-app `npm ci` using each app's own lockfile.
+# The root package.json has no workspaces field (root lock is the gateway
+# project's); apps/web and apps/blog are independently installable — the same
+# way their Vercel projects build them.
+
 on:
   push:
     branches: [main]
@@ -10,36 +15,41 @@ jobs:
   web:
     name: "web - contract, typecheck, build"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Install (workspaces)
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install
         run: npm ci
       - name: "Offline contract gate (CR_MODES consistency + mutation-auth guards)"
-        run: python3 apps/web/scripts/check-contract.py
+        run: python3 scripts/check-contract.py
       - name: Typecheck
-        working-directory: apps/web
         run: npx tsc --noEmit
       - name: Build
-        working-directory: apps/web
         run: npx next build
 
   blog:
     name: "blog - build (Payload)"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/blog
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Install (workspaces)
+          cache-dependency-path: apps/blog/package-lock.json
+      - name: Install
         run: npm ci
       - name: "Build (no DATABASE_URL needed at build - verified locally)"
-        working-directory: apps/blog
         run: npx next build
 
   hooks:
