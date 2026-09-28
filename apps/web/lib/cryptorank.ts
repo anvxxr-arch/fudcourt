@@ -627,6 +627,10 @@ export interface CrEnvelope {
   slice?: string;
   /** How change24h was obtained for this payload. */
   changeSource?: 'direct' | 'derived-from-histPrices-24H' | 'unavailable';
+  /** listings only: rows whose histPrices anchor upstream actually shipped, per widget.
+   * Consumers assert derived-non-null counts EQUAL these (anti-fabrication + no missed derivation). */
+  anchor24h?: { recentlyAdded: number; mostSearched: number; mostVisited: number };
+  anchor7d?: { recentlyAdded: number; mostSearched: number; mostVisited: number };
   global?: CrGlobal;
   fundingRounds?: CrFundingRound[];
   upcomingIco?: CrUpcomingIco[];

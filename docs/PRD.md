@@ -1,6 +1,6 @@
 # PRD — Fudcourt
 
-- **Status:** v1.0, verified against remote head `957836d` (2026-09-27)
+- **Status:** v1.1 — re-aligned 2026-09-28 to the running system ([ARCHITECTURE.md](./ARCHITECTURE.md)); v1.0 verified against remote head `957836d` (2026-09-27)
 - **Owner:** Dwi (`dwizzy`)
 - **Repo:** `github.com/anvxxr-arch/fudcourt`
 
@@ -45,9 +45,17 @@ One private surface where the owner can answer, at any moment:
   ecosystems/ecosystem, rwa/rwaasset, quarterly returns, prediction markets,
   converter, media, newstag, ai-overview; plus loud-503 refusals for `funding`/`unlocks`.
 - FR-3.2 ChainRank proxy (`stats`, `listings`), DEX Screener proxy (8 types),
-  DefiLlama proxy (`chains`, `protocols`, `historical`), News proxy, Signals proxy.
+  DefiLlama proxy (`chains`, `protocols`, `historical`), News proxy (strict
+  `source`/`limit`), Signals proxy, **CoinGecko markets proxy** (`/api/markets`,
+  top-250 pool — powers Coin Explorer *and* Price Tracker; the tracker's former
+  browser-direct CoinGecko call was re-aligned into this gated route).
 - FR-3.3 Every board must fail loudly: upstream error → HTTP 502 with the real
   upstream status; never an empty-successful table.
+- FR-3.4 Every family ships a verifier (`scripts/verify-<family>.py`) asserting
+  real/request-varying data, strict 400s on our params, honest `derived`
+  labels, cache observability and independent ground-truth gates; families and
+  their verifier status are tabulated in ARCHITECTURE.md §4 (news: monitor
+  smoke only, deep verifier pending — PLAN SG-5.2).
 
 ### FR-4 — Blog (apps/blog)
 - FR-4.1 Payload CMS 3.89 collections: posts, media, categories, users on Neon Postgres.

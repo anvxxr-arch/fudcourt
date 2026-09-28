@@ -195,6 +195,22 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 
 ---
 
+## G5 — 🔄 Family alignment (repurpose pass, 2026-09-28)
+
+Owner direction: *"repurpose this fudcourt apps, and re-architecture biar jelas"* →
+align every already-built surface into one clear, gated architecture
+(the map: [ARCHITECTURE.md](./ARCHITECTURE.md)).
+
+- SG-5.1 ✅ `/api/markets` built (was an orphan 404 behind CoinPage), `lib/markets.ts`
+  contract, CoinPage honest labels (`N of pool`, null → `—`, loud errors),
+  `verify-markets.py` 49 checks (GATE2 llama / GATE3 cryptorank @ 3%, measured
+  0.009–0.287%), `sort=mcap` for the tracker, TrackerPage re-wired off
+  browser-direct CoinGecko onto the gated route, news route strict params
+  (400 not clamp/NaN/soft-404) + `upstream` labels, monitor covers markets+news
+  (8 checks), sweep → **110/110**
+- SG-5.2 ⬜ `verify-news.py` deep verifier (feed shape, strict params,
+  headline ground truth) — move news from SMOKE to GATED
+
 ## Sequencing rationale
 
 1. **G1 first** (docs) — zero-risk, unblocks every later task with shared vocabulary.

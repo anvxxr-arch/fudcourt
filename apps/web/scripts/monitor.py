@@ -42,6 +42,8 @@ CHECKS = [
     ("mode=converter", "/api/cryptorank?mode=converter", 200, False),
     ("mode=newstag&key=defi", "/api/cryptorank?mode=newstag&key=defi", 200, False),
     ("mode=funding (decoy refusal)", "/api/cryptorank?mode=funding", 503, False),
+    ("markets (coingecko)", "/api/markets?search=btc&limit=5", 200, True),
+    ("news (cointelegraph rss)", "/api/news?limit=5", 200, True),
 ]
 
 
@@ -81,7 +83,10 @@ def check(args):
         else:
             # envelope shapes differ per mode: home has count/global (no rows),
             # list modes carry rows. Empty data MUST still fail loudly.
-            cnt, rows = body.get("count"), body.get("rows")
+            # Families name their list field differently (CR: rows,
+            # markets: coins, news: items) -- presence of any is enough.
+            cnt = body.get("count") if body.get("count") is not None else body.get("total")
+            rows = body.get("rows") or body.get("coins") or body.get("items")
             if cnt is None and rows is None:
                 problems.append(f"FAIL {name}: no count/rows in envelope")
             elif cnt is not None and int(cnt) < 1:

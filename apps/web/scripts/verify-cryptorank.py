@@ -804,22 +804,28 @@ def main() -> int:
             body.get("changeSource") == "derived-from-histPrices-24H",
             str(body.get("changeSource")),
         )
-        # recentlyAdded: anchor coverage is MIXED (row0 ships no 24h hist, most
-        # rows do) -> derived where present, em-dash where absent, never faked
-        n24 = sum(1 for r in ra if r.get("change24h") is not None)
-        check("listings: recentlyAdded chg24h derived where anchor ships (>=14/20)",
-              n24 >= 14, f"non-null={n24}/{len(ra)}")
+        # Equality against the envelope's anchor-coverage labels (upstream
+        # fact) -- world-state-proof: a freshly-landed recentlyAdded batch
+        # (<24h old) ships no '24H' key (measured 2026-09-28: 0/20) so 0
+        # derived == 0 anchors passes, while a shaper that stops deriving OR
+        # starts fabricating breaks the equality either way. The old >=14/20
+        # floor was a bound on one observed world state, not on the contract.
+        a24 = body.get("anchor24h") or {}
+        for wname, wrs in (("recentlyAdded", ra), ("mostSearched", ms)):
+            n = sum(1 for r in wrs if r.get("change24h") is not None)
+            check(f"listings: {wname} chg24h derived exactly where anchor ships",
+                  n == a24.get(wname),
+                  f"non-null={n}/{len(wrs)} anchors={a24.get(wname)}")
         wild = [r.get("change24h") for r in ra
                 if isinstance(r.get("change24h"), (int, float))
                 and abs(r["change24h"]) > 300]
         check("listings: recentlyAdded chg24h plausible (|chg|<=300%)",
               not wild, f"wild={wild[:3]}")
-        n24s = sum(1 for r in ms if r.get("change24h") is not None)
-        check("listings: mostSearched chg24h derived (>=14/20)",
-              n24s >= 14, f"non-null={n24s}/{len(ms)}")
+        a7 = body.get("anchor7d") or {}
         n7 = sum(1 for r in ra if r.get("change7d") is not None)
-        check("listings: recentlyAdded chg7d derived (>=14/20)",
-              n7 >= 14, f"non-null={n7}/{len(ra)}")
+        check("listings: recentlyAdded chg7d derived exactly where anchor ships",
+              n7 == a7.get("recentlyAdded"),
+              f"non-null={n7}/{len(ra)} anchors={a7.get('recentlyAdded')}")
         # ground truth: BTC row in mostVisited
         btc = next((r for r in mv if r.get("symbol") == "BTC"), None)
         btc_t = truth_fresh().get("BTC")  # R-7 interleave

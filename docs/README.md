@@ -16,6 +16,7 @@ Payload CMS blog — both in one npm-workspaces monorepo.
 | Doc | Contents |
 |-----|----------|
 | [PRD.md](./PRD.md) | Product requirements: goals, personas, FR/NFR, scope, out-of-scope |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | **The clear map**: product statement, system picture, 15-view registry, 8 data families + trust classes, verification tiers, deploy model |
 | [SCHEMA.md](./SCHEMA.md) | Data schemas: Turso tables, Payload/Neon tables, API envelopes |
 | [TECH-STACK.md](./TECH-STACK.md) | Languages, frameworks, data stores, infra, verification tooling |
 | [ANALYSIS.md](./ANALYSIS.md) | Fully comprehensive analysis: architecture, reasoning, evidence, risks |

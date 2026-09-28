@@ -10,11 +10,12 @@ type Coin = {
   name?: string;
   image?: string;
   lastPrice: number;
-  priceChangePercent: number;
-  highPrice: number;
-  lowPrice: number;
-  volume: number;
-  quoteVolume: number;
+  // Null = upstream did not report the metric. Rendered as `--`, never 0.
+  priceChangePercent: number | null;
+  highPrice: number | null;
+  lowPrice: number | null;
+  volume: number | null;
+  quoteVolume: number | null;
   marketCap: number;
   rank: number;
   count: number;
@@ -27,6 +28,8 @@ type MarketsResponse = {
   offset: number;
   hasMore: boolean;
   timestamp: number;
+  /** Size of the CoinGecko pool the local filter/sort ran over. */
+  pool?: number;
 };
 
 export default function CoinPage() {
@@ -48,7 +51,11 @@ export default function CoinPage() {
         search, sort, order, limit: String(limit), page: String(page),
       });
       const res = await fetch(`/api/markets?${params}`, { cache: 'no-store' });
-      if (!res.ok) throw new Error('API error');
+      if (!res.ok) {
+        // Loud failure: surface the route's real error, never a silent table.
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ? `${body.error}` : `HTTP ${res.status}`);
+      }
       const json: MarketsResponse = await res.json();
       setData(json);
     } catch (e: any) {
@@ -62,7 +69,8 @@ export default function CoinPage() {
 
   const sortedCoins = useMemo(() => data?.coins || [], [data]);
 
-  const fmtPrice = (p: number) => {
+  const fmtPrice = (p: number | null) => {
+    if (p === null || p === undefined) return '—';
     if (p === 0) return '$0.00';
     if (p < 0.001) return `$${p.toExponential(2)}`;
     if (p < 1) return `$${p.toFixed(6)}`;
@@ -70,7 +78,8 @@ export default function CoinPage() {
     return `$${p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const fmtVol = (v: number) => {
+  const fmtVol = (v: number | null) => {
+    if (v === null || v === undefined) return '—';
     if (v === 0) return '$0';
     if (v < 1000) return `$${v.toFixed(0)}`;
     if (v < 1e6) return `$${(v / 1e3).toFixed(0)}K`;
@@ -85,8 +94,9 @@ export default function CoinPage() {
     return `$${(m / 1e9).toFixed(2)}B`;
   };
 
-  const fmtPct = (p: number) => {
-    if (!p) return '0.00%';
+  const fmtPct = (p: number | null) => {
+    if (p === null || p === undefined) return '—';
+    if (p === 0) return '0.00%';
     const sign = p >= 0 ? '+' : '';
     return `${sign}${p.toFixed(2)}%`;
   };
@@ -96,7 +106,7 @@ export default function CoinPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <h3 style={{ color: C.accent, margin: 0 }}>Coin Explorer — CoinGecko</h3>
         <div style={{ fontSize: 11, color: C.dim }}>
-          {data ? `${data.total.toLocaleString()} coins · Top by market cap` : 'Top coins by market cap'}
+          {data ? `${data.total.toLocaleString()} of ${data.pool ?? '?'} coins · CoinGecko top by mcap · local search/sort` : 'Top coins by market cap'}
         </div>
       </div>
 
@@ -116,6 +126,7 @@ export default function CoinPage() {
           onChange={(e) => { setSort(e.target.value); setPage(1); }}
           style={{ background: C.bg, color: C.white, border: `1px solid ${C.border}`, padding: '6px 10px', borderRadius: 6, fontSize: 12 }}
         >
+          <option value="mcap">Mkt Cap</option>
           <option value="volume">Volume</option>
           <option value="price">Price</option>
           <option value="change">24h Change</option>
@@ -164,7 +175,7 @@ export default function CoinPage() {
                 </div>
               </td>
               <td style={{ padding: 6, textAlign: 'right', color: C.accent }}>{fmtPrice(coin.lastPrice)}</td>
-              <td style={{ padding: 6, textAlign: 'right', color: coin.priceChangePercent >= 0 ? C.green : C.red }}>
+              <td style={{ padding: 6, textAlign: 'right', color: coin.priceChangePercent === null ? C.dim : coin.priceChangePercent >= 0 ? C.green : C.red }}>
                 {fmtPct(coin.priceChangePercent)}
               </td>
               <td style={{ padding: 6, textAlign: 'right', color: C.dim }}>{fmtPrice(coin.highPrice)}</td>

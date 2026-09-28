@@ -7,8 +7,9 @@ exactly reconciled or shown as `—`; upstream errors fail loud (502/503),
 never as fabricated rows.
 
 **Start here → [docs/README.md](docs/README.md)** — the documentation index
-(PRD, schema, architecture/analysis, ranked recommendations, PLAN status board,
-[DECISIONS](docs/DECISIONS.md) records, [SECRETS](docs/SECRETS.md) runbook).
+(PRD, **[ARCHITECTURE](docs/ARCHITECTURE.md)**, schema, analysis, ranked
+recommendations, PLAN status board, [DECISIONS](docs/DECISIONS.md) records,
+[SECRETS](docs/SECRETS.md) runbook).
 
 > **Hosting:** self-hosted on the homeserver — production = the systemd units
 > (`fudcourt-web` :3100, `fudcourt-blog` :3001, `fudcourt-sync.timer`), **no

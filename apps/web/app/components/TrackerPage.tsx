@@ -3,14 +3,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { C } from '../../lib/ui/shared';
 
+// Same family shape as /api/markets (lib/markets.ts) -- the tracker used to
+// call api.coingecko.com directly from the browser (ungated, hammering CG
+// every 30s with no cache or limiter). Re-aligned 2026-09-28: every CoinGecko
+// read now goes through the gated, cached, rate-limited proxy.
 type Coin = {
-  id: string;
-  symbol: string;
-  name: string;
-  current_price: number;
-  price_change_percentage_24h: number;
-  market_cap: number;
-  total_volume: number;
+  baseAsset: string;
+  name?: string;
+  lastPrice: number;
+  priceChangePercent: number | null;
+  quoteVolume: number | null;
+  marketCap: number;
 };
 
 export default function TrackerPage() {
@@ -22,13 +25,14 @@ export default function TrackerPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(
-        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1',
-        { cache: 'no-store' }
-      );
-      if (!res.ok) throw new Error('API error');
+      const res = await fetch('/api/markets?sort=mcap&order=desc&limit=50', { cache: 'no-store' });
+      if (!res.ok) {
+        // Loud failure with the route's real error, never a silent empty table.
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ? `${body.error}` : `HTTP ${res.status}`);
+      }
       const data = await res.json();
-      setCoins(data);
+      setCoins(data.coins || []);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -40,7 +44,8 @@ export default function TrackerPage() {
 
   const fmtPrice = (p: number) => p < 0.01 ? `$${p.toExponential(2)}` : p < 1000 ? `$${p.toFixed(2)}` : `$${p.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
   const fmtVol = (v: number) => v < 1e6 ? `$${(v/1e3).toFixed(0)}K` : v < 1e9 ? `$${(v/1e6).toFixed(1)}M` : `$${(v/1e9).toFixed(2)}B`;
-  const fmtPct = (p: number) => `${p >= 0 ? '+' : ''}${p?.toFixed(2) || '0.00'}%`;
+  // Null = upstream did not report it -> '--', never a fake 0.00%.
+  const fmtPct = (p: number | null) => p === null ? '—' : `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`;
 
   return (
     <div>
@@ -68,17 +73,17 @@ export default function TrackerPage() {
           </thead>
           <tbody>
             {coins.map((c) => (
-              <tr key={c.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+              <tr key={c.baseAsset} style={{ borderBottom: `1px solid ${C.border}` }}>
                 <td style={{ padding: 6 }}>
-                  <div style={{ fontWeight: 700, color: C.white }}>{c.symbol?.toUpperCase()}</div>
+                  <div style={{ fontWeight: 700, color: C.white }}>{c.baseAsset?.toUpperCase()}</div>
                   <div style={{ fontSize: 10, color: C.dim }}>{c.name}</div>
                 </td>
-                <td style={{ padding: 6, textAlign: 'right', color: C.accent }}>{fmtPrice(c.current_price)}</td>
-                <td style={{ padding: 6, textAlign: 'right', color: c.price_change_percentage_24h >= 0 ? C.green : C.red }}>
-                  {fmtPct(c.price_change_percentage_24h)}
+                <td style={{ padding: 6, textAlign: 'right', color: C.accent }}>{fmtPrice(c.lastPrice)}</td>
+                <td style={{ padding: 6, textAlign: 'right', color: c.priceChangePercent === null ? C.dim : c.priceChangePercent >= 0 ? C.green : C.red }}>
+                  {fmtPct(c.priceChangePercent)}
                 </td>
-                <td style={{ padding: 6, textAlign: 'right', color: C.white }}>{fmtVol(c.total_volume)}</td>
-                <td style={{ padding: 6, textAlign: 'right', color: C.dim }}>{fmtVol(c.market_cap)}</td>
+                <td style={{ padding: 6, textAlign: 'right', color: C.white }}>{c.quoteVolume === null ? '—' : fmtVol(c.quoteVolume)}</td>
+                <td style={{ padding: 6, textAlign: 'right', color: C.dim }}>{fmtVol(c.marketCap)}</td>
               </tr>
             ))}
           </tbody>

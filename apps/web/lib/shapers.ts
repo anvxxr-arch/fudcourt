@@ -405,13 +405,36 @@ export function envelope(
     if (!Array.isArray(ra) || !Array.isArray(ms) || !Array.isArray(mv)) {
       throw new Error('listings: missing widget arrays');
     }
+    // How many rows upstream actually shipped a usable anchor for -- the same
+    // condition shapeListing() derives with. Reported per widget so consumers
+    // (the harness) can assert non-null == anchors: a world-state-proof
+    // equality that catches both missed derivation and fabrication. Measured
+    // 2026-09-28: a freshly-landed recentlyAdded batch (<24h old) ships no
+    // '24H' key at all -> 0 anchors, 0 derived, 0 == 0.
+    const anchorCount = (rows: unknown[], period: string): number => {
+      let n = 0;
+      for (const row of rows) {
+        const hp = ((row as { histPrices?: Record<string, Record<string, unknown>> | null }).histPrices ?? {}) as Record<string, Record<string, unknown> | undefined>;
+        const a = asNum(hp[period]?.USD);
+        if (a !== null && a !== 0) n += 1;
+      }
+      return n;
+    };
+    const cov = (period: string) => ({
+      recentlyAdded: anchorCount(ra, period),
+      mostSearched: anchorCount(ms, period),
+      mostVisited: anchorCount(mv, period),
+    });
     return {
       ...base,
       count: ra.length + ms.length + mv.length,
       slice:
         `three /listings widgets: ${ra.length} recently added + ${ms.length} most searched + ${mv.length} most visited; ` +
-        'chg24h/chg7d derived from histPrices["24H"]/["7D"] anchors where the widget ships them, em-dash otherwise',
+        'chg24h/chg7d derived from histPrices["24H"]/["7D"] anchors where the widget ships them, em-dash otherwise; ' +
+        'anchor24h/anchor7d report how many rows upstream shipped each anchor (derived count must equal them)',
       changeSource: 'derived-from-histPrices-24H',
+      anchor24h: cov('24H'),
+      anchor7d: cov('7D'),
       listings: {
         recentlyAdded: ra.map(shapeListing),
         mostSearched: ms.map(shapeListing),
