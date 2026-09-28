@@ -36,7 +36,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 
 ---
 
-## G1 — 🔵 CURRENT (in progress): Documentation & project baseline
+## G1 — ✅ COMPLETE: Documentation & project baseline
 
 - SG-1.1 ✅ Review remote head (`957836d`, in sync with local `main`)
 - SG-1.2 ✅ Documentation set created in `docs/`:
@@ -76,7 +76,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 
 ---
 
-## G3 — ⬜ Near-term product (P1)
+## G3 — ✅ Near-term product (P1)
 
 ### SG-3.1 ✅ Upstream monitoring (R-4)
 - T-3.1.1 ✅ `apps/web/scripts/monitor.py` — 7-check smoke (unit, board, home
@@ -152,7 +152,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 
 ---
 
-## G4 — 🔄 In progress (P2)
+## G4 — ✅ Later (P2)
 
 - SG-4.1 ✅ Shaper unit tests from recorded upstream fixtures (R-8) — pure
   shapers extracted verbatim to `lib/shapers.ts` (route keeps fetch/auth/refusals);
@@ -182,8 +182,16 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
   inventory row into yes/no at the next deploy. Local-only by design:
   `CR_PYTHON` (helper can't exist on serverless → loud 502) and fail-closed
   mutation auth.
-- SG-4.3 ⬜ Root `README.md` entry point linking `docs/` (R-10)
-- SG-4.4 ⬜ Revisit official CryptoRank key **only if** R-4 reports RE breakage (R-11)
+- SG-4.3 ✅ Root `README.md` entry point (R-10) — run/verify/house-rules in
+  ~45 lines, links `docs/README.md` index (+ DECISIONS/SECRETS/RECOMMENDATIONS).
+  Every command it cites was executed this session: contract OK (28 modes),
+  `npm run test:shapers` 56/56, `npx tsc --noEmit` 0, `next build` 0 (CI
+  3/3 at `0bfa62d`), harness **244/0/8** LIVE, `monitor.py` HEALTHY,
+  `dump-schema.mjs --check` 0.
+- SG-4.4 ✅ Standing, not triggered (R-11) — conditional by design: revisit an
+  official CryptoRank key only on MEASURED RE breakage. No breakage: harness
+  244/0/8 (this session), monitor cron HEALTHY, CI green. Recorded in the root
+  README house rules; no key exists, none is wanted.
 
 ---
 
