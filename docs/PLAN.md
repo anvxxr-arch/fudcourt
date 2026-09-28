@@ -51,19 +51,23 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 
 ---
 
-## G2 — ⬜ Next: Integrity hardening (P0)
+## G2 — ✅ COMPLETE: Integrity hardening (P0)
 
-> Closes the two high risks before any new feature work.
+> Closed 2026-09-28: schema versioned + drift gate, offline pre-push gate live,
+> CI green (`.github/workflows/ci.yml`, run `36393193712`), mutation auth fail-closed
+> on all 7 write handlers. Remaining risks tracked in ANALYSIS §5.
 
 ### SG-2.1 ✅ Schema versioning (R-1, K-1)
 - T-2.1.1 ✅ Dump live Turso schema → `apps/web/db/schema.sql` (`scripts/dump-schema.mjs`, 9 objects)
 - T-2.1.2 ✅ Committed + `SCHEMA.md` annotated (generated file vs code-derived tables)
 - T-2.1.3 ✅ Drift alarm: `dump-schema.mjs --check` (live == committed, exit 1 on diff)
 
-### SG-2.2 🔄 CI / pre-push verification (R-2, K-2)
+### SG-2.2 ✅ CI / pre-push verification (R-2, K-2)
 - T-2.2.1 ✅ `scripts/githooks/pre-push` (`core.hooksPath` configured): tsc for touched app + py syntax
 - T-2.2.2 ✅ Offline contract gate `check-contract.py` (CR_MODES lib↔sweep consistency + mutation-guard audit)
-- T-2.2.3 ⬜ GitHub Action on PR: build web + blog, run offline subset
+- T-2.2.3 ✅ GitHub Action `.github/workflows/ci.yml` (3 jobs, green run `36393193712`):
+  per-app `npm ci` (root has no workspaces field — apps install standalone, as Vercel builds them),
+  contract gate + tsc + builds for web/blog, `bash -n` on the hook
 
 ### SG-2.3 ✅ Mutation authentication (R-6, K-5)
 - T-2.3.1 ✅ `lib/mutation-auth.ts` — fail-closed `x-fud-token` on all 7 write handlers
