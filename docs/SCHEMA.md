@@ -3,10 +3,12 @@
 Two databases + one API envelope contract. Verified 2026-09-27 against remote
 head `957836d`.
 
-> ⚠️ **No `.sql` files exist in the repo.** The Turso schema lives only
-> server-side (reconstructed below from the code that reads/writes it); the
-> Neon schema is versioned via Payload migrations (`apps/blog/src/migrations/`).
-> See RECOMMENDATIONS R-1.
+> ✅ **Versioned since 2026-09-28 (R-1):** `apps/web/db/schema.sql` is a
+> generated dump of the live Turso schema — regenerate with
+> `node apps/web/scripts/dump-schema.mjs`, drift-check with `--check`
+> (exits 1 on mismatch; wired into the offline contract gate). The column
+> tables below are the code-derived annotation layer; the Neon schema is
+> versioned via Payload migrations (`apps/blog/src/migrations/`).
 
 ## 1. Turso (apps/web) — `fud-balance-anvxxr…turso.io`
 

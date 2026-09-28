@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { query } from '../../../../lib/db';
+import { requireMutationAuth } from '../../../../lib/mutation-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
+  const denied = requireMutationAuth(req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const id = parseInt(params.id);
@@ -40,6 +43,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const denied = requireMutationAuth(req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const id = parseInt(params.id);
@@ -75,6 +80,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  const denied = requireMutationAuth(req);
+  if (denied) return denied;
   try {
     const id = parseInt(params.id);
     if (isNaN(id)) return NextResponse.json({ error: 'invalid id' }, { status: 400 });

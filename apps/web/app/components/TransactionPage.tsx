@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { C, EVENT_PRESETS, CHAIN_COLOR } from '../../lib/ui/shared';
 import { Button, Input, Select, Modal, Label } from './ui';
+import { MUT_HEADERS } from '../../lib/mut-client';
 
 type Tx = {
   id: number;
@@ -67,23 +68,23 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
 
   const del = async (id: number) => {
     if (!confirm(`Delete #${id}?`)) return;
-    await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+    await fetch(`/api/transactions/${id}`, { method: 'DELETE', headers: MUT_HEADERS });
     refresh();
   };
 
   const bulkDel = async () => {
     if (!selected.length || !confirm(`Delete ${selected.length}?`)) return;
-    await fetch('/api/transactions', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: selected }) });
+    await fetch('/api/transactions', { method: 'DELETE', headers: MUT_HEADERS, body: JSON.stringify({ ids: selected }) });
     setSelected([]); refresh();
   };
 
   const save = async (tx: Partial<Tx>) => {
-    await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tx) });
+    await fetch('/api/transactions', { method: 'POST', headers: MUT_HEADERS, body: JSON.stringify(tx) });
     setShowAdd(false); refresh();
   };
 
   const patch = async (id: number, u: Partial<Tx>) => {
-    await fetch(`/api/transactions/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(u) });
+    await fetch(`/api/transactions/${id}`, { method: 'PATCH', headers: MUT_HEADERS, body: JSON.stringify(u) });
     setEdit(null); refresh();
   };
 
@@ -95,7 +96,7 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
     if (chain) updates.chain = chain;
     if (event) updates.event = event;
     if (!Object.keys(updates).length) return;
-    await fetch('/api/transactions', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: selected, updates }) });
+    await fetch('/api/transactions', { method: 'PUT', headers: MUT_HEADERS, body: JSON.stringify({ ids: selected, updates }) });
     setSelected([]); refresh();
   };
 

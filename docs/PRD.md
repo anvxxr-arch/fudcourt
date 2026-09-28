@@ -81,6 +81,9 @@ One private surface where the owner can answer, at any moment:
 
 ### NFR-4 — Security posture
 - Blog: Payload access control (403 on user list), introspection off, playground prod-off.
+- Web API mutations: fail-closed `x-fud-token` auth on all 7 write handlers ✅ 2026-09-28
+  (`lib/mutation-auth.ts`, env `FUD_MUTATION_TOKEN`); builds without the env — public
+  Vercel — reject every mutation with 401. Reads stay open on the LAN deployment.
 - Web API: LAN-facing (`127.0.0.1:3100`), rate-limit helper present (`lib/rate-limit.ts`).
 - Secrets never printed; `.env` values redacted in all tooling output.
 
@@ -92,4 +95,4 @@ One private surface where the owner can answer, at any moment:
 | `/ath`, `/performance`, `/funds/*`, ICO analytics, token-unlock, insights | WAF 403 to every client **or** literal `N/A`/empty ROI — no honest source |
 | `/_next/data/*` funding/unlocks/ico routes | Measured synthetic decoy (nonexistent slugs return 200 fabricated payloads) |
 | `/avg-roi-by-sector` | No constituents disclosed → no falsifiable claim path; offering filter broken upstream (500) |
-| Multi-user / public auth for web API | Single-operator LAN surface; see RECOMMENDATIONS R-6 |
+| Multi-user / public auth for web API | Single-operator LAN surface; mutation auth implemented (R-6 ✅), full user auth still out of scope |

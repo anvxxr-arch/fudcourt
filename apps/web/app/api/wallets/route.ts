@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '../../../lib/db';
+import { requireMutationAuth } from '../../../lib/mutation-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -14,6 +15,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const denied = requireMutationAuth(req);
+  if (denied) return denied;
   try {
     const { address, alias, emoji, color, notes } = await req.json();
     if (!address) return NextResponse.json({ error: 'address required' }, { status: 400 });

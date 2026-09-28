@@ -55,20 +55,20 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 
 > Closes the two high risks before any new feature work.
 
-### SG-2.1 ⬜ Schema versioning (R-1, K-1)
-- T-2.1.1 ⬜ Dump live Turso schema → `apps/web/db/schema.sql`
-- T-2.1.2 ⬜ Commit + document authoritative vs reconstructed columns (align `SCHEMA.md` §1)
-- T-2.1.3 ⬜ Harness check: live `sqlite_master` == committed dump (drift alarm)
+### SG-2.1 ✅ Schema versioning (R-1, K-1)
+- T-2.1.1 ✅ Dump live Turso schema → `apps/web/db/schema.sql` (`scripts/dump-schema.mjs`, 9 objects)
+- T-2.1.2 ✅ Committed + `SCHEMA.md` annotated (generated file vs code-derived tables)
+- T-2.1.3 ✅ Drift alarm: `dump-schema.mjs --check` (live == committed, exit 1 on diff)
 
-### SG-2.2 ⬜ CI / pre-push verification (R-2, K-2)
-- T-2.2.1 ⬜ `.git/hooks/pre-push` (or `husky`): `tsc --noEmit` for touched app
-- T-2.2.2 ⬜ Offline harness subset (contract + shaper fixture checks, no upstream)
+### SG-2.2 🔄 CI / pre-push verification (R-2, K-2)
+- T-2.2.1 ✅ `scripts/githooks/pre-push` (`core.hooksPath` configured): tsc for touched app + py syntax
+- T-2.2.2 ✅ Offline contract gate `check-contract.py` (CR_MODES lib↔sweep consistency + mutation-guard audit)
 - T-2.2.3 ⬜ GitHub Action on PR: build web + blog, run offline subset
 
-### SG-2.3 ⬜ Mutation authentication (R-6, K-5)
-- T-2.3.1 ⬜ `FUD_API_TOKEN` env + header check on all write methods in `/api/transactions|wallets`
-- T-2.3.2 ⬜ 401 contract + harness checks (present/absent/incorrect token)
-- T-2.3.3 ⬜ Keep reads public (LAN), document in PRD §4.4 update
+### SG-2.3 ✅ Mutation authentication (R-6, K-5)
+- T-2.3.1 ✅ `lib/mutation-auth.ts` — fail-closed `x-fud-token` on all 7 write handlers
+- T-2.3.2 ✅ 401 contract verified: sweep D1 (7×401 no/wrong token) + D2 (7×validation with token), 107/107
+- T-2.3.3 ✅ Reads stay open (LAN); documented in PRD NFR-4 + ANALYSIS K-5
 
 ---
 

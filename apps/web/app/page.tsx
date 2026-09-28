@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { C, Wallet, Asset, buildWalletMap, getAlias, getColor, groupSum } from '../lib/ui/shared';
+import { MUT_HEADERS } from '../lib/mut-client';
 import DashboardPage from './components/DashboardPage';
 import PortfolioPage from './components/PortfolioPage';
 import WalletPage from './components/WalletPage';
@@ -160,7 +161,7 @@ export default function Home({ initialPage = 'dashboard' }: { initialPage?: stri
       {page === 'coin' && <CoinPage />}
       {page === 'wallets' && (
         <WalletPage wallets={wallets} balanceByWallet={balanceByWallet} onSave={async (w) => {
-          await fetch('/api/wallets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(w) });
+          await fetch('/api/wallets', { method: 'POST', headers: MUT_HEADERS, body: JSON.stringify(w) });
           load();
         }} />
       )}

@@ -1,0 +1,34 @@
+#!/bin/bash
+# fudcourt pre-push hook (PLAN T-2.2.1, R-2) — fast, offline only.
+#   - offline contract check (CR_MODES consistency + mutation-auth guards)
+#   - tsc --noEmit when apps/web TypeScript changed
+#   - python syntax check for changed harness scripts
+# Full harnesses (network) stay manual: scripts/verify-*.py
+set -u
+remote="$1" url="$2"
+rc=0
+
+changed=$(git diff --name-only "$remote"...HEAD 2>/dev/null || git diff --name-only HEAD~5...HEAD)
+[ -z "$changed" ] && changed=$(git diff --name-only HEAD~1...HEAD)
+
+echo "[pre-push] checking $(echo "$changed" | wc -l) changed files..."
+
+if echo "$changed" | grep -q '^apps/web/'; then
+  echo "[pre-push] offline contract check..."
+  if ! (cd apps/web && python3 scripts/check-contract.py); then rc=1; fi
+  echo "[pre-push] tsc --noEmit (apps/web)..."
+  if ! (cd apps/web && unset NODE_ENV && npx tsc --noEmit); then
+    echo "[pre-push] TYPECHECK FAILED"; rc=1
+  fi
+fi
+
+if echo "$changed" | grep -qE '\.py$'; then
+  echo "[pre-push] python syntax..."
+  while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    python3 -m py_compile "$f" || { echo "[pre-push] PY_SYNTAX FAIL: $f"; rc=1; }
+  done < <(echo "$changed" | grep -E '\.py$')
+fi
+
+if [ "$rc" -eq 0 ]; then echo "[pre-push] OK"; fi
+exit $rc

@@ -84,7 +84,7 @@ mode. A gate may fail on *data*, never on a *hiccup*.
 | Claim | Evidence |
 |-------|----------|
 | 28 cryptorank modes live | harness `244 passed / 0 failed / 8 info` (`/tmp/cr_28e.log`), 400-response lists exactly 28 |
-| Route/endpoint health | `verify_all_routes.py` → **100/100** (12 pages, 23 API, 7 mutations, 58 CR checks) |
+| Route/endpoint health | `verify_all_routes.py` → **107/107** (12 pages, 23 API, 7×401 fail-closed, 7×token validation, 58 CR checks) |
 | Browser rendering | Playwright DOM audit → **109/109** |
 | Price truth | GATE2 diffs 0.002%–0.55% vs coins.llama.fi; quarterly 4/4 vs CoinGecko (0.03–0.40%) |
 | Semantic truth (GATE3) | KuCoin GemPool dates; publisher `<title>`; Chainwire presale date; WEN $6.55 quote; NFL schedule == `26SEP27LACBUF`; YT oembed title+channel |
@@ -108,11 +108,11 @@ mode. A gate may fail on *data*, never on a *hiccup*.
 
 | # | Risk | Severity | Detail |
 |---|------|----------|--------|
-| K-1 | **Turso schema not versioned** | High | No `.sql` in repo; a drop/rename is unrecoverable from git. Blog has migrations, web has none. |
-| K-2 | **No CI / pre-merge verification** | High | All gates are manual (`python3 scripts/verify-…`). A bad push reaches `main` unchecked; harnesses aren't wired to any hook. |
+| K-1 | ~~Turso schema not versioned~~ ✅ **closed 2026-09-28** | High→Low | `apps/web/db/schema.sql` generated + `--check` drift gate (R-1). |
+| K-2 | **No CI / pre-merge verification** | High→Med | Partial: `pre-push` hook (contract check + tsc + py syntax) live 2026-09-28; GitHub Action still open (PLAN T-2.2.3). |
 | K-3 | **Dual Next majors (14 web / 16 blog)** | Medium | Two React majors (18/19), divergent TS versions; upgrade path and shared-code future are constrained. |
 | K-4 | **Upstream coupling (CF 429 / Turnstile)** | Medium | CryptoRank HTML RE can break without notice; mitigated by loud failures + harness, but there is no alerting — breakage is discovered on next run. |
-| K-5 | **Web API unauthenticated** | Medium | `:3100` binds localhost (good) but any LAN/local process can `DELETE /api/transactions` bulk. Mutation endpoints have validation, not authorization. |
+| K-5 | ~~Web API unauthenticated~~ ✅ **closed 2026-09-28** | Med→Low | Fail-closed `x-fud-token` auth on all 7 write handlers; public Vercel build has no token ⇒ mutations 401 by construction (R-6). Residual: LAN peers can read the token from the local bundle (accepted — same trust boundary). |
 | K-6 | **No tests for UI logic** | Medium | Rendering proven by DOM audit *script*, not by unit tests; shaper logic tested only through live upstream (flaky-by-nature). |
 | K-7 | **Cloud DB single-credentials** | Low-Med | Turso token + Neon URL are single secrets; rotation story is manual. |
 | K-8 | **Zero onboarding docs (before this set)** | Low | No README/PRD/schema existed at remote head — now addressed by `docs/`. |
@@ -137,5 +137,6 @@ Fudcourt is a **single-operator treasury + market-intelligence OS** whose
 differentiator is *verified data* — the crypto integration shipped 28 modes
 with an evidence trail most dashboards never attempt. Its engineering risks
 are operational (schema versioning, CI, authz, upstream monitoring), not
-architectural. Nothing in §5 blocks current use; K-1 and K-2 should be
-closed before further feature work (see RECOMMENDATIONS + PLAN).
+architectural. Status 2026-09-28: K-1 and K-5 closed, K-2 partially closed
+(local pre-push gate); CI Action, upstream monitoring and remaining items
+track in PLAN G2–G3.

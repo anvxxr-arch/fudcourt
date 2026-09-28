@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '../../../lib/db';
+import { requireMutationAuth } from '../../../lib/mutation-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -62,6 +63,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(req: Request) {
+  const denied = requireMutationAuth(req);
+  if (denied) return denied;
   try {
     const body = await req.json();
 
@@ -138,6 +141,8 @@ export async function POST(req: Request) {
 
 // Bulk operations
 export async function DELETE(req: Request) {
+  const denied = requireMutationAuth(req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const ids = body.ids;
@@ -156,6 +161,8 @@ export async function DELETE(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  const denied = requireMutationAuth(req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const ids = body.ids;
