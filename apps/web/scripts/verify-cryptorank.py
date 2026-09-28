@@ -22,7 +22,7 @@ Checks:
   2. shape/semantics per mode (monotonic gainers, direct vs derived change,
      homepage slices labelled + date-recency, global sanity ranges)
   3. ANTI-FAKE PARITY: an independent venv-side fetch of the same upstream page
-     must yield the same first-row identity + price as the proxy (tolerance 0.5%
+     must yield the same first-row identity + price as the proxy (tolerance 0.1%
      for the live-price gap between the two fetches)
   4. GROUND TRUTH: proxy BTC/ETH prices must sit within 3% of coins.llama.fi
      (independent source). Parity alone cannot detect upstream fabrication --
@@ -47,6 +47,8 @@ import re
 import subprocess
 import sys
 import time
+
+from difflib import SequenceMatcher
 
 import requests
 
@@ -154,6 +156,43 @@ def ground_truth_prices() -> dict:
         }
     except Exception as e:  # noqa: BLE001
             return {"error": f"{type(e).__name__}: {e}"}
+
+
+_TRUTH = {"at": 0.0, "data": {}}
+
+
+def truth_fresh(max_age: float = 20.0) -> dict:
+    """R-7 interleaved truth fetch. The old harness snapshotted llama once and
+    reused the same dict across minutes of run -> time-skew false fails (once
+    "fixed" by widening bounds, which hides real drift). Now every comparison
+    re-reads the snapshot, refetched whenever it is older than max_age seconds,
+    so truth is bracketed to the subject fetch. The proxy's own cache age
+    (cr_fetch TTL 60s) remains the only skew component, bounded by design."""
+    now = time.monotonic()
+    if not _TRUTH["data"] or now - _TRUTH["at"] > max_age:
+        _TRUTH["data"] = ground_truth_prices()
+        _TRUTH["at"] = now
+    return _TRUTH["data"]
+
+
+def llama_top_dexs(n: int = 20) -> list[str]:
+    """Independent DEX 24h-volume ranking (DefiLlama, no key) -> GATE3 for the
+    proxy's DEX board top venue. The old check hard-asserted 'uniswap is #1',
+    which is a world-state claim: volume rotates (measured 2026-09-28, CR top =
+    pancakeswap-v3-bsc while uniswap led earlier). Ranking membership is the
+    falsifiable claim; a fabricated venue matches no llama name."""
+    try:
+        r = requests.get(
+            "https://api.llama.fi/overview/dexs"
+            "?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true",
+            timeout=30,
+        )
+        ps = [p for p in (r.json().get("protocols") or [])
+              if isinstance(p.get("total24h"), (int, float))]
+        ps.sort(key=lambda p: -p["total24h"])
+        return [str(p.get("name") or "") for p in ps[:n]]
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def independent_upstream_page(path: str) -> dict:
@@ -429,7 +468,7 @@ def main() -> int:
 
     # --- ground truth: proxy prices vs independent source (>=3% = fabrication)
     note("ground truth (independent source vs proxy)")
-    gt = ground_truth_prices()
+    gt = truth_fresh()  # R-7 interleave
     if check("ground truth: independent fetch ok", isinstance(gt.get("BTC"), float),
              json.dumps(gt)[:200]) and coins:
         btc = next((r for r in coins if r.get("key") == "bitcoin"), None)
@@ -498,6 +537,11 @@ def main() -> int:
     # ---------------------------------------------------------------- 3
     note("anti-fake parity (independent venv fetch vs proxy)")
     if coins:
+        # R-7 interleave: refetch the subject WITHOUT cache so proxy scrape and
+        # independent scrape bracket each other within seconds (was: minutes-old
+        # snapshot vs live fetch -> time-skew false fails)
+        st_c, coins_f, _ = get(base, "coins", fresh=True)
+        coins = (coins_f or {}).get("rows") or coins
         up = independent_upstream_page("/all-coins-list")
         if check("parity: independent upstream fetch ok", up.get("ok") is True, json.dumps(up)[:200]):
             mine = next((r for r in coins if r.get("key") == "bitcoin"), None)
@@ -510,15 +554,19 @@ def main() -> int:
             if mine and up.get("price") and mine.get("priceUsd"):
                 diff = abs(mine["priceUsd"] - up["price"]) / up["price"] * 100
                 check(
-                    "parity: BTC price matches live upstream (<=0.5%)",
-                    diff <= 0.5,
+                    "parity: BTC price matches live upstream (<=0.1%)",
+                    # R-7 re-audit 2026-09-28: interleaved fresh subject vs
+                    # independent scrape of the SAME source = 0.0000% (n=4).
+                    # 0.1% keeps 100x headroom vs measurement while catching
+                    # any non-shared-source number (decoy class).
+                    diff <= 0.1,
                     f"proxy={mine['priceUsd']} upstream={up['price']} diff={diff:.3f}%",
                 )
 
     # ------------------------------------------- 3b HTML board modes (gated)
     note("HTML board modes: categories / exchanges / coin (3-gate verified)")
 
-    truth = ground_truth_prices()
+    truth = truth_fresh()  # R-7 interleave
     eth_t, btc_t = truth.get("ETH"), truth.get("BTC")
     check(
         "board: ground truth available",
@@ -574,6 +622,7 @@ def main() -> int:
             str(body.get("changeSource")),
         )
         eth = next((r for r in rows if r.get("symbol") == "ETH"), None)
+        eth_t = truth_fresh().get("ETH")  # R-7 interleave
         if eth and isinstance(eth_t, (int, float)) and eth.get("priceUsd"):
             diff = abs(eth["priceUsd"] - eth_t) / eth_t * 100
             check(
@@ -621,6 +670,7 @@ def main() -> int:
             and d["athUsd"] > d["priceUsd"],
             f"ath={d.get('athUsd')} price={d.get('priceUsd')}",
         )
+        btc_t = truth_fresh().get("BTC")  # R-7 interleave
         if isinstance(btc_t, (int, float)) and d.get("priceUsd"):
             diff = abs(d["priceUsd"] - btc_t) / btc_t * 100
             check(
@@ -639,6 +689,7 @@ def main() -> int:
     body = body or {}
     if check("coin?ethereum: HTTP 200", st == 200, f"got {st}"):
         d = body.get("detail") or {}
+        eth_t = truth_fresh().get("ETH")  # R-7 interleave
         if isinstance(eth_t, (int, float)) and d.get("priceUsd"):
             diff = abs(d["priceUsd"] - eth_t) / eth_t * 100
             check(
@@ -659,10 +710,18 @@ def main() -> int:
     if check("exchanges?dex: HTTP 200", st == 200, f"got {st}"):
         rows = body.get("rows") or []
         check("exchanges?dex: >=40 venues", len(rows) >= 40, f"n={len(rows)}")
+        _norm = lambda s: re.sub(r"[^a-z0-9]", "", (s or "").lower())  # noqa: E731
+        top_key = (rows[0].get("key") or "") if rows else ""
+        _tops = llama_top_dexs()
+        _nt = _norm(top_key)
+        _hit = next(
+            (t for t in _tops if _nt and (_norm(t).startswith(_nt[:10]) or _nt.startswith(_norm(t)[:10]))),
+            None,
+        )
         check(
-            "exchanges?dex: top venue uniswap",
-            bool(rows) and "uniswap" in (rows[0].get("key") or ""),
-            str(rows[0].get("key") if rows else None),
+            "exchanges?dex: top venue in independent llama top-20 (GATE3)",
+            bool(_nt) and _hit is not None,
+            f"top={top_key} llama_hit={_hit} n_llama={len(_tops)}",
         )
         check(
             "exchanges?dex: DEX variant labelled",
@@ -722,6 +781,7 @@ def main() -> int:
               n7 >= 14, f"non-null={n7}/{len(ra)}")
         # ground truth: BTC row in mostVisited
         btc = next((r for r in mv if r.get("symbol") == "BTC"), None)
+        btc_t = truth_fresh().get("BTC")  # R-7 interleave
         if btc and isinstance(btc_t, (int, float)) and btc.get("priceUsd"):
             diff = abs(btc["priceUsd"] - btc_t) / btc_t * 100
             check("listings: BTC matches independent ground truth (<=3%)",
@@ -775,7 +835,7 @@ def main() -> int:
             str(body.get("slice"))[:140],
         )
         for sym in ("USDT", "USDC", "LINK"):
-            t = truth.get(sym)
+            t = truth_fresh().get(sym)  # R-7 interleave
             row = next((r for r in rows if r.get("symbol") == sym), None)
             if t and row and row.get("priceUsd"):
                 diff = abs(row["priceUsd"] - t) / t * 100
@@ -895,6 +955,7 @@ def main() -> int:
             "?page" in (body.get("slice") or ""),
             str(body.get("slice"))[:170],
         )
+        truth = truth_fresh()  # R-7 interleave
         # GATE2: relatedCoins snapshot vs llama, mapped by truth-keyed symbol
         rc = [
             c for r in rows for c in (r.get("relatedCoins") or [])
@@ -925,8 +986,13 @@ def main() -> int:
                 continue
             pub = norm(res.get("title") or "")
             mine = norm(r0.get("title"))
+            # CR rotates editorial prefixes ('Crypto-friendly institution ...')
+            # -> prefix-50 alone flakes; require EITHER a shared 50-char head
+            # OR a >=40-char common run (a fabricated title shares <10).
+            _lcs = (SequenceMatcher(None, pub, mine)
+                    .find_longest_match(0, len(pub), 0, len(mine)).size) if pub and mine else 0
             if pub and (pub[:50] == mine[:50] or pub.startswith(mine[:50])
-                        or mine.startswith(pub[:50])):
+                        or mine.startswith(pub[:50]) or _lcs >= 40):
                 matched = True
                 last_err = f"matched: {str(r0.get('url'))[:90]}"
                 break
@@ -971,7 +1037,7 @@ def main() -> int:
             str(body.get("changeSource")),
         )
         bt = next((r for r in rows_t if r.get("symbol") == "BTC"), None)
-        t_btc = truth.get("BTC")
+        t_btc = truth_fresh().get("BTC")  # R-7 interleave
         if bt and t_btc and bt.get("priceUsd"):
             d = abs(bt["priceUsd"] - t_btc) / t_btc * 100
             check("tag: BTC matches independent ground truth (<=3%)",
@@ -1080,16 +1146,22 @@ def main() -> int:
             and isinstance(eth_row.get("tvlUsd"), (int, float)),
             json.dumps(eth_row)[:150] if eth_row else "missing",
         )
-    st, body, hdr = get(base, "ecosystem")
+    st, body, hdr = get(base, "ecosystem", fresh=True)  # R-7: subject bracketed to truth
     body = body or {}
     if check("ecosystem: HTTP 200 (default ethereum)", st == 200, f"got {st}"):
         eco_info = body.get("ecosystem") or {}
         coin = eco_info.get("coin") or {}
-        t_eth = truth.get("ETH")
+        t_eth = truth_fresh().get("ETH")  # R-7 interleave
         if coin.get("priceUsd") and t_eth:
             d = abs(coin["priceUsd"] - t_eth) / t_eth * 100
-            check("ecosystem: native coin price matches ground truth (<=0.5%)",
-                  d <= 0.5,
+            # R-7 re-audit 2026-09-28: interleaved fresh samples show a
+            # CONSTANT 0.4670% methodology gap CR-vs-llama (n=4 identical) --
+            # structural, not time-skew. The old 0.5% bound sat 0.033pp from
+            # that structural value (flake trap: one CR venue reprice fails it).
+            # 1% = 2.1x observed gap; fabrication class measured >=5% off, so
+            # detection power is untouched.
+            check("ecosystem: native coin price matches ground truth (<=1%)",
+                  d <= 1.0,
                   f"mine={coin['priceUsd']} truth={t_eth} diff={d:.4f}%")
         else:
             check("ecosystem: native coin price for ground truth", False,
@@ -1154,7 +1226,7 @@ def main() -> int:
               len(qb) >= 15 and len(qe) >= 10, f"btc={len(qb)} eth={len(qe)}")
         y26 = next((y for y in qb if y.get("year") == 2026), None)
         q3 = (y26 or {}).get("q3") or {}
-        t_btc = truth.get("BTC")
+        t_btc = truth_fresh().get("BTC")  # R-7 interleave
         if q3.get("closeUsd") and t_btc:
             d = abs(q3["closeUsd"] - t_btc) / t_btc * 100
             check("quarterly: in-progress Q3 close near live BTC (<=3%)",
@@ -1203,7 +1275,7 @@ def main() -> int:
         crw = body.get("converterRows") or []
         check("converter: full coverage (>=4900 rows)", len(crw) >= 4900, f"n={len(crw)}")
         cb = next((r0 for r0 in crw if r0.get("key") == "bitcoin"), None)
-        t_btc = truth.get("BTC")
+        t_btc = truth_fresh().get("BTC")  # R-7 interleave
         if cb and isinstance(cb.get("priceUsd"), (int, float)) and t_btc:
             d = abs(cb["priceUsd"] - t_btc) / t_btc * 100
             check("converter: BTC price matches ground truth (<=3%)",
@@ -1274,6 +1346,7 @@ def main() -> int:
         check("newstag: feed differs from general news (real filter)",
               bool(tag_ids) and tag_ids != gen_ids,
               f"overlap={len(tag_ids & gen_ids)}/{len(tag_ids)}")
+        truth = truth_fresh()  # R-7 interleave
         # GATE2: relatedCoins snapshot vs llama
         rc = [
             c for r0 in nrows for c in (r0.get("relatedCoins") or [])
@@ -1299,8 +1372,13 @@ def main() -> int:
                 continue
             pub = norm(res.get("title") or "")
             mine = norm(r0.get("title"))
+            # CR rotates editorial prefixes ('Crypto-friendly institution ...')
+            # -> prefix-50 alone flakes; require EITHER a shared 50-char head
+            # OR a >=40-char common run (a fabricated title shares <10).
+            _lcs = (SequenceMatcher(None, pub, mine)
+                    .find_longest_match(0, len(pub), 0, len(mine)).size) if pub and mine else 0
             if pub and (pub[:50] == mine[:50] or pub.startswith(mine[:50])
-                        or mine.startswith(pub[:50])):
+                        or mine.startswith(pub[:50]) or _lcs >= 40):
                 matched, last_err = True, f"matched: {str(r0.get('url'))[:90]}"
                 break
             last_err = f"status={res.get('status')} pub={pub[:60]!r} vs {mine[:60]!r}"
@@ -1331,7 +1409,11 @@ def main() -> int:
               "their words" in (body.get("slice") or ""),
               str(body.get("slice"))[:170])
         txt = mkt.get("summary") or ""
-        m = re.findall(r"to \$([\d,]+)", txt)
+        # upstream digest template rotates ('to $N' -> 'stands at N', no $,
+        # U+2011 hyphens) -> anchor on the nouns, not on punctuation
+        _mm = re.search(r"market cap[^0-9]{0,40}?([\d][\d,]{6,})", txt)
+        _mv = re.search(r"volume[^0-9]{0,60}?([\d][\d,]{6,})", txt)
+        m = [_mm.group(1), _mv.group(1)] if _mm and _mv else []
         g = (home or {}).get("global") or {}
         if len(m) >= 2 and g.get("totalMarketCap"):
             ai_mcap, ai_vol = int(m[0].replace(",", "")), int(m[1].replace(",", ""))
@@ -1340,13 +1422,29 @@ def main() -> int:
                   dm <= 1, f"ai={ai_mcap} home={g['totalMarketCap']} diff={dm:.4f}%")
             if g.get("totalVolume24h"):
                 dv = abs(ai_vol - g["totalVolume24h"]) / g["totalVolume24h"] * 100
-                # 24h volume churns hard intraday (measured 2.9% in 10 min):
-                # 5% band absorbs fetch skew, still far from decoy magnitude.
-                check("aioverview: digest volume coherent with home global (<=5%)",
-                      dv <= 5, f"ai={ai_vol} home={g['totalVolume24h']} diff={dv:.4f}%")
+                # The digest is a TIMESTAMPED snapshot (updatedAt, shipped by
+                # upstream); home global is live. Measured 2026-09-28:
+                # digest 34.997B @06:00 vs live 39.64B @11:05 = 11.71% over
+                # 4.25h (~2.75%/h volume churn). Band = 5% + 3.5%/h of digest
+                # age: tight for a fresh digest, still far below fabrication
+                # magnitude (decoy class sat 5-15% systematically off), and the
+                # independent CoinGecko band below covers magnitude always.
+                age_h = 0.0
+                try:
+                    from datetime import datetime, timezone
+                    _ts = str(mkt.get("updatedAt") or "").replace("Z", "+00:00")
+                    age_h = max(0.0, (datetime.now(timezone.utc)
+                                      - datetime.fromisoformat(_ts)).total_seconds() / 3600)
+                except Exception:  # noqa: BLE001
+                    age_h = 0.0  # unparseable stamp -> old strict 5% band
+                _band = 5.0 + 3.5 * age_h
+                check("aioverview: digest volume coherent with home (age-scaled band)",
+                      dv <= _band,
+                      f"ai={ai_vol} home={g['totalVolume24h']} diff={dv:.4f}% "
+                      f"age_h={age_h:.2f} band={_band:.1f}%")
         else:
             check("aioverview: digest mcap+volume parsed", False, txt[:150])
-        md = re.search(r"dominance[^0-9]{0,40}([\d.]+)%", txt)
+        md = re.search(r"dominance[^0-9]{0,40}(-?[\d.]+)", txt)
         if md and g.get("btcDominance"):
             ai_dom = float(md.group(1))
             dd = abs(ai_dom - g["btcDominance"]) / g["btcDominance"] * 100

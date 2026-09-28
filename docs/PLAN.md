@@ -119,9 +119,27 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 - T-3.3.2 ✅ Decision record `docs/DECISIONS.md` DR-001 = **accept
   upgrade** (evidence + consequences incl. benign turbopack root warning).
 
-### SG-3.4 ⬜ Harness precision (R-7)
-- T-3.4.1 ⬜ Interleaved truth/subject fetch helper (kills fetch-skew false fails)
-- T-3.4.2 ⬜ Re-audit tolerance bounds against interleaved measurements
+### SG-3.4 ✅ Harness precision (R-7)
+- T-3.4.1 ✅ Interleaving + de-flaking. `truth_fresh()` (20s TTL) replaced the
+  minutes-old global truth snapshot at all 14 reuse sites; tight compares take
+  the subject with `fresh=1` (no cache) so both sides bracket within seconds.
+  Also fixed what fresh runs exposed: aioverview digest parser de-templated
+  (upstream rotated 'to $N' -> 'stands at N', no $, U+2011 hyphens;
+  dominance ships without '%'); DEX top venue -> independent **llama top-20
+  GATE3** (the old 'uniswap is #1' was a stale world-state claim — measured
+  top = pancakeswap-v3-bsc, llama hit PancakeSwap AMM V3); news/newstag
+  publisher-title gate = prefix-50 OR **LCS>=40** (CR rotates editorial
+  prefixes like 'Crypto-friendly institution ...'); aioverview volume band
+  **age-scaled** vs digest updatedAt (measured ~2.75%/h churn: 34.997B@06:00
+  vs 39.64B@11:05 = 11.7%); DOM stats-strip check case-fixed (CSS
+  text-transform uppercase -> innerText all-caps).
+- T-3.4.2 ✅ Bound re-audit on n=4 interleaved samples (back-to-back <2s):
+  parity BTC **0.5% -> 0.1%** (measured 0.0000% — same source, seconds apart);
+  ecosystem **0.5% -> 1.0%** (measured constant 0.4670% methodology gap
+  CR-vs-llama — structural, old bound sat 0.033pp from it = flake trap);
+  3% llama bands kept (fresh gap measured 0.125% + <=90s skew envelope;
+  fabrication class >=5% — detection power untouched). Final gates:
+  harness **244/0/8 RC=0**, DOM audit 0 BAD, bounds documented in-code.
 
 ---
 
