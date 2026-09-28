@@ -107,9 +107,17 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
   pre-existing `src/migrations` drizzle type errors only because
   `typescript.ignoreBuildErrors: true` — seed.ts itself is tsc-clean.
 
-### SG-3.3 ⬜ Next.js version decision (R-3)
-- T-3.3.1 ⬜ Spike: `apps/web` 14 → 16 upgrade branch, `tsc` + build + 100-check sweep
-- T-3.3.2 ⬜ Decision record (upgrade vs documented exception) in `docs/`
+### SG-3.3 ✅ Next.js version decision (R-3)
+- T-3.3.1 ✅ Spike `spike/next16` (worktree, merged `8329669`): 14.2.0 →
+  **16.3.6** exact-pinned. Broke = async route params (TS2344, fixed
+  `Promise<{id}>` + await in `transactions/[id]`), Turbopack execFile
+  tracing (fixed `turbopackIgnore`), tsconfig auto-migration (committed).
+  React stays 18.3.1 (peer accepts ^18.2.0). Gates: build/tsc/contract 0,
+  sweep **107/107** on isolated :3110 + again on production :3100 post
+  cutover, DOM audit parity vs Next 14 (17 tables identical; the one BAD
+  check fails on 14 too → pre-existing, moved to SG-3.4).
+- T-3.3.2 ✅ Decision record `docs/DECISIONS.md` DR-001 = **accept
+  upgrade** (evidence + consequences incl. benign turbopack root warning).
 
 ### SG-3.4 ⬜ Harness precision (R-7)
 - T-3.4.1 ⬜ Interleaved truth/subject fetch helper (kills fetch-skew false fails)
