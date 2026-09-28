@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  web:
+    name: "web - contract, typecheck, build"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install (workspaces)
+        run: npm ci
+      - name: "Offline contract gate (CR_MODES consistency + mutation-auth guards)"
+        run: python3 apps/web/scripts/check-contract.py
+      - name: Typecheck
+        working-directory: apps/web
+        run: npx tsc --noEmit
+      - name: Build
+        working-directory: apps/web
+        run: npx next build
+
+  blog:
+    name: "blog - build (Payload)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install (workspaces)
+        run: npm ci
+      - name: "Build (no DATABASE_URL needed at build - verified locally)"
+        working-directory: apps/blog
+        run: npx next build
+
+  hooks:
+    name: "pre-push hook syntax"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "bash -n sanity"
+        run: bash -n scripts/githooks/pre-push

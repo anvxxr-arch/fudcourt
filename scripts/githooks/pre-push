@@ -26,7 +26,9 @@ if echo "$changed" | grep -qE '\.py$'; then
   echo "[pre-push] python syntax..."
   while IFS= read -r f; do
     [ -f "$f" ] || continue
-    python3 -m py_compile "$f" || { echo "[pre-push] PY_SYNTAX FAIL: $f"; rc=1; }
+    # ast.parse instead of py_compile: no __pycache__ artifacts in the repo
+    python3 -c "import ast,sys; ast.parse(open(sys.argv[1], encoding='utf-8').read())" "$f" \
+      || { echo "[pre-push] PY_SYNTAX FAIL: $f"; rc=1; }
   done < <(echo "$changed" | grep -E '\.py$')
 fi
 
