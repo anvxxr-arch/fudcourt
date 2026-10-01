@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/events/event.schema.json",
+  "title": "FUDCourt canonical event",
+  "description": "One event on the bus: the shared envelope (../schemas/event-envelope.json) with event_type pinned to the stable ids of catalog.json. Legacy SCREAMING_SNAKE names (the TS ExecutionEventName values) are accepted aliases of the same ids — see catalog.json `aliases`.",
+  "allOf": [
+    { "$ref": "../schemas/event-envelope.json" },
+    {
+      "type": "object",
+      "properties": {
+        "event_type": {
+          "enum": [
+            "ExecutionCreated",
+            "RiskCalculated",
+            "PlanCreated",
+            "ExecutionStarted",
+            "OrderPlanned",
+            "OrderSubmitted",
+            "OrderAccepted",
+            "OrderPartiallyFilled",
+            "OrderFilled",
+            "OrderCancelled",
+            "OrderRejected",
+            "PositionUpdated",
+            "BalanceUpdated",
+            "RiskRecalculated",
+            "PlanResized",
+            "ExecutionPaused",
+            "ExecutionResumed",
+            "ExecutionCompleted",
+            "ExecutionFailed",
+            "ExecutionRiskStopped",
+            "ExecutionCancelled",
+            "ReconciliationMismatch",
+            "ExternalStateChange",
+            "CredentialCreated",
+            "CredentialRevoked",
+            "ExchangeAccountConnected",
+            "ReconciliationStarted",
+            "ReconciliationCompleted"
+          ]
+        }
+      }
+    }
+  ]
+}
