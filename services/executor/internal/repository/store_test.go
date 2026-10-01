@@ -19,8 +19,8 @@ func newExec(id string) executor.ExecutionRecord {
 	now := time.Now().UnixMilli()
 	return executor.ExecutionRecord{
 		ID:                id,
-		UserID:            "user-1",
-		AccountID:         "acc-1",
+		UserID:            uuid(2),
+		AccountID:         uuid(3),
 		Exchange:          "binance",
 		Symbol:            "BTCUSDT",
 		MarketType:        "spot",
@@ -123,6 +123,22 @@ func TestStoreEndToEnd(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 	defer s.Close()
+
+	// Seed the exchange account the execution's FK points at
+	// (executions.account_id → exchange_accounts.id). The store has NO
+	// account-writing method — accounts are owned by the API service — so a
+	// DSN-gated run must create the row directly, exactly as that service would.
+	// Without it every SaveExecution violates the FK and this test could never
+	// have passed against the real schema.
+	if _, err := s.pool.Exec(ctx, `
+		insert into executor.exchange_accounts
+			(id, user_id, exchange, label, api_key_masked, api_key_encrypted,
+			 api_secret_encrypted, iv, auth_tag, permissions, health, created_at, updated_at)
+		values ($1,$2,'binance','e2e','****',$3,$4,$5,$6,'{}'::jsonb,'ACTIVE',$7,$7)
+		on conflict (id) do nothing`,
+		uuid(3), uuid(2), []byte{1}, []byte{2}, []byte{3}, []byte{4}, time.Now().UnixMilli()); err != nil {
+		t.Fatalf("seed exchange account: %v", err)
+	}
 
 	exec := newExec(uuid(1))
 	if err := s.SaveExecution(ctx, exec); err != nil {
