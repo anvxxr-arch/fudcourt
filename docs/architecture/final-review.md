@@ -297,6 +297,13 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    proves a TWAP execution releases its plan as multiple children over the window, each slice
    sized from the remaining plan, and the window closes with the plan fully released even when
    no slice ever filled. Hermetic; green.
+8. **The DSN-gated repository test could never have passed against real Postgres** — skipped by
+   default (no `FUDCOURT_EXECUTOR_PG_URL`), `TestStoreEndToEnd` had drifted three ways from the live
+   schema: non-UUID `user-1`/`acc-1` ids (the store now refuses non-UUIDs), no
+   `executor.exchange_accounts` row for the `executions.account_id` FK, and a `DRAFT` fixture status
+   that `LoadRecoverable` (like `worker.MemoryStore`) excludes. Proven by running it for real this
+   session against a throwaway local Postgres + `database/schema/executor-schema.sql`; fixed
+   (`4959f8f`). Both store tests now pass live.
 
 ## 9. Recommended next steps
 
