@@ -6,7 +6,8 @@
 // implementations were shown to agree in one place, and `verify-reconcile.py`
 // carries the durable contract assertions.
 //
-// Usage: TURSO_AUTH_TOKEN=... bun scripts/tools/parity-reconcile.ts [rust-base]
+// Usage: cd frontend/web && bun --tsconfig-override ./tsconfig.json \
+//   ../../scripts/verify/parity-reconcile.ts [rust-base]
 import { query } from '@/platform/db/client';
 import { reconcile } from '@/features/treasury/reconcile';
 import type { AssetRow, TxRow, WalletRow } from '@/features/treasury/reconcile';

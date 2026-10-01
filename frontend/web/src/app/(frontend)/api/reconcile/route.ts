@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
  * WHY A PROXY: the reconciliation maths is now a Rust implementation
  * (`backend/sync/src/reconcile.rs`) with the original TS shaper kept beside it
  * (`lib/reconcile.ts`) as the independent oracle. Both were diffed section by
- * section on live data (`scripts/tools/parity-reconcile.ts`: identical rows,
+ * section on live data (`scripts/verify/parity-reconcile.ts`: identical rows,
  * wallets and walletSummary, key order included) before this route was pointed at
  * the service.
  *

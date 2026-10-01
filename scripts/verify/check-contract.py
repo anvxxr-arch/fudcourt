@@ -25,16 +25,21 @@ import os
 import re
 import sys
 from pathlib import Path
-ROOT = Path(__file__).resolve().parents[2]  # frontend/web (this file is scripts/checks/)
+# This gate is repo-wide (it diffs the TS mode tables against the Go ones), so it
+# lives in scripts/verify/ and resolves everything from the repo root — the web app
+# is the frontend/web subdirectory. Cwd-independent by construction: CI runs it from
+# frontend/web, verify-all.sh from the repo root, an operator from anywhere.
+REPO = Path(__file__).resolve().parents[2]  # scripts/verify/ -> scripts -> repo
+WEB = REPO / "frontend" / "web"
 # Every TS source lives under src/ (DR-018), so the gate resolves its TS side
 # through that single root instead of hardcoding an old location. The `app/`
 # route tree is at SRC/app; a `lib/` no longer exists — putting one back would
 # make the feature lookups below fail loudly, which is the intended behaviour.
-SRC = ROOT / "src"
+SRC = WEB / "src"
 # Normally backend/data/internal/cryptorank/modes.go; overridable so the parity
 # gate can be exercised (and so CI survives a different checkout layout).
 GO_TABLE = Path(os.environ.get(
-    "FUDCOURT_DATA_MODES_GO", ROOT.parent.parent / "backend" / "data" / "internal" / "research" / "cryptorank" / "modes.go"))
+    "FUDCOURT_DATA_MODES_GO", REPO / "backend" / "data" / "internal" / "research" / "cryptorank" / "modes.go"))
 fails = []
 def modes_from_lib() -> set:
     src = (SRC / "features" / "cryptorank" / "client.ts").read_text()
@@ -43,13 +48,34 @@ def modes_from_lib() -> set:
         fails.append("src/features/cryptorank/client.ts: CR_MODES not found")
         return set()
     return set(re.findall(r"'([a-z0-9-]+)'", m.group(1)))
+def sweep_modes_from(src: str) -> set:
+    """Mode tokens of the route sweep's cryptorank table (the CR list only).
+
+    Scoped deliberately: the khala/llama/chainrank tables in the same file carry
+    their own mode= strings (`report`, `protocols`, `latest`, …) which are NOT
+    cryptorank modes, so a whole-file regex invents a false mismatch.
+    """
+    # NB the marker must NOT include the opening bracket: block_after() scans for
+    # the open char AFTER the marker, so "CR = [" would skip this list's own `[`
+    # and capture the next one in the file (the khala table).
+    body = block_after(src, "CR = ", "[", "]")
+    if body is None:
+        return set()
+    return set(re.findall(r'"mode=([a-z0-9-]+)', body)) - {"bogus"}
+
+
 def modes_from_sweep() -> set:
-    p = Path.home() / ".hermes/cache/scratch/cryptorank/verify_all_routes.py"
+    """The cryptorank mode set an independent route sweep witnesses.
+
+    The sweep is a web-only artifact and moved to frontend/web/tests/ in the
+    restructure. The path fetched from ~/.hermes/cache/… is a machine-local
+    operator copy that CI can never have — reading it made this comparison
+    unfalsifiable on a runner, so it is not consulted any more.
+    """
+    p = REPO / "frontend" / "web" / "tests" / "verify_all_routes.py"
     if not p.exists():
-        return set()  # sweep not present on this machine -> skip, not fail
-    src = p.read_text()
-    # 'bogus' is an intentional invalid-input sentinel in the sweep, not a mode
-    return set(re.findall(r'"mode=([a-z0-9-]+)', src)) - {"bogus"}
+        return set()
+    return sweep_modes_from(p.read_text())
 def check_guards():
     api = SRC / "app" / "(frontend)" / "api"
     targets = [api / "transactions" / "route.ts", api / "transactions" / "[id]" / "route.ts",
@@ -61,7 +87,7 @@ def check_guards():
         if not handlers:
             fails.append(f"{f.name}: no mutation handlers found (parse drift?)")
         elif guards != len(handlers):
-            fails.append(f"{f.relative_to(ROOT)}: {len(handlers)} mutation handlers but "
+            fails.append(f"{f.relative_to(SRC)}: {len(handlers)} mutation handlers but "
                          f"{guards} requireMutationAuth guards")
 def block_after(src: str, marker: str, open_ch: str = "{", close_ch: str = "}") -> str | None:
     """Body of the balanced open_ch..close_ch block after the first `marker`."""
@@ -95,7 +121,11 @@ def keys_of(body: str | None, quote: str = '"') -> set | None:
 def check_go_table() -> bool:
     """Go cryptorank table must equal the TS table (both languages, same contract)."""
     if not GO_TABLE.exists():
-        print(f"SKIP: backend/data mode table not found at {GO_TABLE}")
+        # The TS side is the tracked source of truth and is always present, so a
+        # missing Go table is a broken checkout, not an optional comparison: the
+        # old skip let all nine rows pass vacuously while still printing CONTRACT_OK.
+        fails.append(f"backend/data mode table not found at {GO_TABLE} — the TS<->Go parity "
+                     "rows cannot run (tracked source missing?)")
         return False
     ts = (SRC / "features" / "cryptorank" / "client.ts").read_text()
     go = GO_TABLE.read_text()
@@ -151,7 +181,12 @@ lib = modes_from_lib()
 sweep = modes_from_sweep()
 if lib and len(lib) < 20:
     fails.append(f"CR_MODES only has {len(lib)} modes (expected >= 20)")
-if sweep and lib and sweep != lib:
+if not sweep:
+    # No witness is a FAIL, not a skip: a comparison that cannot run on CI must
+    # never be reported as a parity result (the sweep is tracked in-repo now).
+    fails.append("sweep witness missing: frontend/web/tests/verify_all_routes.py has no "
+                 "cryptorank CR table (the lib<->sweep parity check cannot run)")
+elif lib and sweep != lib:
     fails.append(f"mode set mismatch lib vs sweep: only-lib={sorted(lib - sweep)} "
                  f"only-sweep={sorted(sweep - lib)}")
 check_guards()
@@ -163,7 +198,7 @@ check_route_is_proxy()
 # family does (same convention as modes_from_sweep).
 KH_TS = SRC / "features" / "khala" / "client.ts"
 KH_GO = Path(os.environ.get("FUDCOURT_DATA_KHALA_GO",
-                            ROOT.parent.parent / "backend" / "data" / "internal" / "research" / "khala" / "modes.go"))
+                            REPO / "backend" / "data" / "internal" / "research" / "khala" / "modes.go"))
 kh_parity = "khala absent"
 if KH_TS.exists() and KH_GO.exists():
     kh_ts_modes = set(re.findall(
@@ -180,7 +215,11 @@ if KH_TS.exists() and KH_GO.exists():
     else:
         kh_parity = f"khala KH_MODES parity ({len(kh_ts_modes)} modes)"
 elif KH_TS.exists() or KH_GO.exists():
-    kh_parity = "khala parity SKIPPED (other side absent)"
+    # One side without the other is drift, not an absent family: both live in this
+    # tree, so a half-present pair would silently drop the comparison.
+    missing = "backend/data/internal/research/khala/modes.go" if KH_TS.exists() else str(KH_TS)
+    fails.append(f"khala parity cannot run: {missing} is missing (both sides are tracked)")
+    kh_parity = "khala parity FAILED (one side absent)"
 if check_route_is_proxy("khala"):
     kh_parity += ", route is a proxy"
 # llama: the THIRD sidecar-resident family (PLAN G9 SG-9.3). Same convention as
@@ -188,7 +227,7 @@ if check_route_is_proxy("khala"):
 # modes.go the Go one, and the route must be the verbatim proxy.
 LL_TS = SRC / "features" / "llama" / "client.ts"
 LL_GO = Path(os.environ.get("FUDCOURT_DATA_LLAMA_GO",
-                            ROOT.parent.parent / "backend" / "data" / "internal" / "research" / "llama" / "modes.go"))
+                            REPO / "backend" / "data" / "internal" / "research" / "llama" / "modes.go"))
 ll_parity = "llama absent"
 if LL_TS.exists() and LL_GO.exists():
     ll_ts_modes = set(re.findall(
@@ -205,7 +244,9 @@ if LL_TS.exists() and LL_GO.exists():
     else:
         ll_parity = f"llama LLAMA_MODES parity ({len(ll_ts_modes)} modes)"
 elif LL_TS.exists() or LL_GO.exists():
-    ll_parity = "llama parity SKIPPED (other side absent)"
+    missing = "backend/data/internal/research/llama/modes.go" if LL_TS.exists() else str(LL_TS)
+    fails.append(f"llama parity cannot run: {missing} is missing (both sides are tracked)")
+    ll_parity = "llama parity FAILED (one side absent)"
 if check_route_is_proxy("llama", ("execFile", "child_process", "limitedFetch",
                                   "LLAMA_MODES.includes", "parseInt")):
     ll_parity += ", route is a proxy"
@@ -217,7 +258,7 @@ if check_route_is_proxy("llama", ("execFile", "child_process", "limitedFetch",
 # route that regrows one is the drift this row exists to catch.
 NW_TS = SRC / "features" / "news" / "client.ts"
 NW_GO = Path(os.environ.get("FUDCOURT_DATA_NEWS_GO",
-                            ROOT.parent.parent / "backend" / "data" / "internal" / "research" / "news" / "modes.go"))
+                            REPO / "backend" / "data" / "internal" / "research" / "news" / "modes.go"))
 nw_parity = "news absent"
 if NW_TS.exists() and NW_GO.exists():
     nw_ts_sources = set(re.findall(
@@ -239,7 +280,9 @@ if NW_TS.exists() and NW_GO.exists():
         if not m:
             fails.append(f"src/features/news/client.ts: {name} must be {want} (the Go 400 boundary)")
 elif NW_TS.exists() or NW_GO.exists():
-    nw_parity = "news parity SKIPPED (other side absent)"
+    missing = "backend/data/internal/research/news/modes.go" if NW_TS.exists() else str(NW_TS)
+    fails.append(f"news parity cannot run: {missing} is missing (both sides are tracked)")
+    nw_parity = "news parity FAILED (one side absent)"
 # `parseInt`/`Math.min` were the silent-coercion pair the original TS route used;
 # `XMLParser`/`<item>` would mean the parse came back. All four are code smells
 # here, not just prose (comments are stripped by the helper).
@@ -254,7 +297,7 @@ if check_route_is_proxy("news", ("execFile", "child_process", "limitedFetch",
 # board must show).
 CH_TS = SRC / "features" / "chainrank" / "client.ts"
 CH_GO = Path(os.environ.get("FUDCOURT_DATA_CHAINRANK_GO",
-                            ROOT.parent.parent / "backend" / "data" / "internal" / "research" / "chainrank" / "modes.go"))
+                            REPO / "backend" / "data" / "internal" / "research" / "chainrank" / "modes.go"))
 ch_parity = "chainrank absent"
 if CH_TS.exists() and CH_GO.exists():
     ch_ts_modes = set(re.findall(
@@ -277,7 +320,9 @@ if CH_TS.exists() and CH_GO.exists():
         if f"/api/{verb}" in route_src:
             fails.append(f"app/api/chainrank/route.ts: /api/{verb} present — writes must never be proxied")
 elif CH_TS.exists() or CH_GO.exists():
-    ch_parity = "chainrank parity SKIPPED (other side absent)"
+    missing = "backend/data/internal/research/chainrank/modes.go" if CH_TS.exists() else str(CH_TS)
+    fails.append(f"chainrank parity cannot run: {missing} is missing (both sides are tracked)")
+    ch_parity = "chainrank parity FAILED (one side absent)"
 if check_route_is_proxy("chainrank", ("execFile", "child_process", "limitedFetch",
                                       "CR_MODES.includes", "Math.min", "pageSize")):
     ch_parity += ", route is a proxy"
@@ -305,7 +350,7 @@ if RC_ROUTE.exists():
     # src/features/treasury/reconcile.ts must still exist as the oracle, or parity has no second side.
     if not (SRC / "features" / "treasury" / "reconcile.ts").exists():
         fails.append("src/features/treasury/reconcile.ts: the TS oracle is gone — parity has no second side")
-    elif not (ROOT.parent.parent / "scripts" / "verify" / "verify-reconcile.py").exists():
+    elif not (REPO / "scripts" / "verify" / "verify-reconcile.py").exists():
         fails.append("scripts/verify/verify-reconcile.py: contract harness is gone")
     else:
         rc_row = "reconcile is a Rust-served proxy (oracle kept, 502 path present)"

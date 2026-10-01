@@ -32,7 +32,7 @@ import re
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[4]  # scripts/checks/ -> scripts -> web -> frontend -> repo
+REPO = Path(__file__).resolve().parents[2]  # scripts/verify/ -> scripts -> repo
 UNITS = sorted(
     p
     for p in (REPO / "infrastructure" / "systemd").glob("*")

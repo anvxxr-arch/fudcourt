@@ -19,7 +19,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * `limit`-only-for-`latest` scoping and every 400 live in Go ONLY.
  * Re-validating here would be a second implementation waiting to drift (this is
  * the same reasoning the cryptorank route records, and the same reason
- * scripts/checks/check-contract.py asserts the two cryptorank mode tables can never
+ * scripts/verify/check-contract.py asserts the two cryptorank mode tables can never
  * diverge). If this route ever grows a param guard, that guard is the bug.
  *
  * No HTML crosses this route. `mode=report` ships the article as a STRUCTURED

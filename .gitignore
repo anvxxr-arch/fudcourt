@@ -37,5 +37,8 @@ backend/data/.cache/
 # rust (backend/sync; target/ is also covered by backend/sync/.gitignore)
 backend/sync/target/
 # live verifier reports (regenerated on every run; the tracked artifacts live in
-# tests/fixtures/, which is the reviewed record)
+# tests/fixtures/, which is the reviewed record). scripts/verify/ is where the
+# harnesses write them since the Phase-8 relocation; the frontend/web path is the
+# pre-move location, kept so a stale tree cannot re-add one.
+scripts/verify/*-report.json
 frontend/web/scripts/**/*-report.json

@@ -14,7 +14,7 @@
   // .shaper-tests/frontend/web/tests/*.js and .shaper-tests/tests/**/*.js, and
   // alias-resolver.cjs maps `@/x` to .shaper-tests/frontend/web/src/x.
   //
-  // `scripts/tools/parity-reconcile.ts` is deliberately NOT included: it is a
+  // `scripts/verify/parity-reconcile.ts` (repo-wide, moved out of frontend/web) is not
   // bun-run ESM script (top-level await) and never goes through this compiler.
   "extends": "./tsconfig.json",
   "compilerOptions": {
@@ -61,7 +61,7 @@
     "../../tests/e2e/executor/executor-runtime-tests.ts",
     "../../tests/integration/executor/executor-exchange-tests.ts",
     "../../tests/integration/executor/executor-store-tests.ts",
-    "scripts/tools/record-fixtures.ts",
-    "scripts/tools/dump-envelopes.ts"
+    "../../tests/oracle/record-fixtures.ts",
+    "../../tests/oracle/dump-envelopes.ts"
   ]
 }

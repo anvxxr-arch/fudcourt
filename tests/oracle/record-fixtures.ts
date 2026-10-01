@@ -9,11 +9,12 @@
  * so a hand-edited fixture fails the tamper check.
  *
  * Usage (fresh upstream fetch, per-mode default key):
- *   cd frontend/web && npx tsc lib/cryptorank.ts scripts/tools/record-fixtures.ts \
- *     --outDir .shaper-tests --module commonjs --moduleResolution node \
- *     --target es2020 --esModuleInterop --skipLibCheck --types node --noEmitOnError \
- *   && node .shaper-tests/scripts/tools/record-fixtures.js
+ *   cd frontend/web && npm run record:fixtures
+ *   (tsc -p tsconfig.shaper-tests.json, then node on the compiled copy under
+ *    .shaper-tests/tests/oracle/; the helper and the fixtures are located by
+ *    walking up to the repo root, so no cwd assumption.)
  */
+import { existsSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
@@ -32,11 +33,20 @@ import {
 } from '@/features/cryptorank/client';
 
 const PYTHON = process.env.CR_PYTHON ?? '/home/dwizzy/.venvs/crfetch/bin/python';
-// The oracle and the recorded fixtures moved out of frontend/web in the Phase 7
-// relocation: tests/oracle/cr_fetch.py and tests/fixtures (shared with the Go
-// parity gate). process.cwd() is frontend/web.
-const HELPER = path.join(process.cwd(), '..', '..', 'tests', 'oracle', 'cr_fetch.py');
-const OUT = path.join(process.cwd(), '..', '..', 'tests', 'fixtures');
+// This recorder lives in the repo-root tests/oracle/ beside the helper it drives
+// (cr_fetch.py) and the fixtures it writes (tests/fixtures, shared with the Go
+// parity gate). Both are resolved by walking up from the COMPILED location to the
+// repository root, so the script works from any cwd — the tsc project emits it to
+// frontend/web/.shaper-tests/tests/oracle/.
+function repoRoot(start: string): string {
+  for (let d = start; ; d = path.dirname(d)) {
+    if (existsSync(path.join(d, 'tests', 'fixtures', 'MANIFEST.json'))) return d;
+    if (path.dirname(d) === d) throw new Error(`repo root (tests/fixtures/MANIFEST.json) not found above ${start}`);
+  }
+}
+const REPO = repoRoot(__dirname);
+const HELPER = path.join(REPO, 'tests', 'oracle', 'cr_fetch.py');
+const OUT = path.join(REPO, 'tests', 'fixtures');
 
 type KeyedMode = keyof typeof CR_KEYED_PATHS;
 type ModeKey = keyof typeof CR_MODE_ARGS;
@@ -113,8 +123,8 @@ const live = (CR_MODES as readonly string[]).filter(
 
 mkdirSync(OUT, { recursive: true });
 const manifest: Record<string, unknown> = {
-  source: 'scripts/tools/record-fixtures.ts',
-  recorder: 'frontend/web/scripts/tools/record-fixtures.ts',
+  source: 'tests/oracle/record-fixtures.ts',
+  recorder: 'tests/oracle/record-fixtures.ts',
   note: 'raw HelperOut stdout per mode, byte-for-byte, stored gzipped; sha256 is over the RAW json bytes (tamper-evidence)',
   recordedAt: Math.floor(Date.now() / 1000),
   python: PYTHON,

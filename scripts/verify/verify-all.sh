@@ -24,13 +24,16 @@ step "structure gate (DR-018 layers)"
 (cd frontend/web && python3 scripts/checks/check-structure.py) || fail structure
 
 step "web contract gate (CR_MODES + mutation-auth guards)"
-(cd frontend/web && python3 scripts/checks/check-contract.py) || fail web-contract
+python3 scripts/verify/check-contract.py || fail web-contract
 
 step "shared/contracts drift gate"
 node shared/contracts/scripts/check-contract.mjs || fail contracts
 
 step "shared/contracts canonical-schema gate (parse, dialect, refs, README index, structure)"
 node shared/contracts/scripts/check-schemas.mjs || fail schemas
+
+step "canonical doc-citation gate (cited repo paths resolve)"
+node shared/contracts/scripts/check-doc-citations.mjs || fail doc-citations
 
 step "canonical reference artifact drift (reference.json is generated)"
 go run ./backend/api/internal/markets/reference/cmd/emit -check || fail reference
@@ -58,7 +61,7 @@ step "cargo build/test (backend/sync)"
 # backend/sync/target/release/* must already be built — running this before the cargo step
 # is red on a clean checkout.
 step "deploy-unit guard (ExecStart paths, timer pairs)"
-(cd frontend/web && python3 scripts/checks/check-deploy.py) || fail deploy
+python3 scripts/verify/check-deploy.py || fail deploy
 
 step "sync oracle gate (Python oracle vs Rust replay, byte-identical projection)"
 python3 scripts/verify/verify-sync.py >/dev/null || fail sync-oracle

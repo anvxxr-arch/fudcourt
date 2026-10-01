@@ -25,17 +25,17 @@
  *
  * Usage: cd frontend/web && npm run dump:envelopes
  *   (Same tsc -> node pattern as test:shapers / record:fixtures: plain
- *    `node scripts/tools/dump-envelopes.ts` cannot resolve the extensionless
- *    `../lib/cryptorank` / `../lib/shapers` imports. Equivalent one-liner:
- *      npx tsc lib/shapers.ts lib/cryptorank.ts scripts/tools/dump-envelopes.ts \
+ *    `node tests/oracle/dump-envelopes.ts` cannot resolve the extensionless
+ *    `@/features/cryptorank/...` imports. Equivalent one-liner:
+ *      npx tsc src/features/cryptorank/{client,shapers}.ts tests/oracle/dump-envelopes.ts \
  *        --outDir .shaper-tests --module commonjs --moduleResolution node \
  *        --target es2020 --esModuleInterop --skipLibCheck --types node --noEmitOnError \
- *      && node .shaper-tests/scripts/tools/dump-envelopes.js
+ *      && node --require ./tests/alias-resolver.cjs .shaper-tests/tests/oracle/dump-envelopes.js
  *    then read the written files.)
  */
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import {
@@ -53,9 +53,18 @@ import {
 } from '@/features/cryptorank/client';
 import { envelope, type HelperOut } from '@/features/cryptorank/shapers';
 
-// The fixtures moved to the repo-root tests/fixtures (spec Phase 7); process.cwd()
-// is frontend/web, so the shared tree is two levels up.
-const FIX = path.join(process.cwd(), '..', '..', 'tests', 'fixtures');
+// This generator lives in the repo-root tests/oracle/ (it produces the shared
+// oracle, not web-app tooling). The shared tree is resolved by walking up from the
+// COMPILED location to the repository root, so the script works from any cwd — the
+// tsc project emits it to frontend/web/.shaper-tests/tests/oracle/.
+function repoRoot(start: string): string {
+  for (let d = start; ; d = path.dirname(d)) {
+    if (existsSync(path.join(d, 'tests', 'fixtures', 'MANIFEST.json'))) return d;
+    if (path.dirname(d) === d) throw new Error(`repo root (tests/fixtures/MANIFEST.json) not found above ${start}`);
+  }
+}
+const REPO = repoRoot(__dirname);
+const FIX = path.join(REPO, 'tests', 'fixtures');
 const OUT = path.join(FIX, 'expected');
 
 type ManifestMode = {

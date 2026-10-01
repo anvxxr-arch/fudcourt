@@ -5,9 +5,9 @@
   "scripts": {
     "verify": "bash scripts/verify/verify-all.sh",
     "check:contracts": "node shared/contracts/scripts/check-contract.mjs",
-    "check:deploy": "cd frontend/web && python3 scripts/checks/check-deploy.py",
+    "check:deploy": "python3 scripts/verify/check-deploy.py",
     "check:structure": "cd frontend/web && python3 scripts/checks/check-structure.py",
-    "check:web-contract": "cd frontend/web && python3 scripts/checks/check-contract.py",
+    "check:web-contract": "python3 scripts/verify/check-contract.py",
     "test:web": "cd frontend/web && bun run test:shapers",
     "test:go": "go test ./backend/api/... ./backend/workers/executor/... ./backend/data/...",
     "test:sync": "cd backend/sync && cargo test --release"

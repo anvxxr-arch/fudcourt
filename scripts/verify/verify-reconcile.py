@@ -13,7 +13,9 @@ Two things are being proved here and they are different:
 
 2. PARITY WITH THE ORIGINAL TS SHAPER, which is what makes the port trustworthy
    rather than merely plausible. The shaper is run in-process on the same rows via
-   `bun frontend/web/scripts/tools/parity-reconcile.ts` and the two payloads are diffed section
+   `bun frontend/web/…` is the historical invocation; the probe now lives at
+   `scripts/verify/parity-reconcile.ts` and is run with cwd=frontend/web so the
+   app's `@/…` imports resolve. The two payloads are diffed section
    by section, JSON key order included. If bun is unavailable the parity half is
    SKIPPED loudly -- never silently downgraded to "passed".
 
@@ -215,21 +217,32 @@ def main() -> int:
         skipped.append("--no-parity was passed")
         print(f"  [{DIM}SKIP{RESET}] parity vs the TS shaper  {DIM}--no-parity{RESET}")
     else:
-        probe = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "web" / "scripts" / "tools" / "parity-reconcile.ts"
+        # The probe moved to scripts/verify/ with this harness (it is the parity half
+        # of a repo-wide gate) but still imports the app's `@/…` modules. Bun resolves
+        # tsconfig `paths` relative to the ENTRYPOINT, so running a repo-root file with
+        # cwd=frontend/web is not enough — the app tsconfig must be named explicitly
+        # (verified: without this flag bun fails with "Cannot find module
+        # '@/platform/db/client'").
+        probe = pathlib.Path(__file__).resolve().parent / "parity-reconcile.ts"
+        web = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "web"
         if not probe.exists():
             check(False, "the parity probe exists", note(str(probe)))
         else:
             t0 = time.time()
             r = subprocess.run(
-                ["bun", str(probe), base],
-                cwd=str(probe.parent.parent.parent),
+                ["bun", "--tsconfig-override", str(web / "tsconfig.json"), str(probe), base],
+                cwd=str(web),
                 capture_output=True, text=True, timeout=180,
             )
             out = (r.stdout or "") + (r.stderr or "")
-            tail = out.strip().splitlines()[-1] if out.strip() else ""
+            # Bun prints an informational `Internal error: directory mismatch …` on
+            # stderr when the entrypoint and cwd differ; it is not the verdict, so the
+            # reported tail is the last REAL line of the probe's own output.
+            lines = [l for l in out.splitlines() if not l.startswith("Internal error:")]
+            tail = lines[-1] if lines else ""
             check(r.returncode == 0, "the live TS shaper and the Rust service agree on every section",
                   note(f"{time.time() - t0:.1f}s", tail[:140]))
-            for line in out.splitlines():
+            for line in lines:
                 if line.startswith(("FAIL", "PARITY")):
                     print(f"    {DIM}{line[:180]}{RESET}")
 
