@@ -9,7 +9,7 @@
    bundle).
 3. ONE CONTRACT, TWO IMPLEMENTATIONS: the Go sidecar (backend/data) owns the
    CryptoRank mode/key tables at runtime, so its table in
-   internal/cryptorank/modes.go must EQUAL the TS table in src/features/cryptorank/client.ts --
+   internal/research/cryptorank/modes.go must EQUAL the TS table in src/features/cryptorank/client.ts --
    mode list, disabled list, the exchange/launchpool/nodesale/RWA whitelists
    and the two keyed tables. Drift here means the Go service accepts or serves
    something the rest of this repo does not document (or vice versa), which is
@@ -184,7 +184,7 @@ elif KH_TS.exists() or KH_GO.exists():
 if check_route_is_proxy("khala"):
     kh_parity += ", route is a proxy"
 # llama: the THIRD sidecar-resident family (PLAN G9 SG-9.3). Same convention as
-# khala -- src/features/llama/client.ts carries the TS mode list, backend/data/internal/llama/
+# khala -- src/features/llama/client.ts carries the TS mode list, backend/data/internal/research/llama/
 # modes.go the Go one, and the route must be the verbatim proxy.
 LL_TS = SRC / "features" / "llama" / "client.ts"
 LL_GO = Path(os.environ.get("FUDCOURT_DATA_LLAMA_GO",
@@ -211,7 +211,7 @@ if check_route_is_proxy("llama", ("execFile", "child_process", "limitedFetch",
     ll_parity += ", route is a proxy"
 # news: the FOURTH sidecar-resident family (PLAN G12 SG-12.3), and the first
 # whose upstream is a DOCUMENT rather than a JSON API. Same convention as
-# llama -- src/features/news/client.ts carries the TS feed list, backend/data/internal/news/
+# llama -- src/features/news/client.ts carries the TS feed list, backend/data/internal/research/news/
 # modes.go the Go one, and the route must be the verbatim proxy. The RSS parser
 # itself must not come back: src/features/llama/client.ts-style mirror has no parse code, and a
 # route that regrows one is the drift this row exists to catch.
