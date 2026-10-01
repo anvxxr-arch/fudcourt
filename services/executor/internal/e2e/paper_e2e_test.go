@@ -595,6 +595,59 @@ func TestPaperPartialFillThenComplete(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 10 — pause/resume: the worker never drives a paused execution
+// ---------------------------------------------------------------------------
+
+// TestPaperPauseResume rests a limit child, pauses the execution, and proves the
+// worker does NOT drive a PAUSED execution (no events, no placement, status
+// unchanged); after the API resumes it (PAUSED → RUNNING) the worker drives
+// again without forking a duplicate child.
+func TestPaperPauseResume(t *testing.T) {
+	ctx := context.Background()
+	h := newHarness(t, "w1", nil)
+	rec := execRec("e9", executor.StrategyLimit, "0.01",
+		executor.EntryDefinition{Kind: "limit", Price: "90000"}, executor.ExecutionConfig{})
+	if err := h.store.SaveExecution(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.w.StartExecution(ctx, "e9"); err != nil {
+		t.Fatalf("StartExecution: %v", err)
+	}
+	h.tick() // recovery
+	h.tick() // place the resting limit
+	if rows := h.children(t, "e9"); len(rows) != 1 {
+		t.Fatalf("children = %d, want 1", len(rows))
+	}
+
+	// PAUSE: a paused execution must be seen but NOT driven.
+	cur, _ := h.store.Execution("e9")
+	cur.Status = executor.StatusPaused
+	if err := h.store.SaveExecution(ctx, cur); err != nil {
+		t.Fatal(err)
+	}
+	before := len(h.events())
+	h.tick()
+	if after := len(h.events()); after != before {
+		t.Fatalf("a PAUSED execution was driven: %d new events", after-before)
+	}
+	if s, _ := h.store.Execution("e9"); s.Status != executor.StatusPaused {
+		t.Fatalf("status changed while paused: %s", s.Status)
+	}
+
+	// RESUME (the API's PAUSED → RUNNING intent): the worker drives again, but
+	// the resting child is adopted — no fork, no duplicate.
+	cur2, _ := h.store.Execution("e9")
+	cur2.Status = executor.StatusRunning
+	if err := h.store.SaveExecution(ctx, cur2); err != nil {
+		t.Fatal(err)
+	}
+	h.tick()
+	if rows := h.children(t, "e9"); len(rows) != 1 {
+		t.Fatalf("resume forked children: %d, want 1", len(rows))
+	}
+}
+
+// ---------------------------------------------------------------------------
 // §127.1 — plan + risk-based sizing (create → size)
 // ---------------------------------------------------------------------------
 
