@@ -21,7 +21,9 @@
 > of them**. Do not break existing frontend clients.
 >
 > **Snapshot.** Working tree of branch `refactor/frontend-backend-architecture`. The canonical
-> workstream landed as `2904749`, `33958a8`, `a8cc4df`, `4eb0a13`; every citation below is the path
+> workstream landed as `2904749`, `33958a8`, `2830118`, `6531d45` — four commits authored by
+> `Fox <fox@local>`. `a8cc4df` (`anvxxr-arch <anvxxr-arch@users.noreply.github.com>`) and `4eb0a13`
+> (`omp <omp@local>`) are **not** this workstream's (see §7 (c)); every citation below is the path
 > that resolved when the file was read, and every path cited here was re-tested (§7).
 >
 > **Sibling catalogs (all in this directory, all cited below):**
@@ -53,11 +55,15 @@ row below is a client-visible break, not a refactor.
 **"Unchanged by this workstream" is verifiable, not asserted.** The canonical workstream touched no
 envelope-producing code:
 ```sh
-for c in 2904749 33958a8 a8cc4df 4eb0a13; do
+# this workstream's commits only (all authored by Fox <fox@local>)
+for c in 2904749 33958a8 2830118 6531d45; do
   git show --stat --format="" $c | grep -E "backend/data|backend/sync|frontend|backend/workers|database/"
 done
 # → no output: no commit in the workstream touched backend/data, backend/sync,
 #   frontend/**, backend/workers/** or database/**
+# the same grep over the foreign commits 4eb0a13 (omp <omp@local>) and a8cc4df
+#   (anvxxr-arch) is also empty — a strictly stronger claim, and the reason the file's
+#   original four-hash set read as one workstream when it was two.
 ```
 Its code delta is additive and confined to `backend/api/internal/markets/{reference,instruments}` (new
 packages) — `git show --stat 2904749` — plus two additive lines in `scripts/verify/verify-all.sh` (the
@@ -331,10 +337,15 @@ find "frontend/web/src/app/(frontend)/api/executor" -name route.ts | wc -l   # �
 python3 -c "import json;d=json.load(open('shared/contracts/data/reference.json'));print({k:len(d[k]) for k in ['chains','assets','tokens','venues','mappings','misses','unmapped']})"
 # → {'chains': 9, 'assets': 8, 'tokens': 11, 'venues': 12, 'mappings': 49, 'misses': 3, 'unmapped': 7}
 
-# (c) the freeze claim: the canonical commits touch no envelope-producing code
-for c in 2904749 33958a8 a8cc4df 4eb0a13; do
+# (c) the freeze claim: this workstream's commits touch no envelope-producing code
+#     (four commits, all authored by Fox <fox@local>; verified with
+#      git show -s --format='%h %an <%ae> %s' <hash>)
+for c in 2904749 33958a8 2830118 6531d45; do
   git show --stat --format="" $c | grep -E "backend/data|backend/sync|frontend|backend/workers|database/"
 done                                                                     # → no output
+# the foreign commits of the same era — 4eb0a13 (omp <omp@local>, docs-repoint only) and
+# a8cc4df (anvxxr-arch) — are empty under the same grep too, but they are NOT this
+# workstream's and are not counted as evidence for it.
 
 # (d) every relative link in this document resolves
 for l in source-catalog.md data-catalog.md data-classification.md database-classification.md \

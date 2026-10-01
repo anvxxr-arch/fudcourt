@@ -389,7 +389,7 @@ Counted mechanically from the tables above (`grep -c`/script over this file):
 
 | Section | Rows |
 |---|---|
-| §1 Research feed rows (CryptoRank 26, Khala 5, DefiLlama 3, News 1, ChainRank 3) | **37** |
+| §1 Research feed rows (CryptoRank 25, Khala 5, DefiLlama 3, News 1, ChainRank 3) | **37** |
 | §2 Market-data rows read directly by the web tier | **12** |
 | §3 On-chain/RPC rows (6 Alchemy chains, Solana ×2, Hyperliquid, coins price) | **10** |
 | §4 CEX execution rows (Binance 4, Bybit 5, MEXC 5, paper 1) | **15** |
