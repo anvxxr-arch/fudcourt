@@ -76,7 +76,7 @@ Already moved in earlier commits on this branch (verified via `git log`):
 
 - **Phase 3 (contracts):** `packages/contracts/{openapi/fudcourt.yaml, events/{catalog.json,event.schema.json}, schemas/{error,event}-envelope.json, scripts/check-contract.mjs}`; `packages/sdk-ts/**` (committed `d4d87e7`).
 - **Phase 4 (api):** `services/api/**` — 18 internal packages, 112 test funcs (committed `3702c6c`).
-- **Phase 5 (executor):** `services/executor/**` — 19 internal packages, 258 test funcs (committed `4ef371a`).
+- **Phase 5 (executor):** `services/executor/**` — 19 internal packages, 266 test funcs (committed `4ef371a`).
 - **Phase 9 (CI):** the five path-filtered workflows (§2) + `scripts/verify/verify-all.sh` (one-command offline gate).
 - **Phase 10 (deploy):** `deploy/systemd/{fudcourt-api,fudcourt-data,fudcourt-executor}.service` (+ existing units).
 - **Phase 8 (tests):** `tests/integration/api/check-api-contract.py` — a cross-service gate that did not exist before (§6).
@@ -117,7 +117,8 @@ ledger; portfolio is derived; append-only events). Current-state highlights:
 | 2 | **15 web route handlers still import `platform/executor`** | `grep -rl platform/executor apps/web/src/app` | #1 |
 | 3 | **EXECUTOR DDL still embedded in `store.ts`** | migration-plan Phase 2 amendment; `executor-store-tests.ts` §59 pins byte-identity to `database/schema/executor-schema.sql` | #1 |
 | 4 | **Phase 8 move of `apps/web/scripts/verify/*` not executed (scoped, deliberate)** — the `verify-*.py` harnesses statically read `apps/web/src/**` (routes, UI components, shell) and write report JSON beside themselves; they are **web-app harnesses**, not cross-service tests. Cross-service scope is satisfied by `tests/integration/api/` + the per-service in-repo suites. | 77 references to `scripts/verify`; `grep` shows each harness opening `(root / "src/...")` with `root = ...parents[2]` = `apps/web` | migration-plan Phase 8 is *ordered after* Phase 7; Phase 7 requires #1. Moving them now is churn against a green, host-operator-expected report path |
-| 5 | **`api` lists "admin" as a hosted context but has no `internal/admin`** | `services/api/internal/` has no `admin/`; admin logic lives in `cmd/api/routes.go` | documentation-only fix (comment corrected this session; package split deferred) |
+| 5 | ~~**`api` lists "admin" as a hosted context but has no `internal/admin`**~~ **RESOLVED** | the false claim is gone: `services/api/cmd/api/main.go` now names the `/api/admin/members` route plane, `identity.TierAdmin`, and the handlers in `cmd/api/{routes,errors}.go`, with an explicit note that splitting it into `internal/admin` is deferred. `go build ./services/api/...` green. Package split remains a legitimate follow-up; the misleading comment does not. |
+| 6 | **`request_id` was missing from the executor's four required identifiers** (PRD §66 names `execution_id`, `request_id`, `client_order_id`, `event_id` — only three existed) | `idempotency.RequestID` (`req_<exec>_<seq>`) + `ParseRequestID` added; refuses foreign ids incl. `fud_...` client order ids so the two id spaces can never be cross-parsed. Verified by `TestRequestIDAndClientOrderIDAreDistinct` + `TestRequestIDIsStableAcrossRetry`. Restart/duplicate proof runs against the REAL paper venue: `TestPaperRestartNoDuplicateOrder`, `TestPaperDuplicateStartIsNoOp`, `TestPaperRejectedOrderThenReplaces` all green in `internal/e2e`. | none — gate 5 of `.ai/prompts/executor-migration.md` closed |
 | 6 | **Sync oracle gate wired (Phase 6) — done, committed** | `verify-sync.py` + `tests/oracle/fixtures/{capture.json,expected-projection.txt,make-capture.py}` exist and the gate is in `verify-all.sh`; run output `SYNC_ORACLE_OK (34 rows, 40 request keys)` | none (committed; §9.3) |
 
 Items 1–4 are the *same* dependency: the executor cutover. They are a single decision, not four.
@@ -131,7 +132,7 @@ Items 1–4 are the *same* dependency: the executor cutover. They are a single d
 | 3 | `apps/apicalls` → `services/data` | MET | `apps/apicalls` absent; `services/data/{cmd/apicalls,internal/*}`, module path rewritten |
 | 4 | Rust sync under `services/sync` | MET | `services/sync/{src,tests,Cargo.toml}`; `cargo test --release` green |
 | 5 | `services/api` is the primary Go API | MET | 18 internal packages, 112 test funcs; 4 routes live; conformance-gated vs contract |
-| 6 | `services/executor` owns executor logic | **MET (code) / PARTIAL (cutover)** | 258 test funcs across 19 internal packages (18 with tests, incl. the composed `internal/e2e` harness); TS remains production until §9.1 |
+| 6 | `services/executor` owns executor logic | **MET (code) / PARTIAL (cutover)** | 266 test funcs across 19 internal packages (18 with tests, incl. the composed `internal/e2e` harness); TS remains production until §9.1 |
 | 7 | exchange adapters use a common abstraction | MET | `internal/exchange/{exchange,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package |
 | 8 | PostgreSQL is the durable execution truth | MET | `database/schema/executor-schema.sql` (10 tables) + `internal/repository`; **proven live this session** — the DSN-gated `TestStoreEndToEnd`/`TestStoreNewFailLoud` run green against a throwaway local Postgres with that schema applied (`4959f8f`) |
 | 9 | Valkey only ephemeral coordination | MET | `internal/lock/{valkey,memory}.go`; durable state is Postgres |
@@ -141,7 +142,7 @@ Items 1–4 are the *same* dependency: the executor cutover. They are a single d
 | 13 | CI is domain-aware | MET | `.github/workflows/{web,go,rust,contracts,integration}.yml` |
 | 14 | services do not import each other's impl | MET | each Go module imports only its own path (§5) |
 | 15 | existing product behavior compatible | MET | `verify-all.sh` green; host units active |
-| 16 | migrated executor has parity tests | **PARTIAL** | `parity-matrix.md` rows 1–9 DONE; the offline **composed Go paper harness** is now DONE (`internal/e2e`, 12 tests); 258 Go funcs. Remaining cutover rows (live PG e2e, TS deletion) OPEN → §9.1 |
+| 16 | migrated executor has parity tests | **PARTIAL** | `parity-matrix.md` rows 1–9 DONE; the offline **composed Go paper harness** is now DONE (`internal/e2e`, 12 tests); 266 Go funcs. Remaining cutover rows (live PG e2e, TS deletion) OPEN → §9.1 |
 | 17 | build/test status documented | MET | §7 + `scripts/verify/verify-all.sh` |
 
 ### Objective "Goal terukur" acceptance metrics (re-derived this session)
@@ -181,7 +182,7 @@ One command: `bash scripts/verify/verify-all.sh` → **`VERIFY_ALL_OK`** (exit 0
 | contracts drift (enums, 36 OpenAPI paths, 39 route handlers, 28 events) | `CONTRACTS_OK` |
 | sdk-ts generated-SDK drift + typecheck | PASS |
 | **cross-service api conformance** | `API_CONTRACT_OK go_paths=4 documented=36 web_proxies=4` |
-| Go build/vet/test ×3 modules | PASS (api **112**, executor **258**, data **178** test funcs at HEAD) |
+| Go build/vet/test ×3 modules | PASS (api **112**, executor **266**, data **178** test funcs at HEAD) |
 | Rust build/test | PASS (17 test fns) |
 | **sync oracle gate** (`verify-sync.py`) | PASS — 9 checks, `SYNC_ORACLE_OK (34 rows, 40 request keys)` |
 | **composed Go paper E2E** (`internal/e2e`) | PASS (**12** tests, hermetic) |
@@ -197,7 +198,7 @@ route_handlers=39 events=28 client_endpoints=17`, `check-api-contract.py`
 `API_CONTRACT_OK go_paths=4 documented=36 web_proxies=4`, `go build/vet/test` OK for all
 three Go modules, `cargo build/test` OK for `services/sync`, `bash -n pre-push` OK.
 
-The executor module now carries **258** test functions across 19 internal packages plus the
+The executor module now carries **266** test functions across 19 internal packages plus the
 composed harness in `internal/e2e` (12 tests). The harness is the first executor test to
 drive the **real** worker + **real** `exchange/paper` venue + **real** `lock.MemoryLock`
 over a `worker.MemoryStore` with a hand-advanced `FixedClock` — no Postgres, no Valkey,
