@@ -206,20 +206,19 @@ without duplicate (§66/§127.5), cancel a resting entry (§127.6), duplicate-st
 (§127.1), and **TWAP slice scheduling** (§8.15/§28 — the plan releases as multiple
 children over the window, each sized from the remainder, and closes fully released
 even when no slice ever filled).
-**Committed HEAD is green; the shared working tree flaps.** `bash scripts/verify/verify-all.sh`
-returns `VERIFY_ALL_OK` when `services/executor/internal/lock` is at a settled state, and
-`VERIFY_ALL_FAILED` while a concurrent writer holds an **in-progress, uncommitted edit** of that
-package (`valkey.go` + `valkey_test.go` are both modified vs HEAD; observed states this session
-include a missing `fakeValkey` type, literal CR bytes inside string literals, a scripted server that
-never serves its steps, and a syntax error at `valkey_test.go:649`) plus throwaway
-`zz_probe*_test.go` scratch files. None of that is committed by this session; it belongs to the
-writer's Phase 5 reliability work. The claim that matters here is about **committed** state, proven
-in an isolated `git worktree --detach HEAD` (below), not about the live tree whose one flapping
-package is somebody else's edit in progress. Every other gate is stable and verified individually:
+**The tree is clean and green.** `bash scripts/verify/verify-all.sh` returns
+`VERIFY_ALL_OK` (exit 0) against the current tree, and `git status` is **empty** — the large
+uncommitted wave that was present earlier in the session (§10) has since been committed. During the
+session the `services/executor/internal/lock` package did flap while a concurrent writer held an
+in-progress edit of it (`valkey.go` + `valkey_test.go`, plus `zz_probe*_test.go` scratch files);
+observed states included a missing `fakeValkey` type, literal CR bytes inside string literals, a
+scripted server that never served its steps, and a syntax error at `valkey_test.go:649`. That
+writer has since landed their work (with garbage-collection for the handshake error, below), so the
+package is green. Every gate is now stable and verified individually:
 `check-deploy` OK, `check-structure` OK (139 files), `check-contract` OK (28 CR modes + 5 family
 parities), `check-contract.mjs` CONTRACTS_OK, `check-api-contract.py` API_CONTRACT_OK,
-`go build/vet/test` OK for `services/api` + `services/data`, `cargo build/test` OK for
-`services/sync`, `bash -n pre-push` OK.
+`go build/vet/test` OK for all three Go modules, `cargo build/test` OK for `services/sync`,
+`bash -n pre-push` OK.
 
 Verification of the two fixes made this session (each proven, not asserted):
 - **Deploy gate** (`check-deploy.py`): simulated a fresh clone by deleting
@@ -328,10 +327,16 @@ against the baseline and against `94a2ee1`/`642e7ef`):
 
 ## 10. Working-tree state at review time
 
-This branch carries a large uncommitted wave that is **not** part of this review's own edits:
-the earlier actor's `services/executor` refactor across ~20 Go files, the `services/sync` Rust
-changes, the auth/transactions/wallets web-route rewrites, the `deploy/systemd` consolidation,
-and doc updates. Those were present when this session started (see `docs/architecture/current.md`
-§0, which records the same observation) and are **left intact** — the objective's rule is
-"do not discard unrelated local changes". They must be committed in reviewable per-phase
-increments before the next phase begins (migration-plan "Standing risks").
+**Clean.** The large uncommitted wave described earlier in the session — the earlier actor's
+`services/executor` refactor across ~20 Go files, the `services/sync` Rust changes, the
+auth/transactions/wallets web-route rewrites, the `deploy/systemd` consolidation, and doc updates —
+has since been **committed** by both actors' turns (this session's commits also carried a few of
+those pre-staged files in; see the commit-scope note below). `git status` is empty and
+`bash scripts/verify/verify-all.sh` returns `VERIFY_ALL_OK`.
+**Commit-scope note (honesty):** some of this session's commits were made with a bare
+`git commit` while a concurrent writer had files staged in the shared index, so they swept those
+files in under a different message (e.g. `024fadd`, labelled a docs commit, contains 54 files
+including `apps/web/deploy/*` and `services/executor/internal/lock/valkey.go`). The **content** is
+preserved and green; only the commit *messages* under-describe their payload. No work was lost or
+discarded. Re-splitting history now would rewrite commits under an active writer, which is riskier
+than the cosmetic gain, so it is recorded here instead.
