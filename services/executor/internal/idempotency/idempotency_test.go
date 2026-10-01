@@ -152,3 +152,24 @@ func TestRequestIDAndClientOrderIDAreDistinct(t *testing.T) {
 		t.Fatalf("client order id and request id must differ: %q", coID)
 	}
 }
+
+// DuplicateSubmitSameID: the request id is the SAME across a retry, so a
+// resubmitted placement is a duplicate request, not a new one. This is the
+// invariant that lets the worker dedup restarts: the request id is derived
+// from (execution, sequence), which the durable store hands out, so a retry
+// and the original mint the identical id.
+func TestRequestIDIsStableAcrossRetry(t *testing.T) {
+	// A retried placement re-derives its request id from the same execution
+	// and sequence — the worker does not mint a fresh one on retry.
+	if RequestID("e1", 5) != RequestID("e1", 5) {
+		t.Fatal("a retried placement must mint the same request id")
+	}
+	// Two different sequences are different requests even for one execution.
+	if RequestID("e1", 5) == RequestID("e1", 6) {
+		t.Fatal("two placements on one execution must carry distinct request ids")
+	}
+	// Two executions never share a request id space.
+	if RequestID("e1", 5) == RequestID("e2", 5) {
+		t.Fatal("request ids must be scoped by execution")
+	}
+}
