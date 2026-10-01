@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/common/time.json",
+  "title": "Time semantics",
+  "description": "The five time meanings this contract allows, and the rule each carries. Canonical encoding is integer Unix MILLISECONDS, matching shared/contracts/schemas/event-envelope.json ('Unix milliseconds when the event occurred') and database/schema/executor-schema.sql ('timestamps are bigint unix MILLISECOND values'). KNOWN LEGACY DEVIATIONS in the repo, which a consumer must not read as this contract: database/schema/{schema.sql,pg-schema.sql} store created_at/updated_at as text 'YYYY-MM-DD HH:MM:SS' (seconds, no offset); identity/cookie.go SessionClaims.Exp is epoch SECONDS while identity.go Session.ExpiresAtMs is milliseconds; frontend/web/src/features/cryptorank/shapers.ts and the acquisition envelopes use seconds in `fetchedAt`. See docs/architecture/canonical-model.md section 4 for the full violation table (T1-T10).",
+  "$defs": {
+    "occurred_at": {
+      "title": "occurred_at - when the fact happened in the world",
+      "description": "Supplied by the source (venue fill clock, chain block time, event time), never by us. Carriers: ledger Entry.OccurredAtMs, audit Record.OccurredAtMs (validated > 0), notifications Request.OccurredAt, treasury Movement.OccurredAt, executor.fills.timestamp.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "observed_at": {
+      "title": "observed_at - when this value was read from the source",
+      "description": "When we looked and read the number, distinct from when the number was true. Carriers: markets Ticker.Ts, Candle.OpenTime, FundingRate.NextFundingAt, TypeScript VenueQuote.at.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "received_at": {
+      "title": "received_at - when the payload reached our process",
+      "description": "Must move forward on every read, even when the body is served from cache. NO CARRIER EXISTS TODAY: the nearest field, `fetchedAt`, is set once at acquisition and reused verbatim on an L2 cache hit (backend/data/platform/cache/cache.go Encode/Decode carry the original fetchedAt on purpose), so it is an acquisition time, not a receipt time. A consumer CANNOT currently distinguish 'we read this 2 s ago' from 'we read this 2 s ago and the body is 59 s old'.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "recorded_at": {
+      "title": "recorded_at - when the row was written to durable storage",
+      "description": "Us, at the write. Carriers: ledger Entry.CreatedAt (deliberately excluded from the idempotency key so a re-delivered event does not fork a row), SQL assets.updated_at DEFAULT datetime('now'), executor.*.created_at bigint.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "updated_at": {
+      "title": "updated_at - last mutation of a MUTABLE row",
+      "description": "Only for rows that are updated in place; a system-of-record row (execution_events, ledger entries) must not carry it. Semantics differ per table today: on `assets` it is a recorded_at written by the sync, on executor.child_orders it is a true last-mutation time.",
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

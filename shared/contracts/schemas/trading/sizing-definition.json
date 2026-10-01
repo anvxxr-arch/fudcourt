@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/trading/sizing-definition.json",
+  "title": "Sizing definition",
+  "description": "How the platform decided how big the position is. Nine modes, each with its own required cast: equivalent to a discriminated union, and it is the exact place where the repo's ONE numeric unit-ambiguity lives in the schema too - the single `value` column (executor.executions.sizing_value) is a USD amount, a raw quantity or a PERCENT depending on the mode, so this contract makes `value` untyped decimal and lets `mode` say how to read it. Percent modes REQUIRE balance_basis: the sizing engine refuses a percent mode without a basis rather than guessing which balance was meant. This mirrors shared/contracts/openapi/fudcourt.yaml SizingDefinition, which is the documented HTTP surface.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "value"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "risk_usd"
+          ]
+        },
+        "value": {
+          "$ref": "../common/money.json"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "value",
+        "balance_basis"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "risk_percent",
+            "allocation_percent",
+            "target_profit_percent"
+          ]
+        },
+        "value": {
+          "$ref": "../common/percentage.json"
+        },
+        "balance_basis": {
+          "$ref": "#/$defs/balance_basis"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "value"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "allocation_usd",
+            "notional_usd",
+            "fixed_margin",
+            "target_profit_usd"
+          ]
+        },
+        "value": {
+          "$ref": "../common/money.json"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "value"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "fixed_quantity"
+          ]
+        },
+        "value": {
+          "$ref": "../common/quantity.json"
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "balance_basis": {
+      "type": "string",
+      "enum": [
+        "spot_available",
+        "spot_equity",
+        "futures_available",
+        "futures_equity",
+        "total_exchange_equity",
+        "asset_equity",
+        "custom"
+      ],
+      "description": "A percentage sizing mode MUST name the balance basis explicitly - a percent of an unnamed basis is not a size."
+    },
+    "sizing_mode": {
+      "type": "string",
+      "enum": [
+        "risk_usd",
+        "risk_percent",
+        "allocation_usd",
+        "allocation_percent",
+        "notional_usd",
+        "fixed_quantity",
+        "fixed_margin",
+        "target_profit_usd",
+        "target_profit_percent"
+      ],
+      "description": "The nine sizing modes of SizingDefinition['mode']. Percent-valued modes require balance_basis to be present (the sizing engine refuses a percent mode without a basis)."
+    }
+  }
+}

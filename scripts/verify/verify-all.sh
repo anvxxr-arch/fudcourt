@@ -29,6 +29,9 @@ step "web contract gate (CR_MODES + mutation-auth guards)"
 step "shared/contracts drift gate"
 node shared/contracts/scripts/check-contract.mjs || fail contracts
 
+step "shared/contracts canonical-schema gate (parse, dialect, refs, README index, structure)"
+node shared/contracts/scripts/check-schemas.mjs || fail schemas
+
 step "sdk-ts generated-SDK drift + typecheck"
 (cd shared/sdk/typescript \
   && tmp=$(mktemp -d) && cp -r src/generated "$tmp/generated" \

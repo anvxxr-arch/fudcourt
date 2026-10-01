@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/research/exchange-row.json",
+  "title": "Exchange row (provider)",
+  "description": "A provider's row for a centralized exchange: volumes, pair counts, reserves. This is a MARKETS/venue-surface product view, not the Venue entity (markets/venue.json): it is a provider's opinion about an exchange, with fields our venue allowlist knows nothing about (reserve transparency, stablecoin share). `rank` is SYNTHESIZED BY US from row order because the upstream sends the list unsorted - so it is a derived value and the envelope must label it. Counts (pairs, currencies, wallets) arrive as provider floats and are declared counts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "key"
+  ],
+  "properties": {
+    "key": {
+      "type": "string",
+      "description": "Provider's exchange key."
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "rank": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "DERIVED by us from list order (i + 1). Not an upstream figure."
+    },
+    "day_volume_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "week_volume_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "month_volume_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "percent_volume": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "pairs_count": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "currencies_count": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reserves_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Transparency variant only: 'the cex-transparency variant is a different schema upstream, so the optional columns must be emitted on exactly that variant'."
+    },
+    "clean_reserves_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stablecoins_percent": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "wallets_count": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "audit_date": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Provider-formatted date string; not parsed into an instant."
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/common/source.json",
+  "title": "Source",
+  "description": "Where a fact came from. Today this is a free-form string with a default ('manual') in transactions.Transaction.Source, documented as provenance that 'survives every operation'; the sidecar has one Source struct per feed (backend/data/internal/research/news/modes.go) and price_history carries a `source` column. This contract keeps the string, names the closed set of kinds, and requires the id form so a row can be traced without re-parsing a label.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_id",
+    "kind"
+  ],
+  "properties": {
+    "source_id": {
+      "$ref": "./identifier.json"
+    },
+    "kind": {
+      "type": "string",
+      "description": "What sort of origin this is.",
+      "enum": [
+        "onchain",
+        "venue",
+        "aggregator",
+        "research",
+        "news",
+        "signals",
+        "manual",
+        "internal"
+      ]
+    },
+    "name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Display label: the outlet's own name ('Cointelegraph'), a venue name, or a chain name - never the request parameter that selected it."
+    },
+    "url": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sensitivity": {
+      "type": "string",
+      "description": "Most restrictive sensitivity class of any value this source can yield. A downstream field inherits it (docs/architecture/canonical-model.md section 6.3).",
+      "enum": [
+        "S0_secret",
+        "S1_credential_adjacent",
+        "S2_personal",
+        "S3_financial_private",
+        "S4_public_market",
+        "S5_provenance"
+      ]
+    }
+  }
+}

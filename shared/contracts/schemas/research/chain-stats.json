@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/research/chain-stats.json",
+  "title": "Chain stats row",
+  "description": "A provider's per-chain market row (distinct from assets/chain.json, which is OUR registrable chain: this one carries a provider slug, its market cap and a token-platform label). Nullable figures are the norm here and MUST stay null rather than become zero - a chain whose market cap the provider omits is 'unknown', not 'worth nothing'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "slug"
+  ],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "description": "Provider slug (upstream `slug`, falling back to its `key`)."
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "market_cap_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "token_platform_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The provider's platform label for the chain's token standard."
+    },
+    "image": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "logo": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

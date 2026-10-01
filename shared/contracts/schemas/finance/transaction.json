@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/finance/transaction.json",
+  "title": "Transaction (user-visible money-movement history row)",
+  "description": "One row a user reads as their history. NOT THE SAME ENTITY AS LedgerEntry (canonical-model.md D4): a Transaction is presentation with provenance, and it may exist without any ledger counterpart (a manual entry); a LedgerEntry is the accounting fact. The amount is signed and its SIGN IS THE DIRECTION - '>= 0 is in, < 0 is out', and the zero amount counts as 'in' because that is the schema's rule, kept as written rather than second-guessed (finance/transactions DirectionOf). `hash` is nullable in the table but EXACT ON-CHAIN RECONCILIATION REQUIRES IT: rows without it are for display, not reconciliation. `source` must survive every merge. `date` is a calendar DATE, not an instant - it is the field that makes date-only ordering ambiguous (see common/time.json T3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "date",
+    "chain",
+    "event",
+    "direction",
+    "source"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "../common/count.json",
+      "description": "SQL surrogate key (INTEGER PRIMARY KEY AUTOINCREMENT). There is no canonical transaction id."
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "YYYY-MM-DD calendar date as stored (TEXT NOT NULL). Validated by transactions.New; NOT an instant, so ordering by it alone is ambiguous and callers must break ties by id."
+    },
+    "chain": {
+      "type": "string",
+      "description": "Free-form today; the Go default is 'Offchain'. chain_id joins it once chain ids exist."
+    },
+    "chain_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "asset": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "asset_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "event": {
+      "type": "string",
+      "description": "The event label shown to the user; required non-empty by the table."
+    },
+    "amount_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "SIGNED: its sign IS the direction. Null (unreported) must never be read as 0."
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "in",
+        "out"
+      ],
+      "description": "Must agree with amount_usd's sign; derived from it when absent, never contradicted."
+    },
+    "hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Chain transaction hash. REQUIRED for exact reconciliation; null means display-only."
+    },
+    "url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source": {
+      "type": "string",
+      "description": "Provenance ('manual' is the default). Survives every operation and is never dropped by a merge."
+    },
+    "memo": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "wallet_to": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "venue_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "trade_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "recorded_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/recorded_at"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "SQL created_at. LEGACY ENCODING is text 'YYYY-MM-DD HH:MM:SS', not integer ms."
+    }
+  }
+}

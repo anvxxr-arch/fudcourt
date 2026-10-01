@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/defi/protocol.json",
+  "title": "Protocol (DeFi aggregate)",
+  "description": "One DeFi protocol's aggregate state. Provider is DefiLlama, whose own identifier is a slug - and whose `/protocols` body is ~8.9 MB of 8386 rows, which is why the sidecar trims to a top-N and MUST label the result as derived and truncated (upstream sends UNSORTED; the sort is ours). TVL nullability is NOT a mistake to fix: 'null happens upstream (1238 of 8386 rows) -> UI shows em-dash' - a protocol whose TVL the provider omits must render as an em-dash, never as 0, because 0 would read as 'this protocol holds nothing'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_id",
+    "name"
+  ],
+  "properties": {
+    "protocol_id": {
+      "$ref": "../common/identifier.json",
+      "description": "The DefiLlama slug today. Once a mapping table exists this becomes an opaque canonical id and the slug moves to provider_ids."
+    },
+    "name": {
+      "type": "string"
+    },
+    "category": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Provider taxonomy, opaque string - no canonical category set exists."
+    },
+    "tvl_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null = the provider omitted it (real: ~15% of rows). NEVER 0."
+    },
+    "change_1d_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "change_7d_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "market_cap_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "chains": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Chain NAMES as the provider spells them; not chain_ids - the provider's vocabulary is upstream of our registry."
+    },
+    "url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "logo": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_ids": {
+      "$ref": "../assets/asset.json#/properties/provider_ids"
+    }
+  }
+}

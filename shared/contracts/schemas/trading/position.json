@@ -1,0 +1,323 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/trading/position.json",
+  "title": "Position (venue-reported or derived)",
+  "description": "A held directional exposure. TWO IMPLEMENTATIONS EXIST IN DIFFERENT DOMAINS and this schema is the VENUE one (canonical-model.md D-Position): the venue's own report (backend/workers/executor/internal/executor/records.go Position, read from the exchange API) versus a DERIVED position computed from fills/entries (backend/api/internal/finance/portfolio/portfolio.go Position, keyed on instrument_id). They are not interchangeable: the venue's is the truth for reconciliation and carries leverage/liquidation, the derived one is a valuation input. quantity is SIGNED here on purpose (positive = long), unlike the derived model whose Quantity is an unsigned magnitude with a separate side. No synthetic id: a venue position is keyed by (instrument, position_side).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "instrument_id",
+    "position_side",
+    "quantity"
+  ],
+  "properties": {
+    "position_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null today: positions are keyed by (symbol, position_side), there is no synthetic id. Present so a durable store can mint one without a shape change."
+    },
+    "instrument_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "symbol": {
+      "type": "string"
+    },
+    "account_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "position_side": {
+      "$ref": "#/$defs/position_side"
+    },
+    "quantity": {
+      "$ref": "../common/quantity.json",
+      "description": "SIGNED: positive is long, negative is short. A magnitude-plus-side encod-ing would lose the venue's own sign convention."
+    },
+    "entry_price": {
+      "$ref": "../common/price.json"
+    },
+    "mark_price": {
+      "anyOf": [
+        {
+          "$ref": "../common/price.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "leverage": {
+      "anyOf": [
+        {
+          "$ref": "../common/decimal.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null when the venue does not report it (spot positions have none)."
+    },
+    "liquidation_price": {
+      "anyOf": [
+        {
+          "$ref": "../common/price.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null means the venue did not report one - NEVER 0, which would read as 'liquidates at zero'."
+    },
+    "unrealized_pnl": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null when no mark price is known - never 0."
+    },
+    "position_mode": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/position_mode"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "observed_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/observed_at"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "market_type": {
+      "type": "string",
+      "enum": [
+        "spot",
+        "linear_perp"
+      ],
+      "description": "USDT-linear perpetual only in the MVP."
+    },
+    "side": {
+      "type": "string",
+      "enum": [
+        "buy",
+        "sell"
+      ],
+      "description": "Order side. A spot sell-open is refused outside explicit margin support."
+    },
+    "intent": {
+      "type": "string",
+      "enum": [
+        "open",
+        "close",
+        "reduce"
+      ],
+      "description": "What the user wants the order to do to the position - not what the venue will do."
+    },
+    "execution_status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "CALCULATED",
+        "VALIDATED",
+        "READY",
+        "RUNNING",
+        "PARTIALLY_FILLED",
+        "FILLED",
+        "PAUSED",
+        "CANCEL_REQUESTED",
+        "CANCELLED",
+        "FAILED",
+        "RISK_STOPPED",
+        "EXPIRED",
+        "RECONCILING",
+        "STOPPED"
+      ],
+      "description": "Execution lifecycle. FROZEN: this list is cross-checked against frontend/web/src/platform/executor/types.ts and shared/contracts/openapi/fudcourt.yaml by shared/contracts/scripts/check-contract.mjs (CHECKED_ENUMS), so it MUST NOT be re-spelled or reordered, and it MUST NOT be merged with ChildOrderStatus."
+    },
+    "child_order_status": {
+      "type": "string",
+      "enum": [
+        "PLANNED",
+        "SUBMITTING",
+        "OPEN",
+        "PARTIAL",
+        "FILLED",
+        "CANCELLING",
+        "CANCELLED",
+        "REJECTED",
+        "EXPIRED",
+        "UNKNOWN"
+      ],
+      "description": "Child-order lifecycle. FROZEN and cross-checked like execution_status. UNKNOWN is a real state, not an error: a non-terminal child with no venue row and no SUBMITTING grace is marked UNKNOWN + EXTERNAL_STATE_CHANGE so fill ingestion decides the truth."
+    },
+    "execution_mode": {
+      "type": "string",
+      "enum": [
+        "preview",
+        "paper",
+        "live"
+      ],
+      "description": "LIVE is fail-closed behind the FUDCOURT_EXECUTOR_LIVE kill switch; a paper execution reuses the account's market/fee/balance context but NEVER sends an order."
+    },
+    "time_in_force": {
+      "type": "string",
+      "enum": [
+        "GTC",
+        "IOC",
+        "FOK"
+      ]
+    },
+    "position_side": {
+      "type": "string",
+      "enum": [
+        "long",
+        "short",
+        "net"
+      ],
+      "description": "Venue position mode's own vocabulary."
+    },
+    "margin_mode": {
+      "type": "string",
+      "enum": [
+        "isolated",
+        "cross"
+      ]
+    },
+    "position_mode": {
+      "type": "string",
+      "enum": [
+        "one_way",
+        "hedge"
+      ]
+    },
+    "leverage_mode": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "auto_safe"
+      ]
+    },
+    "stop_mode": {
+      "type": "string",
+      "enum": [
+        "native",
+        "synthetic",
+        "hybrid"
+      ],
+      "description": "How a protective stop is managed; native preferred."
+    },
+    "risk_breach_policy": {
+      "type": "string",
+      "enum": [
+        "resize_then_stop",
+        "pause",
+        "stop"
+      ]
+    },
+    "existing_position_policy": {
+      "type": "string",
+      "enum": [
+        "add",
+        "reject"
+      ]
+    },
+    "balance_basis": {
+      "type": "string",
+      "enum": [
+        "spot_available",
+        "spot_equity",
+        "futures_available",
+        "futures_equity",
+        "total_exchange_equity",
+        "asset_equity",
+        "custom"
+      ],
+      "description": "A percentage sizing mode MUST name the balance basis explicitly - a percent of an unnamed basis is not a size."
+    },
+    "sizing_mode": {
+      "type": "string",
+      "enum": [
+        "risk_usd",
+        "risk_percent",
+        "allocation_usd",
+        "allocation_percent",
+        "notional_usd",
+        "fixed_quantity",
+        "fixed_margin",
+        "target_profit_usd",
+        "target_profit_percent"
+      ],
+      "description": "The nine sizing modes of SizingDefinition['mode']. Percent-valued modes require balance_basis to be present (the sizing engine refuses a percent mode without a basis)."
+    },
+    "child_order_type": {
+      "type": "string",
+      "enum": [
+        "market",
+        "limit"
+      ],
+      "description": "The two order types the engine emits. The SQL column is unconstrained text; this enum is the value set the code writes."
+    },
+    "credential_health": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "ACTIVE",
+        "INVALID",
+        "EXPIRED",
+        "PERMISSION_ERROR",
+        "RATE_LIMITED",
+        "REVOKED"
+      ]
+    },
+    "error_category": {
+      "type": "string",
+      "enum": [
+        "network_retryable",
+        "rate_limited",
+        "exchange_overload",
+        "invalid_order",
+        "permission_error",
+        "insufficient_balance",
+        "fatal",
+        "unknown"
+      ],
+      "description": "Retry taxonomy: only network_retryable / rate_limited / exchange_overload may retry. Mirrors shared/contracts/schemas/error-envelope.json's coarser 12-value `code` set - the envelope is the wire contract, this is the executor's internal classification."
+    },
+    "event_name": {
+      "type": "string",
+      "description": "A STABLE event id from shared/contracts/events/catalog.json (PascalCase), whose SCREAMING_SNAKE spellings are accepted aliases. Not re-enumerated here on purpose: events/catalog.json plus events/event.schema.json are the single source of truth, pinned by check-contract.mjs, and duplicating the list in a second schema would create a drift surface."
+    }
+  }
+}

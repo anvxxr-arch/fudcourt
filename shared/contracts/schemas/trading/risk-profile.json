@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/trading/risk-profile.json",
+  "title": "Risk profile (per user)",
+  "description": "The per-user risk limits the engine sizes and gates against. Stored as one jsonb document keyed by user_id (executor.risk_profiles), not as columns, so this contract is the only description of the shape. EVERY percentage here is a decimal string, and the repo's own Rust-side type carries the same rule with an explicit comment ('percentage fields are decimal strings'). Thresholds are NOT clamped on write - a negative or absurd limit is refused with a field-named error, never silently corrected (the settings route's stated rule). Defaults come from DEFAULT_RISK_PROFILE in frontend/web/src/platform/executor/types.ts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "user_id",
+    "default_risk_mode"
+  ],
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "default_risk_mode": {
+      "type": "string",
+      "enum": [
+        "risk_usd",
+        "risk_percent"
+      ]
+    },
+    "default_risk": {
+      "$ref": "../common/decimal.json",
+      "description": "Read according to default_risk_mode: money when risk_usd, percentage when risk_percent."
+    },
+    "max_risk_per_trade_pct": {
+      "$ref": "../common/percentage.json"
+    },
+    "max_open_risk_pct": {
+      "$ref": "../common/percentage.json"
+    },
+    "max_daily_loss_pct": {
+      "$ref": "../common/percentage.json",
+      "description": "Gates new executions against realized P&L for the day (runtime.ts daily-loss gate)."
+    },
+    "max_leverage": {
+      "$ref": "../common/decimal.json"
+    },
+    "slippage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "slippage_bps": {
+          "$ref": "../common/count.json"
+        },
+        "safety_reserve_pct": {
+          "$ref": "../common/percentage.json"
+        },
+        "maker_bps": {
+          "$ref": "../common/count.json"
+        },
+        "taker_bps": {
+          "$ref": "../common/count.json"
+        }
+      }
+    },
+    "max_open_positions": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "updated_at": {
+      "$ref": "../common/time.json#/$defs/updated_at"
+    }
+  }
+}

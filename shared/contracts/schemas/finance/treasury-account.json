@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/finance/treasury-account.json",
+  "title": "TreasuryAccount (internal capital account)",
+  "description": "One internal capital account. INVARIANT: one account holds ONE asset - a multi-asset balance is several accounts, so every movement names the asset it moves (backend/api/internal/finance/treasury/treasury.go Account doc). `owner_kind` is a closed set because an unlisted owner kind would make internal capital unauditable. Balances are obtained from `Balances` (a map of account id -> exact signed decimal) and absence there means UNKNOWN, not zero: Move refuses to touch an account it cannot see rather than inventing a starting balance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "account_id",
+    "owner_kind",
+    "owner_id",
+    "asset"
+  ],
+  "properties": {
+    "account_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "owner_kind": {
+      "type": "string",
+      "enum": [
+        "organization",
+        "team",
+        "wallet"
+      ],
+      "description": "Mirrors treasury.OwnerKind."
+    },
+    "owner_id": {
+      "type": "string"
+    },
+    "asset": {
+      "type": "string",
+      "description": "The single asset this account holds. Kept as the Go symbol string because no asset_id producer exists yet; asset_id is listed alongside for the migration."
+    },
+    "asset_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

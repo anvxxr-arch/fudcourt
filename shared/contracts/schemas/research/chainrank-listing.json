@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/research/chainrank-listing.json",
+  "title": "ChainRank listing row",
+  "description": "A paid-listing row from chainrank.fyi. MONEY IS IN INTEGER CENTS HERE and that is deliberate: the provider's contract is `totalUsdCents`, and the UI divides by 100 at render time. This is the ONE integer minor-unit money carrier in the repo (common/money.json explains that everything else is a decimal string), and it is preserved as-is rather than converted, because converting would claim a precision the contract does not state. `lastPaidAt`/`createdAt` are provider ISO strings and stay strings.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "key",
+    "kind",
+    "url",
+    "title",
+    "total_usd_cents",
+    "rank"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "key": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string",
+      "description": "The listed target's kind: 'handle' (x.com/...) or 'url'."
+    },
+    "url": {
+      "type": "string"
+    },
+    "handle": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "logo_url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "total_usd_cents": {
+      "$ref": "../common/count.json",
+      "description": "Cents of USDC raised. Integer by contract; divide by 100 for display."
+    },
+    "clicks": {
+      "$ref": "../common/count.json"
+    },
+    "owner_address": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The paying wallet's address - a public chain address, not a secret, but still S3-adjacent: expose only where the provider already does."
+    },
+    "last_paid_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Provider ISO string; NOT an instant we produced."
+    },
+    "created_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Provider ISO string."
+    },
+    "rank": {
+      "$ref": "../common/count.json",
+      "description": "Position in the provider's own ordering (DERIVED from the ordering, like the exchange row's rank)."
+    },
+    "partial": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Fields the provider shipped that this contract does not name. The row is passed through verbatim by the sidecar rather than re-modelled, so a consumer MUST tolerate additive keys here; this property exists so the object can still be closed where the value set IS known."
+    }
+  }
+}

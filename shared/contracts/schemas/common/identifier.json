@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/common/identifier.json",
+  "title": "Opaque canonical identifier",
+  "description": "A stable, opaque, provider-independent id for one entity. INVARIANTS: (1) it is NOT a symbol and NOT a ticker - symbols are spellings (common/symbol.json) and MUST NOT be used as identity on any money-bearing row; (2) it is NOT the provider's id - every provider id is a separate mapping row (provider, provider_id) -> this value; (3) it is stable across renames of the display name and across re-listings. Current state of the repo (see docs/architecture/canonical-model.md section 1.4): only instrument_id, execution/order/fill ids and ledger entry ids satisfy this; asset_id, token_id, chain_id and venue_id are REQUIRED by this contract but have no producer today, and no (provider, provider_id) mapping table exists in any schema under database/. Consumers must treat the value as opaque (no parsing) even though the current instrument_id is conventionally 'exchange:market_type:BASE/QUOTE'.",
+  "type": "string",
+  "minLength": 1
+}

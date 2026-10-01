@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/accounts/exchange-account.json",
+  "title": "ExchangeAccount (one connected venue account)",
+  "description": "One connected venue CEX account. DISTINCT from a treasury Account and from a chain wallet: a CEX account is an IOU on a venue. INVARIANT (tested, quote from backend/api/internal/accounts/exchange/account.go): 'this record contains no secret material of any kind - json.Marshal of it can therefore never leak credentials. The vault link is CredentialID only.' The sealed material lives in executor.exchange_accounts (api_key_encrypted/api_secret_encrypted/passphrase_encrypted bytea + one 12-byte IV and 16-byte GCM tag per secret, concatenated in column order) and MUST NEVER appear in this object or in any response. Lifecycle is strictly ordered: pending -> active -> disabled -> revoked, enforced by TransitionTo.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "user_id",
+    "exchange",
+    "label",
+    "account_type",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "../common/identifier.json"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Ownership scope; every lookup binds it (PRD 108). A Discord snowflake (numeric string), never parsed as a number."
+    },
+    "credential_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Opaque handle to the vault row. Contract-visible as a handle only - it is never a key, never a secret."
+    },
+    "exchange": {
+      "type": "string",
+      "description": "Lowercase venue name; the supported set is the venue allowlist (markets/venue.json)."
+    },
+    "venue_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "label": {
+      "type": "string"
+    },
+    "account_type": {
+      "type": "string",
+      "enum": [
+        "spot",
+        "futures",
+        "both"
+      ],
+      "description": "Mirrors AccountType in account.go."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "active",
+        "disabled",
+        "revoked"
+      ],
+      "description": "Mirrors Status in account.go. NOTE: a DIFFERENT type with the same name exists in backend/api/internal/access/credentials/credential.go (active/revoked/unknown) - see canonical-model.md D-US2."
+    },
+    "supported_markets": {
+      "type": "array",
+      "items": {
+        "$ref": "../markets/instrument.json#/$defs/market_type"
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Venue-reported key restrictions. Every venue-reported flag is nullable ON PURPOSE: null means the venue is silent and is NEVER inferred as false (house rule: honest absence over fabricated zero). `read` is the only verified-by-probe flag. `withdraw` MUST be false or null in effect - the platform never requests withdrawal capability, and a true from the user's own key must be surfaced as a warning, never silently trusted.",
+      "required": [
+        "read"
+      ],
+      "properties": {
+        "read": {
+          "type": "boolean"
+        },
+        "spot_trade": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "futures_trade": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "withdraw": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "health": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "ACTIVE",
+        "INVALID",
+        "EXPIRED",
+        "PERMISSION_ERROR",
+        "RATE_LIMITED",
+        "REVOKED"
+      ],
+      "description": "executor.exchange_accounts.health (default 'UNKNOWN')."
+    },
+    "last_sync_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/updated_at"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null until the first successful venue sync - a missing sync is reported as missing, never as a zero timestamp. Monotonic: a retried/out-of-order sync must not rewind it (account.go TouchSync)."
+    },
+    "recorded_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/recorded_at"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "updated_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/updated_at"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "revoked_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/updated_at"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

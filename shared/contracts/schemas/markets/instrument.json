@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/markets/instrument.json",
+  "title": "Instrument",
+  "description": "One tradable market on one venue, with its price/quantity grid. THE ONLY NEAR-COMPLETE CANONICAL ENTITY IN THE REPO: the type and the id convention exist (backend/api/internal/markets/instruments/instrument.go Instrument, InstrumentID = 'exchange:market_type:BASE/QUOTE', evidenced by the fixture in instrument_test.go), the symbol normalization exists (symbol.go CanonicalSymbol/VenueSymbol) and the grid rounding exists (rounding.go RoundQuantityDown/RoundPrice). NO PRODUCER MINTS IT outside tests, and no service serves it over HTTP. Closed object: the field set is the Go struct's, and additionalProperties is false because Validate refuses unknown grid parameters rather than ignoring them. Absent-vs-zero rule (instrument.go doc): an empty grid string or null means 'the venue did not report it', never 0 - ContractSize excepted, which must be positive ('a zero would silently zero out every notional').",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "instrument_id",
+    "base_asset",
+    "quote_asset",
+    "market_type",
+    "exchange",
+    "exchange_symbol",
+    "tick_size",
+    "quantity_step",
+    "contract_size"
+  ],
+  "properties": {
+    "instrument_id": {
+      "$ref": "../common/identifier.json",
+      "description": "Canonical id. Convention today: 'exchange:market_type:BASE/QUOTE' (src fixture 'binance:spot:BTC/USDT'). Consumers MUST treat it as opaque."
+    },
+    "base_asset": {
+      "$ref": "../assets/asset.json",
+      "description": "Reference-by-id form of the Go struct's bare symbol string."
+    },
+    "quote_asset": {
+      "$ref": "../assets/asset.json"
+    },
+    "market_type": {
+      "$ref": "#/$defs/market_type"
+    },
+    "exchange": {
+      "type": "string",
+      "description": "Venue name as spelled in code ('binance'), lowercase by convention."
+    },
+    "venue_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "exchange_symbol": {
+      "type": "string",
+      "description": "The symbol EXACTLY as the venue spells it ('BTCUSDT'); never the canonical form."
+    },
+    "canonical_symbol": {
+      "$ref": "../common/symbol.json"
+    },
+    "tick_size": {
+      "$ref": "../common/price.json"
+    },
+    "quantity_step": {
+      "$ref": "../common/quantity.json"
+    },
+    "min_quantity": {
+      "anyOf": [
+        {
+          "$ref": "../common/quantity.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null when the venue does not report it (the Go empty string)."
+    },
+    "min_notional": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "contract_size": {
+      "$ref": "../common/quantity.json",
+      "description": "Contract multiplier applied to quantity to get notional; '1' for spot. MUST be positive."
+    },
+    "price_precision": {
+      "$ref": "../common/count.json",
+      "description": "Decimal places the venue prints for prices; 0 is legal."
+    },
+    "quantity_precision": {
+      "$ref": "../common/count.json"
+    },
+    "max_leverage": {
+      "$ref": "../common/count.json",
+      "description": "Venue leverage ceiling; the Go int field, 1 = no leverage."
+    }
+  },
+  "$defs": {
+    "market_type": {
+      "type": "string",
+      "enum": [
+        "spot",
+        "linear_perp"
+      ],
+      "description": "Frozen pair, declared identically in backend/api/internal/markets/instruments/instrument.go and backend/api/internal/accounts/exchange/account.go (duplicated type, same values - see canonical-model.md D-US2). The executor's TS union is the same two values (frontend/web/src/platform/executor/types.ts MarketType)."
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/markets/venue.json",
+  "title": "Venue",
+  "description": "A place orders can be placed and balances held. Closed object: the supported set is a closed allowlist in code, three times over (backend/api/internal/accounts/exchange/account.go KnownExchange; backend/api/internal/markets/instruments/symbol.go symbol switches; backend/api/internal/accounts/wallets/wallets.go exchangeChains). This schema does not invent a fourth list - `known` says whether THIS build can trade it, and `venue_id` is the canonical handle a mapping table would mint (absent today, see docs/architecture/canonical-model.md D-CANON). A DEX pool is not a Venue for trading purposes in the current repo (no DEX order path exists).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "venue_id",
+    "kind",
+    "known"
+  ],
+  "properties": {
+    "venue_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Display name ('Binance'), never the lowercased key used in code."
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "cex",
+        "dex"
+      ],
+      "description": "cex = a venue with an order API; dex = an on-chain venue (pool data only today; not tradable via the executor, whose adapters are binance/bybit/mexc)."
+    },
+    "known": {
+      "type": "boolean",
+      "description": "True only if this build's allowlist contains the venue. False means the data may exist but no order may be placed."
+    },
+    "market_types": {
+      "type": "array",
+      "items": {
+        "$ref": "instrument.json#/$defs/market_type"
+      },
+      "description": "Market families this venue is modelled for. Mirrors backend/api/internal/accounts/exchange/account.go KnownExchange plus the instrument MarketType pairs."
+    },
+    "url": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

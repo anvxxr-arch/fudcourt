@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/accounts/balance.json",
+  "title": "Balance (one asset held by one account)",
+  "description": "How much of one asset one account holds, as of an observation time. Every figure is an exact decimal string (backend/workers/executor/internal/exchange/* keeps venue wire decimals as strings end to end; the `used` derived figure is computed with exact decimal subtraction, never float64). Absence rules differ per producer and both are honest: a venue that does not report a basis leaves it NULL (executor AccountEquity: spot_equity/futures_equity/total_equity are *string and 'the venue may not report one basis (honest null)'), while an unreported asset simply does not appear. The repo does NOT have a Balance type in backend/api: the read paths are `ledger.BalanceByAsset` and `treasury.Balances`, both map[string]string keyed on account id.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "account_id",
+    "asset_id",
+    "observed_at"
+  ],
+  "properties": {
+    "account_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "asset_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "free": {
+      "anyOf": [
+        {
+          "$ref": "../common/quantity.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "used": {
+      "anyOf": [
+        {
+          "$ref": "../common/quantity.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null when the venue does not report a locked figure - never a fabricated 0."
+    },
+    "total": {
+      "anyOf": [
+        {
+          "$ref": "../common/quantity.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "When both free and used are present this MUST equal their exact sum (decimal.Add), not a re-computed float."
+    },
+    "observed_at": {
+      "$ref": "../common/time.json#/$defs/observed_at"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/common/symbol.json",
+  "title": "Market symbol (canonical or venue spelling)",
+  "description": "A SPELLING of a market, never an identity. Canonical form is 'BASE/QUOTE' with both sides uppercased and no venue prefix, produced by backend/api/internal/markets/instruments/symbol.go CanonicalSymbol and inverted by VenueSymbol; the venue's own spelling (for example 'BTCUSDT') is a different string and is carried in a separate field (exchange_symbol). Venue symbols contain ':…' suffixes for dated instruments ('BTC/USD:BTC-261030'), which is why the canonical form strips anything from ':' onward. Do not key money-bearing rows on this value: the repo's sharpest interoperability gap is that market-data rows carry a canonical 'BASE/QUOTE' string while the executor's VenueKey is 'exchange:market_type:BASE/QUOTE' (frontend/web/src/platform/executor/types.ts venueKey), so the two cannot be joined (canonical-model.md D5).",
+  "type": "string",
+  "pattern": "^[A-Z0-9][A-Z0-9._-]*/[A-Z0-9][A-Z0-9._-]*$"
+}

@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/common/price.json",
+  "title": "Exact price",
+  "description": "A decimal string price in the quote asset of its instrument. A COMPUTED price must be rounded to the instrument's price grid by a named rule (half-up) before storage: instruments.RoundPrice / decimal.RoundToTick. A venue-reported price is preserved verbatim and never re-rounded.",
+  "$ref": "./decimal.json"
+}

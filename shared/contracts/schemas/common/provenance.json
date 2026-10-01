@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/common/provenance.json",
+  "title": "Provenance block",
+  "description": "The honesty fields every acquisition-family payload carries so a consumer can tell a complete answer from a truncated one and a fresh body from a cached one. This is the machine-readable form of the repo's house rule that an absent or partial upstream value is never rendered as a plausible number, and that a derived body must say so. Field sources: backend/data/internal/research/cryptorank/types.go CrEnvelope (upstream, fetchedAt, cache, count, upstreamTotal, slice, changeSource), news Envelope (upstream, timestamp), khala Envelope (upstream, fetchedAt, cache, count, upstreamTotal, slice, missingSlugs), llama Envelope (upstream, fetchedAt, upstreamTotal, derived).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_id",
+    "observed_at"
+  ],
+  "properties": {
+    "source_id": {
+      "$ref": "./identifier.json"
+    },
+    "upstream": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The exact upstream URL (or route) this body came from, as the envelopes already report it."
+    },
+    "observed_at": {
+      "$ref": "./time.json#/$defs/observed_at"
+    },
+    "received_at": {
+      "oneOf": [
+        {
+          "$ref": "./time.json#/$defs/received_at"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null while no carrier exists (see time.json#/$defs/received_at); a consumer MUST NOT substitute `fetched_at` for it."
+    },
+    "cache": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Cache disposition of THIS response, as the sidecar already reports it: 'MISS' on a live fetch, 'HIT' on a cache read.",
+      "enum": [
+        "MISS",
+        "HIT",
+        null
+      ]
+    },
+    "derived": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Non-null whenever the body was transformed (sorted, trimmed, aggregated). Names the transform, so a client never implies the body is upstream-verbatim. Precedent: llama's `derived: 'sorted by tvl (upstream sends unsorted)'`."
+    },
+    "count": {
+      "oneOf": [
+        {
+          "$ref": "./count.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "How many rows THIS body contains."
+    },
+    "total": {
+      "oneOf": [
+        {
+          "$ref": "./count.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "How many rows the source had. count < total means truncated, and a client must render '50 of 8386', never '50 rows exist'."
+    },
+    "slice": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Human-readable statement of the truncation, when one happened."
+    },
+    "missing": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "description": "Identifiers the parse expected and could not find (khala's missingSlugs) - a loud partial, reported rather than hidden."
+    }
+  }
+}
