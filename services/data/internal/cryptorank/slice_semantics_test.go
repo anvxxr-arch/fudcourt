@@ -203,3 +203,32 @@ func TestDashSemantics(t *testing.T) {
 		t.Error("ShapeRwaAsset must not fabricate a pointer to an empty string")
 	}
 }
+
+// Upstream moved /all-coins-list from a bare `pageProps.coins` array to a
+// wrapper (`{"coins":{"data":[...],"total":N}}`). Reading only the bare form
+// shipped `count:0` with HTTP 200 -- a silent empty envelope, the exact failure
+// the contract forbids -- so both shapes must resolve to the same rows.
+func TestCoinsAcceptsWrappedAndBarePayloads(t *testing.T) {
+	rows := []interface{}{
+		map[string]interface{}{"key": "bitcoin", "name": "Bitcoin", "symbol": "BTC"},
+		map[string]interface{}{"key": "ethereum", "name": "Ethereum", "symbol": "ETH"},
+	}
+	cases := []struct {
+		name string
+		pp   map[string]interface{}
+	}{
+		{"wrapped", map[string]interface{}{"coins": map[string]interface{}{"data": rows, "total": float64(100)}}},
+		{"bare", map[string]interface{}{"coins": rows}},
+	}
+	for _, tc := range cases {
+		env, err := cryptorank.Envelope("coins", &cryptorank.HelperOut{
+			OK: true, Route: "html", FetchedAt: 1790000000, Cache: "MISS", PageProps: tc.pp,
+		}, cryptorank.Opts{})
+		if err != nil {
+			t.Fatalf("%s: envelope refused: %v", tc.name, err)
+		}
+		if env.Count != 2 || len(env.Rows) != 2 {
+			t.Errorf("%s: count=%d rows=%d, want 2/2", tc.name, env.Count, len(env.Rows))
+		}
+	}
+}

@@ -77,6 +77,13 @@ func Envelope(kind string, h *HelperOut, opts Opts) (CrEnvelope, error) {
 
 	case "coins":
 		coins := dictArray(pp["coins"])
+		if len(coins) == 0 {
+			// Upstream moved /all-coins-list to a wrapper payload
+			// ({"coins":{"data":[...],"total":N}}); the bare array is the older
+			// shape. Reading only the bare form shipped count=0 with a 200 -- a
+			// silent empty envelope, which the contract forbids.
+			coins = dictArray(objOrEmpty(pp["coins"])["data"])
+		}
 		out := base
 		out.Count = len(coins)
 		out.UpstreamTotal = &Num{ptr(float64(len(coins)))}
