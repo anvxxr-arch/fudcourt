@@ -28,8 +28,11 @@ apps/web/media/
 .DS_Store
 # compiled addons
 *.node
-# go (services/data)
+# go (services/* — each module builds its own binary into bin/ at
+# runtime via ExecStartPre; the artifacts are never committed)
 services/data/bin/
+services/api/bin/
+services/executor/bin/
 services/data/.cache/
 # rust (services/sync; target/ is also covered by services/sync/.gitignore)
 services/sync/target/

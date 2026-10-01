@@ -6,13 +6,14 @@
 #
 # Covers: structure gate (DR-018), web contract gate, deploy-unit guard,
 # packages/contracts drift gate + generated-SDK drift + sdk typecheck, the three
-# Go modules (build/vet/test), the Rust crate (build/test), the hook syntax check,
-# and apps/web typecheck + shaper fixture tests.
+# Go modules (build/vet/test), the Rust crate (build/test), the sync oracle gate
+# (Python vs Rust byte-identical replay, tests/oracle/fixtures — offline), the
+# cross-service API conformance check, the hook syntax check, and apps/web
+# typecheck + shaper fixture tests.
 #
 # DELIBERATELY NOT HERE: live/network harnesses (apps/web/scripts/verify/verify-*.py,
 # APICALLS_LIVE=1 Go tests, real exchange calls) — they are slow and touch upstreams;
-# run them manually against a known-good window. The sync oracle gate
-# (verify-sync.py --fixtures) joins this runner once it lands.
+# run them manually against a known-good window.
 set -u
 cd "$(dirname "$0")/../.."
 rc=0
@@ -49,6 +50,8 @@ go build ./services/data/... && go vet ./services/data/... && go test ./services
 step "cargo build/test (services/sync)"
 (cd services/sync && cargo build --release --quiet && cargo test --release --quiet) || fail rust
 
+step "sync oracle gate (Python oracle vs Rust replay, byte-identical projection)"
+python3 apps/web/scripts/verify/verify-sync.py >/dev/null || fail sync-oracle
 step "cross-service API conformance (Go api routes <-> contract <-> web proxies)"
 python3 tests/integration/api/check-api-contract.py || fail api-contract
 step "pre-push hook syntax"

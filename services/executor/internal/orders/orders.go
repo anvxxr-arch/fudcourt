@@ -43,7 +43,7 @@ type Child struct {
 // clamped before it reaches the exchange.
 type Request struct {
 	ClientOrderID string
-	Quantity       string // exact decimal, the requested size
+	Quantity      string // exact decimal, the requested size
 	// StepSize is the instrument quantity step ("0.001"): the clamp floors both
 	// the request and the room onto this grid (PRD §71).
 	StepSize string
@@ -81,7 +81,7 @@ var ErrInvalidQuantity = errors.New("orders: invalid quantity")
 //
 // Exits never consume entry room.
 type Ledger struct {
-	mu     sync.Mutex
+	mu       sync.Mutex
 	children map[string]Child
 }
 
@@ -204,11 +204,11 @@ func ClampChild(req Request, ledger *Ledger, planned string) (Result, error) {
 			// Provisional PLANNED entry: holds room until the caller records the
 			// real outcome under the same id. Non-terminal, so it holds room.
 			ledger.children[req.ClientOrderID] = Child{
-				ClientOrderID: req.ClientOrderID,
-				Quantity:      q,
+				ClientOrderID:  req.ClientOrderID,
+				Quantity:       q,
 				FilledQuantity: "0",
-				IsExit:        isExit,
-				Status:        executor.ChildPlanned,
+				IsExit:         isExit,
+				Status:         executor.ChildPlanned,
 			}
 		}
 		return Result{ClientOrderID: req.ClientOrderID, Quantity: q, Clamped: !equalDecimal(q, req.Quantity)}

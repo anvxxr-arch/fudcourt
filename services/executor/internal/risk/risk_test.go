@@ -14,7 +14,7 @@ import (
 // normalized decimals (exact equality after decimal normalization).
 
 var (
-	btc  = InstrumentMetadata{Symbol: "BTC/USDT", MarketType: executor.MarketLinearPerp, Exchange: executor.ExchangeBinance,
+	btc = InstrumentMetadata{Symbol: "BTC/USDT", MarketType: executor.MarketLinearPerp, Exchange: executor.ExchangeBinance,
 		BaseAsset: "BTC", QuoteAsset: "USDT", SettlementAsset: "USDT",
 		TickSize: "0.01", StepSize: "0.001", ContractMultiplier: "1",
 		MaxLeverage: strPtr("125"), MaintenanceMarginRate: strPtr("0.005")}
@@ -237,7 +237,7 @@ func TestRoundQuantityDown(t *testing.T) {
 
 func TestRoundPriceTiesHalfUp(t *testing.T) {
 	cases := []struct{ in, want string }{
-		{"1.005", "1.01"},   // exact tie rounds up
+		{"1.005", "1.01"}, // exact tie rounds up
 		{"1.004", "1"},
 		{"100.0049", "100"},
 		{"98000.126", "98000.13"},
@@ -384,7 +384,7 @@ func TestTinyQuantityRoundsToZero(t *testing.T) {
 func TestHugeQuantitiesExactCents(t *testing.T) {
 	pos := mustRisk(t, RiskPositionInput{Side: executor.SideBuy, Entry: "100000", Stop: "98000",
 		RiskBudget: "123456789012.35", FeeModel: noFees, SlippageModel: noSlip, Instrument: btc})
-	eqDec(t, pos.Quantity, "61728394.506", "quantity")        // floored to step 0.001
+	eqDec(t, pos.Quantity, "61728394.506", "quantity") // floored to step 0.001
 	eqDec(t, pos.UnroundedQuantity, "61728394.506175", "unrounded")
 	eqDec(t, pos.Notional, "6172839450600", "notional")
 	eqDec(t, pos.Risk.TotalRisk, "123456789012", "totalRisk") // 0.35 budget slack < one step of risk
@@ -528,13 +528,13 @@ func TestEstimateNetProfit(t *testing.T) {
 		price string
 		want  string
 	}{
-		{executor.SideBuy, "90", "-100"},  // honest negative
-		{executor.SideSell, "90", "100"},  // short win
+		{executor.SideBuy, "90", "-100"},   // honest negative
+		{executor.SideSell, "90", "100"},   // short win
 		{executor.SideSell, "110", "-100"}, // short loss
 	} {
 		got, err := EstimateNetProfit(EstimateNetProfitInput{Side: c.side, Entry: "100", Quantity: "10",
 			TakeProfits: []executor.TakeProfitLevel{{Price: c.price}},
-			FeeModel: noFees, SlippageModel: noSlip, Instrument: unit})
+			FeeModel:    noFees, SlippageModel: noSlip, Instrument: unit})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -620,10 +620,10 @@ func TestMaxSafeQuantityAddedLegPaysEntryCosts(t *testing.T) {
 
 func TestLiquidationPriceApprox(t *testing.T) {
 	cases := []struct {
-		side  executor.Side
-		lev   string
-		mmr   *string
-		want  string
+		side executor.Side
+		lev  string
+		mmr  *string
+		want string
 	}{
 		{executor.SideBuy, "2", s("0.005"), "50.5"},
 		{executor.SideSell, "2", s("0.005"), "149.5"},

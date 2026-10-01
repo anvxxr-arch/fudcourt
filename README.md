@@ -32,7 +32,7 @@ schema), `docs/operations/` (PLAN, [SECRETS](docs/operations/SECRETS.md), change
 
 ```bash
 cd services/data && go build -o bin/apicalls ./cmd/apicalls && ./bin/apicalls
-                                         # CryptoRank sidecar -> :3101 (unit: services/data/deploy/fudcourt-apicalls.service)
+                                         # CryptoRank sidecar -> :3101 (unit: deploy/systemd/fudcourt-apicalls.service)
 cd apps/web  && bun install && bun run dev # dashboard + blog + proxy -> :3000
                                           # (prod unit: :3100, served by Bun — DR-008/DR-017)
                                           # blog: /blog (public), /blog/cms/admin (Payload)
@@ -59,6 +59,13 @@ Secrets live only in git-ignored `.env` files — see [docs/operations/SECRETS.m
 for the inventory and rotation steps (never print a value).
 
 ## Verify
+```bash
+bun run verify   # = bash scripts/verify/verify-all.sh: EVERY offline gate in one pass
+                 # (structure, web contract, deploy units, contracts drift + sdk drift,
+                 #  go build/vet/test x3 modules, cargo build/test, hook syntax,
+                 #  apps/web typecheck + shaper fixtures)
+```
+The gates individually:
 
 ```bash
 cd services/data
@@ -68,6 +75,8 @@ cd ../web
 python3 scripts/checks/check-contract.py   # offline: CR_MODES + TS-Go mode-table parity + mutation-auth guards
 bun run test:shapers                # offline: 80 tests (shapers + auth + inbound rate limit)
 bunx tsc --noEmit && bun run build  # typecheck + Next 16 build (Bun is the runner: DR-007)
+python3 scripts/verify/verify-sync.py         # OFFLINE: sync oracle gate — Python sync-live.py vs
+                                              # Rust fudcourt-sync byte-identical replay (tests/oracle fixtures)
 python3 scripts/verify/verify-cryptorank.py  # LIVE: 244-check upstream harness (3-gate decoy detector)
 python3 scripts/verify/monitor.py            # LIVE: deterministic smoke monitor (cron every 15m)
 python3 scripts/verify/verify-khala.py       # LIVE: khala harness (136 checks; green on :3101)

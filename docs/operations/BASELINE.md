@@ -42,7 +42,7 @@ services/data   Go acquisition sidecar (cryptorank, chainrank, llama, news, khal
 services/sync       Rust crate: fudcourt-sync (balance sync) + fudcourt-reconciled :3102
 ```
 
-Deploy units versioned in-repo: 10 unit files under `apps/*/deploy/`
+Deploy units versioned in-repo: 10 unit files under `deploy/systemd/`
 (`fudcourt-web`, `fudcourt-executor-worker`, `fudcourt-pgload`, `fudcourt-sync`
 (Python oracle variant + Rust variant), `fudcourt-sync.timer`, `fudcourt-apicalls`,
 `fudcourt-reconciled`).

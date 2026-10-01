@@ -11,7 +11,7 @@ func TestFloorToStep(t *testing.T) {
 		{"0.0198", "0.0001", "0.0198", true},
 		{"5", "1", "5", true},
 		{"0.0005", "0.001", "0", true},
-		{"1", "0", "", false},  // unusable grid: never guess
+		{"1", "0", "", false}, // unusable grid: never guess
 		{"1", "-0.1", "", false},
 		{"abc", "0.1", "", false},
 		{"-1", "0.1", "", false}, // negative refused, never clamped

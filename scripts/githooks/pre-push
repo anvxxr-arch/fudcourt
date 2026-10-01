@@ -1,6 +1,7 @@
 #!/bin/bash
 # fudcourt pre-push hook (PLAN T-2.2.1, R-2) — fast, offline only.
 #   - offline contract check (CR_MODES consistency + mutation-auth guards)
+#   - contracts drift gate + generated sdk-ts check (packages/, apps/web changes)
 #   - deploy-unit guard (every ExecStart/Documentation repo path must exist)
 #   - shaper fixture tests (offline, recorded upstream payloads) - SG-4.1
 #   - tsc --noEmit when apps/web TypeScript changed
@@ -32,19 +33,39 @@ if echo "$changed" | grep -q '^apps/web/'; then
   fi
 fi
 
-if echo "$changed" | grep -qE '^services/data/|\.go$'; then
-  echo "[pre-push] go build/vet/test (services/data)..."
-  # GOTOOLCHAIN=auto resolves go>=1.24.1 (fhttp/tls-client floor) from the
-  # locally cached toolchain — offline-safe here; see docs/DECISIONS.md DR-005.
-  if ! (cd services/data && go build ./... && go vet ./... && go test ./...); then
-    echo "[pre-push] GO BUILD/VET/TEST FAILED"; rc=1
+if echo "$changed" | grep -qE '^packages/|^apps/web/'; then
+  echo "[pre-push] contracts drift gate (packages/contracts)..."
+  if ! node packages/contracts/scripts/check-contract.mjs; then rc=1; fi
+fi
+if echo "$changed" | grep -q '^packages/'; then
+  echo "[pre-push] sdk-ts generate-drift + typecheck..."
+  # Compare regenerated output against the tree copy (works before the generated
+  # files are committed too, unlike a git-diff-based check).
+  if ! (cd packages/sdk-ts && tmp=$(mktemp -d) && cp -r src/generated "$tmp/generated" \
+        && bun run generate && diff -r "$tmp/generated" src/generated && bun run typecheck); then
+    echo "[pre-push] SDK DRIFT/TYPECHECK FAILED (fix: cd packages/sdk-ts && bun install && bun run generate, then commit)"; rc=1
   fi
+fi
+if echo "$changed" | grep -qE '^services/(data|api|executor)/|\.go$'; then
+  echo "[pre-push] go build/vet/test (services/data, services/api, services/executor)..."
+  # GOTOOLCHAIN=auto resolves go>=1.25.0 (services/api|executor) / >=1.24.1
+  # (services/data: fhttp/tls-client floor) from the locally cached toolchain —
+  # offline-safe here; see docs/DECISIONS.md DR-005.
+  for mod in services/data services/api services/executor; do
+    if ! (cd "$mod" && go build ./... && go vet ./... && go test ./...); then
+      echo "[pre-push] GO BUILD/VET/TEST FAILED ($mod)"; rc=1
+    fi
+  done
 fi
 
 if echo "$changed" | grep -qE '^services/sync/|\.rs$'; then
   echo "[pre-push] cargo build/test (services/sync)..."
   if ! (cd services/sync && cargo build --release && cargo test --release); then
     echo "[pre-push] RUST BUILD/TEST FAILED"; rc=1
+  fi
+  echo "[pre-push] sync oracle gate (Python oracle vs Rust replay)..."
+  if ! python3 apps/web/scripts/verify/verify-sync.py >/dev/null; then
+    echo "[pre-push] SYNC ORACLE GATE FAILED (projections diverge)"; rc=1
   fi
 fi
 if echo "$changed" | grep -qE '\.py$'; then

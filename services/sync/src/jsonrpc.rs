@@ -18,6 +18,21 @@ pub async fn rpc(
     params: serde_json::Value,
 ) -> Result<serde_json::Value, RpcError> {
     let body = serde_json::json!({"jsonrpc": "2.0", "id": 1, "method": method, "params": params});
+    // Oracle replay seam: a recorded body short-circuits the network entirely.
+    // The key is only built in oracle mode, so the production path allocates
+    // nothing extra.
+    if crate::oracle::active() {
+        let key = crate::oracle::key_rpc(url, method, &body["params"]);
+        if let Some(hit) = crate::oracle::replay(&key) {
+            let text = hit.map_err(RpcError)?;
+            let j: serde_json::Value =
+                serde_json::from_str(&text).map_err(|e| RpcError(format!("{method}: {e}")))?;
+            if j.get("error").is_some() {
+                return Err(RpcError(format!("{method} -> {}", j["error"])));
+            }
+            return Ok(j.get("result").cloned().unwrap_or(serde_json::Value::Null));
+        }
+    }
     let body = serde_json::to_vec(&body).map_err(|e| RpcError(e.to_string()))?;
     let mut last: Option<String> = None;
     for attempt in 0..3u64 {

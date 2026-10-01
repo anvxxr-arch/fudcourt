@@ -4,10 +4,25 @@ fudcourt live multi-chain sync -> Turso `assets` table.
 HARD RULES:
   * exact wallet address, exact balance, exact hash
   * a failed RPC NEVER becomes 0 -- it raises, so we never fake a zero balance
-"""
-import re, json, urllib.request, urllib.error, sys, time, os
-from pathlib import Path
 
+ORACLE MODE (added for the Phase-6 cross-implementation gate; the default,
+flagless run is byte-for-byte the behaviour this script always had):
+  * `--oracle-record FILE`  run the live pipeline but write NO rows to Turso;
+      instead record every upstream HTTP response body keyed by its request and
+      dump that key->body map to FILE. This is how a replayable input capture is
+      produced. `assets` is never touched.
+  * `--oracle-inputs FILE`  replay a previously recorded capture: every upstream
+      HTTP response is served from FILE, no network, and -- again -- no rows are
+      written. The *projection* (the exact `assets` rows the run would have
+      written, byte-for-byte as they cross the Turso wire) is printed between
+      `#ASSETS-PROJECTION-BEGIN/END` markers for the gate to diff.
+
+In both oracle modes the Turso write path is disabled, so a divergent or failed
+comparison can never corrupt the live `assets` table (fail-safe by construction:
+the gate has no write code path at all).
+"""
+import re, json, urllib.request, urllib.error, sys, time, os, argparse
+from pathlib import Path
 # ---------- config ----------
 def load_env():
     """Load .env, walking up from this file to the repo root."""
@@ -25,8 +40,6 @@ def load_env():
         k, v = line.split('=', 1)
         os.environ.setdefault(k.strip(), v.strip().strip('\'"'))
 
-load_env()
-
 def require_env(name: str) -> str:
     """A missing credential must STOP the sync loudly. The old fallbacks (parse
     lib/db.ts for a token, a hardcoded Alchemy default) could only ever yield
@@ -39,9 +52,78 @@ def require_env(name: str) -> str:
         )
     return v
 
-TURSO = require_env('TURSO_AUTH_TOKEN')
 TURL = 'https://fud-balance-anvxxr.aws-ap-northeast-1.turso.io/v2/pipeline'
-ALCHEMY = require_env('ALCHEMY_KEY')
+HL_URL = 'https://api.hyperliquid.xyz/info'
+LLAMA_URL = 'https://coins.llama.fi/prices/current/'
+
+# ---------- oracle seam (inert unless an --oracle-* flag is passed) ----------
+class OracleError(RuntimeError):
+    """A replay that cannot find a recorded response must be loud, never a
+    silently invented empty result (honesty rule)."""
+
+def canon(x) -> str:
+    """Deterministic JSON encoding of a request payload. Both the Python oracle
+    and the Rust port build fixture keys with this exact form, so a capture
+    recorded by one is readable by the other. Sorted keys + compact separators."""
+    return json.dumps(x, sort_keys=True, separators=(',', ':'))
+
+class Oracle:
+    """record: live responses are captured to `data`; replay: they are served
+    from it. `trace` accumulates every upstream request body so a test can prove
+    the gate issued no Turso writes."""
+    def __init__(self, mode, path, trace_path):
+        self.mode = mode            # 'record' | 'replay'
+        self.path = path
+        self.trace_path = trace_path
+        self.data = {}
+        self.trace = []
+        if mode == 'replay':
+            with open(path) as f:
+                blob = json.load(f)
+            self.data = blob.get('responses', {})
+
+    def fetch(self, key, thunk):
+        self.trace.append(key)
+        if self.mode == 'replay':
+            if key not in self.data:
+                raise OracleError(f'no recorded response for {key}')
+            return self.data[key]
+        body = thunk()
+        self.data[key] = body
+        return body
+
+    def save(self):
+        with open(self.path, 'w') as f:
+            json.dump({'version': 1, 'responses': self.data}, f, indent=1, sort_keys=True)
+        if self.trace_path:
+            with open(self.trace_path, 'w') as f:
+                f.write('\n'.join(self.trace) + '\n')
+
+ORACLE = None  # None => live passthrough (flagless behaviour)
+
+def _fetch(key, thunk):
+    """Serve one upstream HTTP response body. Flagless: call `thunk` directly
+    (no key is even built). Oracle mode: record or replay it."""
+    if ORACLE is None:
+        return thunk()
+    return ORACLE.fetch(key, thunk)
+
+# ---------- http helpers (return the raw response body text) ----------
+def _http_json(url, payload, timeout=30, headers=None):
+    H = {'Content-Type': 'application/json'}
+    if headers:
+        H.update(headers)
+    req = urllib.request.Request(url, headers=H, method='POST')
+    if payload is not None:
+        req.data = json.dumps(payload).encode()
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read().decode()
+
+def _http_get(url, timeout=25):
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read().decode()
+
 def db(sql, args=None):
     H = {'Authorization': f'Bearer {TURSO}', 'Content-Type': 'application/json'}
     stmt = {'sql': sql}
@@ -60,20 +142,21 @@ def db(sql, args=None):
 
 # ---------- rpc: loud on failure ----------
 class RPCError(RuntimeError): pass
+def _redact(url):
+    return url.replace(TURSO_SECRET['alchemy'], '{ALCHEMY}') if TURSO_SECRET.get('alchemy') else url
 
 def rpc(url, method, params, tries=3):
+    key = f'rpc|{_redact(url)}|{method}|{canon(params)}'
     last = None
     for a in range(tries):
         try:
-            req = urllib.request.Request(url, headers={'Content-Type': 'application/json'}, method='POST')
-            req.data = json.dumps({'jsonrpc': '2.0', 'id': 1, 'method': method, 'params': params}).encode()
-            with urllib.request.urlopen(req, timeout=30) as r:
-                j = json.loads(r.read())
+            text = _fetch(key, lambda: _http_json(url, {'jsonrpc': '2.0', 'id': 1, 'method': method, 'params': params}))
+            j = json.loads(text)
             if 'error' in j:
                 last = f"{method} -> {j['error']}"
                 raise RPCError(last)
             return j.get('result')
-        except RPCError:
+        except (RPCError, OracleError):
             raise
         except Exception as ex:
             last = f'{method} @ {url[:40]}: {ex}'
@@ -96,40 +179,32 @@ def pad_addr(addr):
     return a.rjust(64, '0')
 
 # ---------- chain registry ----------
-EVM = {
-    'Ethereum': {'url': f'https://eth-mainnet.g.alchemy.com/v2/{ALCHEMY}', 'native': 'ETH',
-                 'tokens': {'USDT': ('0xdAC17F958D2ee523a2206206994597C13D831ec7', 6),
-                            'USDC': ('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', 6)}},
-    'BSC': {'url': f'https://bnb-mainnet.g.alchemy.com/v2/{ALCHEMY}', 'native': 'BNB',
-            'tokens': {'USDT': ('0x55d398326f99059ff775485246999027b3197955', 18),
-                       'USDC': ('0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', 18)}},
-    'Polygon': {'url': f'https://polygon-mainnet.g.alchemy.com/v2/{ALCHEMY}', 'native': 'POL',
-                'tokens': {'USDT': ('0xc2132D05D31c914a87C6611C10748AEb04B58e8F', 6),
-                           'USDC': ('0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', 6)}},
-    'Arbitrum': {'url': f'https://arb-mainnet.g.alchemy.com/v2/{ALCHEMY}', 'native': 'ETH',
-                 'tokens': {'USDT': ('0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', 6),
-                            'USDC': ('0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8', 6)}},
-    'Optimism': {'url': f'https://opt-mainnet.g.alchemy.com/v2/{ALCHEMY}', 'native': 'ETH',
-                 'tokens': {'USDT': ('0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', 6),
-                            'USDC': ('0x7F5c764cBc14f9669B88837ca1490cCa17c31607', 6)}},
-    'Base': {'url': f'https://base-mainnet.g.alchemy.com/v2/{ALCHEMY}', 'native': 'ETH',
-             'tokens': {'USDC': ('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 6)}},
-}
+def evm_registry(alchemy):
+    return {
+        'Ethereum': {'url': f'https://eth-mainnet.g.alchemy.com/v2/{alchemy}', 'native': 'ETH',
+                     'tokens': {'USDT': ('0xdAC17F958D2ee523a2206206994597C13D831ec7', 6),
+                                'USDC': ('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', 6)}},
+        'BSC': {'url': f'https://bnb-mainnet.g.alchemy.com/v2/{alchemy}', 'native': 'BNB',
+                'tokens': {'USDT': ('0x55d398326f99059ff775485246999027b3197955', 18),
+                           'USDC': ('0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', 18)}},
+        'Polygon': {'url': f'https://polygon-mainnet.g.alchemy.com/v2/{alchemy}', 'native': 'POL',
+                    'tokens': {'USDT': ('0xc2132D05D31c914a87C6611C10748AEb04B58e8F', 6),
+                               'USDC': ('0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', 6)}},
+        'Arbitrum': {'url': f'https://arb-mainnet.g.alchemy.com/v2/{alchemy}', 'native': 'ETH',
+                     'tokens': {'USDT': ('0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', 6),
+                                'USDC': ('0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8', 6)}},
+        'Optimism': {'url': f'https://opt-mainnet.g.alchemy.com/v2/{alchemy}', 'native': 'ETH',
+                     'tokens': {'USDT': ('0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', 6),
+                                'USDC': ('0x7F5c764cBc14f9669B88837ca1490cCa17c31607', 6)}},
+        'Base': {'url': f'https://base-mainnet.g.alchemy.com/v2/{alchemy}', 'native': 'ETH',
+                 'tokens': {'USDC': ('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 6)}},
+    }
 
 WALLETS = [
     ('Main', '0x6816ba2cb2bc013a78225228a153586ca63b1548', 'evm'),
     ('Hanif', '0xB0be41f0e7F0AD49622B292dA1322c2BEA46fA1b', 'evm'),
     ('Akang', '7KMhEBFjmhhC1B2HqaJC7zvkyx9pJ9ryCXqUnGBThgFP', 'sol'),
 ]
-
-# Spot-price oracle. Source history: this read
-# `api.coingecko.com/api/v3/simple/price` until 2026-09-29, when CoinGecko began
-# refusing this host wholesale -- 403 on every /api/v3 price route and 429 on
-# /api/v3/ping, with or without browser TLS impersonation (measured: plain curl
-# and curl_cffi chrome131 both 403). The sync then failed every 5 minutes and
-# the `assets` table silently became 0 rows / $0 net worth. coins.llama.fi is
-# the same independent oracle three harnesses already gate on
-# (verify-{cryptorank,markets,llama}.py), keyless, and answers this host 200.
 LLAMA_IDS = {
     'ETH': 'coingecko:ethereum',
     'BNB': 'coingecko:binancecoin',
@@ -139,125 +214,173 @@ LLAMA_IDS = {
     'USDC': 'coingecko:usd-coin',
 }
 
+TURSO_SECRET = {}  # populated in main(); used only for redaction in fixture keys
+
 def prices():
-    url = 'https://coins.llama.fi/prices/current/' + ','.join(LLAMA_IDS.values())
-    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-    with urllib.request.urlopen(req, timeout=25) as r:
-        coins = (json.loads(r.read()) or {}).get('coins') or {}
+    url = LLAMA_URL + ','.join(LLAMA_IDS.values())
+    text = _fetch(f'prices|{url}', lambda: _http_get(url))
+    coins = (json.loads(text) or {}).get('coins') or {}
     out = {}
     for sym, cid in LLAMA_IDS.items():
         entry = coins.get(cid)
         price = entry.get('price') if isinstance(entry, dict) else None
-        # A missing id must STOP the sync, never value an asset at 0.
         if not isinstance(price, (int, float)):
             raise RuntimeError(f'price oracle returned no usable price for {sym} ({cid})')
         out[sym] = price
-    # The Polygon native balance is valued in POL; the asset is the token that
-    # replaced MATIC, and `assets` rows labelled MATIC read the same number.
     out['MATIC'] = out['POL']
     return out
 
+# ---------- projection (the exact bytes that would cross the Turso wire) ----------
+def projection(rows, tot):
+    """Return the list of `assets` rows exactly as they would be sent to Turso
+    (the six text args of the INSERT, rendered with `str(a)`), in write order,
+    plus the net worth the readback journal would print."""
+    out = []
+    stored = []
+    for chain, owner, asset, qty, usd in rows:
+        q = str(round(qty, 10))
+        v = str(round(usd, 4))
+        sh = str(round(usd / tot * 100, 2) if tot else 0)
+        out.append([str(chain), str(asset), q, v, sh, str(owner)])
+        stored.append(float(v))
+    s = 0.0
+    for v in sorted(stored, reverse=True):   # readback sums ORDER BY value_usd DESC
+        s += v
+    return out, str(round(s, 2))
+
+def print_projection(rows, tot):
+    pj, net = projection(rows, tot)
+    print('#ASSETS-PROJECTION-BEGIN')
+    print('["chain","asset","quantity","value_usd","share_pct","wallet"]')
+    for row in pj:
+        print(json.dumps(row, separators=(',', ':')))
+    print(f'#NET_WORTH={net}')
+    print('#ASSETS-PROJECTION-END')
+
 # ---------- sync ----------
-P = prices()
-print('prices:', {k: round(v, 4) for k, v in P.items()})
-
-rows = []
-errors = []
-
-for label, addr, kind in WALLETS:
-    if kind == 'sol':
-        # Solana
-        try:
-            b = rpc('https://api.mainnet-beta.solana.com', 'getBalance', [addr])
-            sol_val = (b.get('value', 0) if isinstance(b, dict) else 0) / 1e9
-            if sol_val > 1e-9:
-                rows.append(('Solana', label, 'SOL', sol_val, sol_val * P['SOL']))
-        except Exception as ex:
-            errors.append(f'Solana native {label}: {ex}')
-
-        # SPL tokens
-        try:
-            ta = rpc('https://api.mainnet-beta.solana.com', 'getTokenAccountsByOwner',
-                     [addr, {'programId': 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'}, {'encoding': 'jsonParsed'}])
-            for t in ta.get('value', []):
-                inf = t['account']['data']['parsed']['info']
-                amt = inf['tokenAmount']['uiAmount'] or 0
-                if amt > 0:
-                    rows.append(('Solana', label, f"SPL:{inf['mint'][:6]}", amt, 0.0))
-        except Exception as ex:
-            errors.append(f'Solana SPL {label}: {ex}')
-        continue
-
-    # EVM chains
-    for chain, cfg in EVM.items():
-        try:
-            nb = hexint(rpc(cfg['url'], 'eth_getBalance', [addr, 'latest'])) / 1e18
-            if nb > 1e-9:
-                rows.append((chain, label, cfg['native'], nb, nb * P.get(cfg['native'], 0)))
-        except Exception as ex:
-            errors.append(f'{chain} native {label}: {ex}')
-
-        for sym, (taddr, dec) in cfg['tokens'].items():
+def run_sync():
+    alchemy = require_env('ALCHEMY_KEY')
+    TURSO_SECRET['alchemy'] = alchemy
+    EVM = evm_registry(alchemy)
+    P = prices()
+    print('prices:', {k: round(v, 4) for k, v in P.items()})
+    rows = []
+    errors = []
+    for label, addr, kind in WALLETS:
+        if kind == 'sol':
             try:
-                raw = rpc(cfg['url'], 'eth_call', [{'to': taddr, 'data': '0x70a08231' + pad_addr(addr)}, 'latest'])
-                tb = hexint(raw) / 10**dec
-                if tb > 1e-6:
-                    rows.append((chain, label, sym, tb, tb * P.get(sym, 1.0)))
+                b = rpc('https://api.mainnet-beta.solana.com', 'getBalance', [addr])
+                sol_val = (b.get('value', 0) if isinstance(b, dict) else 0) / 1e9
+                if sol_val > 1e-9:
+                    rows.append(('Solana', label, 'SOL', sol_val, sol_val * P['SOL']))
             except Exception as ex:
-                errors.append(f'{chain} {sym} {label}: {ex}')
+                errors.append(f'Solana native {label}: {ex}')
+            try:
+                ta = rpc('https://api.mainnet-beta.solana.com', 'getTokenAccountsByOwner',
+                         [addr, {'programId': 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'}, {'encoding': 'jsonParsed'}])
+                for t in ta.get('value', []):
+                    inf = t['account']['data']['parsed']['info']
+                    amt = inf['tokenAmount']['uiAmount'] or 0
+                    if amt > 0:
+                        rows.append(('Solana', label, f"SPL:{inf['mint'][:6]}", amt, 0.0))
+            except Exception as ex:
+                errors.append(f'Solana SPL {label}: {ex}')
+            continue
+        for chain, cfg in EVM.items():
+            try:
+                nb = hexint(rpc(cfg['url'], 'eth_getBalance', [addr, 'latest'])) / 1e18
+                if nb > 1e-9:
+                    rows.append((chain, label, cfg['native'], nb, nb * P.get(cfg['native'], 0)))
+            except Exception as ex:
+                errors.append(f'{chain} native {label}: {ex}')
+            for sym, (taddr, dec) in cfg['tokens'].items():
+                try:
+                    raw = rpc(cfg['url'], 'eth_call', [{'to': taddr, 'data': '0x70a08231' + pad_addr(addr)}, 'latest'])
+                    tb = hexint(raw) / 10**dec
+                    if tb > 1e-6:
+                        rows.append((chain, label, sym, tb, tb * P.get(sym, 1.0)))
+                except Exception as ex:
+                    errors.append(f'{chain} {sym} {label}: {ex}')
+    # Hyperliquid (Main) -- spot + perp + PnL
+    try:
+        def hl(body):
+            text = _fetch(f'hl|{canon(body)}', lambda: _http_json(HL_URL, body))
+            return json.loads(text)
+        spot = hl({'type': 'spotClearinghouseState', 'user': WALLETS[0][1]})
+        for b in (spot or {}).get('balances', []):
+            amt = float(b.get('total', 0))
+            if amt > 0:
+                rows.append(('Hyperliquid (spot)', 'Main', b['coin'], amt,
+                             amt * P.get(b['coin'], 1.0) if b['coin'] in P else amt))
+        cs = hl({'type': 'clearinghouseState', 'user': WALLETS[0][1]})
+        av = float((cs or {}).get('marginSummary', {}).get('accountValue', 0))
+        if av > 0:
+            rows.append(('Hyperliquid (perp)', 'Main', 'USDC', av, av))
+        print(f'Hyperliquid perp accountValue: ${av}')
+        fills = hl({'type': 'userFills', 'user': WALLETS[0][1]})
+        if isinstance(fills, list):
+            pnl = sum(float(f.get('closedPnl') or 0) for f in fills)
+            fees = sum(float(f.get('fee') or 0) for f in fills)
+            print(f'Hyperliquid fills={len(fills)} realizedPnL=${pnl:.4f} fees=${fees:.4f}')
+    except Exception as ex:
+        errors.append(f'Hyperliquid: {ex}')
+    # ---------- print ----------
+    print(f'\n=== LIVE ON-CHAIN ({len(rows)} positions) ===')
+    tot = 0
+    for chain, owner, asset, qty, usd in sorted(rows, key=lambda r: -r[4]):
+        tot += usd
+        print(f'  {owner:6} {chain:11} {asset:9} {qty:>20.8f}  ${usd:>11.2f}')
+    if errors:
+        print(f'\n!!! {len(errors)} RPC ERRORS (NOT treated as zero) !!!')
+        for e in errors:
+            print('  -', e)
+    return rows, tot
 
-# Hyperliquid (Main) -- spot + perp + PnL
-try:
-    def hl(body):
-        req = urllib.request.Request('https://api.hyperliquid.xyz/info',
-                                    headers={'Content-Type': 'application/json'}, method='POST')
-        req.data = json.dumps(body).encode()
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return json.loads(r.read())
+def write_and_report(rows, tot):
+    """Flagless path only: write the rows to Turso and read them back. This is
+    the behaviour the systemd unit depends on and it is NOT touched in oracle
+    mode."""
+    db('DELETE FROM assets')
+    for chain, owner, asset, qty, usd in rows:
+        db('INSERT INTO assets (chain,asset,quantity,value_usd,share_pct,wallet,updated_at) '
+           "VALUES (?,?,?,?,?,?,datetime('now'))",
+           [chain, asset, round(qty, 10), round(usd, 4), round(usd / tot * 100, 2) if tot else 0, owner])
+    print('\n=== TURSO assets (LIVE) ===')
+    s = 0
+    for a in db('SELECT wallet,chain,asset,quantity,value_usd,share_pct FROM assets ORDER BY value_usd DESC'):
+        s += float(a['value_usd'])
+        print(f"  {a['wallet']:6} {a['chain']:11} {a['asset']:9} {float(a['quantity']):>20.8f}  ${float(a['value_usd']):>10.2f}  {a['share_pct']}%")
+    print(f'\nNET WORTH: ${round(s, 2)}')
 
-    spot = hl({'type': 'spotClearinghouseState', 'user': WALLETS[0][1]})
-    for b in (spot or {}).get('balances', []):
-        amt = float(b.get('total', 0))
-        if amt > 0:
-            rows.append(('Hyperliquid (spot)', 'Main', b['coin'], amt,
-                         amt * P.get(b['coin'], 1.0) if b['coin'] in P else amt))
+def main(argv=None):
+    global ORACLE, TURSO
+    ap = argparse.ArgumentParser(add_help=True)
+    ap.add_argument('--oracle-record', metavar='FILE')
+    ap.add_argument('--oracle-inputs', metavar='FILE')
+    ap.add_argument('--oracle-trace', metavar='FILE')
+    args = ap.parse_args(argv)
 
-    cs = hl({'type': 'clearinghouseState', 'user': WALLETS[0][1]})
-    av = float((cs or {}).get('marginSummary', {}).get('accountValue', 0))
-    if av > 0:
-        rows.append(('Hyperliquid (perp)', 'Main', 'USDC', av, av))
-    print(f'Hyperliquid perp accountValue: ${av}')
+    load_env()
+    if args.oracle_inputs:
+        ORACLE = Oracle('replay', args.oracle_inputs, args.oracle_trace)
+    elif args.oracle_record:
+        ORACLE = Oracle('record', args.oracle_record, args.oracle_trace)
 
-    fills = hl({'type': 'userFills', 'user': WALLETS[0][1]})
-    if isinstance(fills, list):
-        pnl = sum(float(f.get('closedPnl') or 0) for f in fills)
-        fees = sum(float(f.get('fee') or 0) for f in fills)
-        print(f'Hyperliquid fills={len(fills)} realizedPnL=${pnl:.4f} fees=${fees:.4f}')
-except Exception as ex:
-    errors.append(f'Hyperliquid: {ex}')
+    if ORACLE is None:
+        # ---- flagless: exactly the original behaviour ----
+        TURSO = require_env('TURSO_AUTH_TOKEN')
+        rows, tot = run_sync()
+        write_and_report(rows, tot)
+    else:
+        # ---- oracle: projection only, Turso is never written ----
+        rows, tot = run_sync()
+        print_projection(rows, tot)
+        ORACLE.save()
+    return 0
 
-# ---------- print ----------
-print(f'\n=== LIVE ON-CHAIN ({len(rows)} positions) ===')
-tot = 0
-for chain, owner, asset, qty, usd in sorted(rows, key=lambda r: -r[4]):
-    tot += usd
-    print(f'  {owner:6} {chain:11} {asset:9} {qty:>20.8f}  ${usd:>11.2f}')
-
-if errors:
-    print(f'\n!!! {len(errors)} RPC ERRORS (NOT treated as zero) !!!')
-    for e in errors:
-        print('  -', e)
-
-# ---------- write ----------
-db('DELETE FROM assets')
-for chain, owner, asset, qty, usd in rows:
-    db('INSERT INTO assets (chain,asset,quantity,value_usd,share_pct,wallet,updated_at) '
-       "VALUES (?,?,?,?,?,?,datetime('now'))",
-       [chain, asset, round(qty, 10), round(usd, 4), round(usd / tot * 100, 2) if tot else 0, owner])
-
-print('\n=== TURSO assets (LIVE) ===')
-s = 0
-for a in db('SELECT wallet,chain,asset,quantity,value_usd,share_pct FROM assets ORDER BY value_usd DESC'):
-    s += float(a['value_usd'])
-    print(f"  {a['wallet']:6} {a['chain']:11} {a['asset']:9} {float(a['quantity']):>20.8f}  ${float(a['value_usd']):>10.2f}  {a['share_pct']}%")
-print(f'\nNET WORTH: ${round(s, 2)}')
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except OracleError as ex:
+        print(f'oracle error: {ex}', file=sys.stderr)
+        sys.exit(2)

@@ -32,21 +32,26 @@ type ValkeyConfig struct {
 	// Address is the `host:port` the default Dialer connects to. Ignored when
 	// Dialer is set.
 	Address string
-
 	// Dialer is the connection seam. nil means net.Dialer to Address.
 	Dialer Dialer
-
 	// Clock is part of the shared injection seam (address, dialer, clock,
 	// token suffix) so callers can build both lock implementations from one
 	// options shape. ValkeyLock does not consult it: lease TTLs are enforced
 	// server-side with PX and I/O deadlines come from the context, so there is
 	// no client-side time to compute. nil means SystemClock.
 	Clock Clock
-
 	// TokenSuffix mints the random half of each owner token (`owner:suffix`).
 	// Tests inject a deterministic sequence so exact wire bytes are assertable;
 	// nil means the crypto/rand default.
 	TokenSuffix func() string
+	// Password is the Valkey ACL password, sent as `AUTH <password>` on every
+	// fresh dial before the command. The local instance requires auth
+	// (`-NOAUTH Authentication required.` without it), so an unauthenticated
+	// lock cannot acquire anything: every Acquire would answer fail-closed.
+	// Empty means no AUTH is sent (passwordless instance). The password is
+	// never logged (reply.String renders no payloads; this field is read once
+	// at construction and stored on the lock).
+	Password string
 }
 
 // ValkeyLock is the production ExecutionLock: it speaks the exact Redis
@@ -64,9 +69,10 @@ type ValkeyConfig struct {
 // handshake. The fail-closed consequence is documented on do: a connection
 // that dies mid-command is an error, never a guessed success.
 type ValkeyLock struct {
-	dial   Dialer
-	clock  Clock
-	suffix func() string
+	dial     Dialer
+	clock    Clock
+	suffix   func() string
+	password string
 
 	mu     sync.Mutex
 	tokens map[tokenKey]string
@@ -94,10 +100,11 @@ func NewValkeyLock(cfg ValkeyConfig) (*ValkeyLock, error) {
 		cfg.TokenSuffix = randomTokenSuffix
 	}
 	return &ValkeyLock{
-		dial:   dial,
-		clock:  cfg.Clock,
-		suffix: cfg.TokenSuffix,
-		tokens: make(map[tokenKey]string),
+		dial:     dial,
+		clock:    cfg.Clock,
+		suffix:   cfg.TokenSuffix,
+		password: cfg.Password,
+		tokens:   make(map[tokenKey]string),
 	}, nil
 }
 
@@ -214,10 +221,38 @@ func (l *ValkeyLock) do(ctx context.Context, args ...string) (reply, error) {
 			return reply{}, err
 		}
 	}
-	if _, err := conn.Write(encodeCommand(args...)); err != nil {
-		return reply{}, err
+	// AUTH is a handshake, not a command-exchange: it runs on the SAME
+	// connection as the command, before it, and its reply must be +OK. A
+	// passwordless instance sends nothing. A wrong password answers -ERR and
+	// is fail-closed here — the lock answers (false, ErrUnavailable) and the
+	// caller must not trade, exactly like a dial failure.
+	//
+	// ONE buffered reader serves both the AUTH reply and the command reply: a
+	// second bufio.Reader would discard whatever the first one pre-buffered
+	// (the AUTH reply is 5 bytes; a reader created after it would start at the
+	// next byte and silently swallow the SET reply), so a shared reader is
+	// also the only correct shape.
+	reader := bufio.NewReader(conn)
+	if l.password != "" {
+		if _, err := conn.Write(encodeCommand("AUTH", l.password)); err != nil {
+			return reply{}, fmt.Errorf("lock: AUTH write: %w", err)
+		}
+		auth, err := readReply(reader)
+		if err != nil {
+			return reply{}, fmt.Errorf("lock: AUTH read: %w", err)
+		}
+		if auth.kind != '+' {
+			return reply{}, fmt.Errorf("lock: AUTH handshake rejected: %s", auth.String())
+		}
 	}
-	return readReply(bufio.NewReader(conn))
+	if _, err := conn.Write(encodeCommand(args...)); err != nil {
+		return reply{}, fmt.Errorf("lock: command write: %w", err)
+	}
+	r, err := readReply(reader)
+	if err != nil {
+		return r, fmt.Errorf("lock: command read: %w", err)
+	}
+	return r, nil
 }
 
 // encodeCommand encodes args as a RESP array of bulk strings —

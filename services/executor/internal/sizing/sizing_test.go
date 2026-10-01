@@ -208,10 +208,10 @@ func TestTargetProfitUSDVector(t *testing.T) {
 
 func TestAllNineModesProducePositions(t *testing.T) {
 	cases := []struct {
-		name  string
+		name   string
 		sizing executor.SizingDefinition
-		lev   LeverageSpec
-		wantQ string
+		lev    LeverageSpec
+		wantQ  string
 	}{
 		{"risk_usd", executor.SizingDefinition{Mode: executor.SizingRiskUSD, Amount: "20"},
 			LeverageSpec{Mode: executor.LeverageManual, Leverage: "5"}, "0.01"},
@@ -324,7 +324,7 @@ func TestScaleInWithinBudget(t *testing.T) {
 	}
 	eqDec(t, out.Quantity, "0.01", "quantity") // 20/2000 exactly at zero fees
 	eqDec(t, *out.PriceRisk, "20", "priceRisk")
-	leDec(t, *out.TotalRisk, "20", "totalRisk") // the budget is hard
+	leDec(t, *out.TotalRisk, "20", "totalRisk")          // the budget is hard
 	eqDec(t, out.EstimatedEntry, "97000", "ladder VWAP") // 4-level average
 }
 

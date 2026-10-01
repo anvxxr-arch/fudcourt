@@ -1,9 +1,0 @@
-[Unit]
-Description=Project Turso into the local Postgres read model every 60s (DR-019)
-Documentation=file:///home/dwizzy/fudcourt/apps/web/scripts/tools/pg-load.ts
-[Timer]
-OnBootSec=30
-OnUnitActiveSec=60
-AccuracySec=10
-[Install]
-WantedBy=timers.target

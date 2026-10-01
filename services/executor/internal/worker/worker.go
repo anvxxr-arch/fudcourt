@@ -24,9 +24,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/exchange"
 	"github.com/anvxxr-arch/fudcourt/services/executor/internal/execution"
 	"github.com/anvxxr-arch/fudcourt/services/executor/internal/executor"
-	"github.com/anvxxr-arch/fudcourt/services/executor/internal/exchange"
 )
 
 // Clock is the injected time source (house rule: deterministic tests). All

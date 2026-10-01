@@ -27,6 +27,45 @@ struct Position {
 }
 
 type Prices = Vec<(&'static str, f64)>;
+/// `print_projection(rows, tot)` — oracle mode only. Prints the exact `assets`
+/// rows the run would have written, byte-for-byte as they cross the Turso
+/// wire, between the same markers `sync-live.py` uses (the gate diffs the two).
+///
+/// Rounding mirrors the Python `projection()` exactly: quantity round(..,10),
+/// value round(..,4), share round(usd/tot*100, 2) or "0" when tot == 0, and
+/// the net worth is the readback sum of the stored values in DESC order —
+/// Python sums its `stored` floats in descending order too, so the ORDER of
+/// the float additions is identical and the totals cannot diverge by an ulp.
+fn print_projection(rows: &[Position], tot: f64) {
+    println!("#ASSETS-PROJECTION-BEGIN");
+    println!("[\"chain\",\"asset\",\"quantity\",\"value_usd\",\"share_pct\",\"wallet\"]");
+    let mut stored: Vec<f64> = Vec::with_capacity(rows.len());
+    for r in rows {
+        let share = if tot != 0.0 {
+            repr(round2(r.usd / tot * 100.0))
+        } else {
+            "0".to_string()
+        };
+        let q = repr(round10(r.qty));
+        let v = repr(round4(r.usd));
+        stored.push(v.parse().unwrap_or(0.0));
+        // The Python oracle prints `json.dumps(row)`: quantity, value_usd and
+        // share_pct are PYTHON STRINGS (str(round(...))), so the wire form is
+        // JSON-quoted. Emitting them bare here would be a real divergence.
+        println!(
+            "[\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"]",
+            r.chain, r.asset, q, v, share, r.owner
+        );
+    }
+    let mut desc = stored.clone();
+    desc.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+    let mut s = 0.0f64;
+    for v in &desc {
+        s += v;
+    }
+    println!("#NET_WORTH={}", repr(round2(s)));
+    println!("#ASSETS-PROJECTION-END");
+}
 
 fn price(p: &Prices, sym: &str) -> Option<f64> {
     p.iter().find(|(k, _)| *k == sym).map(|(_, v)| *v)
@@ -36,17 +75,14 @@ fn price(p: &Prices, sym: &str) -> Option<f64> {
 async fn prices(http: &Client) -> Result<Prices, String> {
     let ids: Vec<&str> = LLAMA_IDS.iter().map(|(_, id)| *id).collect();
     let url = format!("https://coins.llama.fi/prices/current/{}", ids.join(","));
-    let resp = http
-        .get(&url)
-        .header("User-Agent", "Mozilla/5.0")
-        .timeout(Duration::from_secs(25))
-        .send()
-        .await
-        .map_err(|e| format!("price oracle: {e}"))?;
-    let body = resp
-        .text()
-        .await
-        .map_err(|e| format!("price oracle: {e}"))?;
+    let body = if crate::oracle::active() {
+        match crate::oracle::replay(&crate::oracle::key_prices(&url)) {
+            Some(hit) => hit.map_err(|e| format!("price oracle: {e}"))?,
+            None => fetch_prices(http, &url).await?,
+        }
+    } else {
+        fetch_prices(http, &url).await?
+    };
     let j: Value = serde_json::from_str(&body).map_err(|e| format!("price oracle: {e}"))?;
     let empty = serde_json::Map::new();
     let coins = j.get("coins").and_then(|c| c.as_object()).unwrap_or(&empty);
@@ -71,6 +107,16 @@ async fn prices(http: &Client) -> Result<Prices, String> {
     Ok(out)
 }
 
+async fn fetch_prices(http: &Client, url: &str) -> Result<String, String> {
+    let resp = http
+        .get(url)
+        .header("User-Agent", "Mozilla/5.0")
+        .timeout(Duration::from_secs(25))
+        .send()
+        .await
+        .map_err(|e| format!("price oracle: {e}"))?;
+    resp.text().await.map_err(|e| format!("price oracle: {e}"))
+}
 /// `float(v)` as Python would apply it to a parsed JSON scalar.
 fn json_f64(v: &Value) -> Option<f64> {
     match v {
@@ -266,6 +312,12 @@ async fn hyperliquid_inner(
 ) -> Result<(), String> {
     let user = WALLETS[0].addr;
     let hl = |body: Value| async move {
+        if crate::oracle::active() {
+            if let Some(hit) = crate::oracle::replay(&crate::oracle::key_hl(&body)) {
+                let text = hit?;
+                return serde_json::from_str(&text).map_err(|e| e.to_string());
+            }
+        }
         let resp = http
             .post(HYPERLIQUID_INFO)
             .header("Content-Type", "application/json")
@@ -379,6 +431,10 @@ pub async fn run(env: &Env) -> Result<(), String> {
         }
     }
 
+    if crate::oracle::active() {
+        print_projection(&rows, tot);
+        return Ok(());
+    }
     // ---- write ----
     let db = Db::new(env.turso_token.clone(), http.clone());
     db.delete_assets().await?;

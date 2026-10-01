@@ -47,7 +47,10 @@ type fakeStep struct {
 	dialErr      string // non-empty: the dial fails with this error, no connection is served
 	closeNoReply bool   // read the request, then close without replying (mid-op transport failure)
 
-	got string // request bytes actually received (filled by the harness)
+	// multi: this step is a HANDSHAKE (AUTH) and the command that follows it
+	// is served over the SAME connection. Dial reserves both steps for it.
+	multi bool
+	got   string // request bytes actually received (filled by the harness)
 }
 
 // fakeValkey is a scripted RESP server behind the Dialer seam. Each dial gets
@@ -77,41 +80,66 @@ func (f *fakeValkey) Dial(ctx context.Context) (net.Conn, error) {
 		return nil, errors.New("fake valkey: unexpected extra dial")
 	}
 	step := f.steps[f.next]
-	f.next++
+	idx := f.next
+	// A `multi` step (the AUTH handshake) reserves the command step that
+	// follows it: both are replayed over THIS one connection.
+	if step.multi && idx+1 < len(f.steps) {
+		f.next += 2
+	} else {
+		f.next++
+	}
 	f.mu.Unlock()
 	if step.dialErr != "" {
 		return nil, errors.New(step.dialErr)
 	}
 	client, server := net.Pipe()
-	go f.serve(server, step)
+	go f.serve(server, step, idx)
 	return client, nil
 }
 
-func (f *fakeValkey) serve(server net.Conn, step *fakeStep) {
+// serve replays one scripted step over one connection. A `multi` step (the
+// AUTH handshake) is followed on the SAME connection by the step at idx+1 --
+// ValkeyLock.do sends AUTH before its command on one connection, so both
+// exchanges share the dial.
+func (f *fakeValkey) serve(server net.Conn, step *fakeStep, idx int) {
 	defer server.Close()
-	buf := make([]byte, len(step.want))
-	if _, err := io.ReadFull(server, buf); err != nil {
-		return
-	}
-	f.mu.Lock()
-	step.got = string(buf)
-	f.mu.Unlock()
-	if step.closeNoReply {
-		return
-	}
-	for i := 0; i < len(step.reply); {
-		n := len(step.reply) - i
-		if step.chunk > 0 && n > step.chunk {
-			n = step.chunk
-		}
-		if _, err := server.Write([]byte(step.reply[i : i+n])); err != nil {
+	cur := step
+	curIdx := idx
+	for {
+		buf := make([]byte, len(cur.want))
+		if _, err := io.ReadFull(server, buf); err != nil {
 			return
 		}
-		i += n
+		f.mu.Lock()
+		cur.got = string(buf)
+		f.mu.Unlock()
+		if cur.closeNoReply {
+			return
+		}
+		for i := 0; i < len(cur.reply); {
+			n := len(cur.reply) - i
+			if cur.chunk > 0 && n > cur.chunk {
+				n = cur.chunk
+			}
+			if _, err := server.Write([]byte(cur.reply[i : i+n])); err != nil {
+				return
+			}
+			i += n
+		}
+		if !cur.multi {
+			return
+		}
+		f.mu.Lock()
+		if curIdx+1 >= len(f.steps) {
+			f.mu.Unlock()
+			return
+		}
+		curIdx++
+		cur = f.steps[curIdx]
+		f.mu.Unlock()
 	}
 }
 
-// verify asserts every step was served and carried exactly its expected bytes.
 func (f *fakeValkey) verify(t *testing.T) {
 	t.Helper()
 	f.mu.Lock()
@@ -564,4 +592,70 @@ func TestValkeyLockFailClosed(t *testing.T) {
 			f.verify(t)
 		})
 	}
+}
+
+// wantAuth renders the exact `AUTH <password>` request bytes, for asserting the
+// handshake the lock sends before its command when a password is configured.
+func wantAuth(password string) string {
+	return fmt.Sprintf("*2\r\n$4\r\nAUTH\r\n$%d\r\n%s\r\n", len(password), password)
+}
+
+// newTestValkeyPassword is newTestValkey with the Valkey ACL password set.
+// Empty password keeps the no-AUTH path exercised by the existing tests.
+func newTestValkeyPassword(t *testing.T, f *fakeValkey, password string, suffixes ...string) *ValkeyLock {
+	t.Helper()
+	i := 0
+	suffix := func() string {
+		if i >= len(suffixes) {
+			return "stale"
+		}
+		s := suffixes[i]
+		i++
+		return s
+	}
+	l, err := NewValkeyLock(ValkeyConfig{Dialer: f.Dial, Password: password, TokenSuffix: suffix})
+	if err != nil {
+		t.Fatalf("NewValkeyLock: %v", err)
+	}
+	return l
+}
+
+// TestValkeyLockAuthHandshake: with a password, the lock sends AUTH then the
+// real command on ONE connection. The scripted server answers +OK to AUTH and
+// +OK to SET NX, so Acquire succeeds and exactly one dial happened.
+func TestValkeyLockAuthHandshake(t *testing.T) {
+	// The id is BARE: Acquire formats the wire key itself (LockKey), so a
+	// pre-formatted key would be wrapped twice and never reach the server.
+	id := "e1"
+	token := "w:abcd"
+	f := newFakeValkey(
+		fakeStep{want: wantAuth("sekrit"), reply: "+OK\r\n", multi: true},
+		fakeStep{want: wantSet(LockKey(id), token, "1000"), reply: "+OK\r\n"},
+	)
+	l := newTestValkeyPassword(t, f, "sekrit", "abcd")
+	ok, err := l.Acquire(testCtx(t), id, "w", time.Second)
+	if !ok || err != nil {
+		t.Fatalf("Acquire = %v, %v; want true, nil", ok, err)
+	}
+	f.verify(t)
+	if f.dials != 1 {
+		t.Fatalf("dials = %d; want 1 (AUTH + SET on one connection)", f.dials)
+	}
+}
+
+// TestValkeyLockAuthRejected: a wrong password answers -ERR and Acquire is
+// fail-closed — the caller must not trade on a rejected handshake, exactly
+// like a dial failure.
+func TestValkeyLockAuthRejected(t *testing.T) {
+	id := "e1"
+	f := newFakeValkey(fakeStep{want: wantAuth("sekrit"), reply: "-ERR wrong password\r\n", multi: true})
+	l := newTestValkeyPassword(t, f, "sekrit", "abcd")
+	ok, err := l.Acquire(testCtx(t), id, "w", time.Second)
+	if ok {
+		t.Fatal("Acquire = true; want false (AUTH rejected)")
+	}
+	if err == nil {
+		t.Fatal("AUTH rejection must carry a fail-closed error, not nil")
+	}
+	f.verify(t)
 }

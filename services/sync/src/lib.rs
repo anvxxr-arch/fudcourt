@@ -10,6 +10,7 @@
 //! pipeline client (`db`), CPython-exact float rendering (`pyfmt`), and now the
 //! reconciliation maths + its HTTP surface (`reconcile`, `server`).
 pub mod db;
+pub mod oracle;
 pub mod pyfmt;
 pub mod reconcile;
 pub mod server;

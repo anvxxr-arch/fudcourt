@@ -14,8 +14,9 @@ mod sync;
 
 // Shared with the `fudcourt-reconciled` binary through the library: the Turso
 // client and the CPython-exact float rendering (DR-014 added the second
-// consumer, which is what made a library surface worth having).
-use fudcourt_sync::{db, pyfmt};
+// consumer, which is what made a library surface worth having), plus the
+// oracle replay seam (`crate::oracle` in the bin-local sync/jsonrpc modules).
+use fudcourt_sync::{db, oracle, pyfmt};
 
 use std::path::{Path, PathBuf};
 
@@ -100,18 +101,70 @@ fn stamp(line: &str) {
 
 #[tokio::main]
 async fn main() {
+    let argv: Vec<String> = std::env::args().skip(1).collect();
+    let mut oracle_inputs: Option<String> = None;
+    let mut oracle_trace: Option<String> = None;
+    let mut i = 0;
+    while i < argv.len() {
+        match argv[i].as_str() {
+            // --oracle-inputs FILE: replay a recorded capture (no network, no
+            // writes; prints the projection between the same markers the
+            // Python oracle uses). Mirrors sync-live.py's seam.
+            "--oracle-inputs" => match argv.get(i + 1) {
+                Some(v) => {
+                    oracle_inputs = Some(v.clone());
+                    i += 2;
+                }
+                None => usage("--oracle-inputs needs a FILE"),
+            },
+            "--oracle-trace" => match argv.get(i + 1) {
+                Some(v) => {
+                    oracle_trace = Some(v.clone());
+                    i += 2;
+                }
+                None => usage("--oracle-trace needs a FILE"),
+            },
+            other => usage(&format!("unknown flag {other}")),
+        }
+    }
+    if let Some(path) = oracle_inputs {
+        if let Err(e) = oracle::init(&path, oracle_trace.as_deref()) {
+            eprintln!("oracle init failed: {e}");
+            std::process::exit(2);
+        }
+    }
     load_env();
-    let env = sync::Env {
-        turso_token: require_env("TURSO_AUTH_TOKEN"),
-        alchemy_key: require_env("ALCHEMY_KEY"),
+    // Oracle mode needs no credential: every upstream call is served from the
+    // capture and the Turso write path is never reached. The live (flagless)
+    // path still requires both tokens (a missing credential STOPs the run).
+    let env = if oracle::active() {
+        sync::Env {
+            turso_token: std::env::var("TURSO_AUTH_TOKEN").unwrap_or_default(),
+            alchemy_key: std::env::var("ALCHEMY_KEY").unwrap_or_default(),
+        }
+    } else {
+        sync::Env {
+            turso_token: require_env("TURSO_AUTH_TOKEN"),
+            alchemy_key: require_env("ALCHEMY_KEY"),
+        }
     };
     stamp("sync start (rust)");
     match sync::run(&env).await {
-        Ok(()) => stamp("sync ok"),
+        Ok(()) => {
+            if oracle::active() {
+                oracle::save_trace();
+            }
+            stamp("sync ok");
+        }
         Err(e) => {
             eprintln!("sync failed: {e}");
             stamp(&format!("sync failed: {e}"));
             std::process::exit(1);
         }
     }
+}
+
+fn usage(problem: &str) -> ! {
+    eprintln!("{problem}\nusage: fudcourt-sync [--oracle-inputs FILE] [--oracle-trace FILE]");
+    std::process::exit(2);
 }

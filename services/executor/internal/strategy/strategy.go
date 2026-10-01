@@ -38,10 +38,10 @@ const (
 // Action is one child-order intent. Order carries the full OrderRequest for
 // submit actions; ClientOrderID is the cancel target for cancel actions.
 type Action struct {
-	Kind         ActionKind
-	Order        executor.OrderRequest
+	Kind          ActionKind
+	Order         executor.OrderRequest
 	ClientOrderID string
-	Reason       string
+	Reason        string
 }
 
 // StrategyContext is one deterministic tick's inputs (objective §8.15).
@@ -90,15 +90,15 @@ type ChildOrderEvent string
 
 // The event vocabulary. Each event maps to exactly one target status.
 const (
-	ChildEventSubmit       ChildOrderEvent = "submit"
-	ChildEventAccept       ChildOrderEvent = "accept"
-	ChildEventPartialFill  ChildOrderEvent = "partial_fill"
-	ChildEventFill         ChildOrderEvent = "fill"
-	ChildEventCancelReq    ChildOrderEvent = "cancel_request"
-	ChildEventCancel       ChildOrderEvent = "cancel"
-	ChildEventReject       ChildOrderEvent = "reject"
-	ChildEventExpire       ChildOrderEvent = "expire"
-	ChildEventUnknown      ChildOrderEvent = "unknown"
+	ChildEventSubmit      ChildOrderEvent = "submit"
+	ChildEventAccept      ChildOrderEvent = "accept"
+	ChildEventPartialFill ChildOrderEvent = "partial_fill"
+	ChildEventFill        ChildOrderEvent = "fill"
+	ChildEventCancelReq   ChildOrderEvent = "cancel_request"
+	ChildEventCancel      ChildOrderEvent = "cancel"
+	ChildEventReject      ChildOrderEvent = "reject"
+	ChildEventExpire      ChildOrderEvent = "expire"
+	ChildEventUnknown     ChildOrderEvent = "unknown"
 )
 
 // childEventTarget maps each event to its target status (engine.ts

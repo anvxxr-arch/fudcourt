@@ -40,7 +40,8 @@ fudcourt/
 │                               executor-schema.sql (execution ledger)
 ├── tests/
 │   ├── integration/api/        cross-service conformance gate (Go api ⇄ contract ⇄ web BFF)
-│   └── oracle/                 reserved for oracle assets (not yet populated)
+│   └── oracle/                 sync oracle gate: Python `sync-live.py` ⇄ Rust `fudcourt-sync`
+│                               byte-identical replay (fixtures + pinned projection, offline)
 ├── deploy/systemd/             13 unit files (web, api, data, executor, sync×2, reconciled, pgload, web)
 ├── scripts/{githooks,verify}/  pre-push hook · verify-all.sh (one-command offline gate)
 ├── docs/{architecture,operations,prd,product,records}/
@@ -216,7 +217,7 @@ carries the writer's uncommitted edits above.
 
 ## 8. Known regressions
 
-**None outstanding.** Three failures were found and fixed this session; all were pre-existing in the
+**None outstanding.** Four failures were found and fixed this session; all were pre-existing in the
 working tree or in the branch's committed history (none caused by this session's changes — checked
 against the baseline and against `94a2ee1`/`642e7ef`):
 1. `services/api/cmd/api/main.go:5` — a comment line missing its `//` (`notifications, jobs.`),
@@ -230,6 +231,15 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    tree held the coherent completion; this session landed it (`befd141`, `25cd532`) and verified HEAD
    in an isolated worktree. The "split by 7d90520" wording in `befd141`'s message is wrong and is
    corrected here: `git show --stat 7d90520 -- services/executor/cmd/executor/` is empty.
+4. **`internal/worker` clobbered a terminal landing with the stale status** — `drive()` re-saved
+   the execution record *after* `runActions`, so any pass that landed a terminal/paused status
+   (`StrategyComplete`→`FILLED`, cancel→`CANCELLED`, risk-stop) had that status overwritten by the
+   pre-action `RUNNING`: a fully filled execution was silently resurrected and re-driven every tick
+   forever. Found by the new composed harness (`internal/e2e`), which is the first test to reach the
+   completion path; existing worker tests never did. Proven red at the prior HEAD
+   (`git worktree --detach HEAD` + the harness → `TestPaperMarketLifecycle` and
+   `TestPaperRestartNoDuplicateOrder` fail there), fixed (`9688722`) by persisting the engine state
+   **before** acting, green after (`5f8a8ba` adds the harness).
 The `apps/web/deploy/*` → `deploy/systemd/` consolidation was also captured mid-edit (over-broad
 `git add` of the writer's staged files) and has been restored to the coherent, host-matching pair
 (`5f2d3f9`; `check-deploy` OK, and the checked-in `fudcourt-sync.service` byte-matches the installed
@@ -247,14 +257,21 @@ host unit's `ExecStart`).
    the parity matrix names. The Go side has the pieces but not the composition:
    `internal/exchange/paper` is unit-tested **in-package** (`paper_test.go`, `match.go`), and
    `internal/worker` is tested with a **fake exchange + fake store**
-   (`TestRestartDoesNotDoubleSubmit`, `TestStartExecutionIdempotent`, `TestRiskStopPath`, …), but
-   **no test drives `worker` + `paper` together** through the §127 scenario (create → size →
-   schedule → fill → risk update → TWAP → cancel → restart-recover). That composed Go paper harness
-   is the missing artifact; it can run offline against the existing fake worker store + the paper
-   adapter, and it is what would let the cutover row turn green. For that reason
-   `executor-paper-e2e.ts` was **not run here**: it would create the `executor` schema in the shared
-   local Postgres for a gate that does not yet prove Go parity (and the concurrent writer is
-   actively editing `services/executor` this session, so a competing new test file there is unsafe).
+   (`TestRestartDoesNotDoubleSubmit`, `TestStartExecutionIdempotent`, `TestRiskStopPath`, …).
+   **Update (this session): the composed harness now EXISTS** —
+   `services/executor/internal/e2e/paper_e2e_test.go` (new package, so it can only use the public
+   surface a composition root uses) drives the **real** worker + **real** `exchange/paper` venue +
+   **real** `lock.MemoryLock` over a `worker.MemoryStore` and a hand-advanced `FixedClock` — no
+   Postgres, no Valkey, no credentials, no sleeping, so it runs in plain `go test`. It covers
+   create→start→recovery→place→fill→complete, lease contention (§65/§127.4), restart without
+   duplicate (§66/§127.5), cancel a resting entry (§127.6), duplicate-start no-op (§23), simulated
+   disconnect degrade-then-recover (§76), and plan + risk-based sizing (§127.1). It immediately
+   found and pinned a real bug (see §8.4). What is *still* gated is only the **live** proof:
+   running this same scenario against `cmd/executor` through Postgres+Valkey requires
+   `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY`, which the repo does not carry. For
+   that same reason `executor-paper-e2e.ts` was **not run here**: it exercises the **TS** runtime
+   against the shared local Postgres (not the Go worker) and would create the `executor` schema
+   for a gate that does not prove Go parity.
 2. **Then** execute the Phase 8 move (`apps/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
    repointing the 77 references in one commit.
 3. **Sync oracle gate — DONE (uncommitted, by the concurrent writer).** `verify-sync.py`

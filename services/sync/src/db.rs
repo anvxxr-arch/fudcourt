@@ -25,7 +25,17 @@ impl Db {
     }
 
     /// `db(sql, args)` -- raises on any transport error or `results[0].error`.
+    ///
+    /// FAIL-SAFE tripwire: when the oracle replay is active this returns an
+    /// error WITHOUT touching the network, so an oracle run cannot send a
+    /// single byte to Turso (`assets` stays exactly as it was).
     pub async fn query(&self, sql: &str, args: Option<&[String]>) -> Result<Vec<Row>, String> {
+        if crate::oracle::active() {
+            crate::oracle::note(&format!("db|{sql}"));
+            return Err(format!(
+                "oracle mode: refusing to send SQL to Turso ({sql})"
+            ));
+        }
         let mut stmt = serde_json::Map::new();
         stmt.insert("sql".into(), Value::String(sql.to_string()));
         if let Some(args) = args {

@@ -104,7 +104,7 @@ type SizingDefinition struct {
 	// Amount is the risk/profit budget (risk_usd / target_profit_usd family).
 	Amount string `json:"amount,omitempty"`
 	// Percent for the percentage family; Basis is REQUIRED with it (PRD §10).
-	Percent string `json:"percent,omitempty"`
+	Percent string       `json:"percent,omitempty"`
 	Basis   BalanceBasis `json:"basis,omitempty"`
 	// Quantity (fixed_quantity) and margin (fixed_margin).
 	Quantity string `json:"quantity,omitempty"`
@@ -127,10 +127,10 @@ type ScaleLevel struct {
 // Absent config means the naive deterministic schedule — jitter is never
 // silent (DR-021 §2g).
 type TwapConfig struct {
-	Slices            int    `json:"slices,omitempty"`
-	DurationMs        int64  `json:"durationMs,omitempty"`
-	QuantityJitterBps int    `json:"quantityJitterBps,omitempty"`
-	IntervalJitterBps int    `json:"intervalJitterBps,omitempty"`
+	Slices            int   `json:"slices,omitempty"`
+	DurationMs        int64 `json:"durationMs,omitempty"`
+	QuantityJitterBps int   `json:"quantityJitterBps,omitempty"`
+	IntervalJitterBps int   `json:"intervalJitterBps,omitempty"`
 }
 
 // ExecutionConstraints bound the strategy (types.ts).

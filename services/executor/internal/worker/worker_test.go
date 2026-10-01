@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/services/executor/internal/executor"
 	"github.com/anvxxr-arch/fudcourt/services/executor/internal/exchange"
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/executor"
 )
 
 // ---- fakes -----------------------------------------------------------------
@@ -21,12 +21,12 @@ func (f *fakeClock) Now() int64 { return f.ms }
 // fakeLock is the lease fake: outcomes are controllable and every call counted
 // so "fail-closed, untouched" assertions can prove a negative.
 type fakeLock struct {
-	mu        sync.Mutex
-	acquire   bool
-	renew     bool
-	acquires  int
-	renews    int
-	releases  int
+	mu       sync.Mutex
+	acquire  bool
+	renew    bool
+	acquires int
+	renews   int
+	releases int
 }
 
 func (f *fakeLock) Acquire(executionID, owner string, ttlMs int64) (bool, error) {
@@ -186,13 +186,13 @@ func runningRec() executor.ExecutionRecord {
 func newTestWorker(t *testing.T, store Store, lock Lock, ex exchange.Exchange, maxInFlight int, opts ...func(*Config)) *Worker {
 	t.Helper()
 	cfg := Config{
-		Owner:       "worker-1",
-		LockTTL:     time.Second,
-		MaxInFlight: maxInFlight,
-		Clock:       &fakeClock{ms: 1000},
-		Store:       store,
-		Lock:        lock,
-		Exchanges:   func(executor.ExecutionRecord) (exchange.Exchange, error) { return ex, nil },
+		Owner:        "worker-1",
+		LockTTL:      time.Second,
+		MaxInFlight:  maxInFlight,
+		Clock:        &fakeClock{ms: 1000},
+		Store:        store,
+		Lock:         lock,
+		Exchanges:    func(executor.ExecutionRecord) (exchange.Exchange, error) { return ex, nil },
 		QuantityStep: func(executor.ExecutionRecord) string { return "0.001" },
 	}
 	for _, o := range opts {

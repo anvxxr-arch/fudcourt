@@ -71,7 +71,7 @@ Production == this homeserver:
 | Blog / Payload (merged into `apps/web`, DR-017) | `fudcourt-web.service` | `127.0.0.1:3100` (`/blog`, `/blog/cms/*`) | `apps/web/.env.local` |
 | Live balance sync | `fudcourt-sync.timer` (5 min) | — (outbound only) | repo-root `.env` via `load_env()` |
 | CEX Executor API + composer (`apps/web`) | `fudcourt-web.service` | `127.0.0.1:3100` (`/executor`, `/api/executor`, tier `team`) | `apps/web/.env.local` (`FUDCOURT_EXECUTOR_MASTER_KEY`; exchange API secrets are **not** in any env file) |
-| CEX Executor worker | `fudcourt-executor-worker.service` (`bun scripts/executor/worker.ts`, unit versioned at `apps/web/deploy/fudcourt-executor-worker.service`) | — (outbound only: venue APIs) | `apps/web/.env.local` via the unit's `EnvironmentFile`; **independent of `fudcourt-web`** — restarting the web unit never stops an execution |
+| CEX Executor worker | `fudcourt-executor-worker.service` (`bun scripts/executor/worker.ts`, unit versioned at `deploy/systemd/fudcourt-executor-worker.service`) | — (outbound only: venue APIs) | `apps/web/.env.local` via the unit's `EnvironmentFile`; **independent of `fudcourt-web`** — restarting the web unit never stops an execution |
 
 - **No third-party deploy target.** The `fudcourt.vercel.app` domain answers
   `404 DEPLOYMENT_NOT_FOUND` (measured 2026-09-28) — there is nothing deployed

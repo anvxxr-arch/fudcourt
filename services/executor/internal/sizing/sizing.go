@@ -242,8 +242,8 @@ func SizePosition(in SizeInputs) (SizedPosition, error) {
 		}
 		out = SizedPosition{
 			Quantity: r.Quantity, UnroundedQuantity: r.UnroundedQuantity,
-			Notional:          risk.Wire(notional),
-			Budget:            nil, RiskBasis: basis, BalanceReference: basisVal,
+			Notional: risk.Wire(notional),
+			Budget:   nil, RiskBasis: basis, BalanceReference: basisVal,
 			EntryFee: risk.Wire(entryFee), ExitFee: risk.Wire(exitFee), SlippageBudget: risk.Wire(slipBudget),
 			Warnings: append(warnings, r.Warnings...), Errors: errs,
 		}

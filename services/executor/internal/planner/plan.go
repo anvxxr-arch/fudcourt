@@ -18,13 +18,13 @@ var DefaultSlippageModel = risk.SlippageModel{SlippageBps: "5", SafetyReservePct
 // DefaultRiskProfile mirrors types.ts DEFAULT_RISK_PROFILE for callers with no
 // account profile.
 var DefaultRiskProfile = executor.RiskProfile{
-	DefaultRiskMode:        "risk_percent",
-	DefaultRisk:            "1",
-	MaxRiskPerTradePct:     "2",
-	MaxOpenRiskPct:         "5",
-	MaxDailyLossPct:        "5",
-	MaxLeverage:            "10",
-	DefaultMarginMode:      executor.MarginIsolated,
+	DefaultRiskMode:         "risk_percent",
+	DefaultRisk:             "1",
+	MaxRiskPerTradePct:      "2",
+	MaxOpenRiskPct:          "5",
+	MaxDailyLossPct:         "5",
+	MaxLeverage:             "10",
+	DefaultMarginMode:       executor.MarginIsolated,
 	DefaultExecutionUrgency: executor.UrgencyBalanced,
 }
 
@@ -162,10 +162,10 @@ func PlanExecution(inputs PlanInputs) (PlanResult, error) {
 					risk.USD2(requestedMaxLoss), risk.USD2(target), risk.USD2(shownLoss), risk.USD2(achievable),
 					risk.USD2(target), risk.USD2(requiredRisk)),
 				Detail: map[string]string{
-					"requestedMaxLoss":    risk.Wire(requestedMaxLoss),
+					"requestedMaxLoss":      risk.Wire(requestedMaxLoss),
 					"requestedTargetProfit": risk.Wire(target),
-					"achievableProfit":    risk.Wire(achievable),
-					"requiredRisk":        risk.Wire(requiredRisk),
+					"achievableProfit":      risk.Wire(achievable),
+					"requiredRisk":          risk.Wire(requiredRisk),
 				},
 			})
 		}

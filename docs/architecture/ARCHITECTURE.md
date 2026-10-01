@@ -255,9 +255,9 @@ implies team implies member.
 
 - **Production = this homeserver.** Units: `fudcourt-web` (`127.0.0.1:3100`),
   `fudcourt-apicalls` (Go acquisition sidecar, `127.0.0.1:3101`, unit versioned
-  at `services/data/deploy/fudcourt-apicalls.service`),
+  at `deploy/systemd/fudcourt-apicalls.service`),
   `fudcourt-reconciled` (**Rust** `/api/reconcile` service, `127.0.0.1:3102`, unit
-  versioned at `services/sync/deploy/fudcourt-reconciled.service`; DR-014),
+  versioned at `deploy/systemd/fudcourt-reconciled.service`; DR-014),
   `fudcourt-sync.timer` (5 min). **`fudcourt-blog` is retired (DR-017)**: the blog
   is served by `fudcourt-web` at `/blog`, so there is no second Next process.
 - Origin binds loopback; the **only** path in is the tunnel ingress

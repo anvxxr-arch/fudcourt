@@ -21,10 +21,10 @@ var (
 		TickSize: "0.01", StepSize: "0.0001", MinQuantity: sp("0.0001"),
 		MinNotional: sp("5"), ContractMultiplier: "1", MaxLeverage: sp("125"),
 		MaintenanceMarginRate: sp("0.004")}
-	noFees = risk.FeeModel{MakerBps: "0", TakerBps: "0"}
-	noSlip = risk.SlippageModel{SlippageBps: "0", SafetyReservePct: "0"}
+	noFees  = risk.FeeModel{MakerBps: "0", TakerBps: "0"}
+	noSlip  = risk.SlippageModel{SlippageBps: "0", SafetyReservePct: "0"}
 	defSlip = risk.SlippageModel{SlippageBps: "5", SafetyReservePct: "0.01"} // plan.ts DEFAULT_SLIPPAGE_MODEL
-	bals   = risk.BalanceSnapshot{
+	bals    = risk.BalanceSnapshot{
 		SpotAvailable: sp("2500"), SpotEquity: sp("2600"), FuturesAvailable: sp("4800"),
 		FuturesEquity: sp("5000"), TotalExchangeEquity: sp("7500"),
 	}
@@ -59,17 +59,17 @@ func leDec(t *testing.T, got, bound, label string) {
 // stop 98,000, one TP at 106,000, manual 5x, limit execution at the entry.
 func baseRequest() ExecutionRequest {
 	return ExecutionRequest{
-		AccountID:  "acc-1",
-		Symbol:     "BTC/USDT",
-		MarketType: executor.MarketLinearPerp,
-		Side:       executor.SideBuy,
-		Intent:     executor.IntentOpen,
-		Entry:      executor.EntryDefinition{Kind: "limit", Price: "100000"},
-		StopLoss:   &executor.PriceDefinition{Kind: "stop", Price: "98000"},
+		AccountID:   "acc-1",
+		Symbol:      "BTC/USDT",
+		MarketType:  executor.MarketLinearPerp,
+		Side:        executor.SideBuy,
+		Intent:      executor.IntentOpen,
+		Entry:       executor.EntryDefinition{Kind: "limit", Price: "100000"},
+		StopLoss:    &executor.PriceDefinition{Kind: "stop", Price: "98000"},
 		TakeProfits: []executor.TakeProfitLevel{{Price: "106000"}},
-		Sizing:     executor.SizingDefinition{Mode: executor.SizingRiskUSD, Amount: "20"},
-		Leverage:   &sizing.LeverageSpec{Mode: executor.LeverageManual, Leverage: "5"},
-		Execution:  ExecutionSpec{Type: executor.StrategyLimit, Price: "100000"},
+		Sizing:      executor.SizingDefinition{Mode: executor.SizingRiskUSD, Amount: "20"},
+		Leverage:    &sizing.LeverageSpec{Mode: executor.LeverageManual, Leverage: "5"},
+		Execution:   ExecutionSpec{Type: executor.StrategyLimit, Price: "100000"},
 	}
 }
 
@@ -591,10 +591,10 @@ func TestAutoSafeWithoutBalancesWarns(t *testing.T) {
 
 func TestEstimateSlices(t *testing.T) {
 	cases := []struct {
-		name  string
-		exec  ExecutionSpec
-		qty   string
-		want  *int // nil = honest null
+		name string
+		exec ExecutionSpec
+		qty  string
+		want *int // nil = honest null
 	}{
 		{"twap explicit slices", ExecutionSpec{Type: executor.StrategyTWAP, Slices: ip(4)}, "10", ip(4)},
 		{"twap from duration", ExecutionSpec{Type: executor.StrategyTWAP, DurationMs: lp(900_000)}, "10", ip(6)},
@@ -623,5 +623,5 @@ func TestEstimateSlices(t *testing.T) {
 	}
 }
 
-func ip(v int) *int       { return &v }
-func lp(v int64) *int64   { return &v }
+func ip(v int) *int     { return &v }
+func lp(v int64) *int64 { return &v }
