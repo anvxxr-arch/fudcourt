@@ -24,7 +24,10 @@
 > Recount 2026-10-01T07:28:31Z (single instant; the tree was actively mutating during this
 > amendment round): 29 pending changes (23 tracked modifications/renames) + 6 untracked —
 > `docs/architecture/{current,domain-map}.md` (this audit's deliverables) plus `packages/`,
-> `services/api/`, `services/executor/`, `go.work`. No `.ai/` directory exists in the tree.
+> `services/api/`, `services/executor/`, `go.work`. Note: the prompt-pack directory `.ai/` (11 files) exists on disk (direct listing verified
+> 2026-10-01) but does not appear in the untracked list above — it is tracked or ignored,
+> not missing (the earlier "No `.ai/` directory exists" statement was an incorrect inference
+> from the untracked list and is retracted).
 
 Two observations, in order (historical snapshot from before the commits above):
 
