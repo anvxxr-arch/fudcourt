@@ -323,11 +323,15 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    sizing (§127.1), and **TWAP slice scheduling** (§8.15/§28 — the plan releases as multiple
    children over the window, each sized from the remainder, closing fully released even when no
    slice ever filled). It immediately found and pinned two real bugs (§8.4, §8.5). What is *still*
-   gated is only the **live** proof: running this same scenario against `cmd/executor` through
-   Postgres+Valkey requires `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY`, which the
-   repo does not carry. For that same reason `executor-paper-e2e.ts` was **not run here**: it
-   exercises the **TS** runtime against the shared local Postgres (not the Go worker) and would
-   create the `executor` schema for a gate that does not prove Go parity.
+   gated is only the **live** proof, and this session pinned exactly *why* it is credential-gated:
+   verified by reading `services/executor/cmd/executor/main.go` — its `resolver.adapterFor` maps only
+   `ExchangeBinance`/`ExchangeBybit`/`ExchangeMEXC` and has **no `paper` branch**, so a live run needs
+   a real venue credential; and the credential is a sealed envelope (`exchange_accounts
+   .api_key_encrypted`) that only `FUDCOURT_EXECUTOR_MASTER_KEY` can open, which the repo does not
+   carry. A throwaway Postgres + Valkey can be provisioned locally, but not a venue key. For that
+   same reason `executor-paper-e2e.ts` was **not run here**: it exercises the **TS** runtime against
+   the shared local Postgres (not the Go worker) and would create the `executor` schema for a gate
+   that does not prove Go parity.
 2. **Then** execute the Phase 8 move (`apps/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
    repointing the 77 references in one commit.
 3. **Sync oracle gate — DONE (uncommitted, by the concurrent writer).** `verify-sync.py`
