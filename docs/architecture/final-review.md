@@ -195,6 +195,13 @@ host unit's `ExecStart`).
    and `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex), run `executor-paper-e2e.ts` against the Go
    worker, then delete the TS executor + re-point the 16 route handlers (Phase 5/7). This
    unblocks debt items 1–4 at once.
+   **Precision (verified this session):** `apps/web/scripts/verify/executor-paper-e2e.ts`
+   imports `@/platform/executor/{store,worker,plan,runtime,lock}` — it exercises the **TS**
+   runtime against the real Postgres/Valkey, so it is *not yet* the "against the Go worker" gate
+   the parity matrix names; a Go-side paper harness (driving `services/executor/cmd/executor`
+   through the same §127 scenario) still has to be written. For the same reason it was **not run
+   here**: it would create the `executor` schema in the shared local Postgres for a gate that does
+   not yet prove Go parity (and the concurrent writer is actively editing that exact code).
 2. **Then** execute the Phase 8 move (`apps/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
    repointing the 77 references in one commit.
 3. **Sync oracle gate — DONE (uncommitted, by the concurrent writer).** `verify-sync.py`
