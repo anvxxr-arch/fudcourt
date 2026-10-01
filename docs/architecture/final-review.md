@@ -29,7 +29,8 @@ fudcourt/
 │   ├── api/                    Go — primary backend (identity, admin, portfolio,
 │   │                           treasury, wallets, transactions, markets, ledger)
 │   ├── executor/               Go — execution engine (risk, sizing, planner,
-│   │                           strategies, exchange adapters, worker, locks, repo)
+│   │                           strategies, exchange adapters, worker, locks, repo,
+│   │                           credentials, cmd/executor service binary)
 │   ├── data/                   Go — external data (cryptorank, khala, llama,
 │   │                           chainrank, news, cache)
 │   └── sync/                   Rust — balance sync + /api/reconcile
@@ -132,7 +133,7 @@ Items 1–4 are the *same* dependency: the executor cutover. They are a single d
 | 5 | `services/api` is the primary Go API | MET | 17 internal packages, 112 test funcs; 4 routes live; conformance-gated vs contract |
 | 6 | `services/executor` owns executor logic | **MET (code) / PARTIAL (cutover)** | 252 test funcs across 19 internal packages (18 with tests, incl. the composed `internal/e2e` harness); TS remains production until §9.1 |
 | 7 | exchange adapters use a common abstraction | MET | `internal/exchange/{exchange,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package |
-| 8 | PostgreSQL is the durable execution truth | MET | `database/schema/executor-schema.sql` (10 tables) + `internal/repository` |
+| 8 | PostgreSQL is the durable execution truth | MET | `database/schema/executor-schema.sql` (10 tables) + `internal/repository`; **proven live this session** — the DSN-gated `TestStoreEndToEnd`/`TestStoreNewFailLoud` run green against a throwaway local Postgres with that schema applied (`4959f8f`) |
 | 9 | Valkey only ephemeral coordination | MET | `internal/lock/{valkey,memory}.go`; durable state is Postgres |
 | 10 | API contracts centralized | MET | `packages/contracts/{openapi,events,schemas}`; `CONTRACTS_OK` gate |
 | 11 | cross-service tests outside `apps/web` | MET | `tests/integration/api/check-api-contract.py`, `tests/oracle/fixtures/` |
@@ -182,9 +183,10 @@ One command: `bash scripts/verify/verify-all.sh` → **`VERIFY_ALL_OK`** (exit 0
 | **cross-service api conformance** | `API_CONTRACT_OK go_paths=4 documented=36 web_proxies=4` |
 | Go build/vet/test ×3 modules | PASS (api **112**, executor **252**, data **178** test funcs) |
 | Rust build/test | PASS (17 test fns) |
-| **composed Go paper E2E** (`internal/e2e`) | PASS (**8** tests, hermetic) |
+| **sync oracle gate** (`verify-sync.py`) | PASS — 9 checks, `SYNC_ORACLE_OK (34 rows, 40 request keys)` |
+| **composed Go paper E2E** (`internal/e2e`) | PASS (**10** tests, hermetic) |
 | pre-push hook syntax | PASS |
-| web typecheck + shaper fixtures | PASS (**188** tests) |
+| web typecheck + shaper fixtures | PASS (**240** tests) |
 
 **Committed HEAD is green — verified on the live tree, not in a worktree.**
 `bash scripts/verify/verify-all.sh` returns `VERIFY_ALL_OK` (exit 0) against the current
@@ -196,7 +198,7 @@ route_handlers=39 events=28 client_endpoints=17`, `check-api-contract.py`
 three Go modules, `cargo build/test` OK for `services/sync`, `bash -n pre-push` OK.
 
 The executor module now carries **252** test functions across 19 internal packages plus the
-composed harness in `internal/e2e` (8 tests). The harness is the first executor test to
+composed harness in `internal/e2e` (10 tests). The harness is the first executor test to
 drive the **real** worker + **real** `exchange/paper` venue + **real** `lock.MemoryLock`
 over a `worker.MemoryStore` with a hand-advanced `FixedClock` — no Postgres, no Valkey,
 no credentials, no sleeping, so it runs in plain `go test` on any machine. It covers
@@ -227,6 +229,14 @@ Verification of the two fixes made this session (each proven, not asserted):
 - **Cross-service gate** (`tests/integration/api/check-api-contract.py`): added a web
   proxy route with no Go counterpart → gate FAILS naming the 502-in-production path;
   removed it → gate PASSES.
+- **Valkey AUTH handshake** (`internal/lock/valkey.go`): the handshake created a *second*
+  `bufio.Reader` for the AUTH reply, which could buffer past `+OK` and swallow the command
+  reply — a lock that looks unavailable (fail-closed) on a healthy Valkey. Fixed by sharing one
+  reader across both replies on the connection; the scripted fake server was fixed in the same
+  pass (an AUTH step now also serves its command over the same connection, mirroring `do`).
+- **Sync oracle gate** (`verify-sync.py`, added this session): perturb one wei in the
+  recorded capture → the gate FAILS with the exact diverging line and exit 1; restore → PASS.
+  Both directions confirmed, so the gate is proven able to fail, not merely to pass.
 
 **Committed HEAD is green (verified in an isolated `git worktree --detach HEAD`).**
 A clean checkout of HEAD builds and tests clean across every module:
