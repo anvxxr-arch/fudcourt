@@ -1,0 +1,23 @@
+# FUD Court external data sidecar (Go; services/data).
+#
+# Stands in for the old apps/apicalls Go service (git mv'd to services/data in
+# Phase 1). Serves the CryptoRank/Khala/ChainRank/Llama/news read proxies on
+# 127.0.0.1:3101; the Next.js BFF proxies /api/cryptorank, /api/chainrank,
+# /api/llama and /api/news to it. Binaries are built by ExecStartPre into
+# services/data/bin/, which .gitignore excludes.
+[Unit]
+Description=FUD Court external data sidecar (Go) :3101
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/dwizzy/fudcourt/services/data
+ExecStartPre=/usr/bin/go build -C /home/dwizzy/fudcourt/services/data -o bin/fudcourt-data ./cmd/apicalls
+ExecStart=/home/dwizzy/fudcourt/services/data/bin/fudcourt-data
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65536
+
+[Install]
+WantedBy=default.target

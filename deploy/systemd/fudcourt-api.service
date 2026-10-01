@@ -1,0 +1,26 @@
+# FUD Court primary Go backend API (services/api).
+#
+# Listens on 127.0.0.1:3103 — the Go API is the authoritative backend; the
+# Next.js BFF proxies /api/* to it (see apps/web middleware). Built from the
+# module root with the workspace (go.work) so the three Go modules share one
+# dependency graph. The binary is NOT committed: it is built by the unit's
+# ExecStartPre and lives in services/api/bin/, which .gitignore excludes.
+[Unit]
+Description=FUD Court primary Go backend API :3103
+After=network-online.target postgresql@17-main.service valkey.service
+Wants=postgresql@17-main.service valkey.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/dwizzy/fudcourt/services/api
+EnvironmentFile=/home/dwizzy/fudcourt/.env
+Environment=FUDCOURT_API_ADDR=127.0.0.1:3103
+ExecStartPre=/usr/bin/go build -C /home/dwizzy/fudcourt/services/api -o bin/fudcourt-api ./cmd/api
+ExecStart=/home/dwizzy/fudcourt/services/api/bin/fudcourt-api
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65536
+
+[Install]
+WantedBy=default.target
