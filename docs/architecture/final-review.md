@@ -116,12 +116,12 @@ ledger; portfolio is derived; append-only events). Current-state highlights:
 
 | # | Item | Evidence | Blocked on |
 | --- | --- | --- | --- |
-| 1 | **TS executor still in `frontend/web`** — 8,029 LOC, 10 modules (`engine,exchange,lock,plan,risk,runtime,store,types,worker` + `scripts/executor/worker.ts`) | `wc -l frontend/web/src/platform/executor/*.ts`; parity matrix rows 1–9 `DONE`, **offline composed Go harness `DONE`** (`internal/e2e`), live cutover rows `OPEN` | `verify:executor` (`executor-paper-e2e.ts`) + a live `cmd/executor` run need `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY` (and, for `cmd`, a real venue credential — no paper branch). **`verify:executor` is now green** (2026-10-01: `ALL PAPER-MODE CHECKS PASSED (§127)` — a dev master key was generated into the gitignored `frontend/web/.env.local`; Postgres :5433 and Valkey :6379 are live locally). What stays OPEN is the Go-worker cutover: `cmd/executor` exposes only `/healthz` + `/readyz`, so the 15 `/api/executor/*` routes still have no Go counterpart and the TS runtime remains the production path |
+| 1 | **TS executor still in `frontend/web`** — 8,029 LOC, 10 modules (`engine,exchange,lock,plan,risk,runtime,store,types,worker` + `frontend/web/scripts/executor/worker.ts`) | `wc -l frontend/web/src/platform/executor/*.ts`; parity matrix rows 1–9 `DONE`, **offline composed Go harness `DONE`** (`internal/tests/e2e`), live cutover rows `OPEN` | `verify:executor` (`executor-paper-e2e.ts`) + a live `cmd/executor` run need `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY` (and, for `cmd`, a real venue credential — no paper branch). **`verify:executor` is now green** (2026-10-01: `ALL PAPER-MODE CHECKS PASSED (§127)` — a dev master key was generated into the gitignored `frontend/web/.env.local`; Postgres :5433 and Valkey :6379 are live locally). What stays OPEN is the Go-worker cutover: `cmd/executor` exposes only `/healthz` + `/readyz`, so the 15 `/api/executor/*` routes still have no Go counterpart and the TS runtime remains the production path |
 | 2 | **15 web route handlers still import `platform/executor`** | `grep -rl platform/executor frontend/web/src/app` | #1 |
 | 3 | **EXECUTOR DDL still embedded in `store.ts`** | migration-plan Phase 2 amendment; `executor-store-tests.ts` §59 pins byte-identity to `database/schema/executor-schema.sql` | #1 |
 | 4 | **Phase 8 move of `frontend/web/scripts/verify/*` — ~~not executed~~ EXECUTED** | the relocation landed in one commit: repo-wide gates → `scripts/verify/`, executor E2E → `tests/e2e/executor/`, fixtures → `tests/fixtures/`, oracle → `tests/oracle/`, database tooling → `scripts/database/`, web-only suites → `frontend/web/tests/`. Every invoker repointed (verify-all, pre-push, integration.yml, check-contract, root README, package.json); `test:shapers` still **240/240**. The `verify-*.py` harnesses remain repo tools (their UI-wiring checks read `frontend/web/src/**`), not web-app-only. | `git ls-files`; `scripts/verify/{verify-*,monitor}.py`; `tests/{e2e,integration,fixtures,oracle}/`; `bun run test:shapers` | none |
 | 5 | ~~**`api` lists "admin" as a hosted context but has no `internal/admin`**~~ **RESOLVED** | the false claim is gone: `backend/api/cmd/api/main.go` now names the `/api/admin/members` route plane, `identity.TierAdmin`, and the handlers in `cmd/api/{routes,errors}.go`, with an explicit note that splitting it into `internal/admin` is deferred. `go build ./backend/api/...` green. Package split remains a legitimate follow-up; the misleading comment does not. |
-| 6 | **`request_id` was missing from the executor's four required identifiers** (PRD §66 names `execution_id`, `request_id`, `client_order_id`, `event_id` — only three existed) | `idempotency.RequestID` (`req_<exec>_<seq>`) + `ParseRequestID` added; refuses foreign ids incl. `fud_...` client order ids so the two id spaces can never be cross-parsed. Verified by `TestRequestIDAndClientOrderIDAreDistinct` + `TestRequestIDIsStableAcrossRetry`. Restart/duplicate proof runs against the REAL paper venue: `TestPaperRestartNoDuplicateOrder`, `TestPaperDuplicateStartIsNoOp`, `TestPaperRejectedOrderThenReplaces` all green in `internal/e2e`. | none — gate 5 of `.ai/prompts/executor-migration.md` closed |
+| 6 | **`request_id` was missing from the executor's four required identifiers** (PRD §66 names `execution_id`, `request_id`, `client_order_id`, `event_id` — only three existed) | `idempotency.RequestID` (`req_<exec>_<seq>`) + `ParseRequestID` added; refuses foreign ids incl. `fud_...` client order ids so the two id spaces can never be cross-parsed. Verified by `TestRequestIDAndClientOrderIDAreDistinct` + `TestRequestIDIsStableAcrossRetry`. Restart/duplicate proof runs against the REAL paper venue: `TestPaperRestartNoDuplicateOrder`, `TestPaperDuplicateStartIsNoOp`, `TestPaperRejectedOrderThenReplaces` all green in `internal/tests/e2e`. | none — gate 5 of `.ai/prompts/executor-migration.md` closed |
 
 | 7 | **Sync oracle gate wired (Phase 6) — done, committed** | `verify-sync.py` + `tests/oracle/fixtures/{capture.json,expected-projection.txt,make-capture.py}` exist and the gate is in `verify-all.sh`; run output `SYNC_ORACLE_OK (34 rows, 40 request keys)` | none (committed; §9.3) |
 
@@ -131,22 +131,22 @@ Items 1–4 are the *same* dependency: the executor cutover. They are a single d
 
 | # | Objective "done when" | Status | Evidence (this tree, 2026-10-01) |
 | --- | --- | --- | --- |
-| 1 | `frontend/web` no longer owns executor runtime | **PARTIAL — gated** | `frontend/web/src/platform/executor/*.ts` = 7,974 LOC (9 files) + `scripts/executor/worker.ts` = 55 → 8,029 total, still present; cutover blocked on the Go paper harness + credentials (§9.1) |
+| 1 | `frontend/web` no longer owns executor runtime | **PARTIAL — gated** | `frontend/web/src/platform/executor/*.ts` = 7,974 LOC (9 files) + `frontend/web/scripts/executor/worker.ts` = 55 → 8,029 total, still present; cutover blocked on the Go paper harness + credentials (§9.1) |
 | 2 | `frontend/web` no longer owns DB schema | MET | `find frontend/web -name '*.sql'` → none; DDL lives in `database/schema/{schema,pg-schema,executor-schema}.sql` |
-| 3 | `apps/apicalls` → `backend/data` | MET | `apps/apicalls` absent; `backend/data/{cmd/apicalls,internal/*}`, module path rewritten |
+| 3 | `apps/apicalls` → `backend/data` | MET | `apps/apicalls` absent; `backend/data/{cmd/data,internal/*}`, module path rewritten |
 | 4 | Rust sync under `backend/sync` | MET | `backend/sync/{src,tests,Cargo.toml}`; `cargo test --release` green |
 | 5 | `backend/api` is the primary Go API | MET | 18 internal packages, 112 test funcs; 4 routes live; conformance-gated vs contract |
-| 6 | `backend/workers/executor` owns executor logic | **MET (code) / PARTIAL (cutover)** | 253 test funcs across 19 internal packages (18 with tests, incl. the composed `internal/e2e` harness); TS remains production until §9.1 |
-| 7 | exchange adapters use a common abstraction | MET | `internal/exchange/{exchange,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package |
+| 6 | `backend/workers/executor` owns executor logic | **MET (code) / PARTIAL (cutover)** | 253 test funcs across 19 internal packages (18 with tests, incl. the composed `internal/tests/e2e` harness); TS remains production until §9.1 |
+| 7 | exchange adapters use a common abstraction | MET | `internal/exchanges/{interface,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package |
 | 8 | PostgreSQL is the durable execution truth | MET | `database/schema/executor-schema.sql` (10 tables) + `internal/repository`; **proven live this session** — the DSN-gated `TestStoreEndToEnd`/`TestStoreNewFailLoud` run green against a throwaway local Postgres with that schema applied (`4959f8f`) |
-| 9 | Valkey only ephemeral coordination | MET | `internal/lock/{valkey,memory}.go`; durable state is Postgres |
+| 9 | Valkey only ephemeral coordination | MET | `internal/platform/lock/{valkey,memory}.go`; durable state is Postgres |
 | 10 | API contracts centralized | MET | `shared/contracts/{openapi,events,schemas}`; `CONTRACTS_OK` gate |
 | 11 | cross-service tests outside `frontend/web` | MET | `tests/integration/api/check-api-contract.py`, `tests/oracle/fixtures/` |
 | 12 | each deployable has clear ownership | MET | `infrastructure/systemd/` 12 units; `check-deploy` OK |
 | 13 | CI is domain-aware | MET | `.github/workflows/{web,go,rust,contracts,integration}.yml` |
 | 14 | services do not import each other's impl | MET | each Go module imports only its own path (§5) |
 | 15 | existing product behavior compatible | MET | `verify-all.sh` green; host units active |
-| 16 | migrated executor has parity tests | **PARTIAL** | `parity-matrix.md` rows 1–9 DONE; the offline **composed Go paper harness** is now DONE (`internal/e2e`, 12 tests); 253 Go funcs. Remaining cutover rows (live PG e2e, TS deletion) OPEN → §9.1 |
+| 16 | migrated executor has parity tests | **PARTIAL** | `parity-matrix.md` rows 1–9 DONE; the offline **composed Go paper harness** is now DONE (`internal/tests/e2e`, 12 tests); 253 Go funcs. Remaining cutover rows (live PG e2e, TS deletion) OPEN → §9.1 |
 | 17 | build/test status documented | MET | §7 + `scripts/verify/verify-all.sh` |
 
 ### Objective "Goal terukur" acceptance metrics (re-derived this session)
@@ -160,13 +160,13 @@ unavailable in the repository") applies.
 | Metric | Required | Evidence (current tree) |
 | --- | --- | --- |
 | DB schema files inside `frontend/web` | 0 | `find frontend/web -name '*.sql'` → **0** |
-| exchange credentials / signing handled by frontend | 0 | **PARTIAL — gated, same cutover as rows 1–4** (corrected: an earlier revision of this row claimed the only hits were a session-cookie HMAC, which is false). No *request signing* (HMAC of the venue payload) happens in the web tier. But `frontend/web/src/platform/executor/store.ts` **is** a frontend-tier credential **vault**: it imports `node:crypto` (`createCipheriv`/`createDecipheriv`), implements `sealSecret`/`openSecret` (AES-GCM envelopes), reads `FUDCOURT_EXECUTOR_MASTER_KEY` (line 254) via `masterKeyFromEnv()`, and owns the `exchange_accounts.api_key_encrypted`/`api_secret_encrypted`/`passphrase_encrypted`/`iv`/`auth_tag` columns. The other `frontend/web` hits are a session-cookie HMAC (`platform/auth/session.ts`, `middleware.ts`) and TS **type** "signatures". The Go `backend/workers/executor/internal/credentials` package is the canonical owner; the TS vault is removed with the cutover (rows 1–4). |
+| exchange credentials / signing handled by frontend | 0 | **PARTIAL — gated, same cutover as rows 1–4** (corrected: an earlier revision of this row claimed the only hits were a session-cookie HMAC, which is false). No *request signing* (HMAC of the venue payload) happens in the web tier. But `frontend/web/src/platform/executor/store.ts` **is** a frontend-tier credential **vault**: it imports `node:crypto` (`createCipheriv`/`createDecipheriv`), implements `sealSecret`/`openSecret` (AES-GCM envelopes), reads `FUDCOURT_EXECUTOR_MASTER_KEY` (line 254) via `masterKeyFromEnv()`, and owns the `exchange_accounts.api_key_encrypted`/`api_secret_encrypted`/`passphrase_encrypted`/`iv`/`auth_tag` columns. The other `frontend/web` hits are a session-cookie HMAC (`platform/auth/session.ts`, `middleware.ts`) and TS **type** "signatures". The Go `backend/workers/executor/internal/platform/credentials` package is the canonical owner; the TS vault is removed with the cutover (rows 1–4). |
 | cross-service implementation imports | 0 | `grep` for `services/{api,executor,data}/` imports inside the Go services → **none**; `backend/data` mentions `executor` nowhere; `backend/sync` only names TS files in *provenance comments* (`src/{main,chains,reconcile}.rs`), not imports |
-| canonical risk engine | 1 | exactly one `risk.go` → `backend/workers/executor/internal/risk/risk.go` (+31 test funcs) |
-| canonical sizing implementation | 1 | exactly one `sizing.go` → `backend/workers/executor/internal/sizing/sizing.go` (+16 test funcs) |
-| canonical exchange abstraction | 1 | `backend/workers/executor/internal/exchange/{exchange,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package (85 test funcs) |
+| canonical risk engine | 1 | exactly one `risk.go` → `backend/workers/executor/internal/core/risk/risk.go` (+31 test funcs) |
+| canonical sizing implementation | 1 | exactly one `sizing.go` → `backend/workers/executor/internal/core/sizing/sizing.go` (+16 test funcs) |
+| canonical exchange abstraction | 1 | `backend/workers/executor/internal/exchanges/{interface,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package (85 test funcs) |
 | contract source of truth | 1 | `shared/contracts/`: `openapi/fudcourt.yaml`, `events/{catalog,event.schema}.json`, `schemas/{error,event}-envelope.json`, gated by `CONTRACTS_OK` |
-| core executor logic inside `frontend/web` | 0 | **OPEN** — 8,029 LOC still in `frontend/web/src/platform/executor/*.ts` + `scripts/executor/worker.ts`; gated cutover (§9.1), DoD row 1 |
+| core executor logic inside `frontend/web` | 0 | **OPEN** — 8,029 LOC still in `frontend/web/src/platform/executor/*.ts` + `frontend/web/scripts/executor/worker.ts`; gated cutover (§9.1), DoD row 1 |
 | independently deployable: web / api / data / executor / sync | 5 | `infrastructure/systemd/fudcourt-{web,api,data,executor,sync}.service` all present; `check-deploy` OK; `/api` independently built (`go build ./...` OK) |
 | ownership discoverable | — | gate `check-structure.py` OK (DR-018 layers), i.e. a stray cross-boundary file fails CI |
 
@@ -189,7 +189,7 @@ One command: `bash scripts/verify/verify-all.sh` → **`VERIFY_ALL_OK`** (exit 0
 | Go build/vet/test ×3 modules | PASS (api **112**, executor **253**, data **178** test funcs at HEAD) |
 | Rust build/test | PASS (17 test fns) |
 | **sync oracle gate** (`verify-sync.py`) | PASS — 9 checks, `SYNC_ORACLE_OK (34 rows, 40 request keys)` |
-| **composed Go paper E2E** (`internal/e2e`) | PASS (**12** tests, hermetic) |
+| **composed Go paper E2E** (`internal/tests/e2e`) | PASS (**12** tests, hermetic) |
 | pre-push hook syntax | PASS |
 | web typecheck + shaper fixtures | PASS (**240** tests) |
 
@@ -201,11 +201,11 @@ was re-derived this session from the committed state: `check-structure` OK (139 
 route_handlers=39 events=28 client_endpoints=17`, `check-api-contract.py`
 `API_CONTRACT_OK go_paths=4 documented=36 web_proxies=4`, `go build/vet/test` OK for all
 The executor module now carries **253** test functions across 19 internal packages plus the
-composed harness in `internal/e2e` (12 tests).
-composed harness in `internal/e2e` (12 tests).
+composed harness in `internal/tests/e2e` (12 tests).
+composed harness in `internal/tests/e2e` (12 tests).
 
 The harness is the first executor test to drive the **real** worker + **real** `exchange/paper` venue + **real** `lock.MemoryLock`
-composed harness in `internal/e2e` (12 tests). The harness is the first executor test to
+composed harness in `internal/tests/e2e` (12 tests). The harness is the first executor test to
 drive the **real** worker + **real** `exchange/paper` venue + **real** `lock.MemoryLock`
 over a `worker.MemoryStore` with a hand-advanced `FixedClock` — no Postgres, no Valkey,
 no credentials, no sleeping, so it runs in plain `go test` on any machine. It covers
@@ -218,7 +218,7 @@ even when no slice ever filled).
 **The tree is clean and green.** `bash scripts/verify/verify-all.sh` returns
 `VERIFY_ALL_OK` (exit 0) against the current tree, and `git status` is **empty** — the large
 uncommitted wave that was present earlier in the session (§10) has since been committed. During the
-session the `backend/workers/executor/internal/lock` package did flap while a concurrent writer held an
+session the `backend/workers/executor/internal/platform/lock` package did flap while a concurrent writer held an
 in-progress edit of it (`valkey.go` + `valkey_test.go`, plus `zz_probe*_test.go` scratch files);
 observed states included a missing `fakeValkey` type, literal CR bytes inside string literals, a
 scripted server that never served its steps, and a syntax error at `valkey_test.go:649`. That
@@ -236,7 +236,7 @@ Verification of the two fixes made this session (each proven, not asserted):
 - **Cross-service gate** (`tests/integration/api/check-api-contract.py`): added a web
   proxy route with no Go counterpart → gate FAILS naming the 502-in-production path;
   removed it → gate PASSES.
-- **Valkey AUTH handshake** (`internal/lock/valkey.go`): the handshake created a *second*
+- **Valkey AUTH handshake** (`internal/platform/lock/valkey.go`): the handshake created a *second*
   `bufio.Reader` for the AUTH reply, which could buffer past `+OK` and swallow the command
   reply — a lock that looks unavailable (fail-closed) on a healthy Valkey. Fixed by sharing one
   reader across both replies on the connection; the scripted fake server was fixed in the same
@@ -287,11 +287,11 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    tree held the coherent completion; this session landed it (`befd141`, `25cd532`) and verified HEAD
    in an isolated worktree. The "split by 7d90520" wording in `befd141`'s message is wrong and is
    corrected here: `git show --stat 7d90520 -- backend/workers/executor/cmd/executor/` is empty.
-4. **`internal/worker` clobbered a terminal landing with the stale status** — `drive()` re-saved
+4. **`internal/runtime/worker` clobbered a terminal landing with the stale status** — `drive()` re-saved
    the execution record *after* `runActions`, so any pass that landed a terminal/paused status
    (`StrategyComplete`→`FILLED`, cancel→`CANCELLED`, risk-stop) had that status overwritten by the
    pre-action `RUNNING`: a fully filled execution was silently resurrected and re-driven every tick
-   forever. Found by the new composed harness (`internal/e2e`), which is the first test to reach the
+   forever. Found by the new composed harness (`internal/tests/e2e`), which is the first test to reach the
    completion path; existing worker tests never did. Proven red at the prior HEAD
    (`git worktree --detach HEAD` + the harness → `TestPaperMarketLifecycle` and
    `TestPaperRestartNoDuplicateOrder` fail there), fixed (`9688722`) by persisting the engine state
@@ -303,10 +303,10 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    (`fakeValkey`) was already correct — `Dial` reserves both steps for a `multi` AUTH step and
    `serve` replays step idx+1 on the same connection. Fixed in production code (`024fadd`): each
    write/read in `do` now wraps its error with a context label (`lock: AUTH write/read`,
-   `lock: command write/read`). Verified: `go test -race ./internal/lock/` green 3× consecutively,
+   `lock: command write/read`). Verified: `go test -race ./internal/platform/lock/` green 3× consecutively,
    and `TestValkeyLockAuthHandshake`/`TestValkeyLockAuthRejected` both pass. No behavior change —
    the fail-closed contract is untouched; only the error string carries more information.
-6. **`internal/worker.isRetryable` misclassified every venue error as retryable** — it looked for a
+6. **`internal/runtime/worker.isRetryable` misclassified every venue error as retryable** — it looked for a
    `Retryable() bool` *method* by unwrapping the error chain, but adapters and the `paper` simulator
    put retryability in `exchange.VenueError.Class.Retryable`, a **field**; nothing implements the
    method, so the lookup always fell through to the fail-safe default `true`. Consequence: a
@@ -343,7 +343,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    imports `@/platform/executor/{store,worker,plan,runtime,lock}` — it exercises the **TS**
    runtime against the real Postgres/Valkey, so it is *not yet* the "against the Go worker" gate
    the parity matrix names. **The Go offline half of that gate is now proven**: the composed
-   harness in `backend/workers/executor/internal/e2e` (12 tests, hermetic) drives the **real** worker +
+   harness in `backend/workers/executor/internal/tests/e2e` (12 tests, hermetic) drives the **real** worker +
    **real** `exchange/paper` venue + **real** `lock.MemoryLock` over a `worker.MemoryStore` with a
    hand-advanced `FixedClock`, covering create→start→recovery→place→fill→complete, lease
    contention (§65/§127.4), restart without duplicate (§66/§127.5), cancel a resting entry (§127.6),
@@ -402,7 +402,7 @@ those pre-staged files in; see the commit-scope note below). `git status` is emp
 **Commit-scope note (honesty):** some of this session's commits were made with a bare
 `git commit` while a concurrent writer had files staged in the shared index, so they swept those
 files in under a different message (e.g. `024fadd`, labelled a docs commit, contains 54 files
-including `frontend/web/infrastructure/*` and `backend/workers/executor/internal/lock/valkey.go`). The **content** is
+including `frontend/web/infrastructure/*` and `backend/workers/executor/internal/platform/lock/valkey.go`). The **content** is
 preserved and green; only the commit *messages* under-describe their payload. No work was lost or
 discarded. Re-splitting history now would rewrite commits under an active writer, which is riskier
 than the cosmetic gain, so it is recorded here instead.

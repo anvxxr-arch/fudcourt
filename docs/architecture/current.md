@@ -103,7 +103,7 @@ post-Phase-1/2 tree, i.e. after the `database/` move — pre-move runs at the ol
 | `python3 scripts/checks/check-deploy.py` (frontend/web) | 0 (`check-deploy: OK (10 unit files: paths exist, ExecStart absolute, timer pairs present)`) |
 | `python3 scripts/checks/check-structure.py` (frontend/web) | 0 (`STRUCTURE_OK (139 files across (src root)(1), app(74), cms(9), features(32), platform(21), shell(1), styles(1), ui(1))`) |
 | `bunx tsc -p tsconfig.shaper-tests.json` (frontend/web; the tsc compile step of `test:shapers`) | 0 |
-| `node --require ./scripts/tests/alias-resolver.cjs --test .shaper-tests/scripts/tests/executor-<suite>-tests.js` × 8 suites (frontend/web; per-suite parity breakdown in §5) | 0 each |
+| `node --require ./tests/alias-resolver.cjs --test .shaper-tests/frontend/web/tests/<suite>.js .shaper-tests/tests/e2e/executor/<suite>.js .shaper-tests/tests/integration/executor/<suite>.js` × 8 suites (frontend/web; per-suite parity breakdown in §5) | 0 each |
 | `bun run verify:executor` (frontend/web) | **0 — `ALL PAPER-MODE CHECKS PASSED (§127)`** against the real stack (2026-10-01: Bun.sql + real `executor` schema on :5433 + real Valkey lock + real worker). Gate: `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex, fail-closed §128.23) |
 
 **Pre-existing failures: none.** Every documented baseline command passes on this tree, including the live paper E2E above. The skips below are environmental, not failures.
@@ -225,7 +225,7 @@ Plus `sitemap.ts`, `robots.ts`, `globals.css`, root `layout.tsx`.
 | File | Dialect / role | Objects |
 |---|---|---|
 | `schema.sql` | SQLite (Turso) source-of-truth | `accounts`, `assets`, `journal`, `ledger`, `trades`, `transactions`, `venues`, `wallets` (+ `sqlite_sequence`) |
-| `pg-schema.sql` | Postgres read model (projected from Turso by `scripts/tools/pg-load.ts`, DR-019) | same 8 tables + `asset_history` (indexes `asset_history_asset_ts`, unique snapshot), `price_history` (unique `price_history_symbol_ts_source`) |
+| `pg-schema.sql` | Postgres read model (projected from Turso by `frontend/web/scripts/tools/pg-load.ts`, DR-019) | same 8 tables + `asset_history` (indexes `asset_history_asset_ts`, unique snapshot), `price_history` (unique `price_history_symbol_ts_source`) |
 | `executor-schema.sql` | Postgres `executor` schema (owned by the executor runtime; DDL mirrored in `src/platform/executor/store.ts` `EXECUTOR_DDL`, applied via `ensureExecutorSchema`) | `executor.exchange_accounts`, `executor.executions`, `executor.execution_plans`, `executor.child_orders`, `executor.fills`, `executor.execution_events`, `executor.balance_snapshots`, `executor.positions_snapshots`, `executor.risk_profiles`, `executor.audit_logs` (each with the indexes named in the file) |
 
 Ownership today (feature → tables):
@@ -238,7 +238,7 @@ Ownership today (feature → tables):
   projected to Postgres by `pg-load.ts` (web scripts) — ownership is split across two apps today.
 - **DDL byte-identity (Phase-5 anchor): PASS** — `store.ts` `EXECUTOR_DDL` is asserted
   byte-identical (normalized) to `database/schema/executor-schema.sql` by
-  `scripts/tests/executor-store-tests.ts` §59 ("no silent drift"); suite 41/41 green 2026-10-01
+  `tests/integration/executor/executor-store-tests.ts` §59 ("no silent drift"); suite 41/41 green 2026-10-01
   (details in §5a).
 
 ## 5. Executor runtime (`frontend/web/src/platform/executor/`) — in-frontend execution engine
@@ -259,16 +259,18 @@ Adjacent:
 - `src/features/executor/` — UI layer: `client.ts` (typed API client: Preview/Create/Lifecycle/List
   response types), `ui.tsx` (`ExecutorComposer`, `ExecutorProgress`, `ExecutorFrame`, `buildExecution`),
   `shapers.ts` (display formatting).
-- `scripts/executor/worker.ts` — headless worker entry run by systemd
+- `frontend/web/scripts/executor/worker.ts` — headless worker entry run by systemd
   `fudcourt-executor-worker.service` (Bun).
-- Tests: `scripts/tests/executor-{engine,exchange,plan,risk,runtime,store,worker,ui}-tests.ts`
+- Tests: `tests/e2e/executor/executor-{engine,plan,risk,runtime,worker}-tests.ts` +
+  `tests/integration/executor/executor-{exchange,store}-tests.ts` +
+  `frontend/web/tests/executor-ui-tests.ts`
   (compiled by `tsconfig.shaper-tests.json` into `.shaper-tests/`, run offline via `node --test`).
 - `tests/e2e/executor/executor-paper-e2e.ts` — paper-trading end-to-end verifier (`verify:executor`).
 
 ### 5a. Phase 5 parity baseline (per-suite, 2026-10-01)
 The 8 `executor-*-tests` suites are the deletion gate for the TS→Go port (migration-plan Phase 5).
 Per compiled suite (`bunx tsc -p tsconfig.shaper-tests.json` exit 0, then
-`node --require ./scripts/tests/alias-resolver.cjs --test .shaper-tests/scripts/tests/<suite>.js`):
+`node --require ./tests/alias-resolver.cjs --test <compiled suite>.js`):
 
 | Suite | tests | pass | fail | exit |
 |---|---|---|---|---|
@@ -352,7 +354,7 @@ module has moved into it):
   (`src/reconciliation/server.rs`) serving `/api/reconcile` (:3102) — Rust port of
   `frontend/web/src/app/(frontend)/api/reconcile/route.ts` (DR-014); reconciliation math in
   `src/reconciliation/reconcile.rs`.
-- Tests: `tests/reconcile.rs` + inline tests (17 total, all passing).
+- Tests: `backend/sync/tests/reconcile.rs` + inline tests (17 total, all passing).
 
 Note: the Python originals (`frontend/web/scripts/tools/sync-live.py`, web `api/reconcile`) still exist
 and are still wired to the **web** `fudcourt-sync.service`/`.timer` in `infrastructure/systemd/`; the Rust
@@ -387,7 +389,7 @@ Toolchain pins: Node 22 runtime, Bun 1.4.2, Go 1.24.1, Rust stable.
 
 - **Executor internals reach deep into web**: production files outside
   `src/platform/executor/` import its internals — 15 `api/executor/**` route handlers,
-  `scripts/executor/worker.ts`, `tests/e2e/executor/executor-paper-e2e.ts`, and
+  `frontend/web/scripts/executor/worker.ts`, `tests/e2e/executor/executor-paper-e2e.ts`, and
   `src/features/executor/{client,ui}`. Of these, all 15 routes + worker + paper-e2e
   import the **sensitive** modules directly (`risk`, `exchange`, `lock`, `store`, `plan`, `engine`).
 - **Shell depends on features** (upward): `src/components/layout/store-shell.tsx` imports 16+

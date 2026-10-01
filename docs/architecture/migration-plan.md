@@ -41,7 +41,7 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
 ## Phase 2 — `database/` extraction
 > **Amended 2026-10-01 (partially executed):** `frontend/web/db/{schema.sql,pg-schema.sql,
 > executor-schema.sql}` are now `database/schema/{schema.sql,pg-schema.sql,executor-schema.sql}`
-> (`database/README.md` records the move). `pg-load.ts`, `mirror.ts`, `store.ts`, `dump-schema.mjs`
+> (`database/README.md` records the move). `pg-load.ts`, `mirror.ts`, `store.ts`, `scripts/database/dump-schema.mjs`
 > path comments updated; `dump-schema.mjs --check` remains the Turso drift gate. **Not done:**
 > lifting `EXECUTOR_DDL` content out of `store.ts` (it stays embedded byte-equivalent to
 > `database/schema/executor-schema.sql`, pinned by `executor-store-tests.ts` §59 test
@@ -77,7 +77,7 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
   normalization, `schemas/` for the table groups in `domain-map.md` §2.
 - Extract `shared/sdk/typescript` from `frontend/web/src/features/executor/client.ts` + the other
   `features/*/client.ts` typed clients.
-- **Risks:** the shaper tests (`scripts/tests/*`) assert today's response shapes — they double as
+- **Risks:** the shaper tests (`frontend/web/tests/*`, plus the executor suites under `tests/{e2e,integration}/executor/`) assert today's response shapes — they double as
   contract fixtures; regenerate from `record:fixtures` output, don't hand-copy.
 - **Ordering:** after Phase 2; before Phases 4–6 (each service port consumes contracts).
 - **Rollback:** contracts are additive new files; consumers not yet cut over.
@@ -120,9 +120,10 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
 ## Phase 5 — executor TS → Go incremental port (`backend/workers/executor`)
 > **Amended 2026-10-01 (port IN FLIGHT, measured green):** `backend/workers/executor` is a
 > Go 1.25 module (`go.work` member). Landed and verified green (`go build/vet/test
-> ./...` fresh pass, 174 test funcs): `internal/{executor (records/enums/lifecycle/
-> types), decimal, execution, idempotency, orders, risk, sizing, strategy, worker,
-> planner (pkg present), lock}` and `internal/exchange` (interface, registry,
+> ./...` fresh pass, 174 test funcs): `internal/{core/execution (records/enums/
+> lifecycle/types), core/orders, core/risk, core/sizing, core/planner,
+> strategies, runtime/worker, runtime/idempotency, platform/{lock,decimal,credentials}}`
+> and `internal/exchanges` (interface, registry,
 > classify/symbols/credentials/http) with adapters `binance`, `bybit`, `mexc` and
 > `paper` (same-interface simulated matcher). Exchange+lock slice alone: 108 test
 > funcs / 390 cases, classifier/symbol/signing/error-mapping parity with
@@ -133,16 +134,16 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
 Port order chosen so parity tests can gate each deletion (per module in `current.md` §5):
 
 1. `types.ts` + `plan.ts` + `risk.ts` (pure functions — easiest parity: table-driven tests
-   comparing TS vs Go outputs from `scripts/tests/executor-{plan,risk}-tests.ts` fixtures).
+   comparing TS vs Go outputs from `tests/e2e/executor/executor-{plan,risk}-tests.ts` fixtures).
 2. `engine.ts` strategy FSM (`transitionChildOrder`, `strategyStep/OnFill/Progress`,
    `defaultSlices`) with `executor-*-tests.ts` as the parity oracle.
 3. `store.ts` persistence (`executor.*` writes) + `lock.ts`.
 4. `exchange.ts` adapters (binance/bybit/mexc via `CcxtLike` shape) + key handling
    (`masterKeyFromEnv` — move key custody to backend/workers/executor, web never sees secrets).
-5. `worker.ts` + `scripts/executor/worker.ts` last (it composes everything).
+5. `worker.ts` + `frontend/web/scripts/executor/worker.ts` last (it composes everything).
 
 - **Rule: parity tests MUST pass before each TS module is deleted** (the existing
-  `scripts/tests/executor-*-tests.ts` suites are the seed). Keep the TS runtime until
+  `tests/{e2e,integration}/executor/executor-*-tests.ts` suites are the seed). Keep the TS runtime until
   `verify:executor` (`executor-paper-e2e.ts`) passes against the Go worker.
 - **Parity baseline (2026-10-01):** `current.md` §5a records the per-suite breakdown
   (155 tests, 0 fail across the 8 executor suites; covered by `test:shapers` 240/240) and the
@@ -210,7 +211,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 > `fudcourt-sync-rust.service` (Rust) — the collision risk noted below is retired.
 > `check-deploy.py` was updated in the same wave (the ExecStart-exists gate covers the new
 > folder). Remaining: retire the `fudcourt-apicalls` name in favor of `fudcourt-data`, add
-> `infrastructure/docker|compose/`, and re-infrastructure/reload the host units.
+> `infrastructure/docker|compose/`, and re-pointing/reloading the host units.
 
 **Status: core move EXECUTED (2026-10-01), verified green.**
 - All 10 unit files consolidated into `infrastructure/systemd/` via `git mv` (was

@@ -116,7 +116,7 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
 ### 3.4 Cross-app source imports (Go/Rust ↔ TS)
 - **None found.** `backend/data` (Go) and `backend/sync` (Rust) contain no references to
   `frontend/web` source; coupling is HTTP (`/api/reconcile` proxy), Turso tables, and shared `.sql`
-  files only. (Docs/comments in Rust reference `frontend/web/scripts/sync-live.py` as the oracle —
+  files only. (Docs/comments in Rust reference `frontend/web/scripts/tools/sync-live.py` as the oracle —
   documentation references, not imports.)
 
 ### 3.5 Dual-implementation debt (same domain in two languages, both live)

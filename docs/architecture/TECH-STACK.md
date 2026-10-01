@@ -134,7 +134,7 @@ Browser/agent  ──►  GET /api/cryptorank?mode=…[&key=…][&fresh=1]   (:3
 | Official exchange announcements / league schedules / official quotes | launchpool, prediction, rwa GATE3 |
 
 ## frontend/web layout (DR-018)
-One `src/` tree — the placement rule, enforced by `scripts/checks/check-structure.py`:
+One `src/` tree — the placement rule, enforced by `frontend/web/scripts/checks/check-structure.py`:
 ```
 src/app/         routes only ((frontend)/ route groups (public)|(dashboard)|(admin) + api/, blog/ CMS + frontend) + middleware.ts
 src/features/    one slice per data family: client + shaper/types + its panel

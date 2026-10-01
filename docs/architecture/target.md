@@ -53,7 +53,7 @@ scripts/
 ## 3. Dependency rules (allowed / forbidden)
 
 RFC 2119. These rules are the acceptance criteria for later phases and SHOULD be enforced by
-`scripts/checks` + CI once the phases land.
+`frontend/web/scripts/checks` + CI once the phases land.
 
 ### 3.1 Allowed
 
@@ -67,7 +67,7 @@ RFC 2119. These rules are the acceptance criteria for later phases and SHOULD be
 
 - `frontend/web` MUST NOT own or contain: executor runtime, risk, sizing, strategy logic, exchange
   signing/keys, workers, locks, or execution persistence. (Today `src/platform/executor/` and
-  `scripts/executor/` violate this — Phase 5 removes them.)
+  `frontend/web/scripts/executor/` violate this — Phase 5 removes them.)
 - Services MUST NOT import each other's implementation — contracts only. No shared Go/Rust/TS
   source across service boundaries.
 - `backend/api` MUST NOT reach into `executor.*` tables directly; it commands `backend/workers/executor`
@@ -114,5 +114,5 @@ SQLite/Turso remains the source of truth for balances; Postgres remains the read
 - `tests/integration` — cross-service contract tests (generated from `shared/contracts`).
 - `tests/e2e` — browser/user journeys (executor wizard paper-trade path included).
 - `tests/fixtures` + `tests/oracle` — recorded upstream envelopes and the Python-oracle
-  parity harness currently under `frontend/web/scripts/{fixtures,oracle,verify}`.
+  parity harness now under `tests/{fixtures,oracle}` + `scripts/verify`.
 - Unit tests live next to their service (Go `*_test.go`, Rust `tests/`, web vitest/node --test).

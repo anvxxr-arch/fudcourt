@@ -1,7 +1,7 @@
 # Events — canonical contracts
 > Reality-first: everything here is read off `shared/contracts/` (landed),
 > `frontend/web/src/platform/executor/types.ts` and
-> `backend/workers/executor/internal/executor/enums.go`. Written 2026-10-01.
+> `backend/workers/executor/internal/core/execution/enums.go`. Written 2026-10-01.
 > Sources: `shared/contracts/events/catalog.json`,
 > `shared/contracts/events/event.schema.json`,
 > `shared/contracts/schemas/event-envelope.json`,
@@ -37,7 +37,7 @@ path.)
 ## 2. The 23 ExecutionEventName values
 The immutable append-only event vocabulary of the execution log. Rows 1–19
 are the exact legacy list shared 1:1 by `frontend/web/src/platform/executor/types.ts`
-(`ExecutionEventName`) and `backend/workers/executor/internal/executor/enums.go`;
+(`ExecutionEventName`) and `backend/workers/executor/internal/core/execution/enums.go`;
 rows 20–23 are the 2026-10-01 catalog additions, carried by `enums.go` and
 `catalog.json` but not yet by `types.ts` (no producer emits them yet):
 

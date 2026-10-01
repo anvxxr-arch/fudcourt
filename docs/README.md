@@ -38,6 +38,7 @@ docs/
 | architecture | [data-catalog.md](architecture/data-catalog.md) | Per-dataset detail: today's layer, provider carrier, canonical target, identity, time semantics, consumers |
 | architecture | [data-classification.md](architecture/data-classification.md) | The classification matrix + provider-DTO leak audit + duplicate-concept audit |
 | architecture | [database-classification.md](architecture/database-classification.md) | Every table in Turso/Postgres/executor-schema/Neon classified: canonical/event/snapshot/cache/provider-specific/legacy/unknown, owner, durability, sensitivity, writer gaps |
+| architecture | [canonical-acceptance.md](architecture/canonical-acceptance.md) | The acceptance-criteria scorecard: every criterion mapped to observed evidence, with unresolved ambiguities and P0/P1/P2 next actions |
 | operations | [PLAN.md](operations/PLAN.md) | Goal → subgoal → task → subtask breakdown with status |
 | operations | [SECRETS.md](operations/SECRETS.md) | Secret inventory, production (self-hosted) env model, rotation runbook |
 | operations | [CHANGELOG.md](operations/CHANGELOG.md) | What shipped, in change-sized rows |
@@ -45,46 +46,65 @@ docs/
 ## One-line map of the repo
 
 ```
-apps/
-  web/    Next.js 16.3.6 portfolio OS (16 views, 21 API routes: 18 data + 3 auth)
-          + the Payload blog + verify harnesses
-  fudcourt-data/ Go sidecar :3101 — one package per family: `internal/cryptorank`
-            (mode tables, tls-client fetch, cache, shaping), `internal/khala`
-            (research reports, plain net/http), `internal/llama` (DeFiLlama TVL),
-            `internal/news` (Cointelegraph RSS: feed table, strict source/limit,
-            RSS parse), `internal/chainrank` (chainrank.fyi reads; pagination
-            relayed verbatim) + `internal/httpx` (shared escaping rule);
-            /api/{cryptorank,khala,llama,news,chainrank} proxy to it
-            (DR-005/DR-006/DR-009/DR-012/DR-013)
-  sync/ Rust services — TWO binaries from one crate: `fudcourt-sync` (the live
-            multi-chain balance sync → Turso + share %, parity-checked against
-            scripts/tools/sync-live.py; SG-9.4) and `fudcourt-reconciled`
-            (:3102, the `/api/reconcile` HTTP service — zero new dependencies,
-            parity-checked byte-for-byte against the TS shaper; DR-014)
-  (blog)  Payload CMS 3.89 merged INTO frontend/web (DR-017): collections +
-          migrations + the admin/API routes live at src/cms and
-          app/blog/(payload), served at /blog, /blog/cms/admin, /blog/cms/api/*.
-          Posts/media/categories/users still live in Neon (DATABASE_URL)
+frontend/web/    Next.js 16.3.6 portfolio OS (16 views; the API routes live at
+                 `src/app/(frontend)/api/**`) + the Payload blog + verify harnesses
+backend/api/     Go — primary HTTP API (unit `fudcourt-api` :3103, `cmd/api`;
+                 `internal/{access,accounts,finance,markets,notifications,audit,jobs,
+                 platform}`)
+backend/workers/executor/
+                 Go — CEX execution engine (`cmd/executor`;
+                 `internal/{core,strategies,exchanges,runtime,platform,repository,tests}`)
+backend/data/    Go sidecar :3101 — one package per family, under `internal/research/`:
+                 `cryptorank` (mode tables, tls-client fetch, cache, shaping),
+                 `khala` (research reports, plain net/http), `llama` (DeFiLlama TVL),
+                 `news` (Cointelegraph RSS: feed table, strict source/limit, RSS
+                 parse), `chainrank` (chainrank.fyi reads; pagination relayed
+                 verbatim) + `platform/httpx` (shared escaping rule) and
+                 `platform/cache`; /api/{cryptorank,khala,llama,news,chainrank}
+                 proxy to it (DR-005/DR-006/DR-009/DR-012/DR-013)
+backend/sync/    Rust crate — TWO binaries: `fudcourt-sync` (the live multi-chain
+                 balance sync → Turso + share %, parity-checked against
+                 frontend/web/scripts/tools/sync-live.py; SG-9.4) and
+                 `fudcourt-reconciled` (:3102, the `/api/reconcile` HTTP service —
+                 zero new dependencies, parity-checked byte-for-byte against the
+                 TS shaper; DR-014)
+shared/contracts/      OpenAPI + event catalog + JSON schemas — the one shared artifact
+shared/sdk/typescript/ generated TS client over the contract
+database/schema/       schema.sql (Turso) · pg-schema.sql (read model) ·
+                       executor-schema.sql (execution ledger)
+infrastructure/systemd/ 12 unit files + 2 retired tombstones (web, api, data, executor,
+                       executor-worker, sync, sync-rust, reconciled, pgload)
+tests/           integration/ · e2e/ · fixtures/ · oracle/ — cross-system suites
+scripts/         verify/ · database/ · githooks/ — repo-wide gates, tooling, hook
+(blog)           Payload CMS 3.89 merged INTO frontend/web (DR-017): collections +
+                 migrations + the admin/API routes live at src/cms and
+                 app/blog/(payload), served at /blog, /blog/cms/admin, /blog/cms/api/*.
+                 Posts/media/categories/users still live in Neon (DATABASE_URL)
 ```
 `frontend/web/` splits routes from React by role (DR-011): `app/` holds the Next route
 tree (`api/`, one wrapper per deep link) plus `app/store/store-shell.tsx` (the SPA
 state container), `src/components/` the 18 panel components and `src/styles/` the
-design tokens + view types. The Go sidecar is one package per family —
-`internal/{cryptorank,khala,llama,news,chainrank}` — and `backend/sync/` is the Rust
+design tokens + view types. The Go sidecar is one package per family under
+`backend/data/internal/research/` —
+`{cryptorank,khala,llama,news,chainrank}` — and `backend/sync/` is the Rust
 crate behind both of its services (`fudcourt-sync`, `fudcourt-reconciled`).
 `/api/reconcile` is a thin proxy to `fudcourt-reconciled` on `:3102` (DR-014), with
-`lib/reconcile.ts` kept as the independent oracle rather than a fallback path.
-`frontend/web/scripts/` is grouped by function — one directory per job, so a reader
-never has to guess whether a file is a gate or a one-off:
+the web-side `src/features/treasury/reconcile.ts` kept as the oracle rather than a
+fallback path.
+`frontend/web/scripts/` holds the web-app-only tooling and harnesses
+(`checks/` offline gates, `tools/` codegen/maintenance incl. `sync-live.py`);
+the repo-wide verifiers, fixtures and cross-system suites have moved out of
+`frontend/web`:
 ```
-  checks/   offline gates ......... check-contract.py (TS↔Go tables, mutation guards)
-  tests/    offline unit suites ... shaper/auth/rate-limit tests, verify-limiter.mts
-  verify/   live harnesses ........ verify-<family>.py, verify_all_routes.py,
-                                    monitor.py (continuous), dom_audit.py
-  oracle/   independent oracle .... cr_fetch.py (only used BY verify-cryptorank.py)
-  tools/    codegen/maintenance ... record-fixtures.ts, dump-envelopes.ts,
-                                    dump-schema.mjs, sync-live.py
-  fixtures/ recorded payloads ..... 26 .gz + expected/ envelopes, sha256 in MANIFEST.json
+  scripts/verify/        live harnesses + one-command gate: verify-<family>.py,
+                         verify_all_routes.py, monitor.py, dom_audit.py, verify-all.sh
+  scripts/database/      dump-schema.mjs (Turso schema drift alarm)
+  scripts/githooks/      pre-push hook
+  tests/e2e/executor/      executor E2E suites + executor-paper-e2e.ts
+  tests/integration/       cross-service gates (api contract, executor integration)
+  tests/fixtures/          recorded payloads: 26 .gz + expected/ envelopes,
+                           sha256 in MANIFEST.json
+  tests/oracle/            independent oracle: cr_fetch.py (only used BY verify-cryptorank.py)
 ```
 The frontend installs and runs through **Bun 1.4.2** (`bun install --frozen-lockfile`,
 `bun run …`, `bunx`) and is *served* by Bun ([DR-008](records/DECISIONS.md)). There is one
