@@ -110,7 +110,11 @@ pub fn str_or(v: Option<&Value>, fallback: &str) -> String {
 ///
 /// `assets`, `transactions` and `wallets` are the three SELECT result sets in the
 /// route's own order.
-pub fn reconcile(assets: &[Row], transactions: &[Row], wallets: Vec<Value>) -> (Vec<ReconRow>, Vec<Value>) {
+pub fn reconcile(
+    assets: &[Row],
+    transactions: &[Row],
+    wallets: Vec<Value>,
+) -> (Vec<ReconRow>, Vec<Value>) {
     // wallet -> asset -> (current, in_sum, out_sum), in first-seen order.
     let mut balance: Ordered<Ordered<(f64, f64, f64)>> = Ordered::default();
 

@@ -88,7 +88,10 @@ async fn prices(http: &Client) -> Result<Prices, String> {
     let coins = j.get("coins").and_then(|c| c.as_object()).unwrap_or(&empty);
     let mut out: Prices = Vec::new();
     for (sym, cid) in LLAMA_IDS {
-        let price = coins.get(*cid).and_then(|e| e.get("price")).and_then(json_f64);
+        let price = coins
+            .get(*cid)
+            .and_then(|e| e.get("price"))
+            .and_then(json_f64);
         // A missing id must STOP the sync, never value an asset at 0.
         let p = match price {
             Some(p) => p,
@@ -216,7 +219,9 @@ async fn sync_evm(
         let url = format!("https://{}/v2/{}", chain.host, env.alchemy_key);
         // Native balance
         let native = match rpc(http, &url, "eth_getBalance", json!([addr, "latest"])).await {
-            Ok(v) => hexint(Some(&v)).map(|raw| scale_dec(raw, 18)).map_err(|e| e.0),
+            Ok(v) => hexint(Some(&v))
+                .map(|raw| scale_dec(raw, 18))
+                .map_err(|e| e.0),
             Err(e) => Err(e.0),
         };
         match native {
@@ -425,7 +430,10 @@ pub async fn run(env: &Env) -> Result<(), String> {
         );
     }
     if !errors.is_empty() {
-        println!("\n!!! {} RPC ERRORS (NOT treated as zero) !!!", errors.len());
+        println!(
+            "\n!!! {} RPC ERRORS (NOT treated as zero) !!!",
+            errors.len()
+        );
         for e in &errors {
             println!("  - {e}");
         }

@@ -79,17 +79,17 @@ pub fn repr(x: f64) -> String {
             m.push_str(&digits[1..]);
         }
         let e = decpt - 1;
-        format!(
-            "{m}e{}{:02}",
-            if e < 0 { '-' } else { '+' },
-            e.abs()
-        )
+        format!("{m}e{}{:02}", if e < 0 { '-' } else { '+' }, e.abs())
     } else if decpt <= 0 {
         format!("0.{}{}", "0".repeat((-decpt) as usize), digits)
     } else if decpt >= ndigits {
         format!("{}{}.0", digits, "0".repeat((decpt - ndigits) as usize))
     } else {
-        format!("{}.{}", &digits[..decpt as usize], &digits[decpt as usize..])
+        format!(
+            "{}.{}",
+            &digits[..decpt as usize],
+            &digits[decpt as usize..]
+        )
     };
     if neg {
         format!("-{body}")
@@ -182,8 +182,8 @@ mod tests {
         assert_eq!(repr(round4(1.00005)), "1.0001");
         assert_eq!(repr(round2(12.345)), "12.35"); // CPython: round(12.345, 2) == 12.35
         assert_eq!(repr(round2(12.335)), "12.34"); // CPython: 12.335 is
-        // really 12.33499999... in binary, so the correctly-rounded 2-dp
-        // result is 12.34 — measured with python3 -c "print(round(12.335,2))"
+                                                   // really 12.33499999... in binary, so the correctly-rounded 2-dp
+                                                   // result is 12.34 — measured with python3 -c "print(round(12.335,2))"
         assert_eq!(repr(round10(0.890881)), "0.890881");
     }
 
@@ -194,4 +194,3 @@ mod tests {
         assert_eq!(fixed4(1.5), "1.5000");
     }
 }
-

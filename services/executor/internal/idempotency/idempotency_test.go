@@ -96,3 +96,59 @@ func TestFillDedupKeyScopedByAccount(t *testing.T) {
 		t.Fatal("component boundaries must keep the key injective")
 	}
 }
+
+// RequestID is the fourth identifier PRD §66 requires before live mode
+// (execution_id, request_id, client_order_id, event_id). It is NOT a client
+// order id: it names the placement REQUEST, so a retried submit is a duplicate
+// request even though it maps onto the same venue order. The two id spaces
+// carry different prefixes precisely so they can never be cross-parsed.
+
+func TestRequestIDDeterministic(t *testing.T) {
+	if got := RequestID("e1", 0); got != "req_e1_0" {
+		t.Fatalf("RequestID = %q; want req_e1_0", got)
+	}
+	if got := RequestID("e-1", 7); got != "req_e-1_7" {
+		t.Fatalf("RequestID = %q; want req_e-1_7", got)
+	}
+}
+
+func TestParseRequestIDRoundTrip(t *testing.T) {
+	for _, seq := range []int{0, 1, 100} {
+		id := RequestID("e1", seq)
+		gotExec, gotSeq, err := ParseRequestID(id)
+		if err != nil {
+			t.Fatalf("ParseRequestID(%q) err = %v", id, err)
+		}
+		if gotExec != "e1" || gotSeq != seq {
+			t.Fatalf("ParseRequestID(%q) = (%q, %d); want (e1, %d)", id, gotExec, gotSeq, seq)
+		}
+	}
+}
+
+func TestParseRequestIDRefusesForeignIDs(t *testing.T) {
+	for _, id := range []string{
+		"", "req_", "req_e1", "req_e1_", "fud_e1_0", "e1_0",
+		"req__0", "req_e 1_0", "req_e1_-1", "req_e1_00",
+	} {
+		if _, _, err := ParseRequestID(id); err == nil {
+			t.Fatalf("ParseRequestID(%q) accepted a foreign id; want refusal", id)
+		}
+	}
+}
+
+// Cross-parse: a client order id must never parse as a request id and vice
+// versa. This is the invariant that prevents a restart from minting a "new"
+// request id for a placement that already has a venue order.
+func TestRequestIDAndClientOrderIDAreDistinct(t *testing.T) {
+	coID := ClientOrderID("e1", 3)
+	if _, _, err := ParseRequestID(coID); err == nil {
+		t.Fatalf("client order id %q must not parse as a request id", coID)
+	}
+	reqID := RequestID("e1", 3)
+	if _, _, err := ParseClientOrderID(reqID); err == nil {
+		t.Fatalf("request id %q must not parse as a client order id", reqID)
+	}
+	if coID == reqID {
+		t.Fatalf("client order id and request id must differ: %q", coID)
+	}
+}

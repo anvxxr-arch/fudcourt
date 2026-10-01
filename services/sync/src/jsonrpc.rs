@@ -84,9 +84,8 @@ async fn call_once(
 
 /// `hexint(v)` -- refusing to read a null as zero.
 pub fn hexint(v: Option<&serde_json::Value>) -> Result<u128, RpcError> {
-    let v = v.ok_or_else(|| {
-        RpcError("hexint(None) -- refusing to treat a null as zero".to_string())
-    })?;
+    let v =
+        v.ok_or_else(|| RpcError("hexint(None) -- refusing to treat a null as zero".to_string()))?;
     let s = match v {
         serde_json::Value::Null => {
             return Err(RpcError(
@@ -130,7 +129,10 @@ mod tests {
         assert_eq!(hexint(Some(&json!("0x"))).unwrap(), 0u128);
         assert!(hexint(None).is_err());
         assert!(hexint(Some(&json!(null))).is_err());
-        assert_eq!(hexint(Some(&json!("0xde0b6b3a7640000"))).unwrap(), 1_000_000_000_000_000_000u128);
+        assert_eq!(
+            hexint(Some(&json!("0xde0b6b3a7640000"))).unwrap(),
+            1_000_000_000_000_000_000u128
+        );
     }
 
     #[test]

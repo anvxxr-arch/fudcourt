@@ -32,9 +32,13 @@ static ORACLE: Mutex<Option<Oracle>> = Mutex::new(None);
 /// a real key (see `redact`).
 pub fn init(path: &str, trace_path: Option<&str>) -> Result<(), String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("oracle inputs {path}: {e}"))?;
-    let blob: Value = serde_json::from_str(&text).map_err(|e| format!("oracle inputs {path}: {e}"))?;
+    let blob: Value =
+        serde_json::from_str(&text).map_err(|e| format!("oracle inputs {path}: {e}"))?;
     let empty = serde_json::Map::new();
-    let responses = blob.get("responses").and_then(|r| r.as_object()).unwrap_or(&empty);
+    let responses = blob
+        .get("responses")
+        .and_then(|r| r.as_object())
+        .unwrap_or(&empty);
     let mut data = BTreeMap::new();
     for (k, v) in responses {
         let s = match v {

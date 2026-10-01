@@ -67,7 +67,9 @@ fn load_env() {
 }
 
 fn token() -> Option<String> {
-    std::env::var("TURSO_AUTH_TOKEN").ok().filter(|t| !t.is_empty())
+    std::env::var("TURSO_AUTH_TOKEN")
+        .ok()
+        .filter(|t| !t.is_empty())
 }
 
 #[tokio::main]

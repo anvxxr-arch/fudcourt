@@ -34,7 +34,10 @@ async fn read_request(s: &mut TcpStream) -> std::io::Result<Option<Request>> {
     let mut buf: Vec<u8> = Vec::with_capacity(1024);
     loop {
         if buf.len() >= MAX_HEAD {
-            return Err(std::io::Error::new(ErrorKind::InvalidData, "request head too large"));
+            return Err(std::io::Error::new(
+                ErrorKind::InvalidData,
+                "request head too large",
+            ));
         }
         let mut chunk = [0u8; 512];
         let n = s.read(&mut chunk).await?;
@@ -133,9 +136,7 @@ pub async fn serve(addr: &str, db: Db) -> Result<(), String> {
     let local = listener
         .local_addr()
         .map_err(|e| format!("local_addr: {e}"))?;
-    eprintln!(
-        "fudcourt-reconciled listening on {local} (rust reconcile service; DR-014)"
-    );
+    eprintln!("fudcourt-reconciled listening on {local} (rust reconcile service; DR-014)");
     loop {
         let (mut stream, _peer) = match listener.accept().await {
             Ok(v) => v,

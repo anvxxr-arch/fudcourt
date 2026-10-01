@@ -7,9 +7,7 @@
 
 use serde_json::{json, Map, Value};
 
-use fudcourt_sync::reconcile::{
-    body, num, reconcile, str_or, summary_map, ReconRow,
-};
+use fudcourt_sync::reconcile::{body, num, reconcile, str_or, summary_map, ReconRow};
 use fudcourt_sync::server::route;
 
 type Row = Map<String, Value>;
@@ -57,12 +55,30 @@ fn str_or_matches_the_routes_fallback() {
 #[test]
 fn assets_accumulate_into_current_and_transactions_split_by_direction() {
     let assets = vec![
-        row(&[("wallet", json!("w1")), ("asset", json!("USDT")), ("quantity", json!(100))]),
-        row(&[("wallet", json!("w1")), ("asset", json!("USDT")), ("quantity", json!(50.5))]),
+        row(&[
+            ("wallet", json!("w1")),
+            ("asset", json!("USDT")),
+            ("quantity", json!(100)),
+        ]),
+        row(&[
+            ("wallet", json!("w1")),
+            ("asset", json!("USDT")),
+            ("quantity", json!(50.5)),
+        ]),
     ];
     let txs = vec![
-        row(&[("wallet_to", json!("w1")), ("asset", json!("USDT")), ("direction", json!("IN")), ("amount_usd", json!(200))]),
-        row(&[("wallet_to", json!("w1")), ("asset", json!("USDT")), ("direction", json!("OUT")), ("amount_usd", json!(49.5))]),
+        row(&[
+            ("wallet_to", json!("w1")),
+            ("asset", json!("USDT")),
+            ("direction", json!("IN")),
+            ("amount_usd", json!(200)),
+        ]),
+        row(&[
+            ("wallet_to", json!("w1")),
+            ("asset", json!("USDT")),
+            ("direction", json!("OUT")),
+            ("amount_usd", json!(49.5)),
+        ]),
     ];
     let (rows, _) = reconcile(&assets, &txs, vec![]);
     assert_eq!(rows.len(), 1);
@@ -85,8 +101,14 @@ fn a_direction_that_is_not_exactly_in_counts_as_out() {
             ("amount_usd", json!(10)),
         ])];
         let (rows, _) = reconcile(&[], &txs, vec![]);
-        assert_eq!(rows[0].out_sum, 10.0, "direction {tag:?} must be an outflow");
-        assert_eq!(rows[0].in_sum, 0.0, "direction {tag:?} must not be an inflow");
+        assert_eq!(
+            rows[0].out_sum, 10.0,
+            "direction {tag:?} must be an outflow"
+        );
+        assert_eq!(
+            rows[0].in_sum, 0.0,
+            "direction {tag:?} must not be an inflow"
+        );
     }
 }
 
@@ -120,7 +142,11 @@ fn missing_wallet_and_asset_use_the_routes_literals() {
 fn a_failed_row_is_never_dropped_a_zero_is_never_substituted_for_absence() {
     // The board's own rule: absent metrics render as an em-dash, so a row must
     // survive with the value it actually had (0 here is REAL: the column said 0).
-    let assets = vec![row(&[("wallet", json!("w")), ("asset", json!("ETH")), ("quantity", json!(0))])];
+    let assets = vec![row(&[
+        ("wallet", json!("w")),
+        ("asset", json!("ETH")),
+        ("quantity", json!(0)),
+    ])];
     let (rows, _) = reconcile(&assets, &[], vec![]);
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].current, 0.0);
@@ -129,17 +155,37 @@ fn a_failed_row_is_never_dropped_a_zero_is_never_substituted_for_absence() {
 #[test]
 fn rows_are_sorted_by_absolute_difference_desc() {
     let assets = vec![
-        row(&[("wallet", json!("small")), ("asset", json!("USDT")), ("quantity", json!(1))]),
-        row(&[("wallet", json!("big")), ("asset", json!("USDT")), ("quantity", json!(1000))]),
-        row(&[("wallet", json!("mid")), ("asset", json!("USDT")), ("quantity", json!(100))]),
+        row(&[
+            ("wallet", json!("small")),
+            ("asset", json!("USDT")),
+            ("quantity", json!(1)),
+        ]),
+        row(&[
+            ("wallet", json!("big")),
+            ("asset", json!("USDT")),
+            ("quantity", json!(1000)),
+        ]),
+        row(&[
+            ("wallet", json!("mid")),
+            ("asset", json!("USDT")),
+            ("quantity", json!(100)),
+        ]),
     ];
     let (rows, _) = reconcile(&assets, &[], vec![]);
     let wallets: Vec<&str> = rows.iter().map(|r| r.wallet.as_str()).collect();
     assert_eq!(wallets, vec!["big", "mid", "small"]);
     // A NEGATIVE difference of the same magnitude sorts with its positive twin.
     let assets = vec![
-        row(&[("wallet", json!("neg")), ("asset", json!("USDT")), ("quantity", json!(-500))]),
-        row(&[("wallet", json!("pos")), ("asset", json!("USDT")), ("quantity", json!(400))]),
+        row(&[
+            ("wallet", json!("neg")),
+            ("asset", json!("USDT")),
+            ("quantity", json!(-500)),
+        ]),
+        row(&[
+            ("wallet", json!("pos")),
+            ("asset", json!("USDT")),
+            ("quantity", json!(400)),
+        ]),
     ];
     let (rows, _) = reconcile(&assets, &[], vec![]);
     assert_eq!(rows[0].wallet, "neg", "|−500| > |400|");
@@ -151,8 +197,16 @@ fn row_order_on_an_absolute_difference_tie_is_first_seen_not_byte_order() {
     // accumulator would emit abc first; the route emitted them in asset order, so
     // an implementation diff that keys on ORDER would report a false difference.
     let assets = vec![
-        row(&[("wallet", json!("zeb")), ("asset", json!("USDT")), ("quantity", json!(1))]),
-        row(&[("wallet", json!("abc")), ("asset", json!("USDT")), ("quantity", json!(1))]),
+        row(&[
+            ("wallet", json!("zeb")),
+            ("asset", json!("USDT")),
+            ("quantity", json!(1)),
+        ]),
+        row(&[
+            ("wallet", json!("abc")),
+            ("asset", json!("USDT")),
+            ("quantity", json!(1)),
+        ]),
     ];
     let (rows, _) = reconcile(&assets, &[], vec![]);
     let wallets: Vec<&str> = rows.iter().map(|r| r.wallet.as_str()).collect();
@@ -164,8 +218,16 @@ fn wallet_summary_counts_only_the_stablecoin_legs() {
     // The route's own quirk, preserved rather than "fixed": current_total sums
     // only the USDC/USDT legs, while expected_total and diff_total sum everything.
     let assets = vec![
-        row(&[("wallet", json!("w")), ("asset", json!("USDT")), ("quantity", json!(100))]),
-        row(&[("wallet", json!("w")), ("asset", json!("ETH")), ("quantity", json!(2))]),
+        row(&[
+            ("wallet", json!("w")),
+            ("asset", json!("USDT")),
+            ("quantity", json!(100)),
+        ]),
+        row(&[
+            ("wallet", json!("w")),
+            ("asset", json!("ETH")),
+            ("quantity", json!(2)),
+        ]),
     ];
     let (rows, _) = reconcile(&assets, &[], vec![]);
     let summary = summary_map(&rows);
@@ -173,7 +235,11 @@ fn wallet_summary_counts_only_the_stablecoin_legs() {
     assert_eq!(w["current_total"], json!(100.0), "only the stablecoin leg");
     // expected comes from TRANSACTIONS ONLY, so with no transactions it is 0 and
     // the ETH leg contributes a +2 disagreement to diff_total.
-    assert_eq!(w["expected_total"], json!(0.0), "expected is transaction-derived");
+    assert_eq!(
+        w["expected_total"],
+        json!(0.0),
+        "expected is transaction-derived"
+    );
     assert_eq!(w["diff_total"], json!(102.0), "current - expected, per row");
 }
 
@@ -182,7 +248,11 @@ fn wallet_summary_counts_only_the_stablecoin_legs() {
 #[test]
 fn the_body_carries_rows_wallets_summary_and_its_source() {
     let (rows, wallets) = reconcile(
-        &[row(&[("wallet", json!("w")), ("asset", json!("USDT")), ("quantity", json!(1))])],
+        &[row(&[
+            ("wallet", json!("w")),
+            ("asset", json!("USDT")),
+            ("quantity", json!(1)),
+        ])],
         &[],
         vec![json!({"address": "0xdead", "label": "hot"})],
     );
@@ -194,7 +264,9 @@ fn the_body_carries_rows_wallets_summary_and_its_source() {
     assert_eq!(b["wallets"][0]["label"], json!("hot"));
     assert_eq!(b["walletSummary"]["w"]["expected_total"], json!(0.0));
     // Every ReconRow field must be present, in the route's names.
-    for k in ["wallet", "asset", "current", "in_sum", "out_sum", "expected", "diff"] {
+    for k in [
+        "wallet", "asset", "current", "in_sum", "out_sum", "expected", "diff",
+    ] {
         assert!(b["rows"][0].get(k).is_some(), "row key {k} missing");
     }
 }
@@ -227,10 +299,7 @@ async fn routing_table_refuses_everything_it_does_not_serve() {
     // they must not depend on a live database. `/healthz` and `/api/reconcile`
     // therefore answer 500 here (loud, with the real reason) rather than 200,
     // which is itself the rule under test.
-    let db = fudcourt_sync::db::Db::new(
-        "not-a-real-token".to_string(),
-        reqwest::Client::new(),
-    );
+    let db = fudcourt_sync::db::Db::new("not-a-real-token".to_string(), reqwest::Client::new());
     let (st, body) = route(&db, "POST", "/api/reconcile").await;
     assert_eq!(st, 405);
     assert_eq!(body["error"], json!("method not allowed"));
@@ -246,7 +315,16 @@ async fn routing_table_refuses_everything_it_does_not_serve() {
     // A database that cannot be reached is a 500 with a reason, never a 200
     // carrying an empty reconciliation.
     let (st, body) = route(&db, "GET", "/api/reconcile").await;
-    assert_eq!(st, 500, "an unreachable database must not read as 'all reconciled'");
-    assert!(body.get("error").is_some(), "the 500 must name the real reason");
-    assert!(body.get("rows").is_none(), "no payload may accompany a failure");
+    assert_eq!(
+        st, 500,
+        "an unreachable database must not read as 'all reconciled'"
+    );
+    assert!(
+        body.get("error").is_some(),
+        "the 500 must name the real reason"
+    );
+    assert!(
+        body.get("rows").is_none(),
+        "no payload may accompany a failure"
+    );
 }

@@ -92,10 +92,7 @@ impl Db {
             })
             .unwrap_or_default();
         let empty = Vec::new();
-        let rows = rr
-            .get("rows")
-            .and_then(|r| r.as_array())
-            .unwrap_or(&empty);
+        let rows = rr.get("rows").and_then(|r| r.as_array()).unwrap_or(&empty);
         Ok(rows
             .iter()
             .map(|row| {
