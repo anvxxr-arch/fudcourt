@@ -1,7 +1,7 @@
 // Package khala is the khala.io research-report family: the mode table, the
 // plain-net/http fetcher, the HTML extractor and the JSON envelope.
 //
-// # Why ONE package per family (as internal/cryptorank now also is)
+// # Why ONE package per family (as internal/research/cryptorank now also is)
 //
 // That split mirrors three separate upstream artifacts: cr_fetch.py (a Python
 // helper), lib/shapers.ts (TS shapers) and lib/cryptorank.ts (a TS mode table).
@@ -19,7 +19,7 @@
 // text/html; a report page -> 200 429159-468140 bytes; the framerusercontent
 // JSON -> 200. No 403, no `cf-mitigated: challenge`, no interstitial, no
 // Cloudflare anywhere (framerusercontent.com is CloudFront). So the
-// tls-client/chrome_131 stack internal/cryptorank needs is deliberately NOT used here: it
+// tls-client/chrome_131 stack internal/research/cryptorank needs is deliberately NOT used here: it
 // would buy nothing and cost a browser-fingerprint dependency. Do not "fix"
 // this into the expensive stack -- there is nothing to defeat.
 //

@@ -3,6 +3,11 @@
 > Phase 0 audit. "Today" = working tree 2026-10-01 (Phase 1/2 moves committed as `4e8ba91`;
 > Go scaffolds `services/{api,executor}` started in the uncommitted wave). Paths are repo-relative.
 >
+> **Amended 2026-10-01 (api bounded-context regroup):** `backend/api/internal/` was regrouped
+> from a flat package set into explicit bounded contexts (`access/`, `accounts/`, `finance/`,
+> `markets/`) — the as-built layout is §4 below, the ownership mapping stays §1. No behavior,
+> route, response shape, error code or exported symbol changed; the module path is unchanged.
+>
 > Sources cross-checked read-only: `ARCHITECTURE.md` §2 (System picture) + §4 (Data families)
 > define the domains, §8b (CEX Executor runtime) the execution-plane boundary;
 > `TECH-STACK.md` §2/§4/§5/§6 the acquisition stack and infra; `SCHEMA.md` §1–§3 the table and
@@ -19,8 +24,8 @@
 | transactions / ledger | web | `api/transactions{,/[id]}` + `features/treasury/transactions.tsx` | `backend/api` (transactions, treasury) |
 | treasury reconciliation (query side) | web | `api/reconcile/route.ts` (proxies Rust) | `backend/api` reads via `backend/sync` |
 | markets / venues / prices (read) | web | `api/{markets,ticker,ticker/instrument(s)}`, `features/{markets,ticker}/*` | `backend/api` (markets) |
-| data acquisition | Go sidecar | `backend/data/internal/{llama,cryptorank,khala,chainrank,news}` (ex-`apps/apicalls`) | `backend/data` (already moved) |
-| data caching | Go + TS | `backend/data/internal/cache`, `frontend/web/src/platform/cache` | `backend/data` |
+| data acquisition | Go sidecar | `backend/data/internal/research/{llama,cryptorank,khala,chainrank,news}` (ex-`apps/apicalls`) | `backend/data` (already moved) |
+| data caching | Go + TS | `backend/data/platform/cache`, `frontend/web/src/platform/cache` | `backend/data` |
 | stream sync / balances | Rust | `backend/sync/src/{sync,chains,jsonrpc,pyfmt,db}.rs` + Python twin `frontend/web/scripts/tools/sync-live.py` | `backend/sync` (already moved; Phase 6 specializes) |
 | reconciliation maths | Rust + TS twin | `backend/sync/src/reconcile.rs` vs `frontend/web/app…/api/reconcile/route.ts` | `backend/sync` |
 | event normalization | Rust (partial) | `backend/sync/src/jsonrpc.rs`, `sync.rs` | `backend/sync` |
@@ -96,9 +101,9 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
 
 ### 3.2 Shell layer imports feature pages (layering inversion inside frontend/web)
 
-- `frontend/web/src/shell/store-shell.tsx` imports `@/features/{dashboard/ui, treasury/ui,
-  treasury/wallet, treasury/transactions, treasury/reconciliation, dex/trench, dex/ui,
-  signals/ui, signals/scoreboard, chainrank/ui, …}` (16+ feature modules).
+- `frontend/web/src/components/layout/store-shell.tsx` imports `@/features/{dashboard/ui,
+  portfolio/ui, wallets/ui, transactions/ui, treasury/reconciliation, dex/trench, dex/ui,
+  signals/ui, scoreboard/ui, chainrank/ui, …}` (16+ feature modules).
   Acceptable while `frontend/web` is UI-only; MUST NOT migrate into `packages/*` or services.
 
 ### 3.3 Platform-internal coupling (fine today, becomes backend/workers/executor internals)

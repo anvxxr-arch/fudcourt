@@ -6,7 +6,7 @@
 //
 // # Why ONE package and four files
 //
-// Same argument as internal/khala's and internal/llama's: the family has ONE
+// Same argument as internal/research/khala's and internal/research/llama's: the family has ONE
 // artifact (a TS route), so modes/fetch/parse/shape are a reading aid, not a
 // compatibility boundary. There is one upstream document (one RSS feed), so the
 // parse and the shape belong to the same package the mode table does.
@@ -17,7 +17,7 @@
 //	  with ~30-100 <item> elements, each carrying title/link/description/
 //	  pubDate and (sometimes) a <media:content url="…"> image.
 //	The feed is public and keyless and never challenged a non-browser client,
-//	so no browser-TLS stack is needed (contrast internal/cryptorank).
+//	so no browser-TLS stack is needed (contrast internal/research/cryptorank).
 //
 // # Honest-by-construction (house rule: the wire says what was done)
 //
@@ -38,7 +38,7 @@
 // so `limit=5` and `limit=30` share one fetch of the 340KB document, and the
 // trim happens after the cache. The cache is bounded BY CONSTRUCTION at the
 // feed table's size (one URL per source), so there is no eviction policy for
-// the same reason internal/llama has none.
+// the same reason internal/research/llama has none.
 package news
 
 import (

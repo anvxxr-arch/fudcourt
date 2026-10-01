@@ -34,7 +34,7 @@ SRC = ROOT / "src"
 # Normally backend/data/internal/cryptorank/modes.go; overridable so the parity
 # gate can be exercised (and so CI survives a different checkout layout).
 GO_TABLE = Path(os.environ.get(
-    "FUDCOURT_DATA_MODES_GO", ROOT.parent.parent / "backend" / "data" / "internal" / "cryptorank" / "modes.go"))
+    "FUDCOURT_DATA_MODES_GO", ROOT.parent.parent / "backend" / "data" / "internal" / "research" / "cryptorank" / "modes.go"))
 fails = []
 def modes_from_lib() -> set:
     src = (SRC / "features" / "cryptorank" / "client.ts").read_text()
@@ -163,7 +163,7 @@ check_route_is_proxy()
 # family does (same convention as modes_from_sweep).
 KH_TS = SRC / "features" / "khala" / "client.ts"
 KH_GO = Path(os.environ.get("FUDCOURT_DATA_KHALA_GO",
-                            ROOT.parent.parent / "backend" / "data" / "internal" / "khala" / "modes.go"))
+                            ROOT.parent.parent / "backend" / "data" / "internal" / "research" / "khala" / "modes.go"))
 kh_parity = "khala absent"
 if KH_TS.exists() and KH_GO.exists():
     kh_ts_modes = set(re.findall(
@@ -188,7 +188,7 @@ if check_route_is_proxy("khala"):
 # modes.go the Go one, and the route must be the verbatim proxy.
 LL_TS = SRC / "features" / "llama" / "client.ts"
 LL_GO = Path(os.environ.get("FUDCOURT_DATA_LLAMA_GO",
-                            ROOT.parent.parent / "backend" / "data" / "internal" / "llama" / "modes.go"))
+                            ROOT.parent.parent / "backend" / "data" / "internal" / "research" / "llama" / "modes.go"))
 ll_parity = "llama absent"
 if LL_TS.exists() and LL_GO.exists():
     ll_ts_modes = set(re.findall(
@@ -217,7 +217,7 @@ if check_route_is_proxy("llama", ("execFile", "child_process", "limitedFetch",
 # route that regrows one is the drift this row exists to catch.
 NW_TS = SRC / "features" / "news" / "client.ts"
 NW_GO = Path(os.environ.get("FUDCOURT_DATA_NEWS_GO",
-                            ROOT.parent.parent / "backend" / "data" / "internal" / "news" / "modes.go"))
+                            ROOT.parent.parent / "backend" / "data" / "internal" / "research" / "news" / "modes.go"))
 nw_parity = "news absent"
 if NW_TS.exists() and NW_GO.exists():
     nw_ts_sources = set(re.findall(
@@ -254,7 +254,7 @@ if check_route_is_proxy("news", ("execFile", "child_process", "limitedFetch",
 # board must show).
 CH_TS = SRC / "features" / "chainrank" / "client.ts"
 CH_GO = Path(os.environ.get("FUDCOURT_DATA_CHAINRANK_GO",
-                            ROOT.parent.parent / "backend" / "data" / "internal" / "chainrank" / "modes.go"))
+                            ROOT.parent.parent / "backend" / "data" / "internal" / "research" / "chainrank" / "modes.go"))
 ch_parity = "chainrank absent"
 if CH_TS.exists() and CH_GO.exists():
     ch_ts_modes = set(re.findall(

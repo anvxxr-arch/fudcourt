@@ -76,7 +76,7 @@ root `package.json` has no workspaces field.
 |---|---|---|---|
 | `go build ./...` | backend/data (GOWORK=off) | **PASS** | exit 0 |
 | `go vet ./...` | backend/data | **PASS** | exit 0 |
-| `go test ./...` | backend/data | **PASS** | `cmd/data`, `internal/{chainrank,cryptorank,khala,llama,news,paritytest}` all `ok`; `internal/{cache,httpx}` report `[no test files]` |
+| `go test ./...` | backend/data | **PASS** | `cmd/data`, `internal/research/{chainrank,cryptorank,khala,llama,news,paritytest}` all `ok`; `platform/{cache,httpx}` report `[no test files]` |
 | `cargo check --all-targets` | backend/sync | **PASS** | finished clean |
 | `cargo test` | backend/sync | **PASS** | 17 tests: 3 + 2 + 12 across lib/bins/integration, 0 failed |
 | `bun run test:shapers` | frontend/web | **PASS** | 240 tests, 0 fail (tsc → node --test over 12 compiled suites). Executor parity subset (Phase 5 oracle): 155 tests, 0 fail across the 8 `executor-*-tests` suites — engine 20, exchange 1, plan 25, risk 39, runtime 12, store 41, worker 9, ui 8 (per-suite runs, all exit 0); the remaining 85 tests are the shaper/auth/rate-limit/db suites |
@@ -111,7 +111,7 @@ post-Phase-1/2 tree, i.e. after the `database/` move — pre-move runs at the ol
 Environmental limitations (recorded as environmental, NOT failures — each blocked by its own gate):
 - `backend/data` live-fetch tests: exact gate `FUDCOURT_DATA_LIVE=1` (unset ⇒ the live fetch tests
   skip themselves; offline they consume recorded fixtures via `FUDCOURT_DATA_FIXTURES_DIR`).
-  Parity tests (`internal/paritytest`, `internal/cryptorank/{parity,slice_semantics}_test.go`)
+  Parity tests (`internal/research/paritytest`, `internal/research/cryptorank/{parity,slice_semantics}_test.go`)
   run offline against golden envelopes and are included in the `go test ./...` PASS above.
 - CI's "Reconcile contract vs the Rust service" job step: exact gate `TURSO_AUTH_TOKEN` set
   (unset ⇒ the step warns and skips; the live gate was not exercised locally).
@@ -321,15 +321,15 @@ Module `github.com/anvxxr-arch/fudcourt/backend/data`; entrypoint `cmd/data` (se
 
 | Package | Upstream | Role |
 |---|---|---|
-| `internal/llama` | `https://api.llama.fi` | DefiLlama fetch/parse/shape (protocols, TVL) |
-| `internal/news` | `https://cointelegraph.com` | News fetch/parse/shape (RSS-style, author validation) |
-| `internal/chainrank` | `https://www.chainrank.fyi` | ChainRank fetch/modes/shape |
-| `internal/cryptorank` | `https://cryptorank.io` | CryptoRank fetch + envelope/marshal/shapers/types/value; parity & slice-semantics tests |
-| `internal/khala` | `https://www.khala.io` | Khala research fetch/parse/shape |
+| `internal/research/llama` | `https://api.llama.fi` | DefiLlama fetch/parse/shape (protocols, TVL) |
+| `internal/research/news` | `https://cointelegraph.com` | News fetch/parse/shape (RSS-style, author validation) |
+| `internal/research/chainrank` | `https://www.chainrank.fyi` | ChainRank fetch/modes/shape |
+| `internal/research/cryptorank` | `https://cryptorank.io` | CryptoRank fetch + envelope/marshal/shapers/types/value; parity & slice-semantics tests |
+| `internal/research/khala` | `https://www.khala.io` | Khala research fetch/parse/shape |
 | `backend/workers/executor` env | `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex, REQUIRED, fail-closed §128.23), `FUDCOURT_EXECUTOR_PG_URL`, `VALKEY_ADDR` (empty ⇒ in-process locks), `VALKEY_PASSWORD` (empty ⇒ no AUTH; a backend that REQUIRES a password fails startup, it does not run degraded), `FUDCOURT_EXECUTOR_HEALTH_ADDR` (127.0.0.1:3104), `FUDCOURT_EXECUTOR_QUANTITY_STEP`, `FUDCOURT_EXECUTOR_MAX_IN_FLIGHT`, `FUDCOURT_EXECUTOR_READY_TIMEOUT_MS` | startup refuses a missing/weak key, a missing DSN, a nonpositive budget or an unparseable timeout |
-| `internal/cache` | filesystem (`FUDCOURT_DATA_CACHE_DIR`, `FUDCOURT_DATA_KHALA_CACHE_DIR`) + Valkey (`FUDCOURT_DATA_VALKEY_ADDR`, `FUDCOURT_DATA_VALKEY_PASSWORD`), TTL envs per source | shared response cache |
-| `internal/httpx` | — | JSON/HTTP helpers |
-| `internal/paritytest` | — | shared parity/golden-envelope test harness |
+| `platform/cache` | filesystem (`FUDCOURT_DATA_CACHE_DIR`, `FUDCOURT_DATA_KHALA_CACHE_DIR`) + Valkey (`FUDCOURT_DATA_VALKEY_ADDR`, `FUDCOURT_DATA_VALKEY_PASSWORD`), TTL envs per source | shared response cache |
+| `platform/httpx` | — | JSON/HTTP helpers |
+| `internal/research/paritytest` | — | shared parity/golden-envelope test harness |
 
 Config: per-source TTLs (`FUDCOURT_DATA_{LLAMA,NEWS,CHAINRANK}_TTL`), `FUDCOURT_DATA_CACHE=off` switch,
 live tests behind `FUDCOURT_DATA_LIVE=1`. `bin/fudcourt-data` is the built binary referenced by the unit file.
@@ -386,9 +386,9 @@ Toolchain pins: Node 22 runtime, Bun 1.4.2, Go 1.24.1, Rust stable.
   `scripts/executor/worker.ts`, `scripts/verify/executor-paper-e2e.ts`, and
   `src/features/executor/{client,ui}`. Of these, all 15 routes + worker + paper-e2e
   import the **sensitive** modules directly (`risk`, `exchange`, `lock`, `store`, `plan`, `engine`).
-- **Shell depends on features** (upward): `src/shell/store-shell.tsx` imports 16+ feature pages
-  (`@/features/{dashboard,treasury,dex,signals,chainrank,…}`) — the shell layer wires the whole
-  store UI.
+- **Shell depends on features** (upward): `src/components/layout/store-shell.tsx` imports 16+
+  feature pages (`@/features/{dashboard,portfolio,wallets,transactions,treasury,dex,signals,scoreboard,chainrank,…}`)
+  — the layout component wires the whole store UI.
 - **Web owns execution concerns** that the target architecture assigns to Go services:
   risk sizing, exchange adapters/signing (`exchange.ts` `CcxtLike`, `masterKeyFromEnv` encrypted
   keys in `store.ts`), the worker loop, distributed lock, and `executor.*` persistence.

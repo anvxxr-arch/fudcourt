@@ -36,7 +36,7 @@ func PtrSlice[T any](s []T) *[]T {
 // UNESCAPE bytes the inner `json.Marshal` already turned into \u003c/\u0026 (it
 // cannot tell an intended literal from an escape). Measured: with only the
 // top-level setting, `rows` entries whose names carry `&` still served
-// `\u0026` while the TS body served `&` (internal/paritytest catches it).
+// `\u0026` while the TS body served `&` (internal/research/paritytest catches it).
 //
 // Encode appends a newline, which the outer encoder would treat as trailing
 // whitespace inside our raw value, so it is trimmed.

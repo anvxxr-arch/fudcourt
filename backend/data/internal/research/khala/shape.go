@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// This file mirrors internal/cryptorank/types.go's tag discipline exactly, because
+// This file mirrors internal/research/cryptorank/types.go's tag discipline exactly, because
 // that file states the house rule: `undefined` in TS means "absent from
 // JSON.stringify" and maps to `omitempty`; `| null` is a present null and must
 // NOT be omitted.

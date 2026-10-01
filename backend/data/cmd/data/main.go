@@ -19,13 +19,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/cache"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/chainrank"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/cryptorank"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/httpx"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/khala"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/llama"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/news"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/cryptorank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/llama"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/news"
+	"github.com/anvxxr-arch/fudcourt/backend/data/platform/cache"
+	"github.com/anvxxr-arch/fudcourt/backend/data/platform/httpx"
 )
 
 func main() {
@@ -34,7 +34,7 @@ func main() {
 	// The shared L2 (Valkey). It is initialised before the families so that a
 	// cold start after a deploy can serve from a cache that outlives this
 	// process; a failure here only logs, and every family then falls back to
-	// its own in-process cache exactly as before (internal/cache's contract).
+	// its own in-process cache exactly as before (platform/cache's contract).
 	cache.Init()
 
 	f, err := cryptorank.New(cryptorank.Options{})
@@ -47,7 +47,7 @@ func main() {
 	// never challenged a non-browser client, so unifying them would either
 	// impose the browser fingerprint on a site that never asked for it, or
 	// tempt a reader into deleting the profile cryptorank depends on
-	// (internal/khala package doc; DR-006 D1/D9).
+	// (internal/research/khala package doc; DR-006 D1/D9).
 	kf, err := khala.New(khala.Options{})
 	if err != nil {
 		log.Fatalf("fudcourt-data: khala: %v", err)
@@ -56,7 +56,7 @@ func main() {
 	// HTTPS (no fingerprinting wall) and its cache is IN-MEMORY with a 15s TTL
 	// rather than a disk cache, because its largest body is an 8.9MB list whose
 	// window the TS route also kept in process. Keeping the three clients
-	// separate is the same call as khala's (internal/llama's package doc);
+	// separate is the same call as khala's (internal/research/llama's package doc);
 	// FUDCOURT_DATA_LLAMA_TTL overrides the TTL.
 	lf, err := llama.New(llama.Options{})
 	if err != nil {
@@ -683,7 +683,7 @@ func truthyValue(v interface{}) bool {
 	return true
 }
 
-// writeJSON delegates to internal/httpx so the served-bytes parity test proves
+// writeJSON delegates to platform/httpx so the served-bytes parity test proves
 // the production writer (no HTML escaping, one trailing newline).
 func writeJSON(w http.ResponseWriter, code int, v interface{}) {
 	httpx.WriteJSON(w, code, v)

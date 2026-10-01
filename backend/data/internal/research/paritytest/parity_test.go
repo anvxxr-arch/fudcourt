@@ -1,6 +1,6 @@
 // Package paritytest proves the SERVED BYTES, not just the in-memory envelope.
 //
-// internal/cryptorank's parity test unmarshals the TS golden and the Go envelope
+// internal/research/cryptorank's parity test unmarshals the TS golden and the Go envelope
 // and re-marshals BOTH through Go's encoder before comparing, so it is blind to
 // divergence introduced by the encoder itself: HTML escaping (\u003c for `<`)
 // and key order both vanish under that alignment.
@@ -24,12 +24,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
 
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/cryptorank"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/httpx"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/cryptorank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/platform/httpx"
 )
 
 func fixturesDir(t *testing.T) string {
@@ -37,15 +38,33 @@ func fixturesDir(t *testing.T) string {
 	if d := os.Getenv("FUDCOURT_DATA_FIXTURES_DIR"); d != "" {
 		return d
 	}
-	// internal/paritytest -> services/data -> apps -> repo root
-	dir, err := filepath.Abs(filepath.Join("..", "..", "..", "web", "scripts", "fixtures"))
-	if err != nil {
-		t.Fatal(err)
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
 	}
-	if _, err := os.Stat(filepath.Join(dir, "MANIFEST.json")); err != nil {
-		t.Skipf("fixtures not found at %s (set FUDCOURT_DATA_FIXTURES_DIR)", dir)
+	dir := filepath.Dir(thisFile)
+	for {
+		for _, rel := range fixtureCandidates {
+			cand := filepath.Join(dir, rel)
+			if _, err := os.Stat(filepath.Join(cand, "MANIFEST.json")); err == nil {
+				return cand
+			}
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Skip("fixtures not found (looked for tests/fixtures, frontend/web/scripts/fixtures and apps/web/scripts/fixtures upward from this source file; set FUDCOURT_DATA_FIXTURES_DIR to run parity)")
+		}
+		dir = parent
 	}
-	return dir
+}
+
+// fixtureCandidates are the manifest-bearing roots, in preference order: the
+// current shared location, the frontend-owned scripts tree, and the legacy
+// apps/web/scripts/fixtures kept so this helper works on either tree shape.
+var fixtureCandidates = []string{
+	filepath.Join("tests", "fixtures"),
+	filepath.Join("frontend", "web", "scripts", "fixtures"),
+	filepath.Join("apps", "web", "scripts", "fixtures"),
 }
 
 // serveOnce runs the real HTTP handler against a stubbed fetcher that returns

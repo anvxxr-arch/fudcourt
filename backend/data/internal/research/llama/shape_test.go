@@ -515,7 +515,7 @@ func sorted(m map[string]any) []string {
 }
 
 // TestServedBytesShape pins the exact serialised envelope of one mode: the
-// handler writes this with internal/httpx, so a field added, renamed or
+// handler writes this with platform/httpx, so a field added, renamed or
 // omitempty'd here would change the public wire without any test noticing.
 func TestServedBytesShape(t *testing.T) {
 	u := UpstreamURL("chains")

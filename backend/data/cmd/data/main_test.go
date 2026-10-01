@@ -15,11 +15,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/chainrank"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/cryptorank"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/khala"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/llama"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/news"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/cryptorank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/llama"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/news"
 )
 
 type fakeFetcher struct {

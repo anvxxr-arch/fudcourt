@@ -1,7 +1,7 @@
 // Wire-contract tests for the khala family (PLAN G8 / DR-006).
 //
 // They are OFFLINE and deterministic: the fake khala body fetcher serves the
-// six recorded fixtures in internal/khala/testdata, so the whole handler --
+// six recorded fixtures in internal/research/khala/testdata, so the whole handler --
 // param scoping, refusals, headers, envelope -- is provable without touching
 // khala.io. The live oracle run belongs to scripts/verify-khala.py.
 package main
@@ -16,10 +16,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/chainrank"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/khala"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/llama"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/news"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/llama"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/news"
 )
 
 const (
@@ -32,7 +32,7 @@ const (
 
 func khFixture(t *testing.T, name string) string {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join("..", "..", "internal", "khala", "testdata", name))
+	b, err := os.ReadFile(filepath.Join("..", "..", "internal", "research", "khala", "testdata", name))
 	if err != nil {
 		t.Fatalf("fixture %s: %v", name, err)
 	}

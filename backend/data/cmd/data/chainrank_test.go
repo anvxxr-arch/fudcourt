@@ -14,10 +14,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/chainrank"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/khala"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/llama"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/news"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/llama"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/news"
 )
 
 // crDoer serves one canned body per path and records the URLs it was asked for,

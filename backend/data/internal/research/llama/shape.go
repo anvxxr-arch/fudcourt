@@ -11,7 +11,7 @@ import (
 // ordering every mode depends on, and the Service that ties a Fetcher to the
 // mode semantics.
 //
-// # Tag discipline (the house rule, from internal/cryptorank/types.go)
+// # Tag discipline (the house rule, from internal/research/cryptorank/types.go)
 //
 // `undefined` in TS means "absent from JSON.stringify" and maps to *T +
 // `omitempty`; `| null` is a present null and must NOT be omitted. The TS llama

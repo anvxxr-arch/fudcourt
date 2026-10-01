@@ -6,7 +6,7 @@
 //
 // # Why ONE package and three files
 //
-// Same argument as internal/{khala,llama,news}: the family has ONE artifact (a
+// Same argument as internal/research/{khala,llama,news}: the family has ONE artifact (a
 // TS route + its lib/chainrank.ts type surface), so modes/fetch/shape are a
 // reading aid, not a compatibility boundary.
 //

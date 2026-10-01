@@ -2,11 +2,13 @@ package cryptorank_test
 
 // Parity oracle for the Go port.
 //
-// For every recorded upstream fixture (apps/web/scripts/fixtures/<mode>.json.gz,
-// the raw HelperOut stdout of scripts/cr_fetch.py) this runs the Go envelope()
+// For every recorded upstream fixture (<fixtures>/<mode>.json.gz, the raw
+// HelperOut stdout of scripts/oracle/cr_fetch.py) this runs the Go envelope()
 // with the same opts the TS route uses -- default key for keyed/list modes,
 // CR_MODE_UPSTREAM[mode] as the upstream field -- and deep-compares the result
-// with the frozen TypeScript output in apps/web/scripts/fixtures/expected/.
+// with the frozen TypeScript output in <fixtures>/expected/. <fixtures> is the
+// manifest-bearing root resolved by fixturesDir (tests/fixtures, else
+// frontend/web/scripts/fixtures, else the legacy apps/web/scripts/fixtures).
 //
 // The comparison is semantic (unmarshal both, deep-equal) plus an explicit
 // report of any key present on one side and absent on the other, so a dropped
@@ -18,7 +20,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/cryptorank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/cryptorank"
 	"io"
 	"math"
 	"os"
@@ -31,7 +33,12 @@ import (
 	"testing"
 )
 
-// fixturesDir walks up from this source file to apps/web/scripts/fixtures.
+// fixturesDir locates the shared fixture tree the Go parity tests and the web
+// shaper tests read. FUDCOURT_DATA_FIXTURES_DIR wins; otherwise it walks up from
+// this source file and accepts the first root-relative candidate that carries a
+// MANIFEST.json: the current shared location tests/fixtures, the frontend-owned
+// scripts tree, or the legacy apps/web/scripts/fixtures (kept so this helper
+// works on either tree shape pre/post the root restructure).
 func fixturesDir(t *testing.T) string {
 	t.Helper()
 	if d := os.Getenv("FUDCOURT_DATA_FIXTURES_DIR"); d != "" {
@@ -43,16 +50,25 @@ func fixturesDir(t *testing.T) string {
 	}
 	dir := filepath.Dir(thisFile)
 	for {
-		cand := filepath.Join(dir, "web", "scripts", "fixtures")
-		if _, err := os.Stat(filepath.Join(cand, "MANIFEST.json")); err == nil {
-			return cand
+		for _, rel := range fixtureCandidates {
+			cand := filepath.Join(dir, rel)
+			if _, err := os.Stat(filepath.Join(cand, "MANIFEST.json")); err == nil {
+				return cand
+			}
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Skip("apps/web/scripts/fixtures not found (set FUDCOURT_DATA_FIXTURES_DIR to run parity)")
+			t.Skip("fixtures not found (looked for tests/fixtures, frontend/web/scripts/fixtures and apps/web/scripts/fixtures upward from this source file; set FUDCOURT_DATA_FIXTURES_DIR to run parity)")
 		}
 		dir = parent
 	}
+}
+
+// fixtureCandidates are the manifest-bearing roots, in preference order.
+var fixtureCandidates = []string{
+	filepath.Join("tests", "fixtures"),
+	filepath.Join("frontend", "web", "scripts", "fixtures"),
+	filepath.Join("apps", "web", "scripts", "fixtures"),
 }
 
 type manifestMode struct {

@@ -6,7 +6,7 @@
 //
 // # Why ONE package and four files
 //
-// Same argument as internal/khala's: the family has ONE artifact (a TS route +
+// Same argument as internal/research/khala's: the family has ONE artifact (a TS route +
 // its lib/llama.ts type surface), so modes/fetch/shape are a reading aid, not a
 // compatibility boundary. There is no second implementation to stay compatible
 // with and no independent oracle to keep the pieces apart for.

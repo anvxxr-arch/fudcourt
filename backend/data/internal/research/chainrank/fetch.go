@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/cache"
+	"github.com/anvxxr-arch/fudcourt/backend/data/platform/cache"
 )
 
 const (
@@ -120,7 +120,7 @@ func IsHardError(err error) (*HardError, bool) {
 
 // Requirement is one of the TLS/feature facts this family does NOT need, kept as
 // prose only: chainrank.fyi serves its API over plain HTTPS behind no
-// fingerprinting wall, so the tls-client chrome_131 stack internal/cryptorank
+// fingerprinting wall, so the tls-client chrome_131 stack internal/research/cryptorank
 // needs is deliberately not used here.
 
 // entry is one cached body.
@@ -189,7 +189,7 @@ func New(o Options) (*Fetcher, error) {
 	if f.client == nil {
 		// Redirects are followed (net/http's default), asserted rather than
 		// inherited silently: a redirect silently turned into a failure is
-		// exactly the behaviour change internal/cryptorank measured elsewhere.
+		// exactly the behaviour change internal/research/cryptorank measured elsewhere.
 		f.client = &http.Client{
 			Timeout: timeout,
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {

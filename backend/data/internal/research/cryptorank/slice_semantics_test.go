@@ -12,7 +12,7 @@ package cryptorank_test
 
 import (
 	"encoding/json"
-	"github.com/anvxxr-arch/fudcourt/backend/data/internal/cryptorank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/cryptorank"
 	"strings"
 	"testing"
 )

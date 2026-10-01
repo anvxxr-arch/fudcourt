@@ -21,8 +21,8 @@ import (
 // It is NOT sufficient on its own: a value that reaches this encoder through a
 // nested MarshalJSON has already been encoded by json.Marshal inside that
 // method, and the outer `compact` pass can only ADD escapes, never remove them.
-// Every nested marshaler in internal/cryptorank therefore uses marshalNoEscape too;
-// internal/paritytest drives the real handler over the recorded fixtures and
+// Every nested marshaler in internal/research/cryptorank therefore uses marshalNoEscape too;
+// internal/research/paritytest drives the real handler over the recorded fixtures and
 // fails if either half regresses.
 //
 // Framing: the body is one JSON value followed by a single "\n" (from

@@ -21,7 +21,7 @@ import (
 // DefaultCacheDir is the khala cache root, *below* the fudcourt-data cache root the
 // deploy unit already sets (FUDCOURT_DATA_CACHE_DIR -> ~/.cache/fudcourt-data):
 // "<root>/khala". A family must never share another family's cache directory
-// (services/data/README.md "keep the oracle's cache separate"): a shared cache
+// (backend/data/README.md "keep the oracle's cache separate"): a shared cache
 // turns an independent verification fetch into self-confirmation. It is a
 // SUBDIR of FUDCOURT_DATA_CACHE_DIR rather than a second cache-root env var so the
 // deploy unit keeps setting exactly one root.
@@ -190,7 +190,7 @@ func New(o Options) (*Fetcher, error) {
 		// Redirects are followed (net/http's default, max 10). This is asserted
 		// rather than inherited silently: khala.io is a static host today and
 		// does not redirect, but a redirect turned into a hard failure is
-		// exactly the kind of silent behaviour change internal/cryptorank measured
+		// exactly the kind of silent behaviour change internal/research/cryptorank measured
 		// (WithNotFollowRedirects turned a 404 into a 502 there).
 		f.client = &http.Client{
 			Timeout: timeout,
@@ -408,7 +408,7 @@ func readEntry(cf string) (*Entry, error) {
 
 // writeEntry is atomic (tmp + rename) with a UNIQUE temp name in the
 // destination directory (same filesystem, so the rename is atomic). The unique
-// name matters for the same reason it did in internal/cryptorank: ?fresh=1 deliberately
+// name matters for the same reason it did in internal/research/cryptorank: ?fresh=1 deliberately
 // bypasses single-flight, so two fresh requests can write the same cache file
 // at once and a fixed ".tmp" path makes one rename fail with "no such file or
 // directory" (measured there).
