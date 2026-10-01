@@ -130,7 +130,7 @@ Items 1–4 are the *same* dependency: the executor cutover. They are a single d
 | 3 | `apps/apicalls` → `services/data` | MET | `apps/apicalls` absent; `services/data/{cmd/apicalls,internal/*}`, module path rewritten |
 | 4 | Rust sync under `services/sync` | MET | `services/sync/{src,tests,Cargo.toml}`; `cargo test --release` green |
 | 5 | `services/api` is the primary Go API | MET | 17 internal packages, 112 test funcs; 4 routes live; conformance-gated vs contract |
-| 6 | `services/executor` owns executor logic | **MET (code) / PARTIAL (cutover)** | 240 test funcs across 17 packages; TS remains production until §9.1 |
+| 6 | `services/executor` owns executor logic | **MET (code) / PARTIAL (cutover)** | 252 test funcs across 19 internal packages (18 with tests, incl. the composed `internal/e2e` harness); TS remains production until §9.1 |
 | 7 | exchange adapters use a common abstraction | MET | `internal/exchange/{exchange,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package |
 | 8 | PostgreSQL is the durable execution truth | MET | `database/schema/executor-schema.sql` (10 tables) + `internal/repository` |
 | 9 | Valkey only ephemeral coordination | MET | `internal/lock/{valkey,memory}.go`; durable state is Postgres |
@@ -180,7 +180,7 @@ One command: `bash scripts/verify/verify-all.sh` → **`VERIFY_ALL_OK`** (exit 0
 | contracts drift (enums, 36 OpenAPI paths, 39 route handlers, 28 events) | `CONTRACTS_OK` |
 | sdk-ts generated-SDK drift + typecheck | PASS |
 | **cross-service api conformance** | `API_CONTRACT_OK go_paths=4 documented=36 web_proxies=4` |
-| Go build/vet/test ×3 modules | PASS (api **112**, executor **249**, data **178** test funcs) |
+| Go build/vet/test ×3 modules | PASS (api **112**, executor **252**, data **178** test funcs) |
 | Rust build/test | PASS (17 test fns) |
 | **composed Go paper E2E** (`internal/e2e`) | PASS (**8** tests, hermetic) |
 | pre-push hook syntax | PASS |
@@ -195,7 +195,7 @@ route_handlers=39 events=28 client_endpoints=17`, `check-api-contract.py`
 `API_CONTRACT_OK go_paths=4 documented=36 web_proxies=4`, `go build/vet/test` OK for all
 three Go modules, `cargo build/test` OK for `services/sync`, `bash -n pre-push` OK.
 
-The executor module now carries **249** test functions across 17 packages plus the
+The executor module now carries **252** test functions across 19 internal packages plus the
 composed harness in `internal/e2e` (8 tests). The harness is the first executor test to
 drive the **real** worker + **real** `exchange/paper` venue + **real** `lock.MemoryLock`
 over a `worker.MemoryStore` with a hand-advanced `FixedClock` — no Postgres, no Valkey,
