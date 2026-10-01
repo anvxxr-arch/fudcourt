@@ -1,10 +1,14 @@
 package main
 
 import (
-	"os"
+	"context"
+	"errors"
 	"testing"
 	"time"
 )
+
+// errBoom is the sentinel the fail-closed test expects verbatim.
+var errBoom = errors.New("boom")
 
 // envLookup builds an os.Getenv-shaped stub from a map.
 func envLookup(m map[string]string) func(string) string {
@@ -80,13 +84,61 @@ func TestLoadConfigBadTickRefused(t *testing.T) {
 	}
 }
 
-func TestLeaseAdapterForwardsAndTranslatesTTL(t *testing.T) {
-	// A cancelled context on the underlying lock is what the bridge faces; the
-	// worker's contract is fail-closed, so a nil-free fake completes the
-	// translation check without a live Valkey.
-	a := leaseAdapter{lock: nil}
-	if a.Acquire("e1", "o1", 250) != nil {
-		_ = a // interface satisfied at compile time; nil backend is never called
+// fakeLock records the exact arguments the adapter forwards.
+type fakeLock struct {
+	calls []string
+	ok    bool
+	err   error
+}
+
+func (f *fakeLock) Acquire(_ context.Context, id, owner string, ttl time.Duration) (bool, error) {
+	f.calls = append(f.calls, "acquire:"+id+":"+owner+":"+ttl.String())
+	return f.ok, f.err
+}
+func (f *fakeLock) Renew(_ context.Context, id, owner string, ttl time.Duration) (bool, error) {
+	f.calls = append(f.calls, "renew:"+id+":"+owner+":"+ttl.String())
+	return f.ok, f.err
+}
+func (f *fakeLock) Release(_ context.Context, id, owner string) error {
+	f.calls = append(f.calls, "release:"+id+":"+owner)
+	return f.err
+}
+
+// TestLeaseAdapterTranslatesTTLAndProxiesCalls pins the worker↔lock bridge:
+// the worker speaks milliseconds on a minimal interface, the lock package
+// speaks Duration on a contextual one. The translation is the adapter's only
+// job and losing it (or mis-slicing by 1000) would silently change lease TTLs.
+func TestLeaseAdapterTranslatesTTLAndProxiesCalls(t *testing.T) {
+	f := &fakeLock{ok: true}
+	a := leaseAdapter{lock: f}
+	if ok, err := a.Acquire("e1", "o1", 250); !ok || err != nil {
+		t.Fatalf("acquire: got (%v,%v)", ok, err)
+	}
+	if ok, err := a.Renew("e1", "o1", 1000); !ok || err != nil {
+		t.Fatalf("renew: got (%v,%v)", ok, err)
+	}
+	if err := a.Release("e1", "o1"); err != nil {
+		t.Fatalf("release: %v", err)
+	}
+	want := []string{"acquire:e1:o1:250ms", "renew:e1:o1:1s", "release:e1:o1"}
+	if len(f.calls) != len(want) {
+		t.Fatalf("calls = %v, want %v", f.calls, want)
+	}
+	for i := range want {
+		if f.calls[i] != want[i] {
+			t.Fatalf("call %d = %q, want %q", i, f.calls[i], want[i])
+		}
+	}
+}
+
+// TestLeaseAdapterForwardsFailClosed proves the bridge cannot turn a failed
+// acquire into a trade: the (false, err) pair reaches the worker verbatim.
+func TestLeaseAdapterForwardsFailClosed(t *testing.T) {
+	f := &fakeLock{ok: false, err: errBoom}
+	a := leaseAdapter{lock: f}
+	ok, err := a.Acquire("e1", "o1", 30)
+	if ok || err != errBoom {
+		t.Fatalf("fail-closed lost: got (%v,%v), want (false,errBoom)", ok, err)
 	}
 }
 
@@ -109,5 +161,4 @@ func TestMainEnvIsNotRequired(t *testing.T) {
 	if got != want {
 		t.Fatal("unrelated env changed configuration")
 	}
-	_ = os.Getenv
 }
