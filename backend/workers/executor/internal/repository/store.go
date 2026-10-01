@@ -352,23 +352,7 @@ func (s *Store) ListChildOrders(ctx context.Context, executionID string) ([]exec
 // restarts. A caller-supplied ID is ignored: the store owns id assignment and
 // returns the stored record.
 func (s *Store) AppendEvent(ctx context.Context, ev execution.ExecutionEventRecord) (execution.ExecutionEventRecord, error) {
-	if err := uuidErr("execution id", ev.ExecutionID); err != nil {
-		return execution.ExecutionEventRecord{}, err
-	}
-	payload, err := json.Marshal(ev.Payload)
-	if err != nil {
-		return execution.ExecutionEventRecord{}, fmt.Errorf("repository: append event payload: %w", err)
-	}
-	if ev.Payload == nil {
-		payload = []byte("{}") // the column is NOT NULL DEFAULT '{}' (PRD §63)
-	}
-	var seq int64
-	if err := s.pool.QueryRow(ctx, appendEventSQL,
-		ev.ExecutionID, string(ev.Name), payload, ev.CreatedAt).Scan(&seq); err != nil {
-		return execution.ExecutionEventRecord{}, fmt.Errorf("repository: append event: %w", err)
-	}
-	ev.ID = EventID(ev.ExecutionID, seq)
-	return ev, nil
+	return s.appendEvent(ctx, ev)
 }
 
 const appendEventSQL = `
@@ -735,4 +719,26 @@ func isUUID(s string) bool {
 		}
 	}
 	return true
+}
+
+// appendEvent is the shared append used by both the worker.Store method and the
+// executor API port; the id is assigned by the durable database sequence.
+func (s *Store) appendEvent(ctx context.Context, ev execution.ExecutionEventRecord) (execution.ExecutionEventRecord, error) {
+	if err := uuidErr("execution id", ev.ExecutionID); err != nil {
+		return execution.ExecutionEventRecord{}, err
+	}
+	payload, err := json.Marshal(ev.Payload)
+	if err != nil {
+		return execution.ExecutionEventRecord{}, fmt.Errorf("repository: append event payload: %w", err)
+	}
+	if ev.Payload == nil {
+		payload = []byte("{}") // the column is NOT NULL DEFAULT '{}' (PRD §63)
+	}
+	var seq int64
+	if err := s.pool.QueryRow(ctx, appendEventSQL,
+		ev.ExecutionID, string(ev.Name), payload, ev.CreatedAt).Scan(&seq); err != nil {
+		return execution.ExecutionEventRecord{}, fmt.Errorf("repository: append event: %w", err)
+	}
+	ev.ID = EventID(ev.ExecutionID, seq)
+	return ev, nil
 }

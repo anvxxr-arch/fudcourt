@@ -149,6 +149,17 @@ func (f *fakeExchange) GetFills(context.Context, string) ([]execution.Fill, erro
 	return nil, nil
 }
 
+// GetMarkets/GetFees complete the canonical venue interface for the fake: the
+// worker loop never calls them (they are the API-tier plan path), so they are
+// honest "not available" answers rather than fabricated venue data.
+func (f *fakeExchange) GetMarkets(context.Context) ([]exchanges.Market, error) {
+	return nil, exchanges.ErrMarketsUnavailable
+}
+
+func (f *fakeExchange) GetFees(context.Context, string) (exchanges.FeeModel, error) {
+	return exchanges.FeeModel{}, exchanges.ErrFeesUnavailable
+}
+
 func (f *fakeExchange) createCount() int {
 	f.mu.Lock()
 	defer f.mu.Unlock()

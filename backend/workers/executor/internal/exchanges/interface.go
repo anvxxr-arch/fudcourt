@@ -37,4 +37,17 @@ type Exchange interface {
 	// GetFills lists recent fills on symbol (adapters dedup nothing; the fill
 	// store dedups by (account, exchangeTradeId)).
 	GetFills(ctx context.Context, symbol string) ([]execution.Fill, error)
+	// GetMarkets returns the venue's tradable instruments normalized to the
+	// canonical Instrument shape (TS exchange.ts getMarkets). It is the
+	// planner's instrument-metadata source: step/tick/min-notional bounds must
+	// come from the venue, never be guessed. Adapters that cannot enumerate
+	// instruments (paper) return ErrMarketsUnavailable, and the caller must
+	// supply the metadata another way rather than fabricate a grid.
+	GetMarkets(ctx context.Context) ([]Market, error)
+	// GetFees returns the venue's fee schedule for symbol (TS exchange.ts
+	// getFees). A venue that does not publish per-symbol taker/maker fees
+	// (Bybit) reports them on the account, not here; such an adapter returns
+	// ErrFeesUnavailable and the caller reports "market data unavailable"
+	// rather than inventing a schedule.
+	GetFees(ctx context.Context, symbol string) (FeeModel, error)
 }

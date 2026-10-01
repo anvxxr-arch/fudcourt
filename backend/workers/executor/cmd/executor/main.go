@@ -226,7 +226,7 @@ func (r *resolver) quantityStep(rec execution.ExecutionRecord) string {
 func (r *resolver) touch(rec execution.ExecutionRecord) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	if err := r.store.TouchCredential(ctx, rec.AccountID, time.Now().UnixMilli()); err != nil {
+	if err := r.store.TouchAccountCredential(ctx, rec.AccountID, time.Now().UnixMilli()); err != nil {
 		slog.Warn("executor: credential touch failed", "account", rec.AccountID, "error", err)
 	}
 }
@@ -317,6 +317,20 @@ func main() {
 			slog.Error("executor: health surface failed", "addr", cfg.healthAddr, "error", err)
 			stop() // take the worker loop down with it: honest failure, not silent
 		}
+	}()
+	// The `/api/executor/*` HTTP surface (objective §52: web → executor). It is
+	// fail-visible (§34): a construction failure — a missing/short session
+	// secret, an unusable listener address — exits before serving rather than
+	// degrading into 404s the web tier would read as "no such route".
+	apiSrv, err := startAPISurface(ctx, store, cfg.masterKey, os.Getenv)
+	if err != nil {
+		slog.Error("executor: API surface refused", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = apiSrv.Shutdown(shutdownCtx)
 	}()
 
 	if err := w.Run(ctx); err != nil {

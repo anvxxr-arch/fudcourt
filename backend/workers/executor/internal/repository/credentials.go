@@ -74,10 +74,10 @@ func (r CredentialRow) MaskedKeyOrFingerprint() string {
 	return r.ID
 }
 
-// TouchCredential records a credential use (last_used_at) without touching
+// TouchAccountCredential records a credential use (last_used_at) without touching
 // any sealed column. Failures are logged by the caller, not fatal: a stale
 // audit timestamp must never stop trading.
-func (s *Store) TouchCredential(ctx context.Context, accountID string, atMs int64) error {
+func (s *Store) TouchAccountCredential(ctx context.Context, accountID string, atMs int64) error {
 	tag, err := s.pool.Exec(ctx, `
 		UPDATE executor.exchange_accounts
 		   SET last_used_at = $2

@@ -131,6 +131,11 @@ type TwapConfig struct {
 	DurationMs        int64 `json:"durationMs,omitempty"`
 	QuantityJitterBps int   `json:"quantityJitterBps,omitempty"`
 	IntervalJitterBps int   `json:"intervalJitterBps,omitempty"`
+	// OrderType is the request's slice order type ("market" | "limit" |
+	// "maker"). The TWAP strategy rests its slices at the touch regardless, so
+	// this field is carried for record fidelity with the frozen TS
+	// ExecutionDefinition; it is not read by any strategy.
+	OrderType string `json:"orderType,omitempty"`
 }
 
 // ExecutionConstraints bound the strategy (types.ts).

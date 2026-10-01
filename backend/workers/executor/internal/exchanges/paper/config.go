@@ -109,6 +109,16 @@ type PaperConfig struct {
 	// RejectCategory is the error category of simulated rejections
 	// (default execution.ErrInvalidOrder).
 	RejectCategory execution.ErrorCategory
+	// WithdrawPermission is the withdrawal flag GetAccount reports. The zero
+	// value (false) mirrors a key WITHOUT withdrawal — the only kind FUDCourt
+	// supports (PRD §43) — so a test that needs the refusal sets it true.
+	WithdrawPermission bool
+	// Instruments are the tradable instruments this simulator reports from
+	// GetMarkets, keyed by canonical symbol. The paper venue has no wire
+	// instrument list, so the caller supplies one; a symbol that clears
+	// GetTicker but has no instrument here is refused by the planner, never
+	// rounded against a fabricated grid.
+	Instruments map[string]exchanges.Instrument
 }
 
 // bpsRate converts basis points to a decimal fraction ("5" -> "0.0005") so

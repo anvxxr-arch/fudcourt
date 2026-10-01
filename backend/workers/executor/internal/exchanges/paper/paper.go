@@ -119,6 +119,13 @@ type Paper struct {
 	orderSeq  []string          // acceptance order for stable iteration
 	fills     []paperFill
 	positions map[string]*positionState
+	// instruments are the simulator's reported tradable set (GetMarkets) and
+	// makerBps/takerBps the raw bps of its fee schedule (GetFees); the decimal
+	// fractions makerFee/takerFee above are the matching fill-time rates.
+	instruments  map[string]exchanges.Instrument
+	makerBps     string
+	takerBps     string
+	withdrawPerm bool
 
 	seq      uint32 // deterministic order-id sequence (also the xorshift32 state)
 	tradeSeq uint64 // deterministic trade-id sequence
@@ -213,6 +220,10 @@ func NewPaper(cfg PaperConfig) (*Paper, error) {
 		rejectCat:    rejectCat,
 		balances:     balances,
 		marks:        marks,
+		instruments:  cfg.Instruments,
+		makerBps:     strconv.FormatInt(maker, 10),
+		takerBps:     strconv.FormatInt(taker, 10),
+		withdrawPerm: cfg.WithdrawPermission,
 		orders:       map[string]*orderState{},
 		byClient:     map[string]string{},
 		positions:    map[string]*positionState{},
@@ -417,7 +428,7 @@ func (p *Paper) GetAccount(ctx context.Context) (execution.AccountMetadata, erro
 	if err := p.beginCall(); err != nil {
 		return execution.AccountMetadata{}, err
 	}
-	spot, futures, withdraw := true, true, false
+	spot, futures, withdraw := true, true, p.withdrawPerm
 	label, accountType := "paper", "paper"
 	return execution.AccountMetadata{
 		Exchange:    p.venue,
@@ -745,4 +756,46 @@ func (p *Paper) GetFills(ctx context.Context, symbol string) ([]execution.Fill, 
 		}
 	}
 	return out, nil
+}
+
+// GetMarkets returns the simulator's configured instruments, one canonical
+// Market per symbol, sorted by symbol so the result is deterministic. A paper
+// venue with no configured instruments returns an EMPTY list (not an error):
+// the simulator genuinely has no tradable set, and the planner's missing-symbol
+// refusal — not a fabricated grid — is the honest outcome.
+func (p *Paper) GetMarkets(ctx context.Context) ([]exchanges.Market, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if err := p.beginCall(); err != nil {
+		return nil, err
+	}
+	markets := make([]exchanges.Market, 0, len(p.instruments))
+	for symbol, instr := range p.instruments {
+		markets = append(markets, exchanges.Market{
+			Symbol:     symbol,
+			MarketType: instr.MarketType,
+			Metadata:   instr,
+		})
+	}
+	sort.Slice(markets, func(i, j int) bool { return markets[i].Symbol < markets[j].Symbol })
+	return markets, nil
+}
+
+// GetFees returns the simulator's fee schedule for symbol in bps, matching the
+// maker/taker rates it charges at fill time (GetFees and settlement can never
+// disagree). An unknown symbol is refused — the planner priced an entry the
+// venue does not list.
+func (p *Paper) GetFees(ctx context.Context, symbol string) (exchanges.FeeModel, error) {
+	if err := validateSymbol(symbol); err != nil {
+		return exchanges.FeeModel{}, err
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if err := p.beginCall(); err != nil {
+		return exchanges.FeeModel{}, err
+	}
+	if _, ok := p.instruments[symbol]; !ok {
+		return exchanges.FeeModel{}, fmt.Errorf("%w: %s", exchanges.ErrFeesUnavailable, symbol)
+	}
+	return exchanges.FeeModel{MakerBps: p.makerBps, TakerBps: p.takerBps}, nil
 }

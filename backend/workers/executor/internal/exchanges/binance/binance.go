@@ -533,3 +533,19 @@ func (b *Binance) GetFills(ctx context.Context, symbol string) ([]execution.Fill
 	}
 	return out, nil
 }
+
+// GetMarkets is NOT implemented for this adapter yet: the venue's instrument
+// list (precision, min notional, leverage brackets) is not parsed here, and the
+// executor API's planner path refuses a venue it cannot read a grid for rather
+// than fabricating one. Returning a named refusal keeps the failure honest and
+// fail-closed; implementing it means porting exchange.ts getMarkets for this
+// venue. See the executor API's planContext.
+func (b *Binance) GetMarkets(context.Context) ([]exchanges.Market, error) {
+	return nil, exchanges.ErrMarketsUnavailable
+}
+
+// GetFees is NOT implemented for this adapter yet (same reason as GetMarkets):
+// the per-symbol fee schedule is not parsed. See the executor API's planContext.
+func (b *Binance) GetFees(context.Context, string) (exchanges.FeeModel, error) {
+	return exchanges.FeeModel{}, exchanges.ErrFeesUnavailable
+}
