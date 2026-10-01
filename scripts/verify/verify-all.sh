@@ -32,6 +32,8 @@ node shared/contracts/scripts/check-contract.mjs || fail contracts
 step "shared/contracts canonical-schema gate (parse, dialect, refs, README index, structure)"
 node shared/contracts/scripts/check-schemas.mjs || fail schemas
 
+step "canonical reference artifact drift (reference.json is generated)"
+go run ./backend/api/internal/markets/reference/cmd/emit -check || fail reference
 step "sdk-ts generated-SDK drift + typecheck"
 (cd shared/sdk/typescript \
   && tmp=$(mktemp -d) && cp -r src/generated "$tmp/generated" \

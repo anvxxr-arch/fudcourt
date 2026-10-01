@@ -52,14 +52,26 @@ func main() {
 	if *check {
 		switch {
 		case readErr != nil && os.IsNotExist(readErr):
-			fail(fmt.Errorf("%s does not exist; run: go run ./backend/api/internal/markets/reference/cmd/emit", reference.DocumentPath))
+			// Named exactly, because "the artifact is missing" and "the artifact is
+			// stale" need different fixes: the first is a checkout problem, the
+			// second a regeneration.
+			fmt.Printf("REFERENCE_FAIL missing %s\n", reference.DocumentPath)
+			fmt.Fprintf(os.Stderr, "emit -check: regenerate with: go run ./backend/api/internal/markets/reference/cmd/emit\n")
+			os.Exit(1)
 		case readErr != nil:
-			fail(readErr)
+			fmt.Printf("REFERENCE_FAIL cannot read %s: %v\n", reference.DocumentPath, readErr)
+			fmt.Fprintf(os.Stderr, "emit -check: %v\n", readErr)
+			os.Exit(1)
 		case !bytes.Equal(have, want):
-			fail(fmt.Errorf("%s is STALE (%d bytes on disk, %d emitted); regenerate with: go run ./backend/api/internal/markets/reference/cmd/emit",
-				reference.DocumentPath, len(have), len(want)))
+			// Both sides are deterministic, so the report can name the actionable
+			// facts: how the sizes differ and the first byte region that differs.
+			first, line := firstDifference(have, want)
+			fmt.Printf("REFERENCE_FAIL %s is STALE: %d bytes on disk, %d emitted (first difference at byte %d%s)\n",
+				reference.DocumentPath, len(have), len(want), first, line)
+			fmt.Fprintf(os.Stderr, "emit -check: regenerate with: go run ./backend/api/internal/markets/reference/cmd/emit\n")
+			os.Exit(1)
 		}
-		fmt.Printf("REFERENCE_UP_TO_DATE %s (%d bytes)\n", reference.DocumentPath, len(want))
+		fmt.Printf("REFERENCE_OK %d bytes\n", len(want))
 		return
 	}
 
@@ -95,6 +107,22 @@ func main() {
 		fail(err)
 	}
 	fmt.Printf("REFERENCE_WRITTEN %s (%d bytes)\n", reference.DocumentPath, len(want))
+}
+
+// firstDifference returns the byte offset of the first position where have and
+// want disagree (or min(len) when one is a prefix of the other) and a short
+// human-readable line number for that offset. Both arguments come from
+// deterministic emitters, so this reports a real divergence rather than a
+// heuristic: the caller only reaches it when bytes.Equal was already false.
+func firstDifference(have, want []byte) (int, string) {
+	n := min(len(have), len(want))
+	for i := range n {
+		if have[i] != want[i] {
+			return i, fmt.Sprintf(", on line %d", 1+bytes.Count(have[:i], []byte("\n")))
+		}
+	}
+	// One is a prefix of the other: the difference is the extra tail.
+	return n, fmt.Sprintf(", on line %d (one side ends here)", 1+bytes.Count(have[:n], []byte("\n")))
 }
 
 func fail(err error) {
