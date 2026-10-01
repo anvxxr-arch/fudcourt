@@ -116,9 +116,31 @@ ledger; portfolio is derived; append-only events). Current-state highlights:
 | 3 | **EXECUTOR DDL still embedded in `store.ts`** | migration-plan Phase 2 amendment; `executor-store-tests.ts` §59 pins byte-identity to `database/schema/executor-schema.sql` | #1 |
 | 4 | **Phase 8 move of `apps/web/scripts/verify/*` not executed (scoped, deliberate)** — the `verify-*.py` harnesses statically read `apps/web/src/**` (routes, UI components, shell) and write report JSON beside themselves; they are **web-app harnesses**, not cross-service tests. Cross-service scope is satisfied by `tests/integration/api/` + the per-service in-repo suites. | 77 references to `scripts/verify`; `grep` shows each harness opening `(root / "src/...")` with `root = ...parents[2]` = `apps/web` | migration-plan Phase 8 is *ordered after* Phase 7; Phase 7 requires #1. Moving them now is churn against a green, host-operator-expected report path |
 | 5 | **`api` lists "admin" as a hosted context but has no `internal/admin`** | `services/api/internal/` has no `admin/`; admin logic lives in `cmd/api/routes.go` | documentation-only fix (comment corrected this session; package split deferred) |
-| 6 | **`tests/oracle/` is empty** | `ls tests/oracle/fixtures` | sync oracle gate (`verify-sync.py`) not yet wired into `verify-all.sh` |
+| 6 | **Sync oracle gate wired (Phase 6) — done, uncommitted** | `verify-sync.py` + `tests/oracle/fixtures/{capture.json,expected-projection.txt,make-capture.py}` exist and the gate is in `verify-all.sh`; run output `SYNC_ORACLE_OK (34 rows, 40 request keys)` | none (writer's work, left uncommitted; §9.3) |
 
 Items 1–4 are the *same* dependency: the executor cutover. They are a single decision, not four.
+
+### Definition-of-Done map (objective → current-state evidence)
+
+| # | Objective "done when" | Status | Evidence (this tree, 2026-10-01) |
+| --- | --- | --- | --- |
+| 1 | `apps/web` no longer owns executor runtime | **PARTIAL — gated** | `apps/web/src/platform/executor/` = 7,974 LOC across 10 modules still present; cutover blocked on the Go paper harness + credentials (§9.1) |
+| 2 | `apps/web` no longer owns DB schema | MET | `find apps/web -name '*.sql'` → none; DDL lives in `database/schema/{schema,pg-schema,executor-schema}.sql` |
+| 3 | `apps/apicalls` → `services/data` | MET | `apps/apicalls` absent; `services/data/{cmd/apicalls,internal/*}`, module path rewritten |
+| 4 | Rust sync under `services/sync` | MET | `services/sync/{src,tests,Cargo.toml}`; `cargo test --release` green |
+| 5 | `services/api` is the primary Go API | MET | 17 internal packages, 112 test funcs; 4 routes live; conformance-gated vs contract |
+| 6 | `services/executor` owns executor logic | **MET (code) / PARTIAL (cutover)** | 240 test funcs across 17 packages; TS remains production until §9.1 |
+| 7 | exchange adapters use a common abstraction | MET | `internal/exchange/{exchange,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package |
+| 8 | PostgreSQL is the durable execution truth | MET | `database/schema/executor-schema.sql` (10 tables) + `internal/repository` |
+| 9 | Valkey only ephemeral coordination | MET | `internal/lock/{valkey,memory}.go`; durable state is Postgres |
+| 10 | API contracts centralized | MET | `packages/contracts/{openapi,events,schemas}`; `CONTRACTS_OK` gate |
+| 11 | cross-service tests outside `apps/web` | MET | `tests/integration/api/check-api-contract.py`, `tests/oracle/fixtures/` |
+| 12 | each deployable has clear ownership | MET | `deploy/systemd/` 14 units; `check-deploy` OK |
+| 13 | CI is domain-aware | MET | `.github/workflows/{web,go,rust,contracts,integration}.yml` |
+| 14 | services do not import each other's impl | MET | each Go module imports only its own path (§5) |
+| 15 | existing product behavior compatible | MET | `verify-all.sh` green; host units active |
+| 16 | migrated executor has parity tests | **PARTIAL** | `parity-matrix.md` rows 1–9 DONE, cutover rows OPEN; Go side has 240 funcs but no Go paper harness (§9.1) |
+| 17 | build/test status documented | MET | §7 + `scripts/verify/verify-all.sh` |
 
 ## 7. Test / build results (current working tree, 2026-10-01)
 
