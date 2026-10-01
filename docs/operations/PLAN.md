@@ -58,7 +58,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 > on all 7 write handlers. Remaining risks tracked in ANALYSIS §5.
 
 ### SG-2.1 ✅ Schema versioning (R-1, K-1)
-- T-2.1.1 ✅ Dump live Turso schema → `frontend/web/db/schema.sql` (`scripts/database/dump-schema.mjs`, 9 objects)
+- T-2.1.1 ✅ Dump live Turso schema → `frontend/web/db/schema.sql` (`scripts/tools/dump-schema.mjs`, 9 objects)
 - T-2.1.2 ✅ Committed + `SCHEMA.md` annotated (generated file vs code-derived tables)
 - T-2.1.3 ✅ Drift alarm: `dump-schema.mjs --check` (live == committed, exit 1 on diff)
 
@@ -79,7 +79,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 ## G3 — ✅ Near-term product (P1)
 
 ### SG-3.1 ✅ Upstream monitoring (R-4)
-- T-3.1.1 ✅ `scripts/verify/monitor.py` — 7-check smoke (unit, board, home
+- T-3.1.1 ✅ `frontend/web/scripts/verify/monitor.py` — 7-check smoke (unit, board, home
   non-empty+upstream, coins, converter, newstag keyed, funding-must-503),
   concurrent (wall = slowest check, ~1-2s warm), deterministic output
   (byte-stable = silent tick), retry only 429/5xx. Deployed to
@@ -701,7 +701,7 @@ program that direction names; the subgoals below are what this session measured.
   - T-9.14.3 [OK] `platform/db/mirror.ts` projects Turso -> Postgres idempotently,
     prunes replaced batches, translates `?`/`rowid`. Caught by parity: upserting
     alone doubled net worth after a `DELETE FROM assets` sync.
-  - T-9.14.4 [OK] `scripts/verify/parity-pg.ts` gates the read model against Turso
+  - T-9.14.4 [OK] `scripts/tools/parity-pg.ts` gates the read model against Turso
     -> **PARITY_OK 8/8**.
   - T-9.14.5 [OK] `internal/cache` (valkey-go) L2 in llama/chainrank/news;
     `platform/cache/valkey.ts` (Bun native) for the ticker sweep. Both fail open.

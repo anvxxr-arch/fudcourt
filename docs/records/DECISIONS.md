@@ -248,7 +248,7 @@ allowance would then need to key on something else.
 **Status:** accepted, deployed (`fudcourt-apicalls` :3101 + cut-over
 `fudcourt-web` :3100; harness re-run against the cut-over origin).
 **Context.** Every CryptoRank mode was served by `app/api/cryptorank/route.ts`
-shelling out to `tests/oracle/cr_fetch.py` under a dedicated `curl_cffi` venv. That
+shelling out to `scripts/oracle/cr_fetch.py` under a dedicated `curl_cffi` venv. That
 worked, but it made the repo's most load-bearing data family depend on a
 subprocess spawn per fetch, a Python venv on the host, and a second
 implementation of validation/shaping logic — while the fetch itself only ever
@@ -983,7 +983,7 @@ the Next route is its only client, exactly like the Go sidecar.
   the real reason when the service is unreachable — it does NOT fall back to
   `lib/reconcile.ts`, because a board that keeps rendering from a silent fallback
   is the failure this house refuses. `lib/reconcile.ts` keeps the same status
-  `tests/oracle/cr_fetch.py` has.
+  `scripts/oracle/cr_fetch.py` has.
 - The stablecoin-only `current_total` and the transaction-derived `expected` are
   **preserved, not fixed**. Both are the route's original rules; changing either
   would silently re-score every wallet, so they are asserted (the harness FAILS if
@@ -1288,7 +1288,7 @@ previous batch and doubled net worth (170.42 → 340.84; caught by the parity ga
 - Every ordering gained a total-order tiebreaker. SQLite's rowid makes an ORDER BY
   on a non-unique column deterministic; Postgres leaves ties unspecified, and the
   transactions list genuinely differed row-for-row until this was fixed.
-- `scripts/verify/parity-pg.ts` gates it: the app's own `DASHBOARD_READS` are run
+- `scripts/tools/parity-pg.ts` gates it: the app's own `DASHBOARD_READS` are run
   against both engines and compared. Result: **PARITY_OK, 8/8 identical**.
 - Effect: **94 ms → 0.2 ms per query; 8-query dashboard 5.1 ms warm.**
 - Window accepted: sub-second staleness between a write and its projection. Turso

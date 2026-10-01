@@ -37,5 +37,5 @@ backend/data/.cache/
 # rust (backend/sync; target/ is also covered by backend/sync/.gitignore)
 backend/sync/target/
 # live verifier reports (regenerated on every run; the tracked artifacts live in
-# frontend/web/scripts/fixtures/, which is the reviewed record)
+# tests/fixtures/, which is the reviewed record)
 frontend/web/scripts/**/*-report.json
