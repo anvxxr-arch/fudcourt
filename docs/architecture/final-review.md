@@ -138,13 +138,17 @@ One command: `bash scripts/verify/verify-all.sh` → **`VERIFY_ALL_OK`** (exit 0
 | web typecheck + shaper fixtures | PASS (**188** tests) |
 
 **Note on `services/executor` (a second writer is active on this branch).** All the gates above are
-green *except* the last one that touches `services/executor`: at the time of writing the working tree
-contains an **incomplete, uncommitted edit by a concurrent writer** in
-`services/executor/internal/lock/valkey_test.go` — it references an undefined `fakeValkey` type
-(`go vet` → `undefined: fakeValkey`) and has carried literal CR bytes inside Go string literals
-(`string literal not terminated`). That file is their work-in-progress, **not committed by this
-session** (HEAD's copy is clean); it is being left untouched rather than "completed" or committed
-half-done. Every other gate in the table passes on the current tree, verified individually:
+green *except* `services/executor/internal/lock`: the working tree contains an **uncommitted,
+actively-moving edit by a concurrent writer** in `services/executor/internal/lock/valkey_test.go`
+(134 insertions vs HEAD, which is clean). It now compiles (`type fakeValkey` at line 58) but its
+scripted fake-Valkey server does not serve the scripted steps, so 3 lock tests fail with
+`write pipe: i/o timeout` (75s of timeouts) — e.g. `Acquire = false, ... backend unavailable; want
+true, nil`. That file is their work-in-progress, **not committed by this session**; it is left
+untouched rather than "completed" or committed half-done. **Provenance proof:** the file is a
+97-insertion uncommitted diff (`git diff --numstat`) while `git show HEAD:…` is clean, and
+`services/executor/internal/lock` **passed** in this session's first baseline run before their edit
+landed — so the failure belongs to the uncommitted diff, not to committed code. Every other gate in
+the table passes on the current tree, verified individually:
 `check-deploy` OK (13 units), `check-structure` OK (139 files), `check-contract` OK (28 CR modes +
 5 family parities), `check-contract.mjs` CONTRACTS_OK, `check-api-contract.py` API_CONTRACT_OK,
 `go build/vet/test` OK for `services/api` **and** `services/data`, `bash -n pre-push` OK.
