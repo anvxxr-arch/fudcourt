@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * CryptoRank read proxy. Mode-only input (never a raw path).
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `fudcourt-data` (services/data, 127.0.0.1:3101). The Go service does the real
+ * `fudcourt-data` (backend/data, 127.0.0.1:3101). The Go service does the real
  * work: mode validation, key/list validation, disabled-mode refusal, the
  * browser-fingerprint fetch (tls-client chrome_131 + HTTP/2 — the only
  * combination measured to beat cryptorank.io's Cloudflare ClientHello
@@ -26,7 +26,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * refusal (`funding`, `unlocks` — upstream's /_next/data class serves
  * synthetic decoy: nonexistent slugs -> 200 fabricated payloads, prices off
  * ground truth by 30%, measured 2026-09-27) live in Go ONLY. Re-validating
- * here would be a second implementation waiting to drift; apps/web/scripts/
+ * here would be a second implementation waiting to drift; frontend/web/scripts/
  * check-contract.py asserts the two mode tables can never diverge.
  *
  * scripts/oracle/cr_fetch.py is NO LONGER a runtime path. It is retained solely as

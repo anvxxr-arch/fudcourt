@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * llama read proxy (DeFiLlama). Mode-only input, never a raw path.
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `fudcourt-data` (services/data, 127.0.0.1:3101), exactly like
+ * `fudcourt-data` (backend/data, 127.0.0.1:3101), exactly like
  * app/api/khala/route.ts and app/api/cryptorank/route.ts. The Go side owns the
  * mode table, the strict `top`/`days` validation (integer, 1..200 / 1..3288,
  * never clamped), the 15s TTL cache + single-flight, the sort/trim and the
@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * status, body and the `X-Cache` / `Cache-Control` headers — so the public
  * surface on :3100 is
  * GET /api/llama?mode=<chains|protocols|historical>[&top=<n>][&days=<n>]
- * with the wire contract the Go side froze (services/data/internal/llama).
+ * with the wire contract the Go side froze (backend/data/internal/llama).
  *
  * Single source of truth: the mode list and every refusal live in Go ONLY.
  * Re-validating here would be a second implementation waiting to drift, which

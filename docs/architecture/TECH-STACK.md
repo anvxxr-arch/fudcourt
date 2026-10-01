@@ -135,12 +135,11 @@ Browser/agent  ──►  GET /api/cryptorank?mode=…[&key=…][&fresh=1]   (:3
 ## frontend/web layout (DR-018)
 One `src/` tree — the placement rule, enforced by `scripts/checks/check-structure.py`:
 ```
-src/app/         routes only ((frontend)/ dashboard, blog/ CMS + frontend) + middleware.ts
+src/app/         routes only ((frontend)/ route groups (public)|(dashboard)|(admin) + api/, blog/ CMS + frontend) + middleware.ts
 src/features/    one slice per data family: client + shaper/types + its panel
-src/platform/    auth/  db/  http/  routing/   (cross-cutting; never imports a feature)
-src/ui/          presentational primitives (leaf)
+src/platform/    auth/  cache/  db/  executor/  http/  routing/   (cross-cutting; never imports a feature)
+src/components/  ui/ primitives (leaf) + layout/ the SPA state container that composes features
 src/styles/      design tokens + shared view types (leaf)
-src/shell/       the SPA state container that composes features
 src/cms/         Payload config, collections, migrations
 ```
 One import alias: `@/x` is `src/x`. Nothing else — no `@lib/`, no layered `../` chains.

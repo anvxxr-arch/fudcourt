@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 /**
- * GET /api/auth/callback — THIN PROXY to the Go api (services/api/cmd/api,
+ * GET /api/auth/callback — THIN PROXY to the Go api (backend/api/cmd/api,
  * handleAuthCallback). The Go service does the real work: state comparison,
  * the code->token->/users/@me->guild-roles exchange, tier resolution and the
  * signed session cookie. This route forwards the request and replays the

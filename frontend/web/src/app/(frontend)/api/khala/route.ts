@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * khala read proxy. Mode-only input (never a raw path).
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `fudcourt-data` (services/data, 127.0.0.1:3101), exactly like
+ * `fudcourt-data` (backend/data, 127.0.0.1:3101), exactly like
  * app/api/cryptorank/route.ts. The Go service does the real work: mode
  * validation, the `key`/`limit` scoping, the strict 1..50 limit, the report
  * slug regex, the HTML acquisition of khala.io, the block extraction and the

@@ -1679,13 +1679,14 @@ def main() -> int:
         return open(p, encoding="utf-8").read() if os.path.exists(p) else ""
 
     # The SPA tab registry and the render branch moved out of app/page.tsx into
-    # src/shell/store-shell.tsx (page.tsx is now a wrapper that renders <StoreShell/>).
+    # src/components/layout/store-shell.tsx (page.tsx is now a wrapper that renders
+    # <StoreShell/>).
     # A hard-coded path rots the moment the shell is refactored -- so DISCOVER
     # which file owns each half and require the invariant in EITHER, reporting
     # which one satisfied it. The invariant stays load-bearing: the halves are
     # asserted separately, so a tab registered but never rendered (or rendered
     # without its component import) still fails loudly.
-    shell_files = ["src/shell/store-shell.tsx", "src/app/(frontend)/page.tsx"]
+    shell_files = ["src/components/layout/store-shell.tsx", "src/app/(frontend)/(public)/page.tsx"]
     shells = {f: read(f) for f in shell_files}
     _reg_needle = "key: 'cryptorank'"
     _ren_needle = "page === 'cryptorank' && <CryptorankPage />"
@@ -1713,11 +1714,11 @@ def main() -> int:
     info("shell: cryptorank anchors resolved across the shell split",
          f"registry in {reg_ok}, render branch in {ren_ok}, component import in "
          f"{imp_ok} (searched {shell_files})")
-    _dl = read("src/app/(frontend)/cryptorank/page.tsx")
+    _dl = read("src/app/(frontend)/(public)/cryptorank/page.tsx")
     _dl_needle = 'initialPage="cryptorank"'
-    check("wrapper: src/app/(frontend)/cryptorank/page.tsx (deep link selects the cryptorank tab)",
+    check("wrapper: src/app/(frontend)/(public)/cryptorank/page.tsx (deep link selects the cryptorank tab)",
           bool(_dl) and _dl_needle in _dl,
-          "searched src/app/(frontend)/cryptorank/page.tsx: "
+          "searched src/app/(frontend)/(public)/cryptorank/page.tsx: "
           f"exists={bool(_dl)} {_dl_needle!r} present={_dl_needle in _dl}")
     comp = read("src/features/cryptorank/ui.tsx")
     check("component: fetches /api/cryptorank", "/api/cryptorank?mode=" in comp, "")

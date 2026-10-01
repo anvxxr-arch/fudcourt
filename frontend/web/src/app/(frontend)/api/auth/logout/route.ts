@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 /**
- * GET|POST /api/auth/logout — THIN PROXY to the Go api (services/api/cmd/api,
+ * GET|POST /api/auth/logout — THIN PROXY to the Go api (backend/api/cmd/api,
  * handleAuthLogout). The Go service does the real work: the session-cookie
  * retire (Set-Cookie maxAge 0) and the redirect home. This route forwards the
  * request and replays the upstream response VERBATIM — status, Location and

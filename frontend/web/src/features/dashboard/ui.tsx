@@ -1,7 +1,7 @@
 'use client';
 
 import { C, Asset, CHAIN_COLOR, groupBy, groupSum } from '@/styles/shared';
-import { Card } from '@/ui/primitives';
+import { Card } from '@/components/ui/primitives';
 
 type Props = {
   assets: Asset[];

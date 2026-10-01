@@ -19,9 +19,9 @@
 |---|---|---|---|
 | auth / sessions | web platform | `frontend/web/src/platform/auth/*` (session, guard, discord, mutation) | `backend/api` (auth), web keeps UI login |
 | accounts / members | web | `frontend/web/src/app/(frontend)/api/admin/members`, `src/features/*` | `backend/api` |
-| portfolio | web | `frontend/web/src/features/treasury/{ui,wallet,transactions,reconciliation}.tsx` | `backend/api` (portfolio) |
-| wallets | web | `api/wallets/route.ts` + `features/treasury/wallet.tsx` | `backend/api` (wallets) |
-| transactions / ledger | web | `api/transactions{,/[id]}` + `features/treasury/transactions.tsx` | `backend/api` (transactions, treasury) |
+| portfolio | web | `frontend/web/src/features/{portfolio,treasury,wallets,transactions}/*.tsx` | `backend/api` (portfolio) |
+| wallets | web | `api/wallets/route.ts` + `features/wallets/ui.tsx` | `backend/api` (wallets) |
+| transactions / ledger | web | `api/transactions{,/[id]}` + `features/transactions/ui.tsx` | `backend/api` (transactions, treasury) |
 | treasury reconciliation (query side) | web | `api/reconcile/route.ts` (proxies Rust) | `backend/api` reads via `backend/sync` |
 | markets / venues / prices (read) | web | `api/{markets,ticker,ticker/instrument(s)}`, `features/{markets,ticker}/*` | `backend/api` (markets) |
 | data acquisition | Go sidecar | `backend/data/internal/research/{llama,cryptorank,khala,chainrank,news}` (ex-`apps/apicalls`) | `backend/data` (already moved) |
@@ -39,7 +39,7 @@
 | execution state machine | web | `src/platform/executor/{engine,worker}.ts` (`transitionChildOrder`, `clampChild`) | `backend/workers/executor` (state machine) |
 | execution locks | web | `src/platform/executor/lock.ts` | `backend/workers/executor` |
 | execution persistence | web | `src/platform/executor/store.ts` (`EXECUTOR_DDL`, `executor.*`) | `backend/workers/executor` (persistence) |
-| executor UI | web | `frontend/web/src/features/executor/{ui.tsx,client.ts,shapers.ts}` + `app/(frontend)/executor/**` pages | `frontend/web` (stays, via `shared/sdk/typescript`) |
+| executor UI | web | `frontend/web/src/features/executor/{ui.tsx,client.ts,shapers.ts}` + `app/(frontend)/(dashboard)/executor/**` pages | `frontend/web` (stays, via `shared/sdk/typescript`) |
 | CMS / blog | web | `frontend/web/src/app/blog/**`, `src/cms/**` (Payload) | `frontend/web` (frontend-only exception: content, no domain logic) |
 
 ## 2. Table ownership mapping

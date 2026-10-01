@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 /**
- * GET /api/auth/login — THIN PROXY to the Go api (services/api/cmd/api,
+ * GET /api/auth/login — THIN PROXY to the Go api (backend/api/cmd/api,
  * handleAuthLogin). The Go service does the real work: the OAuth state nonce,
  * the `next` open-redirect filter (identity.IsSafeNext) and the Discord
  * authorize redirect. This route forwards the request and replays the

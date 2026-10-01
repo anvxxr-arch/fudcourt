@@ -16,9 +16,10 @@ THE MODEL (src/<layer>/<thing>/…), in one screen:
     src/platform/   cross-cutting infrastructure (auth, db, http, routing). It may
                     not import a feature — infrastructure that depends on a family
                     is not infrastructure.
-    src/ui/         presentational primitives. Leaf: imports nothing from the app.
+    src/components/ presentational code: ui/ primitives (leaf: `components/ui/*`
+                    imports nothing but styles) and the layout/ SPA state
+                    container that composes features.
     src/styles/     design tokens + shared view types. Leaf.
-    src/shell/      the SPA state container that composes features.
     src/cms/        Payload config/collections (a Next/Payload convention keeps
                     `@payload-config`, so the file itself is the contract).
 
@@ -26,7 +27,7 @@ Rules enforced (each one is a class of drift that has actually occurred):
   1. no file may live in the old flat locations (lib/, app/<x>.ts logic, components/)
   2. imports use the single `@/…` alias — no `../` chains escaping a layer
   3. platform/ never imports features/ or app/
-  4. ui/ and styles/ never import a feature, platform, or app code
+  4. components/ui/ and styles/ never import a feature, platform, or app code
   5. features/<a> never imports features/<b>'s internals (cross-feature coupling)
   6. every `features/<x>` directory actually contains a module (no empty slices)
 
@@ -73,7 +74,11 @@ def layer_of(path: Path) -> str:
 
 
 # --- rule 1: the retired flat locations must not come back -------------------
-for dead in ("lib", "components", "store"):
+# `components/` was on this list when the retired thing was the FLAT bag of
+# panel components at src/components/*.tsx. It is now a real layer (ui/ +
+# layout/), so the flat-bag half of the rule is enforced below instead: no
+# module may sit directly at src/components/, only inside a named shelf.
+for dead in ("lib", "store"):
     if (SRC / dead).exists():
         violations.append(
             f"src/{dead}/ exists — it was retired by DR-018; "
@@ -81,6 +86,21 @@ for dead in ("lib", "components", "store"):
         )
 if (ROOT / "lib").exists():
     violations.append("frontend/web/lib/ exists — the flat lib bag was retired by DR-018 (src/platform, src/features)")
+COMPONENT_SHELVES = {"ui", "layout", "navigation", "data-display", "feedback"}
+comp_root = SRC / "components"
+if comp_root.exists():
+    for f in sources():
+        if comp_root in f.parents:
+            rel_c = f.relative_to(comp_root)
+            if len(rel_c.parts) < 2:
+                violations.append(
+                    f"src/components/{rel_c} sits at the top of components/ — the flat "
+                    f"component bag was retired by DR-018; use one of {sorted(COMPONENT_SHELVES)}"
+                )
+            elif rel_c.parts[0] not in COMPONENT_SHELVES:
+                violations.append(
+                    f"src/components/{rel_c} is not on a component shelf — the shelves are {sorted(COMPONENT_SHELVES)}"
+                )
 
 # --- walk the tree ----------------------------------------------------------
 by_layer: dict[str, list[Path]] = {}
@@ -89,7 +109,7 @@ for f in sources():
         continue
     by_layer.setdefault(layer_of(f), []).append(f)
 
-known_layers = {"app", "features", "platform", "ui", "styles", "shell", "cms"}
+known_layers = {"app", "components", "features", "platform", "styles", "cms"}
 for top in sorted(by_layer):
     if top != "(src root)" and top not in known_layers:
         violations.append(f"src/{top}/ is not a layer — the layers are {sorted(known_layers)}")
@@ -136,16 +156,26 @@ for f in sources():
         tlayer, tname = parts[0], parts[1]
 
         # --- rule 3: platform is infrastructure, not a feature consumer ------
-        if layer == "platform" and tlayer in ("features", "app", "shell"):
+        if layer == "platform" and tlayer in ("features", "app", "components"):
             violations.append(
                 f"src/{rel}:{line_no} platform/ imports {tlayer}/{tname} — "
                 f"infrastructure may not depend on a feature or the route tree"
             )
-        # --- rule 4: ui/ and styles/ are leaves ------------------------------
-        if layer in ("ui", "styles") and tlayer in ("features", "platform", "app", "shell"):
+        # --- rule 4: styles/ and components/ui/ are leaves --------------------
+        # styles/ is root-level; components/ui/ is the presentational primitive
+        # shelf. Either may import itself and styles/ and nothing further — a
+        # primitive must never reach for a feature, infrastructure, the route
+        # tree, or the shell. (components/layout/ is the exception: composing
+        # features is its whole job.)
+        if layer == "components" and rel.parts[1] == "ui" and tlayer in ("features", "platform", "app", "components") and not target.startswith("components/ui/"):
             violations.append(
-                f"src/{rel}:{line_no} {layer}/ imports {tlayer}/{tname} — "
-                f"{layer}/ is presentational and must stay dependency-free"
+                f"src/{rel}:{line_no} components/ui/ imports {tlayer}/{tname} — "
+                f"components/ui/ is presentational and must stay dependency-free"
+            )
+        if layer == "styles" and tlayer in ("features", "platform", "app", "components"):
+            violations.append(
+                f"src/{rel}:{line_no} styles/ imports {tlayer}/{tname} — "
+                f"styles/ is presentational and must stay dependency-free"
             )
         # --- rule 5: no cross-feature coupling -------------------------------
         if layer == "features" and tlayer == "features":

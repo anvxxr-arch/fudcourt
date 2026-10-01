@@ -1,7 +1,7 @@
 /**
  * khala client surface, shared by the API route and the UI.
  *
- * Contract source: the Go sidecar's frozen wire contract (services/data,
+ * Contract source: the Go sidecar's frozen wire contract (backend/data,
  * `GET /api/khala`, DR-006 era) — this file is its TS mirror, exactly as
  * lib/cryptorank.ts mirrors the cryptorank mode table. Nothing here re-validates
  * what the sidecar already validates at runtime; the values exist so the board

@@ -1,7 +1,7 @@
 /**
  * CryptoRank (cryptorank.io) read-only types + mode map.
  *
- * Data path: /api/cryptorank (thin proxy, DR-005) -> services/data (Go,
+ * Data path: /api/cryptorank (thin proxy, DR-005) -> backend/data (Go,
  * 127.0.0.1:3101) -> cryptorank.io <script id="__NEXT_DATA__"> SSR payload.
  * The Go service owns mode/key validation and the shaping; this file is the
  * TS-side mirror of its tables, and scripts/checks/check-contract.py fails the build

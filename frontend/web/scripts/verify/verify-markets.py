@@ -283,7 +283,7 @@ def verify_ui_wiring(base: str) -> None:
     root = pathlib.Path(__file__).resolve().parents[2]  # frontend/web
     route = (root / "src/app/(frontend)/api/markets/route.ts").read_text()
     tracker = (root / "src/features/tracker/ui.tsx").read_text()
-    shell = (root / "src/shell/store-shell.tsx").read_text()
+    shell = (root / "src/components/layout/store-shell.tsx").read_text()
 
     check("/api/markets" in tracker, "tracker fetches /api/markets")
     check("sort=mcap&order=desc&limit=50" in tracker, "tracker requests the mcap window")

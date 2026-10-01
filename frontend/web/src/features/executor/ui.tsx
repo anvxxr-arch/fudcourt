@@ -23,7 +23,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties, type Rea
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { C } from '@/styles/shared';
-import { Card, Label } from '@/ui/primitives';
+import { Card, Label } from '@/components/ui/primitives';
 import {
   DEFAULT_RISK_PROFILE,
   isTerminalExecution,

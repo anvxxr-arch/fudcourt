@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { C, Wallet, groupBy, groupSum } from '@/styles/shared';
-import { Card } from '@/ui/primitives';
+import { Card } from '@/components/ui/primitives';
 
 type ReconRow = {
   wallet: string;
