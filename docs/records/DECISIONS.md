@@ -303,9 +303,11 @@ TS — a second implementation of a rule is a second place for it to drift.
   go1.24.1; CI pins `go-version: '1.24.1'` via `actions/setup-go@v5`. The
   pre-push hook builds offline against the cached toolchain.
 - One contract, two implementations is now enforced offline:
-  `apps/web/scripts/checks/check-contract.py` parses the Go table in
-  `services/data/internal/cryptorank/modes.go` and asserts it equals the TS mirror
-  in `lib/cryptorank.ts` (modes, disabled set, exchange/launchpool/nodesale/RWA
+  `apps/web/scripts/checks/check-contract.py` *(superseded: the repo-wide contract gate now lives at
+  `scripts/verify/check-contract.py`, and the app-local layer gate at
+  `frontend/web/scripts/checks/check-structure.py` — paths as of 2026-10-01)* parses the Go table in
+  `services/data/internal/cryptorank/modes.go` *(superseded: `backend/data/internal/research/cryptorank/modes.go`)* and asserts it equals the TS mirror
+  in `lib/cryptorank.ts` *(superseded: `frontend/web/src/features/cryptorank/client.ts`)* (modes, disabled set, exchange/launchpool/nodesale/RWA
   whitelists, keyed + default-key maps), and additionally asserts the route is
   still a proxy (no `execFile`, no python path, no local validation).
 - Politeness unchanged: the disk cache (`APICALLS_CACHE_DIR`, default TTL 60 s)
@@ -948,7 +950,8 @@ the Next route is its only client, exactly like the Go sidecar.
 **Measured evidence.**
 - **The Rust service and the ORIGINAL TS shaper agree byte-for-byte on live data.**
   `lib/reconcile.ts` holds the route's logic moved verbatim and an importable
-  shaper; `scripts/tools/parity-reconcile.ts` runs the same three SELECTs through
+  shaper; `scripts/tools/parity-reconcile.ts` *(superseded: the harness now lives at
+  `scripts/verify/parity-reconcile.ts`, moved there by the Phase-8 tooling relocation, 2026-10-01)* runs the same three SELECTs through
   both and diffs `rows`, `wallets` and `walletSummary` as JSON — **all sections
   identical, key order included** (18 rows, 3 wallets, 10 summaries). The only
   change the port needed to reach that was `preserve_order`: serde_json sorts
@@ -1731,3 +1734,104 @@ express a ladder at all.
 **Context.** Phase 1 moved `apps/apicalls` to `services/data` but renamed only the directory: the binary, the Go package, the env prefix (`APICALLS_*`), the unit (`fudcourt-apicalls`) and the docs still carried the name of the 2026-09-29 spike (DR-005). One component had two names, and the host ran the retired one (`fudcourt-apicalls.service`) while the repo described the new one — drift `systemctl` reported as fact. Separately, the tracked tombstone `deploy/systemd/RETIRED-fudcourt-apicalls.service.txt` carried `APICALLS_VALKEY_PASSWORD=` with the **live** Valkey password in clear text.
 **Decision.** (1) The component is `fudcourt-data` everywhere: `cmd/data`, `bin/fudcourt-data`, env prefix `FUDCOURT_DATA_*`, unit `fudcourt-data.service`, cache `~/.cache/fudcourt-data`, script `smoke-data.sh`. The spike name survives only where it is history (`apps/apicalls`, the `apicalls-probe` spike, the tombstone). (2) No tracked file carries a live credential; units read secrets from the gitignored `EnvironmentFile` (`/home/dwizzy/fudcourt/.env`, 0600). (3) A committed secret is treated as burned and **rotated**, because deleting the line does not delete it from git history.
 **Consequences.** `fudcourt-apicalls.service` is disabled and its installed unit renamed aside; `fudcourt-data.service` is the one bound to `:3101`. Renaming a service means renaming its env prefix, and a consumer still reading `APICALLS_*` silently gets the default rather than an error — so the sweep is held by `check-contract.py` (guards updated to the new const) plus the live verifiers, never by grep alone. The rotation is the repair: the old password is rejected and the L2 is proven by a cold→warm ticker (71.0 s → 0.023 s).
+## DR-034 — Two canonical id spaces behind the frozen envelopes: reference data is bounded, instruments are per-venue markets (2026-10-01)
+**Status:** accepted and landed (`2904749`, `33958a8`, `2830118`, `6531d45`). Adoption is **not**
+started: no route, no SQL table, no consumer re-pointed (§"What this does not close").
+**Context.** The canonical model recorded Asset/Token/Chain/Venue as having no id space and
+`InstrumentID` pinned to `binance:spot:BTC/USDT` with nothing minting it — symbols were the de-facto
+key on every money row. Before any consumer could be re-pointed, two things had to be decided: what
+mints each id, and where the canonical layers sit relative to response bodies clients already read.
+Both were decided in code, and this entry records the decisions and the boundary they must not
+cross.
+**Decision — two id spaces, one hashing implementation.**
+1. **Reference space** (`backend/api/internal/markets/reference`, salt
+   `fudcourt/canonical-reference/v1` — `registry.go:13`). Preimage exactly
+   `id = kind ":" hex(sha256(salt NUL kind NUL naturalKey))[0:10]` (`ids.go:35` `MintIDWithSalt`;
+   `IDHexLen = 10` at `ids.go:15`). Kinds are exactly `asset`/`token`/`chain`/`venue`
+   (`reference.go:97-103`, `EntityKinds`), and each kind's natural key is stable and non-display:
+   `asset/<kind>/<SYMBOL>`, `token/<chain-name>/<FULL address>`, `chain/<name>`, `venue/<venue-id>`
+   (`AssetKey`/`TokenKey`/`ChainKey`/`VenueKey`, `ids.go:48-68`). The whole table ships as a data
+   artifact, `shared/contracts/data/reference.json` (`document_version` 1; 9 chains, 8 assets,
+   11 tokens, 12 venues, 49 mappings, 7 unmapped, 3 misses), drift-pinned by
+   `TestReferenceArtifactIsCurrent` (`document_test.go:467`) and `TestBuildIsPinnedToKnownIDs`
+   (`registry_test.go:36`).
+2. **Instrument space** (`backend/api/internal/markets/instruments/canonical.go`, salt
+   `fudcourt/canonical-instrument/v1` — `:57`, kind `"instrument"` — `:53`). Preimage
+   `"instrument:" + hex(sha256(salt NUL "instrument" NUL naturalKey))[0:10]`, naturalKey built ONLY
+   from RESOLVED components — `venue_id`, market type, `base_asset_id`, `quote_asset_id`,
+   `settlement_asset_id` — never a spelling (`MintInstrumentID:264`). Pinned by
+   `TestInstrumentIDGoldenVector` (`canonical_test.go:270`, id `instrument:aed45391cb`).
+3. **Why separate, and why one implementation.** Reference data is **bounded** (hundreds of
+   entities — the `IDHexLen = 10` doc in `ids.go:15-18` reasons from exactly that scale) and is
+   published in `reference.json`; instruments are **unbounded per-venue markets** and are
+   deliberately NOT emitted into that document (`canonical.go:40-45`). Both spaces are hashed by the
+   **same** function, `reference.MintIDWithSalt` (`canonical.go:36`), with **distinct salts**, so an
+   instrument id cannot collide with a reference id even if a kind were misspelled, and the two
+   spaces cannot drift apart the way two hash implementations would. `Build` refuses two entities
+   with the same id (`ErrDuplicateID`, `document.go:211`) rather than trusting the 40-bit arithmetic.
+   `[INFERENCE]` The shared-function claim is read from the import and call at `canonical.go:36,264`;
+   no test asserts collision-freedom across the two salts (the salts differ, which is the argument).
+**Freeze boundary — canonical layers sit BEHIND the frozen public envelopes.** List, pinned in
+`canonical-placement.md` §1: the **`:3101` family envelopes** (`backend/data/cmd/data/main.go:156-188`
+— five `/api/...` families plus `/healthz`), the **`:3102` reconcile body** (`{rows, wallets,
+walletSummary, source}` — `backend/sync/src/reconciliation/reconcile.rs:237`), the **28-id event
+catalog** (`shared/contracts/events/catalog.json`), the **36-path OpenAPI surface**
+(`shared/contracts/openapi/fudcourt.yaml`), and the **15 executor route handlers**
+(`frontend/web/src/app/(frontend)/api/executor/**/route.ts`). **No envelope was reshaped**: the
+workstream's code delta is additive and confined to the two new packages plus two additive
+`scripts/verify/verify-all.sh` lines, and its commits touch no file under `backend/data`,
+`backend/sync`, `frontend/**`, `backend/workers/**` or `database/` (`canonical-placement.md` §1
+`git show --stat` sweep).
+**Answers to the questions the earlier audit raised.**
+- **O1 — owner of canonical reference data: `backend/api`.** Rationale recorded at
+  `reference.go:7-17`: `backend/data` is stateless passthrough (its own `platform/cache` doc: "a
+  cache is an optimisation; it must never become a dependency"), `backend/api` holds the domain
+  packages, `backend/sync` owns only the `assets` snapshot, the executor owns only `executor.*`. Since
+  no Go package may be imported across services, the registry publishes a DATA artifact instead of
+  exposing a type. **Rejected alternative:** an HTTP endpoint served by `backend/api` — rejected
+  because `backend/api` serves no domain routes today (only `/healthz`, `/readyz`,
+  `/api/auth/{login,callback,logout}`, `/api/admin/members`; `cmd/api/main.go:73-100`) and an id
+  space is a static fact, so a runtime hop would make "what is asset X called" a network dependency
+  (`reference.go:73-79`).
+- **O3 — the mapping is curator-owned and shipped as an artifact, not first-writer-wins.** It lives
+  in `…/reference/seed.go` (curated Go data, every row carrying its citation) and ships as
+  `shared/contracts/data/reference.json`; a runtime resolver was rejected so two providers that
+  disagree cannot silently mint two ids for one asset; adding an asset is a code change with a test,
+  and the artifact's `unmapped`/`misses` lists are the honest record of what is known but unresolved.
+- **O4 — instrument identity is minted, not a spelling.** `BASE/QUOTE` and
+  `exchange:marketType:BASE/QUOTE` are both spellings; the canonical instrument id is the minted
+  opaque id above, and the legacy `exchange:marketType:BASE/QUOTE` string is retained as the
+  human-readable spelling with its meaning unchanged. No consumer is re-pointed in this change.
+**Gates added, and what each can and cannot catch.**
+- `shared/contracts/scripts/check-schemas.mjs` → `SCHEMAS_OK files=56 refs=344 enums=148`: parses the
+  schema tree, pins `$schema`/`$id`, resolves every local `$ref` and the README index both ways.
+  **Cannot** see a phantom directory named in prose — it indexes only `schemas/**/*.json` and
+  README links whose target ends in `.json`, so an unbackticked tree-block line naming
+  `schemas/events/` (which never existed) is outside its reach.
+- The reference-artifact drift step, `go run ./backend/api/internal/markets/reference/cmd/emit -check`
+  → `REFERENCE_OK 19565 bytes`: compares the emitted document against the tracked file
+  **byte-exactly**, so any undocumented edit to `reference.json` fails and the regenerated bytes are
+  the proof.
+- `shared/contracts/scripts/check-doc-citations.mjs` (new here) → `DOCS_OK docs=8 citations=900
+  allowances=45`: resolves every backticked repo-path citation in the seven canonical architecture
+  docs plus `shared/contracts/schemas/README.md` against the tree, with an explicit named-allowance
+  list for paths that legitimately miss. **Cannot** check a line number or symbol, or a path that
+  exists but is the wrong file.
+All three are wired into `scripts/verify/verify-all.sh` (the schema gate and the drift step in
+`33958a8`; the doc-citation gate immediately after the schema gate, a 2-line insertion that the
+concurrent tooling-relocation commit `d4119ca` swept into its own diff).
+**What this does not close (standing gaps, recorded not implied).** (a) There is **no SQL-side
+`(provider, provider_id) → canonical_id` table** — `database/schema/*.sql` has none, so a database
+consumer still resolves through a symbol. (b) **No HTTP route serves the reference document**, so
+nothing outside the Go package can obtain an id at runtime; an instrument id is likewise obtainable
+only in-process, from `instruments.ResolveInstrument` (`canonical.go:351`) or a future emitted
+artifact. (c) **No consumer has been re-pointed** — every provider-shaped reader is unchanged.
+(d) **Criterion 14 is NOT MET**: the frontend still reads provider-shaped payloads
+(`features/{cryptorank,dex,llama,khala,chainrank,signals}/ui.tsx`), as recorded in
+`canonical-acceptance.md` §1 row 14.
+**Consequences.** The two id spaces are frozen as written: changing any component, separator, salt or
+the truncation re-mints every id in that space and is a breaking change that MUST be a new version,
+not an edit (the golden-vector tests exist to make that impossible to do silently). Any future
+"canonical ids in the database" work is a migration plus a loader for `reference.json`, not a second
+minter. A consumer that needs an id must read the artifact or call the package — never parse an id
+back into a symbol, which is the property the opaque form was chosen for.

@@ -9,12 +9,17 @@
 > reading the code once the `khala` family landed: **16** views = `TEAM_TABS` (5) +
 > `BOARD_TABS` (**11**) in `src/components/layout/store-shell.tsx`; the §3 registry adds the `member`
 > and `admin` surfaces, so it carries **18** rows. **10** data families = the §4
-> table rows. **21** `/api` route handlers = **18** data routes (17 across the 10 §4
-> families + the `/api/admin/members` admin control API in §5) + **3** auth routes
-> (`/api/auth/login`, `/callback`, `/logout`) — counted, not incremented:
-> `find frontend/web/src/app/api -name route.ts | wc -l` = **21**, three of them
-> `src/app/(frontend)/api/auth/*`. Sitemap: **12** static routes in `src/platform/routing/public-routes.ts` + **30**
-> `TICKER_SYMBOLS` = **42** `<loc>` (§5 moved 41 → 42).
+> table rows (unchanged at 2026-10-01). **21** `/api` route handlers *(2026-09-29
+> count — 18 data + 3 auth)*; re-derived 2026-10-01 the app carries **36** handlers
+> under `src/app/(frontend)/api/**` (3 auth + 33 data incl. the executor surface),
+> because the executor family and its account/execution sub-routes landed after this
+> line was written — the §3/§4 rows and the §2 diagram were updated, the older
+> aggregate figures below are kept as the dated measurement they were.
+> `find frontend/web/src/app/api -name route.ts | wc -l` = **21** *(2026-09-29; today the
+> equivalent is `find "frontend/web/src/app/(frontend)/api" -name route.ts` = **36**)*, three of them
+> `src/app/(frontend)/api/auth/*`. Sitemap: **13** static routes in `src/platform/routing/public-routes.ts` + **30**
+> `TICKER_SYMBOLS` = **43** `<loc>` (corrected 2026-10-01 in §5; the earlier 42 = 12 + 30 was a
+> miscount of `PUBLIC_ROUTES` and predates `/blog` being enumerated).
 >
 > Runtime facts now match the source tree (2026-09-29 ~13:00 UTC): `GET :3100/api/khala`
 > answers **200** because the `bun run build` deployed on `:3100` carries
@@ -47,9 +52,10 @@ origin; DR-002 — no third-party deploy target, ever).
                     └────────────────┬────────────────────────────────┘
                                      ▼
    ┌──────────────────── frontend/web (Next 16, fudcourt-web) ────────────────────┐
-   │  app/page.tsx = SPA shell (initialPage state + tab nav + shared db fetch)│
-   │  app/<view>/page.tsx = deep-link wrapper → <Home initialPage=…>          │
-   │  app/api/* = 21: 18 data (17 family §4 + /admin/members §5) + 3 auth     │
+   │  src/app/(frontend)/page.tsx = SPA shell (initialPage state + tab nav + db)│
+   │  src/app/(frontend)/<view>/page.tsx = deep-link wrapper → <StoreShell …> │
+   │  src/app/(frontend)/api/* = 36: 33 data (families §4 + admin §5 + executor)│
+   │                            + 3 auth                                     │
    └──────┬────────────────────────────────────────────┬──────────────────────┘
           │ Turso (treasury, synced every 5 min        │ keyless upstreams:
           │ by fudcourt-sync.timer → backend/sync,     │ chainrank.fyi RE,
@@ -164,7 +170,7 @@ the full judgment record for the grouping is §4 of that file.
 | public | cryptorank | `/cryptorank` | `CryptorankPage` | `/api/cryptorank?mode=…` (28 modes) |
 | public | llama | `/llama` | `LlamaPage` | `/api/llama?mode=chains/protocols/historical` |
 | public | news | `/news` | `NewsPage` | `/api/news?limit=30` |
-| public | khala *(source-landed; :3100 build predates it)* | `/khala` | `KhalaPage` | `/api/khala?mode=reports` · `/api/khala?mode=report&key=…` · `/api/khala?mode=latest&limit=N` |
+| public | khala (served: sidecar mux + `:3100` route; `verify-khala.py` **136/0/0**) | `/khala` | `KhalaPage` | `/api/khala?mode=reports` · `/api/khala?mode=report&key=…` · `/api/khala?mode=latest&limit=N` |
 
 Legacy `/portfolio` now **307s** to `/team/portfolio` (it used to rewrite to
 `/`, which is now a duplicate of the landing page).
@@ -235,17 +241,20 @@ implies team implies member.
   chars) means no session can be signed or verified, so every tier is
   unreachable. Missing guild/role env can only *lower* access: an unresolvable
   member becomes `member`, never `team`.
-- The treasury bundle is never fetched for a non-team shell: `app/page.tsx`
+- The treasury bundle is never fetched for a non-team shell: `src/app/(frontend)/page.tsx`
   reads the session server-side and mounts `StoreShell` with `isTeam`, which
   gates both the fetch and every treasury render.
-- `public/robots.txt` does not exist as a file — `app/robots.ts` serves real
-  `text/plain` and `app/sitemap.ts` yields **42** `<loc>` entries (re-derived
-  2026-09-29 from the source — 41 was the count before `/khala` landed): the **12**
-  static routes in `src/platform/routing/public-routes.ts` (the single source of truth for the crawl
-  tier) plus **30** per-coin `/ticker/<base>` pages enumerated from `TICKER_SYMBOLS`
-  (bounded allowlist, never crawled). Measurement split: source = **42**; the running
-  build still serves **41** (`curl -s :3100/sitemap.xml | grep -c '<loc>'` = 41, with
-  no `/khala` entry), because `frontend/web/.next` predates `src/platform/routing/public-routes.ts` — see §9.
+- `public/robots.txt` does not exist as a file — `src/app/robots.ts` serves real
+  `text/plain` and `src/app/(frontend)/sitemap.ts` yields **43** `<loc>` entries
+  (re-derived 2026-10-01 from the source: `PUBLIC_ROUTES` in
+  `src/platform/routing/public-routes.ts` — the single source of truth for the crawl
+  tier — holds **13** entries, plus **30** per-coin `/ticker/<base>` pages enumerated
+  from `TICKER_SYMBOLS`). The older "**42** = 12 static + 30 ticker" figure was derived
+  from a count of `path:` tokens (one entry's doc comment also contains the word) and
+  is stale: the 13th static route is `/blog`, added by the DR-017 merge
+  (`/blog` is public and crawlable; individual posts are not enumerated — the index
+  links them). `curl -s :3100/sitemap.xml | grep -c '<loc>'` re-confirms the served
+  count on any running build.
 
 ## 6. Trust classes
 
@@ -270,8 +279,8 @@ implies team implies member.
 
 | Tier | What | Where it runs |
 |---|---|---|
-| Offline | `check-contract.py` (CR_MODES ↔ sweep consistency + **TS↔Go mode-table parity** + **khala KH_MODES parity** + **news NEWS_SOURCES parity** + **chainrank CR_MODES parity** + mutation-guard + proxy-shape), `test:shapers` (`80 tests` = 56 shaper/fixture + 11 auth + 13 rate-limit, over 26 gz fixtures, sha256 over raw payload), `tsc`, both builds (Bun), `cargo build/test` (backend/sync), `go build/vet/test` (backend/data: cryptorank + khala + llama + news + chainrank packages, 111 tests) | pre-push hook + CI on every push |
-| Live | per-family verifiers (§4) — plus `verify-khala.py` **green against the served sidecar: 136 pass / 0 fail / 0 skip, 6.7 s** (`--base http://127.0.0.1:3101`; GATED met 2026-09-29, PLAN G8 ✅), cryptorank harness (244 checks; since DR-005 run it against the Go sidecar for a full pass — through :3100 the DR-004 inbound budget stops a ~55-call run, PLAN G7 SG-7.6), route sweep **154/165** (18 page checks = 13 HTML + `/robots.txt` + `/sitemap.xml` + 3 real-404 retired/unknown · 7 gate-307 · 47 API incl. the whole ticker, llama, news and chainrank families · 7 mut no-session 401 · 10 session-gated probes · 58 CR · 17 khala; 11 fails = 1 CoinGecko 403 passthrough + 10 session-gated probes unrunnable because no `FUDCOURT_SESSION_SECRET` exists on this host, ANALYSIS K-11), DOM audit of the /tracker board (asserts /api/markets is proxied and the browser never calls CoinGecko) | on demand + this repo's loop |
+| Offline | `check-contract.py` (CR_MODES ↔ sweep consistency + **TS↔Go mode-table parity** + **khala KH_MODES parity** + **news NEWS_SOURCES parity** + **chainrank CR_MODES parity** + mutation-guard + proxy-shape), `test:shapers` (`240 tests` as of 2026-10-01), `tsc`, both builds (Bun), `cargo build/test` (backend/sync), `go build/vet/test` (backend/data: cryptorank + khala + llama + news + chainrank packages — **179** `func Test` as of 2026-10-01, was 111 in the 2026-09-29 figure this row used to carry) | pre-push hook + CI on every push |
+| Live | per-family verifiers (§4) — plus `verify-khala.py` **green against the served sidecar: 136 pass / 0 fail / 0 skip, 6.7 s** (`--base http://127.0.0.1:3101`; GATED met 2026-09-29, PLAN G8 ✅), cryptorank harness (244 checks; since DR-005 run it against the Go sidecar for a full pass — through :3100 the DR-004 inbound budget stops a ~55-call run, PLAN G7 SG-7.6), route sweep **154/165** (18 page checks = 13 HTML + `/robots.txt` + `/sitemap.xml` + 3 real-404 retired/unknown · 7 gate-307 · 47 API incl. the whole ticker, llama, news and chainrank families · 7 mut no-session 401 · 10 session-gated probes · 58 CR · 17 khala; 11 fails = 1 CoinGecko 403 passthrough + 10 session-gated probes unrunnable because no `FUDCOURT_SESSION_SECRET` exists on this host, ANALYSIS K-11) *(sweep figures are the 2026-09-29 recorded run — a point-in-time measurement, not a live claim)*, DOM audit of the /tracker board (asserts /api/markets is proxied and the browser never calls CoinGecko) | on demand + this repo's loop |
 | Continuous | `monitor.py` — unit active + 8 endpoint checks (board page, 5 cryptorank modes incl. decoy-refusal 503, markets, news), deterministic output, parallel | cron `f191fe6df16c` every 15 min, silent when `HEALTHY` |
 
 ## 8. Deploy & hosting (DR-002)
@@ -286,7 +295,9 @@ implies team implies member.
 - Origin binds loopback; the **only** path in is the tunnel ingress
   `fc.dwirijal.my.id → http://127.0.0.1:3100` (proxied CNAME, zone
   `dwirijal.my.id`).
-- CI (`.github/workflows/ci.yml`) = gates only, **no deploy step**, zero
+- CI (`.github/workflows/` — five path-filtered workflows: `web.yml`, `go.yml`, `rust.yml`,
+  `contracts.yml`, `integration.yml`; the single `ci.yml` this line used to name was split by
+  Phase 9) = gates only, **no deploy step**, zero
   secrets. Vercel projects exist but are unused and deletable (see
   `docs/operations/SECRETS.md` §3).
 - Secrets live in git-ignored `.env*` files only — inventory + rotation in

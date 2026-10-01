@@ -88,7 +88,7 @@ All five Next proxies are thin (`route validates nothing`) and live:
 | item | artifact | pinned today by | unchanged |
 |---|---|---|---|
 | Response body `{rows, wallets, walletSummary, source}` | `backend/sync/src/reconciliation/reconcile.rs:237` (`pub fn body`), rows `:37` (`ReconRow`), `:49` (`WalletSummary`); HTTP shell `backend/sync/src/reconciliation/server.rs:24` (`Request`), `:90` (`reason`) | `scripts/verify/verify-reconcile.py` (the 28/28 live harness recorded in `docs/records/DECISIONS.md` DR-019/§reconcile) and the TS oracle twin `frontend/web/src/features/treasury/reconcile.ts` | yes |
-| Unit/port | `infrastructure/systemd/fudcourt-reconciled.service:20` (`RECONCILE_ADDR=127.0.0.1:3102`) | `frontend/web/scripts/checks/check-deploy.py` (ExecStart-path guard, `scripts/verify/verify-all.sh` step "deploy-unit guard") | yes |
+| Unit/port | `infrastructure/systemd/fudcourt-reconciled.service:20` (`RECONCILE_ADDR=127.0.0.1:3102`) | `scripts/verify/check-deploy.py` (ExecStart-path guard, `scripts/verify/verify-all.sh` step "deploy-unit guard") | yes |
 | Next proxy adds `source: "rust"` and answers 502-with-the-real-reason, never a fallback board | `frontend/web/src/app/(frontend)/api/reconcile/route.ts` | `SCHEMA.md` §3.3 `/api/reconcile` row | yes |
 
 ### 1.3 The 28-id event catalog

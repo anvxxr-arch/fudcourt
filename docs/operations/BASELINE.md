@@ -2,7 +2,10 @@
 
 > Phase 0 of the domain restructure (2026-10-01). Every command below was run on
 > the pre-move tree at `apps/{web,apicalls,sync}` on a clean working tree
-> (`git status`: clean). This file is the regression reference: a phase may not
+> (`git status`: clean). **HISTORICAL SNAPSHOT** — those directories no longer exist
+> (current homes: `frontend/web`, `backend/data`, `backend/sync`); the `Working dir`
+> column in the results table names the **post-move** directory the same commands run from
+> today. This file is the regression reference: a phase may not
 > make any of these results worse. Pre-existing failures (none here) would be
 > listed explicitly and would not count as migration regressions.
 
@@ -28,6 +31,12 @@
 | 6 | `bunx tsc --noEmit` | `frontend/web` | **PASS** — 0 errors |
 | 7 | `bun run test:shapers` | `frontend/web` | **PASS** — **240 tests / 0 fail** (shapers + auth + rate-limit + db + executor risk/engine/exchange/store/plan/worker/ui/runtime) |
 | 8 | `bun run build` | `frontend/web` | **PASS** — Next 16.3.6 Turbopack build, compiled in 59 s, 9 static pages, proxy (middleware) wired |
+Counts in rows 1, 4 and 5 are as-of-2026-10-01 measurements: `infrastructure/systemd/` held 10
+units then and holds **12 live units + 2 tombstones** now, and `go test ./...` in `backend/data`
+is 179 `func Test` today (was 111 when `ARCHITECTURE.md` was written). The command paths in the
+table are the paths the gates lived at then; the contract/deploy gates have since moved out of
+the app to `scripts/verify/check-{contract,deploy}.py` (`check-structure.py` remains at
+`frontend/web/scripts/checks/`). Re-derive rather than quoting these numbers forward.
 
 Live harnesses (`scripts/verify/verify-*.py`, `monitor.py`, `verify:executor`
 paper E2E) need the homeserver services, upstream access, or a Postgres+Valkey

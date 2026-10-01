@@ -74,10 +74,12 @@ go test ./...                            # offline: mode-table + shaping tests
 cd ../sync && cargo test --release  # offline: the Rust sync crate (parity-checked
                                       # against the repo-root path frontend/web/scripts/tools/sync-live.py)
 cd ../../frontend/web
-python3 scripts/checks/check-contract.py     # offline: CR_MODES + TS-Go mode-table parity + mutation-auth guards
+python3 scripts/checks/check-structure.py    # offline: DR-018 layer gate (the one gate left inside the app)
 bun run test:shapers                # offline: shaper + auth + inbound rate-limit tests
 bunx tsc --noEmit && bun run build  # typecheck + Next 16 build (Bun is the runner: DR-007)
 cd ../..                            # back to the repo root: the repo-wide gates live in scripts/
+python3 scripts/verify/check-contract.py     # offline: CR_MODES + TS-Go mode-table parity + mutation-auth guards
+python3 scripts/verify/check-deploy.py       # offline: every unit ExecStart path must exist
 python3 scripts/verify/verify-sync.py         # OFFLINE: sync oracle gate — Python sync-live.py vs
                                               # Rust fudcourt-sync byte-identical replay (tests/oracle fixtures)
 python3 scripts/verify/verify-cryptorank.py  # LIVE: 244-check upstream harness (3-gate decoy detector)
@@ -88,7 +90,8 @@ python3 scripts/verify/verify-news.py        # LIVE: Cointelegraph RSS harness (
 python3 scripts/verify/verify-chainrank.py   # LIVE: chainrank harness (50 checks; green on :3101/:3100)
 node scripts/database/dump-schema.mjs --check  # schema drift alarm vs database/schema/schema.sql
 ```
-CI is five path-filtered workflows — `web.yml` (contract/structure/deploy gates,
+CI is five path-filtered workflows (the single `ci.yml` this line used to name was split in
+Phase 9) — `web.yml` (contract/structure/deploy gates,
 typecheck, shaper fixtures, build), `go.yml` (build/vet/test per Go module),
 `rust.yml` (`backend/sync`), `contracts.yml` (contracts drift + generated SDK) and
 `integration.yml` (the offline aggregate `scripts/verify/verify-all.sh` plus the live

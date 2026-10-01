@@ -81,9 +81,10 @@ scripts/         verify/ · database/ · githooks/ — repo-wide gates, tooling,
                  app/blog/(payload), served at /blog, /blog/cms/admin, /blog/cms/api/*.
                  Posts/media/categories/users still live in Neon (DATABASE_URL)
 ```
-`frontend/web/` splits routes from React by role (DR-011): `app/` holds the Next route
-tree (`api/`, one wrapper per deep link) plus `app/store/store-shell.tsx` (the SPA
-state container), `src/components/` the 18 panel components and `src/styles/` the
+`frontend/web/` splits routes from React by role (DR-011/DR-018): `src/app/` holds the
+Next route tree (`(frontend)/api/**`, one wrapper per deep link, plus the blog CMS
+tree), `src/components/layout/store-shell.tsx` is the SPA state container,
+`src/components/ui/primitives.tsx` the presentational leaves and `src/styles/` the
 design tokens + view types. The Go sidecar is one package per family under
 `backend/data/internal/research/` —
 `{cryptorank,khala,llama,news,chainrank}` — and `backend/sync/` is the Rust
@@ -92,19 +93,24 @@ crate behind both of its services (`fudcourt-sync`, `fudcourt-reconciled`).
 the web-side `src/features/treasury/reconcile.ts` kept as the oracle rather than a
 fallback path.
 `frontend/web/scripts/` holds the web-app-only tooling and harnesses
-(`checks/` offline gates, `tools/` codegen/maintenance incl. `sync-live.py`);
+(`checks/check-structure.py` — the layer gate — plus `executor/worker.ts` and `tools/` codegen/maintenance incl. `sync-live.py`);
 the repo-wide verifiers, fixtures and cross-system suites have moved out of
 `frontend/web`:
 ```
-  scripts/verify/        live harnesses + one-command gate: verify-<family>.py,
-                         verify_all_routes.py, monitor.py, dom_audit.py, verify-all.sh
+  scripts/verify/        repo-wide harnesses + one-command gate: check-contract.py,
+                         check-deploy.py, verify-<family>.py, verify-sync.py,
+                         verify-reconcile.py, monitor.py, verify-all.sh
   scripts/database/      dump-schema.mjs (Turso schema drift alarm)
   scripts/githooks/      pre-push hook
-  tests/e2e/executor/      executor E2E suites + executor-paper-e2e.ts
+  frontend/web/tests/      web-only suites + probes: shaper/auth/rate-limit/db/executor-ui
+                           tests, verify-limiter.mts, dom_audit.py, verify_all_routes.py,
+                           dbg-smoke.cjs
+  tests/e2e/executor/      executor E2E suites + executor-paper-e2e.ts (+ probe-sizing.cjs)
   tests/integration/       cross-service gates (api contract, executor integration)
   tests/fixtures/          recorded payloads: 26 .gz + expected/ envelopes,
                            sha256 in MANIFEST.json
   tests/oracle/            independent oracle: cr_fetch.py (only used BY verify-cryptorank.py)
+                           + the fixture recorder/dumper (record-fixtures.ts, dump-envelopes.ts)
 ```
 The frontend installs and runs through **Bun 1.4.2** (`bun install --frozen-lockfile`,
 `bun run …`, `bunx`) and is *served* by Bun ([DR-008](records/DECISIONS.md)). There is one

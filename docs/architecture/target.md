@@ -1,118 +1,113 @@
 # Target Architecture — domain-oriented monorepo
-
-> Phase 0 design artifact. This is the intended end-state for the restructure planned in
-> `migration-plan.md`; nothing here exists yet except where noted. Ground rules come from the
+> Phase 0 design artifact, **reconciled against the working tree 2026-10-01 (docs-reality pass)**.
+> This file is the intended end-state for the restructure planned in `migration-plan.md`.
+> Its §1 sketch was written before any move; since then **most of it has landed** under
+> different directory names, so each section below now states **landed / pending** explicitly —
+> a section with neither marker is still design-only. Ground rules come from the
 > product scope in `docs/prd/cex-executor.md` (CEX executor: planner, risk, sizing, strategies
 > market/limit/TWAP/adaptive-TWAP/iceberg/chase-limit/scale — note the objective's sketch also
 > names VWAP and smart-limit, which have no TS oracle and are not ported, exchange adapters
 > binance/bybit/mexc, worker, state machine) and the current inventory in `current.md`.
-
-## 1. Layout
-
+## 1. Layout — *target names (left) vs what landed (right)*
 ```
-apps/
-  web/                    Next.js + Bun — FRONTEND ONLY (pages, UI, typed API client)
-services/
-  api/                    Go — auth, accounts, members, portfolio, wallets, transactions,
-                          treasury, markets, executor orchestration (command API)
-  executor/               Go — planner, risk, sizing, strategies (market, limit, TWAP,
-                          adaptive TWAP, iceberg, chase-limit, scale in/out — VWAP/smart-limit
-                          are not implemented in the TS oracle and are out of scope), exchange
-                          adapters (binance, bybit, mexc), worker, execution state machine,
-                          persistence (executor.* schema)
-  data/                   Go — upstream acquisition, moved from apps/apicalls:
-                          llama, cryptorank, khala, chainrank, news (+ cache, httpx)
-  sync/                   Rust — websocket streams, reconciliation, event normalization
-                          (today's fudcourt-sync + fudcourt-reconciled, specialized further)
-packages/
-  contracts/              openapi/, events/, schemas/ — the ONLY shared artifacts
-  sdk-ts/                 generated/hand-maintained TS client over contracts (consumed by frontend/web)
-  config/                 shared toolchain/lint/tsconfig/env schema
-database/
-  migrations/  schema/  seeds/  fixtures/
-tests/
-  integration/  e2e/  fixtures/  oracle/
-infrastructure/
-  systemd/  docker/  compose/
-scripts/
-  dev/  verify/  database/  release/
+target sketch            as-built on the working tree 2026-10-01
+apps/web/                frontend/web/                       LANDED
+services/api/            backend/api/                        LANDED
+services/executor/       backend/workers/executor/           LANDED (exchanges/, not exchanges)
+services/data/           backend/data/                       LANDED (moved from apps/apicalls)
+services/sync/           backend/sync/                       LANDED
+packages/contracts/      shared/contracts/                   LANDED
+packages/sdk-ts/         shared/sdk/typescript/              LANDED
+packages/config/         —                                   NOT LANDED (DR-018 keeps one tsconfig per app; no shared config exists to move)
+database/{schema}        database/schema/                    LANDED (schema.sql, pg-schema.sql, executor-schema.sql)
+database/{migrations,seeds,fixtures}  —                       NOT CREATED (empty; migrations/ deliberately not created, DR-020)
+tests/{integration,e2e,fixtures,oracle}  tests/{integration,e2e,fixtures,oracle}  LANDED
+infrastructure/systemd/  infrastructure/systemd/             LANDED (14 files: 12 live units + 2 retired tombstones)
+infrastructure/{docker,compose}  —                          NOT LANDED (no container config exists — DR-002 self-hosted systemd + Cloudflare Tunnel)
+scripts/{dev,verify,database,release}  scripts/{verify,database,githooks}  PARTIAL (no dev/ or release/; a githooks/ dir was added instead)
 ```
-
-## 2. Domain → service
-
+The rule that produced this shape: one directory per service, a domain name per service, and
+exactly one shared artifact tree. Where the tree deviates from the sketch, the deviation is a
+**deliberate omission of something that does not exist** (see the `NOT LANDED / NOT CREATED`
+rows), not unfinished work. As-built tree: `docs/architecture/final-review.md` §1,
+`docs/README.md` "One-line map of the repo".
+## 2. Domain → service — LANDED
 | Domain | Owns | Service |
 |---|---|---|
-| auth, accounts, members | users, sessions, roles | backend/api |
-| portfolio, wallets, transactions, treasury | balances, ledger, reconciliation queries | backend/api |
-| markets | venues, assets, prices (read side) | backend/api |
-| executor orchestration | execution commands (create/start/pause/resume/cancel/emergency), authz, audit | backend/api |
-| execution engine | planner, risk, sizing, strategies, adapters, worker, FSM, `executor.*` writes | backend/workers/executor |
-| data acquisition | llama, cryptorank, khala, chainrank, news | backend/data |
-| streams & reconciliation | websocket ingestion, event normalization, reconcile maths | backend/sync |
-
+| auth, accounts, members | users, sessions, roles | `backend/api` |
+| portfolio, wallets, transactions, treasury | balances, ledger, reconciliation queries | `backend/api` |
+| markets | venues, assets, prices (read side) | `backend/api` |
+| executor orchestration | execution commands (create/start/pause/resume/cancel/emergency), authz, audit | `backend/api` *(pending: the orchestration plane is still the TS routes — see §3.2)* |
+| execution engine | planner, risk, sizing, strategies, adapters, worker, FSM, `executor.*` writes | `backend/workers/executor` *(Go engine landed; TS still the production runtime until cutover)* |
+| data acquisition | llama, cryptorank, khala, chainrank, news | `backend/data` |
+| streams & reconciliation | websocket ingestion, event normalization, reconcile maths | `backend/sync` |
 ## 3. Dependency rules (allowed / forbidden)
-
-RFC 2119. These rules are the acceptance criteria for later phases and SHOULD be enforced by
-`frontend/web/scripts/checks` + CI once the phases land.
-
-### 3.1 Allowed
-
-- `frontend/web` MAY import `shared/sdk/typescript`, `packages/config`, `shared/contracts` (types only).
-- Every service MAY import `shared/contracts` and `packages/config`.
+RFC 2119. These rules are the acceptance criteria for later phases. **Enforcement status
+(2026-10-01):** the Go layering is enforced by `shared/contracts/scripts/check-contract.mjs` +
+`tests/integration/api/check-api-contract.py` + CI; the web layering is enforced by
+`frontend/web/scripts/checks/check-structure.py`. The rules below marked **OPEN** are the ones
+the checks do not yet cover.
+### 3.1 Allowed — LANDED
+- `frontend/web` MAY import `shared/sdk/typescript`, `shared/contracts` (types only). *(no `packages/config` exists to import)*
+- Every service MAY import `shared/contracts`.
 - `backend/api` MAY call `backend/workers/executor`, `backend/data`, `backend/sync` over HTTP/contracts.
 - `backend/data`, `backend/sync` MAY share `database/schema` definitions via `shared/contracts`
   (SQL/DDL versions), never via source imports.
-
-### 3.2 Forbidden
-
+### 3.2 Forbidden — status per rule
 - `frontend/web` MUST NOT own or contain: executor runtime, risk, sizing, strategy logic, exchange
-  signing/keys, workers, locks, or execution persistence. (Today `src/platform/executor/` and
-  `frontend/web/scripts/executor/` violate this — Phase 5 removes them.)
+  signing/keys, workers, locks, or execution persistence. — **OPEN.** `frontend/web/src/platform/executor/`
+  and `frontend/web/scripts/executor/` are still present and are still the production executor;
+  the Go counterpart (`backend/workers/executor`) is built and parity-tested, and the deletion is
+  the gated Phase 5 cutover (see `parity-matrix.md`, `final-review.md` §6).
 - Services MUST NOT import each other's implementation — contracts only. No shared Go/Rust/TS
-  source across service boundaries.
+  source across service boundaries. — **ENFORCED** (zero cross-module imports; `final-review.md` §5).
 - `backend/api` MUST NOT reach into `executor.*` tables directly; it commands `backend/workers/executor`
-  through the orchestration contract. (Today the web routes write `executor.*` via
-  `src/platform/executor/store.ts` — Phase 5 changes the owner to backend/workers/executor.)
-- `frontend/web` MUST NOT talk to exchanges or hold API keys/secrets beyond session cookies.
-  (Today `exchange.ts` + `store.ts` `masterKeyFromEnv` live in web — Phase 5.)
-- UI/shell layers MUST NOT be imported by platform/feature layers below them (today
-  `src/shell/store-shell.tsx` imports feature pages; acceptable inside `frontend/web` as long as it
-  stays a UI-only app, but platform code MUST NOT import features — see domain-map.md).
-- `database/*` is owned by migrations tooling only; services MUST NOT embed DDL strings once
-  Phase 2 lands (today `store.ts` carries `EXECUTOR_DDL` — Phase 2/5 move it to
-  `database/schema/executor.sql` + generated migrations).
-
-## 4. Contracts (`shared/contracts`)
-
-- `openapi/` — HTTP surfaces: api (auth/accounts/portfolio/markets/executor commands),
-  executor (internal), data, sync.
-- `events/` — execution lifecycle events (execution_events), stream normalization envelopes.
-- `schemas/` — DDL + JSON schemas for `users/members/wallets/portfolio`, `execution*`, `analytics`.
+  through the orchestration contract. — **OPEN.** The web routes write `executor.*` through
+  `frontend/web/src/platform/executor/store.ts`; ownership moves to `backend/workers/executor`
+  with the cutover.
+- `frontend/web` MUST NOT talk to exchanges or hold API keys/secrets beyond session cookies. —
+  **OPEN.** `exchange.ts` + `store.ts` `masterKeyFromEnv` are still in web (cutover).
+- UI/shell layers MUST NOT be imported by platform/feature layers below them — **ENFORCED** by
+  `check-structure.py` (the shell may import feature pages; `platform/` must not import a feature).
+- `database/*` is owned by migrations tooling only; services MUST NOT embed DDL strings. —
+  **OPEN.** `store.ts` still carries `EXECUTOR_DDL`, asserted byte-identical to
+  `database/schema/executor-schema.sql` by `tests/integration/executor/executor-store-tests.ts` §59.
+  Lifting it out of `store.ts` is tracked in `migration-plan.md` Phase 2 (not `database/schema/executor.sql` —
+  that file was never created; the tracked name is `executor-schema.sql`).
+## 4. Contracts (`shared/contracts`) — LANDED (partial)
+- `openapi/` — HTTP surfaces. Present: `shared/contracts/openapi/fudcourt.yaml` (`CONTRACTS_OK`,
+  36 paths). The api/executor/data/sync surfaces are being folded into the one document.
+- `events/` — `shared/contracts/events/{catalog.json,event.schema.json}` (28 stable ids), execution
+  lifecycle events + stream normalization envelopes.
+- `schemas/` — `shared/contracts/schemas/**` (56 files) + `shared/contracts/data/reference.json`.
 Compatibility rule: additive changes only per release; breaking changes REQUIRE a versioned path.
-
-## 5. Persistence ownership
-
+Consumers: `shared/sdk/typescript` (generated), gated by `shared/contracts/scripts/check-contract.mjs`
+and `check-schemas.mjs`.
+## 5. Persistence ownership — LANDED (as targets)
 | Tables | Owner |
 |---|---|
-| users, members, wallets, portfolio (+accounts, trades, journal, ledger, transactions) | backend/api |
-| execution, execution_orders, execution_fills, execution_events (today `executor.executions`, `executor.child_orders`, `executor.fills`, `executor.execution_events` + plans/snapshots/risk_profiles/audit_logs) | backend/workers/executor |
-| analytics (today `assets`, `asset_history`, `price_history` written by sync, projected by pg-load) | backend/data + backend/sync |
-
+| users, members, wallets, portfolio (+accounts, trades, journal, ledger, transactions) | `backend/api` |
+| execution, execution_orders, execution_fills, execution_events (today `executor.executions`, `executor.child_orders`, `executor.fills`, `executor.execution_events` + plans/snapshots/risk_profiles/audit_logs) | `backend/workers/executor` |
+| analytics (today `assets`, `asset_history`, `price_history` written by sync, projected by pg-load) | `backend/data` + `backend/sync` |
 SQLite/Turso remains the source of truth for balances; Postgres remains the read model
-(DR-019). That split is unchanged by the restructure — only the code owning each write path moves.
-
-## 6. Deploy target
-
-- `infrastructure/systemd/` — one unit set per service: `fudcourt-api`, `fudcourt-executor`,
-  `fudcourt-data`, `fudcourt-sync`, `fudcourt-web`, plus timers (`pgload`, `sync`).
-  The dual Python/Rust sync units collapse to the Rust service after Phase 6 parity is proven.
-- `infrastructure/docker|compose/` — local dev orchestration mirroring the systemd topology.
+(DR-019; Postgres as durable truth for the executor is DR-023). That split is unchanged by the
+restructure — only the code owning each write path moves.
+## 6. Deploy target — LANDED
+- `infrastructure/systemd/` — one unit set per service (`fudcourt-api`, `fudcourt-executor`,
+  `fudcourt-executor-worker`, `fudcourt-data`, `fudcourt-sync`, `fudcourt-sync-rust`,
+  `fudcourt-reconciled`, `fudcourt-web`) plus the `pgload`/`sync` timers; 12 live units and
+  2 `RETIRED-*.service.txt` tombstones.
+  The dual Python/Rust sync units are expected to collapse to the Rust service after Phase 6 parity is proven.
+- `infrastructure/{docker,compose}/` — **NOT LANDED**; no container config exists (DR-002
+  self-hosted systemd + Cloudflare Tunnel). Recorded as an omission, not planned work.
 - Ingress unchanged: Cloudflare Tunnel → loopback origin (DR-002), fail-closed.
-
-## 7. Tests target
-
-- `tests/integration` — cross-service contract tests (generated from `shared/contracts`).
-- `tests/e2e` — browser/user journeys (executor wizard paper-trade path included).
+## 7. Tests target — LANDED
+- `tests/integration` — cross-service contract tests (`api/check-api-contract.py`, `executor/*-tests.ts`).
+- `tests/e2e` — executor journeys (`executor/executor-paper-e2e.ts` + the per-module suites).
 - `tests/fixtures` + `tests/oracle` — recorded upstream envelopes and the Python-oracle
-  parity harness now under `tests/{fixtures,oracle}` + `scripts/verify`.
+  parity harness.
+- `scripts/verify` — the repo-wide harnesses (`check-contract.py`, `check-deploy.py`,
+  `verify-<family>.py`, `monitor.py`, `verify-all.sh`, `parity-*`); the app-only probes
+  (`dom_audit.py`, `verify_all_routes.py`, `dbg-smoke.cjs`) and the web suites live at
+  `frontend/web/tests/`.
 - Unit tests live next to their service (Go `*_test.go`, Rust `tests/`, web vitest/node --test).

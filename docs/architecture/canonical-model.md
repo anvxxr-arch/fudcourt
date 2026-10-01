@@ -15,6 +15,9 @@
 >
 > **Snapshot.** Working tree of branch `refactor/frontend-backend-architecture` at `8c902dc`
 > (`refactor: move apps/services/packages/deploy to frontend/backend/shared/infrastructure`).
+> *The commit subject quoted here is the move that produced the current tree; the names it uses
+> are pre-move — `apps/`, `services/`, `packages/`, `deploy/` no longer exist (see
+> `final-review.md` §1).*
 > A concurrent, uncommitted domain-reslice was in flight while this was written (staged renames
 > visible in `git status --porcelain`: `backend/data/internal/{cryptorank,khala,llama,news,chainrank}`
 > → `backend/data/internal/research/*`, `backend/data/internal/{cache,httpx}` →
@@ -70,8 +73,25 @@
 > a prose package name — `backend/api markets/instruments` — and two paths written without their
 > `features/` / `scripts/` segment, now corrected to
 > `frontend/web/src/features/executor/ui.tsx` and
-> `frontend/web/scripts/tools/dump-envelopes.ts`.) Citations where both the pre- and post-regroup
+> `tests/oracle/dump-envelopes.ts` — *the latter has since been relocated by the Phase-8 tests
+> move; it was `frontend/web/scripts/tools/dump-envelopes.ts` when this note was written*.)
+> Citations where both the pre- and post-regroup
 > shapes were observed are marked *"path moved mid-audit"*.
+>
+> **Re-run against the current file.** The same extraction was repeated over this file as it stands
+> now (after the executor tree was regrouped a second time): **265 path-like citation occurrences
+> (128 distinct)** were found (a count taken before this note was appended; this note adds three
+> more occurrences and no new distinct path), of which **114 resolve and 14 do not**. The 14 misses are all
+> `backend/workers/executor/internal/*` citations still in the pre-regroup shape —
+> `internal/exchange` and `internal/exchange/{binance,bybit,mexc}/*.go`
+> (→ `internal/exchanges…`), `internal/{orders,executor}` (→ `internal/core/orders`,
+> `internal/core/execution`), `internal/{planner,risk,sizing}` (→ `internal/core/*`),
+> `internal/strategy/strategies.go` (→ `internal/strategies/strategies.go`),
+> `internal/{decimal,idempotency}/…` (→ `internal/platform/decimal/decimal.go`,
+> `internal/runtime/idempotency/idempotency.go`), and
+> `frontend/web/src/platform/executor/ui.tsx` (→ `frontend/web/src/features/executor/ui.tsx`) —
+> the same class of mid-flight move the paragraph above already records; they are named here
+> rather than silently rewritten.
 
 ---
 
@@ -139,14 +159,14 @@ dex/markets/signals/ticker (documented acquisition debt, `docs/architecture/doma
 
 | Implementation | Location | Evidence |
 |---|---|---|
-| CryptoRank `Cr*` structs | `…/cryptorank/types.go:8-437` (43 exported types) | Header `types.go:2-5`: "Types mirror apps/web/lib/cryptorank.ts's Cr* interfaces exactly: the JSON tags are the wire contract". Renames only: `price→PriceUsd`, `volumes.day.toUSD→DayVolUsd`, `funds[].name→[]string`. |
+| CryptoRank `Cr*` structs | `…/cryptorank/types.go:8-437` (43 exported types) | Header `types.go:2-5`: "Types mirror apps/web/lib/cryptorank.ts's Cr* interfaces exactly: the JSON tags are the wire contract" — *the quoted header is pre-move wording kept verbatim; that TS file is now `frontend/web/src/features/cryptorank/client.ts`*. Renames only: `price→PriceUsd`, `volumes.day.toUSD→DayVolUsd`, `funds[].name→[]string`. |
 | CryptoRank shapers | `…/cryptorank/shapers.go:17,70,93,106,126,148,162,180,214,252,286,307,339,384,414,444,457,470,547,631` | Header `shapers.go:5-8`: "an absent upstream value becomes null rather than 0". |
 | Envelope assembly | `…/cryptorank/envelope.go:36` (`Envelope`), 26 mode arms | Lines 45-53 stamp `fetchedAt`/`cache`. |
 | Khala envelope | `…/research/khala/shape.go` (`BuildReport`, `List`) | |
 | Llama projection | `…/research/llama/shape.go:210` (`projectProtocols`, 10-key projection), `:242` (`projectHistorical`) | Rows are `json.RawMessage`; only the projection is typed. |
 | Rust number rendering | `backend/sync/src/pyfmt.rs:20` (`round4`), `:34` (`round_n`), `:46` (`round10`), `:52` (`round2`), `:59` (`repr`), `:120` (`json_str`) | Module doc `pyfmt.rs:1-11`: CPython-identical rendering. **This is the treasury plane's de-facto numeric normalization.** |
 | Venue symbol normalization | `backend/api/internal/markets/instruments/symbol.go:35` (`CanonicalSymbol`), `:81` (`VenueSymbol`) | `analyse → BASE/QUOTE`; `quoteSuffixes:13` is a hard-coded spelling table. |
-| Feature-side shapers | `frontend/web/src/features/cryptorank/shapers.ts` (1198 lines: `asNum:71`, `asNumLoose:74`, `shapeCoin:93`, `envelope:276`) | **Note:** this module is importable but the runtime path is Go — its only consumers are `frontend/web/tests/shaper-tests.ts:22` and `frontend/web/scripts/tools/dump-envelopes.ts:54`. It is the TS mirror, not the live NORMALIZED layer. |
+| Feature-side shapers | `frontend/web/src/features/cryptorank/shapers.ts` (1198 lines: `asNum:71`, `asNumLoose:74`, `shapeCoin:93`, `envelope:276`) | **Note:** this module is importable but the runtime path is Go — its only consumers are `frontend/web/tests/shaper-tests.ts:22` and `tests/oracle/dump-envelopes.ts:54` (moved there by Phase 8). It is the TS mirror, not the live NORMALIZED layer. |
 | Go↔wire float identity | `…/cryptorank/parity_test.go:170-173` (`walkNumbers:320`) | Asserts Go `encoding/json` renders the same literals JS does (`11500000`, `0.005551724137931036`). |
 
 ### 1.4 CANONICAL — **[CANONICAL OWNER]** owner exists for Asset/Token/Chain/Venue; still absent for the rest.
@@ -440,7 +460,7 @@ one of them (em-dash rendering), which is the part that is right.
 | `frontend/web/src/app/(frontend)/api/signals/route.ts` | `mcap:18`, `liq:19`, `price:20`, `score:22`, `volTrend:28`, `topHolderPct:29`, `holdersCount:26`; scoreboard `peak24:49`, `x24h:52`, `score:44` |
 | `frontend/web/src/features/chainrank/client.ts` | **integer cents** (`totalUsdCents:48`, `topUsdCents:69`, `claimTopCents:70`) divided by 100 at render (`features/chainrank/ui.tsx:10`) — the only minor-unit money in the repo |
 | `frontend/web/src/platform/executor/types.ts` | The executor **wire** types: `ExecutionPlan.quantity/notional/estimatedEntry/stopLoss/…:689-723`, `PreviewResult.expectedLossAtStop/…:729-735`, `FillRecord.price/quantity/quoteQuantity/fee:1157-1161`, `ExecutionRecord.sizingValue…currentRisk:1094-1113`, `Balance:906-908`, `AccountEquity:912-914`, `Position:925-929`, `Order:940-943`, `RiskProfile:1186-1195`. Header `:31-35` states `number` is the WIRE type only. |
-| `frontend/web/src/platform/executor/ui.tsx` (feature) | `ComposerState` keeps **every** numeric input as `string` (`:340-363`), parsed by `num():263` (`''→undefined`, never 0) |
+| `frontend/web/src/features/executor/ui.tsx` (feature; was `src/platform/executor/ui.tsx` before the DR-018 move) | `ComposerState` keeps **every** numeric input as `string` (`:340-363`), parsed by `num():263` (`''→undefined`, never 0) |
 
 OpenAPI mirrors the float choice: `SizingDefinition.value` / `PriceDefinition.price` /
 `TakeProfitDefinition.price` / `ScaleLevel.price` are `type: number`

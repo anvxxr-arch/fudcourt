@@ -90,7 +90,7 @@ mode. A gate may fail on *data*, never on a *hiccup*.
 | Claim | Evidence |
 |-------|----------|
 | 28 cryptorank modes live | harness `244 passed / 0 failed / 8 info` (`/tmp/cr_28e.log`), 400-response lists exactly 28 |
-| Route/endpoint health | `verify_all_routes.py` → **122/133** measured 2026-09-29 (two byte-identical runs; 11 fails = 1 CoinGecko 403 passthrough + 10 session-gated probes unrunnable on the secret-less :3107 target — environmental). Re-aligned sweep detail: PLAN SG-5.3; breakdown: ARCHITECTURE §7 |
+| Route/endpoint health | route sweep `frontend/web/tests/verify_all_routes.py` (was `frontend/web/scripts/verify/verify_all_routes.py`) → **122/133** measured 2026-09-29 (two byte-identical runs; 11 fails = 1 CoinGecko 403 passthrough + 10 session-gated probes unrunnable on the secret-less :3107 target — environmental). Re-aligned sweep detail: PLAN SG-5.3; breakdown: ARCHITECTURE §7 |
 | Browser rendering | Playwright DOM audit → **109/109** |
 | Price truth | GATE2 diffs 0.002%–0.55% vs coins.llama.fi; quarterly 4/4 vs CoinGecko (0.03–0.40%) |
 | Semantic truth (GATE3) | KuCoin GemPool dates; publisher `<title>`; Chainwire presale date; WEN $6.55 quote; NFL schedule == `26SEP27LACBUF`; YT oembed title+channel |
@@ -114,7 +114,7 @@ mode. A gate may fail on *data*, never on a *hiccup*.
 
 | # | Risk | Severity | Detail |
 |---|------|----------|--------|
-| K-1 | ~~Turso schema not versioned~~ ✅ **closed 2026-09-28** | High→Low | `frontend/web/db/schema.sql` generated + `--check` drift gate (R-1). |
+| K-1 | ~~Turso schema not versioned~~ ✅ **closed 2026-09-28** | High→Low | `database/schema/schema.sql` (dumped as `frontend/web/db/schema.sql` at the time; moved to `database/schema/` by the Phase-2 restructure) + `--check` drift gate (R-1). |
 | K-2 | **No CI / pre-merge verification** | High→Med | Partial: `pre-push` hook (contract check + tsc + py syntax) live 2026-09-28; GitHub Action still open (PLAN T-2.2.3). |
 | K-3 | **Two React majors (web R18 18.3.1 / blog+root R19 19.2.0); Next patch divergence (web 16.3.6 / blog+root 16.3.5)** | Medium | Divergent TS versions (5.7.2 web / 5.9.3 root+blog); shared-code future is constrained. Next itself is now one major — DR-001 moved `frontend/web` 14.2.0 → 16.3.6 (2026-09-28), so the original "dual Next majors" framing no longer holds. |
 | K-4 | **Upstream coupling (CF 429 / Turnstile)** | Medium | CryptoRank HTML RE can break without notice; mitigated by loud failures + harness, but there is no alerting — breakage is discovered on next run. Since DR-005 the fetch is a Go sidecar, so the class now also covers *Cloudflare rule/profile rotation* (a pinned `chrome_131` profile could start getting 403s) and a stopped sidecar (loud 502). Residual: `monitor.py` covers the sidecar only **transitively** (its `/api/cryptorank` checks fail when `fudcourt-data` is down); it does not yet assert the `:3101` unit nor alarm on `cf-mitigated: challenge`. |

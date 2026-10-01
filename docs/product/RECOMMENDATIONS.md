@@ -4,7 +4,7 @@ Ranked by (impact ÷ effort), tied to risks in [ANALYSIS.md §5](ANALYSIS.md).
 
 | ID | Recommendation | Closes | Impact | Effort | Priority |
 |----|----------------|--------|--------|--------|----------|
-| **R-1** | **Version the Turso schema.** Export `SELECT sql FROM sqlite_master` into `frontend/web/db/schema.sql` + a `docs/architecture/SCHEMA.md`-referenced migration folder; add a drift check (schema dump vs committed file) to the harness. | K-1 | High | S | **P0** |
+| **R-1** | **Version the Turso schema.** Export `SELECT sql FROM sqlite_master` into a tracked schema file (done: `database/schema/schema.sql`, written as `frontend/web/db/schema.sql` at the time and moved by the Phase-2 restructure) + a `docs/architecture/SCHEMA.md`-referenced migration folder; add a drift check (schema dump vs committed file) to the harness. | K-1 | High | S | **P0** |
 | **R-2** | **Wire verification into CI / git hook.** A pre-push hook (or GitHub Action) running `verify-cryptorank.py --offline-ish subset` + `tsc --noEmit` + `next build` on changed apps. Even a reduced offline subset (contract checks, no upstream) catches 80% of regressions. | K-2 | High | M | **P0** |
 | **R-3** | **Decide the Next.js version story.** Either upgrade `frontend/web` 14→16 (aligns React 18→19, single toolchain) or document web-stays-14 as a policy with an expiry. Do not let the divergence grow silently. | K-3 | Med | M | P1 |
 | **R-4** | **Add an upstream monitor.** A cron (15 min) that runs a 5-check smoke (`home`, `coins`, `converter`, `newstag`, `funding`-must-503) and notifies on deviation — converts K-4 from "found on next manual run" to "found in ≤15 min". | K-4 | Med | S | P1 |

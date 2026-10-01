@@ -1,7 +1,8 @@
 # Domain Map — today's owner → target owner
 
 > Phase 0 audit. "Today" = working tree 2026-10-01 (Phase 1/2 moves committed as `4e8ba91`;
-> Go scaffolds `services/{api,executor}` started in the uncommitted wave). Paths are repo-relative.
+> Go scaffolds `services/{api,executor}` — since renamed `backend/api` + `backend/workers/executor`
+> — started in the uncommitted wave). Paths are repo-relative.
 >
 > **Amended 2026-10-01 (api bounded-context regroup):** `backend/api/internal/` was regrouped
 > from a flat package set into explicit bounded contexts (`access/`, `accounts/`, `finance/`,
@@ -60,6 +61,11 @@
 
 Naming note: today's physical names (`executor.*` schema, `child_orders`, `fills`) map to the
 target's logical names (`execution_orders`, `execution_fills`); renaming happens in Phase 2/5.
+**Re-read 2026-10-01 (docs-reality pass):** the `database/schema/*.sql` filenames in the "target
+location" column are the **Phase-2 proposal** and were never created — the tree holds exactly
+three schema files, `database/schema/{schema.sql,pg-schema.sql,executor-schema.sql}`, and
+`database/migrations/` is deliberately absent (DR-020). Read that column as "which schema file
+would own this table if the split were made".
 
 ## 3. Cross-boundary import violations (file paths)
 
@@ -105,7 +111,7 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
 - `frontend/web/src/components/layout/store-shell.tsx` imports `@/features/{dashboard/ui,
   portfolio/ui, wallets/ui, transactions/ui, treasury/reconciliation, dex/trench, dex/ui,
   signals/ui, scoreboard/ui, chainrank/ui, …}` (16+ feature modules).
-  Acceptable while `frontend/web` is UI-only; MUST NOT migrate into `packages/*` or services.
+  Acceptable while `frontend/web` is UI-only; MUST NOT migrate into `shared/*` or services.
 
 ### 3.3 Platform-internal coupling (fine today, becomes backend/workers/executor internals)
 
@@ -142,6 +148,11 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
   `shared/` (not `packages/`) and `backend/workers/executor` is committed.
 - The TS execution plane (§3.1) remains the live implementation until Phase 5's parity gate
   allows deletion.
+> **Re-read 2026-10-01 (docs-reality pass):** nothing in this section is current — the
+> "uncommitted" scaffolds it lists were committed, and there is no `packages/` or `services/`
+> directory in the tree. The as-built homes are `shared/contracts` + `shared/sdk/typescript`
+> (not `packages/*`), `backend/api` (not `services/api`) and `backend/workers/executor` (not
+> `services/executor`).
 ## 4. `backend/api` package layout (as-built, 2026-10-01)
 The module `github.com/anvxxr-arch/fudcourt/backend/api` hosts ONE process (`cmd/api`) whose
 `internal/` is grouped by bounded context. A directory exists only where real code lives —

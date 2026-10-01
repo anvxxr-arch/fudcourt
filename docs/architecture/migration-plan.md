@@ -1,10 +1,21 @@
 # Migration Plan — phased restructure
 
+> **Status (re-read 2026-10-01, docs-reality pass).** This is the execution plan. Phases **0–4 and
+> 6, 8, 9, 10 have landed** (under the as-built names `backend/…`, `shared/…`, `infrastructure/systemd/`,
+> `tests/…`, `scripts/verify/` — see `final-review.md` §1–§3 and `target.md` §1); **Phase 5 (delete the
+> TS executor) and Phase 7 (frontend cleanup) are deliberately not executed** — they are gated on the
+> money-path cutover (the Go executor still has no HTTP surface for the `/api/executor/*` routes).
+> Each phase block below keeps its original plan text plus a dated amendment; **read a phase's
+> original bullet list as the plan of record at the time, and its amendments as what actually
+> happened.** Paths in the original bullets (`apps/…`, `services/…`, `packages/…`,
+> `frontend/web/db/`) are pre-move and no longer exist on disk.
+>
 > Phase 0 planning artifact. Grounded in the audit in `current.md` / `domain-map.md`
 > (working tree 2026-10-01). Every phase ends with the same exit gate:
 > `go build/vet/test`, `cargo check/test`, `bun run test:shapers`, `bunx tsc --noEmit`,
-> `bun run build`, `scripts/checks/{check-contract,check-deploy,check-structure}.py`
-> all green (the exact baseline table in `current.md` §2).
+> `bun run build`, `frontend/web/scripts/checks/check-structure.py`,
+> `scripts/verify/check-contract.py`, `scripts/verify/check-deploy.py`
+> all green (the exact baseline table in `current.md` §2 — a dated snapshot, see that file's header).
 
 ## Phase 1 — move `apps/apicalls` → `backend/data`, `apps/sync` → `backend/sync`
 
@@ -21,14 +32,21 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
   `go build/vet/test ./...` PASS at the new path — re-verified).
 - `infrastructure/systemd/fudcourt-apicalls.service` + `infrastructure/systemd/fudcourt-sync-rust.*`:
   `WorkingDirectory`/`ExecStart` now point at `services/...` (check-deploy.py PASS).
+  **Corrected 2026-10-01 (docs-reality pass):** that path text was a stale intermediate — today
+  there is no `fudcourt-apicalls.service` at all: the unit was retired as
+  `infrastructure/systemd/RETIRED-fudcourt-apicalls.service.txt` when the binary was renamed
+  `fudcourt-data` (DR-033), and the live unit is `infrastructure/systemd/fudcourt-data.service`
+  with `WorkingDirectory`/`ExecStart` on `backend/data/**` (there is no `services/` directory).
 - `.github/workflows/ci.yml`: Go job `working-directory: backend/data`, Rust job
   `working-directory: backend/sync`; the web job's live-reconcile step builds
   `../../backend/sync/Cargo.toml`.
 - No stale `apps/apicalls|apps/sync` strings remain in `*.go`, `*.rs`, `*.ts`, `*.service`,
   `*.timer`, `*.yml`, `*.toml`.
 
-**Remaining for Phase 1 closure:** commit the working tree as one reviewable change
-(the `git mv` history is preserved in the rename entries), then run the full exit gate in CI.
+**Remaining for Phase 1 closure:** ~~commit the working tree as one reviewable change
+(the `git mv` history is preserved in the rename entries), then run the full exit gate in CI.~~
+**DONE 2026-10-01** — committed as `4e8ba91` (plus the `6184d84` baseline snapshot); the exit gate
+runs on push in CI. Nothing remains open in this phase.
 
 - **Risks:** uncommitted 103-file change set mixes the "repurpose" surface changes with the
   moves — splitting into two commits (surface vs moves) keeps `git mv` detection intact and
@@ -53,7 +71,10 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
   `database/{schema,seeds,fixtures}/`; keep a generated copy or path update in
   `frontend/web/scripts/tools/pg-load.ts` and `src/platform/executor/store.ts`.
 - Lift `EXECUTOR_DDL` out of `store.ts` into `database/schema/executor.sql` (store.ts imports
-  the file or a generated constant).
+  the file or a generated constant). **Status 2026-10-01: NOT done, and the target filename in this
+  bullet is wrong** — there is no `database/schema/executor.sql`; the tracked name is
+  `database/schema/executor-schema.sql`, and `store.ts` still embeds the DDL (asserted
+  byte-identical to that file). This is Phase 5/7 work, not a landed move.
 - **Risks:** `pg-load.ts` (60s timer, live) and `ensureExecutorSchema` (boot-time DDL) reference
   the files by path — `check-deploy.py` won't catch a missing `.sql`; add a check or keep
   shims one release.
@@ -68,11 +89,14 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
 > fetch client generated from the contract) exist. Verified: `check-contract.mjs` →
 > `CONTRACTS_OK enums=3 openapi_paths=15 route_handlers=39 events=24`, `tsc --noEmit`
 > clean, and `bun run generate` is **deterministic** (so the generated-SDK drift gate
-> is meaningful). The gate is wired into `ci.yml` (job `contracts`) and
-> `scripts/githooks/pre-push`. **In flight:** the data/sync/api HTTP surfaces are
-> being added to the same contract + SDK in a follow-up pass (same ground-truth rules).
+is meaningful). The gate is wired into the `contracts` workflow
+(`.github/workflows/contracts.yml` — the single `ci.yml` named here was split in Phase 9) and
+`scripts/githooks/pre-push`. **In flight:** the data/sync/api HTTP surfaces are
+being added to the same contract + SDK in a follow-up pass (same ground-truth rules).
+**Re-read 2026-10-01:** the contract has since grown to **36** OpenAPI paths / **28** events;
+re-derive with `node shared/contracts/scripts/check-contract.mjs` rather than trusting this dated line.
 
-- Author `openapi/` for the four HTTP surfaces (web's 35 routes collapse to api+executor+data+sync
+- Author `openapi/` for the four HTTP surfaces (web's 36 `(frontend)/api` routes collapse to api+executor+data+sync
   contracts), `events/` for execution lifecycle (`executor.execution_events` rows) and stream
   normalization, `schemas/` for the table groups in `domain-map.md` §2.
 - Extract `shared/sdk/typescript` from `frontend/web/src/features/executor/client.ts` + the other
@@ -180,7 +204,8 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 - Delete `frontend/web/src/platform/executor/` and `frontend/web/scripts/executor/` remnants (post-5),
   data-passthrough routes replaced by `backend/data` via `backend/api` (post-4),
   `src/features/executor/client.ts` re-targeted to `shared/sdk/typescript`.
-- Fix the shell inversion: `src/shell/store-shell.tsx` may keep importing feature pages
+- Fix the shell inversion: `src/components/layout/store-shell.tsx` (the DR-018 location — the
+  pre-move `src/shell/` path in this bullet no longer exists) may keep importing feature pages
   (UI-only app) but `check-structure.py` should then enforce "no platform→feature imports".
 - **Risks:** low; mostly deletions behind green proxies.
 - **Ordering:** after 4–6. **Rollback:** per-file revert.
@@ -188,8 +213,13 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 ## Phase 8 — tests layout
 
 - Move `frontend/web/scripts/{tests,fixtures,oracle,verify}` → `tests/{integration,fixtures,oracle}`
-  + per-service unit tests; keep `test:shapers` working via `packages/config` tsconfig until the
-  last move.
+  + per-service unit tests; keep `test:shapers` working via a shared tsconfig until the
+  last move. *(No `packages/config` was created — DR-018 keeps
+  `frontend/web/tsconfig.shaper-tests.json` in the app; `tests/tsconfig.json` covers the moved
+  suites.)* **Status 2026-10-01: EXECUTED** — see `final-review.md` §9.2 for the exact map and its
+  one caveat: the repo-wide harnesses moved to `scripts/verify/` + `tests/…`, while the web-only
+  probes (`dom_audit.py`, `verify_all_routes.py`, `dbg-smoke.cjs`) went to the app's own
+  `frontend/web/tests/`.
 - **Risks:** `test:shapers` compiles via `tsconfig.shaper-tests.json` into `.shaper-tests/`
   with a custom `alias-resolver.cjs` — path moves break the alias map; move the resolver with it.
 - **Ordering:** after 7 (code settles first). **Rollback:** revert moves; CI job paths updated
@@ -199,6 +229,11 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 
 - Split `ci.yml` into per-surface workflows (`web`, `api`, `executor`, `data`, `sync`,
   `contracts`) with path filters; keep one aggregate required check for merges.
+  **Status 2026-10-01: EXECUTED** — `.github/workflows/` now holds five path-filtered workflows
+  (`web.yml`, `go.yml`, `rust.yml`, `contracts.yml`, `integration.yml`), each ending in a required
+  `gate` job; the single `ci.yml` was removed. The split used a combined `go.yml` and `rust.yml`
+  rather than the per-service `api`/`executor`/`data`/`sync` names sketched here — each runs all
+  Go modules / the Rust crate respectively.
 - **Risks:** the live-reconcile step couples web CI to `backend/sync` build — keep it in the
   aggregate workflow or on `backend/sync` changes.
 - **Ordering:** after 8. **Rollback:** restore single `ci.yml` (it's current + green).
@@ -212,6 +247,12 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 > `check-deploy.py` was updated in the same wave (the ExecStart-exists gate covers the new
 > folder). Remaining: retire the `fudcourt-apicalls` name in favor of `fudcourt-data`, add
 > `infrastructure/docker|compose/`, and re-pointing/reloading the host units.
+> **Re-read 2026-10-01 (docs-reality pass):** the `fudcourt-apicalls` retirement **has since
+> landed** — `infrastructure/systemd/` now has no `fudcourt-apicalls.service` at all, only the
+> tombstone `RETIRED-fudcourt-apicalls.service.txt`, and the live unit is
+> `infrastructure/systemd/fudcourt-data.service` (DR-033). The folder now holds **14 files**
+> (12 live units + 2 tombstones), not the "10 unit files" this block records — the api/executor
+> units were added after the move. `docker|compose/` remains deliberately absent (DR-002).
 
 **Status: core move EXECUTED (2026-10-01), verified green.**
 - All 10 unit files consolidated into `infrastructure/systemd/` via `git mv` (was
@@ -249,9 +290,11 @@ Still open (deliberately not done in the move):
 ```
 
 Standing risks across phases:
-- Phases 1-2 are committed (6184d84 baseline snapshot, 4e8ba91 phase 1-2). New uncommitted
-  waves (Phase 3+ artifacts: `packages/`, `services/{api,executor}`, `go.work`) must be
-  committed in reviewable per-phase increments before the next phase starts.
+- Phases 1-2 are committed (6184d84 baseline snapshot, 4e8ba91 phase 1-2), and the Phase 3+ artifacts
+  this bullet listed as uncommitted — `shared/contracts`, `shared/sdk/typescript`, `backend/api`,
+  `backend/workers/executor`, `go.work` — have since been committed too (under their as-built
+  names; there is no `packages/` or `services/` directory). Ongoing phases still land as
+  reviewable per-phase increments.
 - Money-path code (Phase 5) requires parity-first deletion; never delete TS before its Go
   counterpart passes the ported suite and `verify:executor`.
 - The sync/reconcile Python-vs-Rust twins are live in production units; every cutover keeps the

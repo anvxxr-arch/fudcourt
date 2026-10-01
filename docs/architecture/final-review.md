@@ -19,32 +19,39 @@ deliberately not executed (Phase 5 deletion, Phase 7 cleanup).
 
 ## 1. Final repository tree
 
+> **Corrected 2026-10-01 (docs-reality pass).** This block previously printed the
+> **pre-move** tree (`apps/web`, `services/{api,executor,data,sync}`,
+> `packages/{contracts,sdk-ts}`) — none of those directories exist on this branch.
+> The tree below is `ls`-derived from the working tree; the pre-move snapshot is
+> preserved in git history (and in the "Files moved" ledger in §2).
+
 ```
 fudcourt/
-├── apps/
-│   └── web/                    Next.js 16 + Bun — UI, SSR, thin BFF, Payload blog
-│       ├── src/{app,features,platform,cms,shell,styles,ui}
-│       └── scripts/{checks,tools,tests,verify,fixtures,oracle,executor}
-├── services/
+├── frontend/web/               Next.js 16.3.6 + Bun — UI, SSR, thin BFF, Payload blog
+│   ├── src/{app,cms,components,features,platform,styles}
+│   ├── scripts/{checks,executor,tools}
+│   └── tests/                  web-only suites (shaper/auth/rate-limit/db/executor-ui)
+├── backend/
 │   ├── api/                    Go — primary backend (identity, admin, portfolio,
 │   │                           treasury, wallets, transactions, markets, ledger)
-│   ├── executor/               Go — execution engine (risk, sizing, planner,
+│   ├── workers/executor/       Go — execution engine (risk, sizing, planner,
 │   │                           strategies, exchange adapters, worker, locks, repo,
 │   │                           credentials, cmd/executor service binary)
 │   ├── data/                   Go — external data (cryptorank, khala, llama,
-│   │                           chainrank, news, cache)
+│   │                           chainrank, news, cache); the `fudcourt-data`
+│   │                           sidecar on :3101
 │   └── sync/                   Rust — balance sync + /api/reconcile
-├── packages/
+├── shared/
 │   ├── contracts/              OpenAPI + event catalog + schemas (source of truth)
-│   └── sdk-ts/                 generated TS client
+│   └── sdk/typescript/         generated TS client
 ├── database/schema/            schema.sql (Turso) · pg-schema.sql (read model) ·
 │                               executor-schema.sql (execution ledger)
-├── tests/
-│   ├── integration/api/        cross-service conformance gate (Go api ⇄ contract ⇄ web BFF)
-│   └── oracle/                 sync oracle gate: Python `sync-live.py` ⇄ Rust `fudcourt-sync`
-│                               byte-identical replay (fixtures + pinned projection, offline)
-├── infrastructure/systemd/             12 unit files (web, api, data, executor, executor-worker, sync, sync-rust, reconciled, pgload — + 2 retired .txt)
-├── scripts/{githooks,verify}/  pre-push hook · verify-all.sh (one-command offline gate)
+├── tests/{e2e,integration,fixtures,oracle}/
+├── infrastructure/systemd/     14 files: 12 live units (web, api, data, executor,
+│                               executor-worker, sync, sync-rust, reconciled, pgload
+│                               + 2 timers) + 2 retired .txt tombstones
+├── scripts/{database,githooks,verify}/  schema drift alarm · pre-push hook ·
+│                               verify-all.sh (one-command offline gate)
 ├── docs/{architecture,operations,prd,product,records}/
 ├── .github/workflows/          web · go · rust · contracts · integration (path-filtered)
 ├── go.work · go.work.sum · package.json · README.md
@@ -59,6 +66,10 @@ DR-020); `Cargo.toml` at root (single Rust crate lives in `backend/sync`). These
 
 ## 2. Files moved
 
+*Historical ledger* — every row below describes a move that happened in an earlier
+commit; the `From` paths no longer exist on disk. Kept as the audit trail, not as
+current state.
+
 This session (uncommitted at the time of writing; see §7):
 | From | To | Method |
 | --- | --- | --- |
@@ -70,7 +81,7 @@ Already moved in earlier commits on this branch (verified via `git log`):
 | `apps/apicalls/` | `backend/data/` | `4e8ba91` (Phase 1) |
 | `apps/sync/` | `backend/sync/` | `4e8ba91` (Phase 1) |
 | `frontend/web/db/*.sql` | `database/schema/*.sql` | `4e8ba91` (Phase 2) |
-| `apps/*/infrastructure/*.service|*.timer` | `infrastructure/systemd/` | `94a2ee1` (Phase 10) |
+| `frontend/web/infrastructure/*`, `apps/apicalls/infrastructure/*`, `apps/sync/infrastructure/*` (`*.service`, `*.timer`) | `infrastructure/systemd/` | `94a2ee1` (Phase 10) |
 
 ## 3. Files created
 
@@ -103,7 +114,7 @@ as parity oracle; canonical exchange interface; OpenAPI as contract source of tr
 ledger; portfolio is derived; append-only events). Current-state highlights:
 
 - **One shared artifact.** Services share `shared/contracts` only. Verified: each Go module
-  (`services/{api,executor,data}`) imports **only its own** module path — zero cross-service
+  (`backend/{api,workers/executor,data}`) imports **only its own** module path — zero cross-service
   implementation imports (§7 evidence).
 - **Contract is machine-checked.** `shared/contracts/scripts/check-contract.mjs` gates enums
   (OpenAPI ⇄ `types.ts`) and route coverage; the new `tests/integration/api/check-api-contract.py`
@@ -161,7 +172,7 @@ unavailable in the repository") applies.
 | --- | --- | --- |
 | DB schema files inside `frontend/web` | 0 | `find frontend/web -name '*.sql'` → **0** |
 | exchange credentials / signing handled by frontend | 0 | **PARTIAL — gated, same cutover as rows 1–4** (corrected: an earlier revision of this row claimed the only hits were a session-cookie HMAC, which is false). No *request signing* (HMAC of the venue payload) happens in the web tier. But `frontend/web/src/platform/executor/store.ts` **is** a frontend-tier credential **vault**: it imports `node:crypto` (`createCipheriv`/`createDecipheriv`), implements `sealSecret`/`openSecret` (AES-GCM envelopes), reads `FUDCOURT_EXECUTOR_MASTER_KEY` (line 254) via `masterKeyFromEnv()`, and owns the `exchange_accounts.api_key_encrypted`/`api_secret_encrypted`/`passphrase_encrypted`/`iv`/`auth_tag` columns. The other `frontend/web` hits are a session-cookie HMAC (`platform/auth/session.ts`, `middleware.ts`) and TS **type** "signatures". The Go `backend/workers/executor/internal/platform/credentials` package is the canonical owner; the TS vault is removed with the cutover (rows 1–4). |
-| cross-service implementation imports | 0 | `grep` for `services/{api,executor,data}/` imports inside the Go services → **none**; `backend/data` mentions `executor` nowhere; `backend/sync` only names TS files in *provenance comments* (`src/{main,chains,reconcile}.rs`), not imports |
+| cross-service implementation imports | 0 | `grep` for `backend/{api,workers/executor,data}/` imports inside the Go services → **none**; `backend/data` mentions `executor` nowhere; `backend/sync` only names TS files in *provenance comments* (`src/{main,chains,reconcile}.rs`), not imports |
 | canonical risk engine | 1 | exactly one `risk.go` → `backend/workers/executor/internal/core/risk/risk.go` (+31 test funcs) |
 | canonical sizing implementation | 1 | exactly one `sizing.go` → `backend/workers/executor/internal/core/sizing/sizing.go` (+16 test funcs) |
 | canonical exchange abstraction | 1 | `backend/workers/executor/internal/exchanges/{interface,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package (85 test funcs) |
@@ -377,7 +388,14 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    (`frontend/web/scripts/verify/*` → `scripts/verify/`, executor E2E → `tests/e2e/executor/`,
    executor integration → `tests/integration/executor/`, fixtures → `tests/fixtures/`,
    oracle → `tests/oracle/`, database tooling → `scripts/database/`, web-only suites →
-   `frontend/web/tests/`), with every invoker repointed and `test:shapers` still 240/240.
+   `frontend/web/tests/`), with the invokers repointed and `test:shapers` still 240/240.
+   **Correction (docs-reality pass, 2026-10-01):** the *repo-wide* harnesses and the executor E2E
+   probe moved; the **web-only probes went to the app's own tests dir**, not to `tests/`.
+   As settled on disk: `scripts/verify/{check-contract.py,check-deploy.py,verify-<family>.py,monitor.py,verify-all.sh,parity-*}`,
+   `tests/oracle/{cr_fetch.py,record-fixtures.ts,dump-envelopes.ts}`, `tests/e2e/executor/probe-sizing.cjs`,
+   and the web-only set (`dom_audit.py`, `verify_all_routes.py`, `dbg-smoke.cjs`) plus the suites
+   under `frontend/web/tests/`. `frontend/web/scripts/` retains only `checks/check-structure.py`,
+   `executor/worker.ts` and `tools/`.
 3. **Sync oracle gate — DONE and committed.** `scripts/verify/verify-sync.py`
    (fixture replay, no `--fixtures` flag needed) is wired into `verify-all.sh` and passes:
    `SYNC_ORACLE_OK (34 rows, 40 request keys)` — Python oracle and Rust `fudcourt-sync` produce

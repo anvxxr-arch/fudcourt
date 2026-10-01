@@ -12,11 +12,11 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 
 | Name | Consumers (first-party) | Home (file) | Production consumer | CI needs it? |
 |------|------------------------|-------------|---------------------|--------------|
-| `TURSO_AUTH_TOKEN` | `frontend/web/lib/db.ts`, `backend/sync/src/db.rs`, `scripts/tools/sync-live.py`, `scripts/database/dump-schema.mjs` | `./.env` (root) + `frontend/web/.env.local` | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`; it REFUSES TO START without the token) | no |
+| `TURSO_AUTH_TOKEN` | `frontend/web/src/platform/db/client.ts`, `backend/sync/src/persistence/db.rs`, `frontend/web/scripts/tools/sync-live.py`, `scripts/database/dump-schema.mjs` | `./.env` (root) + `frontend/web/.env.local` | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`; it REFUSES TO START without the token) | no |
 | `ALCHEMY_KEY` | `frontend/web/scripts/tools/sync-live.py` (live ETH RPC) + `frontend/web/scripts/archive/*.mjs` (forensic one-offs **deleted 2026-09-29**, after the rotation was recorded) | `./.env` (root) | `fudcourt-sync.timer` | no |
-| `FUDCOURT_BOT_TOKEN` | `app/api/auth/callback` + `app/admin` (reads guild member roles with the bot) | `frontend/web/.env.local` | `fudcourt-web` | no |
-| `FUDCOURT_CLIENT_SECRET` | `app/api/auth/callback` (OAuth code exchange) | `frontend/web/.env.local` | `fudcourt-web` | no |
-| `FUDCOURT_SESSION_SECRET` | `lib/auth.ts` (HMAC key for the `fud_session` cookie) | `frontend/web/.env.local` | `fudcourt-web` | no |
+| `FUDCOURT_BOT_TOKEN` | `src/app/(frontend)/api/auth/callback` + `src/app/(frontend)/(admin)` (reads guild member roles with the bot) | `frontend/web/.env.local` | `fudcourt-web` | no |
+| `FUDCOURT_CLIENT_SECRET` | `src/app/(frontend)/api/auth/callback` (OAuth code exchange) | `frontend/web/.env.local` | `fudcourt-web` | no |
+| `FUDCOURT_SESSION_SECRET` | `src/platform/auth/session.ts` (HMAC key for the `fud_session` cookie) | `frontend/web/.env.local` | `fudcourt-web` | no |
 | `FUD_MUTATION_TOKEN` + `NEXT_PUBLIC_FUD_MUTATION_TOKEN` | **RETIRED** — superseded by the session tier. `NEXT_PUBLIC_…` was inlined at build time and shipped in a public JS chunk; the pair is safe to delete from `.env.local` and `.env` | — | — | no |
 | `DATABASE_URL` (Neon) | Payload blog (now `frontend/web/src/cms`, DR-017) | `frontend/web/.env.local` | `fudcourt-web` (:3100) | no (build works without it — verified) |
 | `PAYLOAD_SECRET` | Payload blog (sessions/cookies) | `frontend/web/.env.local` | `fudcourt-web` (:3100) | no |
@@ -44,12 +44,13 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
    all 14). **Because history retains the old value, ROTATION IS MANDATORY —
    see §5 step R1 (human step, Alchemy dashboard).**
 3. **RESOLVED — dead credential fallback.** `sync-live.py` used to "recover" a
-   Turso token by slicing quote-delimited bytes out of `lib/db.ts`, which since
+   Turso token by slicing quote-delimited bytes out of `lib/db.ts` (now
+   `frontend/web/src/platform/db/client.ts`), which since
    the env-ref rewrite can only ever yield the *text* `process.env…` — garbage
    credentials. Removed; both creds now come from the repo-root `.env` via
    `load_env()` or the run stops with an explicit error. Verified by running the
    script (RC 0, real sync, net worth reported).
-4. **`lib/db.ts` / `dump-schema.mjs` are clean** — Turso *URL* is public form
+4. **`frontend/web/src/platform/db/client.ts` / `scripts/database/dump-schema.mjs` are clean** — Turso *URL* is public form
    (`libsql://…turso.io`), the token is `process.env`-only.
 5. **CI requires zero secrets.** The GitHub Actions web job (contract + tsc +
    build + shaper fixture tests) and blog job pass with no env configured.
@@ -144,8 +145,8 @@ Production == this homeserver:
 1. Turso dashboard → database → *Create token* (least privilege: read/write on
    the fudcourt DB), copy it, then revoke the old token.
 2. Update BOTH homes: repo-root `.env` and `frontend/web/.env.local`.
-3. Verify: `cd frontend/web && node scripts/database/dump-schema.mjs --check` (RC 0) and
-   `python3 scripts/tools/sync-live.py` (RC 0); then `systemctl --user restart
+3. Verify: `node scripts/database/dump-schema.mjs --check` (RC 0, from the repo root) and
+   `cd frontend/web && python3 scripts/tools/sync-live.py` (RC 0); then `systemctl --user restart
    fudcourt-web` and `curl -s -o /dev/null -w '%{http_code}'
    http://127.0.0.1:3100/cryptorank` → 200.
 
@@ -205,7 +206,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3100/portfolio       #
 curl -s -o /dev/null -w '%{http_code}\n' 'http://127.0.0.1:3100/blog/cms/api/posts?limit=1&depth=0'  # 200 -> Neon live
 curl -s -o /dev/null -w '%{http_code}\n' 'http://127.0.0.1:3100/api/transactions'           # 200, rows -> Turso live
 curl -s -o /dev/null -X DELETE -w '%{http_code}\n' 'http://127.0.0.1:3100/api/transactions/1'  # 401 -> fail-closed (NO token used here)
-cd frontend/web && python3 scripts/checks/check-contract.py && bun run test:shapers        # offline gates
+cd ../.. && (cd frontend/web && python3 scripts/checks/check-structure.py) && python3 scripts/verify/check-contract.py && (cd frontend/web && bun run test:shapers)   # offline gates
 ```
 
 A var that is set in the §1 home file but missing at runtime shows up as one of

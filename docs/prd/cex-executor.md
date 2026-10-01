@@ -3237,6 +3237,13 @@ fudcourt/
 
 Adapt naming to existing monorepo tooling.
 
+> **As-built note (2026-10-01, docs-reality pass).** The block above is this PRD's *proposal*
+> ("recommended layout … adapt naming"), not a description of the tree. The tree that landed is:
+> `backend/workers/executor/internal/{core/{execution,orders,planner,risk,sizing},strategies,exchanges/{binance,bybit,mexc,paper},runtime/{worker,idempotency},platform/{lock,decimal,credentials},repository}`
+> plus the TS parity oracle still in `frontend/web/src/platform/executor/`. See
+> `docs/architecture/executor.md` for the module map and `docs/architecture/final-review.md` §1 for
+> the repo tree.
+
 ---
 
 # 102. Core Package Boundaries

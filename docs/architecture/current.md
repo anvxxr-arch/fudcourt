@@ -4,6 +4,19 @@
 > no production code, config, script, or doc outside `docs/architecture/{current,target,domain-map,migration-plan}.md`
 > was modified. Pre-existing docs (`ARCHITECTURE.md`, `TECH-STACK.md`, `SCHEMA.md`) were read only.
 >
+> **HISTORICAL SNAPSHOT — pinned at capture, not current state.** Every path, count and command
+> in §1–§9 below describes the tree at/just after the Phase-1/2 moves (`6184d84` + `4e8ba91`; see
+> §0's timeline amendment). It was accurate then; it is not a living document. Changes that landed
+> afterwards on this branch are described in `docs/architecture/final-review.md` §1–§3 and
+> `docs/architecture/target.md`: `backend/api` + `backend/workers/executor` landed (root `go.work`,
+> the `api`/`executor` CI jobs and units exist), `shared/contracts` + `shared/sdk/typescript`
+> landed, the single `.github/workflows/ci.yml` was split into **five** path-filtered workflows
+> (§9 below is pinned to the pre-split single 4-job file), `tests/{e2e,integration}` grew the
+> executor suites, and `infrastructure/systemd/` gained the api/executor units. The app-local gates
+> this file names as `frontend/web/scripts/checks/*` were later split: `check-contract.py` and
+> `check-deploy.py` moved to `scripts/verify/`, `check-structure.py` stayed app-side. Read a number
+> here as "as of 2026-10-01 (Phase 0/1)", never as today's.
+>
 > Sources cross-checked read-only (2026-10-01) against: `ARCHITECTURE.md` §2 (System picture),
 > §4 (Data families), §8b (CEX Executor runtime); `TECH-STACK.md` §2 (Frameworks & runtimes),
 > §4 (Infrastructure), §5 (Market-data acquisition stack), §6 (External data sources),

@@ -1,6 +1,16 @@
 # Plan — Fudcourt (goal → subgoal → task → subtask)
 
 Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in progress · ⬜ not started.
+>
+> **Read this as a dated execution ledger, not as current state** (note added 2026-10-01, docs-reality
+> pass). Every ✅ row describes what was true at the time it was closed; the paths it names are the
+> tree *then*. The tree has since moved (`frontend/web/src/**` by DR-018; `backend/{api,workers/executor,data,sync}`,
+> `shared/{contracts,sdk/typescript}`, `scripts/{verify,database,githooks}`, `tests/**`,
+> `infrastructure/systemd/` by the Phase 1–10 restructure) — so a path or count in a closed row
+> (e.g. `frontend/web/lib/…`, `frontend/web/db/…`, `frontend/web/scripts/{verify,tests,fixtures}`,
+> `apps/blog`, `services/*`, `.github/workflows/ci.yml`) is historical, even where it carries no
+> per-line marker. For the tree today use `docs/architecture/final-review.md` §1 and
+> `docs/architecture/target.md` §1; for the dated Phase-0 picture use `docs/architecture/current.md`.
 
 ---
 
@@ -30,7 +40,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 ### SG-0.4 ✅ Verification artifacts
 - T-0.4.1 ✅ `verify-cryptorank.py` harness — **244/0/8**
 - T-0.4.2 ✅ Playwright DOM audit — **109/109**
-- T-0.4.3 ✅ Route/endpoint sweep `verify_all_routes.py` — 133 checks, re-aligned to the repurpose pass (latest measured **122/133**, 2026-09-29 over two byte-identical runs: 11 fails = 1 CoinGecko 403 passthrough + 10 session-gated probes unrunnable on the secret-less :3107 audit target — environmental, zero regressions; full breakdown in ARCHITECTURE §7)
+- T-0.4.3 ✅ Route/endpoint sweep `frontend/web/tests/verify_all_routes.py` (was `frontend/web/scripts/verify/verify_all_routes.py`; that directory was removed by the Phase-8 tooling relocation) — 133 checks, re-aligned to the repurpose pass (latest measured **122/133**, 2026-09-29 over two byte-identical runs: 11 fails = 1 CoinGecko 403 passthrough + 10 session-gated probes unrunnable on the secret-less :3107 audit target — environmental, zero regressions; full breakdown in ARCHITECTURE §7)
 - T-0.4.4 ✅ Resilience: runHelper 429 backoff×3, harness retries, audit cache warm-up
 - T-0.4.5 ✅ Pushed to origin (`0ed7ab6..957836d`)
 
@@ -156,7 +166,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 
 - SG-4.1 ✅ Shaper unit tests from recorded upstream fixtures (R-8) — pure
   shapers extracted verbatim to `lib/shapers.ts` (route keeps fetch/auth/refusals);
-  `scripts/record-fixtures.ts` records the helper's raw stdout per live mode
+  `tests/oracle/record-fixtures.ts` (was `frontend/web/scripts/tools/record-fixtures.ts`) records the helper's raw stdout per live mode
   (26/26, gzipped 7.87 MB -> 1.76 MB, sha256 over the RAW payload in
   `fixtures/MANIFEST.json` = hand-edited fixture fails the tamper check);
   `scripts/tests/shaper-tests.ts` (`npm run test:shapers`, node --test, offline ~0.5s,
@@ -217,7 +227,7 @@ align every already-built surface into one clear, gated architecture
   the route), the strict `source`/`limit` 400 matrix, `total` vs the served head,
   the cache keyed on the FEED URL (two limits, one upstream read) and an
   anti-fake parity probe against a DIRECT feed fetch. News moved SMOKE -> GATED.
-- SG-5.3 ✅ Route sweep `verify_all_routes.py` re-aligned to the repurpose pass (2026-09-29):
+- SG-5.3 ✅ Route sweep `frontend/web/tests/verify_all_routes.py` (was under `frontend/web/scripts/verify/`) re-aligned to the repurpose pass (2026-09-29):
   page list corrected (`/coin`/`/balance` → real-404 absence checks, `/ticker`,`/login`,`/ticker/BTC`/`/ticker/ETH` added, `/ticker/FOO` a real 404), treasury reads
   expect the session-gated 401, the ticker API family added (6 checks incl. strict-param 400 +
   unknown-symbol 404), the retired `x-fud-token` D2 block replaced by signed-admin-session mutation
@@ -302,9 +312,10 @@ holds a real browser TLS fingerprint (→ [DR-005](../records/DECISIONS.md)).
   cache on `backend/data/go.sum`); root `.gitignore` ignores
   `backend/data/bin/` + `backend/data/.cache/`.
 - SG-7.4 ✅ One contract, two implementations, enforced offline:
-  `frontend/web/scripts/checks/check-contract.py` now parses
-  `backend/data/internal/cryptorank/modes.go` and asserts it equals
-  `lib/cryptorank.ts` — modes, disabled list, exchange/launchpool/nodesale/RWA
+  `scripts/verify/check-contract.py` (was `frontend/web/scripts/checks/check-contract.py` before
+  the Phase-8 move) now parses
+  `backend/data/internal/research/cryptorank/modes.go` and asserts it equals
+  `frontend/web/src/features/cryptorank/client.ts` — modes, disabled list, exchange/launchpool/nodesale/RWA
   whitelists, keyed + default-key maps — and asserts the route is still a
   proxy (no `execFile`/`cr_fetch`/`CR_PYTHON`/local `CR_MODES.includes`). If the
   Go table is absent it prints an explicit `SKIP:` line rather than passing
@@ -507,7 +518,7 @@ scalable"*. Everything below was executed and re-verified; nothing is a proposal
   resolution fixed in every moved file (Python `parents[2]`, TS `../../lib/`, the
   oracle path, the component path in verify-dex) and every reference rewritten —
   package.json scripts, pre-push, CI, the Hermes cron wrapper, MANIFEST, docstrings.
-- SG-11.3 ✅ **New offline guard `scripts/checks/check-deploy.py`** — asserts every
+- SG-11.3 ✅ **New offline guard `scripts/verify/check-deploy.py`** (was `frontend/web/scripts/checks/check-deploy.py`; moved repo-wide by Phase 8) — asserts every
   unit's `ExecStart`/`Documentation` repo path exists, that `ExecStart` is absolute,
   that sync service+timer pairs are both present, and that no two units claim one
   systemd name. Wired into the pre-push hook and CI. **It earns its place:** the
@@ -617,7 +628,7 @@ program that direction names; the subgoals below are what this session measured.
   `lib/reconcile.ts` keeps the original maths as the independent oracle. Evidence:
   `cargo test --release` **17/17** (12 new); `verify-reconcile.py` **28/28** at `:3102`;
   live parity TS↔Rust **byte-identical on every section incl. JSON key order**
-  (`scripts/tools/parity-reconcile.ts`; 18 rows / 3 wallets / 10 summaries);
+  (`scripts/verify/parity-reconcile.ts` — was `scripts/tools/` before the Phase-8 move; 18 rows / 3 wallets / 10 summaries);
   `:3100` proxy statically proven on a throwaway `:3199` instance (401 for an
   insufficient tier, 200 `{source:"rust"}` for a team session, payload identical,
   `x-reconcile-upstream` naming the service) with production left fail-closed 401
@@ -679,7 +690,7 @@ program that direction names; the subgoals below are what this session measured.
   slices (`src/features/<family>/` holds that family's client + shaper + panel) with
   `src/platform/` for cross-cutting infrastructure, `src/ui/` + `src/styles/` as leaves,
   and `src/app/` holding **routes only**. The rule is enforced by a new gate,
-  `scripts/checks/check-structure.py`, which fails on the six drifts that actually
+  `frontend/web/scripts/checks/check-structure.py` (still app-local), which fails on the six drifts that actually
   happened (a retired location returning, `../` chains escaping a layer, `platform/`
   importing a feature, a leaf importing app code, cross-feature coupling, an empty
   slice) — negative-tested for each. Evidence: route sweep **165/165 PASS, 0 FAIL** on
@@ -701,7 +712,7 @@ program that direction names; the subgoals below are what this session measured.
   - T-9.14.3 [OK] `platform/db/mirror.ts` projects Turso -> Postgres idempotently,
     prunes replaced batches, translates `?`/`rowid`. Caught by parity: upserting
     alone doubled net worth after a `DELETE FROM assets` sync.
-  - T-9.14.4 [OK] `scripts/tools/parity-pg.ts` gates the read model against Turso
+  - T-9.14.4 [OK] `scripts/verify/parity-pg.ts` (was `scripts/tools/parity-pg.ts`) gates the read model against Turso
     -> **PARITY_OK 8/8**.
   - T-9.14.5 [OK] `internal/cache` (valkey-go) L2 in llama/chainrank/news;
     `platform/cache/valkey.ts` (Bun native) for the ticker sweep. Both fail open.
