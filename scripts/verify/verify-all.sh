@@ -48,7 +48,7 @@ step "go build/vet/test (services/data)"
 go build ./services/data/... && go vet ./services/data/... && go test ./services/data/... || fail go-data
 
 step "cargo build/test (services/sync)"
-(cd services/sync && cargo build --release --quiet && cargo test --release --quiet) || fail rust
+(cd services/sync && cargo fmt --check && cargo build --release --quiet && cargo test --release --quiet) || fail rust
 
 step "sync oracle gate (Python oracle vs Rust replay, byte-identical projection)"
 python3 apps/web/scripts/verify/verify-sync.py >/dev/null || fail sync-oracle
