@@ -1,0 +1,98 @@
+name: integration
+# Cross-surface integration: the one place that runs gates spanning more than
+# one service, because a per-surface workflow cannot see both sides.
+#
+#   1. the OFFLINE aggregate (`scripts/verify/verify-all.sh`) — every fast gate
+#      in one pass: structure, web contract, deploy units, contracts drift +
+#      SDK drift, the three Go modules, the Rust crate, hook syntax, web
+#      typecheck + shaper fixtures.
+#   2. the LIVE reconcile contract: builds the Rust service from this same
+#      commit, starts it, and diffs `/api/reconcile` byte-for-byte against the
+#      TS shaper — the web path really is served by Rust. Secret-gated on
+#      TURSO_AUTH_TOKEN (skipped with a warning, never silently passed).
+#
+# This workflow always RUNS; the live job is skipped without the secret.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+defaults:
+  run:
+    shell: bash
+jobs:
+  offline:
+    name: "integration - offline aggregate (all surfaces)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.0'
+          cache-dependency-path: |
+            services/api/go.sum
+            services/executor/go.sum
+            services/data/go.sum
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install apps/web deps (structure/contract gates read the tree; shaper tests need deps)
+        working-directory: apps/web
+        run: bun install --frozen-lockfile
+      - name: Install packages/sdk-ts deps (drift gate regenerates the SDK)
+        working-directory: packages/sdk-ts
+        run: bun install --frozen-lockfile
+      - name: "Every offline gate (bash scripts/verify/verify-all.sh)"
+        run: bash scripts/verify/verify-all.sh
+  reconcile-live:
+    name: "integration - live reconcile contract (Rust service + byte parity)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - name: "Reconcile contract vs the Rust service (live Turso + byte-parity diff)"
+        working-directory: apps/web
+        env:
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          bun install --frozen-lockfile
+          if [ -z "${TURSO_AUTH_TOKEN:-}" ]; then
+            echo "::warning title=reconcile harness skipped::TURSO_AUTH_TOKEN secret is not set; the live gate for /api/reconcile (Rust service + byte-parity diff) did NOT run"
+            exit 0
+          fi
+          # Build the Rust service this route proxies to, from this same commit.
+          cargo build --release --manifest-path ../../services/sync/Cargo.toml
+          ../../services/sync/target/release/fudcourt-reconciled &
+          SVC=$!
+          trap 'kill $SVC 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            curl -sf --max-time 2 http://127.0.0.1:3102/healthz >/dev/null && break
+            sleep 1
+          done
+          python3 scripts/verify/verify-reconcile.py --base http://127.0.0.1:3102
+  gate:
+    name: "integration - gate (required)"
+    needs: [offline, reconcile-live]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Verdict"
+        run: |
+          echo "offline=${{ needs.offline.result }} reconcile-live=${{ needs.reconcile-live.result }}"
+          for r in "${{ needs.offline.result }}" "${{ needs.reconcile-live.result }}"; do
+            case "$r" in
+              success|skipped) ;;
+              *) echo "::error::integration surface failed"; exit 1 ;;
+            esac
+          done
+          exit 0

@@ -35,8 +35,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[4]  # scripts/checks/ -> scripts -> web -> apps -> repo
 UNITS = sorted(
     p
-    for base in ("apps", "services")
-    for p in REPO.glob(f"{base}/*/deploy/*")
+    for p in (REPO / "deploy" / "systemd").glob("*")
     if p.suffix in (".service", ".timer")
 )
 # Directives that must hold a repo path (or an absolute path) rather than a bare binary.
@@ -54,6 +53,32 @@ def repo_paths(line: str) -> list[str]:
     return re.findall(r"(/home/dwizzy/fudcourt/[^\s\"']+)", line)
 
 
+def provisioned_paths(text: str) -> set[str]:
+    """Repo paths a unit CREATES at start, so absence on disk is not drift.
+
+    Three units (api/data/executor) build their binary with
+    `ExecStartPre=/usr/bin/go build -C <dir> -o <rel>` into a gitignored `bin/`.
+    A fresh clone (and CI) has no such file until the unit first starts, so
+    requiring it on disk made the gate red for a correct unit. Collect the `-o`
+    target of every ExecStartPre and treat exactly those paths as satisfied.
+    """
+    out: set[str] = set()
+    for raw in text.splitlines():
+        line = raw.strip()
+        if line.startswith("#") or not line.startswith("ExecStartPre="):
+            continue
+        m_out = re.search(r"-o\s+(\S+)", line)
+        if not m_out:
+            continue
+        target = m_out.group(1)
+        if not target.startswith("/"):
+            m_dir = re.search(r"-C\s+(\S+)", line)
+            base = m_dir.group(1) if m_dir else "/home/dwizzy/fudcourt"
+            target = f"{base.rstrip('/')}/{target.lstrip('./')}"
+        out.add(target)
+    return out
+
+
 def directive(line: str) -> str | None:
     if "=" not in line:
         return None
@@ -69,6 +94,7 @@ def main() -> int:
     for unit in UNITS:
         rel = unit.relative_to(REPO)
         text = unit.read_text(encoding="utf-8")
+        provisioned = provisioned_paths(text)
 
         # 4. collect declared unit names for the duplicate check below
         for m in re.finditer(r"^\s*Unit=(\S+)", text, re.M):
@@ -89,6 +115,10 @@ def main() -> int:
                 if first and not first.startswith("/") and first not in ALLOWED_BARE:
                     problems.append(f"{rel}: {d} uses a bare command ({first!r}) -- use an absolute path")
                 for p in repo_paths(line):
+                    # A path this unit's own ExecStartPre builds is a build
+                    # artifact (gitignored bin/), not a repo file to require.
+                    if p in provisioned:
+                        continue
                     if not (REPO / p.removeprefix("/home/dwizzy/fudcourt/")).exists():
                         problems.append(f"{rel}: {d} points at a missing repo path: {p}")
                 # A `Documentation=file://` for a file that is not a repo path is a

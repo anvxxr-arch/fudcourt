@@ -314,6 +314,550 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything the dashboard reads, in one call
+         * @description Runs the eight `DASHBOARD_READS` queries in parallel via
+         *     `platform/db/client.ts` `getAll()` against the local Postgres read model
+         *     (DR-019) and returns their row arrays plus the board constants.
+         *     Requires the `team` tier (middleware).
+         */
+        get: operations["getAll"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/coins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Distinct coins with total value, sorted by value desc
+         * @description `SELECT asset, SUM(value_usd), SUM(quantity), COUNT(DISTINCT chain),
+         *     COUNT(DISTINCT wallet) FROM assets GROUP BY asset` plus the portfolio
+         *     total. Requires the `team` tier (middleware).
+         */
+        get: operations["listCoins"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/wallets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * All wallet rows (`SELECT * FROM wallets`)
+         * @description Requires the `team` tier (middleware). Rows carry the full wallets table columns.
+         */
+        get: operations["listWallets"];
+        put?: never;
+        /**
+         * Update a wallet's display fields (address identifies the row)
+         * @description Despite being a POST this is an UPDATE: `address` is required and
+         *     identifies the row; at least one of `alias`/`emoji`/`color`/`notes`
+         *     must be present. Requires the `team` tier AND `requireMutationAuth`.
+         */
+        post: operations["updateWallet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Filtered, paginated transactions
+         * @description `limit`/`offset` are parsed with `parseInt` (non-numeric falls back to
+         *     the default — this legacy route does not refuse). `search` is a LIKE
+         *     over memo/event/hash/wallet_to. Requires the `team` tier (middleware).
+         */
+        get: operations["listTransactions"];
+        /**
+         * Bulk update transactions by id
+         * @description Requires `requireMutationAuth` (team). Only listed fields are updated.
+         */
+        put: operations["bulkUpdateTransactions"];
+        /**
+         * Insert one transaction or a bulk batch
+         * @description Bulk when `{"bulk": true, "transactions": [...]}`; otherwise a single
+         *     row. `date` and `event` are required on the single path. `amount_usd`
+         *     is `parseFloat(...) || 0`; missing `direction` defaults to IN/OUT by
+         *     the sign. Requires `requireMutationAuth` (team).
+         */
+        post: operations["createTransactions"];
+        /**
+         * Bulk delete transactions by id
+         * @description Requires `requireMutationAuth` (team). `count` is the number of ids requested, not rows actually deleted.
+         */
+        delete: operations["bulkDeleteTransactions"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/transactions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transaction id (integer in the path). */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update one transaction (same field set as PATCH)
+         * @description Requires `requireMutationAuth` (team). Returns the row after the update (`{}` if absent).
+         */
+        put: operations["replaceTransaction"];
+        post?: never;
+        /**
+         * Delete one transaction
+         * @description Requires `requireMutationAuth` (team). The deleted row is echoed back.
+         */
+        delete: operations["deleteTransaction"];
+        options?: never;
+        head?: never;
+        /**
+         * Update one transaction (same field set as PUT)
+         * @description Requires `requireMutationAuth` (team). Returns the row after the update (`{}` if absent).
+         */
+        patch: operations["patchTransaction"];
+        trace?: never;
+    };
+    "/api/admin/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Guild members with their resolved tier
+         * @description Thin proxy to the Go api (services/api, `FUDCOURT_API_URL`, default
+         *     127.0.0.1:3103), which owns the admin tier check from the signed
+         *     session cookie, the guild member listing and the role grant/revoke;
+         *     the response (status, body, headers) is replayed verbatim. The bodies
+         *     below are the frozen pre-migration contract the proxy preserves.
+         *     `roleIds` echoes the configured role id table (`FUDCOURT_ROLE_TEAM` /
+         *     `FUDCOURT_ROLE_ADMIN`; a role with no configured id has its KEY ABSENT
+         *     from the object, not `null` — the Go wire uses `omitempty`).
+         */
+        get: operations["listGuildMembers"];
+        put?: never;
+        /**
+         * Grant or revoke the team/admin role of a guild member
+         * @description Requires the admin tier (checked server-side). `role` is `team` or `admin`; `action` is `add` or `remove`.
+         */
+        post: operations["setMemberRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Start the Discord OAuth2 flow (302 to Discord)
+         * @description Parks a per-attempt nonce + validated `next` in the `fud_oauth_state`
+         *     cookie and redirects to Discord's authorize URL (scopes identify +
+         *     guilds). Misconfiguration is the only JSON failure.
+         */
+        get: operations["authLogin"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * OAuth2 callback — code → session cookie (307)
+         * @description Validates `state` against the parked cookie value, exchanges the code,
+         *     reads `/users/@me` and the guild member roles, resolves the tier and
+         *     mints the signed session cookie. Every redirect failure ends at
+         *     `/login?error=<code>` with one of: `discord_denied`, `bad_state`,
+         *     `auth_unconfigured`, `token_exchange_failed`, `discord_api_failed`,
+         *     `session_secret_missing`. ONE exception: an undecodable parked-state
+         *     cookie answers `500 {"error":"internal","detail":"internal error"}` —
+         *     a JSON body, not a redirect (the divergence is documented in the Go
+         *     handler). No token, secret or Discord payload is ever echoed.
+         */
+        get: operations["authCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Drop the session cookie (GET form, for `<a href>`) */
+        get: operations["authLogoutGet"];
+        put?: never;
+        /** Drop the session cookie (POST form, for a form button) */
+        post: operations["authLogoutPost"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/markets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * CoinGecko markets ranking (public, keyless)
+         * @description Read-only proxy to api.coingecko.com `/coins/markets`, serving the
+         *     tracker view. One fixed pool fetch (top-250) is cached and
+         *     single-flighted through the shared limiter (60s TTL); search / sort /
+         *     order / page / limit run LOCALLY over that pool and say so via
+         *     `derived` + `pool` + `upstreamTotal` — the body never pretends
+         *     CoinGecko filtered or sorted. Null upstream metrics stay null.
+         */
+        get: operations["getMarkets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ticker": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cross-venue CEX ticker board (OKX + Bybit + 8 more via CCXT)
+         * @description Sweeps every venue in `exchanges` for the fixed `universe` allowlist of
+         *     quotable pairs and returns one row per pair with EACH venue's own
+         *     quote plus their divergence (`spread`), so one venue going wrong is
+         *     visible instead of silently becoming the number everyone reads. One
+         *     sweep (71-80s cold) serves every search/sort/page for 60s; a stale copy
+         *     (≤1h) is served immediately while a refresh runs in the background, and
+         *     only a wholly missing snapshot blocks. No market cap / supply / rank:
+         *     no venue reports them keyless, so they are absent, never invented.
+         */
+        get: operations["getTicker"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ticker/instruments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which dated instruments exist for a coin (per venue, per type)
+         * @description Everything offered here comes from the venues' own market lists (loaded
+         *     once a day), so every selectable expiry/strike is known to be listed
+         *     rather than constructed. Strikes are reported PER EXPIRY because they
+         *     genuinely differ by date. `default` is computed with the same helper the
+         *     board uses and a real spot price, so the preselected instrument here
+         *     and the one a board row lands on cannot disagree.
+         */
+        get: operations["listInstruments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ticker/instrument": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One specific instrument priced across every venue that lists it
+         * @description The selection (expiry/strike/kind) is resolved against each venue's own
+         *     market list rather than by string-building a ccxt symbol — the same
+         *     option is spelled differently on OKX and Bybit, and a constructed
+         *     symbol is rejected by the venue it was wrong for. `notListed` (the
+         *     venue has no such instrument) and `failed` (it should have answered and
+         *     did not) are kept apart because they call for different reactions.
+         *     `price` is the median across venues that priced it, `null` when none
+         *     did. Omitting expiry/strike/kind means "whatever that type defaults to".
+         */
+        get: operations["getInstrument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * DexScreener read proxy (profiles / boosts / search / tokens / pairs / orders)
+         * @description Proxies **DexScreener** public endpoints (`https://api.dexscreener.com`)
+         *     through the shared cache + single-flight limiter; `X-Cache:
+         *     HIT|MISS|COALESCED` reports which arm served the response. PUBLIC — not
+         *     in `guard.ts` `TEAM_API_ROUTES`, so no tier gate. `type` chooses both
+         *     the upstream endpoint and the response family; `limit` is CLAMPED
+         *     (never refused, unlike the other data routes). `search` is the one type
+         *     whose chain narrowing happens locally: DexScreener ignores a
+         *     server-side chain filter, so the returned set is filtered here and the
+         *     full spread is still reported as `chainsSeen`.
+         */
+        get: operations["getDex"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/signals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Signals board passthrough (index / feed / page / scoreboard)
+         * @description Passthrough of `https://data-public.vercel.app/api/<mode>?chain=<chain>[&n=<n>]`
+         *     with `chain`/`generatedAt`/`counts`/`rows`/`upstream` defaulted. The
+         *     upstream's own object is spread FIRST, so upstream keys survive
+         *     untouched. `type=scoreboard` is a SEPARATE payload family (buckets +
+         *     catches) and does NOT carry `rows` — feeding it through the row
+         *     normalizer would fabricate a "no signals" answer. PUBLIC — not in
+         *     `guard.ts` `TEAM_API_ROUTES`. The chain allowlist is PER MODE (so
+         *     `chain=all` is a 400 for `index`/`scoreboard`, valid for `feed`/`page`).
+         *     Every non-2xx upstream (including its own 400/404) collapses to a 502
+         *     with the real status quoted in the message — never a fake 200.
+         */
+        get: operations["getSignals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cryptorank": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * CryptoRank read proxy (mode-only input, never a raw path)
+         * @description Forwards the query string untouched to the Go sidecar, which owns
+         *     mode/key validation, the disabled-mode refusal, the browser-fingerprint
+         *     fetch, the disk cache and the 429 backoff. Success bodies are
+         *     `CrEnvelope` (kind/upstream/fetchedAt/cache/count plus the mode's own
+         *     section). Headers `X-CR-Upstream`, `X-CR-Cache`, `Cache-Control` are
+         *     forwarded from the sidecar. Go bodies end in ONE trailing newline and
+         *     use struct key order — field-compatible, not byte-identical.
+         */
+        get: operations["getCryptorank"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/khala": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * khala.io research read proxy (mode-only input)
+         * @description Modes `reports` (homepage rows), `report` (one article as a STRUCTURED
+         *     block array — never HTML), `latest` (newest-first with per-row dates).
+         *     The sidecar owns mode/key/limit/fresh semantics and every 400. Headers
+         *     `X-KH-Upstream`, `X-KH-Cache`, `Cache-Control` are forwarded.
+         */
+        get: operations["getKhala"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/llama": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * DeFiLlama read proxy (api.llama.fi)
+         * @description Modes: `chains` (full /v2/chains re-sorted by tvl desc), `protocols`
+         *     (head `top` of /protocols by tvl desc), `historical` (tail `days` of
+         *     /v2/historicalChainTvl). Only the mode's own param is read; a param for
+         *     another mode is ignored. Refusals are never clamped. Response header
+         *     `X-Cache` (MISS|HIT) comes from the sidecar.
+         */
+        get: operations["getLlama"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chainrank": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * chainrank read proxy (claim stats + listings)
+         * @description Both modes spread the upstream body first and add `kind`, `upstream`,
+         *     `fetchedAt` — chainrank adds row fields freely, so the payload is
+         *     checked, not rebuilt (a wrong shape is a loud 502). Response header
+         *     `X-Cache` (MISS|HIT|COALESCED). An upstream non-2xx (other than 429) is
+         *     relayed with its REAL status, never flattened to 502.
+         */
+        get: operations["getChainrank"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/news": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cointelegraph RSS read proxy
+         * @description One feed, two strictly-validated params. `items` is the `limit` head
+         *     while `total` is the full parsed count (honest, not the same number).
+         *     An empty feed is a loud 502, never an empty list. Response header
+         *     `X-Cache` (MISS|HIT).
+         */
+        get: operations["getNews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Wallet reconciliation (Rust `fudcourt-reconciled`, DR-014)
+         * @description Verbatim pass-through of the Rust service's JSON — only the body's
+         *     `source` field names the implementation that produced the numbers. NO
+         *     silent fallback to the TS oracle (`lib/reconcile.ts` is a test
+         *     artifact): service down ⇒ 502 with the real reason. Team-tier read
+         *     (middleware + lib/guard.ts). Headers `X-Reconcile-Upstream`,
+         *     `Cache-Control: no-store`.
+         */
+        get: operations["getReconcile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -992,6 +1536,1428 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** @description The `fail()` helper body — `{"error": "<text>"}` with `detail` when the helper was given one. Display `error` verbatim. */
+        FailError: {
+            error: string;
+            detail?: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * @description Any research-proxy or sidecar refusal: `{"error": "<real text>", ...}`.
+         *     The extra keys are the failing branch's own evidence (mode, key, limit,
+         *     upstream, upstreamStatus, detail, kind) and vary per branch; the fields
+         *     below are the observed ones and others may appear.
+         */
+        SidecarError: {
+            error: string;
+            detail?: string;
+            mode?: string;
+            key?: string | null;
+            limit?: string;
+            kind?: string | null;
+            upstream?: string;
+            upstreamStatus?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * @description The CryptoRank envelope: the five always-present keys plus the mode's
+         *     own section(s) — only the relevant ones are emitted per mode.
+         *     `fetchedAt` is unix seconds. Go bodies end in one trailing newline and
+         *     use struct key order (field-compatible, not byte-identical).
+         */
+        CrEnvelope: {
+            /** @description Echo of the requested mode. */
+            kind: string;
+            /** @description The upstream URL actually fetched. */
+            upstream: string;
+            /** @description Which data route produced the payload (present on some modes). */
+            dataRoute?: string | null;
+            /**
+             * Format: int64
+             * @description Unix seconds.
+             */
+            fetchedAt: number;
+            /** @enum {string} */
+            cache: "MISS" | "HIT";
+            /** @description Number of rows/items in the mode's main section. */
+            count: number;
+            /** @description Pre-slice upstream row count when the mode slices. */
+            upstreamTotal?: number | null;
+            /** @description Human-readable slice semantics note (rendered verbatim by the board). */
+            slice?: string | null;
+            /** @enum {string|null} */
+            changeSource?: "direct" | "derived-from-histPrices-24H" | "unavailable" | null;
+            anchor24h?: components["schemas"]["AnchorCount"];
+            anchor7d?: components["schemas"]["AnchorCount"];
+            global?: components["schemas"]["CrGlobal"];
+            fundingRounds?: components["schemas"]["CrFundingRound"][];
+            upcomingIco?: components["schemas"]["CrUpcomingIco"][];
+            category?: components["schemas"]["CrCategoryInfo"];
+            tagRows?: components["schemas"]["CrTagRow"][];
+            tag?: components["schemas"]["CrTagInfo"];
+            detail?: components["schemas"]["CrCoinDetail"];
+            chain?: components["schemas"]["CrChainInfo"];
+            chainRows?: components["schemas"]["CrChainRow"][];
+            listings?: components["schemas"]["CrListings"];
+            launchpoolRows?: components["schemas"]["CrLaunchpoolRow"][];
+            nodesaleRows?: components["schemas"]["CrNodeSaleRow"][];
+            ecosystemRows?: components["schemas"]["CrEcosystemRow"][];
+            ecosystem?: components["schemas"]["CrEcosystemInfo"];
+            rwaRows?: components["schemas"]["CrRwaRow"][];
+            rwaAsset?: components["schemas"]["CrRwaAsset"];
+            quarterlyBtc?: components["schemas"]["CrQuarterlyYear"][];
+            quarterlyEth?: components["schemas"]["CrQuarterlyYear"][];
+            prediction?: components["schemas"]["CrPredictionAgg"];
+            predictionRows?: components["schemas"]["CrPredictionRow"][];
+            newsRows?: components["schemas"]["CrNewsRow"][];
+            converterRows?: components["schemas"]["CrConverterRow"][];
+            mediaRows?: components["schemas"]["CrMediaRow"][];
+            relatedTags?: components["schemas"]["CrRelatedTag"][];
+            aiOverview?: components["schemas"]["CrAiOverview"];
+            rows?: components["schemas"]["CrRow"][];
+        };
+        /**
+         * @description A union of the five home/coins/trending/gainers/losers row shapes.
+         *     MarshalJSON emits the bare object of the set shape (no discriminator
+         *     key); an unset union marshals as JSON null.
+         */
+        CrRow: components["schemas"]["CrCoin"] | components["schemas"]["CrListingCoin"] | components["schemas"]["CrTrendingRow"] | components["schemas"]["CrExchangeRow"] | components["schemas"]["CrExchangeTransparencyRow"];
+        CrGlobal: {
+            totalMarketCap?: number | null;
+            totalMarketCapChangePercent?: number | null;
+            totalVolume24h?: number | null;
+            totalVolume24hChangePercent?: number | null;
+            btcDominance?: number | null;
+            btcDominanceChangePercent?: number | null;
+            ethDominance?: number | null;
+            ethDominanceChangePercent?: number | null;
+            allCurrencies?: number | null;
+            gasGwei?: number | null;
+        };
+        CrCoin: {
+            rank?: number | null;
+            key: string;
+            name: string;
+            symbol: string;
+            image?: string | null;
+            priceUsd?: number | null;
+            marketCap?: number | null;
+            volume24hUsd?: number | null;
+            category?: string | null;
+            listingDate?: string | null;
+            lifeCycle?: string | null;
+            athUsd?: number | null;
+            change24h?: number | null;
+            /** @description Emitted by CrCoin only when set (omitempty). */
+            change7d?: number | null;
+        };
+        CrListingCoin: components["schemas"]["CrCoin"] & {
+            /** @description Always emitted on listing rows (null when unknown). */
+            change7d?: number | null;
+        };
+        CrTrendingRow: {
+            rank?: number | null;
+            key: string;
+            name: string;
+            symbol: string;
+            image?: string | null;
+            priceUsd?: number | null;
+            change24h?: number | null;
+            marketCap?: number | null;
+            volume24hUsd?: number | null;
+            high24h?: number | null;
+            low24h?: number | null;
+        };
+        CrFundingRound: {
+            date?: string | null;
+            type?: string | null;
+            raiseUsd?: number | null;
+            valuationUsd?: number | null;
+            coinName?: string | null;
+            coinKey?: string | null;
+            coinIcon?: string | null;
+            funds?: string[];
+        };
+        CrUpcomingIco: {
+            name?: string | null;
+            symbol?: string | null;
+            key?: string | null;
+            platform?: string | null;
+            raiseUsd?: number | null;
+            date?: string | null;
+        };
+        CrExchangeRow: {
+            rank?: number | null;
+            key: string;
+            name: string;
+            image?: string | null;
+            dayVolUsd?: number | null;
+            weekVolUsd?: number | null;
+            monthVolUsd?: number | null;
+            percentVolume?: number | null;
+            pairsCount?: number | null;
+            currenciesCount?: number | null;
+            exchangeType?: string | null;
+        };
+        CrExchangeTransparencyRow: components["schemas"]["CrExchangeRow"] & {
+            reservesUsd?: number | null;
+            cleanReservesUsd?: number | null;
+            stablecoinsPercent?: number | null;
+            walletsCount?: number | null;
+            auditorName?: string | null;
+            auditDate?: string | null;
+        };
+        CrCoinDetail: {
+            key: string;
+            name: string;
+            symbol: string;
+            image?: string | null;
+            priceUsd?: number | null;
+            change24h?: number | null;
+            marketCap?: number | null;
+            fullyDilutedMarketCap?: number | null;
+            volume24h?: number | null;
+            availableSupply?: number | null;
+            totalSupply?: number | null;
+            maxSupply?: number | null;
+            circulatingPct?: number | null;
+            athUsd?: number | null;
+            athDate?: string | null;
+            atlUsd?: number | null;
+            atlDate?: string | null;
+            fromAthPct?: number | null;
+            fromAtlPct?: number | null;
+            listingDate?: string | null;
+            lifeCycle?: string | null;
+            rank?: number | null;
+        };
+        CrChainRow: {
+            slug: string;
+            name: string;
+            image?: string | null;
+            network?: string | null;
+            explorerUrl?: string | null;
+            marketCap?: number | null;
+        };
+        CrChainInfo: {
+            slug: string;
+            name: string;
+            network?: string | null;
+            marketCap?: number | null;
+            explorerUrl?: string | null;
+            ecosystem?: string | null;
+        };
+        CrRelatedCoin: {
+            symbol: string;
+            priceUsd?: number | null;
+            change24h?: number | null;
+        };
+        CrNewsRow: {
+            id?: number | null;
+            title: string;
+            url?: string | null;
+            source?: string | null;
+            date?: string | null;
+            status?: string | null;
+            readingMinutes?: number | null;
+            isAdvertisement: boolean;
+            relatedCoins: components["schemas"]["CrRelatedCoin"][];
+        };
+        CrLaunchpoolRow: {
+            key: string;
+            name: string;
+            symbol: string;
+            category?: string | null;
+            totalRaiseUsd?: number | null;
+            priceUsd?: number | null;
+            launchpads: string[];
+            when?: string | null;
+            till?: string | null;
+        };
+        CrNodeSaleRow: {
+            key: string;
+            name: string;
+            symbol: string;
+            image?: string | null;
+            category: string | null;
+            when?: string | null;
+            till?: string | null;
+            nodePriceFromUsd?: number | null;
+            nodePriceToUsd?: number | null;
+            raiseUsd?: number | null;
+            totalRaiseUsd?: number | null;
+        };
+        CrEcosystemRow: {
+            key: string;
+            name: string;
+            logo?: string | null;
+            projects?: number | null;
+            projectsChange3m?: number | null;
+            marketCapUsd?: number | null;
+            marketCapChange24hPct?: number | null;
+            tvlUsd?: number | null;
+            tvlChange24hPct?: number | null;
+            tags: string[];
+        };
+        EcoBlockchain: {
+            key: string;
+            name: string;
+        };
+        EcoCoin: {
+            key: string;
+            name: string;
+            symbol: string;
+            priceUsd?: number | null;
+            change24h?: number | null;
+        };
+        CrEcosystemInfo: {
+            slug: string;
+            name: string;
+            description?: string | null;
+            blockchain?: components["schemas"]["EcoBlockchain"] | null;
+            coin?: components["schemas"]["EcoCoin"] | null;
+        };
+        CrRwaRow: {
+            rank?: number | null;
+            slug: string;
+            detailKey: string;
+            ticker: string;
+            name: string;
+            type: string;
+            image?: string | null;
+            priceUsd?: number | null;
+            change24h?: number | null;
+            change7d?: number | null;
+            marketCapUsd?: number | null;
+            volume24hUsd?: number | null;
+            tokenizedPriceUsd?: number | null;
+            tokenizedMcapUsd?: number | null;
+            tokenizedVolume24hUsd?: number | null;
+            isLeveraged: boolean;
+            marketState?: string | null;
+            mainTokenKey?: string | null;
+        };
+        CrRwaAsset: {
+            slug: string;
+            detailKey: string;
+            ticker: string;
+            name: string;
+            type: string;
+            image?: string | null;
+            priceUsd?: number | null;
+            change24h?: number | null;
+            change24hAbs?: number | null;
+            marketState?: string | null;
+            currency?: string | null;
+            quoteUpdatedAt?: string | null;
+            isLeveraged: boolean;
+            country?: string | null;
+            exchange?: string | null;
+            sector?: string | null;
+            industry?: string | null;
+            website?: string | null;
+        };
+        CrQuarterQ: {
+            openUsd?: number | null;
+            closeUsd?: number | null;
+            isFull: boolean;
+        };
+        CrQuarterlyYear: {
+            year?: number | null;
+            q1?: components["schemas"]["CrQuarterQ"];
+            q2?: components["schemas"]["CrQuarterQ"];
+            q3?: components["schemas"]["CrQuarterQ"];
+            q4?: components["schemas"]["CrQuarterQ"];
+        };
+        PredictionPlatform: {
+            platform: string;
+            volumeUsd?: number | null;
+            marketsCount?: number | null;
+            openInterestUsd?: number | null;
+        };
+        CrPredictionAgg: {
+            totalVolumeUsd?: number | null;
+            volumeChangePct?: number | null;
+            marketsCount?: number | null;
+            marketsChangePct?: number | null;
+            openInterestUsd?: number | null;
+            oiChangePct?: number | null;
+            platforms: components["schemas"]["PredictionPlatform"][];
+        };
+        CrPredictionRow: {
+            id: string;
+            title: string;
+            platform?: string | null;
+            category?: string | null;
+            endDate?: string | null;
+            volume24hUsd?: number | null;
+            bid?: number | null;
+            ask?: number | null;
+            spread?: number | null;
+            externalUrl?: string | null;
+        };
+        CrRankedCoin: {
+            name: string;
+            key?: string | null;
+        };
+        CrTagRow: {
+            id?: number | null;
+            slug: string;
+            name: string;
+            description?: string | null;
+            marketCap?: number | null;
+            volume24h?: number | null;
+            dominance?: number | null;
+            gainers?: number | null;
+            losers?: number | null;
+            change24h?: number | null;
+            rankedCoins: components["schemas"]["CrRankedCoin"][];
+        };
+        CrTagInfo: {
+            slug: string;
+            name: string;
+            subtitle?: string | null;
+        };
+        CrConverterRow: {
+            key: string;
+            name: string;
+            symbol: string;
+            icon?: string | null;
+            priceUsd?: number | null;
+        };
+        CrMediaRow: {
+            id: string;
+            title: string;
+            channelTitle?: string | null;
+            publishedAt?: string | null;
+            durationSeconds?: number | null;
+            tags: string[];
+        };
+        CrAiOverview: {
+            market: components["schemas"]["AiMarket"];
+            news: components["schemas"]["AiNews"][];
+            funding: components["schemas"]["AiFunding"];
+            dropHunting: components["schemas"]["AiDropHunting"];
+            vesting: components["schemas"]["AiVesting"];
+        };
+        AiMarket: {
+            summary?: string | null;
+            updatedAt?: string | null;
+        };
+        AiNews: {
+            id?: number | null;
+            title: string;
+            date?: string | null;
+            isBullish?: boolean | null;
+        };
+        AiFundingRound: {
+            key?: string | null;
+            name: string;
+            stage?: string | null;
+            raisedUsd?: number | null;
+        };
+        AiFunding: {
+            summary?: string | null;
+            rounds: components["schemas"]["AiFundingRound"][];
+        };
+        AiActivity: {
+            key: string;
+            type?: string | null;
+            coinName?: string | null;
+        };
+        AiDropHunting: {
+            summary?: string | null;
+            activities: components["schemas"]["AiActivity"][];
+        };
+        AiUnlock: {
+            date?: string | null;
+            unlockPercent?: number | null;
+            coinName?: string | null;
+        };
+        AiVesting: {
+            summary?: string | null;
+            unlocks: components["schemas"]["AiUnlock"][];
+        };
+        CrCategoryInfo: {
+            slug: string;
+            name: string;
+            gainers?: number | null;
+            losers?: number | null;
+        };
+        AnchorCount: {
+            recentlyAdded: number;
+            mostSearched: number;
+            mostVisited: number;
+        };
+        CrListings: {
+            recentlyAdded: components["schemas"]["CrListingCoin"][];
+            mostSearched: components["schemas"]["CrListingCoin"][];
+            mostVisited: components["schemas"]["CrListingCoin"][];
+        };
+        CrRelatedTag: {
+            slug: string;
+            name: string;
+        };
+        /** @description The khala envelope. `report` (mode=report) or `rows` (reports/latest) is present per mode; `slice` is the sidecar's own prose note, rendered verbatim. `fetchedAt` is unix seconds. */
+        KhEnvelope: {
+            /** @enum {string} */
+            kind: "reports" | "report" | "latest";
+            upstream: string;
+            /** Format: int64 */
+            fetchedAt: number;
+            /** @enum {string} */
+            cache: "MISS" | "HIT";
+            count: number;
+            upstreamTotal?: number | null;
+            slice?: string | null;
+            missingSlugs?: string[];
+            rows?: components["schemas"]["KhRow"][];
+            report?: components["schemas"]["KhReport"];
+        };
+        KhRow: {
+            position: number;
+            slug: string;
+            url: string;
+            title: string;
+            summary: string;
+            published?: string | null;
+            publishedISO?: string | null;
+        };
+        KhReport: {
+            slug: string;
+            url: string;
+            title: string;
+            metaTitle: string;
+            published?: string | null;
+            publishedISO?: string | null;
+            /** @description Null (not omitted) when the report has no matched author. */
+            authors: components["schemas"]["KhAuthor"][] | null;
+            sections: components["schemas"]["KhSection"][];
+            /** @description The article as structured blocks — `{type, text}` where `type` is the source element's own tag name (`h1`..`h6`, `p`, `li`) and inline emphasis is flattened to text. Never HTML. */
+            body: components["schemas"]["KhBlock"][];
+        };
+        KhAuthor: {
+            name: string;
+            url: string;
+        };
+        KhSection: {
+            id?: string | null;
+            level: number;
+            title: string;
+        };
+        KhBlock: {
+            /** @enum {string} */
+            type: "h2" | "h3" | "h4" | "p" | "li";
+            id?: string | null;
+            text: string;
+        };
+        /** @description `{kind, rows, upstream, fetchedAt, upstreamTotal, derived}`; `cache` is header-only (`X-Cache`), never in the body. Row shapes: chains = `{name, tvl, tokenSymbol?, gecko_id?, chainId?}`; protocols = `{name, slug, category, tvl, change_1d, change_7d, mcap, chains, url, logo}` (nullable-any passthrough); historical = `{date, tvl}`. */
+        LlamaEnvelope: {
+            /** @enum {string} */
+            kind: "chains" | "protocols" | "historical";
+            /** @description The upstream rows, resorted per mode; upstream-defined shape. */
+            rows: {
+                [key: string]: unknown;
+            }[];
+            upstream: string;
+            /**
+             * Format: int64
+             * @description Unix seconds.
+             */
+            fetchedAt: number;
+            upstreamTotal: number;
+            derived: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description `stats` mode: upstream's verified numeric fields (shape-checked before serving) spread through, plus `kind`, `upstream`, `fetchedAt`. Upstream may carry additional fields — they pass through untouched. */
+        ChainrankStatsEnvelope: {
+            /** @enum {string} */
+            kind: "stats";
+            upstream: string;
+            /**
+             * Format: int64
+             * @description Unix seconds.
+             */
+            fetchedAt: number;
+            online: number;
+            totalClicks: number;
+            listings: number;
+            totalUsdCents: number;
+            topUsdCents: number;
+            claimTopCents: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description `listings` mode: upstream's `rows` array (upstream-defined row shape — projected nowhere, the board renders what upstream sent) spread through, plus `kind`, `upstream`, `fetchedAt`. */
+        ChainrankListingsEnvelope: {
+            /** @enum {string} */
+            kind: "listings";
+            upstream: string;
+            /** Format: int64 */
+            fetchedAt: number;
+            rows: {
+                [key: string]: unknown;
+            }[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description `items` is the `limit` head; `total` is the FULL parsed count (the two differ by design). `timestamp` is unix ms. */
+        NewsEnvelope: {
+            items: components["schemas"]["NewsItem"][];
+            total: number;
+            upstream: string;
+            /**
+             * Format: int64
+             * @description Unix milliseconds.
+             */
+            timestamp: number;
+        };
+        /** @description Six strings, always present (empty string when the RSS item lacks the field — the parser's own normalization). */
+        NewsItem: {
+            title: string;
+            link: string;
+            description: string;
+            pubDate: string;
+            image: string;
+            source: string;
+        };
+        /** @description `rows` sorted by biggest |diff| first. `walletSummary` is keyed by wallet name and built in row insertion order (sorted-rows order). `current_total` counts only the stablecoin legs (USDC/USDT) while `expected_total`/`diff_total` count every leg — the route's own quirk, kept. */
+        ReconcileResponse: {
+            rows: components["schemas"]["ReconRow"][];
+            /** @description Wallet rows (`SELECT address, label, alias, emoji, color, chain FROM wallets ORDER BY label`), passed through as objects. */
+            wallets: components["schemas"]["ReconcileWalletRow"][];
+            walletSummary: {
+                [key: string]: components["schemas"]["WalletSummaryTotals"];
+            };
+            /** @description Names the implementation that produced the numbers (e.g. `rust`), so a reader can tell the Rust service's answer from the TS oracle's during the parallel run. */
+            source: string;
+        };
+        ReconRow: {
+            wallet: string;
+            asset: string;
+            current: number;
+            in_sum: number;
+            out_sum: number;
+            expected: number;
+            /** @description current − expected (per asset). */
+            diff: number;
+        };
+        /** @description A wallets-table row passed through raw from Turso. Every SELECTED column key is always present (the Rust reader inserts each column with `Value::Null` when a cell is absent), but every VALUE is nullable — including `address`/`chain` — so presence is guaranteed and non-null is not. */
+        ReconcileWalletRow: {
+            address: string | null;
+            label?: string | null;
+            alias?: string | null;
+            emoji?: string | null;
+            color?: string | null;
+            chain: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        WalletSummaryTotals: {
+            current_total: number;
+            expected_total: number;
+            diff_total: number;
+        };
+        /** @description One `accounts` row. */
+        AccountRow: {
+            code: string;
+            name: string;
+            type: string;
+            statement: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description One `assets` row (latest-state balances; the time series is `asset_history`). */
+        AssetRow: {
+            id: number;
+            chain: string;
+            asset: string;
+            quantity?: number | null;
+            value_usd?: number | null;
+            share_pct?: number | null;
+            wallet?: string | null;
+            updated_at?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description One `journal` row. */
+        JournalRow: {
+            id: number;
+            date: string;
+            entry_code: string;
+            debit_account?: string | null;
+            credit_account?: string | null;
+            memo?: string | null;
+            amount?: number | null;
+            status?: string | null;
+            created_at?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description One `ledger` row. */
+        LedgerRow: {
+            id: number;
+            account_code: string;
+            account_name: string;
+            side: string;
+            balance?: number;
+            currency?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description One `trades` row. */
+        TradeRow: {
+            id: number;
+            date: string;
+            venue?: string | null;
+            symbol?: string | null;
+            side?: string | null;
+            quantity?: number | null;
+            price?: number | null;
+            pnl?: number | null;
+            status?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * @description One `transactions` row (`SELECT *`, column order of
+         *     `database/schema/pg-schema.sql`). `asset`/`amount_usd`/`direction`/
+         *     `hash`/`url`/`source`/`memo`/`wallet_to`/`venue_id`/`trade_id` are
+         *     nullable; the write paths keep writing SQL NULL (never `0`/`''`).
+         */
+        TransactionRow: {
+            id: number;
+            date: string;
+            chain: string;
+            asset?: string | null;
+            event: string;
+            amount_usd?: number | null;
+            direction?: string | null;
+            hash?: string | null;
+            url?: string | null;
+            source?: string | null;
+            created_at?: string | null;
+            memo?: string | null;
+            wallet_to?: string | null;
+            venue_id?: string | null;
+            trade_id?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * @description One `wallets` row, `SELECT *`. `monitored` is the SQLite-derived
+         *     integer 0/1 (Postgres `integer`), passed through as a NUMBER — the
+         *     board reads it as a flag, not a boolean. `emoji`/`color` carry the
+         *     schema defaults for a fresh row but are nullable for legacy rows.
+         */
+        WalletRow: {
+            address: string;
+            label?: string | null;
+            chain?: string | null;
+            monitored?: number | null;
+            created_at?: string | null;
+            alias?: string | null;
+            emoji?: string | null;
+            color?: string | null;
+            notes?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * @description One `GROUP BY asset` aggregate row. The aggregates are NOT coerced:
+         *     the driver's numeric representation is passed through, so a consumer
+         *     must accept number or string (the route's own doc calls them
+         *     "string-typed aggregates"). `chains`/`wallets` are `COUNT(DISTINCT …)`.
+         */
+        CoinRow: {
+            asset: string;
+            total_usd?: number | null;
+            total_qty?: number | null;
+            chains?: number | null;
+            wallets?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * @description `getAll()`'s object literal, key order as written: the seven
+         *     `DASHBOARD_READS` row arrays, then the board constants. The constants
+         *     are FROZEN board values, not computed: `period` is the literal
+         *     `9 Sep 2026 – sekarang` and `liabilities: 0`, `pnl: 0`,
+         *     `cashflow: -850` are hardcoded — a consumer must not read them as
+         *     derived truth. `net_worth` is `SUM(value_usd)` and falls back to the
+         *     literal `0` only when the aggregate is not a number (empty table).
+         *     `transactions` is the FULL table (no LIMIT); `trades` is capped at 20.
+         */
+        AllResponse: {
+            accounts: components["schemas"]["AccountRow"][];
+            transactions: components["schemas"]["TransactionRow"][];
+            journal: components["schemas"]["JournalRow"][];
+            ledger: components["schemas"]["LedgerRow"][];
+            assets: components["schemas"]["AssetRow"][];
+            wallets: components["schemas"]["WalletRow"][];
+            trades: components["schemas"]["TradeRow"][];
+            net_worth: number;
+            period: string;
+            liabilities: number;
+            pnl: number;
+            cashflow: number;
+        };
+        CoinsResponse: {
+            coins: components["schemas"]["CoinRow"][];
+            /** @description JS `reduce` over `Number(total_usd || 0)` — a real number, `0` for an empty table. */
+            total: number;
+        };
+        /**
+         * @description Rows plus the RAW filter echoes (`''` when the param was absent;
+         *     `limit`/`offset` are the parsed integers with their `parseInt`
+         *     fallbacks). `total` is the same-filter `COUNT(*)` — the count of the
+         *     full filtered set, not of the returned page.
+         */
+        TransactionListResponse: {
+            transactions: components["schemas"]["TransactionRow"][];
+            total: number;
+            limit: number;
+            offset: number;
+            search: string;
+            chain: string;
+            venue: string;
+            direction: string;
+            fromDate: string;
+            toDate: string;
+        };
+        /**
+         * @description Body of `POST /api/wallets`. `address` is the ROW KEY (this POST is an
+         *     UPDATE, never an insert). At least one of the four display fields must
+         *     be present or the route answers 400 `nothing to update`; an absent
+         *     field is left untouched (`!== undefined` guard).
+         */
+        WalletUpdateInput: {
+            address: string;
+            alias?: string;
+            emoji?: string;
+            color?: string;
+            notes?: string;
+        };
+        /**
+         * @description The writable `transactions` columns, shared by the create and patch
+         *     bodies. `amount_usd` goes through `parseFloat(...) || 0` in the write
+         *     path (a non-numeric value becomes `0`, it does not refuse). SQL NULL is
+         *     written for an omitted nullable field (`x || null`), never `''`.
+         */
+        TransactionWritableFields: {
+            date?: string;
+            chain?: string;
+            asset?: string;
+            event?: string;
+            amount_usd?: number;
+            direction?: string;
+            memo?: string;
+            wallet_to?: string;
+            venue_id?: string;
+            trade_id?: string;
+            hash?: string;
+            url?: string;
+            source?: string;
+        };
+        /** @description One bulk row. A per-row `date` defaults to today when omitted. */
+        TransactionRowInput: components["schemas"]["TransactionWritableFields"];
+        /**
+         * @description Single-row create. `date` AND `event` are required (400
+         *     `date and event required`); `chain` defaults to `Offchain`, `asset` to
+         *     `USDT`, `source` to `manual`, and an omitted `direction` is derived
+         *     from the sign (`amt >= 0 ? 'IN' : 'OUT'`).
+         */
+        TransactionCreateInput: components["schemas"]["TransactionWritableFields"];
+        /** @description Bulk create. Reached only when `bulk` is truthy; the rows are NOT validated (no `event` requirement on this path). */
+        TransactionBulkInput: {
+            /** @enum {boolean} */
+            bulk: true;
+            transactions: components["schemas"]["TransactionRowInput"][];
+        };
+        /** @description One row read back per insert (`ORDER BY id DESC LIMIT 1`); `inserted` is the number of RESULTS, not a transaction count — the batch is not transactional and concurrent writers can interleave. */
+        TransactionBulkInsertResponse: {
+            inserted: number;
+            transactions: components["schemas"]["TransactionRow"][];
+        };
+        /** @description Body of `PUT /api/transactions`. Only listed update fields are written; an empty update set is 400 `nothing to update`. */
+        TransactionBulkUpdateInput: {
+            ids: number[];
+            updates: components["schemas"]["TransactionWritableFields"];
+        };
+        /** @description Body of `PUT`/`PATCH /api/transactions/{id}` — the same field set; an empty set is 400 `nothing to update`, an absent row answers `{}` with 200. */
+        TransactionPatchInput: {
+            date?: string;
+            chain?: string;
+            asset?: string;
+            event?: string;
+            amount_usd?: number;
+            direction?: string;
+            memo?: string;
+            wallet_to?: string;
+            venue_id?: string;
+            trade_id?: string;
+            hash?: string;
+            url?: string;
+            source?: string;
+        };
+        /** @description Body of `DELETE /api/transactions` and `{id}`-less bulk delete. A missing/empty `ids` array is 400 `ids array required`. */
+        TransactionBulkDeleteInput: {
+            ids: number[];
+        };
+        BulkUpdateResponse: {
+            /** @enum {boolean} */
+            updated: true;
+            /** @description The number of ids REQUESTED, not the number of rows actually changed. */
+            count: number;
+        };
+        BulkDeleteResponse: {
+            /** @enum {boolean} */
+            deleted: true;
+            /** @description The number of ids REQUESTED, not the number of rows actually deleted. */
+            count: number;
+        };
+        TransactionDeleteResponse: {
+            /** @enum {boolean} */
+            deleted: true;
+            id: number;
+            row: components["schemas"]["TransactionRow"];
+        };
+        /** @description One guild member. `globalName`/`avatar` are written as `null` when Discord has no value — the keys are always PRESENT (the honest-null rule), unlike `RoleIds`. */
+        MemberRow: {
+            id: string;
+            username: string;
+            globalName: string | null;
+            avatar: string | null;
+            tier: components["schemas"]["Tier"];
+        };
+        /**
+         * @description Resolved from the member's Discord roles.
+         * @enum {string}
+         */
+        Tier: "public" | "member" | "team" | "admin";
+        /**
+         * @description The configured role id table. `omitempty` on the Go wire: an unset
+         *     `FUDCOURT_ROLE_TEAM`/`FUDCOURT_ROLE_ADMIN` makes the KEY ABSENT, not
+         *     `null` — a deliberate divergence from the honest-null rule so the
+         *     legacy TS consumer keeps parsing the same shape.
+         */
+        RoleIds: {
+            team?: string;
+            admin?: string;
+        };
+        /** @description Key order: `members`, then `roleIds`. */
+        AdminMembersResponse: {
+            members: components["schemas"]["MemberRow"][];
+            roleIds: components["schemas"]["RoleIds"];
+        };
+        RoleChangeInput: {
+            userId: string;
+            /** @enum {string} */
+            role: "team" | "admin";
+            /** @enum {string} */
+            action: "add" | "remove";
+        };
+        RoleChangeResponse: {
+            /** @enum {boolean} */
+            ok: true;
+            userId: string;
+            role: string;
+            action: string;
+        };
+        /**
+         * @description One mapped CoinGecko row. Nullable upstream metrics stay `null`
+         *     (never 0-filled); `quoteAsset` is the literal `USD`. `name`/`image`
+         *     are present only when upstream sent them.
+         */
+        MarketsCoin: {
+            symbol: string;
+            baseAsset: string;
+            /** @enum {string} */
+            quoteAsset: "USD";
+            name?: string;
+            image?: string;
+            lastPrice: number;
+            priceChangePercent: number | null;
+            highPrice: number | null;
+            lowPrice: number | null;
+            volume: number | null;
+            quoteVolume: number | null;
+            marketCap: number;
+            rank: number;
+            count: number;
+        };
+        /**
+         * @description The tracker envelope. `pool`/`upstreamTotal` are the SAME number (the
+         *     CoinGecko top-250 pool); `total` is the locally-matched count;
+         *     `derived` states the local search/sort/pagination rather than
+         *     pretending CoinGecko did it. `timestamp` is unix SECONDS.
+         */
+        MarketsResponse: {
+            coins: components["schemas"]["MarketsCoin"][];
+            total: number;
+            limit: number;
+            offset: number;
+            hasMore: boolean;
+            /** Format: int64 */
+            timestamp: number;
+            pool: number;
+            upstreamTotal: number;
+            upstream: string;
+            derived: string;
+        };
+        /**
+         * @description The ten venues the board reads; measured reachability, not ccxt's static claim.
+         * @enum {string}
+         */
+        TickerExchange: "okx" | "bybit" | "bitget" | "mexc" | "phemex" | "bingx" | "bitfinex" | "htx" | "coinbase" | "kraken";
+        /** @enum {string} */
+        TickerType: "spot" | "swap" | "future" | "option";
+        /** @description The venue's own instrument description, carried so a row is unambiguous about WHICH instrument it priced (`expiry` ms, `strike`, `optionKind`). */
+        TickerInstrument: {
+            settle: string | null;
+            symbol: string;
+            type: components["schemas"]["TickerType"];
+            expiry?: number | null;
+            strike?: number | null;
+            /** @enum {string|null} */
+            optionKind?: "call" | "put" | null;
+            contractSize?: number | null;
+        };
+        /** @description One venue's own quote. `at` is the venue timestamp (ms), or `Date.now()` when the venue reported none — `last` is the only always-real number. */
+        VenueQuote: {
+            exchange: components["schemas"]["TickerExchange"];
+            last: number;
+            bid?: number | null;
+            ask?: number | null;
+            high24h?: number | null;
+            low24h?: number | null;
+            baseVolume?: number | null;
+            quoteVolume?: number | null;
+            change24h?: number | null;
+            /** Format: int64 */
+            at: number;
+            openInterest?: number | null;
+            fundingRate?: number | null;
+        };
+        /**
+         * @description Rows are keyed by `(symbol, type, settlement)` — the same coin in two
+         *     market types or two settlements is TWO rows, never folded.
+         *     `change24h` is in PERCENT (ccxt's own `percentage`, e.g. `-1.36` =
+         *     −1.36%) — the UI appends the `%`; it is NOT a fraction, so do not
+         *     multiply by 100. `spread` is the max divergence in PERCENT vs the
+         *     median, `null` when fewer than two venues quoted.
+         */
+        TickerRow: {
+            symbol: string;
+            base: string;
+            quote: string;
+            type: components["schemas"]["TickerType"];
+            instrument: components["schemas"]["TickerInstrument"];
+            price: number | null;
+            change24h: number | null;
+            high24h: number | null;
+            low24h: number | null;
+            quoteVolume: number | null;
+            venues: components["schemas"]["VenueQuote"][];
+            spread: number | null;
+            failed: components["schemas"]["TickerExchange"][];
+        };
+        TickerDerived: {
+            search: string;
+            sort: string;
+            order: string;
+            type: string;
+            /** @enum {boolean} */
+            filteredLocally: true;
+        };
+        /**
+         * @description The board envelope. `universe` is the fixed 30-pair allowlist and
+         *     `universeNote` says so explicitly (there is no keyless market-cap
+         *     ranking upstream); `scopeNote` separates CEX instruments from the DEX
+         *     family. `timestamp` is unix MILLISECONDS. `Cache-Control:
+         *     public, max-age=60`.
+         */
+        TickerResponse: {
+            rows: components["schemas"]["TickerRow"][];
+            count: number;
+            total: number;
+            limit: number;
+            offset: number;
+            page: number;
+            hasMore: boolean;
+            exchanges: components["schemas"]["TickerExchange"][];
+            types: components["schemas"]["TickerType"][];
+            typeLabels: {
+                [key: string]: string;
+            };
+            venuesForType: {
+                [key: string]: components["schemas"]["TickerExchange"][];
+            };
+            typeCounts: {
+                [key: string]: number;
+            };
+            universe: string[];
+            universeNote: string;
+            scopeNote: string;
+            derived: components["schemas"]["TickerDerived"];
+            /** Format: int64 */
+            timestamp: number;
+        };
+        /**
+         * @description One market type's offering for a coin. `strikesByExpiry` is PER expiry
+         *     because strikes genuinely differ by date; `expiries` are ISO
+         *     `YYYY-MM-DD`. `default` is computed with the same helper the board
+         *     uses (and a real spot price), so the preselected instrument here and
+         *     the one a board row lands on cannot disagree; `null` when nothing is
+         *     listed.
+         */
+        TypeInstrumentSummary: {
+            venues: components["schemas"]["TickerExchange"][];
+            expiries: string[];
+            strikesByExpiry: {
+                [key: string]: number[];
+            };
+            default: {
+                symbol: string;
+                expiry: string | null;
+                strike: number | null;
+                /** @enum {string|null} */
+                optionKind: "call" | "put" | null;
+            } | null;
+        };
+        VenueInstrumentCount: {
+            types: components["schemas"]["TickerType"][];
+            instruments: number;
+        };
+        /**
+         * @description `types` ALWAYS carries all four keys (spot/swap/future/option),
+         *     initialised to empty summaries — a missing type is an empty summary,
+         *     never an absent key. `venues` holds only venues that listed something.
+         *     `timestamp` is unix MILLISECONDS. `null` exchange symbol is 404
+         *     `unknown_symbol`.
+         */
+        InstrumentsResponse: {
+            symbol: string;
+            base: string;
+            quote: string;
+            types: {
+                [key: string]: components["schemas"]["TypeInstrumentSummary"];
+            };
+            venues: {
+                [key: string]: components["schemas"]["VenueInstrumentCount"];
+            };
+            typeLabels: {
+                [key: string]: string;
+            };
+            venuesForType: {
+                [key: string]: components["schemas"]["TickerExchange"][];
+            };
+            /** Format: int64 */
+            timestamp: number;
+        };
+        /**
+         * @description One venue's quote for the resolved instrument; unquoted fields stay
+         *     `null`. `error` names WHY a venue did not price (e.g. `no price
+         *     returned`) and is `null` on a real quote — a venue that errored is
+         *     reported, never silently dropped.
+         */
+        InstrumentQuote: {
+            exchange: components["schemas"]["TickerExchange"];
+            symbol: string;
+            error: string | null;
+            settle?: string | null;
+            last?: number | null;
+            bid?: number | null;
+            ask?: number | null;
+            high24h?: number | null;
+            low24h?: number | null;
+            baseVolume?: number | null;
+            quoteVolume?: number | null;
+            change24h?: number | null;
+            openInterest?: number | null;
+            fundingRate?: number | null;
+            at?: number | null;
+        };
+        /** @description The NORMALIZED selection echoed back. */
+        InstrumentRequest: {
+            expiry: string | null;
+            strike: number | null;
+            /** @enum {string|null} */
+            kind: "call" | "put" | null;
+        };
+        /**
+         * @description `notListed` (the venue has no such instrument) and `failed` (it should
+         *     have answered and did not) are kept APART because they call for
+         *     different reactions. `price` is the median across venues that priced
+         *     it — `null` when none did. `timestamp` is unix MILLISECONDS.
+         */
+        InstrumentResponse: {
+            base: string;
+            type: components["schemas"]["TickerType"];
+            typeLabel: string;
+            request: components["schemas"]["InstrumentRequest"];
+            instruments: components["schemas"]["TickerInstrument"][];
+            settlements: string[];
+            quotes: components["schemas"]["InstrumentQuote"][];
+            priced: number;
+            price: number | null;
+            notListed: components["schemas"]["TickerExchange"][];
+            failed: components["schemas"]["TickerExchange"][];
+            /** Format: int64 */
+            timestamp: number;
+        };
+        /** @description One profile/boost record. Nullable display fields stay `null`; `links` is always an array (possibly empty). */
+        DexProfile: {
+            address: string;
+            chain: string;
+            symbol?: string | null;
+            icon?: string | null;
+            header?: string | null;
+            description?: string | null;
+            links: ({
+                label?: string;
+                url?: string;
+                type?: string;
+            } & {
+                [key: string]: unknown;
+            })[];
+            amount?: number | null;
+            totalAmount?: number | null;
+            url?: string | null;
+        };
+        /** @description A RAW upstream DexScreener pair, passed through unreshaped — optional metrics are genuinely optional, and the route never invents one. */
+        DexPair: {
+            chainId: string;
+            dexId: string;
+            url: string;
+            pairAddress: string;
+            labels?: string[];
+            baseToken: {
+                address: string;
+                name: string;
+                symbol: string;
+            } & {
+                [key: string]: unknown;
+            };
+            quoteToken: {
+                address: string;
+                name: string;
+                symbol: string;
+            } & {
+                [key: string]: unknown;
+            };
+            priceNative?: string;
+            priceUsd?: string;
+            marketCap?: number;
+            fdv?: number;
+            txns?: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
+            volume?: {
+                [key: string]: number;
+            };
+            priceChange?: {
+                [key: string]: number;
+            };
+            liquidity?: {
+                [key: string]: unknown;
+            };
+            pairCreatedAt?: number;
+            info?: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description Kind `profiles` (types profiles/boosts/boosts-top). `total` is the FULL upstream list length; `returned` is what this response carries. */
+        DexProfilesResponse: {
+            /** @enum {string} */
+            kind: "profiles";
+            type: string;
+            data: components["schemas"]["DexProfile"][];
+            returned: number;
+            total: number;
+            upstream: string;
+            /** Format: int64 */
+            fetchedAt: number;
+        };
+        /** @description Kind `orders` — raw passthrough arrays, `[]` when upstream omitted the section. */
+        DexOrdersResponse: {
+            /** @enum {string} */
+            kind: "orders";
+            orders: {
+                [key: string]: unknown;
+            }[];
+            boosts: {
+                [key: string]: unknown;
+            }[];
+            upstream: string;
+            /** Format: int64 */
+            fetchedAt: number;
+        };
+        /**
+         * @description Kind `pairs` (search/tokens/tokens-v1/token-pairs). `data` is the
+         *     local `limit` window of the matched set; `total` is the matched count;
+         *     `upstreamTotal` is the UNFILTERED upstream pair count; `chainsSeen`
+         *     counts every upstream pair by chainId. A locally applied chain filter
+         *     shows up as `filteredBy` and, when it removed everything, as
+         *     `data: []` plus `note` — never as an upstream error.
+         */
+        DexPairsResponse: {
+            /** @enum {string} */
+            kind: "pairs";
+            type: string;
+            data: components["schemas"]["DexPair"][];
+            returned: number;
+            total: number;
+            upstreamTotal: number;
+            chainsSeen: {
+                [key: string]: number;
+            };
+            filteredBy?: string;
+            note?: string;
+            upstream: string;
+            /** Format: int64 */
+            fetchedAt: number;
+        };
+        /** @description Section counters; a missing section is an ABSENT key, never 0. */
+        SignalCounts: {
+            rows?: number;
+            rh?: number;
+            sol?: number;
+            surfaced?: number;
+            runs?: number;
+            revivals?: number;
+        };
+        /** @description Every optional metric is genuinely optional — a missing metric must never render as 0. */
+        SignalRow: {
+            id: number;
+            /** Format: int64 */
+            ts: number;
+            kind: string;
+            chain: string;
+            mint: string;
+            symbol: string;
+            name: string;
+            url: string;
+            mcap: number;
+            liq?: number;
+            price?: number;
+            ageMin?: number;
+            score?: number;
+            decision?: string;
+            source?: string;
+            image?: string;
+            holdersCount?: number;
+            vetoes?: string[];
+            volTrend?: number;
+            topHolderPct?: number;
+            nameReuse?: number;
+            persistCount?: number;
+            registryReuse?: number;
+            sightings?: {
+                n?: number;
+                spanH?: number;
+                sources?: number;
+                surfaced?: number;
+            };
+            socials?: {
+                type?: string;
+                url?: string;
+            }[];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * @description Signal modes (index/feed/page): the upstream object spread FIRST, then
+         *     the route's own `chain`/`generatedAt`/`counts`/`rows`/`upstream`
+         *     override. `counts` is always present and `rows` always an array:
+         *     `rows: []` + `counts: {}` must not hide "upstream returned nothing"
+         *     from "everything filtered out". `generatedAt` is unix SECONDS.
+         */
+        SignalsFeedResponse: {
+            v?: number;
+            kind?: string;
+            chain: string;
+            page?: number;
+            pages?: number;
+            pageRows?: number;
+            total?: number;
+            /** Format: int64 */
+            generatedAt: number;
+            windowH?: number;
+            solDelayMin?: number;
+            counts: components["schemas"]["SignalCounts"];
+            rows: components["schemas"]["SignalRow"][];
+            upstream: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * @description `type=scoreboard` — a DIFFERENT payload family (buckets + catches, no
+         *     `rows`), forced to `kind: scoreboard`. Defaults `generatedAt` to now,
+         *     `cohortDays` to 0 and `chains` to `{}` so the two cannot be confused
+         *     with a real empty board.
+         */
+        SignalsScoreboardResponse: {
+            /** @enum {string} */
+            kind: "scoreboard";
+            v?: number;
+            /** Format: int64 */
+            generatedAt: number;
+            cohortDays: number;
+            chains: {
+                [key: string]: components["schemas"]["ScoreboardChain"];
+            };
+            upstream: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description One chain's scoreboard: the latest bucket, the cohort window, the day series and the notable catches. */
+        ScoreboardChain: {
+            latest: components["schemas"]["ScoreboardBucket"];
+            cohortDays: number;
+            series: components["schemas"]["ScoreboardBucket"][];
+            catches: components["schemas"]["ScoreboardCatch"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description One day's outcome histogram. `unknown` is a real class, not a default — an unclassified token is reported as such. */
+        ScoreboardBucket: {
+            day: string;
+            n: number;
+            run: number;
+            flat: number;
+            dump: number;
+            unknown: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description A notable catch; `x24h` is optional (a missing multiple is absent, never 0). */
+        ScoreboardCatch: {
+            mint: string;
+            symbol: string;
+            score: number;
+            decision: string;
+            peak24: number;
+            chain: string;
+            day: string;
+            x24h?: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @description The middleware limiter body. Headers `X-RateLimit-Limit/-Remaining/-Reset/-Cost/-Scope` and `Retry-After` accompany it. */
+        RateLimitedError: {
+            /** @enum {string} */
+            error: "rate_limited";
+            detail: string;
+            retryAfterSeconds: number;
+        };
     };
     responses: {
         /** @description No session, or the session lacks the `team` tier (fail-closed). */
@@ -1037,6 +3003,35 @@ export interface components {
             };
             content: {
                 "application/json": components["schemas"]["ErrorDetail"];
+            };
+        };
+        /**
+         * @description `requireMutationAuth` refusal (`apps/web/src/platform/auth/mutation.ts`):
+         *     the signed session cookie is missing or below the `team` tier, so a write
+         *     method is refused server-side before any handler runs. The body is the
+         *     same `{error, detail}` pair a read that fails the middleware gate gets.
+         */
+        MutationUnauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorDetail"];
+            };
+        };
+        /**
+         * @description The inbound limiter refused the request (`apps/web/src/middleware.ts` +
+         *     `platform/http/rate-limit-inbound.ts`). Carries the `X-RateLimit-*`
+         *     header set and `Retry-After`; the limiter fails OPEN (a counter failure
+         *     serves the request), so a 429 here is always a measured spend, never a
+         *     guess.
+         */
+        RateLimited: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["RateLimitedError"];
             };
         };
     };
@@ -1590,6 +3585,1451 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    getAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Row arrays per dashboard table plus board constants. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            429: components["responses"]["RateLimited"];
+            /** @description Query failure — `{"error": "<message>"}`. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+        };
+    };
+    listCoins: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Coin rows (string-typed aggregates — the rows are unvalidated at the boundary) and the total. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoinsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            429: components["responses"]["RateLimited"];
+            /** @description Query failure — `{"error": "<message>"}`. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+        };
+    };
+    listWallets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Wallet rows. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletRow"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            429: components["responses"]["RateLimited"];
+            /** @description Query failure — `{"error": "<message>"}`. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+        };
+    };
+    updateWallet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WalletUpdateInput"];
+            };
+        };
+        responses: {
+            /** @description The updated wallet row (`{}` when the row does not exist). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletRow"];
+                };
+            };
+            /** @description `{"error": "address required"}` or `{"error": "nothing to update"}`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+            401: components["responses"]["MutationUnauthorized"];
+            429: components["responses"]["RateLimited"];
+            /** @description Query failure — `{"error": "<message>"}`. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+        };
+    };
+    listTransactions: {
+        parameters: {
+            query?: {
+                /** @description Page size (parseInt; default 100). */
+                limit?: number;
+                /** @description Row offset (parseInt; default 0). */
+                offset?: number;
+                /** @description LIKE filter over memo, event, hash, wallet_to. */
+                search?: string;
+                /** @description Exact chain match. */
+                chain?: string;
+                /** @description Exact venue_id match. */
+                venue?: string;
+                /** @description Exact direction match (e.g. IN/OUT). */
+                direction?: string;
+                /** @description date >= value. */
+                from?: string;
+                /** @description date <= value. */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rows plus the filter echoes and the total count with the same filters. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            429: components["responses"]["RateLimited"];
+            /** @description Query failure — `{"error": "<message>"}`. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+        };
+    };
+    bulkUpdateTransactions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransactionBulkUpdateInput"];
+            };
+        };
+        responses: {
+            /** @description `{"updated": true, "count": <ids.length>}`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkUpdateResponse"];
+                };
+            };
+            /** @description `{"error": "ids array required"}` or `{"error": "nothing to update"}`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+            401: components["responses"]["MutationUnauthorized"];
+            429: components["responses"]["RateLimited"];
+            /** @description Query failure — `{"error": "<message>"}`. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+        };
+    };
+    createTransactions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransactionCreateInput"] | components["schemas"]["TransactionBulkInput"];
+            };
+        };
+        responses: {
+            /** @description The inserted row (single) or `{inserted, transactions}` (bulk). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionRow"] | components["schemas"]["TransactionBulkInsertResponse"];
+                };
+            };
+            /** @description `{"error": "date and event required"}` — the single-row path; bulk rows are inserted as given (event is required in practice but not validated). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+            401: components["responses"]["MutationUnauthorized"];
+            429: components["responses"]["RateLimited"];
+            /** @description Query failure — `{"error": "<message>"}`. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+        };
+    };
+    bulkDeleteTransactions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransactionBulkDeleteInput"];
+            };
+        };
+        responses: {
+            /** @description `{"deleted": true, "count": <ids.length>}`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkDeleteResponse"];
+                };
+            };
+            /** @description `{"error": "ids array required"}`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+            401: components["responses"]["MutationUnauthorized"];
+            429: components["responses"]["RateLimited"];
+            /** @description Query failure — `{"error": "<message>"}`. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+        };
+    };
+    replaceTransaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transaction id (integer in the path). */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransactionPatchInput"];
+            };
+        };
+        responses: {
+            /** @description The updated row. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionRow"];
+                };
+            };
+            /** @description `{"error": "invalid id"}` or `{"error": "nothing to update"}`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+            401: components["responses"]["MutationUnauthorized"];
+            429: components["responses"]["RateLimited"];
+            /** @description Query failure — `{"error": "<message>"}`. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+        };
+    };
+    deleteTransaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transaction id (integer in the path). */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `{"deleted": true, "id": <id>, "row": {...}}`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionDeleteResponse"];
+                };
+            };
+            /** @description `{"error": "invalid id"}`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+            401: components["responses"]["MutationUnauthorized"];
+            /** @description `{"error": "not found"}`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            /** @description Query failure — `{"error": "<message>"}`. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+        };
+    };
+    patchTransaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transaction id (integer in the path). */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransactionPatchInput"];
+            };
+        };
+        responses: {
+            /** @description The updated row. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionRow"];
+                };
+            };
+            /** @description `{"error": "invalid id"}` or `{"error": "nothing to update"}`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+            401: components["responses"]["MutationUnauthorized"];
+            429: components["responses"]["RateLimited"];
+            /** @description Query failure — `{"error": "<message>"}`. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+        };
+    };
+    listGuildMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Member rows and the role id table. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminMembersResponse"];
+                };
+            };
+            /** @description `{"error": "unauthorized", "detail": "requires admin tier"}`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            /** @description `{"error": "discord_unavailable", "detail": ...}` — bot token/guild unset or Discord refused. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    setMemberRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleChangeInput"];
+            };
+        };
+        responses: {
+            /** @description The applied change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleChangeResponse"];
+                };
+            };
+            /** @description `{"error": "bad_request", "detail": ...}` for a non-object body or an invalid userId/role/action. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description `{"error": "unauthorized", "detail": "requires admin tier"}`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            /**
+             * @description `{"error": "discord_error", "detail": ...}` — Discord rejected the
+             *     role change. Also the BFF's own proxy body when the Go api cannot
+             *     be dialled: `{"error": "api unreachable: <reason>"}` (no `detail`).
+             */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description `{"error": "discord_unconfigured", "detail": "FUDCOURT_ROLE_<ROLE> is not set"}`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    authLogin: {
+        parameters: {
+            query?: {
+                /** @description Post-login destination. Unsafe values (absolute URLs, `//`, `..`, `?`/`#`/`%`) are replaced with `/`. */
+                next?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Temporary redirect to `https://discord.com/oauth2/authorize?...`; sets the `fud_oauth_state` cookie. (The Go api answers 307 Temporary Redirect — `writeRedirect` in `services/api/cmd/api/routes.go` — and the Next BFF forwards the upstream status verbatim.) */
+            307: {
+                headers: {
+                    /** @description The Discord authorize URL. */
+                    Location?: string;
+                    /** @description `fud_oauth_state=<nonce>.<next>` (httpOnly, 10 minutes). */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `{"error": "method not allowed"}` for a non-GET method (`methodGuard`); `Allow: GET`. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            /** @description `{"error": "auth_unconfigured", "detail": "FUDCOURT_CLIENT_ID and DISCORD_REDIRECT_URI must be set"}`. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    authCallback: {
+        parameters: {
+            query?: {
+                /** @description Discord authorization code. */
+                code?: string;
+                /** @description Must equal the WHOLE parked `fud_oauth_state` value (`<nonce>.<next>`), not just the nonce — the TS original compared only the nonce and could never pass, so the Go api compares the full value. */
+                state?: string;
+                /** @description Discord error param; present ⇒ `discord_denied` redirect. */
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description Success: redirect to the validated `next` path with the session
+             *     cookie set (and `fud_oauth_state` cleared). Failure: redirect to
+             *     `/login?error=<code>[&next=<path>]` with `fud_oauth_state` cleared.
+             */
+            307: {
+                headers: {
+                    /** @description The `next` path, or `/login?error=<code>`. */
+                    Location?: string;
+                    /** @description Session cookie on success; cleared `fud_oauth_state` always. */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            429: components["responses"]["RateLimited"];
+            /** @description `{"error": "internal", "detail": "internal error", "code": "internal", ...}` — an undecodable parked-state cookie (the one non-redirect failure). */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    authLogoutGet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Temporary redirect to `/`; the session cookie is overwritten with maxAge 0. */
+            307: {
+                headers: {
+                    Location?: string;
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `{"error": "method not allowed"}` for anything but GET/POST; `Allow: GET, POST`. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBasic"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    authLogoutPost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Temporary redirect to `/`; the session cookie is overwritten with maxAge 0. */
+            307: {
+                headers: {
+                    Location?: string;
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    getMarkets: {
+        parameters: {
+            query?: {
+                /** @description Strict — unknown values are a 400 naming the field, never ignored. */
+                sort?: "mcap" | "volume" | "price" | "change" | "name";
+                order?: "asc" | "desc";
+                /** @description Integer 1..1000000 (never clamped). */
+                page?: number;
+                /** @description Integer 1..100 (never clamped). */
+                limit?: number;
+                /** @description At most 64 chars (never truncated). */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description Local slice of the mapped pool plus the pagination echo and the
+             *     local-processing disclosure. `coins` rows are MarketsCoin (upstream
+             *     rows mapped to camelCase; `quoteAsset` is the literal `USD`, and
+             *     `lastPrice`/`marketCap`/`rank` fall back to 0 when upstream lacks
+             *     the number). `timestamp` is unix seconds.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketsResponse"];
+                };
+            };
+            /**
+             * @description `{"error": "unknown sort '<x>'"|"unknown order '<x>'", "detail":
+             *     "expected one of ..."}` or `{"error": "<field> must be an integer,
+             *     got '<raw>'"|"<field> must be between <min> and <max>, got <v>"|
+             *     "search must be at most 64 chars, got <n>", "detail": "<field>"}`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            /**
+             * @description `{"error": "upstream request failed"|"upstream <status> from
+             *     CoinGecko"|"upstream returned a non-list payload"|"upstream
+             *     returned non-JSON"|[empty-pool refusal]", "detail": ...}` — a
+             *     CoinGecko 429 passes through with its own real status, never as 200.
+             */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+        };
+    };
+    getTicker: {
+        parameters: {
+            query?: {
+                sort?: "symbol" | "price" | "change" | "volume" | "spread";
+                /** @description Nulls always sort last in either direction. */
+                order?: "asc" | "desc";
+                /** @description At most 16 chars; matched case-insensitively against symbol and base. */
+                search?: string;
+                /** @description Integer 1..50 (never clamped). */
+                limit?: number;
+                /** @description Integer >= 1 (never clamped). */
+                page?: number;
+                /** @description 'all' or one of the four instrument types; unknown values are a 400, never a silent fall-through to spot. */
+                type?: "spot" | "swap" | "future" | "option" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description The page window plus the echo and the measured venue/type tables.
+             *     `timestamp` is unix ms. `derived` states that filtering, sorting and
+             *     pagination happened locally.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TickerResponse"];
+                };
+            };
+            /** @description `{"error": "bad_request", "detail": "sort must be one of ..."|"order must be one of ..."|"search must be at most 16 characters"|"limit must be an integer 1..50"|"page must be an integer >= 1"|"type must be 'all' or one of ..."}`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            /** @description `{"error": "upstream_unreachable", "detail": <real reason>}` when the sweep fails, or `{"error": "upstream_empty", "detail": "no venue returned a quote for any symbol"}` — never a fake 200 with zero rows. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+        };
+    };
+    listInstruments: {
+        parameters: {
+            query: {
+                /** @description Pair like `BTC/USDT`, uppercased; must be on the ticker symbol allowlist. Max 16 chars. */
+                symbol: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Per-type summaries (`types`) and per-venue instrument counts (`venues`). `timestamp` is unix ms. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstrumentsResponse"];
+                };
+            };
+            /** @description `{"error": "missing_symbol", "detail": "pass ?symbol=BTC/USDT"}` or `{"error": "symbol_too_long", "detail": "max 16 characters"}`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+            /** @description `{"error": "unknown_symbol", "detail": "<SYMBOL> is not on the ticker allowlist"}`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    getInstrument: {
+        parameters: {
+            query: {
+                /** @description Coin base, e.g. `BTC`; uppercased, max 16 chars. */
+                base: string;
+                type?: "spot" | "swap" | "future" | "option";
+                /** @description ISO date (e.g. 2026-09-29); normalized to `YYYY-MM-DD`. */
+                expiry?: string;
+                /** @description Must be numeric when given. */
+                strike?: string;
+                kind?: "call" | "put";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `{base, type, typeLabel, request, instruments, settlements, quotes, priced, price, notListed, failed, timestamp}` — `request` echoes the normalized selection; `settlements` are the settlement currencies actually quoted (prices across them differ by a real basis). `timestamp` is unix ms. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstrumentResponse"];
+                };
+            };
+            /** @description `{"error": "missing_base", "detail": "pass ?base=BTC"}` | `{"error": "base_too_long"|"bad_type"|"bad_strike"|"bad_kind"|"bad_expiry", "detail": ...}`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    getDex: {
+        parameters: {
+            query?: {
+                /** @description Unknown values are a 400 naming the field. `tokens-v1` is a distinct single-token endpoint (deepest single pair); `token-pairs` is the multi-pair one. */
+                type?: "profiles" | "boosts" | "boosts-top" | "search" | "tokens" | "tokens-v1" | "token-pairs" | "orders";
+                /** @description Clamped: `parseInt(raw||30)`; non-finite or <1 becomes 30, otherwise `min(n, 100)`. Never refused. */
+                limit?: number;
+                /** @description Must be in DEX_CHAINS (23 entries) when given, else 400. For `search` it is applied LOCALLY; for the token/order types it defaults to `solana`. */
+                chain?: string;
+                /** @description Required (non-empty) for `type=search`. */
+                q?: string;
+                /** @description Required for `tokens-v1`/`token-pairs`/`orders`; must be a base58 mint, a `0x`+40-hex EVM address, or a dotted NEAR-style name. */
+                address?: string;
+                /** @description Required for `type=tokens`; comma-separated, at most 30, each validated as a mint of one of the three families. */
+                addresses?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description One of three families: `kind: profiles` (profiles/boosts/boosts-top:
+             *     trimmed profile rows + `returned`/`total`), `kind: orders`
+             *     (`orders`/`boosts` raw passthrough arrays, `[]` when absent), or
+             *     `kind: pairs` (search/tokens/tokens-v1/token-pairs: raw upstream
+             *     pairs + `returned`/`total`/`upstreamTotal`/`chainsSeen`, and
+             *     `filteredBy`+`note` when a LOCAL chain filter removed everything).
+             *     All carry `upstream` (the DexScreener URL) and `fetchedAt` (unix
+             *     seconds).
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DexProfilesResponse"] | components["schemas"]["DexPairsResponse"] | components["schemas"]["DexOrdersResponse"];
+                };
+            };
+            /**
+             * @description `fail()` refusals — `{"error": "unknown type '<x>'", "detail":
+             *     "expected one of profiles, boosts, boosts-top, search, tokens,
+             *     tokens-v1, token-pairs, orders"}`, `{"error": "unknown chain '<x>'",
+             *     "detail": "expected one of <23 chains>"}`, `{"error": "search needs
+             *     a non-empty \\`q\\`"}`, `{"error": "\\`address\\` is not a valid
+             *     token address", "detail": "expected a base58 mint, a 0x EVM
+             *     address, or a dotted name"}`, `{"error": "tokens needs
+             *     \\`addresses\\`"}`, `{"error": "tokens accepts at most 30
+             *     addresses"}`, `{"error": "<n> address(es) are not valid mints",
+             *     "detail": "<bad addresses joined by ','>"}`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+            /** @description Upstream Cloudflare 1015, relayed with its real status — `{"error": "upstream <label> rate limited (HTTP 429, Cloudflare 1015) — too many requests in a short window", "detail": <first 200 chars | "no retry-after header">}`. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+            /**
+             * @description `{"error": "upstream <label> unreachable: <msg>"}` (fetch/20 s
+             *     timeout), `{"error": "upstream <label> returned a non-JSON body"}`,
+             *     `{"error": "upstream <type> did not return a list"}`, or
+             *     `{"error": "upstream <type> returned an unrecognised shape"}`. A
+             *     non-429 upstream non-2xx is relayed with its REAL status and
+             *     `{"error": "upstream <label> HTTP <status>", "detail": <first 200
+             *     chars>}` — never a fake 200.
+             */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+        };
+    };
+    getSignals: {
+        parameters: {
+            query?: {
+                /** @description Validated FIRST — the chain allowlist is looked up by mode, so an unknown mode is a 400. */
+                type?: "index" | "feed" | "page" | "scoreboard";
+                /** @description Lowercased. Allowed set depends on `type`: index/scoreboard = solana|robinhood; feed/page = solana|robinhood|all. */
+                chain?: string;
+                /** @description Only read for `type=page`. `parseInt(raw||2)`; non-finite becomes 2; the value is passed through UNCLAMPED and validated: <2 is a 400, >10 is a 404 (mirroring upstream), never silently clamped to another page. */
+                n?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description The upstream payload with the route's own defaults applied. Signal
+             *     modes carry `rows`/`counts`; `type=scoreboard` carries
+             *     `chains`/`cohortDays` and NO `rows`.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalsFeedResponse"] | components["schemas"]["SignalsScoreboardResponse"];
+                };
+            };
+            /**
+             * @description `{"error": "type must be one of index, feed, page, scoreboard"}`
+             *     (no `detail`), `{"error": "chain must be one of <allowed> for
+             *     type=<mode>"}`, or `{"error": "bad chain or page", "detail": "page
+             *     <n> is outside the upstream range 2..10"}`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+            /** @description `{"error": "no such page", "detail": "page <n> is outside the upstream range 2..10"}` (n > 10). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            /** @description `{"error": "upstream /api/<mode> HTTP <status>", "detail": <first 200 chars>}` (any non-2xx upstream) or `{"error": "upstream unreachable: <msg>"}` (fetch failure / 25 s timeout). */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+        };
+    };
+    getCryptorank: {
+        parameters: {
+            query: {
+                /**
+                 * @description One of the 28 CR_MODES. `funding` and `unlocks` are refused with 503
+                 *     (upstream's /_next/data class serves synthetic decoy). Keyed modes
+                 *     (`categories`, `coin`, `chain`, `tag`, `ecosystem`, `rwaasset`,
+                 *     `newstag`) take `key`; list modes (`exchanges`, `launchpool`,
+                 *     `nodesale`) take `key` from their own whitelists.
+                 */
+                mode: "home" | "coins" | "trending" | "gainers" | "losers" | "funding" | "unlocks" | "categories" | "exchanges" | "coin" | "listings" | "blockchains" | "chain" | "launchpool" | "nodesale" | "news" | "tags" | "tag" | "ecosystems" | "ecosystem" | "rwa" | "rwaasset" | "quarterly" | "prediction" | "converter" | "media" | "newstag" | "aioverview";
+                /**
+                 * @description Per-mode key. Slug modes: `^[a-z0-9][a-z0-9-]{0,63}$`
+                 *     (defaults: categories=chain, coin=bitcoin, chain=ethereum,
+                 *     tag=layer-1, ecosystem=ethereum, newstag=defi). `rwaasset`:
+                 *     `<bonds|commodities|etfs|stocks>/<slug>` (default stocks/wendy-s).
+                 *     `exchanges`: cex/spot|dex/spot|perpetuals|cex-transparency (default
+                 *     cex/spot). `launchpool`: past|upcoming|active (default past).
+                 *     `nodesale`: past|active|upcoming (default past).
+                 */
+                key?: string;
+                /** @description `fresh=1` disables the TTL cache for this request only. */
+                fresh?: "1";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description The mode's shaped envelope. Response headers `X-CR-Upstream`,
+             *     `X-CR-Cache` (MISS|HIT), `Cache-Control` come from the sidecar.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrEnvelope"];
+                };
+            };
+            /**
+             * @description Sidecar refusals — `{"error": "unknown mode", ...}` (the 28-mode
+             *     array is shipped verbatim in the body), `{"error": "invalid key",
+             *     "detail": ..., "mode": ..., "key": ...}`, `{"error": "invalid
+             *     exchange list"|"invalid launchpool list"|"invalid nodesale list", ...}`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /** @description `{"error": "upstream 404: no such resource", ...}` or the newstag soft-404 refusal. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /**
+             * @description NOT emitted by the sidecar for an upstream throttle: an upstream
+             *     429 is retried three times and then reported as a **502** with
+             *     `"upstreamStatus": 429` (`fetchWithRetry` → `writeFetchError` in
+             *     `services/data/cmd/apicalls/main.go`). A client that only
+             *     special-cases 429 for backoff will never see one — branch on the
+             *     502 body's `upstreamStatus` instead.
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /** @description `{"error": <real reason>, "upstreamStatus": <int>, "upstream": ..., "kind": <mode>}` — upstream wall or layout drift (this branch carries NO `detail` key), an exhausted retry, or (proxy-level) `apicalls unreachable: <reason>`. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /** @description `{"error": <CR_DISABLED_REASON>, "kind": <mode>, "upstream": ...}` — mode `funding`/`unlocks` (synthetic decoy class). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+        };
+    };
+    getKhala: {
+        parameters: {
+            query: {
+                mode: "reports" | "report" | "latest";
+                /** @description Report slug — REQUIRED for `mode=report`, refused ("unexpected param") on other modes. Must match `^[a-z0-9][a-z0-9-]{0,127}$` (never clamped). */
+                key?: string;
+                /** @description Row count — only for `mode=latest` (strict integer 1..50, never clamped). Absent ⇒ 5. */
+                limit?: number;
+                /** @description `fresh=1` disables the TTL cache for this request only. */
+                fresh?: "1";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The khala envelope; `report` carries the article as `{type: h1..h6|p|li, text}[]` blocks (the block type is the element's own tag name). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KhEnvelope"];
+                };
+            };
+            /**
+             * @description `{"error": "unknown mode"|"unexpected param"|"missing param"|
+             *     "invalid key"|"invalid limit", "detail": ..., "mode": ..., "key"|
+             *     "limit": ...}` — the sidecar's frozen refusal texts.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /** @description `{"error": "upstream 404: no such report", "upstreamStatus": <int>, "upstream": ..., "kind": <mode>}`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /** @description Layout drift / missing CMS resource / transport failure with the real status and detail, or (proxy-level) `apicalls unreachable: <reason>`. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+        };
+    };
+    getLlama: {
+        parameters: {
+            query?: {
+                mode?: "chains" | "protocols" | "historical";
+                /** @description protocols only — integer 1..200 (default 50), never clamped. */
+                top?: number;
+                /** @description historical only — integer 1..3288 (default 365), never clamped. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description `{kind, rows, upstream, fetchedAt, upstreamTotal, derived}` — `rows`
+             *     is the upstream payload passed through (shape per mode; upstream may
+             *     add fields).
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlamaEnvelope"];
+                };
+            };
+            /**
+             * @description `{"error": "unknown mode '<m>'", "detail": "expected one of chains,
+             *     protocols, historical"}` or `{"error": "<param> must be an integer,
+             *     got '<x>'"}` / `{"error": "<param> must be between 1 and <max>, got
+             *     <x>"}`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /** @description Upstream rate limit, status kept and real text quoted. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /**
+             * @description `{"error": "upstream <mode> unreachable: <err>"}` (transport
+             *     failure), or (proxy-level) `apicalls unreachable: <reason>`.
+             *     NOTE: an upstream non-2xx (other than 429) is NOT rewritten to 502 —
+             *     the sidecar passes the real upstream status through (a CoinGecko
+             *     500/503 reaches the client as 500/503), and a 200 body that is not
+             *     the expected list is served as HTTP 200 with an error body.
+             */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+        };
+    };
+    getChainrank: {
+        parameters: {
+            query?: {
+                mode?: "stats" | "listings";
+                /** @description Only meaningful for `mode=listings`; relayed VERBATIM into the upstream URL (never clamped locally — upstream's own clamp is the answer the board shows). */
+                page?: number;
+                /** @description Only meaningful for `mode=listings`; relayed verbatim, never clamped. */
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description `stats`: upstream fields `online`, `totalClicks`, `listings`,
+             *     `totalUsdCents`, `topUsdCents`, `claimTopCents` (numbers) spread
+             *     through. `listings`: upstream `rows` array spread through. Both add
+             *     `kind`, `upstream`, `fetchedAt`.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChainrankStatsEnvelope"] | components["schemas"]["ChainrankListingsEnvelope"];
+                };
+            };
+            /** @description `{"error": "unknown mode '<m>'", "detail": "expected one of stats, listings"}`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /** @description `{"error": <reason>, ...}` — unrecognised upstream shape or transport failure, or (proxy-level) `apicalls unreachable: <reason>`. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+        };
+    };
+    getNews: {
+        parameters: {
+            query?: {
+                source?: "cointelegraph";
+                /** @description Integer 1..100 (default 30), never clamped. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `{items, total, upstream, timestamp}` — timestamp in unix ms. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewsEnvelope"];
+                };
+            };
+            /**
+             * @description `{"error": "unknown source '<s>'", "detail": "expected one of
+             *     cointelegraph"}` or `{"error": "limit must be an integer, got
+             *     '<x>'"}` / `{"error": "limit must be between 1 and 100, got <x>"}`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /** @description Upstream rate limit (`kind: "rate-limit"` in the sidecar's error mapping). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /** @description `{"error": ..., "detail": <upstream body>}` for an empty/blocked feed or transport failure, or (proxy-level) `apicalls unreachable: <reason>`. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /**
+             * @description An upstream non-2xx other than 429 (e.g. 403/500/503) is relayed
+             *     with its REAL status — the response set is not limited to the
+             *     statuses listed above. An empty/blocked feed is a loud 502, never
+             *     an empty list.
+             */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+        };
+    };
+    getReconcile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `{rows, wallets, walletSummary, source}` — rows sorted by biggest |diff| first; `walletSummary` is a map keyed by wallet name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconcileResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            429: components["responses"]["RateLimited"];
+            /** @description Database failure from the service, forwarded verbatim with its own real reason (never a partial board). */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
+            /** @description `{"error": "reconcile unreachable: <reason>", "upstream": ...}` — unreachable, refused, DNS failure or the 45s proxy timeout. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SidecarError"];
+                };
+            };
         };
     };
 }

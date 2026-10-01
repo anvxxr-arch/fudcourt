@@ -903,7 +903,8 @@ paths:
         the response (status, body, headers) is replayed verbatim. The bodies
         below are the frozen pre-migration contract the proxy preserves.
         `roleIds` echoes the configured role id table (`FUDCOURT_ROLE_TEAM` /
-        `FUDCOURT_ROLE_ADMIN`; a role with no configured id is `null`).
+        `FUDCOURT_ROLE_ADMIN`; a role with no configured id has its KEY ABSENT
+        from the object, not `null` — the Go wire uses `omitempty`).
       responses:
         '200':
           description: Member rows and the role id table.
@@ -958,7 +959,10 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
         '502':
-          description: "`{\"error\": \"discord_error\", \"detail\": ...}` — Discord rejected the role change."
+          description: |
+            `{"error": "discord_error", "detail": ...}` — Discord rejected the
+            role change. Also the BFF's own proxy body when the Go api cannot
+            be dialled: `{"error": "api unreachable: <reason>"}` (no `detail`).
           content:
             application/json:
               schema:
@@ -984,8 +988,8 @@ paths:
           schema: { type: string }
           description: 'Post-login destination. Unsafe values (absolute URLs, `//`, `..`, `?`/`#`/`%`) are replaced with `/`.'
       responses:
-        '302':
-          description: Redirect to `https://discord.com/oauth2/authorize?...`; sets the `fud_oauth_state` cookie.
+        '307':
+          description: Temporary redirect to `https://discord.com/oauth2/authorize?...`; sets the `fud_oauth_state` cookie. (The Go api answers 307 Temporary Redirect — `writeRedirect` in `services/api/cmd/api/routes.go` — and the Next BFF forwards the upstream status verbatim.)
           headers:
             Location:
               schema: { type: string }
@@ -999,20 +1003,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
+        '405':
+          description: '`{"error": "method not allowed"}` for a non-GET method (`methodGuard`); `Allow: GET`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBasic'
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/auth/callback:
     get:
       tags: [auth]
       operationId: authCallback
-      summary: OAuth2 callback — code → session cookie (302)
+      summary: OAuth2 callback — code → session cookie (307)
       description: |
-        Validates `state` against the cookie, exchanges the code, reads
-        `/users/@me` and the guild member roles, resolves the tier and mints
-        the signed session cookie. EVERY failure ends at `/login?error=<code>`
-        with one of: `discord_denied`, `bad_state`, `auth_unconfigured`,
-        `token_exchange_failed`, `discord_api_failed`, `session_secret_missing`.
-        No token, secret or Discord payload is ever echoed into a response.
+        Validates `state` against the parked cookie value, exchanges the code,
+        reads `/users/@me` and the guild member roles, resolves the tier and
+        mints the signed session cookie. Every redirect failure ends at
+        `/login?error=<code>` with one of: `discord_denied`, `bad_state`,
+        `auth_unconfigured`, `token_exchange_failed`, `discord_api_failed`,
+        `session_secret_missing`. ONE exception: an undecodable parked-state
+        cookie answers `500 {"error":"internal","detail":"internal error"}` —
+        a JSON body, not a redirect (the divergence is documented in the Go
+        handler). No token, secret or Discord payload is ever echoed.
       parameters:
         - name: code
           in: query
@@ -1021,13 +1034,13 @@ paths:
         - name: state
           in: query
           schema: { type: string }
-          description: Must equal the `fud_oauth_state` cookie's nonce.
+          description: 'Must equal the WHOLE parked `fud_oauth_state` value (`<nonce>.<next>`), not just the nonce — the TS original compared only the nonce and could never pass, so the Go api compares the full value.'
         - name: error
           in: query
           schema: { type: string }
           description: Discord error param; present ⇒ `discord_denied` redirect.
       responses:
-        '302':
+        '307':
           description: |
             Success: redirect to the validated `next` path with the session
             cookie set (and `fud_oauth_state` cleared). Failure: redirect to
@@ -1039,6 +1052,12 @@ paths:
             Set-Cookie:
               schema: { type: string }
               description: Session cookie on success; cleared `fud_oauth_state` always.
+        '500':
+          description: '`{"error": "internal", "detail": "internal error", "code": "internal", ...}` — an undecodable parked-state cookie (the one non-redirect failure).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
         '429':
           $ref: '#/components/responses/RateLimited'
   /api/auth/logout:
@@ -1047,13 +1066,19 @@ paths:
       operationId: authLogoutGet
       summary: Drop the session cookie (GET form, for `<a href>`)
       responses:
-        '302':
-          description: Redirect to `/`; the session cookie is overwritten with maxAge 0.
+        '307':
+          description: Temporary redirect to `/`; the session cookie is overwritten with maxAge 0.
           headers:
             Location:
               schema: { type: string }
             Set-Cookie:
               schema: { type: string }
+        '405':
+          description: '`{"error": "method not allowed"}` for anything but GET/POST; `Allow: GET, POST`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBasic'
         '429':
           $ref: '#/components/responses/RateLimited'
     post:
@@ -1061,8 +1086,8 @@ paths:
       operationId: authLogoutPost
       summary: Drop the session cookie (POST form, for a form button)
       responses:
-        '302':
-          description: Redirect to `/`; the session cookie is overwritten with maxAge 0.
+        '307':
+          description: Temporary redirect to `/`; the session cookie is overwritten with maxAge 0.
           headers:
             Location:
               schema: { type: string }
@@ -1280,59 +1305,94 @@ paths:
     get:
       tags: [data]
       operationId: getDex
-      summary: GeckoTerminal DEX screener (pairs / profiles / boosts / orders)
+      summary: DexScreener read proxy (profiles / boosts / search / tokens / pairs / orders)
       description: |
-        Proxies GeckoTerminal public endpoints through an in-process cache and
-        single-flight limiter. `chains` (CSV) restricts results; when it
-        removes everything the response is `kind: "empty"` with `total: 0` and
-        the per-chain counts still visible. `X-Cache: HIT|MISS|COALESCED`
-        reports cache behavior. Requires the `member` tier (middleware).
+        Proxies **DexScreener** public endpoints (`https://api.dexscreener.com`)
+        through the shared cache + single-flight limiter; `X-Cache:
+        HIT|MISS|COALESCED` reports which arm served the response. PUBLIC — not
+        in `guard.ts` `TEAM_API_ROUTES`, so no tier gate. `type` chooses both
+        the upstream endpoint and the response family; `limit` is CLAMPED
+        (never refused, unlike the other data routes). `search` is the one type
+        whose chain narrowing happens locally: DexScreener ignores a
+        server-side chain filter, so the returned set is filtered here and the
+        full spread is still reported as `chainsSeen`.
       parameters:
-        - { name: chain, in: query, schema: { type: string }, description: 'Single chain filter; invalid names are refused.' }
-        - { name: chains, in: query, schema: { type: string }, description: 'CSV of chains (alias of `chain`); invalid names are refused.' }
-        - { name: address, in: query, schema: { type: string }, description: 'Token address: base58 mint, 0x EVM address or dotted name (e.g. `wrapped.sol`).' }
-        - { name: days, in: query, schema: { type: integer, default: 7 }, description: 'Scan lookback 1..30.' }
-        - { name: limit, in: query, schema: { type: integer, default: 25 }, description: 'Row cap 1..50.' }
-        - { name: type, in: query, schema: { type: string, default: trending }, description: 'Trending scan: trending|top|new.' }
-        - { name: include, in: query, schema: { type: string, default: '' }, description: 'Companion fetches: `profile` and/or `boosts` (CSV).' }
-        - name: kind
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [profiles, boosts, boosts-top, search, tokens, tokens-v1, token-pairs, orders]
+            default: profiles
+          description: 'Unknown values are a 400 naming the field. `tokens-v1` is a distinct single-token endpoint (deepest single pair); `token-pairs` is the multi-pair one.'
+        - name: limit
+          in: query
+          schema: { type: integer, default: 30 }
+          description: 'Clamped: `parseInt(raw||30)`; non-finite or <1 becomes 30, otherwise `min(n, 100)`. Never refused.'
+        - name: chain
           in: query
           schema: { type: string }
-          description: 'Response family override: pairs|profiles|orders (default derived from the inputs).'
+          description: 'Must be in DEX_CHAINS (23 entries) when given, else 400. For `search` it is applied LOCALLY; for the token/order types it defaults to `solana`.'
+        - name: q
+          in: query
+          schema: { type: string }
+          description: 'Required (non-empty) for `type=search`.'
+        - name: address
+          in: query
+          schema: { type: string }
+          description: 'Required for `tokens-v1`/`token-pairs`/`orders`; must be a base58 mint, a `0x`+40-hex EVM address, or a dotted NEAR-style name.'
+        - name: addresses
+          in: query
+          schema: { type: string }
+          description: 'Required for `type=tokens`; comma-separated, at most 30, each validated as a mint of one of the three families.'
       responses:
         '200':
           description: |
-            One of four bodies: `kind: "pairs"` (rows + `upstreamTotal` +
-            `chainsSeen`), `kind: "profiles"` (profile rows), `kind: "orders"`
-            (`orders`/`boosts` passthrough arrays), `kind: "empty"` (`total: 0`).
-            All carry `upstream`, `fetchedAt`; pairs/profiles also `returned`.
+            One of three families: `kind: profiles` (profiles/boosts/boosts-top:
+            trimmed profile rows + `returned`/`total`), `kind: orders`
+            (`orders`/`boosts` raw passthrough arrays, `[]` when absent), or
+            `kind: pairs` (search/tokens/tokens-v1/token-pairs: raw upstream
+            pairs + `returned`/`total`/`upstreamTotal`/`chainsSeen`, and
+            `filteredBy`+`note` when a LOCAL chain filter removed everything).
+            All carry `upstream` (the DexScreener URL) and `fetchedAt` (unix
+            seconds).
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/DexPairsResponse'
                   - $ref: '#/components/schemas/DexProfilesResponse'
+                  - $ref: '#/components/schemas/DexPairsResponse'
                   - $ref: '#/components/schemas/DexOrdersResponse'
-                  - $ref: '#/components/schemas/DexEmptyResponse'
         '400':
           description: |
-            Input refusals — `{"error": "invalid chain", "detail": ...}`,
-            `{"error": "invalid address", "detail": "expected a base58 mint, a 0x EVM address, or a dotted name"}`,
-            `{"error": "invalid limit"|"invalid days", "detail": "got=<x>"}`,
-            `{"error": "unsupported type", "detail": "got=<x>; supported=trending, top, new"}`.
+            `fail()` refusals — `{"error": "unknown type '<x>'", "detail":
+            "expected one of profiles, boosts, boosts-top, search, tokens,
+            tokens-v1, token-pairs, orders"}`, `{"error": "unknown chain '<x>'",
+            "detail": "expected one of <23 chains>"}`, `{"error": "search needs
+            a non-empty \\`q\\`"}`, `{"error": "\\`address\\` is not a valid
+            token address", "detail": "expected a base58 mint, a 0x EVM
+            address, or a dotted name"}`, `{"error": "tokens needs
+            \\`addresses\\`"}`, `{"error": "tokens accepts at most 30
+            addresses"}`, `{"error": "<n> address(es) are not valid mints",
+            "detail": "<bad addresses joined by ','>"}`.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/FailError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '429':
-          $ref: '#/components/responses/RateLimited'
+          description: 'Upstream Cloudflare 1015, relayed with its real status — `{"error": "upstream <label> rate limited (HTTP 429, Cloudflare 1015) — too many requests in a short window", "detail": <first 200 chars | "no retry-after header">}`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailError'
         '502':
           description: |
-            Proxy refusals (also `{kind}` variants) — `{"error": "upstream failed", "detail": "GeckoTerminal ... unavailable"}`,
-            `{"error": "upstream returned no data"}`,
-            `{"error": "upstream <type> did not return a list"}`.
+            `{"error": "upstream <label> unreachable: <msg>"}` (fetch/20 s
+            timeout), `{"error": "upstream <label> returned a non-JSON body"}`,
+            `{"error": "upstream <type> did not return a list"}`, or
+            `{"error": "upstream <type> returned an unrecognised shape"}`. A
+            non-429 upstream non-2xx is relayed with its REAL status and
+            `{"error": "upstream <label> HTTP <status>", "detail": <first 200
+            chars>}` — never a fake 200.
           content:
             application/json:
               schema:
@@ -1341,49 +1401,58 @@ paths:
     get:
       tags: [data]
       operationId: getSignals
-      summary: Normalized signals scoreboard (rename radar / past runners / hot tokens / feed)
+      summary: Signals board passthrough (index / feed / page / scoreboard)
       description: |
-        Aggregates services/chainrank `GET /v1/signals` (or, with
-        `source=api`, its `/v1/cache/...` family) into one board: spot
-        sightings, renames, past-runners and hot tokens in score order.
-        `counts` is always present — `rows: []` + `counts: {}` would otherwise
-        hide "upstream returned nothing" from "everything filtered out".
-        No credential/policy involvement; member tier (middleware).
+        Passthrough of `https://data-public.vercel.app/api/<mode>?chain=<chain>[&n=<n>]`
+        with `chain`/`generatedAt`/`counts`/`rows`/`upstream` defaulted. The
+        upstream's own object is spread FIRST, so upstream keys survive
+        untouched. `type=scoreboard` is a SEPARATE payload family (buckets +
+        catches) and does NOT carry `rows` — feeding it through the row
+        normalizer would fabricate a "no signals" answer. PUBLIC — not in
+        `guard.ts` `TEAM_API_ROUTES`. The chain allowlist is PER MODE (so
+        `chain=all` is a 400 for `index`/`scoreboard`, valid for `feed`/`page`).
+        Every non-2xx upstream (including its own 400/404) collapses to a 502
+        with the real status quoted in the message — never a fake 200.
       parameters:
-        - { name: source, in: query, schema: { type: string, default: sync }, description: 'sync | db | api.' }
-        - { name: limit, in: query, schema: { type: integer, default: 25 }, description: 'Row cap per section, 1..500.' }
-        - { name: wallet, in: query, schema: { type: string }, description: 'Wallet filter (csv accepts several).' }
-        - { name: wallets, in: query, schema: { type: string }, description: 'Alias of `wallet`.' }
-        - { name: user, in: query, schema: { type: string }, description: 'User filter (csv accepted).' }
-        - { name: users, in: query, schema: { type: string }, description: 'Alias of `user`.' }
-        - { name: range, in: query, schema: { type: string }, description: 'Explicit range (ignored when `days` is given).' }
-        - { name: days, in: query, schema: { type: integer }, description: 'Days back 1..180; overrides `range`.' }
-        - { name: sort, in: query, schema: { type: string, default: score }, description: 'score | latest.' }
-        - { name: dir, in: query, schema: { type: string, default: desc }, description: 'asc | desc.' }
-        - { name: group, in: query, schema: { type: string, default: wallet }, description: 'wallet | user.' }
-        - { name: strip, in: query, schema: { type: boolean }, description: 'Enforce clean keys (drop `*`-prefixed entries).' }
-        - { name: nominal, in: query, schema: { type: boolean }, description: 'Nominal sizing for the source call.' }
-        - { name: quote, in: query, schema: { type: string }, description: 'Quote currency for the source call.' }
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [index, feed, page, scoreboard]
+            default: index
+          description: 'Validated FIRST — the chain allowlist is looked up by mode, so an unknown mode is a 400.'
+        - name: chain
+          in: query
+          schema: { type: string, default: solana }
+          description: 'Lowercased. Allowed set depends on `type`: index/scoreboard = solana|robinhood; feed/page = solana|robinhood|all.'
+        - name: n
+          in: query
+          schema: { type: integer, default: 2 }
+          description: 'Only read for `type=page`. `parseInt(raw||2)`; non-finite becomes 2; the value is passed through UNCLAMPED and validated: <2 is a 400, >10 is a 404 (mirroring upstream), never silently clamped to another page.'
       responses:
         '200':
-          description: The normalized board with section counts.
+          description: |
+            The upstream payload with the route's own defaults applied. Signal
+            modes carry `rows`/`counts`; `type=scoreboard` carries
+            `chains`/`cohortDays` and NO `rows`.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SignalsResponse'
+                oneOf:
+                  - $ref: '#/components/schemas/SignalsFeedResponse'
+                  - $ref: '#/components/schemas/SignalsScoreboardResponse'
         '400':
           description: |
-            Input refusals with the offending value echoed — e.g.
-            `{"error": "invalid limit", "detail": "got=9999"}` or
-            `{"error": "invalid days", "detail": "got=0; expected integer 1..180"}`.
+            `{"error": "type must be one of index, feed, page, scoreboard"}`
+            (no `detail`), `{"error": "chain must be one of <allowed> for
+            type=<mode>"}`, or `{"error": "bad chain or page", "detail": "page
+            <n> is outside the upstream range 2..10"}`.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/FailError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: "`{\"error\": \"upstream returned no data\", \"detail\": ...}` (maps the sidecar's 404 empty-response)."
+          description: "`{\"error\": \"no such page\", \"detail\": \"page <n> is outside the upstream range 2..10\"}` (n > 10)."
           content:
             application/json:
               schema:
@@ -1391,7 +1460,7 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
         '502':
-          description: "`{\"error\": \"upstream failed\", \"detail\": ...}` — sidecar unreachable or non-JSON."
+          description: "`{\"error\": \"upstream /api/<mode> HTTP <status>\", \"detail\": <first 200 chars>}` (any non-2xx upstream) or `{\"error\": \"upstream unreachable: <msg>\"}` (fetch failure / 25 s timeout)."
           content:
             application/json:
               schema:
@@ -1478,13 +1547,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidecarError'
         '429':
-          description: Upstream 429, forwarded after the sidecar's own backoff.
+          description: |
+            NOT emitted by the sidecar for an upstream throttle: an upstream
+            429 is retried three times and then reported as a **502** with
+            `"upstreamStatus": 429` (`fetchWithRetry` → `writeFetchError` in
+            `services/data/cmd/apicalls/main.go`). A client that only
+            special-cases 429 for backoff will never see one — branch on the
+            502 body's `upstreamStatus` instead.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SidecarError'
         '502':
-          description: "`{\"error\": <real reason>, \"detail\": ..., \"upstream\": ..., \"kind\": <mode>}` — upstream wall or layout drift, or (proxy-level) `apicalls unreachable: <reason>`."
+          description: "`{\"error\": <real reason>, \"upstreamStatus\": <int>, \"upstream\": ..., \"kind\": <mode>}` — upstream wall or layout drift (this branch carries NO `detail` key), an exhausted retry, or (proxy-level) `apicalls unreachable: <reason>`."
           content:
             application/json:
               schema:
@@ -1519,9 +1594,10 @@ paths:
             type: string
         - name: limit
           in: query
-          description: "Row count — only for `mode=latest` (strict integer 1..50, never clamped)."
+          description: "Row count — only for `mode=latest` (strict integer 1..50, never clamped). Absent ⇒ 5."
           schema:
             type: integer
+            default: 5
         - name: fresh
           in: query
           description: "`fresh=1` disables the TTL cache for this request only."
@@ -1530,7 +1606,7 @@ paths:
             enum: ['1']
       responses:
         '200':
-          description: "The khala envelope; `report` carries the article as `{type: h2|h3|h4|p|li, text}[]` blocks."
+          description: "The khala envelope; `report` carries the article as `{type: h1..h6|p|li, text}[]` blocks (the block type is the element's own tag name)."
           content:
             application/json:
               schema:
@@ -1606,7 +1682,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidecarError'
         '502':
-          description: "`{\"error\": \"upstream <mode> unreachable: <err>\"}` or `{\"error\": <upstream text>, \"detail\": <upstream body>}`, or (proxy-level) `apicalls unreachable: <reason>`."
+          description: |
+            `{"error": "upstream <mode> unreachable: <err>"}` (transport
+            failure), or (proxy-level) `apicalls unreachable: <reason>`.
+            NOTE: an upstream non-2xx (other than 429) is NOT rewritten to 502 —
+            the sidecar passes the real upstream status through (a CoinGecko
+            500/503 reaches the client as 500/503), and a 200 body that is not
+            the expected list is served as HTTP 200 with an error body.
           content:
             application/json:
               schema:
@@ -1620,11 +1702,20 @@ paths:
         Both modes spread the upstream body first and add `kind`, `upstream`,
         `fetchedAt` — chainrank adds row fields freely, so the payload is
         checked, not rebuilt (a wrong shape is a loud 502). Response header
-        `X-Cache` (MISS|HIT|COALESCED).
+        `X-Cache` (MISS|HIT|COALESCED). An upstream non-2xx (other than 429) is
+        relayed with its REAL status, never flattened to 502.
       parameters:
         - name: mode
           in: query
           schema: { type: string, enum: [stats, listings], default: stats }
+        - name: page
+          in: query
+          description: 'Only meaningful for `mode=listings`; relayed VERBATIM into the upstream URL (never clamped locally — upstream''s own clamp is the answer the board shows).'
+          schema: { type: integer }
+        - name: pageSize
+          in: query
+          description: 'Only meaningful for `mode=listings`; relayed verbatim, never clamped.'
+          schema: { type: integer }
       responses:
         '200':
           description: |
@@ -1686,6 +1777,16 @@ paths:
                 $ref: '#/components/schemas/SidecarError'
         '429':
           description: 'Upstream rate limit (`kind: "rate-limit"` in the sidecar''s error mapping).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidecarError'
+        default:
+          description: |
+            An upstream non-2xx other than 429 (e.g. 403/500/503) is relayed
+            with its REAL status — the response set is not limited to the
+            statuses listed above. An empty/blocked feed is a loud 502, never
+            an empty list.
           content:
             application/json:
               schema:
@@ -1778,6 +1879,27 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorDetail'
+    MutationUnauthorized:
+      description: |
+        `requireMutationAuth` refusal (`apps/web/src/platform/auth/mutation.ts`):
+        the signed session cookie is missing or below the `team` tier, so a write
+        method is refused server-side before any handler runs. The body is the
+        same `{error, detail}` pair a read that fails the middleware gate gets.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetail'
+    RateLimited:
+      description: |
+        The inbound limiter refused the request (`apps/web/src/middleware.ts` +
+        `platform/http/rate-limit-inbound.ts`). Carries the `X-RateLimit-*`
+        header set and `Retry-After`; the limiter fails OPEN (a counter failure
+        serves the request), so a 429 here is always a measured spend, never a
+        guess.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RateLimitedError'
   schemas:
     # ------------------------------------------------------------------
     # Enumerations — frozen in apps/web/src/platform/executor/types.ts.
@@ -3286,7 +3408,7 @@ components:
         changeSource:
           type: string
           nullable: true
-          enum: [direct, derived-from-histPrices-24h, unavailable]
+          enum: [direct, derived-from-histPrices-24H, unavailable]
         anchor24h:
           $ref: '#/components/schemas/AnchorCount'
         anchor7d:
@@ -4014,7 +4136,7 @@ components:
             $ref: '#/components/schemas/KhSection'
         body:
           type: array
-          description: 'The article as structured blocks — `{type: h2|h3|h4|p|li, text}` with inline emphasis flattened to text. Never HTML.'
+          description: 'The article as structured blocks — `{type, text}` where `type` is the source element''s own tag name (`h1`..`h6`, `p`, `li`) and inline emphasis is flattened to text. Never HTML.'
           items:
             $ref: '#/components/schemas/KhBlock'
     KhAuthor:
@@ -4178,14 +4300,14 @@ components:
       type: object
       additionalProperties: true
       required: [address, chain]
-      description: A wallets-table row as stored; nullable display columns pass through as JSON null.
+      description: 'A wallets-table row passed through raw from Turso. Every SELECTED column key is always present (the Rust reader inserts each column with `Value::Null` when a cell is absent), but every VALUE is nullable — including `address`/`chain` — so presence is guaranteed and non-null is not.'
       properties:
-        address: { type: string }
+        address: { type: string, nullable: true }
         label: { type: string, nullable: true }
         alias: { type: string, nullable: true }
         emoji: { type: string, nullable: true }
         color: { type: string, nullable: true }
-        chain: { type: string }
+        chain: { type: string, nullable: true }
     WalletSummaryTotals:
       type: object
       additionalProperties: false
@@ -4194,3 +4316,1017 @@ components:
         current_total: { type: number }
         expected_total: { type: number }
         diff_total: { type: number }
+    # ==================================================================
+    # Treasury read model (Postgres read-side, DR-019) — the row shapes the
+    # `/api/{all,coins,wallets,transactions}` handlers return verbatim.
+    # Columns mirror `database/schema/pg-schema.sql` exactly (migrated 1:1
+    # from `database/schema/schema.sql`); rows are UNVALIDATED at the
+    # boundary, so a nullable column is `nullable: true` here, never omitted
+    # and never coerced to 0.
+    # ==================================================================
+    AccountRow:
+      type: object
+      additionalProperties: true
+      required: [code, name, type, statement]
+      description: One `accounts` row.
+      properties:
+        code: { type: string }
+        name: { type: string }
+        type: { type: string }
+        statement: { type: string }
+    AssetRow:
+      type: object
+      additionalProperties: true
+      required: [id, chain, asset]
+      description: One `assets` row (latest-state balances; the time series is `asset_history`).
+      properties:
+        id: { type: integer }
+        chain: { type: string }
+        asset: { type: string }
+        quantity: { type: number, nullable: true }
+        value_usd: { type: number, nullable: true }
+        share_pct: { type: number, nullable: true }
+        wallet: { type: string, nullable: true }
+        updated_at: { type: string, nullable: true }
+    JournalRow:
+      type: object
+      additionalProperties: true
+      required: [id, date, entry_code]
+      description: One `journal` row.
+      properties:
+        id: { type: integer }
+        date: { type: string }
+        entry_code: { type: string }
+        debit_account: { type: string, nullable: true }
+        credit_account: { type: string, nullable: true }
+        memo: { type: string, nullable: true }
+        amount: { type: number, nullable: true }
+        status: { type: string, nullable: true }
+        created_at: { type: string, nullable: true }
+    LedgerRow:
+      type: object
+      additionalProperties: true
+      required: [id, account_code, account_name, side]
+      description: One `ledger` row.
+      properties:
+        id: { type: integer }
+        account_code: { type: string }
+        account_name: { type: string }
+        side: { type: string }
+        balance: { type: number }
+        currency: { type: string, nullable: true }
+    TradeRow:
+      type: object
+      additionalProperties: true
+      required: [id, date]
+      description: One `trades` row.
+      properties:
+        id: { type: integer }
+        date: { type: string }
+        venue: { type: string, nullable: true }
+        symbol: { type: string, nullable: true }
+        side: { type: string, nullable: true }
+        quantity: { type: number, nullable: true }
+        price: { type: number, nullable: true }
+        pnl: { type: number, nullable: true }
+        status: { type: string, nullable: true }
+    TransactionRow:
+      type: object
+      additionalProperties: true
+      required: [id, date, chain, event]
+      description: |
+        One `transactions` row (`SELECT *`, column order of
+        `database/schema/pg-schema.sql`). `asset`/`amount_usd`/`direction`/
+        `hash`/`url`/`source`/`memo`/`wallet_to`/`venue_id`/`trade_id` are
+        nullable; the write paths keep writing SQL NULL (never `0`/`''`).
+      properties:
+        id: { type: integer }
+        date: { type: string }
+        chain: { type: string }
+        asset: { type: string, nullable: true }
+        event: { type: string }
+        amount_usd: { type: number, nullable: true }
+        direction: { type: string, nullable: true }
+        hash: { type: string, nullable: true }
+        url: { type: string, nullable: true }
+        source: { type: string, nullable: true }
+        created_at: { type: string, nullable: true }
+        memo: { type: string, nullable: true }
+        wallet_to: { type: string, nullable: true }
+        venue_id: { type: string, nullable: true }
+        trade_id: { type: string, nullable: true }
+    WalletRow:
+      type: object
+      additionalProperties: true
+      required: [address]
+      description: |
+        One `wallets` row, `SELECT *`. `monitored` is the SQLite-derived
+        integer 0/1 (Postgres `integer`), passed through as a NUMBER — the
+        board reads it as a flag, not a boolean. `emoji`/`color` carry the
+        schema defaults for a fresh row but are nullable for legacy rows.
+      properties:
+        address: { type: string }
+        label: { type: string, nullable: true }
+        chain: { type: string, nullable: true }
+        monitored: { type: integer, nullable: true }
+        created_at: { type: string, nullable: true }
+        alias: { type: string, nullable: true }
+        emoji: { type: string, nullable: true }
+        color: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+    CoinRow:
+      type: object
+      additionalProperties: true
+      required: [asset]
+      description: |
+        One `GROUP BY asset` aggregate row. The aggregates are NOT coerced:
+        the driver's numeric representation is passed through, so a consumer
+        must accept number or string (the route's own doc calls them
+        "string-typed aggregates"). `chains`/`wallets` are `COUNT(DISTINCT …)`.
+      properties:
+        asset: { type: string }
+        total_usd: { type: number, nullable: true }
+        total_qty: { type: number, nullable: true }
+        chains: { type: integer, nullable: true }
+        wallets: { type: integer, nullable: true }
+    AllResponse:
+      type: object
+      additionalProperties: false
+      required: [accounts, transactions, journal, ledger, assets, wallets, trades, net_worth, period, liabilities, pnl, cashflow]
+      description: |
+        `getAll()`'s object literal, key order as written: the seven
+        `DASHBOARD_READS` row arrays, then the board constants. The constants
+        are FROZEN board values, not computed: `period` is the literal
+        `9 Sep 2026 – sekarang` and `liabilities: 0`, `pnl: 0`,
+        `cashflow: -850` are hardcoded — a consumer must not read them as
+        derived truth. `net_worth` is `SUM(value_usd)` and falls back to the
+        literal `0` only when the aggregate is not a number (empty table).
+        `transactions` is the FULL table (no LIMIT); `trades` is capped at 20.
+      properties:
+        accounts:
+          type: array
+          items: { $ref: '#/components/schemas/AccountRow' }
+        transactions:
+          type: array
+          items: { $ref: '#/components/schemas/TransactionRow' }
+        journal:
+          type: array
+          items: { $ref: '#/components/schemas/JournalRow' }
+        ledger:
+          type: array
+          items: { $ref: '#/components/schemas/LedgerRow' }
+        assets:
+          type: array
+          items: { $ref: '#/components/schemas/AssetRow' }
+        wallets:
+          type: array
+          items: { $ref: '#/components/schemas/WalletRow' }
+        trades:
+          type: array
+          items: { $ref: '#/components/schemas/TradeRow' }
+        net_worth: { type: number }
+        period: { type: string }
+        liabilities: { type: number }
+        pnl: { type: number }
+        cashflow: { type: number }
+    CoinsResponse:
+      type: object
+      additionalProperties: false
+      required: [coins, total]
+      properties:
+        coins:
+          type: array
+          items: { $ref: '#/components/schemas/CoinRow' }
+        total:
+          type: number
+          description: 'JS `reduce` over `Number(total_usd || 0)` — a real number, `0` for an empty table.'
+    TransactionListResponse:
+      type: object
+      additionalProperties: false
+      required: [transactions, total, limit, offset, search, chain, venue, direction, fromDate, toDate]
+      description: |
+        Rows plus the RAW filter echoes (`''` when the param was absent;
+        `limit`/`offset` are the parsed integers with their `parseInt`
+        fallbacks). `total` is the same-filter `COUNT(*)` — the count of the
+        full filtered set, not of the returned page.
+      properties:
+        transactions:
+          type: array
+          items: { $ref: '#/components/schemas/TransactionRow' }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+        search: { type: string }
+        chain: { type: string }
+        venue: { type: string }
+        direction: { type: string }
+        fromDate: { type: string }
+        toDate: { type: string }
+    WalletUpdateInput:
+      type: object
+      additionalProperties: false
+      required: [address]
+      description: |
+        Body of `POST /api/wallets`. `address` is the ROW KEY (this POST is an
+        UPDATE, never an insert). At least one of the four display fields must
+        be present or the route answers 400 `nothing to update`; an absent
+        field is left untouched (`!== undefined` guard).
+      properties:
+        address: { type: string }
+        alias: { type: string }
+        emoji: { type: string }
+        color: { type: string }
+        notes: { type: string }
+    TransactionWritableFields:
+      type: object
+      additionalProperties: false
+      description: |
+        The writable `transactions` columns, shared by the create and patch
+        bodies. `amount_usd` goes through `parseFloat(...) || 0` in the write
+        path (a non-numeric value becomes `0`, it does not refuse). SQL NULL is
+        written for an omitted nullable field (`x || null`), never `''`.
+      properties:
+        date: { type: string }
+        chain: { type: string }
+        asset: { type: string }
+        event: { type: string }
+        amount_usd: { type: number }
+        direction: { type: string }
+        memo: { type: string }
+        wallet_to: { type: string }
+        venue_id: { type: string }
+        trade_id: { type: string }
+        hash: { type: string }
+        url: { type: string }
+        source: { type: string }
+    TransactionRowInput:
+      allOf:
+        - $ref: '#/components/schemas/TransactionWritableFields'
+      description: 'One bulk row. A per-row `date` defaults to today when omitted.'
+    TransactionCreateInput:
+      allOf:
+        - $ref: '#/components/schemas/TransactionWritableFields'
+      description: |
+        Single-row create. `date` AND `event` are required (400
+        `date and event required`); `chain` defaults to `Offchain`, `asset` to
+        `USDT`, `source` to `manual`, and an omitted `direction` is derived
+        from the sign (`amt >= 0 ? 'IN' : 'OUT'`).
+    TransactionBulkInput:
+      type: object
+      additionalProperties: false
+      required: [bulk, transactions]
+      description: 'Bulk create. Reached only when `bulk` is truthy; the rows are NOT validated (no `event` requirement on this path).'
+      properties:
+        bulk:
+          type: boolean
+          enum: [true]
+        transactions:
+          type: array
+          items: { $ref: '#/components/schemas/TransactionRowInput' }
+    TransactionBulkInsertResponse:
+      type: object
+      additionalProperties: false
+      required: [inserted, transactions]
+      description: 'One row read back per insert (`ORDER BY id DESC LIMIT 1`); `inserted` is the number of RESULTS, not a transaction count — the batch is not transactional and concurrent writers can interleave.'
+      properties:
+        inserted: { type: integer }
+        transactions:
+          type: array
+          items: { $ref: '#/components/schemas/TransactionRow' }
+    TransactionBulkUpdateInput:
+      type: object
+      additionalProperties: false
+      required: [ids, updates]
+      description: 'Body of `PUT /api/transactions`. Only listed update fields are written; an empty update set is 400 `nothing to update`.'
+      properties:
+        ids:
+          type: array
+          items: { type: integer }
+        updates: { $ref: '#/components/schemas/TransactionWritableFields' }
+    TransactionPatchInput:
+      type: object
+      additionalProperties: false
+      description: 'Body of `PUT`/`PATCH /api/transactions/{id}` — the same field set; an empty set is 400 `nothing to update`, an absent row answers `{}` with 200.'
+      properties:
+        date: { type: string }
+        chain: { type: string }
+        asset: { type: string }
+        event: { type: string }
+        amount_usd: { type: number }
+        direction: { type: string }
+        memo: { type: string }
+        wallet_to: { type: string }
+        venue_id: { type: string }
+        trade_id: { type: string }
+        hash: { type: string }
+        url: { type: string }
+        source: { type: string }
+    TransactionBulkDeleteInput:
+      type: object
+      additionalProperties: false
+      required: [ids]
+      description: 'Body of `DELETE /api/transactions` and `{id}`-less bulk delete. A missing/empty `ids` array is 400 `ids array required`.'
+      properties:
+        ids:
+          type: array
+          items: { type: integer }
+    BulkUpdateResponse:
+      type: object
+      additionalProperties: false
+      required: [updated, count]
+      properties:
+        updated: { type: boolean, enum: [true] }
+        count:
+          type: integer
+          description: 'The number of ids REQUESTED, not the number of rows actually changed.'
+    BulkDeleteResponse:
+      type: object
+      additionalProperties: false
+      required: [deleted, count]
+      properties:
+        deleted: { type: boolean, enum: [true] }
+        count:
+          type: integer
+          description: 'The number of ids REQUESTED, not the number of rows actually deleted.'
+    TransactionDeleteResponse:
+      type: object
+      additionalProperties: false
+      required: [deleted, id, row]
+      properties:
+        deleted: { type: boolean, enum: [true] }
+        id: { type: integer }
+        row: { $ref: '#/components/schemas/TransactionRow' }
+    # ==================================================================
+    # Admin control plane (proxied to services/api, which owns the logic)
+    # ==================================================================
+    MemberRow:
+      type: object
+      additionalProperties: false
+      required: [id, username, globalName, avatar, tier]
+      description: 'One guild member. `globalName`/`avatar` are written as `null` when Discord has no value — the keys are always PRESENT (the honest-null rule), unlike `RoleIds`.'
+      properties:
+        id: { type: string }
+        username: { type: string }
+        globalName: { type: string, nullable: true }
+        avatar: { type: string, nullable: true }
+        tier: { $ref: '#/components/schemas/Tier' }
+    Tier:
+      type: string
+      description: Resolved from the member's Discord roles.
+      enum: [public, member, team, admin]
+    RoleIds:
+      type: object
+      additionalProperties: false
+      description: |
+        The configured role id table. `omitempty` on the Go wire: an unset
+        `FUDCOURT_ROLE_TEAM`/`FUDCOURT_ROLE_ADMIN` makes the KEY ABSENT, not
+        `null` — a deliberate divergence from the honest-null rule so the
+        legacy TS consumer keeps parsing the same shape.
+      properties:
+        team: { type: string }
+        admin: { type: string }
+    AdminMembersResponse:
+      type: object
+      additionalProperties: false
+      required: [members, roleIds]
+      description: 'Key order: `members`, then `roleIds`.'
+      properties:
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/MemberRow' }
+        roleIds: { $ref: '#/components/schemas/RoleIds' }
+    RoleChangeInput:
+      type: object
+      additionalProperties: false
+      required: [userId, role, action]
+      properties:
+        userId: { type: string }
+        role:
+          type: string
+          enum: [team, admin]
+        action:
+          type: string
+          enum: [add, remove]
+    RoleChangeResponse:
+      type: object
+      additionalProperties: false
+      required: [ok, userId, role, action]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        userId: { type: string }
+        role: { type: string }
+        action: { type: string }
+    # ==================================================================
+    # Market data (CoinGecko markets / cross-venue ticker / DexScreener)
+    # ==================================================================
+    MarketsCoin:
+      type: object
+      additionalProperties: false
+      required: [symbol, baseAsset, quoteAsset, lastPrice, priceChangePercent, highPrice, lowPrice, volume, quoteVolume, marketCap, rank, count]
+      description: |
+        One mapped CoinGecko row. Nullable upstream metrics stay `null`
+        (never 0-filled); `quoteAsset` is the literal `USD`. `name`/`image`
+        are present only when upstream sent them.
+      properties:
+        symbol: { type: string }
+        baseAsset: { type: string }
+        quoteAsset: { type: string, enum: [USD] }
+        name: { type: string }
+        image: { type: string }
+        lastPrice: { type: number }
+        priceChangePercent: { type: number, nullable: true }
+        highPrice: { type: number, nullable: true }
+        lowPrice: { type: number, nullable: true }
+        volume: { type: number, nullable: true }
+        quoteVolume: { type: number, nullable: true }
+        marketCap: { type: number }
+        rank: { type: number }
+        count: { type: number }
+    MarketsResponse:
+      type: object
+      additionalProperties: false
+      required: [coins, total, limit, offset, hasMore, timestamp, pool, upstreamTotal, upstream, derived]
+      description: |
+        The tracker envelope. `pool`/`upstreamTotal` are the SAME number (the
+        CoinGecko top-250 pool); `total` is the locally-matched count;
+        `derived` states the local search/sort/pagination rather than
+        pretending CoinGecko did it. `timestamp` is unix SECONDS.
+      properties:
+        coins:
+          type: array
+          items: { $ref: '#/components/schemas/MarketsCoin' }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+        hasMore: { type: boolean }
+        timestamp: { type: integer, format: int64 }
+        pool: { type: integer }
+        upstreamTotal: { type: integer }
+        upstream: { type: string }
+        derived: { type: string }
+    TickerExchange:
+      type: string
+      description: The ten venues the board reads; measured reachability, not ccxt's static claim.
+      enum: [okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken]
+    TickerType:
+      type: string
+      enum: [spot, swap, future, option]
+    TickerInstrument:
+      type: object
+      additionalProperties: false
+      required: [settle, symbol, type]
+      description: 'The venue''s own instrument description, carried so a row is unambiguous about WHICH instrument it priced (`expiry` ms, `strike`, `optionKind`).'
+      properties:
+        settle: { type: string, nullable: true }
+        symbol: { type: string }
+        type: { $ref: '#/components/schemas/TickerType' }
+        expiry: { type: integer, nullable: true }
+        strike: { type: number, nullable: true }
+        optionKind:
+          type: string
+          nullable: true
+          enum: [call, put]
+        contractSize: { type: number, nullable: true }
+    VenueQuote:
+      type: object
+      additionalProperties: false
+      required: [exchange, last, at]
+      description: 'One venue''s own quote. `at` is the venue timestamp (ms), or `Date.now()` when the venue reported none — `last` is the only always-real number.'
+      properties:
+        exchange: { $ref: '#/components/schemas/TickerExchange' }
+        last: { type: number }
+        bid: { type: number, nullable: true }
+        ask: { type: number, nullable: true }
+        high24h: { type: number, nullable: true }
+        low24h: { type: number, nullable: true }
+        baseVolume: { type: number, nullable: true }
+        quoteVolume: { type: number, nullable: true }
+        change24h: { type: number, nullable: true }
+        at: { type: integer, format: int64 }
+        openInterest: { type: number, nullable: true }
+        fundingRate: { type: number, nullable: true }
+    TickerRow:
+      type: object
+      additionalProperties: false
+      required: [symbol, base, quote, type, instrument, price, change24h, high24h, low24h, quoteVolume, venues, spread, failed]
+      description: |
+        Rows are keyed by `(symbol, type, settlement)` — the same coin in two
+        market types or two settlements is TWO rows, never folded.
+        `change24h` is in PERCENT (ccxt's own `percentage`, e.g. `-1.36` =
+        −1.36%) — the UI appends the `%`; it is NOT a fraction, so do not
+        multiply by 100. `spread` is the max divergence in PERCENT vs the
+        median, `null` when fewer than two venues quoted.
+      properties:
+        symbol: { type: string }
+        base: { type: string }
+        quote: { type: string }
+        type: { $ref: '#/components/schemas/TickerType' }
+        instrument: { $ref: '#/components/schemas/TickerInstrument' }
+        price: { type: number, nullable: true }
+        change24h: { type: number, nullable: true }
+        high24h: { type: number, nullable: true }
+        low24h: { type: number, nullable: true }
+        quoteVolume: { type: number, nullable: true }
+        venues:
+          type: array
+          items: { $ref: '#/components/schemas/VenueQuote' }
+        spread: { type: number, nullable: true }
+        failed:
+          type: array
+          items: { $ref: '#/components/schemas/TickerExchange' }
+    TickerDerived:
+      type: object
+      additionalProperties: false
+      required: [search, sort, order, type, filteredLocally]
+      properties:
+        search: { type: string }
+        sort: { type: string }
+        order: { type: string }
+        type: { type: string }
+        filteredLocally:
+          type: boolean
+          enum: [true]
+    TickerResponse:
+      type: object
+      additionalProperties: false
+      required: [rows, count, total, limit, offset, page, hasMore, exchanges, types, typeLabels, venuesForType, typeCounts, universe, universeNote, scopeNote, derived, timestamp]
+      description: |
+        The board envelope. `universe` is the fixed 30-pair allowlist and
+        `universeNote` says so explicitly (there is no keyless market-cap
+        ranking upstream); `scopeNote` separates CEX instruments from the DEX
+        family. `timestamp` is unix MILLISECONDS. `Cache-Control:
+        public, max-age=60`.
+      properties:
+        rows:
+          type: array
+          items: { $ref: '#/components/schemas/TickerRow' }
+        count: { type: integer }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+        page: { type: integer }
+        hasMore: { type: boolean }
+        exchanges:
+          type: array
+          items: { $ref: '#/components/schemas/TickerExchange' }
+        types:
+          type: array
+          items: { $ref: '#/components/schemas/TickerType' }
+        typeLabels:
+          type: object
+          additionalProperties: { type: string }
+        venuesForType:
+          type: object
+          additionalProperties:
+            type: array
+            items: { $ref: '#/components/schemas/TickerExchange' }
+        typeCounts:
+          type: object
+          additionalProperties: { type: integer }
+        universe:
+          type: array
+          items: { type: string }
+        universeNote: { type: string }
+        scopeNote: { type: string }
+        derived: { $ref: '#/components/schemas/TickerDerived' }
+        timestamp: { type: integer, format: int64 }
+    TypeInstrumentSummary:
+      type: object
+      additionalProperties: false
+      required: [venues, expiries, strikesByExpiry, default]
+      description: |
+        One market type's offering for a coin. `strikesByExpiry` is PER expiry
+        because strikes genuinely differ by date; `expiries` are ISO
+        `YYYY-MM-DD`. `default` is computed with the same helper the board
+        uses (and a real spot price), so the preselected instrument here and
+        the one a board row lands on cannot disagree; `null` when nothing is
+        listed.
+      properties:
+        venues:
+          type: array
+          items: { $ref: '#/components/schemas/TickerExchange' }
+        expiries:
+          type: array
+          items: { type: string }
+        strikesByExpiry:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: number }
+        default:
+          type: object
+          nullable: true
+          additionalProperties: false
+          required: [symbol, expiry, strike, optionKind]
+          properties:
+            symbol: { type: string }
+            expiry: { type: string, nullable: true }
+            strike: { type: number, nullable: true }
+            optionKind:
+              type: string
+              nullable: true
+              enum: [call, put]
+    VenueInstrumentCount:
+      type: object
+      additionalProperties: false
+      required: [types, instruments]
+      properties:
+        types:
+          type: array
+          items: { $ref: '#/components/schemas/TickerType' }
+        instruments: { type: integer }
+    InstrumentsResponse:
+      type: object
+      additionalProperties: false
+      required: [symbol, base, quote, types, venues, typeLabels, venuesForType, timestamp]
+      description: |
+        `types` ALWAYS carries all four keys (spot/swap/future/option),
+        initialised to empty summaries — a missing type is an empty summary,
+        never an absent key. `venues` holds only venues that listed something.
+        `timestamp` is unix MILLISECONDS. `null` exchange symbol is 404
+        `unknown_symbol`.
+      properties:
+        symbol: { type: string }
+        base: { type: string }
+        quote: { type: string }
+        types:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/TypeInstrumentSummary' }
+        venues:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/VenueInstrumentCount' }
+        typeLabels:
+          type: object
+          additionalProperties: { type: string }
+        venuesForType:
+          type: object
+          additionalProperties:
+            type: array
+            items: { $ref: '#/components/schemas/TickerExchange' }
+        timestamp: { type: integer, format: int64 }
+    InstrumentQuote:
+      type: object
+      additionalProperties: false
+      required: [exchange, symbol, error]
+      description: |
+        One venue's quote for the resolved instrument; unquoted fields stay
+        `null`. `error` names WHY a venue did not price (e.g. `no price
+        returned`) and is `null` on a real quote — a venue that errored is
+        reported, never silently dropped.
+      properties:
+        exchange: { $ref: '#/components/schemas/TickerExchange' }
+        symbol: { type: string }
+        error: { type: string, nullable: true }
+        settle: { type: string, nullable: true }
+        last: { type: number, nullable: true }
+        bid: { type: number, nullable: true }
+        ask: { type: number, nullable: true }
+        high24h: { type: number, nullable: true }
+        low24h: { type: number, nullable: true }
+        baseVolume: { type: number, nullable: true }
+        quoteVolume: { type: number, nullable: true }
+        change24h: { type: number, nullable: true }
+        openInterest: { type: number, nullable: true }
+        fundingRate: { type: number, nullable: true }
+        at: { type: integer, nullable: true }
+    InstrumentRequest:
+      type: object
+      additionalProperties: false
+      required: [expiry, strike, kind]
+      description: The NORMALIZED selection echoed back.
+      properties:
+        expiry: { type: string, nullable: true }
+        strike: { type: number, nullable: true }
+        kind:
+          type: string
+          nullable: true
+          enum: [call, put]
+    InstrumentResponse:
+      type: object
+      additionalProperties: false
+      required: [base, type, typeLabel, request, instruments, settlements, quotes, priced, price, notListed, failed, timestamp]
+      description: |
+        `notListed` (the venue has no such instrument) and `failed` (it should
+        have answered and did not) are kept APART because they call for
+        different reactions. `price` is the median across venues that priced
+        it — `null` when none did. `timestamp` is unix MILLISECONDS.
+      properties:
+        base: { type: string }
+        type: { $ref: '#/components/schemas/TickerType' }
+        typeLabel: { type: string }
+        request: { $ref: '#/components/schemas/InstrumentRequest' }
+        instruments:
+          type: array
+          items: { $ref: '#/components/schemas/TickerInstrument' }
+        settlements:
+          type: array
+          items: { type: string }
+        quotes:
+          type: array
+          items: { $ref: '#/components/schemas/InstrumentQuote' }
+        priced: { type: integer }
+        price: { type: number, nullable: true }
+        notListed:
+          type: array
+          items: { $ref: '#/components/schemas/TickerExchange' }
+        failed:
+          type: array
+          items: { $ref: '#/components/schemas/TickerExchange' }
+        timestamp: { type: integer, format: int64 }
+    DexProfile:
+      type: object
+      additionalProperties: false
+      required: [address, chain, links]
+      description: 'One profile/boost record. Nullable display fields stay `null`; `links` is always an array (possibly empty).'
+      properties:
+        address: { type: string }
+        chain: { type: string }
+        symbol: { type: string, nullable: true }
+        icon: { type: string, nullable: true }
+        header: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        links:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              label: { type: string }
+              url: { type: string }
+              type: { type: string }
+        amount: { type: number, nullable: true }
+        totalAmount: { type: number, nullable: true }
+        url: { type: string, nullable: true }
+    DexPair:
+      type: object
+      additionalProperties: true
+      required: [chainId, dexId, url, pairAddress, baseToken, quoteToken]
+      description: 'A RAW upstream DexScreener pair, passed through unreshaped — optional metrics are genuinely optional, and the route never invents one.'
+      properties:
+        chainId: { type: string }
+        dexId: { type: string }
+        url: { type: string }
+        pairAddress: { type: string }
+        labels:
+          type: array
+          items: { type: string }
+        baseToken:
+          type: object
+          additionalProperties: true
+          required: [address, name, symbol]
+          properties:
+            address: { type: string }
+            name: { type: string }
+            symbol: { type: string }
+        quoteToken:
+          type: object
+          additionalProperties: true
+          required: [address, name, symbol]
+          properties:
+            address: { type: string }
+            name: { type: string }
+            symbol: { type: string }
+        priceNative: { type: string }
+        priceUsd: { type: string }
+        marketCap: { type: number }
+        fdv: { type: number }
+        txns:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: true
+        volume:
+          type: object
+          additionalProperties: { type: number }
+        priceChange:
+          type: object
+          additionalProperties: { type: number }
+        liquidity:
+          type: object
+          additionalProperties: true
+        pairCreatedAt: { type: integer }
+        info:
+          type: object
+          additionalProperties: true
+    DexProfilesResponse:
+      type: object
+      additionalProperties: false
+      required: [kind, type, data, returned, total, upstream, fetchedAt]
+      description: 'Kind `profiles` (types profiles/boosts/boosts-top). `total` is the FULL upstream list length; `returned` is what this response carries.'
+      properties:
+        kind:
+          type: string
+          enum: [profiles]
+        type: { type: string }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/DexProfile' }
+        returned: { type: integer }
+        total: { type: integer }
+        upstream: { type: string }
+        fetchedAt: { type: integer, format: int64 }
+    DexOrdersResponse:
+      type: object
+      additionalProperties: false
+      required: [kind, orders, boosts, upstream, fetchedAt]
+      description: 'Kind `orders` — raw passthrough arrays, `[]` when upstream omitted the section.'
+      properties:
+        kind:
+          type: string
+          enum: [orders]
+        orders:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        boosts:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        upstream: { type: string }
+        fetchedAt: { type: integer, format: int64 }
+    DexPairsResponse:
+      type: object
+      additionalProperties: false
+      required: [kind, type, data, returned, total, upstreamTotal, chainsSeen, upstream, fetchedAt]
+      description: |
+        Kind `pairs` (search/tokens/tokens-v1/token-pairs). `data` is the
+        local `limit` window of the matched set; `total` is the matched count;
+        `upstreamTotal` is the UNFILTERED upstream pair count; `chainsSeen`
+        counts every upstream pair by chainId. A locally applied chain filter
+        shows up as `filteredBy` and, when it removed everything, as
+        `data: []` plus `note` — never as an upstream error.
+      properties:
+        kind:
+          type: string
+          enum: [pairs]
+        type: { type: string }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/DexPair' }
+        returned: { type: integer }
+        total: { type: integer }
+        upstreamTotal: { type: integer }
+        chainsSeen:
+          type: object
+          additionalProperties: { type: integer }
+        filteredBy: { type: string }
+        note: { type: string }
+        upstream: { type: string }
+        fetchedAt: { type: integer, format: int64 }
+    SignalCounts:
+      type: object
+      additionalProperties: false
+      description: 'Section counters; a missing section is an ABSENT key, never 0.'
+      properties:
+        rows: { type: integer }
+        rh: { type: integer }
+        sol: { type: integer }
+        surfaced: { type: integer }
+        runs: { type: integer }
+        revivals: { type: integer }
+    SignalRow:
+      type: object
+      additionalProperties: true
+      required: [id, ts, kind, chain, mint, symbol, name, url, mcap]
+      description: 'Every optional metric is genuinely optional — a missing metric must never render as 0.'
+      properties:
+        id: { type: integer }
+        ts: { type: integer, format: int64 }
+        kind: { type: string }
+        chain: { type: string }
+        mint: { type: string }
+        symbol: { type: string }
+        name: { type: string }
+        url: { type: string }
+        mcap: { type: number }
+        liq: { type: number }
+        price: { type: number }
+        ageMin: { type: number }
+        score: { type: number }
+        decision: { type: string }
+        source: { type: string }
+        image: { type: string }
+        holdersCount: { type: integer }
+        vetoes:
+          type: array
+          items: { type: string }
+        volTrend: { type: number }
+        topHolderPct: { type: number }
+        nameReuse: { type: number }
+        persistCount: { type: number }
+        registryReuse: { type: number }
+        sightings:
+          type: object
+          additionalProperties: false
+          properties:
+            n: { type: number }
+            spanH: { type: number }
+            sources: { type: number }
+            surfaced: { type: number }
+        socials:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              type: { type: string }
+              url: { type: string }
+    SignalsFeedResponse:
+      type: object
+      additionalProperties: true
+      required: [chain, generatedAt, counts, rows, upstream]
+      description: |
+        Signal modes (index/feed/page): the upstream object spread FIRST, then
+        the route's own `chain`/`generatedAt`/`counts`/`rows`/`upstream`
+        override. `counts` is always present and `rows` always an array:
+        `rows: []` + `counts: {}` must not hide "upstream returned nothing"
+        from "everything filtered out". `generatedAt` is unix SECONDS.
+      properties:
+        v: { type: number }
+        kind: { type: string }
+        chain: { type: string }
+        page: { type: integer }
+        pages: { type: integer }
+        pageRows: { type: integer }
+        total: { type: integer }
+        generatedAt: { type: integer, format: int64 }
+        windowH: { type: number }
+        solDelayMin: { type: number }
+        counts: { $ref: '#/components/schemas/SignalCounts' }
+        rows:
+          type: array
+          items: { $ref: '#/components/schemas/SignalRow' }
+        upstream: { type: string }
+    SignalsScoreboardResponse:
+      type: object
+      additionalProperties: true
+      required: [kind, generatedAt, cohortDays, chains, upstream]
+      description: |
+        `type=scoreboard` — a DIFFERENT payload family (buckets + catches, no
+        `rows`), forced to `kind: scoreboard`. Defaults `generatedAt` to now,
+        `cohortDays` to 0 and `chains` to `{}` so the two cannot be confused
+        with a real empty board.
+      properties:
+        kind:
+          type: string
+          enum: [scoreboard]
+        v: { type: number }
+        generatedAt: { type: integer, format: int64 }
+        cohortDays: { type: integer }
+        chains:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/ScoreboardChain' }
+        upstream: { type: string }
+    ScoreboardChain:
+      type: object
+      additionalProperties: true
+      required: [latest, cohortDays, series, catches]
+      description: 'One chain''s scoreboard: the latest bucket, the cohort window, the day series and the notable catches.'
+      properties:
+        latest: { $ref: '#/components/schemas/ScoreboardBucket' }
+        cohortDays: { type: integer }
+        series:
+          type: array
+          items: { $ref: '#/components/schemas/ScoreboardBucket' }
+        catches:
+          type: array
+          items: { $ref: '#/components/schemas/ScoreboardCatch' }
+    ScoreboardBucket:
+      type: object
+      additionalProperties: true
+      required: [day, n, run, flat, dump, unknown]
+      description: 'One day''s outcome histogram. `unknown` is a real class, not a default — an unclassified token is reported as such.'
+      properties:
+        day: { type: string }
+        n: { type: integer }
+        run: { type: integer }
+        flat: { type: integer }
+        dump: { type: integer }
+        unknown: { type: integer }
+    ScoreboardCatch:
+      type: object
+      additionalProperties: true
+      required: [mint, symbol, score, decision, peak24, chain, day]
+      description: 'A notable catch; `x24h` is optional (a missing multiple is absent, never 0).'
+      properties:
+        mint: { type: string }
+        symbol: { type: string }
+        score: { type: number }
+        decision: { type: string }
+        peak24: { type: number }
+        chain: { type: string }
+        day: { type: string }
+        x24h: { type: number }
+    RateLimitedError:
+      type: object
+      additionalProperties: false
+      required: [error, detail, retryAfterSeconds]
+      description: 'The middleware limiter body. Headers `X-RateLimit-Limit/-Remaining/-Reset/-Cost/-Scope` and `Retry-After` accompany it.'
+      properties:
+        error:
+          type: string
+          enum: [rate_limited]
+        detail: { type: string }
+        retryAfterSeconds: { type: integer }

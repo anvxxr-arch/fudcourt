@@ -1,0 +1,60 @@
+name: rust
+# Surface: services/sync (Rust) — fudcourt-sync (balance sync) and
+# fudcourt-reconciled (the /api/reconcile HTTP service behind the web proxy).
+#
+# This workflow always RUNS; the build job is skipped when nothing Rust moved,
+# so changing a web padding does not compile Rust. See web.yml for why the
+# filter is a job and not a workflow-level `paths:`.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+defaults:
+  run:
+    shell: bash
+jobs:
+  changes:
+    name: "rust - which surface changed"
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'services/sync/**'
+              - '.github/workflows/rust.yml'
+  build:
+    name: "rust - build, test (services/sync)"
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/sync
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build (both binaries)
+        run: cargo build --release --bins
+      - name: Test
+        run: cargo test --release
+  gate:
+    name: "rust - gate (required)"
+    needs: [build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Verdict"
+        run: |
+          echo "build result: ${{ needs.build.result }}"
+          case "${{ needs.build.result }}" in
+            success|skipped) exit 0 ;;
+            *) echo "::error::rust surface failed"; exit 1 ;;
+          esac
