@@ -104,8 +104,9 @@ lock — no business rules), plus `repository/` (executor-schema persistence) an
 | `platform/credentials` | `credentials.go` (AES-GCM envelope custody; objective §8.4) | landed |
 | `platform/lock` | `lock.go`, `memory.go`, `valkey.go`, `lock_test.go` (execution lease, PRD §65) | landed |
 | `repository` | `store.go`, `credentials.go` (executor.* schema persistence) | landed |
+| `api` | `server.go`, `accounts.go`, `executions.go`, `execution_create.go`, `settings.go`, `emergency.go`, `wire.go`, `decode.go`, `convert.go`, `plan_json.go`, `decimal.go` + `routes_test.go`, `harness_test.go` — the **15 `/api/executor/*` contract routes** (accounts GET/POST, `accounts/{id}` GET/DELETE, `accounts/{id}/test` POST, settings GET/PUT, executions GET/POST, `executions/{id}` GET + `/orders` + `/fills` + `/events` + `{start,pause,resume,cancel}`, preview POST, emergency POST); TS-handler envelope fidelity, 29 hermetic tests | landed (`7b8dc2d`) |
 | `tests/e2e` | `paper_e2e_test.go` (composed paper harness, `go test`) | landed |
-| `cmd/executor` | `main.go`, `health.go`, `lease.go` + tests | landed |
+| `cmd/executor` | `main.go`, `health.go`, `lease.go`, `api.go` + tests — mounts the `internal/api` surface on its own loopback listener `FUDCOURT_EXECUTOR_API_ADDR` (default `127.0.0.1:3105`), separate from the `:3104` `/healthz`+`/readyz` surface | landed (`7b8dc2d`) |
 
 ## 3. TS parity policy
 **The TypeScript executor is the PARITY ORACLE and the PRODUCTION executor until
@@ -132,6 +133,11 @@ deleted"). What that means in practice:
 - Cutover (delete TS) requires: every row below green in Go, the paper E2E green
   against the Go worker, and an atomic `fudcourt-executor-worker.service`
   switch (`migration-plan.md` Phase 5 — one worker live at a time).
+  **2026-10-01 (`7b8dc2d`):** the Go **code** counterpart is complete — engine/worker/persistence
+  plus the 15-route HTTP surface (`internal/api` on `:3105`). Still open before deletion: the web
+  tier must thin-proxy `/api/executor/*` to `127.0.0.1:3105`, and `FUDCOURT_SESSION_SECRET` +
+  `FUDCOURT_EXECUTOR_PG_URL` (+ `FUDCOURT_EXECUTOR_MASTER_KEY`) must be provisioned so the unit can
+  start; then the live `verify:executor` runs against the **Go** worker.
 
 Feature × TS × Go parity matrix (objective §22 skeleton — migration status
 column is filled from the §2/§3 evidence only):

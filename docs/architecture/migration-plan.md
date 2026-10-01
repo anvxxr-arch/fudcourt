@@ -4,7 +4,9 @@
 > 6, 8, 9, 10 have landed** (under the as-built names `backend/…`, `shared/…`, `infrastructure/systemd/`,
 > `tests/…`, `scripts/verify/` — see `final-review.md` §1–§3 and `target.md` §1); **Phase 5 (delete the
 > TS executor) and Phase 7 (frontend cleanup) are deliberately not executed** — they are gated on the
-> money-path cutover (the Go executor still has no HTTP surface for the `/api/executor/*` routes).
+> money-path cutover (the Go engine, the composed harness **and — since `7b8dc2d` — the 15-route Go
+> HTTP surface on `:3105`** all exist; what remains is the web re-point to it + env provisioning +
+> the live Go `verify:executor` proof, see `parity-matrix.md` / `final-review.md` §9.1).
 > Each phase block below keeps its original plan text plus a dated amendment; **read a phase's
 > original bullet list as the plan of record at the time, and its amendments as what actually
 > happened.** Paths in the original bullets (`apps/…`, `services/…`, `packages/…`,
@@ -151,8 +153,11 @@ re-derive with `node shared/contracts/scripts/check-contract.mjs` rather than tr
 > classify/symbols/credentials/http) with adapters `binance`, `bybit`, `mexc` and
 > `paper` (same-interface simulated matcher). Exchange+lock slice alone: 108 test
 > funcs / 390 cases, classifier/symbol/signing/error-mapping parity with
-> `exchange.ts` documented in code. **Still in flight:** planner/worker/
-> persistence/cmd/executor wiring per the slice queue. **The [parity matrix](parity-matrix.md) gates
+> `exchange.ts` documented in code. **Update 2026-10-01: the "still in flight" wiring is now
+> landed — planner/worker/persistence/`cmd/executor` all exist, and since `7b8dc2d`
+> `internal/api/**` serves the 15 `/api/executor/*` contract routes on `:3105` (29 hermetic tests).
+> What stays unmet is the cutover only: the web tier has not re-pointed to that surface and the live
+> Go `verify:executor` proof has not run. The [parity matrix](parity-matrix.md) gates
 > any TS deletion — the TS executor remains the production executor until then.**
 
 Port order chosen so parity tests can gate each deletion (per module in `current.md` §5):
@@ -200,6 +205,13 @@ Port order chosen so parity tests can gate each deletion (per module in `current
   `current.md` §7) during the window.
 
 ## Phase 7 — frontend cleanup
+
+> **Status 2026-10-01: NOT executed (deliberately).** The deletions below are gated on the Phase 5
+> cutover; as of `7b8dc2d` the Go **code** side (engine, worker, persistence, and the 15-route HTTP
+> surface on `:3105`) is all present, so the remaining prerequisite is the **web re-point** to
+> `127.0.0.1:3105` + env provisioning + the live Go `verify:executor` — then these deletions and the
+> `client.ts` → `shared/sdk/typescript` re-target can proceed. The TS executor is still production
+> until then.
 
 - Delete `frontend/web/src/platform/executor/` and `frontend/web/scripts/executor/` remnants (post-5),
   data-passthrough routes replaced by `backend/data` via `backend/api` (post-4),

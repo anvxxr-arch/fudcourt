@@ -127,7 +127,7 @@ ledger; portfolio is derived; append-only events). Current-state highlights:
 
 | # | Item | Evidence | Blocked on |
 | --- | --- | --- | --- |
-| 1 | **TS executor still in `frontend/web`** — 8,029 LOC, 10 modules (`engine,exchange,lock,plan,risk,runtime,store,types,worker` + `frontend/web/scripts/executor/worker.ts`) | `wc -l frontend/web/src/platform/executor/*.ts`; parity matrix rows 1–9 `DONE`, **offline composed Go harness `DONE`** (`internal/tests/e2e`), live cutover rows `OPEN` | `verify:executor` (`executor-paper-e2e.ts`) + a live `cmd/executor` run need `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY` (and, for `cmd`, a real venue credential — no paper branch). **`verify:executor` is now green** (2026-10-01: `ALL PAPER-MODE CHECKS PASSED (§127)` — a dev master key was generated into the gitignored `frontend/web/.env.local`; Postgres :5433 and Valkey :6379 are live locally). What stays OPEN is the Go-worker cutover: `cmd/executor` exposes only `/healthz` + `/readyz`, so the 15 `/api/executor/*` routes still have no Go counterpart and the TS runtime remains the production path |
+| 1 | **TS executor still in `frontend/web`** — 8,029 LOC, 10 modules (`engine,exchange,lock,plan,risk,runtime,store,types,worker` + `frontend/web/scripts/executor/worker.ts`) | `wc -l frontend/web/src/platform/executor/*.ts`; parity matrix rows 1–9 `DONE`, **offline composed Go harness `DONE`** (`internal/tests/e2e`), live cutover rows `OPEN` | `verify:executor` (`executor-paper-e2e.ts`) + a live `cmd/executor` run need `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY` (and, for `cmd`, a real venue credential — no paper branch). **`verify:executor` is now green** (2026-10-01: `ALL PAPER-MODE CHECKS PASSED (§127)` — a dev master key was generated into the gitignored `frontend/web/.env.local`; Postgres :5433 and Valkey :6379 are live locally). What stays OPEN is the Go-worker cutover — but **no longer because of a missing Go surface**: since commit `7b8dc2d` `backend/workers/executor/internal/api/**` serves all 15 `/api/executor/*` routes (29 hermetic tests) on `cmd/executor`'s own listener `:3105`. The three remaining blockers are: **(a)** the web tier does not yet thin-proxy `/api/executor/*` to `127.0.0.1:3105`, so the TS handlers remain the live path; **(b)** `FUDCOURT_SESSION_SECRET` + `FUDCOURT_EXECUTOR_PG_URL` are not yet defined in `frontend/web/.env.local`, so the executor unit cannot start; **(c)** `FUDCOURT_EXECUTOR_MASTER_KEY` provisioning + the live `verify:executor` run against the **Go** worker |
 | 2 | **15 web route handlers still import `platform/executor`** | `grep -rl platform/executor frontend/web/src/app` | #1 |
 | 3 | **EXECUTOR DDL still embedded in `store.ts`** | migration-plan Phase 2 amendment; `executor-store-tests.ts` §59 pins byte-identity to `database/schema/executor-schema.sql` | #1 |
 | 4 | **Phase 8 move of `frontend/web/scripts/verify/*` — ~~not executed~~ EXECUTED** | the relocation landed in one commit: repo-wide gates → `scripts/verify/`, executor E2E → `tests/e2e/executor/`, fixtures → `tests/fixtures/`, oracle → `tests/oracle/`, database tooling → `scripts/database/`, web-only suites → `frontend/web/tests/`. Every invoker repointed (verify-all, pre-push, integration.yml, check-contract, root README, package.json); `test:shapers` still **240/240**. The `verify-*.py` harnesses remain repo tools (their UI-wiring checks read `frontend/web/src/**`), not web-app-only. | `git ls-files`; `scripts/verify/{verify-*,monitor}.py`; `tests/{e2e,integration,fixtures,oracle}/`; `bun run test:shapers` | none |
@@ -142,12 +142,12 @@ Items 1–4 are the *same* dependency: the executor cutover. They are a single d
 
 | # | Objective "done when" | Status | Evidence (this tree, 2026-10-01) |
 | --- | --- | --- | --- |
-| 1 | `frontend/web` no longer owns executor runtime | **PARTIAL — gated** | `frontend/web/src/platform/executor/*.ts` = 7,974 LOC (9 files) + `frontend/web/scripts/executor/worker.ts` = 55 → 8,029 total, still present; cutover blocked on the Go paper harness + credentials (§9.1) |
+| 1 | `frontend/web` no longer owns executor runtime | **PARTIAL — gated** | `frontend/web/src/platform/executor/*.ts` = 7,974 LOC (9 files) + `frontend/web/scripts/executor/worker.ts` = 55 → 8,029 total, still present. **The Go surface is no longer the blocker** (`7b8dc2d`: `internal/api` serves the 15 routes, 29 tests, `:3105`); the cutover is now gated on the web re-point + env provisioning + the live Go `verify:executor` (§9.1) |
 | 2 | `frontend/web` no longer owns DB schema | MET | `find frontend/web -name '*.sql'` → none; DDL lives in `database/schema/{schema,pg-schema,executor-schema}.sql` |
 | 3 | `apps/apicalls` → `backend/data` | MET | `apps/apicalls` absent; `backend/data/{cmd/data,internal/*}`, module path rewritten |
 | 4 | Rust sync under `backend/sync` | MET | `backend/sync/{src,tests,Cargo.toml}`; `cargo test --release` green |
 | 5 | `backend/api` is the primary Go API | MET | 18 internal packages, 112 test funcs; 4 routes live; conformance-gated vs contract |
-| 6 | `backend/workers/executor` owns executor logic | **MET (code) / PARTIAL (cutover)** | 253 test funcs across 19 internal packages (18 with tests, incl. the composed `internal/tests/e2e` harness); TS remains production until §9.1 |
+| 6 | `backend/workers/executor` owns executor logic | **MET (code) / PARTIAL (cutover)** | 253 test funcs across 19 internal packages (18 with tests, incl. the composed `internal/tests/e2e` harness) **+ 29 in `internal/api`** (the served surface); TS remains production until the web re-point + live Go proof (§9.1) |
 | 7 | exchange adapters use a common abstraction | MET | `internal/exchanges/{interface,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package |
 | 8 | PostgreSQL is the durable execution truth | MET | `database/schema/executor-schema.sql` (10 tables) + `internal/repository`; **proven live this session** — the DSN-gated `TestStoreEndToEnd`/`TestStoreNewFailLoud` run green against a throwaway local Postgres with that schema applied (`4959f8f`) |
 | 9 | Valkey only ephemeral coordination | MET | `internal/platform/lock/{valkey,memory}.go`; durable state is Postgres |
@@ -157,7 +157,7 @@ Items 1–4 are the *same* dependency: the executor cutover. They are a single d
 | 13 | CI is domain-aware | MET | `.github/workflows/{web,go,rust,contracts,integration}.yml` |
 | 14 | services do not import each other's impl | MET | each Go module imports only its own path (§5) |
 | 15 | existing product behavior compatible | MET | `verify-all.sh` green; host units active |
-| 16 | migrated executor has parity tests | **PARTIAL** | `parity-matrix.md` rows 1–9 DONE; the offline **composed Go paper harness** is now DONE (`internal/tests/e2e`, 12 tests); 253 Go funcs. Remaining cutover rows (live PG e2e, TS deletion) OPEN → §9.1 |
+| 16 | migrated executor has parity tests | **PARTIAL** | `parity-matrix.md` rows 1–9 DONE **+ row 11 (the 15-route Go surface) DONE (code)**; the offline **composed Go paper harness** is DONE (`internal/tests/e2e`, 12 tests); 253 Go funcs + 29 `internal/api` funcs. Remaining cutover rows (web re-point, live PG/go-worker e2e, TS deletion) OPEN → §9.1 |
 | 17 | build/test status documented | MET | §7 + `scripts/verify/verify-all.sh` |
 
 ### Objective "Goal terukur" acceptance metrics (re-derived this session)
@@ -177,7 +177,7 @@ unavailable in the repository") applies.
 | canonical sizing implementation | 1 | exactly one `sizing.go` → `backend/workers/executor/internal/core/sizing/sizing.go` (+16 test funcs) |
 | canonical exchange abstraction | 1 | `backend/workers/executor/internal/exchanges/{interface,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package (85 test funcs) |
 | contract source of truth | 1 | `shared/contracts/`: `openapi/fudcourt.yaml`, `events/{catalog,event.schema}.json`, `schemas/{error,event}-envelope.json`, gated by `CONTRACTS_OK` |
-| core executor logic inside `frontend/web` | 0 | **OPEN** — 8,029 LOC still in `frontend/web/src/platform/executor/*.ts` + `frontend/web/scripts/executor/worker.ts`; gated cutover (§9.1), DoD row 1 |
+| core executor logic inside `frontend/web` | 0 | **OPEN** — 8,029 LOC still in `frontend/web/src/platform/executor/*.ts` + `frontend/web/scripts/executor/worker.ts`. The Go counterpart (engine **and** the 15-route HTTP surface, `7b8dc2d`) is ready; the web tier must re-point to it first (§9.1), DoD row 1 |
 | independently deployable: web / api / data / executor / sync | 5 | `infrastructure/systemd/fudcourt-{web,api,data,executor,sync}.service` all present; `check-deploy` OK; `/api` independently built (`go build ./...` OK) |
 | ownership discoverable | — | gate `check-structure.py` OK (DR-018 layers), i.e. a stray cross-boundary file fails CI |
 
@@ -344,10 +344,13 @@ against the baseline and against `94a2ee1`/`642e7ef`):
 
 ## 9. Recommended next steps
 
-1. **Close the executor cutover (the one unblocker).** Two preconditions, in order: (a) build
-   the Go HTTP surface for the 16 `/api/executor/*` endpoints (neither `backend/api` nor
-   `cmd/executor` serves them today), then (b) provision `FUDCOURT_EXECUTOR_PG_URL` +
-   `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex) and run the gate against the Go worker; only then
+1. **Close the executor cutover (the one unblocker).** ~~Two~~ **Three** preconditions, in order:
+   ~~(a) build the Go HTTP surface for the 16 `/api/executor/*` endpoints (neither `backend/api` nor
+   `cmd/executor` serves them today)~~ → **(a) DONE (`7b8dc2d`)** — the Go surface is served by
+   `backend/workers/executor/internal/api` on `cmd/executor`'s `:3105`; what remains is the web
+   re-point to it, then **(b)** provision `FUDCOURT_SESSION_SECRET` + `FUDCOURT_EXECUTOR_PG_URL`
+   (the unit cannot start without them) and `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex) and run the gate
+   against the Go worker; only then
    delete the TS executor + re-point the 15 route handlers still importing
    `platform/executor` (Phase 5/7). This unblocks debt items 1–4 at once.
    **Precision (verified this session):** `tests/e2e/executor/executor-paper-e2e.ts`
@@ -383,6 +386,19 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    order. This is a code task, not a credentials task, but it is owned by the concurrent
    writer's `backend/workers/executor`/`backend/api` lane; doing it from here would collide with
    their in-flight commits.
+   **UPDATE (`7b8dc2d`, same day) — the "surface-gated" half is RETIRED.** The Go surface this
+   paragraph says must be built first **now exists**: `backend/workers/executor/internal/api/**`
+   serves all **15** `/api/executor/*` contract routes, mounted by `cmd/executor` on its own
+   loopback listener `FUDCOURT_EXECUTOR_API_ADDR` (default `127.0.0.1:3105`, pinned by
+   `infrastructure/systemd/fudcourt-executor.service`), with TS-handler envelope fidelity pinned by
+   **29 hermetic tests** (`internal/api/{routes,harness}_test.go`; memory store + in-repo paper venue
+   + pinned clock, no PG/Valkey/network). What remains is **not** a code-surface task — it is the
+   three-item checklist: **(a)** thin-proxy the web `/api/executor/*` handlers to
+   `127.0.0.1:3105` (until then the TS handlers are the live path); **(b)**
+   `FUDCOURT_SESSION_SECRET` + `FUDCOURT_EXECUTOR_PG_URL` must be provisioned in
+   `frontend/web/.env.local` before the unit can start; **(c)** provision
+   `FUDCOURT_EXECUTOR_MASTER_KEY` and run `verify:executor` against the **Go** worker. The TS
+   executor stays **production** until all three land — the TS deletion is still OPEN.
 2. ~~**Then** execute the Phase 8 move (`frontend/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
    repointing the 77 references in one commit.~~ **DONE** — the move landed in one commit
    (`frontend/web/scripts/verify/*` → `scripts/verify/`, executor E2E → `tests/e2e/executor/`,
