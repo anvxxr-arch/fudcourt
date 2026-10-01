@@ -13,7 +13,7 @@ Two things are being proved here and they are different:
 
 2. PARITY WITH THE ORIGINAL TS SHAPER, which is what makes the port trustworthy
    rather than merely plausible. The shaper is run in-process on the same rows via
-   `bun scripts/tools/parity-reconcile.ts` and the two payloads are diffed section
+   `bun frontend/web/scripts/tools/parity-reconcile.ts` and the two payloads are diffed section
    by section, JSON key order included. If bun is unavailable the parity half is
    SKIPPED loudly -- never silently downgraded to "passed".
 
@@ -215,7 +215,7 @@ def main() -> int:
         skipped.append("--no-parity was passed")
         print(f"  [{DIM}SKIP{RESET}] parity vs the TS shaper  {DIM}--no-parity{RESET}")
     else:
-        probe = pathlib.Path(__file__).resolve().parent.parent / "tools" / "parity-reconcile.ts"
+        probe = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "web" / "scripts" / "tools" / "parity-reconcile.ts"
         if not probe.exists():
             check(False, "the parity probe exists", note(str(probe)))
         else:

@@ -5,7 +5,7 @@ head `957836d`.
 
 > ✅ **Versioned since 2026-09-28 (R-1):** `database/schema/schema.sql` is a
 > generated dump of the live Turso schema — regenerate with
-> `node frontend/web/scripts/tools/dump-schema.mjs`, drift-check with `--check`
+> `node scripts/database/dump-schema.mjs`, drift-check with `--check`
 > (exits 1 on mismatch; wired into the offline contract gate). The column
 > tables below are the code-derived annotation layer; the Neon schema is
 > versioned via Payload migrations (`frontend/web/src/cms/migrations/`).

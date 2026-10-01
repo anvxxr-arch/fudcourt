@@ -89,15 +89,16 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
 
 **Workers/tools — [sensitive]:**
 - `frontend/web/scripts/executor/worker.ts`
-- `frontend/web/scripts/verify/executor-paper-e2e.ts`
+- `tests/e2e/executor/executor-paper-e2e.ts`
 
 **Feature UI (executor UI may keep calling the API, but imports runtime types/logic today):**
 - `frontend/web/src/features/executor/client.ts`
 - `frontend/web/src/features/executor/ui.tsx`
 
 **Test-only (moves with Phase 5/8, listed for completeness):**
-- `frontend/web/scripts/tests/executor-{engine,exchange,plan,risk,runtime,store,worker}-tests.ts`
-- `frontend/web/scripts/tests/executor-ui-tests.ts`
+- `tests/e2e/executor/executor-{engine,plan,risk,runtime,worker}-tests.ts` +
+  `tests/integration/executor/executor-{exchange,store}-tests.ts`
+- `frontend/web/tests/executor-ui-tests.ts`
 
 ### 3.2 Shell layer imports feature pages (layering inversion inside frontend/web)
 

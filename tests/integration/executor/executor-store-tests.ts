@@ -33,7 +33,7 @@ import {
   setStoreDbForTests,
   store,
   type ExecutorSql,
-} from '../../src/platform/executor/store';
+} from '@/platform/executor/store';
 import {
   canTransition,
   DEFAULT_RISK_PROFILE,
@@ -42,7 +42,7 @@ import {
   isTerminalExecution,
   type ExecutionStatus,
   type RiskProfile,
-} from '../../src/platform/executor/types';
+} from '@/platform/executor/types';
 
 // ---------------------------------------------------------------------------
 // Fixtures / helpers
@@ -498,8 +498,9 @@ test('§59: the DDL uniqueness constraints are the ones the SQL statements confl
 });
 
 test('§59: the embedded DDL matches the tracked database/schema/executor-schema.sql (no silent drift)', () => {
-  // __dirname = frontend/web/.shaper-tests/scripts/tests → 5 up = repo root
-  const tracked = readFileSync(join(__dirname, '..', '..', '..', '..', '..', 'database', 'schema', 'executor-schema.sql'), 'utf8');
+  // process.cwd() is frontend/web (test:shapers runs there), so the repo root is
+  // two levels up — same convention as frontend/web/tests/shaper-tests.ts.
+  const tracked = readFileSync(join(process.cwd(), '..', '..', 'database', 'schema', 'executor-schema.sql'), 'utf8');
   const normalize = (text: string): string =>
     text
       .split('\n')

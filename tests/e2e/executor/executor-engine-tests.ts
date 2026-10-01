@@ -25,7 +25,7 @@ import {
   strategyProgress,
   strategyStep,
   transitionChildOrder,
-} from '../../src/platform/executor/engine';
+} from '@/platform/executor/engine';
 import {
   type ChildOrderView,
   type ExecutionConstraints,
@@ -34,7 +34,7 @@ import {
   type FillView,
   type MarketSnapshot,
   type StrategyContext,
-} from '../../src/platform/executor/types';
+} from '@/platform/executor/types';
 
 const INSTRUMENT = {
   symbol: 'BTC/USDT',

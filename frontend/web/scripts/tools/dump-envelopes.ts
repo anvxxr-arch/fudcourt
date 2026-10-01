@@ -1,6 +1,6 @@
 /**
  * Freezes the CURRENT TypeScript envelope() output for every recorded upstream
- * fixture (SG-4.1) into scripts/fixtures/expected/<mode>.json.
+ * fixture (SG-4.1) into tests/fixtures/expected/<mode>.json.
  *
  * Why: the CryptoRank proxy is being ported to Go. The port needs a frozen,
  * machine-checkable oracle: for each recorded HelperOut payload, the exact JSON
@@ -53,7 +53,9 @@ import {
 } from '@/features/cryptorank/client';
 import { envelope, type HelperOut } from '@/features/cryptorank/shapers';
 
-const FIX = path.join(process.cwd(), 'scripts', 'fixtures');
+// The fixtures moved to the repo-root tests/fixtures (spec Phase 7); process.cwd()
+// is frontend/web, so the shared tree is two levels up.
+const FIX = path.join(process.cwd(), '..', '..', 'tests', 'fixtures');
 const OUT = path.join(FIX, 'expected');
 
 type ManifestMode = {

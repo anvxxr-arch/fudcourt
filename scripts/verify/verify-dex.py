@@ -469,7 +469,7 @@ def verify_ui_wiring(base: str) -> None:
     """
     section("every proxy type is reachable from the UI")
 
-    comp = os.path.join(os.path.dirname(__file__), "..", "..", "src", "components", "DexPage.tsx")
+    comp = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "web", "src", "features", "dex", "ui.tsx")
     with open(comp, encoding="utf-8") as fh:
         src = fh.read()
 
@@ -478,7 +478,7 @@ def verify_ui_wiring(base: str) -> None:
     # appear as a MODES entry. A bare substring is enough -- the failure mode we
     # are guarding against is a mode being deleted outright.
     for t in TYPES:
-        check(t in src, f"type '{t}' has a UI path", note("DexPage.tsx"))
+        check(t in src, f"type '{t}' has a UI path", note("src/features/dex/ui.tsx"))
 
     # And the reverse: no UI mode may point at a type the proxy does not serve.
     # 'pairs' is the profiles->tokens join and 'mint' picks tokens-v1/token-pairs

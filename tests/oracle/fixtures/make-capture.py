@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the replayable sync capture fixture (offline, deterministic).
 
-The gate (`frontend/web/scripts/verify/verify-sync.py`) proves the Rust sync and
+The gate (`scripts/verify/verify-sync.py`) proves the Rust sync and
 the Python oracle produce IDENTICAL `assets` projections from the same inputs.
 This script writes those inputs: a recorded `key -> response body` map whose
 keys are built exactly the way BOTH implementations build them.

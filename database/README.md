@@ -8,6 +8,14 @@
 > Moved here from `apps/web/db/` (Phase 2 of the domain restructure); DDL semantics
 > were not changed by the move. Column-level documentation stays in
 > `docs/architecture/SCHEMA.md`.
+>
+> **Note on the restructure:** the tree was renamed underneath this document in
+> two commits (`8c902dc`: `apps/`→`frontend/`, `services/`→`backend/`,
+> `packages/`→`shared/`, `deploy/`→`infrastructure/`; `44604ce`: `backend/data`
+> providers grouped under `internal/research`, `internal/platform`). Every
+> `path:line` below was re-read after `44604ce`; the three `.sql` files themselves
+> did not change. Where a doc reference in this file still names the pre-move
+> path, it is listed under "Known stale references".
 
 ## Files
 
@@ -31,13 +39,13 @@ tables `:32,:58,:100,:106,:129,:147,:157,:165,:173,:179`, indexes
 
 | Consumer | Kind |
 |---|---|
-| `frontend/web/scripts/tools/dump-schema.mjs:38` | **writer** (`--check` mode at `:44` prints `SCHEMA_OK`, `:47` prints `SCHEMA_DRIFT`; usage documented `:3-4`) |
-| `README.md:88` | operator command (`node scripts/tools/dump-schema.mjs --check` — path in the snippet is stale, see below) |
-| `deploy/systemd`-adjacent docs: `docs/architecture/SCHEMA.md:8`, `docs/architecture/TECH-STACK.md:63` | drift-alarm documentation |
+| `scripts/database/dump-schema.mjs:38` | **writer** (`--check` mode at `:44` prints `SCHEMA_OK`, `:47` prints `SCHEMA_DRIFT`; usage documented `:3-4`) |
+| `README.md:88` | operator command (`node scripts/database/dump-schema.mjs --check` — path in the snippet is stale, see below) |
+| docs: `docs/architecture/SCHEMA.md:8` (already repointed to `frontend/web/`), `docs/architecture/TECH-STACK.md:63` (still stale) | drift-alarm documentation |
 | `frontend/web/src/platform/db/mirror.ts:48` | comment: the projection mirrors this file's shape |
 | `database/schema/pg-schema.sql:11,:18` | comment: types map 1:1 from here |
 | `shared/contracts/openapi/fudcourt.yaml:4323` → `shared/sdk/typescript/src/generated/schema.d.ts` | contract comment (SDK is generated from the yaml) |
-| `backend/api/internal/transactions/transactions.go:31,:41` | Go comment (column defaults mirror this file) |
+| `backend/api/internal/finance/transactions/transactions.go:31,:41` | Go comment (column defaults mirror this file) |
 | — | **no other code reads the file.** The only `readFileSync` calls on paths under `database/` in the whole repo are its own generator (`dump-schema.mjs:42`, `--check` mode) and the executor drift test (`executor-store-tests.ts:502`); `dump-schema.mjs:55` is its writer |
 
 **Verdict:** the *live Turso database* is the system of record; this file is a
@@ -53,7 +61,7 @@ authoritative **source** half of the treasury segment.
 | `deploy/systemd`/`infrastructure/systemd/fudcourt-pgload.service:3,:11`, `fudcourt-pgload.timer:3`, `fudcourt-sync.service:41` | runs `pg-load.ts` (oneshot every 60 s; also after every sync) |
 | `infrastructure/systemd/fudcourt-pgload.service:4` | `Documentation=` line only |
 | `shared/contracts/openapi/fudcourt.yaml:4322,:4399` → SDK `schema.d.ts:2227` | contract comment |
-| `docs/architecture/current.md:228`, `docs/architecture/final-review.md:40`, `docs/architecture/domain-map.md:45`, `docs/records/DECISIONS.md:1277` | docs |
+| docs: `docs/architecture/current.md:228`, `docs/architecture/final-review.md:40`, `docs/architecture/domain-map.md:50`, `docs/records/DECISIONS.md:1277` | docs (line numbers re-read post-restructure) |
 
 **Verdict:** the authoritative **representation** of the Postgres read model, but
 **no tool in this repo executes it**: there is no `psql` invocation anywhere in the
@@ -65,12 +73,12 @@ only issues DML against tables this file must already have created.
 
 | Consumer | Kind |
 |---|---|
-| `frontend/web/scripts/tests/executor-store-tests.ts:500-510` | **drift pin** — reads this file (5-up from the compiled `.shaper-tests/scripts/tests`) and asserts normalized equality with `EXECUTOR_DDL` |
+| `tests/integration/executor/executor-store-tests.ts:500-510` | **drift pin** — reads this file (5-up from the compiled `.shaper-tests/scripts/tests`) and asserts normalized equality with `EXECUTOR_DDL` |
 | `frontend/web/src/platform/executor/store.ts:94` (comment), `:97` (`EXECUTOR_DDL`), `:238` (`ensureExecutorSchema`) | the **applied** DDL — this file is the readable copy of it |
 | `frontend/web/src/platform/executor/runtime.ts:117` (`bootstrapExecutor` → `ensureExecutorSchema`) | executes it at boot; entry points `frontend/web/scripts/executor/worker.ts:27` and `runtime.ts:139` |
-| `frontend/web/scripts/verify/executor-paper-e2e.ts:28,:99` | live gate that calls `ensureExecutorSchema()` against the real cluster |
+| `tests/e2e/executor/executor-paper-e2e.ts:28,:99` | live gate that calls `ensureExecutorSchema()` against the real cluster |
 | `backend/workers/executor/internal/{repository/store.go:4, executor/records.go:5, executor/types.go:9, credentials/credentials.go:8}` | Go comment references (the Go worker writes these tables; it does **not** read this file) |
-| `docs/architecture/{current.md:229, executor.md, security.md, events.md, ARCHITECTURE.md:339}`, `docs/records/DECISIONS.md` | docs |
+| docs: `docs/architecture/executor.md:50,:71`, `docs/architecture/security.md:32`, `docs/architecture/events.md:75`, `docs/architecture/ARCHITECTURE.md:362`, `docs/architecture/current.md:229`, `docs/records/DECISIONS.md` | docs (line numbers re-read post-restructure) |
 
 **Verdict:** the authoritative tracked DDL for the `executor` schema. *Applied*
 copy is the embedded `EXECUTOR_DDL`; this file is the human-readable one, and the
@@ -191,9 +199,11 @@ mistakes the plan for the tree:
   `schema/pg-schema.sql`.
 - `database/seeds/` — **NOT DONE, and no content exists to put in it.** (Not
   created: an empty directory would be a claim, not a fact.)
-- `database/fixtures/` — **NOT DONE.** The repo's only DB-shaped fixture set is
-  the sync replay oracle at `tests/oracle/fixtures/`, which belongs to the
-  tests tree.
+- `database/fixtures/` — **NOT DONE.** No DB fixtures live here. (The brief's
+  `tests/fixtures` target relates to the moved recorded payloads under
+  `tests/fixtures/`; the only DB-shaped fixture set in the repo is
+  the sync replay oracle at `tests/oracle/fixtures/`, which belongs to the tests
+  tree.)
 - A single ordered migration runner — **NOT DONE and deliberately not attempted**
   (see the migration policy above).
 
@@ -203,13 +213,28 @@ The tree is being renamed (`apps/` + `services/` → `frontend/` + `backend/`), 
 some in-repo references still name the old paths. Verified, left alone on
 purpose:
 
-- `database/schema/pg-schema.sql:3,:5,:107,:144` and
-  `database/schema/executor-schema.sql:9,:11` name `scripts/tools/…` /
+- `database/schema/pg-schema.sql:3,:5,:144` and
+  `database/schema/executor-schema.sql:9` name `scripts/tools/…` /
   `src/platform/executor/store.ts` without the `frontend/web/` prefix.
-- `executor-schema.sql:11` still spells the test `executor-store-tests.ts`; its
-  real path is `frontend/web/scripts/tests/executor-store-tests.ts`.
-- `frontend/web/scripts/verify/verify-sync.py:43` still resolves the oracle to
-  `apps/web/scripts/tools/sync-live.py` (path no longer exists) and
-  `backend/data/internal/cryptorank/parity_test.go:46` still walks to
-  `web/scripts/fixtures` (post-move, the fixture parity test skips via
-  `FUDCOURT_DATA_FIXTURES_DIR`).
+- `database/schema/executor-schema.sql:11` names the drift test without its
+  directory; its real path is `tests/integration/executor/executor-store-tests.ts`.
+- Go fixture discovery: **fixed 2026-10-01 in `44604ce`**.
+  `backend/data/internal/research/cryptorank/parity_test.go:53-70` and
+  `backend/data/internal/research/paritytest/parity_test.go:47-65` now try
+  `tests/fixtures` → `tests/fixtures` →
+  `apps/web/scripts/fixtures` at each ancestor (env
+  `FUDCOURT_DATA_FIXTURES_DIR` still wins), and the parity tests execute
+  instead of skipping. Recorded here because the fix post-dates this file's
+  original path references.
+- The root `README.md` "Verify" snippet (`:70-89`) still assumes the old
+  `apps/`+`services/` layout: `cd ../web` (`:74`, lands in the non-existent
+  `backend/web`) and `cd ../sync` (`:86`) do not resolve, `scripts/checks/…`,
+  `scripts/verify/…` (`:75`, `:78-85`) are relative to `frontend/web/scripts/`,
+  and `scripts/database/dump-schema.mjs` (`:88`) also needs the `frontend/web/`
+  prefix. Only `bunx tsc`, `bun run build` and `cargo test` are layout-agnostic.
+
+**Verified not stale** (checked because the tree is mid-rename):
+`executor-store-tests.ts:501-502` reaches `database/schema/executor-schema.sql`
+from the compiled `.shaper-tests/` layout, and `verify-sync.py:41-43` resolves
+both the fixtures (`tests/oracle/fixtures`) and the oracle
+(`frontend/web/scripts/tools/sync-live.py`) correctly.

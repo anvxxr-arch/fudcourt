@@ -225,7 +225,7 @@ def verify_parity(base: str) -> None:
 def verify_ui_wiring(base: str) -> None:
     section("every served mode has a UI path, and vice versa")
     import pathlib
-    root = pathlib.Path(__file__).resolve().parents[2]  # frontend/web
+    root = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "web"  # scripts/verify -> frontend/web
     route = (root / "src/app/(frontend)/api/llama/route.ts").read_text()
     page = (root / "src/features/llama/ui.tsx").read_text()
     # The tab registry moved out of app/page.tsx into the shell during the
@@ -256,7 +256,7 @@ def verify_ui_wiring(base: str) -> None:
     # validation moved to backend/data/internal/llama, so the pre-cutover
     # `LLAMA_MODES.includes(mode)` assertion is replaced by the proxy contract —
     # the route must reach the sidecar and must not re-implement the mode table.
-    go_llama = root.parent.parent / "services" / "data" / "internal" / "llama" / "modes.go"
+    go_llama = root.parent.parent / "backend" / "data" / "internal" / "research" / "llama" / "modes.go"
     if go_llama.exists():
         go_modes = set(re.findall(r'"(chains|protocols|historical)"', go_llama.read_text()))
         check(declared == go_modes,

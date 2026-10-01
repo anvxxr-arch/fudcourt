@@ -11,7 +11,7 @@
 # cross-service API conformance check, the hook syntax check, and frontend/web
 # typecheck + shaper fixture tests.
 #
-# DELIBERATELY NOT HERE: live/network harnesses (frontend/web/scripts/verify/verify-*.py,
+# DELIBERATELY NOT HERE: live/network harnesses (scripts/verify/verify-*.py,
 # FUDCOURT_DATA_LIVE=1 Go tests, real exchange calls) — they are slow and touch upstreams;
 # run them manually against a known-good window.
 set -u
@@ -32,6 +32,9 @@ step "deploy-unit guard (ExecStart paths, timer pairs)"
 step "shared/contracts drift gate"
 node shared/contracts/scripts/check-contract.mjs || fail contracts
 
+step "shared/contracts canonical-schema gate (parse, dialect, refs, README index, structure)"
+node shared/contracts/scripts/check-schemas.mjs || fail schemas
+
 step "sdk-ts generated-SDK drift + typecheck"
 (cd shared/sdk/typescript \
   && tmp=$(mktemp -d) && cp -r src/generated "$tmp/generated" \
@@ -51,7 +54,7 @@ step "cargo build/test (backend/sync)"
 (cd backend/sync && cargo fmt --check && cargo build --release --quiet && cargo test --release --quiet) || fail rust
 
 step "sync oracle gate (Python oracle vs Rust replay, byte-identical projection)"
-python3 frontend/web/scripts/verify/verify-sync.py >/dev/null || fail sync-oracle
+python3 scripts/verify/verify-sync.py >/dev/null || fail sync-oracle
 step "cross-service API conformance (Go api routes <-> contract <-> web proxies)"
 python3 tests/integration/api/check-api-contract.py || fail api-contract
 step "pre-push hook syntax"

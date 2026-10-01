@@ -280,7 +280,7 @@ def verify_ui_wiring(base: str) -> None:
     section("route <-> UI wiring (tracker market rows)")
     import pathlib
     import re
-    root = pathlib.Path(__file__).resolve().parents[2]  # frontend/web
+    root = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "web"  # scripts/verify -> frontend/web
     route = (root / "src/app/(frontend)/api/markets/route.ts").read_text()
     tracker = (root / "src/features/tracker/ui.tsx").read_text()
     shell = (root / "src/components/layout/store-shell.tsx").read_text()

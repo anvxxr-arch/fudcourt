@@ -59,7 +59,7 @@ Plaintext key material (API secret, full API key, signed payload, auth headers
 
 Persistence stores only `api_key_masked` + the sealed envelope; the E2E asserts
 a secret appears in neither API payloads nor raw DB rows (DR-021 measured
-evidence; `frontend/web/scripts/tests/executor-store-tests.ts` §44/§109 tests).
+evidence; `tests/integration/executor/executor-store-tests.ts` §44/§109 tests).
 
 ## 4. Withdrawal permission policy
 **FUDCourt NEVER requests, holds, or uses withdrawal capability** (PRD §43:

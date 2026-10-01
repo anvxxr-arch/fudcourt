@@ -305,7 +305,7 @@ if RC_ROUTE.exists():
     # src/features/treasury/reconcile.ts must still exist as the oracle, or parity has no second side.
     if not (SRC / "features" / "treasury" / "reconcile.ts").exists():
         fails.append("src/features/treasury/reconcile.ts: the TS oracle is gone — parity has no second side")
-    elif not (ROOT / "scripts" / "verify" / "verify-reconcile.py").exists():
+    elif not (ROOT.parent.parent / "scripts" / "verify" / "verify-reconcile.py").exists():
         fails.append("scripts/verify/verify-reconcile.py: contract harness is gone")
     else:
         rc_row = "reconcile is a Rust-served proxy (oracle kept, 502 path present)"

@@ -90,7 +90,8 @@ SKIP = 0
 NOTES: list[str] = []
 RESULTS: list[dict] = []
 
-APP_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # frontend/web
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root (scripts/verify -> scripts -> root -> .)
+APP_DIR = os.path.join(REPO, "frontend", "web")
 SIDECAR_DEFAULT = "http://127.0.0.1:3101"
 WEB_DEFAULT = "http://127.0.0.1:3100"
 SITE = "https://www.khala.io"
@@ -904,7 +905,7 @@ def main() -> int:
     report = {"duration_s": dur, "base": base, "site": SITE,
               "endpoint": liveness, "pass": PASS, "fail": FAIL, "skip": SKIP,
               "info": NOTES, "checks": RESULTS}
-    outp = os.path.join(APP_DIR, "scripts", "verify", "khala-report.json")
+    outp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "khala-report.json")
     try:
         with open(outp, "w") as f:
             json.dump(report, f, indent=2, default=str)

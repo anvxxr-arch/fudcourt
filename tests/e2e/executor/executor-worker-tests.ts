@@ -22,14 +22,14 @@ import {
   setLiveAdapterFactory,
   summarizeFills,
   tickerToSnapshot,
-} from '../../src/platform/executor/worker';
+} from '@/platform/executor/worker';
 import {
   canTransition,
   isTerminalExecution,
   type ChildOrderRecord,
   type ExecutorStore,
   type PlannedChildOrder,
-} from '../../src/platform/executor/types';
+} from '@/platform/executor/types';
 
 const INSTRUMENT_GRID = { stepSize: 0.001 };
 

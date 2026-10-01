@@ -16,7 +16,7 @@ surface"), read out of the running build, not from memory:
   read-only 404: the handler SELECTs before it would ever DELETE, and the row
   does not exist). This replaces the retired `x-fud-token` probe: that header
   grants nothing any more (docs/architecture/ARCHITECTURE.md §6).
-  The cookie is minted exactly like frontend/web/scripts/tests/auth-tests.ts does it:
+  The cookie is minted exactly like frontend/web/tests/auth-tests.ts does it:
       payload = base64url(JSON.stringify(SessionUser + exp))
       cookie  = payload + "." + base64url(HMAC-SHA256(secret, payload))
   The secret is discovered from (in order) the listening server's own
@@ -88,7 +88,7 @@ def rec(group, name, st, want, body):
 
 
 # --------------------------------------------------------------------------
-# session minting (mirrors frontend/web/scripts/tests/auth-tests.ts createSessionToken)
+# session minting (mirrors frontend/web/tests/auth-tests.ts createSessionToken)
 # --------------------------------------------------------------------------
 def _b64url(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
@@ -384,7 +384,7 @@ print("=== F. khala: 3 modes + strict params + real-404 decoy ===", flush=True)
 # internal/khala). `key` belongs to mode=report only; `limit` to latest
 # (1..50 strict) -- never clamped, never silently ignored. The deep contract
 # (dates, ISO parity, body fidelity, sitemap equality) lives in
-# frontend/web/scripts/verify/verify-khala.py; this sweep proves the frozen status matrix,
+# scripts/verify/verify-khala.py; this sweep proves the frozen status matrix,
 # so a khala regression surfaces in the whole-route pass too.
 KH = [
     ("mode=reports", 200),

@@ -1,7 +1,7 @@
 /**
- * Records REAL CryptoRank upstream payloads into scripts/fixtures/ (SG-4.1).
+ * Records REAL CryptoRank upstream payloads into tests/fixtures/ (SG-4.1).
  *
- * Why: the shaper unit tests (scripts/tests/shaper-tests.ts) must run offline and
+ * Why: the shaper unit tests (frontend/web/tests/shaper-tests.ts) must run offline and
  * deterministically against the exact HelperOut shape the live route receives,
  * so upstream template drift shows up as a failing test instead of a silent
  * UI change. A fixture is the helper's raw stdout JSON, byte-for-byte -- never
@@ -32,8 +32,11 @@ import {
 } from '@/features/cryptorank/client';
 
 const PYTHON = process.env.CR_PYTHON ?? '/home/dwizzy/.venvs/crfetch/bin/python';
-const HELPER = path.join(process.cwd(), 'scripts', 'oracle', 'cr_fetch.py');
-const OUT = path.join(process.cwd(), 'scripts', 'fixtures');
+// The oracle and the recorded fixtures moved out of frontend/web in the Phase 7
+// relocation: tests/oracle/cr_fetch.py and tests/fixtures (shared with the Go
+// parity gate). process.cwd() is frontend/web.
+const HELPER = path.join(process.cwd(), '..', '..', 'tests', 'oracle', 'cr_fetch.py');
+const OUT = path.join(process.cwd(), '..', '..', 'tests', 'fixtures');
 
 type KeyedMode = keyof typeof CR_KEYED_PATHS;
 type ModeKey = keyof typeof CR_MODE_ARGS;

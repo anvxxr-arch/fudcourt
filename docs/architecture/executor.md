@@ -118,11 +118,12 @@ deleted"). What that means in practice:
   `frontend/web/scripts/executor/worker.ts` (unit
   `infrastructure/systemd/fudcourt-executor-worker.service`) — the API routes under
   `frontend/web/src/app/(frontend)/api/executor/**` (16 handlers) and the worker.
-- The oracle suites are `frontend/web/scripts/tests/executor-{engine,exchange,plan,
-  risk,runtime,store,worker,ui}-tests.ts` — **155 tests, 0 fail** as recorded in
+- The oracle suites are `tests/e2e/executor/executor-{engine,plan,risk,runtime,worker}-tests.ts`,
+  `tests/integration/executor/executor-{exchange,store}-tests.ts` and
+  `frontend/web/tests/executor-ui-tests.ts` — **155 tests, 0 fail** as recorded in
   `docs/architecture/current.md` §5a (engine 20, exchange 1, plan 25, risk 39,
   runtime 12, store 41, worker 9, ui 8). The paper E2E
-  (`frontend/web/scripts/verify/executor-paper-e2e.ts`, `bun run verify:executor`) is
+  (`tests/e2e/executor/executor-paper-e2e.ts`, `bun run verify:executor`) is
   the integration gate; it is environment-gated on `FUDCOURT_EXECUTOR_MASTER_KEY`.
 - Go code mirrors the TS contract field-for-field and says so
   (`backend/workers/executor/internal/core/execution/records.go`: "mirror

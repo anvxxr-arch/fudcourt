@@ -32,7 +32,7 @@ place where the client must *be* a real TLS stack rather than shell out to one.
 **Verification/automation language: Python** — chosen because the
 reverse-engineering probes need `curl_cffi` (TLS-impersonating Chrome) and
 Playwright, both Python-first. Since DR-005 the Python fetch path
-(`frontend/web/scripts/oracle/cr_fetch.py`) exists **only** as `verify-cryptorank.py`'s independent
+(`tests/oracle/cr_fetch.py`) exists **only** as `verify-cryptorank.py`'s independent
 oracle.
 
 ## 2. Frameworks & runtimes
@@ -61,7 +61,7 @@ oracle.
 
 No local database: both stores are managed cloud. The Turso schema **is**
 versioned: `database/schema/schema.sql` (9 `CREATE TABLE`s incl. `sqlite_sequence`,
-tracked) with a drift alarm at `node frontend/web/scripts/tools/dump-schema.mjs --check` (R-1).
+tracked) with a drift alarm at `node scripts/database/dump-schema.mjs --check` (R-1).
 
 ## 4. Infrastructure
 
@@ -108,16 +108,16 @@ Browser/agent  ──►  GET /api/cryptorank?mode=…[&key=…][&fresh=1]   (:3
   every non-browser client; market pages serve full SSR payloads.
 - **Verification stack:** `verify-cryptorank.py` (244 checks incl. ground truth vs
   coins.llama.fi + CoinGecko + publisher-title/oembed GATE3). It keeps driving
-  the **Python** oracle `frontend/web/scripts/oracle/cr_fetch.py` against the same upstream while
+  the **Python** oracle `tests/oracle/cr_fetch.py` against the same upstream while
   checking the **Go-served** origin, so the two clients still cross-check each
   other (DR-005); plus Playwright DOM audit (`frontend/web/scripts/verify/dom_audit.py`,
   4 checks — measured 3 passed / 1 failed: `/tracker` table rows = 0), plus sibling harnesses
-  `verify-{llama,news,chainrank,dex,signals}.py` and `verify-limiter.mts`.
+  `verify-{llama,news,chainrank,dex,signals}.py` and `frontend/web/tests/verify-limiter.mts`.
 - **Offline shaper tests:** `bun run test:shapers` (node --test; shaper/fixture + auth
   + inbound rate-limit suites, ~0.5s)
   runs `frontend/web/src/features/cryptorank/shapers.ts` against 26 recorded upstream payloads (`.json.gz`) in
-  `frontend/web/scripts/fixtures/` (sha256-pinned in `MANIFEST.json`: 26 pinned hashes,
-  re-record with `bun run record:fixtures`; `ls frontend/web/scripts/fixtures/*.gz | wc -l` = 26). Wired into the pre-push hook and the CI web job, so
+  `tests/fixtures/` (sha256-pinned in `MANIFEST.json`: 26 pinned hashes,
+  re-record with `bun run record:fixtures`; `ls tests/fixtures/*.gz | wc -l` = 26). Wired into the pre-push hook and the CI web job, so
   upstream template drift is a red test instead of a silent UI change.
   `frontend/web/scripts/checks/check-contract.py` additionally asserts the Go mode table in
   `backend/data/internal/research/cryptorank/modes.go` **equals** its TS mirror, so the two
@@ -171,6 +171,6 @@ Valkey :6379                   shared L2, survives restarts
   - web (platform/cache/valkey.ts, Bun)     the ticker venue sweep
   Both FAIL OPEN: disabled/unreachable/unreadable all mean "do the work as before".
 ```
-The read-model split is gated by `frontend/web/scripts/tools/parity-pg.ts` (the app's own
+The read-model split is gated by `scripts/verify/parity-pg.ts` (the app's own
 `DASHBOARD_READS` run against both engines). SQLite dialect is translated in one
 place, `toPostgres` in `platform/db/mirror.ts`.

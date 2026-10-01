@@ -77,6 +77,7 @@ cd ../../frontend/web
 python3 scripts/checks/check-contract.py     # offline: CR_MODES + TS-Go mode-table parity + mutation-auth guards
 bun run test:shapers                # offline: shaper + auth + inbound rate-limit tests
 bunx tsc --noEmit && bun run build  # typecheck + Next 16 build (Bun is the runner: DR-007)
+cd ../..                            # back to the repo root: the repo-wide gates live in scripts/
 python3 scripts/verify/verify-sync.py         # OFFLINE: sync oracle gate — Python sync-live.py vs
                                               # Rust fudcourt-sync byte-identical replay (tests/oracle fixtures)
 python3 scripts/verify/verify-cryptorank.py  # LIVE: 244-check upstream harness (3-gate decoy detector)
@@ -85,7 +86,7 @@ python3 scripts/verify/verify-khala.py       # LIVE: khala harness (136 checks; 
 python3 scripts/verify/verify-llama.py       # LIVE: DeFiLlama harness (51 checks; green on :3101/:3100)
 python3 scripts/verify/verify-news.py        # LIVE: Cointelegraph RSS harness (50 checks; green on :3101/:3100)
 python3 scripts/verify/verify-chainrank.py   # LIVE: chainrank harness (50 checks; green on :3101/:3100)
-node scripts/tools/dump-schema.mjs --check  # schema drift alarm vs database/schema/schema.sql
+node scripts/database/dump-schema.mjs --check  # schema drift alarm vs database/schema/schema.sql
 ```
 CI is five path-filtered workflows — `web.yml` (contract/structure/deploy gates,
 typecheck, shaper fixtures, build), `go.yml` (build/vet/test per Go module),

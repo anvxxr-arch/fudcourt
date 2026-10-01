@@ -21,7 +21,11 @@ import { gunzipSync } from 'node:zlib';
 import { CR_DISABLED, CR_MODES, CR_MODE_UPSTREAM, type CrLiveMode } from '@/features/cryptorank/client';
 import { envelope, type HelperOut } from '@/features/cryptorank/shapers';
 
-const FIX = path.join(process.cwd(), 'scripts', 'fixtures');
+// The fixtures moved out of frontend/web (spec Phase 7): they are shared by the web
+// shaper suites, the TS fixture tools and the Go parity gate, so they now live at
+// the repo-root tests/fixtures. process.cwd() is frontend/web (test:shapers runs
+// there), so the tree is two levels up.
+const FIX = path.join(process.cwd(), '..', '..', 'tests', 'fixtures');
 const live = (CR_MODES as readonly string[])
   .filter((m) => !(CR_DISABLED as readonly string[]).includes(m)) as CrLiveMode[];
 

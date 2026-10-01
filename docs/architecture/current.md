@@ -180,7 +180,7 @@ concurrent modification, so no indeterminate results this round (`bun run build`
 re-run — its exit-0 result in the table above stands).
 
 `frontend/web` package scripts (source of truth): `dev`, `build`, `start` (`bun --bun next start -p 3000`),
-`test:shapers` (see above), `verify:executor` (`scripts/verify/executor-paper-e2e.ts`),
+`test:shapers` (see above), `verify:executor` (`tests/e2e/executor/executor-paper-e2e.ts`),
 `record:fixtures`, `dump:envelopes`, `generate:types` / `migrate` / `payload` (Payload CMS).
 
 ## 3. frontend/web — Next.js routes & pages
@@ -263,7 +263,7 @@ Adjacent:
   `fudcourt-executor-worker.service` (Bun).
 - Tests: `scripts/tests/executor-{engine,exchange,plan,risk,runtime,store,worker,ui}-tests.ts`
   (compiled by `tsconfig.shaper-tests.json` into `.shaper-tests/`, run offline via `node --test`).
-- `scripts/verify/executor-paper-e2e.ts` — paper-trading end-to-end verifier (`verify:executor`).
+- `tests/e2e/executor/executor-paper-e2e.ts` — paper-trading end-to-end verifier (`verify:executor`).
 
 ### 5a. Phase 5 parity baseline (per-suite, 2026-10-01)
 The 8 `executor-*-tests` suites are the deletion gate for the TS→Go port (migration-plan Phase 5).
@@ -299,7 +299,7 @@ before failing at `createCredential`. Verbatim error:
 error: FUDCOURT_EXECUTOR_MASTER_KEY missing or malformed (64 hex chars = 32 bytes required) - credential operations are fail-closed
 at masterKeyFromEnv (/home/dwizzy/fudcourt/frontend/web/src/platform/executor/store.ts:256:15)
 at createCredential (/home/dwizzy/fudcourt/frontend/web/src/platform/executor/store.ts:555:20)
-at /home/dwizzy/fudcourt/frontend/web/scripts/verify/executor-paper-e2e.ts:100:29
+at /home/dwizzy/fudcourt/tests/e2e/executor/executor-paper-e2e.ts:100:29
 ```
 **Go-side parity (2026-10-01, measured on this tree):** `backend/workers/executor` is a Go 1.25 module —
 `go build ./... && go vet ./... && go test ./...` green, 19 internal packages + `cmd/executor`,
@@ -336,18 +336,22 @@ live tests behind `FUDCOURT_DATA_LIVE=1`. `bin/fudcourt-data` is the built binar
 
 ## 7. backend/sync (Rust crate `fudcourt-sync`, was apps/sync)
 
-Two binaries sharing `src/lib.rs`:
+Two binaries sharing `src/lib.rs`, grouped by event-pipeline stage (a directory exists only where a
+module has moved into it):
 
 - `src/main.rs` → **`fudcourt-sync`**: live multi-chain balance sync → Turso `assets` table.
-  Pipeline `src/sync.rs` (prices → balances → Hyperliquid → print → Turso), ported from
-  `frontend/web/scripts/sync-live.py` with byte-identical output rules (`pyfmt.rs` Python-identical
-  number formatting; `db.rs` Turso HTTP pipeline client with the same wire protocol;
+  Pipeline `src/streams/sync.rs` (prices → balances → Hyperliquid → print → Turso), ported from
+  `frontend/web/scripts/tools/sync-live.py` with byte-identical output rules (`pyfmt.rs`
+  Python-identical number formatting — crate root, cross-cutting; `src/persistence/db.rs` Turso
+  HTTP pipeline client with the same wire protocol;
   `jsonrpc.rs` retry/honesty rules — a failed RPC call never becomes a zero balance;
-  `chains.rs` chain/wallet/price-oracle registry transcribed from the Python original).
+  `chains.rs` chain/wallet/price-oracle registry transcribed from the Python original). The
+  Python-parity oracle replay seam (`oracle.rs`) also stays at the crate root.
   Scheduled by `fudcourt-sync.timer` (every 5 min).
 - `src/bin/fudcourt-reconciled.rs` → **`fudcourt-reconciled`**: bounded HTTP/1.1 service
-  (`src/server.rs`) serving `/api/reconcile` (:3102) — Rust port of
-  `frontend/web/app/api/reconcile/route.ts` (DR-014); reconciliation math in `src/reconcile.rs`.
+  (`src/reconciliation/server.rs`) serving `/api/reconcile` (:3102) — Rust port of
+  `frontend/web/src/app/(frontend)/api/reconcile/route.ts` (DR-014); reconciliation math in
+  `src/reconciliation/reconcile.rs`.
 - Tests: `tests/reconcile.rs` + inline tests (17 total, all passing).
 
 Note: the Python originals (`frontend/web/scripts/tools/sync-live.py`, web `api/reconcile`) still exist
@@ -383,7 +387,7 @@ Toolchain pins: Node 22 runtime, Bun 1.4.2, Go 1.24.1, Rust stable.
 
 - **Executor internals reach deep into web**: production files outside
   `src/platform/executor/` import its internals — 15 `api/executor/**` route handlers,
-  `scripts/executor/worker.ts`, `scripts/verify/executor-paper-e2e.ts`, and
+  `scripts/executor/worker.ts`, `tests/e2e/executor/executor-paper-e2e.ts`, and
   `src/features/executor/{client,ui}`. Of these, all 15 routes + worker + paper-e2e
   import the **sensitive** modules directly (`risk`, `exchange`, `lock`, `store`, `plan`, `engine`).
 - **Shell depends on features** (upward): `src/components/layout/store-shell.tsx` imports 16+

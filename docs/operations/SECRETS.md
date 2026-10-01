@@ -12,7 +12,7 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 
 | Name | Consumers (first-party) | Home (file) | Production consumer | CI needs it? |
 |------|------------------------|-------------|---------------------|--------------|
-| `TURSO_AUTH_TOKEN` | `frontend/web/lib/db.ts`, `backend/sync/src/db.rs`, `scripts/tools/sync-live.py`, `scripts/tools/dump-schema.mjs` | `./.env` (root) + `frontend/web/.env.local` | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`; it REFUSES TO START without the token) | no |
+| `TURSO_AUTH_TOKEN` | `frontend/web/lib/db.ts`, `backend/sync/src/db.rs`, `scripts/tools/sync-live.py`, `scripts/database/dump-schema.mjs` | `./.env` (root) + `frontend/web/.env.local` | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`; it REFUSES TO START without the token) | no |
 | `ALCHEMY_KEY` | `frontend/web/scripts/tools/sync-live.py` (live ETH RPC) + `frontend/web/scripts/archive/*.mjs` (forensic one-offs **deleted 2026-09-29**, after the rotation was recorded) | `./.env` (root) | `fudcourt-sync.timer` | no |
 | `FUDCOURT_BOT_TOKEN` | `app/api/auth/callback` + `app/admin` (reads guild member roles with the bot) | `frontend/web/.env.local` | `fudcourt-web` | no |
 | `FUDCOURT_CLIENT_SECRET` | `app/api/auth/callback` (OAuth code exchange) | `frontend/web/.env.local` | `fudcourt-web` | no |
@@ -20,7 +20,7 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 | `FUD_MUTATION_TOKEN` + `NEXT_PUBLIC_FUD_MUTATION_TOKEN` | **RETIRED** — superseded by the session tier. `NEXT_PUBLIC_…` was inlined at build time and shipped in a public JS chunk; the pair is safe to delete from `.env.local` and `.env` | — | — | no |
 | `DATABASE_URL` (Neon) | Payload blog (now `frontend/web/src/cms`, DR-017) | `frontend/web/.env.local` | `fudcourt-web` (:3100) | no (build works without it — verified) |
 | `PAYLOAD_SECRET` | Payload blog (sessions/cookies) | `frontend/web/.env.local` | `fudcourt-web` (:3100) | no |
-| `CR_PYTHON` | interpreter for the **verifier oracle** `scripts/oracle/cr_fetch.py` (no longer a runtime path — DR-005: the route proxies to `fudcourt-data`) | code default (`~/.venvs/crfetch/bin/python`) | `verify-cryptorank.py` runs on this host | no |
+| `CR_PYTHON` | interpreter for the **verifier oracle** `tests/oracle/cr_fetch.py` (no longer a runtime path — DR-005: the route proxies to `fudcourt-data`) | code default (`~/.venvs/crfetch/bin/python`) | `verify-cryptorank.py` runs on this host | no |
 | `FUDCOURT_DATA_URL` | upstream base of the CryptoRank route's proxy target | code default (`http://127.0.0.1:3101`) | `fudcourt-web` (`:3100`) | no |
 | `VERCEL_OIDC_TOKEN` (legacy residue) | — none anymore — | `frontend/web/.env.local` | — | no — **safe to delete this line** |
 | **`FUDCOURT_EXECUTOR_MASTER_KEY`** (added with the CEX Executor, DR-021) | `src/platform/executor/store.ts` — seals/opens every exchange credential (AES-256-GCM) and is read by `scripts/executor/worker.ts` indirectly through the store | `frontend/web/.env.local` (**never** committed; git-ignored) | `fudcourt-web` (`:3100`) + `fudcourt-executor-worker` | no |
@@ -92,7 +92,7 @@ Production == this homeserver:
 ## 4. Runtime surfaces
 
 - `CR_PYTHON` points at the curl_cffi venv **on this host**, and since DR-005 it
-  is read only by the verification oracle (`scripts/oracle/cr_fetch.py`), never by a
+  is read only by the verification oracle (`tests/oracle/cr_fetch.py`), never by a
   request. The CryptoRank runtime is the Go `fudcourt-data` service
   (`fudcourt-data`, `:3101`); `/api/cryptorank` is a thin proxy to it, so a
   stopped sidecar is a loud 502 rather than a silent fallback.
@@ -144,7 +144,7 @@ Production == this homeserver:
 1. Turso dashboard → database → *Create token* (least privilege: read/write on
    the fudcourt DB), copy it, then revoke the old token.
 2. Update BOTH homes: repo-root `.env` and `frontend/web/.env.local`.
-3. Verify: `cd frontend/web && node scripts/tools/dump-schema.mjs --check` (RC 0) and
+3. Verify: `cd frontend/web && node scripts/database/dump-schema.mjs --check` (RC 0) and
    `python3 scripts/tools/sync-live.py` (RC 0); then `systemctl --user restart
    fudcourt-web` and `curl -s -o /dev/null -w '%{http_code}'
    http://127.0.0.1:3100/cryptorank` → 200.

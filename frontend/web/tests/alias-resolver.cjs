@@ -6,14 +6,17 @@
 // be resolved at require time. This shim does that against the compiled output,
 // keeping one alias in the source and no second convention in the tests.
 //
-// Loaded with `node --require ./scripts/tests/alias-resolver.cjs`; it is a .cjs
+// Loaded with `node --require ./tests/alias-resolver.cjs`. It is a .cjs
 // file so it works regardless of the nearest package.json `type`.
 'use strict';
 const path = require('node:path');
 const Module = require('node:module');
 
-// Compiled layout mirrors the source tree, so `@/x` -> <.shaper-tests>/src/x.
-const OUT = path.join(__dirname, '..', '..', '.shaper-tests');
+// tsc runs with the repo root as rootDir (web-only suites live in
+// frontend/web/tests, the executor suites in the repo-root tests/), so the
+// compiled layout mirrors the repo from <.shaper-tests>/:
+// `@/x` -> <.shaper-tests>/frontend/web/src/x.
+const OUT = path.join(__dirname, '..', '.shaper-tests', 'frontend', 'web');
 const original = Module._resolveFilename;
 
 Module._resolveFilename = function (request, parent, isMain, options) {

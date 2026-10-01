@@ -12,7 +12,7 @@ verify-cryptorank.py -- executable contract for the CryptoRank integration.
                 funding | unlocks   (503 loud refusal -- synthetic data-route)
                 funding | unlocks -> 503 REFUSED (upstream /_next/data class
                 serves synthetic decoy; see src/features/cryptorank/client.ts CR_DISABLED)
-    data path:  route -> scripts/oracle/cr_fetch.py (venv curl_cffi) -> cryptorank.io
+    data path:  route -> tests/oracle/cr_fetch.py (venv curl_cffi) -> cryptorank.io
                 market-page __NEXT_DATA__ SSR payload (see src/features/cryptorank/client.ts header
                 for the measured access matrix: API host challenged, market pages
                 readable, fundraising tree walled).
@@ -57,9 +57,10 @@ FAIL = 0
 NOTES: list[str] = []
 RESULTS: list[dict] = []
 
-APP_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # frontend/web
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root (scripts/verify -> scripts -> root -> .)
+APP_DIR = os.path.join(REPO, "frontend", "web")
 CR_VENV_PY = "/home/dwizzy/.venvs/crfetch/bin/python"
-HELPER = os.path.join(APP_DIR, "scripts", "oracle", "cr_fetch.py")
+HELPER = os.path.join(REPO, "tests", "oracle", "cr_fetch.py")
 
 
 def note(msg: str) -> None:
@@ -1783,7 +1784,7 @@ def main() -> int:
     check("component: ai overview wired",
           "loadMode('aioverview'" in comp and "aiOverview" in comp
           and "AI market overview" in comp, "")
-    helper_src = read("scripts/oracle/cr_fetch.py")
+    helper_src = read(os.path.join("..", "..", "tests", "oracle", "cr_fetch.py"))
     check("helper: data-route mode present", "--data-route" in helper_src
           and "_next/data" in helper_src, "")
     check("helper: buildId rotation handled", "force=True" in helper_src
@@ -1825,7 +1826,7 @@ def main() -> int:
         "info": NOTES,
         "checks": RESULTS,
     }
-    outp = os.path.join(APP_DIR, "scripts", "verify", "cryptorank-report.json")
+    outp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cryptorank-report.json")
     with open(outp, "w") as f:
         json.dump(report, f, indent=2, default=str)
     print(f"\n{PASS} passed, {FAIL} failed, {len(NOTES)} info ({dur}s) -> {outp}")

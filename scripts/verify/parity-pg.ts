@@ -7,7 +7,7 @@
  * Postgres, but Turso is the system of record, so any drift in the loader,
  * a translated statement, or an ordering is a wrong number on the board.
  *
- * Usage: bun run scripts/tools/parity-pg.ts
+ * Usage: bun run scripts/verify/parity-pg.ts
  * Exit 1 on any mismatch, so it can gate a timer or CI.
  */
 import { query, DASHBOARD_READS } from '@/platform/db/client';

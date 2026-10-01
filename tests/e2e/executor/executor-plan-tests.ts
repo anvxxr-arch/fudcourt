@@ -20,7 +20,7 @@ import {
   sizePosition,
   validatePlanInputs,
   type PlanInputs,
-} from '../../src/platform/executor/plan';
+} from '@/platform/executor/plan';
 import {
   DEFAULT_RISK_PROFILE,
   type BalanceSnapshot,
@@ -28,7 +28,7 @@ import {
   type FeeModel,
   type InstrumentMetadata,
   type MarketSnapshot,
-} from '../../src/platform/executor/types';
+} from '@/platform/executor/types';
 
 const INSTRUMENT: InstrumentMetadata = {
   symbol: 'BTC/USDT',

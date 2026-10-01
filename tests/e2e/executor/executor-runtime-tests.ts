@@ -13,8 +13,8 @@ import assert from 'node:assert/strict';
 import {
   evaluatePortfolioGates,
   evaluatePositionPolicy,
-} from '../../src/platform/executor/runtime';
-import { DEFAULT_RISK_PROFILE, type RiskProfile } from '../../src/platform/executor/types';
+} from '@/platform/executor/runtime';
+import { DEFAULT_RISK_PROFILE, type RiskProfile } from '@/platform/executor/types';
 
 const PROFILE: RiskProfile = {
   ...DEFAULT_RISK_PROFILE,

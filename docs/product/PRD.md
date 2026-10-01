@@ -83,7 +83,7 @@ One private surface where the owner can answer, at any moment:
   regressions). Production (:3100, systemd `EnvironmentFile`) does carry the
   secret and answers those gated paths correctly: `/api/admin/members` → 401,
   gated pages → 307.
-- Regression harness `frontend/web/scripts/verify/verify-cryptorank.py`: **244 passed / 0 failed / 8 info**.
+- Regression harness `scripts/verify/verify-cryptorank.py`: **244 passed / 0 failed / 8 info**.
 - Browser DOM audit: **109/109** checks.
 - All claims in docs must trace to tool output, not code reading.
 

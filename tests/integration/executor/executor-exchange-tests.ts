@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import type {
   ExchangeAdapter,
   NormalizedOrder,
-} from '../../src/platform/executor/types';
+} from '@/platform/executor/types';
 import {
   EXCHANGE_CAPABILITIES,
   PaperExchangeAdapter,
@@ -18,7 +18,7 @@ import {
   fromVenueSymbol,
   mapError,
   toVenueSymbol,
-} from '../../src/platform/executor/exchange';
+} from '@/platform/executor/exchange';
 
 test('placeholder: suite wiring', () => {
   assert.equal(typeof createAdapter, 'function');

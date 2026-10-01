@@ -119,7 +119,7 @@ ledger; portfolio is derived; append-only events). Current-state highlights:
 | 1 | **TS executor still in `frontend/web`** — 8,029 LOC, 10 modules (`engine,exchange,lock,plan,risk,runtime,store,types,worker` + `scripts/executor/worker.ts`) | `wc -l frontend/web/src/platform/executor/*.ts`; parity matrix rows 1–9 `DONE`, **offline composed Go harness `DONE`** (`internal/e2e`), live cutover rows `OPEN` | `verify:executor` (`executor-paper-e2e.ts`) + a live `cmd/executor` run need `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY` (and, for `cmd`, a real venue credential — no paper branch). **`verify:executor` is now green** (2026-10-01: `ALL PAPER-MODE CHECKS PASSED (§127)` — a dev master key was generated into the gitignored `frontend/web/.env.local`; Postgres :5433 and Valkey :6379 are live locally). What stays OPEN is the Go-worker cutover: `cmd/executor` exposes only `/healthz` + `/readyz`, so the 15 `/api/executor/*` routes still have no Go counterpart and the TS runtime remains the production path |
 | 2 | **15 web route handlers still import `platform/executor`** | `grep -rl platform/executor frontend/web/src/app` | #1 |
 | 3 | **EXECUTOR DDL still embedded in `store.ts`** | migration-plan Phase 2 amendment; `executor-store-tests.ts` §59 pins byte-identity to `database/schema/executor-schema.sql` | #1 |
-| 4 | **Phase 8 move of `frontend/web/scripts/verify/*` not executed (scoped, deliberate)** — the `verify-*.py` harnesses statically read `frontend/web/src/**` (routes, UI components, shell) and write report JSON beside themselves; they are **web-app harnesses**, not cross-service tests. Cross-service scope is satisfied by `tests/integration/api/` + the per-service in-repo suites. | 77 references to `scripts/verify`; `grep` shows each harness opening `(root / "src/...")` with `root = ...parents[2]` = `frontend/web` | migration-plan Phase 8 is *ordered after* Phase 7; Phase 7 requires #1. Moving them now is churn against a green, host-operator-expected report path |
+| 4 | **Phase 8 move of `frontend/web/scripts/verify/*` — ~~not executed~~ EXECUTED** | the relocation landed in one commit: repo-wide gates → `scripts/verify/`, executor E2E → `tests/e2e/executor/`, fixtures → `tests/fixtures/`, oracle → `tests/oracle/`, database tooling → `scripts/database/`, web-only suites → `frontend/web/tests/`. Every invoker repointed (verify-all, pre-push, integration.yml, check-contract, root README, package.json); `test:shapers` still **240/240**. The `verify-*.py` harnesses remain repo tools (their UI-wiring checks read `frontend/web/src/**`), not web-app-only. | `git ls-files`; `scripts/verify/{verify-*,monitor}.py`; `tests/{e2e,integration,fixtures,oracle}/`; `bun run test:shapers` | none |
 | 5 | ~~**`api` lists "admin" as a hosted context but has no `internal/admin`**~~ **RESOLVED** | the false claim is gone: `backend/api/cmd/api/main.go` now names the `/api/admin/members` route plane, `identity.TierAdmin`, and the handlers in `cmd/api/{routes,errors}.go`, with an explicit note that splitting it into `internal/admin` is deferred. `go build ./backend/api/...` green. Package split remains a legitimate follow-up; the misleading comment does not. |
 | 6 | **`request_id` was missing from the executor's four required identifiers** (PRD §66 names `execution_id`, `request_id`, `client_order_id`, `event_id` — only three existed) | `idempotency.RequestID` (`req_<exec>_<seq>`) + `ParseRequestID` added; refuses foreign ids incl. `fud_...` client order ids so the two id spaces can never be cross-parsed. Verified by `TestRequestIDAndClientOrderIDAreDistinct` + `TestRequestIDIsStableAcrossRetry`. Restart/duplicate proof runs against the REAL paper venue: `TestPaperRestartNoDuplicateOrder`, `TestPaperDuplicateStartIsNoOp`, `TestPaperRejectedOrderThenReplaces` all green in `internal/e2e`. | none — gate 5 of `.ai/prompts/executor-migration.md` closed |
 
@@ -339,7 +339,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex) and run the gate against the Go worker; only then
    delete the TS executor + re-point the 15 route handlers still importing
    `platform/executor` (Phase 5/7). This unblocks debt items 1–4 at once.
-   **Precision (verified this session):** `frontend/web/scripts/verify/executor-paper-e2e.ts`
+   **Precision (verified this session):** `tests/e2e/executor/executor-paper-e2e.ts`
    imports `@/platform/executor/{store,worker,plan,runtime,lock}` — it exercises the **TS**
    runtime against the real Postgres/Valkey, so it is *not yet* the "against the Go worker" gate
    the parity matrix names. **The Go offline half of that gate is now proven**: the composed
@@ -372,9 +372,13 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    order. This is a code task, not a credentials task, but it is owned by the concurrent
    writer's `backend/workers/executor`/`backend/api` lane; doing it from here would collide with
    their in-flight commits.
-2. **Then** execute the Phase 8 move (`frontend/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
-   repointing the 77 references in one commit.
-3. **Sync oracle gate — DONE and committed.** `frontend/web/scripts/verify/verify-sync.py`
+2. ~~**Then** execute the Phase 8 move (`frontend/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
+   repointing the 77 references in one commit.~~ **DONE** — the move landed in one commit
+   (`frontend/web/scripts/verify/*` → `scripts/verify/`, executor E2E → `tests/e2e/executor/`,
+   executor integration → `tests/integration/executor/`, fixtures → `tests/fixtures/`,
+   oracle → `tests/oracle/`, database tooling → `scripts/database/`, web-only suites →
+   `frontend/web/tests/`), with every invoker repointed and `test:shapers` still 240/240.
+3. **Sync oracle gate — DONE and committed.** `scripts/verify/verify-sync.py`
    (fixture replay, no `--fixtures` flag needed) is wired into `verify-all.sh` and passes:
    `SYNC_ORACLE_OK (34 rows, 40 request keys)` — Python oracle and Rust `fudcourt-sync` produce
    **byte-identical** `assets` projections from `tests/oracle/fixtures/capture.json` (40 recorded

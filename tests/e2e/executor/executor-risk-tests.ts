@@ -25,8 +25,8 @@ import {
   resolveBalanceBasis,
   roundQuantityDown,
   roundPrice,
-} from '../../src/platform/executor/risk';
-import type { BalanceBasis, BalanceSnapshot, FeeModel, InstrumentMetadata, SlippageModel } from '../../src/platform/executor/types';
+} from '@/platform/executor/risk';
+import type { BalanceBasis, BalanceSnapshot, FeeModel, InstrumentMetadata, SlippageModel } from '@/platform/executor/types';
 
 const BTC: InstrumentMetadata = {
   symbol: 'BTC/USDT',
