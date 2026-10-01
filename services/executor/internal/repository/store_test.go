@@ -18,14 +18,16 @@ func uuid(n int) string {
 func newExec(id string) executor.ExecutionRecord {
 	now := time.Now().UnixMilli()
 	return executor.ExecutionRecord{
-		ID:                id,
-		UserID:            uuid(2),
-		AccountID:         uuid(3),
-		Exchange:          "binance",
-		Symbol:            "BTCUSDT",
-		MarketType:        "spot",
-		Side:              "buy",
-		Status:            "DRAFT",
+		ID:         id,
+		UserID:     uuid(2),
+		AccountID:  uuid(3),
+		Exchange:   "binance",
+		Symbol:     "BTCUSDT",
+		MarketType: "spot",
+		Side:       "buy",
+		// A recoverable status, not DRAFT: LoadRecoverable (like
+		// worker.MemoryStore) excludes DRAFT and every terminal status.
+		Status:            "RUNNING",
 		Mode:              "paper",
 		SizingMode:        "risk_usd",
 		SizingValue:       "100",
