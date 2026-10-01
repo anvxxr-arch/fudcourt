@@ -104,10 +104,14 @@ verified with `test -f`.
 
 ## 3. What the matrix says at a glance
 
-- **Ownership:** 12 of 45 datasets are **unowned** (no in-repo writer): Asset identity, Token,
-  `price_history`, `journal`, `ledger`, `trades`, `accounts` (chart of accounts), treasury
-  account/movement storage, `asset_history` consumers, signals, and the DexScreener pool
-  identity. Everything else has exactly one owner.
+- **Ownership:** of the **49 rows** in §2, **6** carry `unowned`/`owner absent` in the ownership
+  column (`Asset`, `Token`, `price_history`, `DexScreener pairs / profiles / boosts`, `Signals feed
+  rows`, and the combined `Journal entry / ledger balance / chart of accounts / trade log` row).
+  The other writer-less tables/CDDL the rest of this document records — `accounts`, `journal`,
+  `ledger`, `trades`, `venues` (`database-classification.md` §6 finding 1), treasury
+  account/movement storage, the `asset_history` consumers and the DexScreener *pool* identity — are
+  either grouped into one of those rows or named in a later column, not separate rows of this
+  matrix. Every remaining row has exactly one owner.
 - **Durability:** only **6** datasets are true `CANONICAL` system-of-record (`transactions`,
   `executor.executions`, `exchange_accounts`, `risk_profiles`, wallet registry, CMS content).
   The treasury plane's canonical facts live in a table that is **overwrite-per-run** (`assets`).

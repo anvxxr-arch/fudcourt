@@ -399,7 +399,7 @@ Counted mechanically from the tables above (`grep -c`/script over this file):
 | **Total registry rows** | **95** |
 | §8 Absent-in-repo rows | **14** |
 | §9 Frontend route rows | **18** |
-| §10 systemd unit rows | **11** |
+| §10 systemd unit rows | **11** (the 14 files in `infrastructure/systemd/` reduce to 11 table rows: the three `.service`+`.timer` pairs `fudcourt-sync`, `fudcourt-sync-rust` and `fudcourt-pgload` each collapse into one row — 6 single-unit rows plus 3 pair rows covering 6 files — and the two `RETIRED-*.service.txt` tombstones appear as their own rows: 6 + 3 + 2 = 11 rows / 6 + 6 + 2 = 14 files) |
 
 Facts behind the counts: CryptoRank declares **28** modes (`ModeCount = len(Modes)`; 26
 live-recorded in `MANIFEST.json.liveModes`, 2 refused-by-design); 10 ccxt venues × the
