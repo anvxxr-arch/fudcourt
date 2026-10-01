@@ -245,6 +245,16 @@ A clean checkout of HEAD builds and tests clean across every module:
 shared tree) is what makes the claim about *committed* state — the shared tree
 carries the writer's uncommitted edits above.
 
+**Re-audit (later same day).** HEAD advanced to `0feb6e2` (+ this doc commit). Committed HEAD
+is still fully green — re-verified on a clean `git worktree --detach HEAD`: `go vet`/`go test
+./...` clean for `services/executor`, and `verify-all.sh`'s non-Go steps (structure, contract,
+api-contract, sync-oracle, deploy, contracts, web typecheck, sync, data) all pass. The only
+shared-tree red is the concurrent writer's untracked, mid-edit `services/executor/cmd/executor/
+health.go` + `health_test.go` (observed states: `undefined: errInvalidProbeTimeout`, then
+`fakeLock redeclared` against the tracked `main_test.go`) — an in-flight edit, not a committed
+regression; the writer has landed the symbol and the production `go build` returns clean between
+edits.
+
 ## 8. Known regressions
 
 **None outstanding.** Eight failures were found and fixed; all were pre-existing in the
@@ -315,7 +325,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    imports `@/platform/executor/{store,worker,plan,runtime,lock}` — it exercises the **TS**
    runtime against the real Postgres/Valkey, so it is *not yet* the "against the Go worker" gate
    the parity matrix names. **The Go offline half of that gate is now proven**: the composed
-   harness in `services/executor/internal/e2e` (8 tests, hermetic) drives the **real** worker +
+   harness in `services/executor/internal/e2e` (12 tests, hermetic) drives the **real** worker +
    **real** `exchange/paper` venue + **real** `lock.MemoryLock` over a `worker.MemoryStore` with a
    hand-advanced `FixedClock`, covering create→start→recovery→place→fill→complete, lease
    contention (§65/§127.4), restart without duplicate (§66/§127.5), cancel a resting entry (§127.6),
@@ -334,13 +344,14 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    that does not prove Go parity.
 2. **Then** execute the Phase 8 move (`apps/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
    repointing the 77 references in one commit.
-3. **Sync oracle gate — DONE (uncommitted, by the concurrent writer).** `verify-sync.py`
+3. **Sync oracle gate — DONE and committed.** `apps/web/scripts/verify/verify-sync.py`
    (fixture replay, no `--fixtures` flag needed) is wired into `verify-all.sh` and passes:
    `SYNC_ORACLE_OK (34 rows, 40 request keys)` — Python oracle and Rust `fudcourt-sync` produce
    **byte-identical** `assets` projections from `tests/oracle/fixtures/capture.json` (40 recorded
    responses across rpc/hl/prices), and no Turso write is issued. The gate and its `oracle.rs`
-   seam are the writer's Phase 6 work, left uncommitted on the tree; the review records it as
-   verified, not as committed.
+   seam are the writer's Phase 6 work and are **committed and clean** (re-verified this session:
+   `git ls-files` lists both `verify-sync.py` and `services/sync/src/oracle.rs`; the gate emits
+   `SYNC_ORACLE_OK`).
 4. **Commit per phase** before stacking more change (see §10).
 5. **Optional perf work** (only on measurement): executor exchange-metadata caching, connection
    pooling — none attempted here because no benchmark showed a problem (objective: "Do not
