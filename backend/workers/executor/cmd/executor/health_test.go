@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/lock"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/lock"
 )
 
 // The shared fakeLock (main_test.go) already answers the lock.ExecutionLock

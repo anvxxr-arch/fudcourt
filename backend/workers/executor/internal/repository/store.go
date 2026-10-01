@@ -41,7 +41,7 @@
 //   - There are no package-level clients or connection state: one *Store owns
 //     one pgxpool.Pool and every method takes a context.Context, so callers
 //     bound and cancel every database round trip (house convention:
-//     internal/lock.ExecutionLock).
+//     internal/platform/lock.ExecutionLock).
 //
 // The domain carries money and quantities as decimal strings while the schema
 // stores double precision (the schema's convention: wire values are numbers).
@@ -59,10 +59,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/runtime/worker"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/executor"
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/worker"
 )
 
 // Store is a Postgres-backed worker.Store. One Store owns one connection
@@ -175,13 +174,13 @@ const execColumns = `id, user_id, account_id, exchange, symbol, market_type, sid
 
 // SaveExecution implements worker.Store: one execution record upserted by id.
 // risk_policy is intentionally NOT written — it is not part of
-// executor.ExecutionRecord (it is written by its own lifecycle), so a save
+// execution.ExecutionRecord (it is written by its own lifecycle), so a save
 // must never clobber it.
 //
 // Timestamps: the domain's zero means "not happened yet"; the schema's NULL
 // means the same (started_at/completed_at/cancelled_at are nullable).
 // created_at is NOT NULL and is stored as given.
-func (s *Store) SaveExecution(ctx context.Context, rec executor.ExecutionRecord) error {
+func (s *Store) SaveExecution(ctx context.Context, rec execution.ExecutionRecord) error {
 	args, err := execArgs(rec)
 	if err != nil {
 		return err
@@ -234,8 +233,8 @@ ON CONFLICT (id) DO UPDATE SET
 
 // LoadRecoverable implements worker.Store: every non-terminal execution past
 // DRAFT. The status set is derived from the one lifecycle truth
-// (executor.ExecutionTransitions), not duplicated in SQL.
-func (s *Store) LoadRecoverable(ctx context.Context) ([]executor.ExecutionRecord, error) {
+// (execution.ExecutionTransitions), not duplicated in SQL.
+func (s *Store) LoadRecoverable(ctx context.Context) ([]execution.ExecutionRecord, error) {
 	rows, err := s.pool.Query(ctx, `SELECT `+execColumns+`
 		FROM executor.executions WHERE status = ANY($1) ORDER BY created_at, id`,
 		recoverableStatuses())
@@ -243,7 +242,7 @@ func (s *Store) LoadRecoverable(ctx context.Context) ([]executor.ExecutionRecord
 		return nil, fmt.Errorf("repository: load recoverable: %w", err)
 	}
 	defer rows.Close()
-	out := []executor.ExecutionRecord{}
+	out := []execution.ExecutionRecord{}
 	for rows.Next() {
 		rec, err := scanExec(rows.Scan)
 		if err != nil {
@@ -261,8 +260,8 @@ func (s *Store) LoadRecoverable(ctx context.Context) ([]executor.ExecutionRecord
 // non-terminal statuses (a slice local to the call — no global state).
 func recoverableStatuses() []string {
 	out := []string{}
-	for status, next := range executor.ExecutionTransitions {
-		if len(next) == 0 || status == executor.StatusDraft {
+	for status, next := range execution.ExecutionTransitions {
+		if len(next) == 0 || status == execution.StatusDraft {
 			continue
 		}
 		out = append(out, string(status))
@@ -279,7 +278,7 @@ const childColumns = `execution_id, exchange_order_id, client_order_id, symbol,
 // reconcile updates the row instead of forking one. The record's ID field is
 // not the persistence key (the table's uuid PK is an internal surrogate); the
 // logical row key is the pair, exactly as in worker.MemoryStore.
-func (s *Store) SaveChildOrder(ctx context.Context, rec executor.ChildOrderRecord) error {
+func (s *Store) SaveChildOrder(ctx context.Context, rec execution.ChildOrderRecord) error {
 	if err := uuidErr("execution id", rec.ExecutionID); err != nil {
 		return err
 	}
@@ -324,14 +323,14 @@ ON CONFLICT (execution_id, client_order_id) DO UPDATE SET
 
 // ListChildOrders implements worker.Store: the execution's child rows, keyed
 // back by the deterministic pair (the same row key worker.MemoryStore uses).
-func (s *Store) ListChildOrders(ctx context.Context, executionID string) ([]executor.ChildOrderRecord, error) {
+func (s *Store) ListChildOrders(ctx context.Context, executionID string) ([]execution.ChildOrderRecord, error) {
 	rows, err := s.pool.Query(ctx, `SELECT `+childColumns+`
 		FROM executor.child_orders WHERE execution_id = $1 ORDER BY client_order_id`, executionID)
 	if err != nil {
 		return nil, fmt.Errorf("repository: list child orders: %w", err)
 	}
 	defer rows.Close()
-	out := []executor.ChildOrderRecord{}
+	out := []execution.ChildOrderRecord{}
 	for rows.Next() {
 		rec, err := scanChild(rows.Scan)
 		if err != nil {
@@ -352,13 +351,13 @@ func (s *Store) ListChildOrders(ctx context.Context, executionID string) ([]exec
 // in this process — ids stay unique and per-execution monotonic across
 // restarts. A caller-supplied ID is ignored: the store owns id assignment and
 // returns the stored record.
-func (s *Store) AppendEvent(ctx context.Context, ev executor.ExecutionEventRecord) (executor.ExecutionEventRecord, error) {
+func (s *Store) AppendEvent(ctx context.Context, ev execution.ExecutionEventRecord) (execution.ExecutionEventRecord, error) {
 	if err := uuidErr("execution id", ev.ExecutionID); err != nil {
-		return executor.ExecutionEventRecord{}, err
+		return execution.ExecutionEventRecord{}, err
 	}
 	payload, err := json.Marshal(ev.Payload)
 	if err != nil {
-		return executor.ExecutionEventRecord{}, fmt.Errorf("repository: append event payload: %w", err)
+		return execution.ExecutionEventRecord{}, fmt.Errorf("repository: append event payload: %w", err)
 	}
 	if ev.Payload == nil {
 		payload = []byte("{}") // the column is NOT NULL DEFAULT '{}' (PRD §63)
@@ -366,7 +365,7 @@ func (s *Store) AppendEvent(ctx context.Context, ev executor.ExecutionEventRecor
 	var seq int64
 	if err := s.pool.QueryRow(ctx, appendEventSQL,
 		ev.ExecutionID, string(ev.Name), payload, ev.CreatedAt).Scan(&seq); err != nil {
-		return executor.ExecutionEventRecord{}, fmt.Errorf("repository: append event: %w", err)
+		return execution.ExecutionEventRecord{}, fmt.Errorf("repository: append event: %w", err)
 	}
 	ev.ID = EventID(ev.ExecutionID, seq)
 	return ev, nil
@@ -384,7 +383,7 @@ RETURNING id`
 // execArgs flattens one ExecutionRecord into the 34 column values of
 // execColumns. It stops with a named error on any figure that does not parse
 // — never a silent zero.
-func execArgs(rec executor.ExecutionRecord) ([]any, error) {
+func execArgs(rec execution.ExecutionRecord) ([]any, error) {
 	if err := uuidErr("execution id", rec.ID); err != nil {
 		return nil, err
 	}
@@ -401,7 +400,7 @@ func execArgs(rec executor.ExecutionRecord) ([]any, error) {
 	}
 	tp := rec.TakeProfit
 	if tp == nil {
-		tp = []executor.TakeProfitLevel{} // NOT NULL DEFAULT '[]'
+		tp = []execution.TakeProfitLevel{} // NOT NULL DEFAULT '[]'
 	}
 	takeProfit, err := marshal("take profit definition", tp)
 	if err != nil {
@@ -486,9 +485,9 @@ func execArgs(rec executor.ExecutionRecord) ([]any, error) {
 // scanExec reads one execColumns row back into the domain record. JSON columns
 // round-trip through encoding/json (the schema's jsonb is JSON); numeric
 // figures come back as decimal strings via shortest round-trip formatting.
-func scanExec(scan func(dest ...any) error) (executor.ExecutionRecord, error) {
+func scanExec(scan func(dest ...any) error) (execution.ExecutionRecord, error) {
 	var (
-		rec                                 executor.ExecutionRecord
+		rec                                 execution.ExecutionRecord
 		exchange, marketType, side, intent  string
 		status, mode, sizingMode, strategy  string
 		sizingValue, actualFees             float64
@@ -510,76 +509,76 @@ func scanExec(scan func(dest ...any) error) (executor.ExecutionRecord, error) {
 		&plannedRisk, &currentRisk, &state, &rec.CreatedAt,
 		&startedAt, &completedAt, &cancelledAt,
 	); err != nil {
-		return executor.ExecutionRecord{}, err
+		return execution.ExecutionRecord{}, err
 	}
-	rec.Exchange = executor.ExchangeID(exchange)
-	rec.MarketType = executor.MarketType(marketType)
-	rec.Side = executor.Side(side)
-	rec.Intent = executor.Intent(intent)
-	rec.Status = executor.ExecutionStatus(status)
-	rec.Mode = executor.ExecutionMode(mode)
-	rec.SizingMode = executor.SizingMode(sizingMode)
-	rec.ExecutionStrategy = executor.ExecutionStrategy(strategy)
+	rec.Exchange = execution.ExchangeID(exchange)
+	rec.MarketType = execution.MarketType(marketType)
+	rec.Side = execution.Side(side)
+	rec.Intent = execution.Intent(intent)
+	rec.Status = execution.ExecutionStatus(status)
+	rec.Mode = execution.ExecutionMode(mode)
+	rec.SizingMode = execution.SizingMode(sizingMode)
+	rec.ExecutionStrategy = execution.ExecutionStrategy(strategy)
 	if err := json.Unmarshal(entry, &rec.EntryDefinition); err != nil {
-		return executor.ExecutionRecord{}, fmt.Errorf("entry definition: %w", err)
+		return execution.ExecutionRecord{}, fmt.Errorf("entry definition: %w", err)
 	}
 	if len(stop) > 0 {
-		rec.StopDefinition = &executor.PriceDefinition{}
+		rec.StopDefinition = &execution.PriceDefinition{}
 		if err := json.Unmarshal(stop, rec.StopDefinition); err != nil {
-			return executor.ExecutionRecord{}, fmt.Errorf("stop definition: %w", err)
+			return execution.ExecutionRecord{}, fmt.Errorf("stop definition: %w", err)
 		}
 	}
 	if err := json.Unmarshal(takeProfit, &rec.TakeProfit); err != nil {
-		return executor.ExecutionRecord{}, fmt.Errorf("take profit definition: %w", err)
+		return execution.ExecutionRecord{}, fmt.Errorf("take profit definition: %w", err)
 	}
 	if err := json.Unmarshal(config, &rec.ExecutionConfig); err != nil {
-		return executor.ExecutionRecord{}, fmt.Errorf("execution config: %w", err)
+		return execution.ExecutionRecord{}, fmt.Errorf("execution config: %w", err)
 	}
 	if err := json.Unmarshal(constraints, &rec.Constraints); err != nil {
-		return executor.ExecutionRecord{}, fmt.Errorf("constraints: %w", err)
+		return execution.ExecutionRecord{}, fmt.Errorf("constraints: %w", err)
 	}
 	if len(state) > 0 {
 		if err := json.Unmarshal(state, &rec.EngineState); err != nil {
-			return executor.ExecutionRecord{}, fmt.Errorf("strategy state: %w", err)
+			return execution.ExecutionRecord{}, fmt.Errorf("strategy state: %w", err)
 		}
 	}
 	if riskBasis != nil {
-		b := executor.BalanceBasis(*riskBasis)
+		b := execution.BalanceBasis(*riskBasis)
 		rec.RiskBasis = &b
 	}
 	var err error
 	if rec.SizingValue, err = outDec(sizingValue); err != nil {
-		return executor.ExecutionRecord{}, err
+		return execution.ExecutionRecord{}, err
 	}
 	if rec.RiskBudget, err = outDecPtr(riskBudget); err != nil {
-		return executor.ExecutionRecord{}, err
+		return execution.ExecutionRecord{}, err
 	}
 	if rec.PlannedQuantity, err = outDec(plannedQty); err != nil {
-		return executor.ExecutionRecord{}, err
+		return execution.ExecutionRecord{}, err
 	}
 	if rec.PlannedNotional, err = outDec(plannedNotional); err != nil {
-		return executor.ExecutionRecord{}, err
+		return execution.ExecutionRecord{}, err
 	}
 	if rec.ActualQuantity, err = outDec(actualQty); err != nil {
-		return executor.ExecutionRecord{}, err
+		return execution.ExecutionRecord{}, err
 	}
 	if rec.ActualNotional, err = outDec(actualNotional); err != nil {
-		return executor.ExecutionRecord{}, err
+		return execution.ExecutionRecord{}, err
 	}
 	if rec.AverageFillPrice, err = outDecPtr(avgFill); err != nil {
-		return executor.ExecutionRecord{}, err
+		return execution.ExecutionRecord{}, err
 	}
 	if rec.EstimatedFees, err = outDecPtr(estFees); err != nil {
-		return executor.ExecutionRecord{}, err
+		return execution.ExecutionRecord{}, err
 	}
 	if rec.ActualFees, err = outDec(actualFees); err != nil {
-		return executor.ExecutionRecord{}, err
+		return execution.ExecutionRecord{}, err
 	}
 	if rec.PlannedRisk, err = outDecPtr(plannedRisk); err != nil {
-		return executor.ExecutionRecord{}, err
+		return execution.ExecutionRecord{}, err
 	}
 	if rec.CurrentRisk, err = outDecPtr(currentRisk); err != nil {
-		return executor.ExecutionRecord{}, err
+		return execution.ExecutionRecord{}, err
 	}
 	rec.StartedAt = orZero(startedAt)
 	rec.CompletedAt = orZero(completedAt)
@@ -590,9 +589,9 @@ func scanExec(scan func(dest ...any) error) (executor.ExecutionRecord, error) {
 // scanChild reads one childColumns row back into the domain record. The row
 // key is the deterministic pair, so ID is rebuilt as the same key
 // worker.MemoryStore would hand out.
-func scanChild(scan func(dest ...any) error) (executor.ChildOrderRecord, error) {
+func scanChild(scan func(dest ...any) error) (execution.ChildOrderRecord, error) {
 	var (
-		rec                   executor.ChildOrderRecord
+		rec                   execution.ChildOrderRecord
 		side, status, typ     string
 		price                 *float64
 		quantity, filled      float64
@@ -603,21 +602,21 @@ func scanChild(scan func(dest ...any) error) (executor.ChildOrderRecord, error) 
 		&side, &typ, &price, &quantity, &filled, &status, &rec.IsExit,
 		&submittedAt, &rec.UpdatedAt, &filledAt,
 	); err != nil {
-		return executor.ChildOrderRecord{}, err
+		return execution.ChildOrderRecord{}, err
 	}
 	rec.ID = childRowKey(rec.ExecutionID, rec.ClientOrderID)
-	rec.Side = executor.Side(side)
+	rec.Side = execution.Side(side)
 	rec.Type = typ
-	rec.Status = executor.ChildOrderStatus(status)
+	rec.Status = execution.ChildOrderStatus(status)
 	var err error
 	if rec.Price, err = outDecPtr(price); err != nil {
-		return executor.ChildOrderRecord{}, err
+		return execution.ChildOrderRecord{}, err
 	}
 	if rec.Quantity, err = outDec(quantity); err != nil {
-		return executor.ChildOrderRecord{}, err
+		return execution.ChildOrderRecord{}, err
 	}
 	if rec.FilledQuantity, err = outDec(filled); err != nil {
-		return executor.ChildOrderRecord{}, err
+		return execution.ChildOrderRecord{}, err
 	}
 	rec.SubmittedAt = orZero(submittedAt)
 	rec.FilledAt = orZero(filledAt)

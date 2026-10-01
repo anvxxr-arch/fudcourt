@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/lock"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/lock"
 )
 
 // leaseAdapter bridges lock.ExecutionLock (the package's public,

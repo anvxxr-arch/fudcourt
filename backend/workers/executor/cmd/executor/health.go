@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/lock"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/lock"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/repository"
 )
 

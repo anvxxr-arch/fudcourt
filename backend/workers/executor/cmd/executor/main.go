@@ -5,7 +5,7 @@
 // Process boundary (objective §52): web → api → executor. This process is the
 // ONLY owner of execution decisions and of exchange credential plaintext:
 // executions arrive by account_id, this composition root loads the sealed
-// executor.exchange_accounts row, unseals it via internal/credentials and
+// executor.exchange_accounts row, unseals it via internal/platform/credentials and
 // hands the adapter its signing handle (objective §8.4 — plaintext never
 // leaves this package, and the web tier never sees the master key).
 //
@@ -41,15 +41,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/credentials"
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchange"
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchange/binance"
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchange/bybit"
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchange/mexc"
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/executor"
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/lock"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchanges"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchanges/binance"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchanges/bybit"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchanges/mexc"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/credentials"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/lock"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/repository"
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/worker"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/runtime/worker"
 )
 
 // config is the validated service configuration. Every field is required
@@ -167,7 +167,7 @@ type resolver struct {
 
 // adapterFor unseals the execution's credential and builds its venue adapter.
 // Every failure names the credential id — never the credential.
-func (r *resolver) adapterFor(ctx context.Context, rec executor.ExecutionRecord) (exchange.Exchange, error) {
+func (r *resolver) adapterFor(ctx context.Context, rec execution.ExecutionRecord) (exchanges.Exchange, error) {
 	row, err := r.store.LoadCredential(ctx, rec.AccountID)
 	if err != nil {
 		return nil, err
@@ -182,15 +182,15 @@ func (r *resolver) adapterFor(ctx context.Context, rec executor.ExecutionRecord)
 	if err != nil {
 		return nil, fmt.Errorf("credential %s: %w", row.MaskedKeyOrFingerprint(), err)
 	}
-	creds := exchange.Credentials{APIKey: apiKey, APISecret: apiSecret}
-	http := exchange.DefaultHTTPClient(r.httpTimeout)
+	creds := exchanges.Credentials{APIKey: apiKey, APISecret: apiSecret}
+	http := exchanges.DefaultHTTPClient(r.httpTimeout)
 	market := rec.MarketType
 	switch rec.Exchange {
-	case executor.ExchangeBinance:
+	case execution.ExchangeBinance:
 		return binance.New(binance.Config{Credentials: creds, HTTP: http, MarketType: market})
-	case executor.ExchangeBybit:
+	case execution.ExchangeBybit:
 		return bybit.New(bybit.Config{Credentials: creds, HTTP: http, MarketType: market})
-	case executor.ExchangeMEXC:
+	case execution.ExchangeMEXC:
 		return mexc.New(mexc.Config{Credentials: creds, HTTP: http, MarketType: market})
 	default:
 		return nil, fmt.Errorf("credential %s: unknown exchange %q", row.MaskedKeyOrFingerprint(), rec.Exchange)
@@ -202,7 +202,7 @@ func (r *resolver) adapterFor(ctx context.Context, rec executor.ExecutionRecord)
 // successful unseal is also where the account is marked used
 // (last_used_at) — the one audit side effect the worker loop is allowed to
 // have.
-func (r *resolver) exchanges(rec executor.ExecutionRecord) (exchange.Exchange, error) {
+func (r *resolver) exchanges(rec execution.ExecutionRecord) (exchanges.Exchange, error) {
 	ex, err := r.adapterFor(context.Background(), rec)
 	if err != nil {
 		return nil, err
@@ -216,14 +216,14 @@ func (r *resolver) exchanges(rec executor.ExecutionRecord) (exchange.Exchange, e
 // persisted plan) would resolve here per execution; until that surface is
 // pinned the operator-configured fallback applies, and an unusable value
 // refuses every placement loudly (the clamp floors only on a > 0 grid).
-func (r *resolver) quantityStep(rec executor.ExecutionRecord) string {
+func (r *resolver) quantityStep(rec execution.ExecutionRecord) string {
 	return r.stepFallback
 }
 
 // touch records credential use (last_used_at) so stale credentials are
 // visible without touching sealed columns. Failures are logged — a stale
 // audit timestamp must never stop trading.
-func (r *resolver) touch(rec executor.ExecutionRecord) {
+func (r *resolver) touch(rec execution.ExecutionRecord) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	if err := r.store.TouchCredential(ctx, rec.AccountID, time.Now().UnixMilli()); err != nil {

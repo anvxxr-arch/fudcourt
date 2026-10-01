@@ -2,12 +2,12 @@
 // resolves an execution's account to a sealed credential row and unseals it
 // for the venue adapter; this file is the READ side of that path, kept apart
 // from store.go because the worker never reads credentials (it only sees
-// exchange.Exchange) — the composition root does.
+// exchanges.Exchange) — the composition root does.
 //
 // The envelope shape is exactly what the web API writes with
-// apps/web/src/platform/executor/store.ts sealCredentials: iv and auth_tag are
+// frontend/web/src/platform/executor/store.ts sealCredentials: iv and auth_tag are
 // per-secret 12-byte / 16-byte concatenations in column order (api_key,
-// api_secret, [passphrase]); internal/credentials reverses that layout.
+// api_secret, [passphrase]); internal/platform/credentials reverses that layout.
 package repository
 
 import (
@@ -15,9 +15,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/credentials"
 	"github.com/jackc/pgx/v5"
-
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/credentials"
 )
 
 var (

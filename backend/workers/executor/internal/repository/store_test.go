@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/executor"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/core/execution"
 )
 
 // uuid returns a deterministic-ish uuid-shaped string for tests.
@@ -15,9 +15,9 @@ func uuid(n int) string {
 	return fmt.Sprintf("00000000-0000-0000-0000-%012d", n)
 }
 
-func newExec(id string) executor.ExecutionRecord {
+func newExec(id string) execution.ExecutionRecord {
 	now := time.Now().UnixMilli()
-	return executor.ExecutionRecord{
+	return execution.ExecutionRecord{
 		ID:         id,
 		UserID:     uuid(2),
 		AccountID:  uuid(3),
@@ -31,11 +31,11 @@ func newExec(id string) executor.ExecutionRecord {
 		Mode:              "paper",
 		SizingMode:        "risk_usd",
 		SizingValue:       "100",
-		EntryDefinition:   executor.EntryDefinition{Kind: "market"},
-		TakeProfit:        []executor.TakeProfitLevel{},
+		EntryDefinition:   execution.EntryDefinition{Kind: "market"},
+		TakeProfit:        []execution.TakeProfitLevel{},
 		ExecutionStrategy: "market",
-		ExecutionConfig:   executor.ExecutionConfig{},
-		Constraints:       executor.ExecutionConstraints{},
+		ExecutionConfig:   execution.ExecutionConfig{},
+		Constraints:       execution.ExecutionConstraints{},
 		PlannedQuantity:   "0.001",
 		PlannedNotional:   "100",
 		ActualQuantity:    "0",
@@ -46,8 +46,8 @@ func newExec(id string) executor.ExecutionRecord {
 	}
 }
 
-func newChild(executionID, clientOrderID string) executor.ChildOrderRecord {
-	return executor.ChildOrderRecord{
+func newChild(executionID, clientOrderID string) execution.ChildOrderRecord {
+	return execution.ChildOrderRecord{
 		ID:             childRowKey(executionID, clientOrderID),
 		ExecutionID:    executionID,
 		ClientOrderID:  clientOrderID,
@@ -62,10 +62,10 @@ func newChild(executionID, clientOrderID string) executor.ChildOrderRecord {
 	}
 }
 
-func newEvent(executionID string) executor.ExecutionEventRecord {
-	return executor.ExecutionEventRecord{
+func newEvent(executionID string) execution.ExecutionEventRecord {
+	return execution.ExecutionEventRecord{
 		ExecutionID: executionID,
-		Name:        executor.EventExecutionCreated,
+		Name:        execution.EventExecutionCreated,
 		Payload:     map[string]any{"status": "DRAFT"},
 		CreatedAt:   time.Now().UnixMilli(),
 	}

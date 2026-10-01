@@ -10,7 +10,7 @@
 ## 1. Domain map — what the executor is made of
 The execution lifecycle (PRD §57) is one table, owned today by
 `frontend/web/src/platform/executor/types.ts` (`EXECUTION_TRANSITIONS`) and ported
-1:1 by `backend/workers/executor/internal/executor/lifecycle.go` (`ExecutionTransitions`,
+1:1 by `backend/workers/executor/internal/core/execution/lifecycle.go` (`ExecutionTransitions`,
 "the ONE lifecycle truth for API intents and worker transitions alike").
 Terminal states accept nothing:
 
@@ -36,17 +36,17 @@ Module map (objective §8.9–§8.16; TS owner today → Go target package):
 
 | Slice | What it owns | Today (TS) | Go package | State |
 |---|---|---|---|---|
-| §8.9 domain types | wire + domain contract: statuses, sizing/leverage/margin modes, records; money/quantity as decimal strings | `frontend/web/src/platform/executor/types.ts` (frozen contract) | `internal/executor` (`types.go`, `enums.go`, `lifecycle.go`, `records.go`) | landed |
-| §8.10 execution aggregate | lifecycle commands (`start/pause/resume/cancel/complete/fail`), status mutation, timestamp stamping | `runtime.ts` lifecycle intents + `worker.ts` `transitionExecution` | `internal/execution` (`Command`, `Execution.Apply`) | landed |
-| §8.11 planner | request → immutable `ExecutionPlan` + `PreviewResult`: entry reference, strict validation (field-named refusals, never clamped), leverage/margin/liquidation policy, conflicts | `frontend/web/src/platform/executor/plan.ts` (PRD §24, §56, §79–80, §98) | `internal/planner` | **in flight** |
-| §8.12 risk | the position-risk formulas — the ONE cost model (PRD §22–23: `totalRisk = Q·unitRisk`, fees, slippage-once, safety reserve), liquidation approximation (PRD §21), the §15 constraint solver | `frontend/web/src/platform/executor/risk.ts` (pure: no HTTP/DB/exchange, PRD §102) | `internal/risk` (`types.go`, `risk.go`, `leverage.go`, `solve.go`, `errors.go`) | landed |
-| §8.13 sizing | sizing-mode resolution (the nine `SizingMode`s), budget→quantity solving incl. the §33 scale-in ladder, grid rounding (quantity floor DOWN), tick rounding, minimum-notional refusals | `plan.ts` `sizePosition` + `risk.ts` `calculateRiskPosition` | `internal/sizing` | landed |
-| §8.14 orders | **Execution ≠ Order**: one execution produces many child orders; the over-order clamp (PRD §107/§128.15) and child accounting | `worker.ts` `clampChild` + `store.ts` child rows | `internal/orders` (`Ledger`, `ClampChild`) | landed |
-| §8.15 strategy | deterministic strategies (TWAP, adaptive TWAP, iceberg, chase limit, scale in/out): tick context → submit/cancel/complete actions; seeded PRNG in state; zero submits on reconcile-only passes | `frontend/web/src/platform/executor/engine.ts` (PRD §25–§35) | `internal/strategy` | landed |
-| §8.16 exchange adapters | canonical `Exchange` interface + normalized models/capabilities/errors/symbol mapping; per-venue adapters absorb every venue difference | `frontend/web/src/platform/executor/exchange.ts` (`CcxtLike`, `mapError`, `SECRET_PATTERNS`) | `internal/exchange` (+ `binance/`, `mexc/`, `paper/`; `bybit/` in flight) | landed |
-| idempotency (objective §23) | `fud_<executionID>_<sequence>` client order ids, fill dedup keys; pure, parse-strict | `types.ts` `clientOrderId` (PRD §66), `store.ts` `fillDedupKey` | `internal/idempotency` | landed |
-| worker/runtime | scheduler, locks, reconciliation, recovery, placement clamps | `frontend/web/src/platform/executor/worker.ts` + `frontend/web/scripts/executor/worker.ts` (unit `infrastructure/systemd/fudcourt-executor-worker.service`) | `internal/worker` | **in flight** |
-| lock | one worker owns one execution (PRD §65) | `frontend/web/src/platform/executor/lock.ts` | `internal/lock` (`lock.go`, `memory.go`, `valkey.go`) | landed |
+| §8.9 domain types | wire + domain contract: statuses, sizing/leverage/margin modes, records; money/quantity as decimal strings | `frontend/web/src/platform/executor/types.ts` (frozen contract) | `internal/core/execution` (`types.go`, `enums.go`, `lifecycle.go`, `records.go`) | landed |
+| §8.10 execution aggregate | lifecycle commands (`start/pause/resume/cancel/complete/fail`), status mutation, timestamp stamping | `runtime.ts` lifecycle intents + `worker.ts` `transitionExecution` | `internal/core/execution` (`Command`, `Execution.Apply`) | landed |
+| §8.11 planner | request → immutable `ExecutionPlan` + `PreviewResult`: entry reference, strict validation (field-named refusals, never clamped), leverage/margin/liquidation policy, conflicts | `frontend/web/src/platform/executor/plan.ts` (PRD §24, §56, §79–80, §98) | `internal/core/planner` | **in flight** |
+| §8.12 risk | the position-risk formulas — the ONE cost model (PRD §22–23: `totalRisk = Q·unitRisk`, fees, slippage-once, safety reserve), liquidation approximation (PRD §21), the §15 constraint solver | `frontend/web/src/platform/executor/risk.ts` (pure: no HTTP/DB/exchange, PRD §102) | `internal/core/risk` (`types.go`, `risk.go`, `leverage.go`, `solve.go`, `errors.go`) | landed |
+| §8.13 sizing | sizing-mode resolution (the nine `SizingMode`s), budget→quantity solving incl. the §33 scale-in ladder, grid rounding (quantity floor DOWN), tick rounding, minimum-notional refusals | `plan.ts` `sizePosition` + `risk.ts` `calculateRiskPosition` | `internal/core/sizing` | landed |
+| §8.14 orders | **Execution ≠ Order**: one execution produces many child orders; the over-order clamp (PRD §107/§128.15) and child accounting | `worker.ts` `clampChild` + `store.ts` child rows | `internal/core/orders` (`Ledger`, `ClampChild`) | landed |
+| §8.15 strategy | deterministic strategies (TWAP, adaptive TWAP, iceberg, chase limit, scale in/out): tick context → submit/cancel/complete actions; seeded PRNG in state; zero submits on reconcile-only passes | `frontend/web/src/platform/executor/engine.ts` (PRD §25–§35) | `internal/strategies` | landed |
+| §8.16 exchange adapters | canonical `Exchange` interface + normalized models/capabilities/errors/symbol mapping; per-venue adapters absorb every venue difference | `frontend/web/src/platform/executor/exchange.ts` (`CcxtLike`, `mapError`, `SECRET_PATTERNS`) | `internal/exchanges` (+ `binance/`, `mexc/`, `paper/`; `bybit/` in flight) | landed |
+| idempotency (objective §23) | `fud_<executionID>_<sequence>` client order ids, fill dedup keys; pure, parse-strict | `types.ts` `clientOrderId` (PRD §66), `store.ts` `fillDedupKey` | `internal/runtime/idempotency` | landed |
+| worker/runtime | scheduler, locks, reconciliation, recovery, placement clamps | `frontend/web/src/platform/executor/worker.ts` + `frontend/web/scripts/executor/worker.ts` (unit `infrastructure/systemd/fudcourt-executor-worker.service`) | `internal/runtime/worker` | **in flight** |
+| lock | one worker owns one execution (PRD §65) | `frontend/web/src/platform/executor/lock.ts` | `internal/platform/lock` (`lock.go`, `memory.go`, `valkey.go`) | landed |
 | persistence | `executor.*` schema writes, credential envelope | `frontend/web/src/platform/executor/store.ts` (`EXECUTOR_DDL`) | repository layer | **in flight** (DDL tracked at `database/schema/executor-schema.sql`) |
 
 Why risk (§8.12) and sizing (§8.13) stay separate packages:
@@ -73,35 +73,39 @@ Cancel cancels orders and NEVER closes a position (PRD §75;
 `shared/contracts/openapi/fudcourt.yaml` lifecycle notes).
 
 No-venue-conditionals rule (§8.16): core executor code MUST NOT branch on the
-venue. `backend/workers/executor/internal/exchange/exchange.go` states it verbatim —
+venue. `backend/workers/executor/internal/exchanges/interface.go` states it verbatim —
 "No `if exchange == "binance"` outside this package (objective §8.16)" —
 symbols, precision, statuses, order types and API errors are normalized by the
 adapters (`binance/`, `mexc/`, `paper/`; `mexc/mexc.go`: "venue conditionals
 never leave this package").
 
 ## 2. Go port state — `backend/workers/executor/internal/*`
-Checked 2026-10-01 (tree is moving as sibling slices land):
-
+Checked 2026-10-01 (tree is moving as sibling slices land). Package layout is
+grouped by role: `core/` (business logic), `strategies/`, `exchanges/` (venue
+boundary), `runtime/` (worker + idempotency), `platform/` (decimal, credentials,
+lock — no business rules), plus `repository/` (executor-schema persistence) and
+`tests/e2e/`.
 | Package | Contents on disk | State |
 |---|---|---|
-| `executor` | `types.go`, `enums.go`, `lifecycle.go`, `records.go` | landed |
-| `decimal` | `decimal.go`, `decimal_test.go` (exact `big.Rat` decimal strings; objective §36: never float64 in financial paths) | landed |
-| `exchange` | `exchange.go`, `types.go`, `symbols.go`, `classify.go`, `credentials.go`, `http.go` + tests | landed |
-| `exchange/binance` | `binance.go`, `sign.go`, `binance_test.go` (stdlib REST adapter, injectable `HTTPClient`) | landed |
-| `exchange/mexc` | `mexc.go`, `sign.go` | landed |
-| `exchange/paper` | `paper.go`, `match.go`, `config.go` (deterministic in-memory venue) | landed |
-| `exchange/bybit` | — | **in flight** |
-| `risk` | `types.go`, `risk.go`, `leverage.go`, `solve.go`, `errors.go` | landed |
-| `sizing` | `sizing.go`, `types.go`, `errors.go` (mode resolution, ladder math, grid rounding) | landed |
-| `execution` | `execution.go` (command→status aggregate, idempotent `Apply`) | landed |
-| `idempotency` | `idempotency.go` (`ClientOrderID`, `ParseClientOrderID`, `FillDedupKey`) | landed |
-| `orders` | `orders.go` (`Ledger`, `ClampChild`) | landed |
-| `strategy` | `strategy.go` (action vocabulary, determinism/recovery contract) | landed |
-| `lock` | `lock.go`, `memory.go`, `valkey.go`, `lock_test.go` | landed |
-| `planner` | — | **in flight** |
-| `worker` | — | **in flight** |
-| persistence/repository | — | **in flight** |
-| `cmd/executor` | — | **in flight** |
+| `core/execution` (`package execution`) | `types.go`, `enums.go`, `lifecycle.go`, `records.go` (canonical domain vocabulary) + `execution.go` (command→status aggregate, idempotent `Apply`) | landed |
+| `core/orders` | `orders.go` (`Ledger`, `ClampChild`) | landed |
+| `core/planner` | `plan.go`, `types.go`, `validate.go` | landed |
+| `core/risk` | `types.go`, `risk.go`, `leverage.go`, `solve.go`, `errors.go` | landed |
+| `core/sizing` | `sizing.go`, `types.go`, `errors.go` (mode resolution, ladder math, grid rounding) | landed |
+| `strategies` | `strategy.go` (action vocabulary, determinism/recovery contract), `strategies.go` (market/limit/TWAP/iceberg/scale implementations) | landed |
+| `exchanges` | `interface.go`, `registry.go`, `types.go`, `symbols.go`, `classify.go`, `credentials.go`, `http.go` + tests | landed |
+| `exchanges/binance` | `binance.go`, `sign.go`, `parse.go`, `binance_test.go` (stdlib REST adapter, injectable `HTTPClient`) | landed |
+| `exchanges/mexc` | `mexc.go`, `sign.go`, `parse.go` | landed |
+| `exchanges/paper` | `paper.go`, `match.go`, `config.go` (deterministic in-memory venue) | landed |
+| `exchanges/bybit` | `bybit.go`, `sign.go`, `parse.go` | landed |
+| `runtime/idempotency` | `idempotency.go` (`ClientOrderID`, `ParseClientOrderID`, `FillDedupKey`) | landed |
+| `runtime/worker` | `worker.go`, `tick.go`, `helpers.go` (runtime loop, recovery pass, over-order clamp) | landed |
+| `platform/decimal` | `decimal.go`, `decimal_test.go` (exact `big.Rat` decimal strings; objective §36: never float64 in financial paths) | landed |
+| `platform/credentials` | `credentials.go` (AES-GCM envelope custody; objective §8.4) | landed |
+| `platform/lock` | `lock.go`, `memory.go`, `valkey.go`, `lock_test.go` (execution lease, PRD §65) | landed |
+| `repository` | `store.go`, `credentials.go` (executor.* schema persistence) | landed |
+| `tests/e2e` | `paper_e2e_test.go` (composed paper harness, `go test`) | landed |
+| `cmd/executor` | `main.go`, `health.go`, `lease.go` + tests | landed |
 
 ## 3. TS parity policy
 **The TypeScript executor is the PARITY ORACLE and the PRODUCTION executor until
@@ -121,7 +125,7 @@ deleted"). What that means in practice:
   (`frontend/web/scripts/verify/executor-paper-e2e.ts`, `bun run verify:executor`) is
   the integration gate; it is environment-gated on `FUDCOURT_EXECUTOR_MASTER_KEY`.
 - Go code mirrors the TS contract field-for-field and says so
-  (`backend/workers/executor/internal/executor/records.go`: "mirror
+  (`backend/workers/executor/internal/core/execution/records.go`: "mirror
   frontend/web/src/platform/executor/types.ts field-for-field … Where the two
   disagree, the TS contract and its tests are the parity oracle until cutover").
 - Cutover (delete TS) requires: every row below green in Go, the paper E2E green
@@ -133,23 +137,23 @@ column is filled from the §2/§3 evidence only):
 
 | Feature | TS (parity oracle) | Go | Status |
 |---|---|---|---|
-| fixed USD risk | `risk.ts` `calculateRiskPosition`, `executor-risk-tests.ts` | `internal/risk` + `internal/sizing` | parity unproven |
-| percentage risk | `risk.ts` + `resolveBalanceBasis` (PRD §9–10), `executor-risk-tests.ts` | `internal/risk` + `internal/sizing` | parity unproven |
-| long sizing | `plan.ts` `sizePosition`, `executor-plan-tests.ts` | `internal/sizing` | parity unproven |
-| short sizing | `plan.ts` `sizePosition`, `executor-plan-tests.ts` | `internal/sizing` | parity unproven |
-| spot | `types.ts` `MarketType: 'spot'`, `exchange.ts` | `executor.MarketSpot`, `internal/exchange` | parity unproven |
-| futures | `types.ts` `'linear_perp'`, `exchange.ts` | `executor.MarketLinearPerp`, `internal/exchange` | parity unproven |
-| leverage | `risk.ts` `autoLeverage` (PRD §18–19), `executor-risk-tests.ts` | `internal/risk/leverage.go` | parity unproven |
-| pause | `runtime.ts` lifecycle + `worker.ts`, `executor-runtime-tests.ts` | `internal/execution` (`CommandPause`) | parity unproven |
-| cancel | `runtime.ts` (cancel cancels orders, never closes positions) | `internal/execution` (`CommandCancel`) | parity unproven |
-| resume | `runtime.ts` + `worker.ts` | `internal/execution` (`CommandResume`) | parity unproven |
-| TWAP | `engine.ts` (jitter opt-in, DR-021 §2g), `executor-engine-tests.ts` | `internal/strategy` | parity unproven |
-| market | `plan.ts`/`exchange.ts` market orders (entry at the touch, PRD §26) | `internal/exchange`, `internal/orders` | parity unproven |
-| limit | `plan.ts`/`exchange.ts` limit orders | `internal/exchange`, `internal/orders` | parity unproven |
-| partial fill | `worker.ts` ingest + `clampChild` (PRD §107), `executor-worker-tests.ts` | `internal/orders` (`ClampChild`) | parity unproven |
-| worker recovery | `worker.ts` `recover()` (PRD §114), `executor-worker-tests.ts` | `internal/worker` | **in flight** |
-| reconciliation | `worker.ts` `reconcileOrders` (PRD §41/§95) | `internal/worker` | **in flight** |
-| idempotent start | `runtime.ts` same-status 409 + `execution.Apply`-equivalent | `internal/execution.Apply` (idempotent at target) | parity unproven |
+| fixed USD risk | `risk.ts` `calculateRiskPosition`, `executor-risk-tests.ts` | `internal/core/risk` + `internal/core/sizing` | parity unproven |
+| percentage risk | `risk.ts` + `resolveBalanceBasis` (PRD §9–10), `executor-risk-tests.ts` | `internal/core/risk` + `internal/core/sizing` | parity unproven |
+| long sizing | `plan.ts` `sizePosition`, `executor-plan-tests.ts` | `internal/core/sizing` | parity unproven |
+| short sizing | `plan.ts` `sizePosition`, `executor-plan-tests.ts` | `internal/core/sizing` | parity unproven |
+| spot | `types.ts` `MarketType: 'spot'`, `exchange.ts` | `executor.MarketSpot`, `internal/exchanges` | parity unproven |
+| futures | `types.ts` `'linear_perp'`, `exchange.ts` | `executor.MarketLinearPerp`, `internal/exchanges` | parity unproven |
+| leverage | `risk.ts` `autoLeverage` (PRD §18–19), `executor-risk-tests.ts` | `internal/core/risk/leverage.go` | parity unproven |
+| pause | `runtime.ts` lifecycle + `worker.ts`, `executor-runtime-tests.ts` | `internal/core/execution` (`CommandPause`) | parity unproven |
+| cancel | `runtime.ts` (cancel cancels orders, never closes positions) | `internal/core/execution` (`CommandCancel`) | parity unproven |
+| resume | `runtime.ts` + `worker.ts` | `internal/core/execution` (`CommandResume`) | parity unproven |
+| TWAP | `engine.ts` (jitter opt-in, DR-021 §2g), `executor-engine-tests.ts` | `internal/strategies` | parity unproven |
+| market | `plan.ts`/`exchange.ts` market orders (entry at the touch, PRD §26) | `internal/exchanges`, `internal/core/orders` | parity unproven |
+| limit | `plan.ts`/`exchange.ts` limit orders | `internal/exchanges`, `internal/core/orders` | parity unproven |
+| partial fill | `worker.ts` ingest + `clampChild` (PRD §107), `executor-worker-tests.ts` | `internal/core/orders` (`ClampChild`) | parity unproven |
+| worker recovery | `worker.ts` `recover()` (PRD §114), `executor-worker-tests.ts` | `internal/runtime/worker` | **in flight** |
+| reconciliation | `worker.ts` `reconcileOrders` (PRD §41/§95) | `internal/runtime/worker` | **in flight** |
+| idempotent start | `runtime.ts` same-status 409 + `execution.Apply`-equivalent | `internal/core/execution.Apply` (idempotent at target) | parity unproven |
 
 ## 4. Idempotency keys
 Four identity layers make retries, restarts and replays safe (objective §23;
@@ -158,11 +162,11 @@ PRD §62/§66):
 | Key | Form | Makes idempotent | Evidence |
 |---|---|---|---|
 | request id | `request_id` correlation id of the originating request | replays of one API call correlate to one logical request; carried on every event (`shared/contracts/schemas/event-envelope.json`) and error (`shared/contracts/schemas/error-envelope.json`) | event/error envelope schemas |
-| execution id | execution uuid | one execution aggregate per user intent; lifecycle intents addressed to it refuse illegal repeats | `executor-schema.sql` `executions`; `internal/execution/execution.go` |
-| client order id | `fud_<executionID>_<sequence>` | a retried/duplicated/replayed placement maps onto the SAME venue order instead of a second one | PRD §66; `types.ts:747`; `internal/idempotency/idempotency.go` (parse-strict: foreign/zero-padded ids refused, never mis-parsed); `UNIQUE (execution_id, client_order_id)` in `executor-schema.sql` |
+| execution id | execution uuid | one execution aggregate per user intent; lifecycle intents addressed to it refuse illegal repeats | `executor-schema.sql` `executions`; `internal/core/execution/execution.go` |
+| client order id | `fud_<executionID>_<sequence>` | a retried/duplicated/replayed placement maps onto the SAME venue order instead of a second one | PRD §66; `types.ts:747`; `internal/runtime/idempotency/idempotency.go` (parse-strict: foreign/zero-padded ids refused, never mis-parsed); `UNIQUE (execution_id, client_order_id)` in `executor-schema.sql` |
 | fill dedup key | `(account_id, exchange_trade_id)` | one venue trade ingested once; `insertFill` resolves null on conflict ("already ingested") | PRD §62; `store.ts` `fillDedupKey` + `UNIQUE (account_id, exchange_trade_id)` in `executor-schema.sql`; Go `FillDedupKey` |
 
-Idempotent start specifically: `internal/execution.Apply` treats a repeated
+Idempotent start specifically: `internal/core/execution.Apply` treats a repeated
 command whose target equals the current status as a no-op
 (`transitioned=false, err=nil`) and the caller MUST NOT re-emit lifecycle events
 or re-drive work; the TS API layer answers the same repeat with 409
@@ -180,7 +184,7 @@ or re-drive work; the TS API layer answers the same repeat with 409
    reconcile, don't place" — and the placement loop breaks on
    `if (!placementEnabled)` ("recovery reconciles first; resume places next
    tick"). `recover()` is the same code path. Go mirrors it:
-   `internal/strategy/strategy.go` — `ctx.PlacementEnabled=false` means the
+   `internal/strategies/strategy.go` — `ctx.PlacementEnabled=false` means the
    strategy MUST emit ZERO submit actions while staying resumable.
 3. **Over-order clamp** (PRD §107/§128.15; `worker.ts` `clampChild`, Go
    `orders.ClampChild`). For an entry child, the quantity legal to send now is
