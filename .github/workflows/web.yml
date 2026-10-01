@@ -60,9 +60,14 @@ jobs:
       - name: Install
         run: bun install --frozen-lockfile
       - name: "Offline contract gate (CR_MODES consistency + mutation-auth guards)"
-        run: python3 scripts/checks/check-contract.py
-      - name: "Deploy-unit guard (every ExecStart path must exist)"
-        run: python3 scripts/checks/check-deploy.py
+        run: python3 ../../scripts/verify/check-contract.py
+      # NO deploy-unit guard here, on purpose. Its subject is the whole repo's
+      # infrastructure/systemd/ units and the cross-service binaries their ExecStart
+      # lines name (backend/sync/target/release/* exists only after `cargo build` and
+      # is gitignored), so on a web-only runner with no Rust toolchain it fails for
+      # reasons that have nothing to do with this surface. integration.yml's `offline`
+      # job runs it via scripts/verify/verify-all.sh, which deliberately orders the
+      # cargo build BEFORE the guard (commit 9e2e1ec).
       - name: "Structure gate (DR-018 layers)"
         run: python3 scripts/checks/check-structure.py
       - name: Typecheck

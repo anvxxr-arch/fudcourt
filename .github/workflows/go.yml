@@ -63,7 +63,14 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
-          cache-dependency-path: ${{ matrix.module }}/go.sum
+          # backend/api has zero external requires and therefore NO go.sum (it is
+          # neither present nor tracked), so naming it here made the cache key point
+          # at a file that cannot exist. Every module that really has one lives at
+          # <module>/go.sum; backend/api simply resolves to nothing and the cache
+          # still keys on its go.mod via the glob.
+          cache-dependency-path: |
+            **/go.mod
+            **/go.sum
       - name: Build
         run: go build ./...
       - name: Vet
