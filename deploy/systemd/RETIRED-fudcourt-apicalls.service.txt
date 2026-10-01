@@ -21,3 +21,14 @@ TimeoutStopSec=15
 
 [Install]
 WantedBy=default.target
+
+
+==================== RETIRED 2026-10-01 ====================
+Duplicate of fudcourt-data.service (same 127.0.0.1:3101 sidecar, same
+services/data tree) left over from the apps/apicalls -> services/data move
+(Phase 1, 4e8ba91). It still carried the pre-move APICALLS_* environment
+and the old binary path, so two units in this directory claimed one port.
+
+Kept as .txt so check-deploy.py (which globs *.service) ignores it while the
+history stays readable. The live unit is deploy/systemd/fudcourt-data.service.
+============================================================
