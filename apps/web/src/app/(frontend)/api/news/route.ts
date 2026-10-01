@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * news read proxy (Cointelegraph RSS). Source/limit input, never a raw path.
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `apicalls` (services/data, 127.0.0.1:3101), exactly like
+ * `fudcourt-data` (services/data, 127.0.0.1:3101), exactly like
  * app/api/khala/route.ts, app/api/llama/route.ts and
  * app/api/cryptorank/route.ts. The Go side owns the feed table, the strict
  * `source`/`limit` validation (known source; integer, 1..100, never clamped),
@@ -31,7 +31,7 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export const dynamic = 'force-dynamic';
 /** Go sidecar base URL. Runtime read: a restart picks up changes without a rebuild. */
-const APICALLS = process.env.APICALLS_URL ?? 'http://127.0.0.1:3101';
+const DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101';
 /**
  * The sidecar's own per-upstream timeout is 20s, so the proxy waits longer than
  * that before calling it unreachable.
@@ -40,7 +40,7 @@ const TIMEOUT_MS = 60_000;
 /* -------------------------------- handler ------------------------------- */
 export async function GET(req: NextRequest) {
   const source = req.nextUrl.searchParams.get('source');
-  const upstream = `${APICALLS}/api/news`;
+  const upstream = `${DATA_URL}/api/news`;
   // Exact same query string, untouched: the sidecar owns source/limit
   // semantics (validation, defaults, refusal). We never rewrite params.
   const target = `${upstream}${req.nextUrl.search}`;
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
             .join(': ')
         : String(err);
     return NextResponse.json(
-      { error: `apicalls unreachable: ${reason}`, upstream, kind: source },
+      { error: `fudcourt-data unreachable: ${reason}`, upstream, kind: source },
       { status: 502 },
     );
   }

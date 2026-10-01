@@ -102,7 +102,7 @@ var (
 
 // Options configures a Fetcher.
 type Options struct {
-	// CacheDir is the disk cache directory ("" -> APICALLS_CACHE_DIR ->
+	// CacheDir is the disk cache directory ("" -> FUDCOURT_DATA_CACHE_DIR ->
 	// ~/.cache/crfetch).
 	CacheDir string
 	// Timeout for a single upstream request.
@@ -146,7 +146,7 @@ type flightResult struct {
 func New(o Options) (*Fetcher, error) {
 	dir := o.CacheDir
 	if dir == "" {
-		dir = os.Getenv("APICALLS_CACHE_DIR")
+		dir = os.Getenv("FUDCOURT_DATA_CACHE_DIR")
 	}
 	if dir == "" {
 		dir = DefaultCacheDir

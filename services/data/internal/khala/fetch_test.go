@@ -328,13 +328,13 @@ func TestCacheWritesAreAtomicAndUniqueTmp(t *testing.T) {
 	}
 }
 
-// The cache root is <APICALLS_CACHE_DIR>/khala: a family must never share the
+// The cache root is <FUDCOURT_DATA_CACHE_DIR>/khala: a family must never share the
 // cryptorank cache dir (a shared cache turns an independent verification fetch
 // into self-confirmation).
-func TestCacheDirIsAPICALLS_CACHE_DIRSubdir(t *testing.T) {
+func TestCacheDirIsFUDCOURT_DATA_CACHE_DIRSubdir(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("APICALLS_CACHE_DIR", root)
-	t.Setenv("APICALLS_KHALA_CACHE_DIR", "")
+	t.Setenv("FUDCOURT_DATA_CACHE_DIR", root)
+	t.Setenv("FUDCOURT_DATA_KHALA_CACHE_DIR", "")
 	f, err := New(Options{})
 	if err != nil {
 		t.Fatal(err)

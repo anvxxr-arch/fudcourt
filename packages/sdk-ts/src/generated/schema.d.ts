@@ -4714,7 +4714,7 @@ export interface operations {
              * @description NOT emitted by the sidecar for an upstream throttle: an upstream
              *     429 is retried three times and then reported as a **502** with
              *     `"upstreamStatus": 429` (`fetchWithRetry` → `writeFetchError` in
-             *     `services/data/cmd/apicalls/main.go`). A client that only
+             *     `services/data/cmd/data/main.go`). A client that only
              *     special-cases 429 for backoff will never see one — branch on the
              *     502 body's `upstreamStatus` instead.
              */
@@ -4726,7 +4726,7 @@ export interface operations {
                     "application/json": components["schemas"]["SidecarError"];
                 };
             };
-            /** @description `{"error": <real reason>, "upstreamStatus": <int>, "upstream": ..., "kind": <mode>}` — upstream wall or layout drift (this branch carries NO `detail` key), an exhausted retry, or (proxy-level) `apicalls unreachable: <reason>`. */
+            /** @description `{"error": <real reason>, "upstreamStatus": <int>, "upstream": ..., "kind": <mode>}` — upstream wall or layout drift (this branch carries NO `detail` key), an exhausted retry, or (proxy-level) `fudcourt-data unreachable: <reason>`. */
             502: {
                 headers: {
                     [name: string]: unknown;
@@ -4794,7 +4794,7 @@ export interface operations {
                     "application/json": components["schemas"]["SidecarError"];
                 };
             };
-            /** @description Layout drift / missing CMS resource / transport failure with the real status and detail, or (proxy-level) `apicalls unreachable: <reason>`. */
+            /** @description Layout drift / missing CMS resource / transport failure with the real status and detail, or (proxy-level) `fudcourt-data unreachable: <reason>`. */
             502: {
                 headers: {
                     [name: string]: unknown;
@@ -4858,7 +4858,7 @@ export interface operations {
             };
             /**
              * @description `{"error": "upstream <mode> unreachable: <err>"}` (transport
-             *     failure), or (proxy-level) `apicalls unreachable: <reason>`.
+             *     failure), or (proxy-level) `fudcourt-data unreachable: <reason>`.
              *     NOTE: an upstream non-2xx (other than 429) is NOT rewritten to 502 —
              *     the sidecar passes the real upstream status through (a CoinGecko
              *     500/503 reaches the client as 500/503), and a 200 body that is not
@@ -4912,7 +4912,7 @@ export interface operations {
                     "application/json": components["schemas"]["SidecarError"];
                 };
             };
-            /** @description `{"error": <reason>, ...}` — unrecognised upstream shape or transport failure, or (proxy-level) `apicalls unreachable: <reason>`. */
+            /** @description `{"error": <reason>, ...}` — unrecognised upstream shape or transport failure, or (proxy-level) `fudcourt-data unreachable: <reason>`. */
             502: {
                 headers: {
                     [name: string]: unknown;
@@ -4967,7 +4967,7 @@ export interface operations {
                     "application/json": components["schemas"]["SidecarError"];
                 };
             };
-            /** @description `{"error": ..., "detail": <upstream body>}` for an empty/blocked feed or transport failure, or (proxy-level) `apicalls unreachable: <reason>`. */
+            /** @description `{"error": ..., "detail": <upstream body>}` for an empty/blocked feed or transport failure, or (proxy-level) `fudcourt-data unreachable: <reason>`. */
             502: {
                 headers: {
                     [name: string]: unknown;

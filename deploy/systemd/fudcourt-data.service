@@ -1,19 +1,31 @@
 # FUD Court external data sidecar (Go; services/data).
 #
-# Stands in for the old apps/apicalls Go service (git mv'd to services/data in
-# Phase 1). Serves the CryptoRank/Khala/ChainRank/Llama/news read proxies on
+# Serves the CryptoRank / Khala / ChainRank / Llama / news read proxies on
 # 127.0.0.1:3101; the Next.js BFF proxies /api/cryptorank, /api/chainrank,
-# /api/llama and /api/news to it. Binaries are built by ExecStartPre into
-# services/data/bin/, which .gitignore excludes.
+# /api/llama, /api/khala and /api/news to it. Supersedes the retired
+# fudcourt-apicalls unit — same service, renamed with the rest of the family
+# once apps/apicalls moved to services/data (Phase 1).
+#
+# The binary is built by ExecStartPre into services/data/bin/, which .gitignore
+# excludes. The Valkey password is a live credential: it is read from the
+# gitignored EnvironmentFile and is never hard-coded in a tracked file.
 [Unit]
-Description=FUD Court external data sidecar (Go) :3101
+Description=FUD Court external data sidecar (Go; services/data) :3101
+Documentation=file:///home/dwizzy/fudcourt/services/data/README.md
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=/home/dwizzy/fudcourt/services/data
-ExecStartPre=/usr/bin/go build -C /home/dwizzy/fudcourt/services/data -o bin/fudcourt-data ./cmd/apicalls
+Environment=FUDCOURT_DATA_ADDR=127.0.0.1:3101
+Environment=FUDCOURT_DATA_CACHE_DIR=/home/dwizzy/.cache/fudcourt-data
+# Shared L2 (Valkey). The unit does not Require= it: the L2 is an optimisation
+# and the sidecar must start (and serve) with Valkey absent.
+Environment=FUDCOURT_DATA_VALKEY_ADDR=127.0.0.1:6379
+# `-` = optional: a missing file must not block startup, it only disables L2.
+EnvironmentFile=-/home/dwizzy/fudcourt/.env
+ExecStartPre=/usr/bin/go build -C /home/dwizzy/fudcourt/services/data -o bin/fudcourt-data ./cmd/data
 ExecStart=/home/dwizzy/fudcourt/services/data/bin/fudcourt-data
 Restart=on-failure
 RestartSec=3

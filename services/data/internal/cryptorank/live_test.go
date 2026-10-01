@@ -1,9 +1,9 @@
 package cryptorank
 
-// Live proofs against the real upstream. Skipped unless APICALLS_LIVE=1,
+// Live proofs against the real upstream. Skipped unless FUDCOURT_DATA_LIVE=1,
 // because they spend requests on someone else's site.
 //
-//	APICALLS_LIVE=1 go test ./internal/cryptorank/ -run TestLive -v -timeout 180s
+//	FUDCOURT_DATA_LIVE=1 go test ./internal/cryptorank/ -run TestLive -v -timeout 180s
 //
 // TestLiveChromeProfileFetches proves the dependency stack works: tls-client +
 // profiles.Chrome_131 over HTTP/2 returns 200 with the SSR payload (measured in
@@ -30,8 +30,8 @@ const livePath = "/all-coins-list"
 
 func liveGuard(t *testing.T) {
 	t.Helper()
-	if os.Getenv("APICALLS_LIVE") != "1" {
-		t.Skip("set APICALLS_LIVE=1 to run live upstream proofs")
+	if os.Getenv("FUDCOURT_DATA_LIVE") != "1" {
+		t.Skip("set FUDCOURT_DATA_LIVE=1 to run live upstream proofs")
 	}
 }
 

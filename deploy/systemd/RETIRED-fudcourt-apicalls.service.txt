@@ -12,7 +12,9 @@ Environment=APICALLS_CACHE_DIR=/home/dwizzy/.cache/apicalls
 # throws away every cached upstream body. The unit does not Require= it: the L2
 # is an optimisation and the sidecar must start without it.
 Environment=APICALLS_VALKEY_ADDR=127.0.0.1:6379
-Environment=APICALLS_VALKEY_PASSWORD=valkey_dev
+# APICALLS_VALKEY_PASSWORD is deliberately NOT recorded here: this file is
+# tracked, and the value is a live credential. The running unit gets it from
+# the gitignored EnvironmentFile instead.
 ExecStart=/home/dwizzy/fudcourt/services/data/bin/apicalls
 Restart=always
 RestartSec=5

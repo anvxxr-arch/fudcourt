@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * CryptoRank read proxy. Mode-only input (never a raw path).
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `apicalls` (services/data, 127.0.0.1:3101). The Go service does the real
+ * `fudcourt-data` (services/data, 127.0.0.1:3101). The Go service does the real
  * work: mode validation, key/list validation, disabled-mode refusal, the
  * browser-fingerprint fetch (tls-client chrome_131 + HTTP/2 — the only
  * combination measured to beat cryptorank.io's Cloudflare ClientHello
@@ -40,7 +40,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /** Go sidecar base URL. Runtime read: a restart picks up changes without a rebuild. */
-const APICALLS = process.env.APICALLS_URL ?? 'http://127.0.0.1:3101';
+const DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101';
 
 /** Largest payload is mode=chain at ~1.19 MB — give the sidecar room. */
 const TIMEOUT_MS = 60_000;
@@ -48,7 +48,7 @@ const TIMEOUT_MS = 60_000;
 /* -------------------------------- handler ------------------------------- */
 export async function GET(req: NextRequest) {
   const mode = req.nextUrl.searchParams.get('mode');
-  const upstream = `${APICALLS}/api/cryptorank`;
+  const upstream = `${DATA_URL}/api/cryptorank`;
   // Exact same query string, untouched: the sidecar owns mode/key/fresh
   // semantics (validation, defaults, refusal). We never rewrite params.
   const target = `${upstream}${req.nextUrl.search}`;
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
             .join(': ')
         : String(err);
     return NextResponse.json(
-      { error: `apicalls unreachable: ${reason}`, upstream, kind: mode },
+      { error: `fudcourt-data unreachable: ${reason}`, upstream, kind: mode },
       { status: 502 },
     );
   }

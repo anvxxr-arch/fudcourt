@@ -34,7 +34,7 @@ SRC = ROOT / "src"
 # Normally services/data/internal/cryptorank/modes.go; overridable so the parity
 # gate can be exercised (and so CI survives a different checkout layout).
 GO_TABLE = Path(os.environ.get(
-    "APICALLS_MODES_GO", ROOT.parent.parent / "services" / "data" / "internal" / "cryptorank" / "modes.go"))
+    "FUDCOURT_DATA_MODES_GO", ROOT.parent.parent / "services" / "data" / "internal" / "cryptorank" / "modes.go"))
 fails = []
 def modes_from_lib() -> set:
     src = (SRC / "features" / "cryptorank" / "client.ts").read_text()
@@ -144,8 +144,8 @@ def check_route_is_proxy(rel: str = "cryptorank", needles=("execFile", "child_pr
         if needle in src:
             fails.append(f"src/app/(frontend)/api/{rel}/route.ts: {needle!r} present — the route must be "
                          f"a thin proxy to services/data (Go owns validation)")
-    if "APICALLS" not in src:
-        fails.append(f"src/app/(frontend)/api/{rel}/route.ts: no APICALLS upstream base — proxy wiring lost")
+    if "DATA_URL" not in src:
+        fails.append(f"src/app/(frontend)/api/{rel}/route.ts: no DATA_URL upstream base — proxy wiring lost")
     return True
 lib = modes_from_lib()
 sweep = modes_from_sweep()
@@ -162,7 +162,7 @@ check_route_is_proxy()
 # Both sides are skipped-not-failed when absent so this gate can land before the
 # family does (same convention as modes_from_sweep).
 KH_TS = SRC / "features" / "khala" / "client.ts"
-KH_GO = Path(os.environ.get("APICALLS_KHALA_GO",
+KH_GO = Path(os.environ.get("FUDCOURT_DATA_KHALA_GO",
                             ROOT.parent.parent / "services" / "data" / "internal" / "khala" / "modes.go"))
 kh_parity = "khala absent"
 if KH_TS.exists() and KH_GO.exists():
@@ -187,7 +187,7 @@ if check_route_is_proxy("khala"):
 # khala -- src/features/llama/client.ts carries the TS mode list, services/data/internal/llama/
 # modes.go the Go one, and the route must be the verbatim proxy.
 LL_TS = SRC / "features" / "llama" / "client.ts"
-LL_GO = Path(os.environ.get("APICALLS_LLAMA_GO",
+LL_GO = Path(os.environ.get("FUDCOURT_DATA_LLAMA_GO",
                             ROOT.parent.parent / "services" / "data" / "internal" / "llama" / "modes.go"))
 ll_parity = "llama absent"
 if LL_TS.exists() and LL_GO.exists():
@@ -216,7 +216,7 @@ if check_route_is_proxy("llama", ("execFile", "child_process", "limitedFetch",
 # itself must not come back: src/features/llama/client.ts-style mirror has no parse code, and a
 # route that regrows one is the drift this row exists to catch.
 NW_TS = SRC / "features" / "news" / "client.ts"
-NW_GO = Path(os.environ.get("APICALLS_NEWS_GO",
+NW_GO = Path(os.environ.get("FUDCOURT_DATA_NEWS_GO",
                             ROOT.parent.parent / "services" / "data" / "internal" / "news" / "modes.go"))
 nw_parity = "news absent"
 if NW_TS.exists() and NW_GO.exists():
@@ -253,7 +253,7 @@ if check_route_is_proxy("news", ("execFile", "child_process", "limitedFetch",
 # drift this row exists to catch, because upstream's own clamp is the answer the
 # board must show).
 CH_TS = SRC / "features" / "chainrank" / "client.ts"
-CH_GO = Path(os.environ.get("APICALLS_CHAINRANK_GO",
+CH_GO = Path(os.environ.get("FUDCOURT_DATA_CHAINRANK_GO",
                             ROOT.parent.parent / "services" / "data" / "internal" / "chainrank" / "modes.go"))
 ch_parity = "chainrank absent"
 if CH_TS.exists() and CH_GO.exists():

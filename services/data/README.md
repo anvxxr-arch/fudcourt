@@ -1,4 +1,4 @@
-# apicalls
+# fudcourt-data
 
 Standalone Go port of the CryptoRank read proxy that used to run as
 `apps/web/scripts/oracle/cr_fetch.py` (curl_cffi subprocess) + `apps/web/lib/shapers.ts`
@@ -25,33 +25,33 @@ guarantee, because "byte-for-byte" would be an overclaim:
   same bytes for the same values.
 
 It binds loopback only. The public ingress is still the Cloudflare tunnel to the
-Next app; `apicalls` is a sidecar, not an origin.
+Next app; `fudcourt-data` is a sidecar, not an origin.
 
 ## Run
 
 ```sh
 cd services/data
-go build -o bin/apicalls ./cmd/apicalls
-APICALLS_ADDR=127.0.0.1:3101 ./bin/apicalls
+go build -o bin/fudcourt-data ./cmd/data
+FUDCOURT_DATA_ADDR=127.0.0.1:3101 ./bin/fudcourt-data
 ```
 
 | env | default | meaning |
 | --- | --- | --- |
-| `APICALLS_ADDR` | `127.0.0.1:3101` | listen address (loopback only by design) |
-| `APICALLS_CACHE_DIR` | `~/.cache/crfetch` (the Python helper's dir; the deploy unit sets `~/.cache/apicalls` — see below) | on-disk fetch cache |
-| `APICALLS_TTL` | `60` | per-route cache TTL in seconds; `?fresh=1` forces TTL 0 for that request |
-| `APICALLS_LLAMA_TTL` | `15` | in-process TTL in seconds for the llama family (read at startup; `top`/`days` share one upstream entry) |
-| `APICALLS_NEWS_TTL` | `15` | in-process TTL in seconds for the news feed (read at startup; keyed on the FEED URL, so every `limit` shares one read) |
-| `APICALLS_CHAINRANK_TTL` | `15` | in-process TTL in seconds for the chainrank reads (read at startup; keyed on the full upstream URL) |
+| `FUDCOURT_DATA_ADDR` | `127.0.0.1:3101` | listen address (loopback only by design) |
+| `FUDCOURT_DATA_CACHE_DIR` | `~/.cache/crfetch` (the Python helper's dir; the deploy unit sets `~/.cache/fudcourt-data` — see below) | on-disk fetch cache |
+| `FUDCOURT_DATA_TTL` | `60` | per-route cache TTL in seconds; `?fresh=1` forces TTL 0 for that request |
+| `FUDCOURT_DATA_LLAMA_TTL` | `15` | in-process TTL in seconds for the llama family (read at startup; `top`/`days` share one upstream entry) |
+| `FUDCOURT_DATA_NEWS_TTL` | `15` | in-process TTL in seconds for the news feed (read at startup; keyed on the FEED URL, so every `limit` shares one read) |
+| `FUDCOURT_DATA_CHAINRANK_TTL` | `15` | in-process TTL in seconds for the chainrank reads (read at startup; keyed on the full upstream URL) |
 
 ### Cache directories: keep the oracle's cache separate
 
-`APICALLS_CACHE_DIR` must **not** point at the Python helper's `~/.cache/crfetch`
+`FUDCOURT_DATA_CACHE_DIR` must **not** point at the Python helper's `~/.cache/crfetch`
 in production. `verify-cryptorank.py` is only worth having because it is an
 independent second client: if it and the Go service share a cache directory, a run
 where the oracle "confirms" a payload can be reading bytes the Go side wrote --
 self-confirmation instead of a cross-check. Separate caches (the unit sets
-`~/.cache/apicalls`) keep that second fetch real.
+`~/.cache/fudcourt-data`) keep that second fetch real.
 
 The volume argument for sharing is moot once Go is the only serving path: after
 the cutover `/api/cryptorank` is a pure proxy, so the Python helper only runs
@@ -186,7 +186,7 @@ render zeros and nobody would notice.
   hard error (a challenge interstitial served with a 200).
 * A transport failure -> `\*cryptorank.HardError{Kind:"transport"}` with the real
   error text.
-* Every hard failure is logged as `apicalls: ALARM <kind> <url>: ...`.
+* Every hard failure is logged as `fudcourt-data: ALARM <kind> <url>: ...`.
 
 A `429` is *not* a hard failure: it is the transient burst limiter, so the same
 fetch is retried up to 3 attempts with `3s x (attempt+1)` backoff before a real
@@ -207,7 +207,7 @@ Other reliability work beyond the Python original:
   directory so the rename stays atomic). The Python helper's fixed `.tmp` path
   breaks once fresh requests can write the same key concurrently: two writers
   raced the rename and one failed with `no such file or directory`.
-* **Configurable cache dir** via `APICALLS_CACHE_DIR`.
+* **Configurable cache dir** via `FUDCOURT_DATA_CACHE_DIR`.
 
 ## Verify
 
@@ -230,10 +230,10 @@ go test ./internal/cryptorank/ -run TestParity -v
 go test ./internal/paritytest/ -v
 
 # 4. live smoke: real upstream, 5 requests, spaced 2s
-./scripts/smoke-apicalls.sh
+./scripts/smoke-data.sh
 
 # 5. live stack proof + the loud challenge arm (2 upstream requests)
-APICALLS_LIVE=1 go test ./internal/cryptorank/ -run TestLive -v -timeout 180s
+FUDCOURT_DATA_LIVE=1 go test ./internal/cryptorank/ -run TestLive -v -timeout 180s
 ```
 
 The parity oracle is only as good as its fixtures: `expected/` is produced by
@@ -243,7 +243,7 @@ the TS shapers change, regenerate both before trusting a green run.
 ## Layout
 
 ```
-cmd/apicalls/         HTTP surface (frozen contract), retry policy, error mapping
+cmd/data/         HTTP surface (frozen contract), retry policy, error mapping
 internal/cryptorank/     port of lib/cryptorank.ts: 28 modes, key rules, refusals
 internal/cryptorank/     port of scripts/oracle/cr_fetch.py: TLS client, allowlist,
                       __NEXT_DATA__ extraction, disk cache, single-flight

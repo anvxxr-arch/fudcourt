@@ -20,8 +20,8 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 | `FUD_MUTATION_TOKEN` + `NEXT_PUBLIC_FUD_MUTATION_TOKEN` | **RETIRED** — superseded by the session tier. `NEXT_PUBLIC_…` was inlined at build time and shipped in a public JS chunk; the pair is safe to delete from `.env.local` and `.env` | — | — | no |
 | `DATABASE_URL` (Neon) | Payload blog (now `apps/web/src/cms`, DR-017) | `apps/web/.env.local` | `fudcourt-web` (:3100) | no (build works without it — verified) |
 | `PAYLOAD_SECRET` | Payload blog (sessions/cookies) | `apps/web/.env.local` | `fudcourt-web` (:3100) | no |
-| `CR_PYTHON` | interpreter for the **verifier oracle** `scripts/oracle/cr_fetch.py` (no longer a runtime path — DR-005: the route proxies to `apicalls`) | code default (`~/.venvs/crfetch/bin/python`) | `verify-cryptorank.py` runs on this host | no |
-| `APICALLS_URL` | upstream base of the CryptoRank route's proxy target | code default (`http://127.0.0.1:3101`) | `fudcourt-web` (`:3100`) | no |
+| `CR_PYTHON` | interpreter for the **verifier oracle** `scripts/oracle/cr_fetch.py` (no longer a runtime path — DR-005: the route proxies to `fudcourt-data`) | code default (`~/.venvs/crfetch/bin/python`) | `verify-cryptorank.py` runs on this host | no |
+| `FUDCOURT_DATA_URL` | upstream base of the CryptoRank route's proxy target | code default (`http://127.0.0.1:3101`) | `fudcourt-web` (`:3100`) | no |
 | `VERCEL_OIDC_TOKEN` (legacy residue) | — none anymore — | `apps/web/.env.local` | — | no — **safe to delete this line** |
 | **`FUDCOURT_EXECUTOR_MASTER_KEY`** (added with the CEX Executor, DR-021) | `src/platform/executor/store.ts` — seals/opens every exchange credential (AES-256-GCM) and is read by `scripts/executor/worker.ts` indirectly through the store | `apps/web/.env.local` (**never** committed; git-ignored) | `fudcourt-web` (`:3100`) + `fudcourt-executor-worker` | no |
 | `FUDCOURT_EXECUTOR_LIVE` | not a secret — the §108 **kill switch**; `=1` is the only value that enables live order placement | `apps/web/.env.local` (absent = paper only) | `fudcourt-executor-worker` | no |
@@ -93,8 +93,8 @@ Production == this homeserver:
 
 - `CR_PYTHON` points at the curl_cffi venv **on this host**, and since DR-005 it
   is read only by the verification oracle (`scripts/oracle/cr_fetch.py`), never by a
-  request. The CryptoRank runtime is the Go `apicalls` service
-  (`fudcourt-apicalls`, `:3101`); `/api/cryptorank` is a thin proxy to it, so a
+  request. The CryptoRank runtime is the Go `fudcourt-data` service
+  (`fudcourt-data`, `:3101`); `/api/cryptorank` is a thin proxy to it, so a
   stopped sidecar is a loud 502 rather than a silent fallback.
 - Auth is **fail-closed**: no `FUDCOURT_SESSION_SECRET` (or one under 32 chars)
   means no session can be signed or verified, so every gated surface — reads

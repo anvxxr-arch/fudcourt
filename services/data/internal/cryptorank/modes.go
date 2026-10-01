@@ -1,7 +1,7 @@
 // The mode table is the port of apps/web/lib/cryptorank.ts: the CryptoRank
 // mode table, key/allowlist validation and the disabled-mode refusal text.
 //
-// Everything here is data. The route in cmd/apicalls/main.go is the only place
+// Everything here is data. The route in cmd/data/main.go is the only place
 // that turns a request into one of these modes; the client never passes a raw
 // upstream path.
 package cryptorank

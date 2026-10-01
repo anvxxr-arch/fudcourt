@@ -67,7 +67,7 @@ tracked) with a drift alarm at `node scripts/tools/dump-schema.mjs --check` (R-1
 | Piece | Detail |
 |-------|--------|
 | Local web | `fudcourt-web.service` (systemd --user, active) → `ExecStart=/home/dwizzy/.bun/bin/bun --bun /home/dwizzy/fudcourt/apps/web/node_modules/next/dist/bin/next start -p 3100` — Bun is the runtime ([DR-008](../records/DECISIONS.md)); absolute paths because a user unit's PATH has no `~/.bun/bin`, and `next` is addressed by its real entry rather than the `node_modules/.bin/next` shim (whose shebang is `#!/usr/bin/env node`). Unit versioned at `deploy/systemd/fudcourt-web.service` (identical to the installed unit, comments aside) |
-| Local CryptoRank sidecar | `fudcourt-apicalls.service` (systemd --user) → `services/data/bin/apicalls`, `:3101`; cache `~/.cache/apicalls`, `Restart=always`. Unit versioned at `deploy/systemd/fudcourt-apicalls.service` (identical to the installed unit) |
+| Local CryptoRank sidecar | `fudcourt-data.service` (systemd --user) → `services/data/bin/fudcourt-data`, `:3101`; cache `~/.cache/fudcourt-data`, `Restart=always`. Unit versioned at `deploy/systemd/fudcourt-data.service` (identical to the installed unit) |
 | Local Rust reconcile service | `fudcourt-reconciled.service` (systemd --user) → `services/sync/target/release/fudcourt-reconciled`, `127.0.0.1:3102`, `Restart=always`, `EnvironmentFile` the repo `.env`; enabled at boot. **Zero new crates** (tokio `net`+`io-util`; serde_json `preserve_order` is a feature, not a package). Unit versioned at `deploy/systemd/fudcourt-reconciled.service` (identical to the installed unit). `/api/reconcile` on `:3100` proxies to it (DR-014) |
 | Local blog | **Retired as a unit (DR-017)** — the blog is served by `fudcourt-web` on `:3100` at `/blog` (public), `/blog/cms/admin` (Payload admin) and `/blog/cms/api/*` (Payload REST/GraphQL). `fudcourt-blog.service` and `:3001` no longer exist; the retirement tombstone is `deploy/systemd/RETIRED-fudcourt-blog.service.txt` |
 | Live sync | `fudcourt-sync.timer` → `OnUnitActiveSec=5min` → `fudcourt-sync.service` (`/usr/bin/python3 .../scripts/tools/sync-live.py`) → Turso `assets` |
@@ -82,7 +82,7 @@ Browser/agent  ──►  GET /api/cryptorank?mode=…[&key=…][&fresh=1]   (:3
                         │  THIN PROXY: forwards the query string verbatim and
                         │  returns the sidecar's body/status/headers unchanged
                         ▼  (no validation, no shaping, no second implementation)
-                 services/data  Go service, fudcourt-apicalls :3101   [DR-005]
+                 services/data  Go service, fudcourt-data :3101   [DR-005]
                         │  mode/key validation · 400 bad key · 404 upstream miss
                         │  503 decoy refusal (funding/unlocks) · disk cache TTL
                         │  429 backoff-retry ×3 · fetch with

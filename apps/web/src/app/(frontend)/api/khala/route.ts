@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * khala read proxy. Mode-only input (never a raw path).
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `apicalls` (services/data, 127.0.0.1:3101), exactly like
+ * `fudcourt-data` (services/data, 127.0.0.1:3101), exactly like
  * app/api/cryptorank/route.ts. The Go service does the real work: mode
  * validation, the `key`/`limit` scoping, the strict 1..50 limit, the report
  * slug regex, the HTML acquisition of khala.io, the block extraction and the
@@ -43,7 +43,7 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export const dynamic = 'force-dynamic';
 /** Go sidecar base URL. Runtime read: a restart picks up changes without a rebuild. */
-const APICALLS = process.env.APICALLS_URL ?? 'http://127.0.0.1:3101';
+const DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101';
 /**
  * Largest payload is `mode=report` over the longest report at 84,315 B
  * (x402, 506 blocks — measured 2026-09-29; see lib/rate-limit-inbound.ts for
@@ -55,7 +55,7 @@ const TIMEOUT_MS = 60_000;
 /* -------------------------------- handler ------------------------------- */
 export async function GET(req: NextRequest) {
   const mode = req.nextUrl.searchParams.get('mode');
-  const upstream = `${APICALLS}/api/khala`;
+  const upstream = `${DATA_URL}/api/khala`;
   // Exact same query string, untouched: the sidecar owns mode/key/limit/fresh
   // semantics (validation, defaults, refusal). We never rewrite params.
   const target = `${upstream}${req.nextUrl.search}`;
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
             .join(': ')
         : String(err);
     return NextResponse.json(
-      { error: `apicalls unreachable: ${reason}`, upstream, kind: mode },
+      { error: `fudcourt-data unreachable: ${reason}`, upstream, kind: mode },
       { status: 502 },
     );
   }

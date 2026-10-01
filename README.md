@@ -22,7 +22,7 @@ schema), `docs/operations/` (PLAN, [SECRETS](docs/operations/SECRETS.md), change
 `scripts/checks/check-structure.py`.
 
 > **Hosting:** self-hosted on the homeserver — production = the systemd units
-> (`fudcourt-web` :3100 — dashboard + blog, `fudcourt-apicalls` :3101,
+> (`fudcourt-web` :3100 — dashboard + blog, `fudcourt-data` :3101,
 > `fudcourt-reconciled` :3102, `fudcourt-sync.timer`), **no
 > third-party deploy target** ([DR-002](docs/records/DECISIONS.md)). Public entry:
 > **https://fc.dwirijal.my.id** (Cloudflare Tunnel → loopback origin,
@@ -31,15 +31,15 @@ schema), `docs/operations/` (PLAN, [SECRETS](docs/operations/SECRETS.md), change
 ## Run
 
 ```bash
-cd services/data && go build -o bin/apicalls ./cmd/apicalls && ./bin/apicalls
-                                         # CryptoRank sidecar -> :3101 (unit: deploy/systemd/fudcourt-apicalls.service)
+cd services/data && go build -o bin/fudcourt-data ./cmd/data && ./bin/fudcourt-data
+                                         # CryptoRank sidecar -> :3101 (unit: deploy/systemd/fudcourt-data.service)
 cd apps/web  && bun install && bun run dev # dashboard + blog + proxy -> :3000
                                           # (prod unit: :3100, served by Bun — DR-008/DR-017)
                                           # blog: /blog (public), /blog/cms/admin (Payload)
 unset NODE_ENV                           # dev/build must never inherit production
 ```
 The board's `/api/cryptorank` is a thin proxy to the Go sidecar: it takes the
-sidecar's env `APICALLS_URL` (default `http://127.0.0.1:3101`), so the Go service
+sidecar's env `FUDCOURT_DATA_URL` (default `http://127.0.0.1:3101`), so the Go service
 must be up for any cryptorank mode to answer — and if it is down the route says
 so (502 with the real reason), it does not fall back to a cached or fabricated
 payload.
@@ -69,7 +69,7 @@ The gates individually:
 
 ```bash
 cd services/data
-go build -o bin/apicalls ./cmd/apicalls  # build the sidecar (go >= 1.24.1)
+go build -o bin/fudcourt-data ./cmd/data  # build the sidecar (go >= 1.24.1)
 go test ./...                            # offline: mode-table + shaping tests
 cd ../web
 python3 scripts/checks/check-contract.py   # offline: CR_MODES + TS-Go mode-table parity + mutation-auth guards

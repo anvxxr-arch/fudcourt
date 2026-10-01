@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Live smoke test for apicalls: starts the real server and drives it over HTTP.
+# Live smoke test for fudcourt-data: starts the real server and drives it over HTTP.
 #
-#   cd services/data && ./scripts/smoke-apicalls.sh
+#   cd services/data && ./scripts/smoke-data.sh
 #
 # It uses its own port and its own cache dir, so it never disturbs a running
-# fudcourt-apicalls unit (which owns 127.0.0.1:3101 and ~/.cache/apicalls).
+# fudcourt-data unit (which owns 127.0.0.1:3101 and ~/.cache/fudcourt-data).
 # Total live upstream requests: 4, spaced 2s (it is someone else's site).
 set -uo pipefail
 
@@ -21,9 +21,9 @@ cleanup() {
 trap cleanup EXIT
 
 echo "building..."
-go build -o /tmp/apicalls-smoke ./cmd/apicalls || exit 1
+go build -o /tmp/fudcourt-data-smoke ./cmd/data || exit 1
 
-APICALLS_ADDR="127.0.0.1:${PORT}" APICALLS_CACHE_DIR="$CACHE" /tmp/apicalls-smoke >"$LOG" 2>&1 &
+FUDCOURT_DATA_ADDR="127.0.0.1:${PORT}" FUDCOURT_DATA_CACHE_DIR="$CACHE" /tmp/fudcourt-data-smoke >"$LOG" 2>&1 &
 PID=$!
 
 for _ in $(seq 1 50); do

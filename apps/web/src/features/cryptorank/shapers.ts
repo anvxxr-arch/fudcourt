@@ -5,7 +5,7 @@
  * Extracted verbatim from app/api/cryptorank/route.ts (SG-4.1) so the
  * deterministic fixture tests (scripts/tests/shaper-tests.ts) can import them
  * offline without loading the Next route module. No I/O here: the live data
- * path is the Go apicalls sidecar (DR-005), and scripts/oracle/cr_fetch.py survives
+ * path is the Go fudcourt-data sidecar (DR-005), and scripts/oracle/cr_fetch.py survives
  * only as verify-cryptorank.py's independent oracle. See
  * scripts/fixtures/expected/ for this module's frozen envelope output.
  */

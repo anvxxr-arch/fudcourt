@@ -2,7 +2,7 @@ package main
 
 // Wire-contract tests for the frozen HTTP surface. These use a fake fetcher so
 // every error body, header and refusal can be proven without touching
-// upstream; the live smoke test lives in smoke-apicalls.sh.
+// upstream; the live smoke test lives in smoke-data.sh.
 
 import (
 	"context"

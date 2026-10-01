@@ -34,7 +34,7 @@ import (
 
 func fixturesDir(t *testing.T) string {
 	t.Helper()
-	if d := os.Getenv("APICALLS_FIXTURES_DIR"); d != "" {
+	if d := os.Getenv("FUDCOURT_DATA_FIXTURES_DIR"); d != "" {
 		return d
 	}
 	// internal/paritytest -> services/data -> apps -> repo root
@@ -43,7 +43,7 @@ func fixturesDir(t *testing.T) string {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "MANIFEST.json")); err != nil {
-		t.Skipf("fixtures not found at %s (set APICALLS_FIXTURES_DIR)", dir)
+		t.Skipf("fixtures not found at %s (set FUDCOURT_DATA_FIXTURES_DIR)", dir)
 	}
 	return dir
 }

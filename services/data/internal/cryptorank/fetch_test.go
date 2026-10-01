@@ -560,7 +560,7 @@ func TestGzippedBodyIsDecompressed(t *testing.T) {
 func TestCacheDirDefaultsAreHonoured(t *testing.T) {
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "custom")
-	t.Setenv("APICALLS_CACHE_DIR", sub)
+	t.Setenv("FUDCOURT_DATA_CACHE_DIR", sub)
 	f, err := New(Options{})
 	if err != nil {
 		t.Fatal(err)
@@ -578,7 +578,7 @@ func TestCacheDirDefaultsAreHonoured(t *testing.T) {
 		t.Errorf("CacheDir=%q want %q", f2.CacheDir(), explicit)
 	}
 	// Empty -> the Python default (~/.cache/crfetch), not a temp dir.
-	os.Unsetenv("APICALLS_CACHE_DIR")
+	os.Unsetenv("FUDCOURT_DATA_CACHE_DIR")
 	f3, err := New(Options{})
 	if err != nil {
 		t.Fatal(err)

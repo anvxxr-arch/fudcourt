@@ -34,7 +34,7 @@ import (
 // fixturesDir walks up from this source file to apps/web/scripts/fixtures.
 func fixturesDir(t *testing.T) string {
 	t.Helper()
-	if d := os.Getenv("APICALLS_FIXTURES_DIR"); d != "" {
+	if d := os.Getenv("FUDCOURT_DATA_FIXTURES_DIR"); d != "" {
 		return d
 	}
 	_, thisFile, _, ok := runtime.Caller(0)
@@ -49,7 +49,7 @@ func fixturesDir(t *testing.T) string {
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Skip("apps/web/scripts/fixtures not found (set APICALLS_FIXTURES_DIR to run parity)")
+			t.Skip("apps/web/scripts/fixtures not found (set FUDCOURT_DATA_FIXTURES_DIR to run parity)")
 		}
 		dir = parent
 	}

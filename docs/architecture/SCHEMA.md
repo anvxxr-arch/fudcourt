@@ -114,7 +114,7 @@ Indexes: btree on `order`, `parent_id`, `slug`, FK columns, `updated_at/created_
 
 Row nullability rule: **any absent upstream metric is `null` and renders `—`;
 `0` is never substituted.**
-### 3.1b `khala` envelopes (`/api/khala`, a thin proxy to the Go `apicalls` sidecar)
+### 3.1b `khala` envelopes (`/api/khala`, a thin proxy to the Go `fudcourt-data` sidecar)
 A sibling of §3.1, using the **same flat `CrEnvelope` convention** (`services/data/internal/cryptorank/types.go`):
 common fields + per-mode payload keys alongside each other, and the one-line tag rule
 **optional ⇒ the key is ABSENT; nullable ⇒ a present `null`**. Three modes, frozen in
@@ -240,7 +240,7 @@ khala-specific rules (all measured — see DESIGN.md D2/D4/D5/D6/D7/D10):
   decentralized-robotics **31**. A **79-char cap was proposed and is measurably wrong** —
   it would 400 the flagship report — and `cryptorank.KeyRe`'s 64-char cap (which would 400
   five of the eight) is deliberately **not** reused.
-### 3.1c `news` envelope (`/api/news`, a thin proxy to the Go `apicalls` sidecar)
+### 3.1c `news` envelope (`/api/news`, a thin proxy to the Go `fudcourt-data` sidecar)
 The Go side (`services/data/internal/news`) owns the feed table, the strict
 `source`/`limit` validation, the RSS parse and the 15 s cache; the route validates
 nothing ([DR-012](../records/DECISIONS.md)). Verified live 2026-09-29 by `verify-news.py`
@@ -277,7 +277,7 @@ Rules (all asserted by `verify-news.py`):
   `"limit must be between 1 and 100, got <v>"`. An empty value is a 400, not the
   default — the port's whole point, since the original TS route turned an unknown
   source into a silent empty 200 and clamped `limit`.
-### 3.1d `chainrank` envelopes (`/api/chainrank`, a thin proxy to the Go `apicalls` sidecar)
+### 3.1d `chainrank` envelopes (`/api/chainrank`, a thin proxy to the Go `fudcourt-data` sidecar)
 The Go side (`services/data/internal/chainrank`) owns the two-mode table, the
 upstream URL construction (pagination relayed VERBATIM), the 32-entry cache and
 the shape check; the route validates nothing ([DR-013](../records/DECISIONS.md)). Verified
@@ -334,7 +334,7 @@ upstream 404, and a missing Framer CMS resource is a 403, not a 404):
 | **405** | anything but `GET`/`HEAD` | `{"error":"method not allowed"}` |
 | **400** | unknown/empty `mode` (the body lists the three modes); malformed `key` (empty/whitespace, or failing `^[a-z0-9][a-z0-9-]{0,127}$`); `key` absent on `mode=report` (no default); a `limit` sent to a mode that does not take one; non-integer or out-of-range `limit` (strict 1..50) — never clamped | `{"error":"unknown mode","modes":["reports","report","latest"],"got":null}` |
 | **404** | honest upstream miss — a key that is not a report is a **real upstream 404** (7,384 B, `<title>Page Not Found \| Framer</title>`) passed through | `{"error":"upstream 404: no such resource","upstreamStatus":404,"upstream":"…","kind":"report"}` |
-| **502** | layout drift (a 200 with no report body), a 403 S3-style `AccessDenied` from a missing Framer CMS resource, or the sidecar being unreachable | `{"error":"apicalls unreachable: <reason>"}` |
+| **502** | layout drift (a 200 with no report body), a 403 S3-style `AccessDenied` from a missing Framer CMS resource, or the sidecar being unreachable | `{"error":"fudcourt-data unreachable: <reason>"}` |
 `/api/chainrank` adds the shape refusal and keeps upstream's own meaning for every
 status — and **no 503** (no disabled mode) and **no write path**:
 | Status | Trigger | Example |

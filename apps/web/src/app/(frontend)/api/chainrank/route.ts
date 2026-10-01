@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * chainrank read proxy (chainrank.fyi). Mode + pagination input, never a raw path.
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `apicalls` (services/data, 127.0.0.1:3101), exactly like
+ * `fudcourt-data` (services/data, 127.0.0.1:3101), exactly like
  * app/api/khala/route.ts, app/api/llama/route.ts, app/api/news/route.ts and
  * app/api/cryptorank/route.ts. The Go side owns the mode table, the upstream
  * URL construction, the 15s TTL cache + single-flight keyed on that URL, the
@@ -36,7 +36,7 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export const dynamic = 'force-dynamic';
 /** Go sidecar base URL. Runtime read: a restart picks up changes without a rebuild. */
-const APICALLS = process.env.APICALLS_URL ?? 'http://127.0.0.1:3101';
+const DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101';
 /**
  * The sidecar's own per-upstream timeout is 20s, so the proxy waits longer than
  * that before calling it unreachable.
@@ -45,7 +45,7 @@ const TIMEOUT_MS = 60_000;
 /* -------------------------------- handler ------------------------------- */
 export async function GET(req: NextRequest) {
   const mode = req.nextUrl.searchParams.get('mode');
-  const upstream = `${APICALLS}/api/chainrank`;
+  const upstream = `${DATA_URL}/api/chainrank`;
   // Exact same query string, untouched: the sidecar owns mode/page/pageSize
   // semantics (validation, defaults, refusal, and the upstream URL itself).
   // We never rewrite params — including the pagination values upstream will
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
             .join(': ')
         : String(err);
     return NextResponse.json(
-      { error: `apicalls unreachable: ${reason}`, upstream, kind: mode },
+      { error: `fudcourt-data unreachable: ${reason}`, upstream, kind: mode },
       { status: 502 },
     );
   }

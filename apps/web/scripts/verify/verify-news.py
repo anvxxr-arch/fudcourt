@@ -205,7 +205,7 @@ def verify_cache(base: str) -> None:
         # does. The HIT half above is what proves the cache works; do NOT weaken
         # this into a check that always passes.
         print(f"  [SKIP] cold-MISS assertion -- the sidecar cache was already warm "
-              f"({COLD_MARK}); restart fudcourt-apicalls to exercise the cold path "
+              f"({COLD_MARK}); restart fudcourt-data to exercise the cold path "
               f"(news has a single cache key, so no client-side probe can force a MISS)")
 
 
@@ -248,8 +248,8 @@ def verify_ui_wiring(base: str) -> None:
     root = pathlib.Path(__file__).resolve().parents[2]  # apps/web
     route = (root / "src/app/(frontend)/api/news/route.ts").read_text()
     lib = (root / "src/features/news/client.ts").read_text()
-    check("APICALLS" in route and "/api/news" in route,
-          "route proxies /api/news to the apicalls sidecar")
+    check("DATA_URL" in route and "/api/news" in route,
+          "route proxies /api/news to the fudcourt-data sidecar")
     for smell in ("execFile", "child_process", "parseInt", "Math.min", "<item>", "stripCdata"):
         check(smell not in route,
               f"route holds no {smell} of its own (the sidecar owns validation + parse)")

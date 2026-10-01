@@ -2,6 +2,11 @@
 Additive, newest first. One row per landed change: what moved, which gate proved
 it, and which doc/decision record owns it. Dates are UTC; every number here was
 measured on this host, never estimated.
+## 2026-10-01
+| Change | Surface | Evidence | Record |
+|---|---|---|---|
+| **`apicalls` retired — the data sidecar is `fudcourt-data` everywhere, and its Valkey password is out of git** — the Phase-1 directory move had left the spike name on the binary, the Go package, the env prefix, the unit and the docs, while the host still ran the retired `fudcourt-apicalls.service`; the tracked tombstone unit also carried the live Valkey password. Env prefix `APICALLS_*` → `FUDCOURT_DATA_*`, binary `bin/fudcourt-data`, unit `fudcourt-data.service` (installed, enabled, running `:3101`), cache `~/.cache/fudcourt-data`; the secret moved to the gitignored `.env` and the committed value was **rotated** | `services/data/**`, `apps/web/src/app/(frontend)/api/{cryptorank,khala,llama,news,chainrank}/route.ts`, `apps/web/scripts/{checks/check-contract,verify/verify-news,verify-llama}.py`, `deploy/systemd/fudcourt-data.service`, `docs/**` | `go build/vet/test ./...` green; `check-deploy` 12 units OK · `check-contract` CONTRACT_OK · `check-structure` OK · `check-api-contract` OK; `verify-news` 50/50 · `verify-llama` 51/51; live: `/healthz` 200, `mode=blockchains` **278** chains, `llama`/`news` real rows, ticker cold **71.0 s** → warm **0.023 s** (L2 hit after rotation), old password rejected | DR-033 |
+
 ## 2026-09-30
 | Change | Surface | Evidence | Record |
 |---|---|---|---|

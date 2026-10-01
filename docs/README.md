@@ -9,7 +9,7 @@ public hostname) — PLAN G8 ✅, [DR-006](records/DECISIONS.md), design record
 `/home/dwizzy/khala-probe/DESIGN.md`.
 
 - Repo: `github.com/anvxxr-arch/fudcourt` · remote head at time of writing: `957836d`
-- Local stack: `fudcourt-web` (`:3100` — dashboard **and** blog), `fudcourt-apicalls`
+- Local stack: `fudcourt-web` (`:3100` — dashboard **and** blog), `fudcourt-data`
   (Go CryptoRank sidecar, `:3101`), `fudcourt-reconciled` (Rust `/api/reconcile`
   service, `:3102`), `fudcourt-sync.timer` (5 min). The blog has no unit of its own
   (DR-017)
@@ -43,7 +43,7 @@ docs/
 apps/
   web/    Next.js 16.3.6 portfolio OS (16 views, 21 API routes: 18 data + 3 auth)
           + the Payload blog + verify harnesses
-  apicalls/ Go sidecar :3101 — one package per family: `internal/cryptorank`
+  fudcourt-data/ Go sidecar :3101 — one package per family: `internal/cryptorank`
             (mode tables, tls-client fetch, cache, shaping), `internal/khala`
             (research reports, plain net/http), `internal/llama` (DeFiLlama TVL),
             `internal/news` (Cointelegraph RSS: feed table, strict source/limit,

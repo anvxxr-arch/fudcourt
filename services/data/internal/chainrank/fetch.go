@@ -52,7 +52,7 @@ type Options struct {
 	// Timeout for a single upstream request (default 15s).
 	Timeout time.Duration
 	// TTL is the cache lifetime in seconds (0 -> defaultTTL). New reads
-	// APICALLS_CHAINRANK_TTL when this is zero.
+	// FUDCOURT_DATA_CHAINRANK_TTL when this is zero.
 	TTL int
 }
 
@@ -165,10 +165,10 @@ const maxEntries = 32
 func New(o Options) (*Fetcher, error) {
 	ttl := o.TTL
 	if ttl == 0 {
-		if v := os.Getenv("APICALLS_CHAINRANK_TTL"); v != "" {
+		if v := os.Getenv("FUDCOURT_DATA_CHAINRANK_TTL"); v != "" {
 			n, err := strconv.Atoi(v)
 			if err != nil || n < 1 {
-				return nil, fmt.Errorf("APICALLS_CHAINRANK_TTL=%q is not a positive integer", v)
+				return nil, fmt.Errorf("FUDCOURT_DATA_CHAINRANK_TTL=%q is not a positive integer", v)
 			}
 			ttl = n
 		} else {

@@ -18,14 +18,14 @@ import (
 	"time"
 )
 
-// DefaultCacheDir is the khala cache root, *below* the apicalls cache root the
-// deploy unit already sets (APICALLS_CACHE_DIR -> ~/.cache/apicalls):
+// DefaultCacheDir is the khala cache root, *below* the fudcourt-data cache root the
+// deploy unit already sets (FUDCOURT_DATA_CACHE_DIR -> ~/.cache/fudcourt-data):
 // "<root>/khala". A family must never share another family's cache directory
 // (services/data/README.md "keep the oracle's cache separate"): a shared cache
 // turns an independent verification fetch into self-confirmation. It is a
-// SUBDIR of APICALLS_CACHE_DIR rather than a second cache-root env var so the
+// SUBDIR of FUDCOURT_DATA_CACHE_DIR rather than a second cache-root env var so the
 // deploy unit keeps setting exactly one root.
-const DefaultCacheDir = "~/.cache/apicalls"
+const DefaultCacheDir = "~/.cache/fudcourt-data"
 
 const (
 	// maxBodyBytes caps one upstream body at 8 MiB. The largest measured khala
@@ -51,8 +51,8 @@ const UA = "fudcourt-khala/1.0 (+https://fc.dwirijal.my.id)"
 // Options configures a Fetcher.
 type Options struct {
 	// CacheDir overrides the resolved cache root (which is then used as the
-	// cache directory directly, not as a parent). "" -> APICALLS_KHALA_CACHE_DIR
-	// -> <APICALLS_CACHE_DIR>/khala -> ~/.cache/apicalls/khala.
+	// cache directory directly, not as a parent). "" -> FUDCOURT_DATA_KHALA_CACHE_DIR
+	// -> <FUDCOURT_DATA_CACHE_DIR>/khala -> ~/.cache/fudcourt-data/khala.
 	CacheDir string
 	// Timeout for a single upstream request (default 30s).
 	Timeout time.Duration
@@ -162,10 +162,10 @@ func (e *NotFoundError) Error() string {
 func New(o Options) (*Fetcher, error) {
 	dir := o.CacheDir
 	if dir == "" {
-		dir = os.Getenv("APICALLS_KHALA_CACHE_DIR")
+		dir = os.Getenv("FUDCOURT_DATA_KHALA_CACHE_DIR")
 	}
 	if dir == "" {
-		root := os.Getenv("APICALLS_CACHE_DIR")
+		root := os.Getenv("FUDCOURT_DATA_CACHE_DIR")
 		if root == "" {
 			root = DefaultCacheDir
 		}
@@ -229,7 +229,7 @@ func (f *Fetcher) CacheFile(url string) string {
 // Fetch retrieves url, honouring the disk cache.
 //
 // ttl is the per-request TTL in seconds and is an ARGUMENT, never fetcher
-// state: the handler passes APICALLS_KHALA_TTL (default 900) normally and 0 for
+// state: the handler passes FUDCOURT_DATA_KHALA_TTL (default 900) normally and 0 for
 // ?fresh=1. ttl <= 0 bypasses the TTL cache AND single-flight entirely (a
 // fresh request must never be satisfied by an in-flight or cached fetch).
 //

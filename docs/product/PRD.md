@@ -88,7 +88,7 @@ One private surface where the owner can answer, at any moment:
 - All claims in docs must trace to tool output, not code reading.
 
 ### NFR-3 — Operations
-- Local: systemd --user units `fudcourt-web` (dashboard **and** blog), `fudcourt-apicalls`, `fudcourt-reconciled`, `fudcourt-sync.timer`; enabled at boot. `fudcourt-blog` was retired by the DR-017 merge.
+- Local: systemd --user units `fudcourt-web` (dashboard **and** blog), `fudcourt-data`, `fudcourt-reconciled`, `fudcourt-sync.timer`; enabled at boot. `fudcourt-blog` was retired by the DR-017 merge.
 - Build gate: `unset NODE_ENV` before any `bun install`/`bun run build` (env trap).
 - Runtime split (owner direction): acquisition families in Go (`services/data`), the
   balance sync in Rust (`services/sync`), the UI/API surface in TypeScript on Bun

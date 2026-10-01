@@ -264,8 +264,8 @@ def verify_ui_wiring(base: str) -> None:
               note("ts", sorted(declared), "go", sorted(go_modes)))
     else:
         print("  [SKIP] Go llama mode table absent (proxied elsewhere?)")
-    check("APICALLS_URL" in route and "api/llama" in route,
-          "route proxies /api/llama to the apicalls sidecar")
+    check("FUDCOURT_DATA_URL" in route and "api/llama" in route,
+          "route proxies /api/llama to the fudcourt-data sidecar")
     check("execFile" not in route and "LLAMA_MODES.includes" not in route,
           "route holds no validation of its own (the sidecar is the only validator)")
 

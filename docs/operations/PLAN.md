@@ -273,32 +273,32 @@ found no inbound limit on the API (DR-004).
   if a non-proxy ingress is ever added — stated in the DR-004 amendment.
 
 ---
-## G7 — 🔄 CryptoRank runtime cutover: Python helper → Go `apicalls` sidecar (2026-09-29)
+## G7 — 🔄 CryptoRank runtime cutover: Python helper → Go `fudcourt-data` sidecar (2026-09-29)
 Owner direction: one implementation of the CryptoRank contract, the Go one that
 holds a real browser TLS fingerprint (→ [DR-005](../records/DECISIONS.md)).
 - SG-7.1 ✅ `services/data` (Go, `module github.com/anvxxr-arch/fudcourt/services/data`,
   `go 1.24.1`) — `internal/cryptorank` (mode/key/allowlist tables + disabled-mode
   refusal text), `internal/cryptorank` (tls-client `chrome_131` + HTTP/2, disk
-  cache TTL, 429 backoff), `internal/cryptorank` (envelope types), `cmd/apicalls`
-  (the HTTP surface on `APICALLS_ADDR`, default `127.0.0.1:3101`).
+  cache TTL, 429 backoff), `internal/cryptorank` (envelope types), `cmd/data`
+  (the HTTP surface on `FUDCOURT_DATA_ADDR`, default `127.0.0.1:3101`).
 - SG-7.1b ✅ Compatibility caveat (sidecar audit, 2026-09-29): field-for-field,
   **not** byte-for-byte — one trailing newline (`Encoder.Encode` framing) and Go
   struct key order. Consumers all parse JSON, so the surface is unchanged; the
   route header now says so instead of claiming byte-compatibility.
 - SG-7.2 ✅ `app/api/cryptorank/route.ts` rewritten as a **thin honest proxy**:
-  forwards the query string verbatim to `${APICALLS_URL}/api/cryptorank`
+  forwards the query string verbatim to `${FUDCOURT_DATA_URL}/api/cryptorank`
   (default `http://127.0.0.1:3101`), returns the upstream body/status and
   `X-CR-Upstream`/`X-CR-Cache`/`Cache-Control` unchanged, always
   `Content-Type: application/json`; 60 s `AbortSignal` timeout (largest payload
   `mode=chain` ≈ 1.19 MB). Removed from the route: `execFile`, `PYTHON`,
   `HELPER`, `runHelperOnce`/`runHelper` (429 backoff now in Go), the `newstag`
   soft-404 derivation and the funding/unlocks 503 branch (both now Go). Fail
-  loud: sidecar unreachable → 502 `apicalls unreachable: <reason>`.
-- SG-7.3 ✅ Ops: versioned unit `services/data/deploy/fudcourt-apicalls.service`
+  loud: sidecar unreachable → 502 `fudcourt-data unreachable: <reason>`.
+- SG-7.3 ✅ Ops: versioned unit `services/data/deploy/fudcourt-data.service`
   (deployed to `~/.config/systemd/user/`, `Restart=always`, `RestartSec=5`,
-  `KillSignal=SIGTERM`, `TimeoutStopSec=15`, cache `~/.cache/apicalls`); pre-push
+  `KillSignal=SIGTERM`, `TimeoutStopSec=15`, cache `~/.cache/fudcourt-data`); pre-push
   hook gained an `services/data/`/`\.go$` branch running `go build/vet/test`
-  (offline, cached go1.24.1); CI gained an `apicalls` job (setup-go 1.24.1,
+  (offline, cached go1.24.1); CI gained an `fudcourt-data` job (setup-go 1.24.1,
   cache on `services/data/go.sum`); root `.gitignore` ignores
   `services/data/bin/` + `services/data/.cache/`.
 - SG-7.4 ✅ One contract, two implementations, enforced offline:
@@ -310,14 +310,14 @@ holds a real browser TLS fingerprint (→ [DR-005](../records/DECISIONS.md)).
   Go table is absent it prints an explicit `SKIP:` line rather than passing
   silently.
 - SG-7.5 ✅ Proof, all measured on the cut-over build (2026-09-29):
-  `go build -o bin/apicalls ./cmd/apicalls` rc=0; sidecar smoke
+  `go build -o bin/fudcourt-data ./cmd/data` rc=0; sidecar smoke
   `home` 200/2,976 B · `coins` 200/35,878 B · `converter` 200/921,773 B ·
   `funding` **503**/468 B (refusal text intact) · `hack` **400**/331 B (28 modes
   listed); proxy is verbatim (`cmp` identical against the sidecar for
   `mode=coins` cache-hit and `fresh=1`, and for the row shapes the harness
   asserts); key contract through the proxy: `?key=BAD%20KEY` → 400,
   `?key=zzznoexist9999` → 404 passthrough; sidecar stopped →
-  `502 {"error":"apicalls unreachable: fetch failed: connect ECONNREFUSED
+  `502 {"error":"fudcourt-data unreachable: fetch failed: connect ECONNREFUSED
   127.0.0.1:3101", …}`; offline `go build/vet/test` with `GOPROXY=off`
   = **2.8 s** (hook-safe, no toolchain download).
 - SG-7.5b ✅ Live harness, both bases, same session:
@@ -331,7 +331,7 @@ holds a real browser TLS fingerprint (→ [DR-005](../records/DECISIONS.md)).
 - SG-7.6 ⏳ Residual, stated not hidden. Three separate, non-cutover items, each
   with its owner class:
   1. `monitor.py` (R-4) covers the sidecar only **transitively** — its
-     `/api/cryptorank` checks fail when `apicalls` is down, but nothing asserts
+     `/api/cryptorank` checks fail when `fudcourt-data` is down, but nothing asserts
      the `:3101` unit is active nor alarms on `cf-mitigated: challenge` (the
      profile-rotation tell from DR-005). Same class as R-4's open half.
   2. `verify-cryptorank.py` cannot complete a full run through the :3100
@@ -354,7 +354,7 @@ Upstream is **Framer** static SSR (no Next/RSC, no Cloudflare); the design is fr
 `/home/dwizzy/khala-probe/DESIGN.md` from the read-only probe
 `/home/dwizzy/khala-probe/RESULTS.md` (2026-09-29) and recorded in
 [DR-006](../records/DECISIONS.md). **As-built state, measured 2026-09-29 ~13:00 UTC** (tree read + `curl` + live harness):
-the family is **served**. `cmd/apicalls/main.go` wires `handleKhala` on
+the family is **served**. `cmd/data/main.go` wires `handleKhala` on
 `/api/khala` (SG-8.3), `/healthz` reports `{"build":"28 modes","khala":"3 modes"}`,
 the `bun run build` at :3100 carries `/khala` + `/api/khala`, and
 `verify-khala.py --base http://127.0.0.1:3101` is green at **136/0/0**. The block
@@ -370,7 +370,7 @@ sequence; the ✅/~~strikethrough~~ marks below carry the current state.
   `framerusercontent.com` index; no challenge), `golang.org/x/net/html` (already in
   `go.sum` at `v0.48.0` — **no new dependency**), `KeyRe = ^[a-z0-9][a-z0-9-]{0,127}$`,
   `MinBodyChars = 4000` drift floor, `defaultTTL = 900`, `maxBodyBytes = 8 MiB`, cache
-  root `~/.cache/apicalls` with a `khala/` subdir, and 6 recorded fixtures in
+  root `~/.cache/fudcourt-data` with a `khala/` subdir, and 6 recorded fixtures in
   `testdata/`. **Landed.**
 - SG-8.3 ✅ **Sidecar wiring** — landed 2026-09-29 (`main.go`: `handleKhala` +
   `mux.HandleFunc("/api/khala", …)` beside `/api/cryptorank`, `writeKhalaError`,
@@ -411,8 +411,8 @@ sequence; the ✅/~~strikethrough~~ marks below carry the current state.
   fails are 1 known CoinGecko 403 passthrough + 10 session-gated probes unrunnable
   without `FUDCOURT_SESSION_SECRET`.
 - SG-8.4 ✅ **Thin verbatim proxy** — `apps/web/app/api/khala/route.ts`, cloned from
-  `app/api/cryptorank/route.ts`: forwards the query string untouched, `APICALLS_URL`
-  base, `no-store`, 60 s timeout, `X-KH-*` pass-through, `apicalls unreachable: <reason>`
+  `app/api/cryptorank/route.ts`: forwards the query string untouched, `FUDCOURT_DATA_URL`
+  base, `no-store`, 60 s timeout, `X-KH-*` pass-through, `fudcourt-data unreachable: <reason>`
   502. **Validates nothing** — the sidecar owns every param. **Landed.**
 - SG-8.5 ✅ **Typing/display mirror** — `apps/web/lib/khala.ts` (`KH_MODES`, `KH_KEY_RE`,
   `KH_LIMIT_MIN/MAX`, `KH_DEFAULT_LIMIT`, `KhRow`/`KhReport`/`KhEnvelope`/`KhError`,
@@ -466,7 +466,7 @@ DR-007's runtime clause only.
 - SG-10.3 ✅ **Cutover**: `apps/web/package.json` `start` → `bun --bun next start`;
   `fudcourt-web.service` `ExecStart` → `bun --bun …/next/dist/bin/next start -p 3100`
   (absolute); unit now **versioned in-repo** at `apps/web/deploy/fudcourt-web.service`
-  (was install-only, like the apicalls unit before SG-7.3). Deployed + restarted.
+  (was install-only, like the fudcourt-data unit before SG-7.3). Deployed + restarted.
 - SG-10.4 ✅ **Post-cutover parity on the live origin**: `BUILD_ID` unchanged
   (`OMhgA85taz_1n1flx_aT2` — the Node-built `.next` is served as-is), 17/17 page
   statuses unchanged, sitemap `<loc>` 42, `/api/khala?mode=reports` **byte-identical**,
@@ -517,7 +517,7 @@ scalable"*. Everything below was executed and re-verified; nothing is a proposal
 - SG-11.4 ✅ **Every production entry point is now versioned in-repo** —
   `apps/web/deploy/{fudcourt-web.service, fudcourt-sync.service, fudcourt-sync.timer}`,
   `apps/blog/deploy/fudcourt-blog.service` (new at the time; **retired in DR-017**), alongside the existing
-  `services/data/deploy/fudcourt-apicalls.service`. Each was diffed against the
+  `services/data/deploy/fudcourt-data.service`. Each was diffed against the
   installed unit (identical, comments aside). The two `fudcourt-sync.service`
   variants (Python oracle vs the sibling's Rust replacement) are cross-referenced in
   their headers, because systemd resolves by name and only one can be installed.
@@ -649,7 +649,7 @@ program that direction names; the subgoals below are what this session measured.
 - SG-9.10 ✅ **Backend framework clause resolved and recorded (DR-016)** — the one clause of
   the owner's direction that had no recorded resolution. Measured: the Go sidecar uses
   **no web framework** (`http.NewServeMux` + hand-registered handlers in
-  `cmd/apicalls/main.go`), five of its six packages use plain `net/http`, and the single
+  `cmd/data/main.go`), five of its six packages use plain `net/http`, and the single
   HTTP client library (`tls-client`) is confined to `internal/cryptorank`, where the
   Cloudflare ClientHello-fingerprint requirement actually lives; the Rust service is
   `tokio::net` + hand-rolled framing, zero new crates (DR-014). Decision: stdlib routing
@@ -725,11 +725,11 @@ program that direction names; the subgoals below are what this session measured.
 - T-11.2.3 [OK] `app/home-shell.tsx` → `app/store/store-shell.tsx` (+ `StoreShell`
   symbol; 18 route wrappers updated)
 - T-11.2.4 [OK] `app/admin/member-table.tsx` → `members-table.tsx`
-### SG-11.3 [OK] Rust + blog + apicalls script
+### SG-11.3 [OK] Rust + blog + fudcourt-data script
 - T-11.3.1 [OK] `services/sync-rs` → `services/sync`, crate/binary `sync-rs` →
   `fudcourt-sync`; CI job, pre-push branch, docs and both versioned units updated
 - T-11.3.2 [OK] `apps/blog/scripts/seed.ts` → `src/seed.ts` (import fixed) — later relocated to `apps/web/src/cms/seed.ts` by DR-017
-- T-11.3.3 [OK] `services/data/scripts/smoke.sh` → `smoke-apicalls.sh`
+- T-11.3.3 [OK] `services/data/scripts/smoke.sh` → `smoke-data.sh`
 ### SG-11.4 [OK] Gates + live verification (the equivalence proof)
 - T-11.4.1 [OK] `go build/vet/test` green (cryptorank parity oracle included),
   `cargo build/test` 5/5, `tsc` 0, `test:shapers` 80/80, `build` 0,
@@ -775,7 +775,7 @@ program that direction names; the subgoals below are what this session measured.
   phrases, unknown source 400 + detail, real upstream statuses, empty feed → 502,
   non-GET → 405
 ### SG-12.3 [OK] Wiring + ops
-- T-12.3.1 [OK] `cmd/apicalls/main.go`: `handleNews` + `writeNewsError`, mux
+- T-12.3.1 [OK] `cmd/data/main.go`: `handleNews` + `writeNewsError`, mux
   registration, `/healthz` gains `"news":"1 feeds"`, startup log line
 - T-12.3.2 [OK] `app/api/news/route.ts` reduced to the verbatim proxy;
   `lib/news.ts` added as the typing/display mirror (no validation)
@@ -818,7 +818,7 @@ program that direction names; the subgoals below are what this session measured.
   real upstream statuses, non-JSON 502, POST 405 and `/api/click` 404, per-URL
   caching, and param-order sharing one entry
 ### SG-13.3 [OK] Wiring + ops
-- T-13.3.1 [OK] `cmd/apicalls/main.go`: `handleChainrank` + `writeChainrankError`
+- T-13.3.1 [OK] `cmd/data/main.go`: `handleChainrank` + `writeChainrankError`
   (405/429 keep their own meaning), mux registration, `/healthz` gains
   `"chainrank":"2 modes"`, startup log line
 - T-13.3.2 [OK] `app/api/chainrank/route.ts` reduced to the verbatim proxy;

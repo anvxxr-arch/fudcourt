@@ -1,4 +1,4 @@
-// Command apicalls is the standalone Go port of the Next.js CryptoRank read
+// Command fudcourt-data is the standalone Go port of the Next.js CryptoRank read
 // proxy (apps/web/app/api/cryptorank/route.ts + scripts/cr_fetch.py +
 // lib/shapers.ts).
 //
@@ -29,8 +29,8 @@ import (
 )
 
 func main() {
-	addr := envOr("APICALLS_ADDR", "127.0.0.1:3101")
-	ttl := envInt("APICALLS_TTL", 60)
+	addr := envOr("FUDCOURT_DATA_ADDR", "127.0.0.1:3101")
+	ttl := envInt("FUDCOURT_DATA_TTL", 60)
 	// The shared L2 (Valkey). It is initialised before the families so that a
 	// cold start after a deploy can serve from a cache that outlives this
 	// process; a failure here only logs, and every family then falls back to
@@ -39,7 +39,7 @@ func main() {
 
 	f, err := cryptorank.New(cryptorank.Options{})
 	if err != nil {
-		log.Fatalf("apicalls: %v", err)
+		log.Fatalf("fudcourt-data: %v", err)
 	}
 	// khala is a SECOND family with its own fetcher (plain net/http, no
 	// tls-client) and its own cache subdirectory. The two clients stay separate
@@ -50,24 +50,24 @@ func main() {
 	// (internal/khala package doc; DR-006 D1/D9).
 	kf, err := khala.New(khala.Options{})
 	if err != nil {
-		log.Fatalf("apicalls: khala: %v", err)
+		log.Fatalf("fudcourt-data: khala: %v", err)
 	}
 	// llama is a THIRD family, again with its own client: api.llama.fi is plain
 	// HTTPS (no fingerprinting wall) and its cache is IN-MEMORY with a 15s TTL
 	// rather than a disk cache, because its largest body is an 8.9MB list whose
 	// window the TS route also kept in process. Keeping the three clients
 	// separate is the same call as khala's (internal/llama's package doc);
-	// APICALLS_LLAMA_TTL overrides the TTL.
+	// FUDCOURT_DATA_LLAMA_TTL overrides the TTL.
 	lf, err := llama.New(llama.Options{})
 	if err != nil {
-		log.Fatalf("apicalls: llama: %v", err)
+		log.Fatalf("fudcourt-data: llama: %v", err)
 	}
 	// news is a FOURTH family and the first whose upstream is a document rather
 	// than a JSON API: cointelegraph.com/rss is plain HTTPS (no fingerprint
 	// needed), so it is a third plain net/http fetcher, not a tls-client one.
 	nf, err := news.New(news.Options{})
 	if err != nil {
-		log.Fatalf("apicalls: news: %v", err)
+		log.Fatalf("fudcourt-data: news: %v", err)
 	}
 	// chainrank is a FIFTH family: two read modes over a JSON API whose
 	// pagination is relayed UNTOUCHED (upstream's own clamping is the answer the
@@ -75,7 +75,7 @@ func main() {
 	// side effect on someone else's production service.
 	cf, err := chainrank.New(chainrank.Options{})
 	if err != nil {
-		log.Fatalf("apicalls: chainrank: %v", err)
+		log.Fatalf("fudcourt-data: chainrank: %v", err)
 	}
 
 	srv := &http.Server{
@@ -84,7 +84,7 @@ func main() {
 		ReadHeaderTimeout: 10 * time.Second,
 		WriteTimeout:      90 * time.Second,
 	}
-	log.Printf("apicalls listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes)",
+	log.Printf("fudcourt-data listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes)",
 		addr, f.CacheDir(), ttl, cryptorank.ModeCount, kf.CacheDir(), khala.TTLDefault(), khala.ModeCount, lf.TTL(), llama.ModeCount, nf.TTL(), news.SourceCount, cf.TTL(), chainrank.ModeCount)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -96,7 +96,7 @@ func main() {
 		_ = srv.Shutdown(sh)
 	}()
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("apicalls: %v", err)
+		log.Fatalf("fudcourt-data: %v", err)
 	}
 }
 
@@ -160,7 +160,7 @@ func (s *server) mux() *http.ServeMux {
 			// khala is a second, independent mode table. It is reported as its
 			// own key rather than folded into `build` so the cryptorank count
 			// stays exactly the number every existing consumer and gate asserts
-			// (cmd/apicalls/main_test.go, services/data/README.md,
+			// (cmd/data/main_test.go, services/data/README.md,
 			// apps/web/scripts/check-contract.py), and a reader can still see
 			// both families from one probe.
 			"khala": fmt.Sprintf("%d modes", khala.ModeCount),
@@ -501,7 +501,7 @@ func writeKhalaError(w http.ResponseWriter, mode, key string, err error) {
 		if he.URL != "" {
 			upstream = he.URL
 		}
-		log.Printf("apicalls: ALARM khala %s %s: %s (%s)", he.Kind, upstream, he.Detail, mode)
+		log.Printf("fudcourt-data: ALARM khala %s %s: %s (%s)", he.Kind, upstream, he.Detail, mode)
 		writeJSON(w, 502, map[string]interface{}{
 			"error":          he.Detail,
 			"upstreamStatus": nullIfZero(he.Status),
@@ -613,7 +613,7 @@ func fetchWithRetry(ctx context.Context, f fetcher, route, path string, ttl int,
 func writeFetchError(w http.ResponseWriter, mode, key, upstream string, err error) {
 	var hard *cryptorank.HardError
 	if errors.As(err, &hard) {
-		log.Printf("apicalls: ALARM %s %s: %s (%s)", hard.Kind, upstream, hard.Detail, hard.Upstrl)
+		log.Printf("fudcourt-data: ALARM %s %s: %s (%s)", hard.Kind, upstream, hard.Detail, hard.Upstrl)
 		writeJSON(w, 502, map[string]interface{}{
 			"error":          hard.Detail,
 			"upstreamStatus": nullIfZero(hard.Status),

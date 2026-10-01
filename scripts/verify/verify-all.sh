@@ -12,7 +12,7 @@
 # typecheck + shaper fixture tests.
 #
 # DELIBERATELY NOT HERE: live/network harnesses (apps/web/scripts/verify/verify-*.py,
-# APICALLS_LIVE=1 Go tests, real exchange calls) — they are slow and touch upstreams;
+# FUDCOURT_DATA_LIVE=1 Go tests, real exchange calls) — they are slow and touch upstreams;
 # run them manually against a known-good window.
 set -u
 cd "$(dirname "$0")/../.."

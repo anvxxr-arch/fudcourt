@@ -3,7 +3,7 @@
 //
 // Each family already keeps an in-process TTL cache, and those stay: they are
 // the L1, and a hit there costs no syscall. What they cannot do is survive a
-// restart, and `fudcourt-apicalls` is restarted on every deploy — which is
+// restart, and `fudcourt-data` is restarted on every deploy — which is
 // exactly when the expensive families are coldest. The measured cost of that:
 // the ticker's venue sweep takes ~64 s on a cold process, and api.llama.fi's
 // /protocols body is ~9 MB.
@@ -47,25 +47,25 @@ func Enabled() bool { return sharedOn }
 // Init connects once from the environment. It is called by main, so a
 // misconfigured cache is reported at startup rather than on the first request:
 //
-//	APICALLS_CACHE=off            disable the L2 entirely (also: 0, false, no)
-//	APICALLS_VALKEY_ADDR=host:port  default 127.0.0.1:6379
-//	APICALLS_VALKEY_PASSWORD       default none
+//	FUDCOURT_DATA_CACHE=off            disable the L2 entirely (also: 0, false, no)
+//	FUDCOURT_DATA_VALKEY_ADDR=host:port  default 127.0.0.1:6379
+//	FUDCOURT_DATA_VALKEY_PASSWORD       default none
 //
 // A failed connection logs and leaves the L2 disabled; it never returns an
 // error, because the sidecar must start and serve without a cache.
 func Init() {
 	initOnce.Do(func() {
-		if v := strings.ToLower(strings.TrimSpace(os.Getenv("APICALLS_CACHE"))); v == "off" || v == "0" || v == "false" || v == "no" {
-			log.Printf("cache: L2 disabled by APICALLS_CACHE=%s", v)
+		if v := strings.ToLower(strings.TrimSpace(os.Getenv("FUDCOURT_DATA_CACHE"))); v == "off" || v == "0" || v == "false" || v == "no" {
+			log.Printf("cache: L2 disabled by FUDCOURT_DATA_CACHE=%s", v)
 			return
 		}
-		addr := os.Getenv("APICALLS_VALKEY_ADDR")
+		addr := os.Getenv("FUDCOURT_DATA_VALKEY_ADDR")
 		if addr == "" {
 			addr = DefaultAddr
 		}
 		client, err := valkey.NewClient(valkey.ClientOption{
 			InitAddress: []string{addr},
-			Password:    os.Getenv("APICALLS_VALKEY_PASSWORD"),
+			Password:    os.Getenv("FUDCOURT_DATA_VALKEY_PASSWORD"),
 			// A request must never wait on the cache longer than it would have
 			// waited on the upstream call the cache exists to avoid.
 			ConnWriteTimeout: 2 * time.Second,
@@ -193,7 +193,7 @@ func Decode(v string, want int) (body string, meta []int64, ok bool) {
 
 // TTLFromEnv reads a seconds-valued TTL override, falling back to fallback when
 // unset or unparseable. It exists so each family keeps reading its own
-// documented variable (APICALLS_LLAMA_TTL, ...) rather than a shared one.
+// documented variable (FUDCOURT_DATA_LLAMA_TTL, ...) rather than a shared one.
 func TTLFromEnv(name string, fallback time.Duration) time.Duration {
 	if v := os.Getenv(name); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {

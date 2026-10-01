@@ -20,7 +20,7 @@ const (
 	// defaultTTL is the per-process cache TTL in seconds. The TS route used
 	// lib/rate-limit.ts CACHE_TTL_MS = 15_000; a 15s window collapses the
 	// board's mount + poll traffic to one fetch of the 340KB feed.
-	// Overridable with APICALLS_NEWS_TTL (read in New, like llama/khala read
+	// Overridable with FUDCOURT_DATA_NEWS_TTL (read in New, like llama/khala read
 	// their cache env there).
 	defaultTTL = 15
 	// defaultTimeout is the TS route's TIMEOUT_MS = 20_000, verbatim.
@@ -51,7 +51,7 @@ type Options struct {
 	// Timeout for a single upstream request (default 20s).
 	Timeout time.Duration
 	// TTL is the cache lifetime in seconds (0 -> defaultTTL). New reads
-	// APICALLS_NEWS_TTL when this is zero.
+	// FUDCOURT_DATA_NEWS_TTL when this is zero.
 	TTL int
 }
 
@@ -165,10 +165,10 @@ type Fetcher struct {
 func New(o Options) (*Fetcher, error) {
 	ttl := o.TTL
 	if ttl == 0 {
-		if v := os.Getenv("APICALLS_NEWS_TTL"); v != "" {
+		if v := os.Getenv("FUDCOURT_DATA_NEWS_TTL"); v != "" {
 			n, err := strconv.Atoi(v)
 			if err != nil || n < 1 {
-				return nil, fmt.Errorf("APICALLS_NEWS_TTL=%q is not a positive integer", v)
+				return nil, fmt.Errorf("FUDCOURT_DATA_NEWS_TTL=%q is not a positive integer", v)
 			}
 			ttl = n
 		} else {

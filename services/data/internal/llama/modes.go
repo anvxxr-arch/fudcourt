@@ -36,7 +36,7 @@
 //
 // The TS route went through lib/rate-limit.ts (min-gap + 15s TTL +
 // single-flight). This side owns that now: an in-memory per-process TTL cache
-// (default 15s, APICALLS_LLAMA_TTL overrides it in main.go) plus single-flight
+// (default 15s, FUDCOURT_DATA_LLAMA_TTL overrides it in main.go) plus single-flight
 // per URL, keyed on the UPSTREAM URL, so `top=3` and `top=7` share one 8.9MB
 // fetch. It is bounded BY CONSTRUCTION at the three URLs AllowedURL admits:
 // there is no eviction policy because there is nothing that can grow (see
