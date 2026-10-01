@@ -15,7 +15,7 @@ Status values: `DONE` (parity vectors ported + green), `IN FLIGHT` (slice runnin
 | 2 | `engine.ts` strategy FSM (`transitionChildOrder`, `strategyStep/OnFill/Progress`, `defaultSlices`) | `internal/{execution,strategy,orders}` | `executor-engine-tests.ts` | `execution_test.go`, `strategy_test.go`, `orders_test.go` | DONE |
 | 3 | `store.ts` persistence (`executor.*` writes) | `internal/repository` | `executor-store-tests.ts` | `store.go` + `credentials.go` (sealed envelope read/touch) | DONE (SQL mirrors DDL; DB-integration gated on `FUDCOURT_PG_DSN`) |
 | 4 | `lock.ts` | `internal/lock` (Memory + Valkey, lock.ts Lua) | `executor-worker-tests.ts` (lock paths) | `lock_test.go`, `memory_test.go`, `valkey_test.go` | DONE |
-| 5 | `exchange.ts` + binance/bybit/mexc + `CcxtLike` | `internal/exchange` + adapters + `paper` | `executor-exchange-tests.ts` | `exchange/*_test.go` (108 funcs) | DONE |
+| 5 | `exchange.ts` + binance/bybit/mexc + `CcxtLike` | `internal/exchange` + adapters + `paper` | `executor-exchange-tests.ts` | `exchange/*_test.go` (85 funcs) | DONE |
 | 6 | worker loop (recovery pass, MaxInFlight, lease fail-closed, risk-stop) | `internal/worker` | `executor-worker-tests.ts` | `worker_test.go` | DONE |
 | 7 | `idempotency` / engine-state resume | `internal/idempotency` | `executor-runtime-tests.ts` | `idempotency_test.go` | DONE |
 | 8 | key custody (`masterKeyFromEnv`, seal/unseal interop) | `internal/credentials` | crypto golden vectors (`apps/web/src/platform/crypto`) | `credentials_test.go` (TS-generated vector cited in test header) | DONE |
@@ -26,7 +26,7 @@ Status values: `DONE` (parity vectors ported + green), `IN FLIGHT` (slice runnin
 
 | Gate | Proof required | Status |
 |---|---|---|
-| All rows 1–9 `DONE` | this matrix | **DONE 2026-10-01** (18 packages green, 252 test funcs) |
+| All rows 1–9 `DONE` | this matrix | **DONE 2026-10-01** (19 packages green, 266 test funcs) |
 | Composed Go paper E2E harness (`internal/e2e/paper_e2e_test.go`) drives worker + paper venue + lease + store together through the §127 scenario | `go test ./services/executor/internal/e2e/` | **DONE 2026-10-01** — 12 tests, hermetic (no PG/Valkey/creds/network), covers create→place→fill→complete, TWAP multi-child schedule (§107), lease contention, restart-no-duplicate-order, cancel-resting, duplicate-start-noop, disconnect-degrade-then-recover, rejected-order-then-replaces, partial-fill-then-complete, pause/resume, reconciliation-mismatch (§94), plan/risk sizing; stable under `-race -count=3` |
 | `verify:executor` (`executor-paper-e2e.ts`) green against the **Go** worker | run output, env-gated on `FUDCOURT_EXECUTOR_MASTER_KEY` (verbatim error in `current.md` §5a) | OPEN (needs `FUDCOURT_EXECUTOR_PG_URL` + master key — the TS harness exercises the TS runtime against live Postgres/Valkey, so it is the *live* half of the gate; the offline Go half above is now proven) |
 | EXECUTOR DDL lifted to `database/schema/executor-schema.sql` as the sole owner (store DDL byte-identity stays PASS) | `database/schema/executor-schema.sql` + store tests | OPEN |

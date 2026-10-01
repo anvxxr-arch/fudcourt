@@ -303,7 +303,7 @@ at /home/dwizzy/fudcourt/apps/web/scripts/verify/executor-paper-e2e.ts:100:29
 258 test funcs (all three Go
 modules together: 548 test funcs). Row-by-row TS↔Go status lives in
 [`parity-matrix.md`](parity-matrix.md) §cutover; every `DONE` row cites the Go suite that pins it.
-The offline composed artifact of that matrix is `services/executor/internal/e2e/` — 10 hermetic
+The offline composed artifact of that matrix is `services/executor/internal/e2e/` — 12 hermetic
 scenarios (create→place→fill→complete, TWAP multi-child schedule with the §107 sum bound, lease
 contention, restart-no-duplicate-order, cancel-resting, duplicate-start-noop,
 disconnect-degrade-then-recover, rejected-order-then-replaces, partial-fill-then-complete,
