@@ -114,7 +114,14 @@ All five Next proxies are thin (`route validates nothing`) and live:
 | item | artifact | pinned today by | unchanged |
 |---|---|---|---|
 | 15 `route.ts` files under `frontend/web/src/app/(frontend)/api/executor/**` (`preview`, `executions{,[id],/[id]/{start,pause,resume,cancel,orders,fills,events}}`, `accounts{,[id],/[id]/test}`, `settings`, `emergency`) | `find 'frontend/web/src/app/(frontend)/api/executor' -name route.ts` → **15** | `check-contract.mjs` (b) (every executor handler documented, none undocumented) + `frontend/web/tests/executor-ui-tests.ts` + `tests/integration/executor/{executor-store-tests.ts,executor-exchange-tests.ts}` | yes |
-
+| served, since `7b8dc2d`, by the **executor process** — not `backend/api` | the 15 `/api/executor/*` routes are served by `backend/workers/executor` (binary `fudcourt-executor`) on its own loopback listener `127.0.0.1:3105` (`FUDCOURT_EXECUTOR_API_ADDR`; `backend/workers/executor/cmd/executor/api.go:16,59`, handlers in `backend/workers/executor/internal/api/*`) | `backend/workers/executor/internal/api/routes_test.go` (29 offline tests: route table, auth gate, envelopes) | yes — additive; `backend/api` did not gain these, and the TS runtime is untouched |
+**Re-observed 2026-10-01 (after `7b8dc2d`).** The 15 Next `route.ts` files still carry the full
+TypeScript implementation (`platform/executor/{store,runtime}`) and do **not** thin-proxy to `:3105`
+yet — `7b8dc2d`'s own message says "The TS production path is untouched", and
+`grep -rn '3105' frontend/web/src` (excluding `node_modules`) → **no match** — so the same URL is
+served twice while the cutover is pending. The count (**15**) and the "unchanged by this workstream"
+verdict both still hold. `backend/api` (`:3103`) is a **different** service and still serves only
+`/healthz`, `/readyz`, `/api/auth/{login,callback,logout}`, `/api/admin/members`.
 **Boundary statement (restated in §5).** Nothing in §1 is a canonical-entity surface. The canonical
 layer's job is to sit *behind* these bodies — a consumer that today parses `CrCoin.Symbol` or the
 executor's `symbol` field keeps receiving exactly that body after any canonical work.
