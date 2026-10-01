@@ -2,7 +2,7 @@
 // target.md): one process hosting the bounded contexts under internal/ —
 // identity, authorization, entitlements, credentials, exchangeaccounts,
 // instruments, markets, ledger, portfolio, treasury, wallets, transactions,
-// notifications, admin, jobs.
+// notifications, jobs.
 //
 // Deliberately NOT one process per domain (objective §51): domains are modules;
 // extraction needs an operational reason.
