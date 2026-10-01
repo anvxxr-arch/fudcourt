@@ -33,11 +33,6 @@ docs/
 | architecture | [ARCHITECTURE.md](architecture/ARCHITECTURE.md) | **The clear map**: product statement, system picture, 16-view shell (18-row registry), 10 data families + trust classes, verification tiers, deploy model |
 | architecture | [TECH-STACK.md](architecture/TECH-STACK.md) | Languages, frameworks, data stores, infra, verification tooling |
 | architecture | [SCHEMA.md](architecture/SCHEMA.md) | Data schemas: Turso tables, Payload/Neon tables, API envelopes |
-| architecture | [canonical-model.md](architecture/canonical-model.md) | The canonical data model: 7-layer pipeline, entity list with identity/owner, domain taxonomy, time semantics, precision rules, duplicate-concept decisions |
-| architecture | [source-catalog.md](architecture/source-catalog.md) | Every data source actually in the repo: provider/feed/account kept distinct, freshness/durability/auth/status + the sources that are absent |
-| architecture | [data-catalog.md](architecture/data-catalog.md) | Per-dataset detail: today's layer, provider carrier, canonical target, identity, time semantics, consumers |
-| architecture | [data-classification.md](architecture/data-classification.md) | The classification matrix + provider-DTO leak audit + duplicate-concept audit |
-| architecture | [database-classification.md](architecture/database-classification.md) | Every table in Turso/Postgres/executor-schema/Neon classified: canonical/event/snapshot/cache/provider-specific/legacy/unknown, owner, durability, sensitivity, writer gaps |
 | operations | [PLAN.md](operations/PLAN.md) | Goal → subgoal → task → subtask breakdown with status |
 | operations | [SECRETS.md](operations/SECRETS.md) | Secret inventory, production (self-hosted) env model, rotation runbook |
 | operations | [CHANGELOG.md](operations/CHANGELOG.md) | What shipped, in change-sized rows |
