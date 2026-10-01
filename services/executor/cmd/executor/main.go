@@ -33,6 +33,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -61,7 +62,12 @@ type config struct {
 	tick         time.Duration
 	valkeyAddr   string
 	stepFallback string
+	healthAddr   string
+	readyTimeout time.Duration
 }
+
+// defaultHealthAddr is loopback-only like every FUDCourt service (DR-002).
+const defaultHealthAddr = "127.0.0.1:3104"
 
 // loadConfigFrom is loadConfig with an injectable env lookup (tests pin the
 // exact refusal and default surface without touching the process env).
@@ -114,6 +120,15 @@ func loadConfigWith(getenv func(string) string) (config, error) {
 	}
 
 	c.valkeyAddr = strings.TrimSpace(getenv("VALKEY_ADDR"))
+
+	c.healthAddr = strings.TrimSpace(getenv("FUDCOURT_EXECUTOR_HEALTH_ADDR"))
+	if c.healthAddr == "" {
+		c.healthAddr = defaultHealthAddr
+	}
+	c.readyTimeout, err = parseProbeTimeout(strings.TrimSpace(getenv("FUDCOURT_EXECUTOR_READYZ_TIMEOUT_MS")))
+	if err != nil {
+		return c, err
+	}
 
 	// The clamp grid fallback. The plan's own precision (constraints) wins per
 	// execution; this only applies when a plan carries no precision, and it is
@@ -273,6 +288,27 @@ func main() {
 		"max_in_flight", cfg.maxInFlight,
 		"quantity_step", cfg.stepFallback,
 	)
+
+	// Operational surface (§34): loopback-only, and started BEFORE the worker
+	// loop so an operator can watch dependencies probe while the loop runs.
+	// A listener failure is fatal — silently losing health visibility would
+	// make a wedged worker indistinguishable from a healthy one.
+	go func() {
+		hs := &healthServer{store: store, lock: lease}
+		mux := hs.handler(cfg.owner, cfg.readyTimeout)
+		srv := &http.Server{
+			Addr:              cfg.healthAddr,
+			Handler:           mux,
+			ReadHeaderTimeout: 5 * time.Second,
+		}
+		slog.Info("executor: health surface listening",
+			"addr", cfg.healthAddr, "readyz_probe_ms", cfg.readyTimeout.Milliseconds())
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("executor: health surface failed", "addr", cfg.healthAddr, "error", err)
+			stop() // take the worker loop down with it: honest failure, not silent
+		}
+	}()
+
 	if err := w.Run(ctx); err != nil {
 		slog.Error("executor: worker loop failed", "error", err)
 		os.Exit(1)

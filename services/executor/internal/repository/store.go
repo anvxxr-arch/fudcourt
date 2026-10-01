@@ -108,6 +108,15 @@ func New(ctx context.Context, databaseURL string) (*Store, error) {
 // pool's own Close is safe to call once per Store).
 func (s *Store) Close() { s.pool.Close() }
 
+// Ping proves the durable store answers one trivial round trip. It is the
+// dependency probe behind the executor's /readyz (objective §34: never report
+// ready before the required dependencies are usable). The query is a constant,
+// not a table read, so it works before the schema exists and cannot expose data.
+func (s *Store) Ping(ctx context.Context) error {
+	var one int
+	return s.pool.QueryRow(ctx, "SELECT 1").Scan(&one)
+}
+
 // EventID formats one event id: evt_<executionID>_<seq>, where seq is the
 // durable per-execution sequence value the store assigned (the
 // executor.execution_events.id returned by INSERT … RETURNING id). The format
