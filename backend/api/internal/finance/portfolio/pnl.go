@@ -36,7 +36,7 @@ type ExitFill struct {
 
 // RealizedPnl returns the signed realized P&L in USD of one closed position,
 // mirroring the executor's summarizePortfolioRisk rollup
-// (apps/web/src/platform/executor/store.ts: `exit_value − exit_qty ×
+// (frontend/web/src/platform/executor/store.ts: `exit_value − exit_qty ×
 // average_fill_price − fees`) and the runtime.ts sign conventions:
 //
 //	long:  exit proceeds − average entry × exited quantity − fees

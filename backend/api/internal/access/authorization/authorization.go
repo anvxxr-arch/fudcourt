@@ -4,7 +4,7 @@
 // never invents data for an actor it cannot see.
 package authorization
 
-import "github.com/anvxxr-arch/fudcourt/backend/api/internal/identity"
+import "github.com/anvxxr-arch/fudcourt/backend/api/internal/access/identity"
 
 // Action is a verb on a resource ("order.create", "execution.cancel", ...).
 // Invariant: Action is non-empty wherever a Decision is evaluated; policies

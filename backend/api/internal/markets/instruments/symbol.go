@@ -18,7 +18,7 @@ var quoteSuffixes = []string{
 
 // CanonicalSymbol normalizes a venue-native symbol into the canonical
 // `BASE/QUOTE` form shared with the web executor (fromVenueSymbol in
-// apps/web/src/platform/executor/exchange.ts). It mirrors those semantics:
+// frontend/web/src/platform/executor/exchange.ts). It mirrors those semantics:
 //
 //   - binance/bybit spell symbols concatenated (`BTCUSDT`), split by the
 //     longest matching quote suffix (`BTC` + `USDT`);
@@ -74,7 +74,7 @@ func CanonicalSymbol(exchange, venueSymbol string) (string, error) {
 }
 
 // VenueSymbol inverts CanonicalSymbol (mirroring toVenueSymbol in
-// apps/web/src/platform/executor/exchange.ts): `BASE/QUOTE` becomes the
+// frontend/web/src/platform/executor/exchange.ts): `BASE/QUOTE` becomes the
 // venue-native spelling — concatenated for binance/bybit, underscored for
 // mexc. INVARIANT: a canonical symbol that is not exactly `BASE/QUOTE` is
 // refused (CodeSymbolUnknown), never emitted half-formed to a venue.

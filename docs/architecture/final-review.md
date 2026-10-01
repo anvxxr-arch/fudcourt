@@ -75,7 +75,10 @@ Already moved in earlier commits on this branch (verified via `git log`):
 ## 3. Files created
 
 - **Phase 3 (contracts):** `shared/contracts/{openapi/fudcourt.yaml, events/{catalog.json,event.schema.json}, schemas/{error,event}-envelope.json, scripts/check-contract.mjs}`; `shared/sdk/typescript/**` (committed `d4d87e7`).
-- **Phase 4 (api):** `backend/api/**` — 18 internal packages, 112 test funcs (committed `3702c6c`).
+- **Phase 4 (api):** `backend/api/**` — 18 internal packages, 112 test funcs (committed `3702c6c`);
+  regrouped 2026-10-01 into bounded contexts (`access/`, `accounts/`, `finance/`, `markets/` —
+  `ARCHITECTURE.md` §2a, `domain-map.md` §4). Pure `git mv`: same package count, same 112 test
+  funcs, no behavior/route/export change.
 - **Phase 5 (executor):** `backend/workers/executor/**` — 19 internal packages, **253** test funcs (committed `4ef371a`).
 - **Phase 9 (CI):** the five path-filtered workflows (§2) + `scripts/verify/verify-all.sh` (one-command offline gate).
 - **Phase 10 (deploy):** `infrastructure/systemd/{fudcourt-api,fudcourt-data,fudcourt-executor}.service` (+ existing units).

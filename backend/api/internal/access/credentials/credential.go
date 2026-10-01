@@ -64,7 +64,7 @@ type Credential struct {
 }
 
 // MaskKey renders an API key for display exactly like the web executor's
-// maskApiKey (apps/web/src/platform/executor/types.ts): a key of at most 8
+// maskApiKey (frontend/web/src/platform/executor/types.ts): a key of at most 8
 // characters cannot show a meaningful prefix/suffix pair, so it collapses to
 // "***"; anything longer shows the first and last 3 characters joined by
 // "...". ASCII keys match the JS slicing byte-for-byte; the rune slicing here

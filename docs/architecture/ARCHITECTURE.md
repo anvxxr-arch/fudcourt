@@ -105,6 +105,29 @@ The 5-minute treasury sync is now also a Rust service, `backend/sync` ([DR-010](
 same Turso pipeline, same Alchemy/Solana/Hyperliquid reads, verified row-for-row
 against the Python oracle `sync-live.py`, which stays installed as the rollback.
 
+### 2a. `backend/api` package layout (as-built, 2026-10-01)
+The primary Go API module (`github.com/anvxxr-arch/fudcourt/backend/api`) is one process
+(`cmd/api`: `main.go` route table + `routes.go`/`errors.go`/`cookies.go`/`discord.go` handlers,
+loopback `127.0.0.1:3103`, `/healthz` + `/readyz`). Its `internal/` is grouped by **bounded
+context**, not one flat package per noun:
+```
+internal/
+├── access/          identity/ authorization/ entitlements/ credentials/
+├── accounts/        exchange/ (was exchangeaccounts/)  wallets/
+├── finance/         ledger/ portfolio/ treasury/ transactions/
+├── markets/         instruments/ overview/ (was markets/)
+├── notifications/   audit/   jobs/
+└── platform/        errs/ health/ httpx/
+```
+A directory exists only where real code lives. There is deliberately **no** `bank/`, `cash/`,
+`sources/`, `finance/assets`, `finance/valuation`, `executor/` or `admin/` package: those names
+are reserved for functionality that does not exist in this module yet, and an empty placeholder
+would misdescribe the tree. `executor/` here is a facade name (commands/queries over the real
+engine in `backend/workers/executor`); the `/api/executor/**` orchestration plane is still TS
+(§8b), and the `/api/admin/members` plane is an api route plane, not an `internal/admin` package.
+Domain ownership of the tables these packages model is in [domain-map.md](domain-map.md) §1-§2;
+the full judgment record for the grouping is §4 of that file.
+
 ## 3. `frontend/web` — SPA shell anatomy
 
 - `src/components/layout/store-shell.tsx` owns `page` state (`initialPage` prop) and renders one

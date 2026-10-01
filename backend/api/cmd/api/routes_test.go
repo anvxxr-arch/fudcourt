@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/backend/api/internal/identity"
+	"github.com/anvxxr-arch/fudcourt/backend/api/internal/access/identity"
 	"github.com/anvxxr-arch/fudcourt/backend/api/internal/platform/health"
 )
 

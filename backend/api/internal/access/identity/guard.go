@@ -20,7 +20,7 @@ func ErrTierRequired(need Tier) *errs.Error {
 }
 
 // RoutePolicy is the single route policy of requiredTierForPath in
-// apps/web/src/platform/auth/guard.ts, moved from hardcoded TypeScript tables
+// frontend/web/src/platform/auth/guard.ts, moved from hardcoded TypeScript tables
 // to explicit configuration. Invariant: the ORDER of entries matters exactly
 // as guard.ts's two passes do — every PagePrefixes entry is consulted before
 // any TeamAPIRoutes entry, so a page prefix and an API prefix that overlap

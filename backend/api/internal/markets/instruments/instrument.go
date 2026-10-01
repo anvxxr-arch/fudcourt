@@ -31,7 +31,7 @@ const (
 )
 
 // MarketType names the instrument's market family. It mirrors the web
-// executor's MarketType (apps/web/src/platform/executor/types.ts:
+// executor's MarketType (frontend/web/src/platform/executor/types.ts:
 // 'spot' | 'linear_perp'), including the linear_perp spelling.
 type MarketType string
 

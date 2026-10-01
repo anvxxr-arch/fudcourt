@@ -83,6 +83,13 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
 - **Rollback:** contracts are additive new files; consumers not yet cut over.
 
 ## Phase 4 — `backend/api` (Go) incremental, Next.js proxy compatibility
+> **Amended 2026-10-01 (bounded-context regroup):** `backend/api/internal/` is now grouped by
+> context — `access/{identity,authorization,entitlements,credentials}`,
+> `accounts/{exchange,wallets}`, `finance/{ledger,portfolio,treasury,transactions}`,
+> `markets/{instruments,overview}`, plus top-level `notifications`, `audit`, `jobs` and
+> `platform/{errs,health,httpx}` (18 internal packages; `cmd/api` unchanged). Pure `git mv`
+> regrouping: no behavior, route, response shape, error code or exported symbol changed, module
+> path unchanged. As-built layout: `ARCHITECTURE.md` §2a, judgment record: `domain-map.md` §4.
 > **Amended 2026-10-01 (domain layer EXECUTED, verified):** `backend/api` exists as a
 > Go 1.25 module (`go.work` member) with the bounded contexts under `internal/`
 > (identity, authorization, entitlements, audit, jobs, credentials, exchangeaccounts,

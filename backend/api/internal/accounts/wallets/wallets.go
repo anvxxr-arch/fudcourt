@@ -57,7 +57,7 @@ var exchangeChains = map[string]bool{
 
 // addressRule is one chain's address normalization rule, kept as an explicit
 // per-chain table — the chains that actually exist in the sync pipeline
-// (services/sync + apps/web/scripts/tools/sync-live.py), exactly those and no
+// (backend/sync + frontend/web/scripts/tools/sync-live.py), exactly those and no
 // guesses. Ethereum-style chains accept 0x hex and are canonicalized to
 // lowercase hex; Solana addresses are base58 and case-SENSITIVE, so their case
 // is preserved byte for byte.

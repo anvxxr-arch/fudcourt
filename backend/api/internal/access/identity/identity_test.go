@@ -8,7 +8,7 @@ import (
 )
 
 // TestTierRankOrdering ports "tiers: rank ordering is public < member < team <
-// admin" from apps/web/scripts/tests/auth-tests.ts.
+// admin" from frontend/web/scripts/tests/auth-tests.ts.
 func TestTierRankOrdering(t *testing.T) {
 	if !(TierPublic.Rank() < TierMember.Rank()) ||
 		!(TierMember.Rank() < TierTeam.Rank()) ||
@@ -179,7 +179,7 @@ func TestSessionIsValid(t *testing.T) {
 	}
 }
 
-// TestMaskKey ports maskApiKey from apps/web/src/platform/executor/types.ts
+// TestMaskKey ports maskApiKey from frontend/web/src/platform/executor/types.ts
 // (PRD §109) including the exact length boundary.
 func TestMaskKey(t *testing.T) {
 	cases := []struct {

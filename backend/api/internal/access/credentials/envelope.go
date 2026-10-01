@@ -10,7 +10,7 @@ import (
 	"github.com/anvxxr-arch/fudcourt/backend/api/internal/platform/errs"
 )
 
-// Envelope geometry, mirrored from the TS store (apps/web/src/platform/
+// Envelope geometry, mirrored from the TS store (frontend/web/src/platform/
 // executor/store.ts, sealCredentials/openCredentials): AES-256-GCM with one
 // 12-byte IV and one 16-byte auth tag per secret, concatenated per column.
 const (

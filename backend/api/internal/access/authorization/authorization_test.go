@@ -3,7 +3,7 @@ package authorization
 import (
 	"testing"
 
-	"github.com/anvxxr-arch/fudcourt/backend/api/internal/identity"
+	"github.com/anvxxr-arch/fudcourt/backend/api/internal/access/identity"
 )
 
 const (

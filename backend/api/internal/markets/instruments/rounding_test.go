@@ -8,7 +8,7 @@ import (
 	"github.com/anvxxr-arch/fudcourt/backend/api/internal/platform/errs"
 )
 
-// The rounding vectors mirror apps/web/scripts/tests/executor-risk-tests.ts
+// The rounding vectors mirror frontend/web/scripts/tests/executor-risk-tests.ts
 // ("roundQuantityDown floors to the step grid", "roundPrice snaps to tick,
 // ties half-up", "huge quantities keep exact cents through Decimal").
 func TestRoundQuantityDownVectors(t *testing.T) {

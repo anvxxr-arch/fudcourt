@@ -2,8 +2,8 @@
 // sessions, and the machine identities (service accounts, API tokens) that
 // stand in for a user. Pure domain model only — no cookie crypto, no Discord
 // calls. The tier resolution and key-masking semantics deliberately mirror the
-// TypeScript oracles (apps/web/src/platform/auth/guard.ts, session.ts and
-// apps/web/src/platform/executor/types.ts) so the two runtimes cannot drift.
+// TypeScript oracles (frontend/web/src/platform/auth/guard.ts, session.ts and
+// frontend/web/src/platform/executor/types.ts) so the two runtimes cannot drift.
 package identity
 
 import (
@@ -150,7 +150,7 @@ func (s Session) Require(now int64, user User) error {
 }
 
 // MaskKey masks an API key for display exactly as maskApiKey in
-// apps/web/src/platform/executor/types.ts (PRD §109): keys of 8 bytes or
+// frontend/web/src/platform/executor/types.ts (PRD §109): keys of 8 bytes or
 // fewer are wholly hidden behind "***", longer keys show their first and last
 // 3 bytes as `abc...xyz`. Invariant: the masked form never reveals more than
 // 6 bytes of the secret, and length 9 is the first key to show any of it.

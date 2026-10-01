@@ -26,9 +26,9 @@
 | markets / venues / prices (read) | web | `api/{markets,ticker,ticker/instrument(s)}`, `features/{markets,ticker}/*` | `backend/api` (markets) |
 | data acquisition | Go sidecar | `backend/data/internal/research/{llama,cryptorank,khala,chainrank,news}` (ex-`apps/apicalls`) | `backend/data` (already moved) |
 | data caching | Go + TS | `backend/data/platform/cache`, `frontend/web/src/platform/cache` | `backend/data` |
-| stream sync / balances | Rust | `backend/sync/src/{sync,chains,jsonrpc,pyfmt,db}.rs` + Python twin `frontend/web/scripts/tools/sync-live.py` | `backend/sync` (already moved; Phase 6 specializes) |
-| reconciliation maths | Rust + TS twin | `backend/sync/src/reconcile.rs` vs `frontend/web/app…/api/reconcile/route.ts` | `backend/sync` |
-| event normalization | Rust (partial) | `backend/sync/src/jsonrpc.rs`, `sync.rs` | `backend/sync` |
+| stream sync / balances | Rust | `backend/sync/src/streams/sync.rs` + `{chains,jsonrpc,pyfmt}.rs` + `persistence/db.rs` + Python twin `frontend/web/scripts/tools/sync-live.py` | `backend/sync` (already moved; Phase 6 specializes) |
+| reconciliation maths | Rust + TS twin | `backend/sync/src/reconciliation/reconcile.rs` vs `frontend/web/src/app/(frontend)/api/reconcile/route.ts` | `backend/sync` |
+| event normalization | Rust (partial) | `backend/sync/src/jsonrpc.rs`, `streams/sync.rs` | `backend/sync` |
 | executor orchestration (command/API) | web | `frontend/web/src/app/(frontend)/api/executor/**` (16 routes) | `backend/api` (executor orchestration) |
 | executor planning | web | `frontend/web/src/platform/executor/plan.ts` | `backend/workers/executor` (planner) |
 | risk & sizing | web | `frontend/web/src/platform/executor/risk.ts` | `backend/workers/executor` (risk, sizing) |
@@ -120,19 +120,69 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
 
 ### 3.5 Dual-implementation debt (same domain in two languages, both live)
 
-- Balance sync: `backend/sync/src/{main,sync}.rs` **and** `frontend/web/scripts/tools/sync-live.py`,
+- Balance sync: `backend/sync/src/main.rs` + `backend/sync/src/streams/sync.rs` **and** `frontend/web/scripts/tools/sync-live.py`,
   each with its own systemd unit (`infrastructure/systemd/fudcourt-sync-rust.service` vs
   `infrastructure/systemd/fudcourt-sync.service`). Phase 6 collapses to Rust after oracle parity.
-- Reconcile: `backend/sync/src/reconcile.rs` **and** `frontend/web/…/api/reconcile/route.ts`
+- Reconcile: `backend/sync/src/reconciliation/reconcile.rs` **and** `frontend/web/…/api/reconcile/route.ts`
   (route proxies the Rust service, verified byte-parity in CI `verify/verify-reconcile.py`).
 
-### 3.6 Scaffolds started after this audit snapshot (Phases 4/5/10 begun in the working tree)
+### 3.6 Scaffolds started after this audit snapshot (historical — the scaffolds are now built)
+> **Superseded 2026-10-01:** the paragraph below records the uncommitted state this audit saw.
+> Those scaffolds were committed and then completed; `backend/api/internal/` has since been
+> regrouped into bounded contexts (see §4, "backend/api package layout (as-built)"), and
+> `backend/data` + `backend/sync` were regrouped by their own lanes.
 - Uncommitted as of this writing (post-`4e8ba91`): `backend/api/` (Go: `cmd/api`,
   `internal/{identity,credentials,authorization,platform/{errs,health,httpx}}`),
   `backend/workers/executor/` (Go: `internal/{decimal,exchange,executor}` — `records.go`/`types.go`
   already pin `database/schema/executor-schema.sql` as their reference), `packages/`, `go.work`,
   and the `infrastructure/systemd/` consolidation (units moved from per-app `infrastructure/` folders into one
   repo-level folder; the Python-vs-Rust `fudcourt-sync` name collision resolved as
-  `fudcourt-sync.service` (Python) vs `fudcourt-sync-rust.service` (Rust)).
-- These are the Phase 4/5/10 ports beginning; the TS execution plane (§3.1) remains the live
-  implementation until Phase 5's parity gate allows deletion.
+  `fudcourt-sync.service` (Python) vs `fudcourt-sync-rust.service` (Rust)). Those paths are now
+  `shared/` (not `packages/`) and `backend/workers/executor` is committed.
+- The TS execution plane (§3.1) remains the live implementation until Phase 5's parity gate
+  allows deletion.
+## 4. `backend/api` package layout (as-built, 2026-10-01)
+The module `github.com/anvxxr-arch/fudcourt/backend/api` hosts ONE process (`cmd/api`) whose
+`internal/` is grouped by bounded context. A directory exists only where real code lives —
+there is deliberately no `bank/`, `cash/`, `sources/`, `finance/assets`, `finance/valuation`,
+`executor/` or `admin/` package.
+```
+internal/
+├── access/          identity/ authorization/ entitlements/ credentials/
+├── accounts/        exchange/ (was exchangeaccounts/)  wallets/
+├── finance/         ledger/ portfolio/ treasury/ transactions/
+├── markets/         instruments/ overview/ (was markets/)
+├── notifications/   audit/   jobs/
+├── platform/        errs/ health/ httpx/          cmd/api/ = main.go, routes.go, errors.go,
+└── (18 packages)                                  cookies.go, discord.go (+ tests)
+```
+Judgment calls, with their evidence:
+- **`wallets` → `accounts/wallets`.** `wallets.go` is the metadata of a `wallets` table row
+  (`database/schema/schema.sql:77`, `pg-schema.sql:95`; written by `backend/sync`), not a derived
+  holding — it is the durable source record, so it belongs to the account side. Its defining rule
+  is chain-address-only and refuses CEX names (`WALLET_CHAIN_IS_EXCHANGE`), and it is exactly the
+  pairing the browser talks to as `/api/wallets` beside the CEX accounts.
+- **`exchangeaccounts` → `accounts/exchange`.** The package name stays `exchangeaccounts` (no
+  exported-symbol or package-name churn); only the directory is named `exchange`, so the accounts
+  context reads `exchange/` + `wallets/` exactly as the spec's `accounts/ exchange/ wallets/`
+  sketch. No `bank/`, `cash/` or `sources/` module is justified by existing functionality.
+- **`instruments` and `markets` are NOT merged.** They are two halves of the read side, not two
+  spellings of one: `markets` is the *market-data value model* (Ticker/Candle/Book/MarkPrice/
+  FundingRate/OpenInterest + their validators and the touch-pair snapshot) while `instruments` is
+  the *tradable-instrument identity + grid* model and the only real computation (venue-symbol
+  normalization, `RoundQuantityDown`, `RoundPrice`). Merging would put the whole execution-sizing
+  grid into the market-data package, and `markets` already refers to `instruments.CanonicalSymbol`
+  in prose (`market.go:40`) without importing it — the boundary is a real seam with zero code
+  coupling between them today. The spec's own sketch names them separately
+  (`markets/ instruments/`), so the split is honored, not inflated.
+- **The six self-contained decimal helpers are kept** (five `decimal.go` copies under
+  `finance/{ledger,portfolio,treasury,transactions}` + `markets/overview`, plus
+  `markets/instruments/rounding.go` which carries its own `parseDecimal`): each is a deliberately
+  self-contained helper for its own domain (the accepted grammar differs per caller — see each
+  file's header), and the spec forbids cross-domain implementation sharing. Consolidating them
+  into one shared package would create exactly the cross-domain coupling the restructure exists to
+  remove, and none of them imports another domain.
+- **`executor/` is NOT created.** It is a facade name (commands/queries over the real engine in
+  `backend/workers/executor`) and no api-side executor code exists today; per the spec's own rule,
+  no empty placeholder package is created. The route plane lives in `cmd/api/{routes,errors}.go`
+  and the admin plane is likewise a route plane, not an `internal/admin` package.

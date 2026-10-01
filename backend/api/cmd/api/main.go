@@ -1,9 +1,14 @@
 // Command api is the FUDCourt primary Go backend layer (docs/architecture/
 // target.md): one process hosting the bounded contexts under internal/ —
-// identity, authorization, entitlements, credentials, exchangeaccounts,
-// instruments, markets, ledger, portfolio, treasury, wallets, transactions,
-// notifications, jobs, and the /api/admin/members plane (admin/members/route.ts
-// port). The admin context is a route plane here, not an internal package:
+// access/{identity,authorization,entitlements,credentials},
+// accounts/{exchange,wallets}, finance/{ledger,portfolio,treasury,transactions},
+// markets/{instruments,overview}, plus notifications, audit, jobs and
+// platform/{errs,health,httpx}, and the /api/admin/members plane
+// (admin/members/route.ts port). There is no api-side executor package yet: the
+// executor here is orchestration (commands/queries over backend/workers/
+// executor), which no Go code in this module implements today, so no internal/
+// executor directory exists — a placeholder would be a lie.
+// The admin context is a route plane here, not an internal package:
 // it reuses identity.TierAdmin ("admin") and the existing handlers in
 // cmd/api/{routes,errors}.go. Splitting it into internal/admin is deferred
 // (docs/architecture/final-review.md §6, debt item 5) — the comment must not
@@ -27,7 +32,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/backend/api/internal/identity"
+	"github.com/anvxxr-arch/fudcourt/backend/api/internal/access/identity"
 	"github.com/anvxxr-arch/fudcourt/backend/api/internal/platform/health"
 	"github.com/anvxxr-arch/fudcourt/backend/api/internal/platform/httpx"
 )

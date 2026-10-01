@@ -1,7 +1,7 @@
 package markets
 
 // Snapshot is the two-sided touch a preview/execution path prices a spread
-// against (the worker's MarketSnapshot in apps/web/src/platform/executor/
+// against (the worker's MarketSnapshot in frontend/web/src/platform/executor/
 // worker.ts, reduced to the touch pair).
 type Snapshot struct {
 	Bid string `json:"bid"`
@@ -9,7 +9,7 @@ type Snapshot struct {
 }
 
 // SnapshotFromTicker derives the touch pair of a ticker under the honest-null
-// rule (mirroring tickerToSnapshot in apps/web/src/platform/executor/worker.ts
+// rule (mirroring tickerToSnapshot in frontend/web/src/platform/executor/worker.ts
 // with its fabrication removed): the bid and ask sides are used AS REPORTED and
 // are NEVER substituted with last — a last-only trade print is not a quote, and
 // pricing a spread against it would invent a touch price the venue never gave.

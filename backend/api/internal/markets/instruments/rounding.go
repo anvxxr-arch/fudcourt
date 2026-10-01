@@ -118,7 +118,7 @@ func ratioParts(a *big.Int, aScale int, m *big.Int, mScale int) (num, den *big.I
 
 // RoundQuantityDown floors a quantity onto the quantity-step grid — the
 // risk-safe direction (exposure never rounds up; PRD §71, mirrored from
-// roundQuantityDown in apps/web/src/platform/executor/risk.ts). Vectors:
+// roundQuantityDown in frontend/web/src/platform/executor/risk.ts). Vectors:
 // 0.012583 @ 0.001 → 0.012, an on-grid value is preserved (0.013 @ 0.001),
 // and 1e12-scale values stay exact (123456789012.345 @ 0.001).
 //
@@ -149,7 +149,7 @@ func RoundQuantityDown(quantity, step string) (string, error) {
 }
 
 // RoundPrice snaps a price onto the tick-size grid, ties rounding half-up
-// (mirrored from roundPrice in apps/web/src/platform/executor/risk.ts).
+// (mirrored from roundPrice in frontend/web/src/platform/executor/risk.ts).
 // Vectors: 1.005 @ 0.01 → 1.01 (the exact tie rounds up), 1.004 @ 0.01 → 1,
 // 100.0049 @ 0.01 → 100, 98000.126 @ 0.01 → 98000.13, and 1e12-scale values
 // stay exact (123456789012.345 @ 0.001).
