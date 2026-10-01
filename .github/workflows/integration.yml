@@ -36,15 +36,15 @@ jobs:
         with:
           go-version: '1.25.0'
           cache-dependency-path: |
-            services/api/go.sum
-            services/executor/go.sum
-            services/data/go.sum
+            backend/api/go.sum
+            backend/workers/executor/go.sum
+            backend/data/go.sum
       - uses: dtolnay/rust-toolchain@stable
-      - name: Install apps/web deps (structure/contract gates read the tree; shaper tests need deps)
-        working-directory: apps/web
+      - name: Install frontend/web deps (structure/contract gates read the tree; shaper tests need deps)
+        working-directory: frontend/web
         run: bun install --frozen-lockfile
-      - name: Install packages/sdk-ts deps (drift gate regenerates the SDK)
-        working-directory: packages/sdk-ts
+      - name: Install shared/sdk/typescript deps (drift gate regenerates the SDK)
+        working-directory: shared/sdk/typescript
         run: bun install --frozen-lockfile
       - name: "Every offline gate (bash scripts/verify/verify-all.sh)"
         run: bash scripts/verify/verify-all.sh
@@ -60,7 +60,7 @@ jobs:
         with:
           bun-version: 1.4.2
       - name: "Reconcile contract vs the Rust service (live Turso + byte-parity diff)"
-        working-directory: apps/web
+        working-directory: frontend/web
         env:
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
         run: |
@@ -71,8 +71,8 @@ jobs:
             exit 0
           fi
           # Build the Rust service this route proxies to, from this same commit.
-          cargo build --release --manifest-path ../../services/sync/Cargo.toml
-          ../../services/sync/target/release/fudcourt-reconciled &
+          cargo build --release --manifest-path ../../backend/sync/Cargo.toml
+          ../../backend/sync/target/release/fudcourt-reconciled &
           SVC=$!
           trap 'kill $SVC 2>/dev/null || true' EXIT
           for _ in $(seq 1 30); do

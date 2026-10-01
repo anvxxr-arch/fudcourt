@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the replayable sync capture fixture (offline, deterministic).
 
-The gate (`apps/web/scripts/verify/verify-sync.py`) proves the Rust sync and
+The gate (`frontend/web/scripts/verify/verify-sync.py`) proves the Rust sync and
 the Python oracle produce IDENTICAL `assets` projections from the same inputs.
 This script writes those inputs: a recorded `key -> response body` map whose
 keys are built exactly the way BOTH implementations build them.
@@ -38,7 +38,7 @@ from pathlib import Path
 PLACEHOLDER_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 ALCHEMY_REDACTED = "{ALCHEMY}"
 
-# --- mirrored verbatim from apps/web/scripts/tools/sync-live.py ------------
+# --- mirrored verbatim from frontend/web/scripts/tools/sync-live.py ------------
 WALLETS = [
     ("Main", "0x6816ba2cb2bc013a78225228a153586ca63b1548", "evm"),
     ("Hanif", "0xB0be41f0e7F0AD49622B292dA1322c2BEA46fA1b", "evm"),

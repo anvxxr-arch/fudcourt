@@ -4,9 +4,9 @@ Ranked by (impact ÷ effort), tied to risks in [ANALYSIS.md §5](ANALYSIS.md).
 
 | ID | Recommendation | Closes | Impact | Effort | Priority |
 |----|----------------|--------|--------|--------|----------|
-| **R-1** | **Version the Turso schema.** Export `SELECT sql FROM sqlite_master` into `apps/web/db/schema.sql` + a `docs/architecture/SCHEMA.md`-referenced migration folder; add a drift check (schema dump vs committed file) to the harness. | K-1 | High | S | **P0** |
+| **R-1** | **Version the Turso schema.** Export `SELECT sql FROM sqlite_master` into `frontend/web/db/schema.sql` + a `docs/architecture/SCHEMA.md`-referenced migration folder; add a drift check (schema dump vs committed file) to the harness. | K-1 | High | S | **P0** |
 | **R-2** | **Wire verification into CI / git hook.** A pre-push hook (or GitHub Action) running `verify-cryptorank.py --offline-ish subset` + `tsc --noEmit` + `next build` on changed apps. Even a reduced offline subset (contract checks, no upstream) catches 80% of regressions. | K-2 | High | M | **P0** |
-| **R-3** | **Decide the Next.js version story.** Either upgrade `apps/web` 14→16 (aligns React 18→19, single toolchain) or document web-stays-14 as a policy with an expiry. Do not let the divergence grow silently. | K-3 | Med | M | P1 |
+| **R-3** | **Decide the Next.js version story.** Either upgrade `frontend/web` 14→16 (aligns React 18→19, single toolchain) or document web-stays-14 as a policy with an expiry. Do not let the divergence grow silently. | K-3 | Med | M | P1 |
 | **R-4** | **Add an upstream monitor.** A cron (15 min) that runs a 5-check smoke (`home`, `coins`, `converter`, `newstag`, `funding`-must-503) and notifies on deviation — converts K-4 from "found on next manual run" to "found in ≤15 min". | K-4 | Med | S | P1 |
 | **R-5** | **Backfill blog content.** 3 seed posts (methodology: how a board is gated; decoy post-mortem; sync integrity rules) prove the CMS end-to-end and give `/blog/[slug]` real traffic. | K-9 | Med | S | P1 |
 | **R-6** | **Authorization on mutating endpoints.** Keep LAN binding, but require a shared-secret header (env `FUD_API_TOKEN`) for `POST/PUT/PATCH/DELETE` on `/api/transactions|wallets`. Validation already exists; this adds *authentication*, currently absent. | K-5 | High | S | **P0** |

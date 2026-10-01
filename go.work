@@ -1,7 +1,7 @@
 go 1.25.0
 
 use (
-	./services/api
-	./services/executor
-	./services/data
+	./backend/api
+	./backend/data
+	./backend/workers/executor
 )

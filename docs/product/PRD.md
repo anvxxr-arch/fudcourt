@@ -37,7 +37,7 @@ One private surface where the owner can answer, at any moment:
 - FR-2.1 `sync-live.py` runs every 5 minutes (`fudcourt-sync.timer`) writing to Turso `assets`.
 - FR-2.2 **Hard rule:** a failed RPC **raises** — it never becomes `0`. Absent data renders as absent, not zero.
 
-### FR-3 — Market intelligence boards (apps/web)
+### FR-3 — Market intelligence boards (frontend/web)
 - FR-3.1 **CryptoRank integration** — 28 modes reverse-engineered from HTML SSR
   payloads (no API key, by explicit owner decision): home, coins, trending, gainers,
   losers, categories, exchanges (CEX/DEX/perps/transparency), coin detail, listings,
@@ -57,7 +57,7 @@ One private surface where the owner can answer, at any moment:
   their verifier status are tabulated in ARCHITECTURE.md §4 (news: monitor
   smoke only, deep verifier pending — PLAN SG-5.2).
 
-### FR-4 — Blog (served by `apps/web` at `/blog`, DR-017)
+### FR-4 — Blog (served by `frontend/web` at `/blog`, DR-017)
 - FR-4.1 Payload CMS 3.89 collections: posts, media, categories, users on Neon Postgres.
 - FR-4.2 Public REST (`/api/posts|categories|media`) read-only; users list ACL-protected (403).
 - FR-4.3 GraphQL endpoint with introspection disabled; playground disabled in production (Payload default).
@@ -83,16 +83,16 @@ One private surface where the owner can answer, at any moment:
   regressions). Production (:3100, systemd `EnvironmentFile`) does carry the
   secret and answers those gated paths correctly: `/api/admin/members` → 401,
   gated pages → 307.
-- Regression harness `apps/web/scripts/verify/verify-cryptorank.py`: **244 passed / 0 failed / 8 info**.
+- Regression harness `frontend/web/scripts/verify/verify-cryptorank.py`: **244 passed / 0 failed / 8 info**.
 - Browser DOM audit: **109/109** checks.
 - All claims in docs must trace to tool output, not code reading.
 
 ### NFR-3 — Operations
 - Local: systemd --user units `fudcourt-web` (dashboard **and** blog), `fudcourt-data`, `fudcourt-reconciled`, `fudcourt-sync.timer`; enabled at boot. `fudcourt-blog` was retired by the DR-017 merge.
 - Build gate: `unset NODE_ENV` before any `bun install`/`bun run build` (env trap).
-- Runtime split (owner direction): acquisition families in Go (`services/data`), the
-  balance sync in Rust (`services/sync`), the UI/API surface in TypeScript on Bun
-  (`apps/web` only — the blog merged into it, DR-017); Python remains the verification-oracle language.
+- Runtime split (owner direction): acquisition families in Go (`backend/data`), the
+  balance sync in Rust (`backend/sync`), the UI/API surface in TypeScript on Bun
+  (`frontend/web` only — the blog merged into it, DR-017); Python remains the verification-oracle language.
   See docs/records/DECISIONS.md DR-005/DR-006/DR-007/DR-008/DR-009/DR-010/DR-012/DR-013.
 - Git: commits authored `Fox <fox@local>`; debug artifacts never committed.
 

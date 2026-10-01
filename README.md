@@ -1,10 +1,10 @@
 # fudcourt
 
 Personal treasury OS + CryptoRank read proxy + Payload blog — Next.js 16
-monorepo (**one** Next app, `apps/web`, serving the dashboard and the CMS blog)
+monorepo (**one** Next app, `frontend/web`, serving the dashboard and the CMS blog)
 plus a Go acquisition sidecar
-(`services/data`, [DR-005](docs/records/DECISIONS.md)) and a Rust service pair
-(`services/sync`, [DR-010](docs/records/DECISIONS.md)/[DR-014](docs/records/DECISIONS.md)),
+(`backend/data`, [DR-005](docs/records/DECISIONS.md)) and a Rust service pair
+(`backend/sync`, [DR-010](docs/records/DECISIONS.md)/[DR-014](docs/records/DECISIONS.md)),
 run on the homeserver
 (`192.168.100.6`) with an evidence-first verification stack. Every number on the board is either
 exactly reconciled or shown as `—`; upstream errors fail loud (502/503),
@@ -31,9 +31,9 @@ schema), `docs/operations/` (PLAN, [SECRETS](docs/operations/SECRETS.md), change
 ## Run
 
 ```bash
-cd services/data && go build -o bin/fudcourt-data ./cmd/data && ./bin/fudcourt-data
-                                         # CryptoRank sidecar -> :3101 (unit: deploy/systemd/fudcourt-data.service)
-cd apps/web  && bun install && bun run dev # dashboard + blog + proxy -> :3000
+cd backend/data && go build -o bin/fudcourt-data ./cmd/data && ./bin/fudcourt-data
+                                         # CryptoRank sidecar -> :3101 (unit: infrastructure/systemd/fudcourt-data.service)
+cd frontend/web  && bun install && bun run dev # dashboard + blog + proxy -> :3000
                                           # (prod unit: :3100, served by Bun — DR-008/DR-017)
                                           # blog: /blog (public), /blog/cms/admin (Payload)
 unset NODE_ENV                           # dev/build must never inherit production
@@ -46,7 +46,7 @@ payload.
 The sidecar is also the home of the **`llama`** family (DeFiLlama TVL, 3 modes,
 strict `top`/`days`), the **`news`** family (Cointelegraph RSS: strict
 `source`/`limit`, the RSS parse, cached on the feed URL), the **`chainrank`**
-family (chainrank.fyi reads, pagination relayed verbatim) and `services/sync` holds
+family (chainrank.fyi reads, pagination relayed verbatim) and `backend/sync` holds
 the Rust port of the 5-minute balance sync. The same sidecar is the home of the **`khala`** family — research reports from
 **khala.io** (Framer SSR, keyless), three modes (`reports`/`report`/`latest`), one Go
 package with a plain `net/http` client; the TS side (`lib/khala.ts`) is a typing-only
@@ -63,12 +63,12 @@ for the inventory and rotation steps (never print a value).
 bun run verify   # = bash scripts/verify/verify-all.sh: EVERY offline gate in one pass
                  # (structure, web contract, deploy units, contracts drift + sdk drift,
                  #  go build/vet/test x3 modules, cargo build/test, hook syntax,
-                 #  apps/web typecheck + shaper fixtures)
+                 #  frontend/web typecheck + shaper fixtures)
 ```
 The gates individually:
 
 ```bash
-cd services/data
+cd backend/data
 go build -o bin/fudcourt-data ./cmd/data  # build the sidecar (go >= 1.24.1)
 go test ./...                            # offline: mode-table + shaping tests
 cd ../web

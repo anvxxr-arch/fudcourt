@@ -3,7 +3,7 @@
 **Fudcourt** is a personal multi-chain treasury & market-intelligence OS: a Next.js
 dashboard that tracks wallets, balances, reconciliation and live market boards
 (cryptorank / chainrank / dexscreener / defillama / news / signals), plus a
-Payload CMS blog — now ONE Next app (`apps/web`) rather than two (DR-017), installed with Bun — there is no npm `workspaces` field. A **`khala`** research-report
+Payload CMS blog — now ONE Next app (`frontend/web`) rather than two (DR-017), installed with Bun — there is no npm `workspaces` field. A **`khala`** research-report
 family (khala.io, Framer SSR) is **served** (sidecar-registered, on the board and the
 public hostname) — PLAN G8 ✅, [DR-006](records/DECISIONS.md), design record
 `/home/dwizzy/khala-probe/DESIGN.md`.
@@ -15,7 +15,7 @@ public hostname) — PLAN G8 ✅, [DR-006](records/DECISIONS.md), design record
   (DR-017)
 - Hosting: **self-hosted** on the homeserver (DR-002) — no third-party deploy
   target; production = the systemd units above (`/portfolio` rewrite lives in
-  `apps/web/next.config.js`)
+  `frontend/web/next.config.js`)
 
 ## Documents — grouped by the question you arrive with
 ```
@@ -56,20 +56,20 @@ apps/
             scripts/tools/sync-live.py; SG-9.4) and `fudcourt-reconciled`
             (:3102, the `/api/reconcile` HTTP service — zero new dependencies,
             parity-checked byte-for-byte against the TS shaper; DR-014)
-  (blog)  Payload CMS 3.89 merged INTO apps/web (DR-017): collections +
+  (blog)  Payload CMS 3.89 merged INTO frontend/web (DR-017): collections +
           migrations + the admin/API routes live at src/cms and
           app/blog/(payload), served at /blog, /blog/cms/admin, /blog/cms/api/*.
           Posts/media/categories/users still live in Neon (DATABASE_URL)
 ```
-`apps/web/` splits routes from React by role (DR-011): `app/` holds the Next route
+`frontend/web/` splits routes from React by role (DR-011): `app/` holds the Next route
 tree (`api/`, one wrapper per deep link) plus `app/store/store-shell.tsx` (the SPA
 state container), `src/components/` the 18 panel components and `src/styles/` the
 design tokens + view types. The Go sidecar is one package per family —
-`internal/{cryptorank,khala,llama,news,chainrank}` — and `services/sync/` is the Rust
+`internal/{cryptorank,khala,llama,news,chainrank}` — and `backend/sync/` is the Rust
 crate behind both of its services (`fudcourt-sync`, `fudcourt-reconciled`).
 `/api/reconcile` is a thin proxy to `fudcourt-reconciled` on `:3102` (DR-014), with
 `lib/reconcile.ts` kept as the independent oracle rather than a fallback path.
-`apps/web/scripts/` is grouped by function — one directory per job, so a reader
+`frontend/web/scripts/` is grouped by function — one directory per job, so a reader
 never has to guess whether a file is a gate or a one-off:
 ```
   checks/   offline gates ......... check-contract.py (TS↔Go tables, mutation guards)

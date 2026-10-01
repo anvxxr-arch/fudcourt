@@ -9,7 +9,7 @@ Analyzed at remote head `957836d` (2026-09-27), local `main` identical
                        ┌────────────────────────────────────────────┐
                        │ monorepo: fudcourt (per-app bun install)   │
                        ├────────────────────────────────────────────┤
-                       │ apps/web — ONE Next.js 16 app / React 19   │
+                       │ frontend/web — ONE Next.js 16 app / React 19   │
                        │   portfolio OS  +  Payload CMS 3.89        │
                        │   /  /team  /admin  /api/*  (dashboard)    │
                        │   /blog  /blog/cms/admin  /blog/cms/api/*  │
@@ -29,7 +29,7 @@ Analyzed at remote head `957836d` (2026-09-27), local `main` identical
 
 **Layering is clean:** UI (`CryptorankPage.tsx` + 11 pages) → mode-only API
 routes (client can never pass a raw path) → **for cryptorank a Go sidecar
-(`services/data` :3101) holding the allowlist, the cache and the
+(`backend/data` :3101) holding the allowlist, the cache and the
 browser-fingerprint fetch**; every other family still uses `lib/rate-limit.ts` →
 third-party HTML/JSON → shapers → typed envelope. Each layer has one job and
 its own failure vocabulary. Since DR-005 the TS route for cryptorank is a pure
@@ -114,9 +114,9 @@ mode. A gate may fail on *data*, never on a *hiccup*.
 
 | # | Risk | Severity | Detail |
 |---|------|----------|--------|
-| K-1 | ~~Turso schema not versioned~~ ✅ **closed 2026-09-28** | High→Low | `apps/web/db/schema.sql` generated + `--check` drift gate (R-1). |
+| K-1 | ~~Turso schema not versioned~~ ✅ **closed 2026-09-28** | High→Low | `frontend/web/db/schema.sql` generated + `--check` drift gate (R-1). |
 | K-2 | **No CI / pre-merge verification** | High→Med | Partial: `pre-push` hook (contract check + tsc + py syntax) live 2026-09-28; GitHub Action still open (PLAN T-2.2.3). |
-| K-3 | **Two React majors (web R18 18.3.1 / blog+root R19 19.2.0); Next patch divergence (web 16.3.6 / blog+root 16.3.5)** | Medium | Divergent TS versions (5.7.2 web / 5.9.3 root+blog); shared-code future is constrained. Next itself is now one major — DR-001 moved `apps/web` 14.2.0 → 16.3.6 (2026-09-28), so the original "dual Next majors" framing no longer holds. |
+| K-3 | **Two React majors (web R18 18.3.1 / blog+root R19 19.2.0); Next patch divergence (web 16.3.6 / blog+root 16.3.5)** | Medium | Divergent TS versions (5.7.2 web / 5.9.3 root+blog); shared-code future is constrained. Next itself is now one major — DR-001 moved `frontend/web` 14.2.0 → 16.3.6 (2026-09-28), so the original "dual Next majors" framing no longer holds. |
 | K-4 | **Upstream coupling (CF 429 / Turnstile)** | Medium | CryptoRank HTML RE can break without notice; mitigated by loud failures + harness, but there is no alerting — breakage is discovered on next run. Since DR-005 the fetch is a Go sidecar, so the class now also covers *Cloudflare rule/profile rotation* (a pinned `chrome_131` profile could start getting 403s) and a stopped sidecar (loud 502). Residual: `monitor.py` covers the sidecar only **transitively** (its `/api/cryptorank` checks fail when `fudcourt-data` is down); it does not yet assert the `:3101` unit nor alarm on `cf-mitigated: challenge`. |
 | K-5 | ~~Web API unauthenticated~~ ✅ **closed 2026-09-28, re-closed same day** | Med→Low | First closed with the `x-fud-token` guard — which was then found inlining its value into a public JS chunk, so reads stayed open to the internet and writes were public. Now superseded by Discord session tiers: treasury reads require `team`, writes re-check server-side, and the client sends no secret at all. Residual: a stolen session cookie grants that tier until it expires (7 days) — rotate `FUDCOURT_SESSION_SECRET` to cut all sessions. |
 | K-6 | **No tests for UI logic** | Medium | Rendering proven by DOM audit *script*, not by unit tests; shaper logic tested only through live upstream (flaky-by-nature). |
@@ -125,7 +125,7 @@ mode. A gate may fail on *data*, never on a *hiccup*.
 | K-9 | **Blog contentless** | Low | Schema verified but `posts` = 0; product surface unproven with real content. |
 | K-10 | **Inbound API abuse (rate limiting)** | High→Low | Measured 2026-09-29: 25× `GET /api/cryptorank?mode=converter` all 200 at 921,588 B (~23 MB), `&fresh=1` bypassing the cache, and a 64.5 s cold `/api/ticker`; the only limiter in the repo was outbound. **Closed same day** by `lib/rate-limit-inbound.ts` + `middleware.ts` (DR-004, PLAN G6): cost-weighted 60 s per-client window, 429 + `Retry-After`, `X-RateLimit-*` on every response. Residual: counters are per Node process (one instance today) — a multi-instance deploy would need a shared store, and Cloudflare's edge is still the right home for a distributed budget. |
 
-| K-11 | **`FUDCOURT_SESSION_SECRET` absent on the host → Discord login is 500 and every tier gate fails closed** | High (availability, not exposure) | Measured 2026-09-29: `GET :3100/api/auth/login` → **500** (`lib/auth.ts` throws without a ≥32-char secret) and `apps/web/.env.local` carries no such key (only `TURSO_AUTH_TOKEN`, `FUD_MUTATION_TOKEN`, `NEXT_PUBLIC_FUD_MUTATION_TOKEN`, `VERCEL_OIDC_TOKEN`). Fail-closed is the correct direction — the treasury stays 401/307 to anonymous callers, verified on the public hostname — but **nobody can sign in**, so member/team/admin surfaces are unreachable for every user, including the operator, and the 10 session-gated sweep probes cannot run. The blog's env is worse in kind: `.env` uses the retired `NEXT_PUBLIC_FUD_MUTATION_TOKEN` naming rather than the current secret names. Fix is a human step (`openssl rand -hex 32` → `apps/web/.env.local` + `FUDCOURT_SESSION_SECRET=…`, restart the unit); not performed here because writing a session secret is the operator's call. |
+| K-11 | **`FUDCOURT_SESSION_SECRET` absent on the host → Discord login is 500 and every tier gate fails closed** | High (availability, not exposure) | Measured 2026-09-29: `GET :3100/api/auth/login` → **500** (`lib/auth.ts` throws without a ≥32-char secret) and `frontend/web/.env.local` carries no such key (only `TURSO_AUTH_TOKEN`, `FUD_MUTATION_TOKEN`, `NEXT_PUBLIC_FUD_MUTATION_TOKEN`, `VERCEL_OIDC_TOKEN`). Fail-closed is the correct direction — the treasury stays 401/307 to anonymous callers, verified on the public hostname — but **nobody can sign in**, so member/team/admin surfaces are unreachable for every user, including the operator, and the 10 session-gated sweep probes cannot run. The blog's env is worse in kind: `.env` uses the retired `NEXT_PUBLIC_FUD_MUTATION_TOKEN` naming rather than the current secret names. Fix is a human step (`openssl rand -hex 32` → `frontend/web/.env.local` + `FUDCOURT_SESSION_SECRET=…`, restart the unit); not performed here because writing a session secret is the operator's call. |
 | K-12 | **Single upstream refusal can silently zero a live dataset** | Closed → Medium | Measured this session: CoinGecko began refusing this host wholesale (403 on every `/api/v3` price route, 429 on `/ping`, with **and** without chrome131 TLS impersonation), which made `fudcourt-sync.service` raise every 5 min while its last successful write stayed in Turso; on a host where the read path had already been written back as 0 rows the board would have shown **$0 net worth** with no alarm. Fixed by moving the price oracle to `coins.llama.fi` (the `prices()` change in `sync-live.py`, uncommitted at time of writing; the same oracle three harnesses already gate on) and verified: service `Finished` clean, net worth restored to **$170.51**. Residual: `sync-live.py` still depends on Alchemy + Hyperliquid, and `/api/markets` remains 403 until the CoinGecko block lifts. |
 ## 6. Verification methodology critique
 

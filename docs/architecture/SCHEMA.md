@@ -5,15 +5,15 @@ head `957836d`.
 
 > ✅ **Versioned since 2026-09-28 (R-1):** `database/schema/schema.sql` is a
 > generated dump of the live Turso schema — regenerate with
-> `node apps/web/scripts/tools/dump-schema.mjs`, drift-check with `--check`
+> `node frontend/web/scripts/tools/dump-schema.mjs`, drift-check with `--check`
 > (exits 1 on mismatch; wired into the offline contract gate). The column
 > tables below are the code-derived annotation layer; the Neon schema is
-> versioned via Payload migrations (`apps/web/src/cms/migrations/`).
+> versioned via Payload migrations (`frontend/web/src/cms/migrations/`).
 
-## 1. Turso (apps/web) — `fud-balance-anvxxr…turso.io`
+## 1. Turso (frontend/web) — `fud-balance-anvxxr…turso.io`
 
 ### 1.1 `transactions` — canonical ledger of money movements
-Reconstructed from `apps/web/app/api/transactions/route.ts` + `[id]/route.ts`:
+Reconstructed from `frontend/web/app/api/transactions/route.ts` + `[id]/route.ts`:
 
 | Column | Type (inferred) | Notes |
 |--------|-----------------|-------|
@@ -37,7 +37,7 @@ API: `GET` (filters: `limit, offset, search, chain, venue, direction, from, to`)
 `DELETE` (bulk ids), plus `/api/transactions/[id]` `PUT|PATCH|DELETE`.
 
 ### 1.2 `wallets`
-Reconstructed from `apps/web/app/api/wallets/route.ts`:
+Reconstructed from `frontend/web/app/api/wallets/route.ts`:
 
 | Column | Notes |
 |--------|-------|
@@ -59,9 +59,9 @@ chain; `value_usd` summed for net worth.
 | `trades` | `ORDER BY date DESC LIMIT 20` |
 | `net_worth` | derived: `SELECT SUM(value_usd) FROM assets` |
 
-## 2. Neon Postgres (payload CMS, merged into apps/web) — 3.89
+## 2. Neon Postgres (payload CMS, merged into frontend/web) — 3.89
 
-Source of truth: `apps/web/src/cms/migrations/20260917_194354.ts`.
+Source of truth: `frontend/web/src/cms/migrations/20260917_194354.ts`.
 
 ### 2.1 Collections (product tables)
 | Table | Purpose | Key columns |
@@ -86,7 +86,7 @@ Indexes: btree on `order`, `parent_id`, `slug`, FK columns, `updated_at/created_
 | `POST /api/graphql` introspection | blocked by schema policy |
 | `/api/graphql-playground` | 404 in production (Payload `disablePlaygroundInProduction: true`) |
 
-## 3. API envelope contract (apps/web)
+## 3. API envelope contract (frontend/web)
 
 ### 3.1 Success envelope (all market modes, e.g. `GET /api/cryptorank?mode=…`)
 
@@ -115,7 +115,7 @@ Indexes: btree on `order`, `parent_id`, `slug`, FK columns, `updated_at/created_
 Row nullability rule: **any absent upstream metric is `null` and renders `—`;
 `0` is never substituted.**
 ### 3.1b `khala` envelopes (`/api/khala`, a thin proxy to the Go `fudcourt-data` sidecar)
-A sibling of §3.1, using the **same flat `CrEnvelope` convention** (`services/data/internal/cryptorank/types.go`):
+A sibling of §3.1, using the **same flat `CrEnvelope` convention** (`backend/data/internal/cryptorank/types.go`):
 common fields + per-mode payload keys alongside each other, and the one-line tag rule
 **optional ⇒ the key is ABSENT; nullable ⇒ a present `null`**. Three modes, frozen in
 [`/home/dwizzy/khala-probe/DESIGN.md`](/home/dwizzy/khala-probe/DESIGN.md) §3 and
@@ -241,7 +241,7 @@ khala-specific rules (all measured — see DESIGN.md D2/D4/D5/D6/D7/D10):
   it would 400 the flagship report — and `cryptorank.KeyRe`'s 64-char cap (which would 400
   five of the eight) is deliberately **not** reused.
 ### 3.1c `news` envelope (`/api/news`, a thin proxy to the Go `fudcourt-data` sidecar)
-The Go side (`services/data/internal/news`) owns the feed table, the strict
+The Go side (`backend/data/internal/news`) owns the feed table, the strict
 `source`/`limit` validation, the RSS parse and the 15 s cache; the route validates
 nothing ([DR-012](../records/DECISIONS.md)). Verified live 2026-09-29 by `verify-news.py`
 (**50/50** on `:3101` and through `:3100`).
@@ -278,7 +278,7 @@ Rules (all asserted by `verify-news.py`):
   default — the port's whole point, since the original TS route turned an unknown
   source into a silent empty 200 and clamped `limit`.
 ### 3.1d `chainrank` envelopes (`/api/chainrank`, a thin proxy to the Go `fudcourt-data` sidecar)
-The Go side (`services/data/internal/chainrank`) owns the two-mode table, the
+The Go side (`backend/data/internal/chainrank`) owns the two-mode table, the
 upstream URL construction (pagination relayed VERBATIM), the 32-entry cache and
 the shape check; the route validates nothing ([DR-013](../records/DECISIONS.md)). Verified
 live 2026-09-29 by `verify-chainrank.py` (**50/50** on `:3101` and through `:3100`).
@@ -355,7 +355,7 @@ status — and **no 503** (no disabled mode) and **no write path**:
 | **502** | a transport failure, **an upstream feed with no `<item>`** (empty ≠ valid answer), or the sidecar being unreachable | `{"error":"upstream returned an empty feed","detail":"…"}` |
 | other upstream | the real status is preserved (403/500/503 pass through with the real body prefix) | `{"error":"upstream 403 from the RSS feed","detail":"…"}` |
 
-### 3.3 Proxy routes (apps/web) — parameter contracts
+### 3.3 Proxy routes (frontend/web) — parameter contracts
 
 | Route | Params | Modes/types |
 |-------|--------|-------------|

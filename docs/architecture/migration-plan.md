@@ -6,7 +6,7 @@
 > `bun run build`, `scripts/checks/{check-contract,check-deploy,check-structure}.py`
 > all green (the exact baseline table in `current.md` §2).
 
-## Phase 1 — move `apps/apicalls` → `services/data`, `apps/sync` → `services/sync`
+## Phase 1 — move `apps/apicalls` → `backend/data`, `apps/sync` → `backend/sync`
 
 **Status: ALREADY EXECUTED in the working tree (uncommitted), verified green.**
 > **Amended 2026-10-01:** committed as `4e8ba91 phase 1-2: services/{data,sync} + database/
@@ -16,14 +16,14 @@
 A concurrent actor performed the moves during Phase 0: `git status` shows 103 changes
 (48 `R`, 20 `RM`, 35 `M`). The `RM` files are the expected path rewrites:
 
-- `services/data/go.mod` module: `github.com/anvxxr-arch/fudcourt/apps/apicalls` →
-  `github.com/anvxxr-arch/fudcourt/services/data` (all internal import paths updated;
+- `backend/data/go.mod` module: `github.com/anvxxr-arch/fudcourt/apps/apicalls` →
+  `github.com/anvxxr-arch/fudcourt/backend/data` (all internal import paths updated;
   `go build/vet/test ./...` PASS at the new path — re-verified).
-- `deploy/systemd/fudcourt-apicalls.service` + `deploy/systemd/fudcourt-sync-rust.*`:
+- `infrastructure/systemd/fudcourt-apicalls.service` + `infrastructure/systemd/fudcourt-sync-rust.*`:
   `WorkingDirectory`/`ExecStart` now point at `services/...` (check-deploy.py PASS).
-- `.github/workflows/ci.yml`: Go job `working-directory: services/data`, Rust job
-  `working-directory: services/sync`; the web job's live-reconcile step builds
-  `../../services/sync/Cargo.toml`.
+- `.github/workflows/ci.yml`: Go job `working-directory: backend/data`, Rust job
+  `working-directory: backend/sync`; the web job's live-reconcile step builds
+  `../../backend/sync/Cargo.toml`.
 - No stale `apps/apicalls|apps/sync` strings remain in `*.go`, `*.rs`, `*.ts`, `*.service`,
   `*.timer`, `*.yml`, `*.toml`.
 
@@ -36,10 +36,10 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
   (`systemctl daemon-reload` + restart `fudcourt-apicalls`/`fudcourt-sync`/`fudcourt-reconciled`).
 - **Ordering:** first; everything else assumes the final tree shape.
 - **Rollback:** `git checkout -- .` restores paths (renames are tracked); systemd units in
-  `deploy/` folders are host-deployed copies — re-deploy old units if the host already reloaded.
+  `infrastructure/` folders are host-deployed copies — re-deploy old units if the host already reloaded.
 
 ## Phase 2 — `database/` extraction
-> **Amended 2026-10-01 (partially executed):** `apps/web/db/{schema.sql,pg-schema.sql,
+> **Amended 2026-10-01 (partially executed):** `frontend/web/db/{schema.sql,pg-schema.sql,
 > executor-schema.sql}` are now `database/schema/{schema.sql,pg-schema.sql,executor-schema.sql}`
 > (`database/README.md` records the move). `pg-load.ts`, `mirror.ts`, `store.ts`, `dump-schema.mjs`
 > path comments updated; `dump-schema.mjs --check` remains the Turso drift gate. **Not done:**
@@ -49,9 +49,9 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
 > PASS). `database/seeds|fixtures/` remain empty; `database/migrations/` deliberately not created
 > (DR-020).
 
-- Move `apps/web/db/{schema.sql,pg-schema.sql,executor-schema.sql}` →
+- Move `frontend/web/db/{schema.sql,pg-schema.sql,executor-schema.sql}` →
   `database/{schema,seeds,fixtures}/`; keep a generated copy or path update in
-  `apps/web/scripts/tools/pg-load.ts` and `src/platform/executor/store.ts`.
+  `frontend/web/scripts/tools/pg-load.ts` and `src/platform/executor/store.ts`.
 - Lift `EXECUTOR_DDL` out of `store.ts` into `database/schema/executor.sql` (store.ts imports
   the file or a generated constant).
 - **Risks:** `pg-load.ts` (60s timer, live) and `ensureExecutorSchema` (boot-time DDL) reference
@@ -60,11 +60,11 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
 - **Ordering:** after Phase 1; before Phase 3 (contracts embed the DDL).
 - **Rollback:** revert the move; SQL files are static content.
 
-## Phase 3 — `packages/contracts`
-> **Amended 2026-10-01 (executor surface EXECUTED, verified):** `packages/contracts`
+## Phase 3 — `shared/contracts`
+> **Amended 2026-10-01 (executor surface EXECUTED, verified):** `shared/contracts`
 > (OpenAPI 3.0.3 of the executor surface — 15 paths / 19 operations mirroring
 > `types.ts` + `client.ts` + the route handlers; `events/catalog.json` 24 stable ids
-> with the 19 TS aliases; event/error JSON Schemas) and `packages/sdk-ts` (thin typed
+> with the 19 TS aliases; event/error JSON Schemas) and `shared/sdk/typescript` (thin typed
 > fetch client generated from the contract) exist. Verified: `check-contract.mjs` →
 > `CONTRACTS_OK enums=3 openapi_paths=15 route_handlers=39 events=24`, `tsc --noEmit`
 > clean, and `bun run generate` is **deterministic** (so the generated-SDK drift gate
@@ -75,15 +75,15 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
 - Author `openapi/` for the four HTTP surfaces (web's 35 routes collapse to api+executor+data+sync
   contracts), `events/` for execution lifecycle (`executor.execution_events` rows) and stream
   normalization, `schemas/` for the table groups in `domain-map.md` §2.
-- Extract `packages/sdk-ts` from `apps/web/src/features/executor/client.ts` + the other
+- Extract `shared/sdk/typescript` from `frontend/web/src/features/executor/client.ts` + the other
   `features/*/client.ts` typed clients.
 - **Risks:** the shaper tests (`scripts/tests/*`) assert today's response shapes — they double as
   contract fixtures; regenerate from `record:fixtures` output, don't hand-copy.
 - **Ordering:** after Phase 2; before Phases 4–6 (each service port consumes contracts).
 - **Rollback:** contracts are additive new files; consumers not yet cut over.
 
-## Phase 4 — `services/api` (Go) incremental, Next.js proxy compatibility
-> **Amended 2026-10-01 (domain layer EXECUTED, verified):** `services/api` exists as a
+## Phase 4 — `backend/api` (Go) incremental, Next.js proxy compatibility
+> **Amended 2026-10-01 (domain layer EXECUTED, verified):** `backend/api` exists as a
 > Go 1.25 module (`go.work` member) with the bounded contexts under `internal/`
 > (identity, authorization, entitlements, audit, jobs, credentials, exchangeaccounts,
 > instruments, markets, ledger, portfolio, treasury, wallets, transactions,
@@ -97,21 +97,21 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
 > HMAC session-cookie crypto into Go is the dependency for every authenticated route;
 > the identity port deliberately excluded cookie crypto).
 
-- Create `services/api` with auth/accounts/members/portfolio/wallets/transactions/treasury/markets
-  handlers moved domain-by-domain from `apps/web/src/app/(frontend)/api/**`.
-- During the transition each Next.js route becomes a thin proxy to `services/api`
+- Create `backend/api` with auth/accounts/members/portfolio/wallets/transactions/treasury/markets
+  handlers moved domain-by-domain from `frontend/web/src/app/(frontend)/api/**`.
+- During the transition each Next.js route becomes a thin proxy to `backend/api`
   (keeps `bun run build` + existing e2e green); delete the route when its consumer switches.
 - **Risks:** auth (session cookie, Discord) is embedded in `src/platform/auth/*` + middleware
   (`src/middleware.ts`); move auth first or the proxy layer can't authenticate. The
   `admin/members` and `reconcile` routes have UI consumers (`admin/members-table.tsx`,
   `team/reconciliation`).
 - **Ordering:** after Phase 3; strictly before Phase 5 (executor orchestration is part of
-  services/api and must reach services/executor through the contract).
+  backend/api and must reach backend/workers/executor through the contract).
 - **Rollback:** flip the Next.js route back to its inline implementation (keep old handler file
   until the proxy is proven); Tunnel ingress unchanged.
 
-## Phase 5 — executor TS → Go incremental port (`services/executor`)
-> **Amended 2026-10-01 (port IN FLIGHT, measured green):** `services/executor` is a
+## Phase 5 — executor TS → Go incremental port (`backend/workers/executor`)
+> **Amended 2026-10-01 (port IN FLIGHT, measured green):** `backend/workers/executor` is a
 > Go 1.25 module (`go.work` member). Landed and verified green (`go build/vet/test
 > ./...` fresh pass, 174 test funcs): `internal/{executor (records/enums/lifecycle/
 > types), decimal, execution, idempotency, orders, risk, sizing, strategy, worker,
@@ -131,7 +131,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
    `defaultSlices`) with `executor-*-tests.ts` as the parity oracle.
 3. `store.ts` persistence (`executor.*` writes) + `lock.ts`.
 4. `exchange.ts` adapters (binance/bybit/mexc via `CcxtLike` shape) + key handling
-   (`masterKeyFromEnv` — move key custody to services/executor, web never sees secrets).
+   (`masterKeyFromEnv` — move key custody to backend/workers/executor, web never sees secrets).
 5. `worker.ts` + `scripts/executor/worker.ts` last (it composes everything).
 
 - **Rule: parity tests MUST pass before each TS module is deleted** (the existing
@@ -149,16 +149,16 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 - **Ordering:** after Phase 4 (orchestration API exists). Straggler: `api/executor/**` routes
   (16 files) are the largest import-violation cluster (`domain-map.md` §3.1) — they disappear
   with this phase.
-- **Rollback:** systemd worker unit points back at `apps/web/scripts/executor/worker.ts`;
+- **Rollback:** systemd worker unit points back at `frontend/web/scripts/executor/worker.ts`;
   `executor.*` schema unchanged during the port (Phase 2 kept DDL stable), so state survives.
 
-## Phase 6 — Rust `services/sync` specialization
+## Phase 6 — Rust `backend/sync` specialization
 
-- Promote `fudcourt-sync` (Rust) over the Python twin `apps/web/scripts/tools/sync-live.py`:
+- Promote `fudcourt-sync` (Rust) over the Python twin `frontend/web/scripts/tools/sync-live.py`:
   CI already has the byte-parity harness pattern (`verify/verify-reconcile.py`); add the same
   oracle gate for sync (`scripts/verify` + `tests/oracle`) comparing `assets` rows.
-- Switch `deploy/systemd/fudcourt-sync.service`/`.timer` to the Rust binary (or retire them in
-  favor of `deploy/systemd/fudcourt-sync-rust.*`), delete the Python original after one clean sync cycle.
+- Switch `infrastructure/systemd/fudcourt-sync.service`/`.timer` to the Rust binary (or retire them in
+  favor of `infrastructure/systemd/fudcourt-sync-rust.*`), delete the Python original after one clean sync cycle.
 - Extend to websocket streams + event normalization (target.md §1).
 - **Risks:** `pyfmt.rs`/`db.rs` exist precisely to preserve byte-identical output — any
   divergence corrupts the Turso journal; the honesty rule (failed RPC ≠ zero balance) MUST hold.
@@ -169,9 +169,9 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 
 ## Phase 7 — frontend cleanup
 
-- Delete `apps/web/src/platform/executor/` and `apps/web/scripts/executor/` remnants (post-5),
-  data-passthrough routes replaced by `services/data` via `services/api` (post-4),
-  `src/features/executor/client.ts` re-targeted to `packages/sdk-ts`.
+- Delete `frontend/web/src/platform/executor/` and `frontend/web/scripts/executor/` remnants (post-5),
+  data-passthrough routes replaced by `backend/data` via `backend/api` (post-4),
+  `src/features/executor/client.ts` re-targeted to `shared/sdk/typescript`.
 - Fix the shell inversion: `src/shell/store-shell.tsx` may keep importing feature pages
   (UI-only app) but `check-structure.py` should then enforce "no platform→feature imports".
 - **Risks:** low; mostly deletions behind green proxies.
@@ -179,7 +179,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 
 ## Phase 8 — tests layout
 
-- Move `apps/web/scripts/{tests,fixtures,oracle,verify}` → `tests/{integration,fixtures,oracle}`
+- Move `frontend/web/scripts/{tests,fixtures,oracle,verify}` → `tests/{integration,fixtures,oracle}`
   + per-service unit tests; keep `test:shapers` working via `packages/config` tsconfig until the
   last move.
 - **Risks:** `test:shapers` compiles via `tsconfig.shaper-tests.json` into `.shaper-tests/`
@@ -191,23 +191,23 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 
 - Split `ci.yml` into per-surface workflows (`web`, `api`, `executor`, `data`, `sync`,
   `contracts`) with path filters; keep one aggregate required check for merges.
-- **Risks:** the live-reconcile step couples web CI to `services/sync` build — keep it in the
-  aggregate workflow or on `services/sync` changes.
+- **Risks:** the live-reconcile step couples web CI to `backend/sync` build — keep it in the
+  aggregate workflow or on `backend/sync` changes.
 - **Ordering:** after 8. **Rollback:** restore single `ci.yml` (it's current + green).
 
 ## Phase 10 — deploy normalization
 > **Amended 2026-10-01 (started in the working tree):** unit files have been `git mv`-ed into
-> `deploy/systemd/` (e.g. `fudcourt-web.service`, `fudcourt-apicalls.service`,
+> `infrastructure/systemd/` (e.g. `fudcourt-web.service`, `fudcourt-apicalls.service`,
 > `fudcourt-sync-rust.*`, `RETIRED-fudcourt-blog.service.txt`), and the Python-vs-Rust
 > `fudcourt-sync` name collision is resolved as `fudcourt-sync.service` (Python) vs
 > `fudcourt-sync-rust.service` (Rust) — the collision risk noted below is retired.
 > `check-deploy.py` was updated in the same wave (the ExecStart-exists gate covers the new
 > folder). Remaining: retire the `fudcourt-apicalls` name in favor of `fudcourt-data`, add
-> `deploy/docker|compose/`, and re-deploy/reload the host units.
+> `infrastructure/docker|compose/`, and re-infrastructure/reload the host units.
 
 **Status: core move EXECUTED (2026-10-01), verified green.**
-- All 10 unit files consolidated into `deploy/systemd/` via `git mv` (was
-  `apps/web/deploy/`, `services/data/deploy/`, `services/sync/deploy/`), including
+- All 10 unit files consolidated into `infrastructure/systemd/` via `git mv` (was
+  `frontend/web/infrastructure/`, `backend/data/infrastructure/`, `backend/sync/infrastructure/`), including
   the `RETIRED-fudcourt-blog.service.txt` tombstone. `ExecStart`/`WorkingDirectory`
   targets are code paths and needed no changes.
 - The `fudcourt-sync` name collision is resolved as of this move: the Rust pair was
@@ -215,7 +215,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
   file names and declared `Unit=` targets are now unique. The Python pair stays
   `fudcourt-sync.{service,timer}` (installed today); swap instructions live in the
   service file header.
-- `check-deploy.py` re-pointed at `deploy/systemd/*`; `check-deploy` + `check-structure`
+- `check-deploy.py` re-pointed at `infrastructure/systemd/*`; `check-deploy` + `check-structure`
   + `check-contract` all PASS after the move. Live docs (README, TECH-STACK,
   ARCHITECTURE, current.md §8, domain-map, BASELINE, SECRETS, migration-plan) repointed;
   dated records (PLAN/CHANGELOG/DECISIONS) left untouched by design.
@@ -224,7 +224,7 @@ Still open (deliberately not done in the move):
 - Unit *renames* to the target names (`fudcourt-apicalls` → `fudcourt-data`, etc.) —
   renaming a repo unit file diverges it from the installed host copy ("live == repo"
   contract), so this needs an `Alias=` release with a host reinstall, not a file move.
-- `deploy/docker|compose/` mirroring: no docker/compose config exists today
+- `infrastructure/docker|compose/` mirroring: no docker/compose config exists today
   (DR-002 self-hosted systemd + Cloudflare Tunnel); not invented here.
 
 - **Risks:** host systemd state drift (DR-002 self-hosted, Cloudflare Tunnel fail-closed) —

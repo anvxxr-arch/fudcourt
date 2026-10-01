@@ -14,20 +14,20 @@
 | Rust | cargo 1.98.1 | single crate `fudcourt-sync` |
 | Bun | 1.4.2 | installer + task runner + server runtime (DR-008) |
 | Node | v22.22.3 | runtime for `next` scripts |
-| Next.js | 16.3.6 (Turbopack) | one app, `apps/web`, + Payload CMS 3.89 |
+| Next.js | 16.3.6 (Turbopack) | one app, `frontend/web`, + Payload CMS 3.89 |
 
 ## Results (2026-10-01, pre-move)
 
 | # | Command | Working dir | Result |
 |---|---|---|---|
-| 1 | `go build ./... && go vet ./... && go test ./...` | `services/data` | **PASS** — 8 packages, all green (cmd + 7 internal), 0 failures |
-| 2 | `cargo build --release --bins && cargo test --release` | `services/sync` | **PASS** — 2 binaries, **17 tests, 5 suites, 0 fail** |
-| 3 | `python3 scripts/checks/check-contract.py` | `apps/web` | **PASS** — `CONTRACT_OK` (28 CR modes TS↔Go parity, khala/llama/news/chainrank parity, proxy-shape + mutation guards) |
-| 4 | `python3 scripts/checks/check-deploy.py` | `apps/web` | **PASS** — `check-deploy: OK (10 unit files)` |
-| 5 | `python3 scripts/checks/check-structure.py` | `apps/web` | **PASS** — `STRUCTURE_OK (139 files)` |
-| 6 | `bunx tsc --noEmit` | `apps/web` | **PASS** — 0 errors |
-| 7 | `bun run test:shapers` | `apps/web` | **PASS** — **240 tests / 0 fail** (shapers + auth + rate-limit + db + executor risk/engine/exchange/store/plan/worker/ui/runtime) |
-| 8 | `bun run build` | `apps/web` | **PASS** — Next 16.3.6 Turbopack build, compiled in 59 s, 9 static pages, proxy (middleware) wired |
+| 1 | `go build ./... && go vet ./... && go test ./...` | `backend/data` | **PASS** — 8 packages, all green (cmd + 7 internal), 0 failures |
+| 2 | `cargo build --release --bins && cargo test --release` | `backend/sync` | **PASS** — 2 binaries, **17 tests, 5 suites, 0 fail** |
+| 3 | `python3 scripts/checks/check-contract.py` | `frontend/web` | **PASS** — `CONTRACT_OK` (28 CR modes TS↔Go parity, khala/llama/news/chainrank parity, proxy-shape + mutation guards) |
+| 4 | `python3 scripts/checks/check-deploy.py` | `frontend/web` | **PASS** — `check-deploy: OK (10 unit files)` |
+| 5 | `python3 scripts/checks/check-structure.py` | `frontend/web` | **PASS** — `STRUCTURE_OK (139 files)` |
+| 6 | `bunx tsc --noEmit` | `frontend/web` | **PASS** — 0 errors |
+| 7 | `bun run test:shapers` | `frontend/web` | **PASS** — **240 tests / 0 fail** (shapers + auth + rate-limit + db + executor risk/engine/exchange/store/plan/worker/ui/runtime) |
+| 8 | `bun run build` | `frontend/web` | **PASS** — Next 16.3.6 Turbopack build, compiled in 59 s, 9 static pages, proxy (middleware) wired |
 
 Live harnesses (`scripts/verify/verify-*.py`, `monitor.py`, `verify:executor`
 paper E2E) need the homeserver services, upstream access, or a Postgres+Valkey
@@ -37,14 +37,14 @@ runs are cited in `docs/records/DECISIONS.md` (DR-005/006/009/014/019/020/021).
 ## What the baseline covers structurally (pre-move tree)
 
 ```text
-apps/web        Next.js 16 + Payload CMS + TS CEX executor runtime + executor worker
-services/api        Go primary backend (identity, admin, portfolio, treasury, ...) :3103
-services/data   Go acquisition sidecar (cryptorank, chainrank, llama, news, khala) :3101
-services/sync       Rust crate: fudcourt-sync (balance sync) + fudcourt-reconciled :3102
-services/executor   Go execution worker; loopback health only (/healthz + /readyz) :3104
+frontend/web        Next.js 16 + Payload CMS + TS CEX executor runtime + executor worker
+backend/api        Go primary backend (identity, admin, portfolio, treasury, ...) :3103
+backend/data   Go acquisition sidecar (cryptorank, chainrank, llama, news, khala) :3101
+backend/sync       Rust crate: fudcourt-sync (balance sync) + fudcourt-reconciled :3102
+backend/workers/executor   Go execution worker; loopback health only (/healthz + /readyz) :3104
 ```
 
-Deploy units versioned in-repo: 12 unit files under `deploy/systemd/`
+Deploy units versioned in-repo: 12 unit files under `infrastructure/systemd/`
 (`fudcourt-web`, `fudcourt-api`, `fudcourt-executor`, `fudcourt-executor-worker`,
 `fudcourt-pgload`, `fudcourt-sync` (Python oracle variant + Rust variant),
 `fudcourt-sync.timer`, `fudcourt-data`, `fudcourt-reconciled`,

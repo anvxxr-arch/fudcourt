@@ -1,12 +1,12 @@
 name: contracts
-# Surface: the API/event source of truth — packages/contracts (OpenAPI + event
-# catalog) and packages/sdk-ts (the generated client). A contracts change is
+# Surface: the API/event source of truth — shared/contracts (OpenAPI + event
+# catalog) and shared/sdk/typescript (the generated client). A contracts change is
 # cross-cutting: it can invalidate the Go services and the web client, which is
 # exactly why it also triggers web.yml and go.yml (see the hints in that
 # workflow's filter) rather than being checked in isolation here.
 #
 # This workflow always RUNS; the check job is skipped when nothing under
-# packages/ moved. See web.yml for why the filter is a job, not a `paths:`.
+# shared/ moved. See web.yml for why the filter is a job, not a `paths:`.
 on:
   push:
     branches: [main]
@@ -30,7 +30,7 @@ jobs:
         with:
           filters: |
             contracts:
-              - 'packages/**'
+              - 'shared/**'
               - '.github/workflows/contracts.yml'
   check:
     name: "contracts - drift gate + generated SDK"
@@ -46,9 +46,9 @@ jobs:
         with:
           bun-version: 1.4.2
       - name: "Contracts drift gate (OpenAPI refs/enums vs types.ts, route coverage, event catalog)"
-        run: node packages/contracts/scripts/check-contract.mjs
+        run: node shared/contracts/scripts/check-contract.mjs
       - name: "Generated SDK matches its sources (openapi + event catalog)"
-        working-directory: packages/sdk-ts
+        working-directory: shared/sdk/typescript
         run: |
           set -euo pipefail
           bun install --frozen-lockfile
@@ -59,11 +59,11 @@ jobs:
           cp -r src/generated "$tmp/generated"
           bun run generate
           if ! diff -r "$tmp/generated" src/generated; then
-            echo "::error::src/generated is stale vs packages/contracts — run 'cd packages/sdk-ts && bun run generate' and commit"
+            echo "::error::src/generated is stale vs shared/contracts — run 'cd shared/sdk/typescript && bun run generate' and commit"
             exit 1
           fi
       - name: "SDK typecheck (strict)"
-        working-directory: packages/sdk-ts
+        working-directory: shared/sdk/typescript
         run: bun run typecheck
   gate:
     name: "contracts - gate (required)"

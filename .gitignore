@@ -15,8 +15,8 @@ tsconfig.tsbuildinfo
 # vercel
 .vercel
 
-# payload (the CMS merged into apps/web in DR-017; uploads land in apps/web/media/)
-apps/web/media/
+# payload (the CMS merged into frontend/web in DR-017; uploads land in frontend/web/media/)
+frontend/web/media/
 
 # test build output
 .shaper-tests/
@@ -28,14 +28,14 @@ apps/web/media/
 .DS_Store
 # compiled addons
 *.node
-# go (services/* — each module builds its own binary into bin/ at
+# go (backend/* — each module builds its own binary into bin/ at
 # runtime via ExecStartPre; the artifacts are never committed)
-services/data/bin/
-services/api/bin/
-services/executor/bin/
-services/data/.cache/
-# rust (services/sync; target/ is also covered by services/sync/.gitignore)
-services/sync/target/
+backend/data/bin/
+backend/api/bin/
+backend/workers/executor/bin/
+backend/data/.cache/
+# rust (backend/sync; target/ is also covered by backend/sync/.gitignore)
+backend/sync/target/
 # live verifier reports (regenerated on every run; the tracked artifacts live in
-# apps/web/scripts/fixtures/, which is the reviewed record)
-apps/web/scripts/**/*-report.json
+# frontend/web/scripts/fixtures/, which is the reviewed record)
+frontend/web/scripts/**/*-report.json

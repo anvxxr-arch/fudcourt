@@ -1,0 +1,34 @@
+[package]
+name = "fudcourt-sync"
+version = "0.1.0"
+edition = "2021"
+description = "fudcourt Rust services: the live multi-chain balance sync (Turso `assets` table) and the /api/reconcile HTTP service (DR-014)"
+
+# Single crate, no workspace. The Python original in frontend/web/scripts/tools/sync-live.py
+# is kept in place as the independent oracle (DR-005 pattern).
+[lib]
+name = "fudcourt_sync"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fudcourt-sync"
+path = "src/main.rs"
+
+[[bin]]
+name = "fudcourt-reconciled"
+path = "src/bin/fudcourt-reconciled.rs"
+
+[dependencies]
+# `net` + `io-util` are for the reconcile HTTP service (DR-014); the sync
+# binary itself only needs the runtime and timers.
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "net", "io-util"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+# `preserve_order` keeps JSON member order as written. The TS route emits
+# `{wallet, asset, current, ...}` in object-literal order, and a diff of the two
+# bodies must not fire on member order -- RFC 8259 leaves order insignificant,
+# but "insignificant" is not "identical", and this service exists to be diffed
+# against the TS one (DR-014).
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[profile.release]
+strip = true

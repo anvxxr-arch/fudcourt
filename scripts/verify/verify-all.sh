@@ -5,13 +5,13 @@
 #   bash scripts/verify/verify-all.sh        # from anywhere in the repo
 #
 # Covers: structure gate (DR-018), web contract gate, deploy-unit guard,
-# packages/contracts drift gate + generated-SDK drift + sdk typecheck, the three
+# shared/contracts drift gate + generated-SDK drift + sdk typecheck, the three
 # Go modules (build/vet/test), the Rust crate (build/test), the sync oracle gate
 # (Python vs Rust byte-identical replay, tests/oracle/fixtures — offline), the
-# cross-service API conformance check, the hook syntax check, and apps/web
+# cross-service API conformance check, the hook syntax check, and frontend/web
 # typecheck + shaper fixture tests.
 #
-# DELIBERATELY NOT HERE: live/network harnesses (apps/web/scripts/verify/verify-*.py,
+# DELIBERATELY NOT HERE: live/network harnesses (frontend/web/scripts/verify/verify-*.py,
 # FUDCOURT_DATA_LIVE=1 Go tests, real exchange calls) — they are slow and touch upstreams;
 # run them manually against a known-good window.
 set -u
@@ -21,44 +21,44 @@ step() { echo; echo "== $1"; }
 fail() { echo "!! FAILED: $1"; rc=1; }
 
 step "structure gate (DR-018 layers)"
-(cd apps/web && python3 scripts/checks/check-structure.py) || fail structure
+(cd frontend/web && python3 scripts/checks/check-structure.py) || fail structure
 
 step "web contract gate (CR_MODES + mutation-auth guards)"
-(cd apps/web && python3 scripts/checks/check-contract.py) || fail web-contract
+(cd frontend/web && python3 scripts/checks/check-contract.py) || fail web-contract
 
 step "deploy-unit guard (ExecStart paths, timer pairs)"
-(cd apps/web && python3 scripts/checks/check-deploy.py) || fail deploy
+(cd frontend/web && python3 scripts/checks/check-deploy.py) || fail deploy
 
-step "packages/contracts drift gate"
-node packages/contracts/scripts/check-contract.mjs || fail contracts
+step "shared/contracts drift gate"
+node shared/contracts/scripts/check-contract.mjs || fail contracts
 
 step "sdk-ts generated-SDK drift + typecheck"
-(cd packages/sdk-ts \
+(cd shared/sdk/typescript \
   && tmp=$(mktemp -d) && cp -r src/generated "$tmp/generated" \
   && bun run generate >/dev/null && diff -r "$tmp/generated" src/generated \
   && bun run typecheck >/dev/null) || fail sdk-ts
 
-step "go build/vet/test (services/api)"
-go build ./services/api/... && go vet ./services/api/... && go test ./services/api/... || fail go-api
+step "go build/vet/test (backend/api)"
+go build ./backend/api/... && go vet ./backend/api/... && go test ./backend/api/... || fail go-api
 
-step "go build/vet/test (services/executor)"
-go build ./services/executor/... && go vet ./services/executor/... && go test ./services/executor/... || fail go-executor
+step "go build/vet/test (backend/workers/executor)"
+go build ./backend/workers/executor/... && go vet ./backend/workers/executor/... && go test ./backend/workers/executor/... || fail go-executor
 
-step "go build/vet/test (services/data)"
-go build ./services/data/... && go vet ./services/data/... && go test ./services/data/... || fail go-data
+step "go build/vet/test (backend/data)"
+go build ./backend/data/... && go vet ./backend/data/... && go test ./backend/data/... || fail go-data
 
-step "cargo build/test (services/sync)"
-(cd services/sync && cargo fmt --check && cargo build --release --quiet && cargo test --release --quiet) || fail rust
+step "cargo build/test (backend/sync)"
+(cd backend/sync && cargo fmt --check && cargo build --release --quiet && cargo test --release --quiet) || fail rust
 
 step "sync oracle gate (Python oracle vs Rust replay, byte-identical projection)"
-python3 apps/web/scripts/verify/verify-sync.py >/dev/null || fail sync-oracle
+python3 frontend/web/scripts/verify/verify-sync.py >/dev/null || fail sync-oracle
 step "cross-service API conformance (Go api routes <-> contract <-> web proxies)"
 python3 tests/integration/api/check-api-contract.py || fail api-contract
 step "pre-push hook syntax"
 bash -n scripts/githooks/pre-push || fail hook-syntax
 
-step "apps/web typecheck + shaper fixture tests"
-(cd apps/web && unset NODE_ENV && bunx tsc --noEmit && bun run test:shapers >/dev/null) || fail web
+step "frontend/web typecheck + shaper fixture tests"
+(cd frontend/web && unset NODE_ENV && bunx tsc --noEmit && bun run test:shapers >/dev/null) || fail web
 
 echo
 if [ "$rc" -eq 0 ]; then echo "VERIFY_ALL_OK"; else echo "VERIFY_ALL_FAILED (see !! FAILED above)"; fi

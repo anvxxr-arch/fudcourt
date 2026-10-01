@@ -1,5 +1,5 @@
 name: web
-# Surface: apps/web (Next.js + Bun + Payload blog).
+# Surface: frontend/web (Next.js + Bun + Payload blog).
 #
 # Why this workflow always RUNS even when no web file changed: a workflow with a
 # workflow-level `paths:` filter that does not match produces NO check run, and a
@@ -8,9 +8,9 @@ name: web
 # EXPENSIVE job is skipped by the `changes` gate below — same cost saving, no
 # stuck PRs. The `gate` job always reports, and is the required check.
 #
-# Install strategy: `bun install --frozen-lockfile` using apps/web's own bun.lock
+# Install strategy: `bun install --frozen-lockfile` using frontend/web's own bun.lock
 # (the toolchain is Bun 1.4.2 everywhere: local, systemd and CI). The root
-# package.json has no workspaces field — apps/web (which also serves the Payload
+# package.json has no workspaces field — frontend/web (which also serves the Payload
 # blog, DR-017) is independently installable and its lockfile is authoritative.
 # Node 22 stays the RUNTIME (`bun run build` shells out to `node` for the
 # scripts); Bun is the installer, task runner and the server runtime.
@@ -37,9 +37,9 @@ jobs:
         with:
           filters: |
             web:
-              - 'apps/web/**'
-              - 'packages/**'
-              - 'deploy/**'
+              - 'frontend/web/**'
+              - 'shared/**'
+              - 'infrastructure/**'
               - '.github/workflows/web.yml'
   web:
     name: "web - contract, typecheck, build"
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: apps/web
+        working-directory: frontend/web
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

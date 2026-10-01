@@ -7,7 +7,7 @@
 > Sources cross-checked read-only (2026-10-01) against: `ARCHITECTURE.md` §2 (System picture),
 > §4 (Data families), §8b (CEX Executor runtime); `TECH-STACK.md` §2 (Frameworks & runtimes),
 > §4 (Infrastructure), §5 (Market-data acquisition stack), §6 (External data sources),
-> “apps/web layout (DR-018)”, “Data layer (DR-019)”; `SCHEMA.md` §1 (Turso), §2 (Neon/Payload),
+> “frontend/web layout (DR-018)”, “Data layer (DR-019)”; `SCHEMA.md` §1 (Turso), §2 (Neon/Payload),
 > §3 (API envelope contract). Cited inline where used; no factual divergence found.
 
 ## 0. Working-tree state (reported, never discarded)
@@ -19,12 +19,12 @@
 > `4e8ba91 phase 1-2: services/{data,sync} + database/ ownership (domain restructure)`, both
 > ancestors of the current branch `refactor/domain-architecture`.
 > As of this amendment, the tree is committed through 4e8ba91; remaining untracked work
-> (`packages/`, `services/api/`, `services/executor/`, `go.work`) belongs to the concurrent
+> (`packages/`, `backend/api/`, `backend/workers/executor/`, `go.work`) belongs to the concurrent
 > Phase 3-5 actor and is out of scope for this audit.
 > Recount 2026-10-01T07:28:31Z (single instant; the tree was actively mutating during this
 > amendment round): 29 pending changes (23 tracked modifications/renames) + 6 untracked —
 > `docs/architecture/{current,domain-map}.md` (this audit's deliverables) plus `packages/`,
-> `services/api/`, `services/executor/`, `go.work`. Note: the prompt-pack directory `.ai/` (10 files: `restructure-fudcourt.md` + 9 under `prompts/`)
+> `backend/api/`, `backend/workers/executor/`, `go.work`. Note: the prompt-pack directory `.ai/` (10 files: `restructure-fudcourt.md` + 9 under `prompts/`)
 > exists on disk and is tracked — committed in `6184d84`'s baseline snapshot (verified:
 > `git log -- .ai/` → 6184d84; `git ls-files .ai/` = 10) — which is why it is absent from the
 > untracked list above. The earlier "No `.ai/` directory exists" statement was an incorrect
@@ -35,18 +35,18 @@ Two observations, in order (historical snapshot from before the commits above):
 
 1. **At audit start** `git status` showed a large uncommitted "repurpose" surface: modified
    `.github/workflows/ci.yml`, `.gitignore`, `README.md`; the old `apps/blog/*` (Payload) tree
-   deleted from `apps/web`'s sibling position; the old flat `apps/web/app/api/*` layout deleted;
-   an untracked new layout `apps/web/src/*` (app/, cms/, features/, platform/, shell/, styles/, ui/),
-   untracked `apps/web/scripts/{tools,verify}/`, `apps/web/tsconfig.shaper-tests.json`, and untracked
+   deleted from `frontend/web`'s sibling position; the old flat `frontend/web/app/api/*` layout deleted;
+   an untracked new layout `frontend/web/src/*` (app/, cms/, features/, platform/, shell/, styles/, ui/),
+   untracked `frontend/web/scripts/{tools,verify}/`, `frontend/web/tsconfig.shaper-tests.json`, and untracked
    `docs/{architecture,operations,prd,product,records}/`. HEAD was
    `5e68576 repurpose: re-align every surface + ARCHITECTURE map`.
 2. **During the audit** a concurrent actor executed the Phase-1 directory moves in the working tree:
-   `apps/apicalls` → `services/data`, `apps/sync` → `services/sync`. Observed via `git status`:
+   `apps/apicalls` → `backend/data`, `apps/sync` → `backend/sync`. Observed via `git status`:
    103 pending changes (48 pure renames `R`, 20 rename+modify `RM`, 35 modified `M`).
    The `RM` set includes path rewrites inside code/config: `go.mod` module is now
-   `github.com/anvxxr-arch/fudcourt/services/data`; systemd `WorkingDirectory`/`ExecStart`
+   `github.com/anvxxr-arch/fudcourt/backend/data`; systemd `WorkingDirectory`/`ExecStart`
    for the moved services now point at `services/...`; CI working-directory for the Go/Rust jobs
-   now points at `services/data` / `services/sync`. No stale `apps/apicalls|apps/sync`
+   now points at `backend/data` / `backend/sync`. No stale `apps/apicalls|apps/sync`
    references remain in `*.go`, `*.rs`, `*.ts`, `*.service`, `*.timer`, `*.yml`, `*.toml`.
 
 Everything below reflects the tree **after** the moves. Baseline commands were run both before
@@ -56,60 +56,60 @@ verified post-move runs.
 ## 1. Repository shape
 
 ```
-apps/web/        Next.js 15 + Bun 1.4.2 + TypeScript — frontend, all HTTP API routes,
+frontend/web/        Next.js 15 + Bun 1.4.2 + TypeScript — frontend, all HTTP API routes,
                  the in-frontend executor runtime, the Payload blog CMS (DB schema DDL
                  moved out to `database/schema/` in the Phase-2 wave, see §4)
-services/data/   Go sidecar ("fudcourt-data") — upstream data acquisition (was apps/apicalls)
-services/sync/   Rust crate "fudcourt-sync" — balance sync + reconcile service (was apps/sync)
+backend/data/   Go sidecar ("fudcourt-data") — upstream data acquisition (was apps/apicalls)
+backend/sync/   Rust crate "fudcourt-sync" — balance sync + reconcile service (was apps/sync)
 docs/            architecture/, operations/, prd/, product/, records/
 scripts/githooks pre-push hook
 .github/workflows ci.yml (single workflow, 4 jobs)
 ```
 
 Toolchain: Bun 1.4.2 (installer, task runner, server runtime), Node 22 (build-script runtime),
-Go 1.24.1, Rust stable. `apps/web` is independently installable (`bun.lock` authoritative);
+Go 1.24.1, Rust stable. `frontend/web` is independently installable (`bun.lock` authoritative);
 root `package.json` has no workspaces field.
 
 ## 2. Build & test commands (discovered + verified)
 
 | Command | Scope | Result | Notes |
 |---|---|---|---|
-| `go build ./...` | services/data (GOWORK=off) | **PASS** | exit 0 |
-| `go vet ./...` | services/data | **PASS** | exit 0 |
-| `go test ./...` | services/data | **PASS** | `cmd/data`, `internal/{chainrank,cryptorank,khala,llama,news,paritytest}` all `ok`; `internal/{cache,httpx}` report `[no test files]` |
-| `cargo check --all-targets` | services/sync | **PASS** | finished clean |
-| `cargo test` | services/sync | **PASS** | 17 tests: 3 + 2 + 12 across lib/bins/integration, 0 failed |
-| `bun run test:shapers` | apps/web | **PASS** | 240 tests, 0 fail (tsc → node --test over 12 compiled suites). Executor parity subset (Phase 5 oracle): 155 tests, 0 fail across the 8 `executor-*-tests` suites — engine 20, exchange 1, plan 25, risk 39, runtime 12, store 41, worker 9, ui 8 (per-suite runs, all exit 0); the remaining 85 tests are the shaper/auth/rate-limit/db suites |
-| `bunx tsc --noEmit` | apps/web | **PASS** | exit 0 |
-| `bun run build` | apps/web | **PASS** | `next build` completed; full route table emitted |
-| `python3 scripts/checks/check-contract.py` | apps/web | **PASS** | CR_MODES consistency + mutation-auth guards |
-| `python3 scripts/checks/check-deploy.py` | apps/web | **PASS** | every ExecStart path must exist |
-| `python3 scripts/checks/check-structure.py` | apps/web | **PASS** | DR-018 layer gate |
+| `go build ./...` | backend/data (GOWORK=off) | **PASS** | exit 0 |
+| `go vet ./...` | backend/data | **PASS** | exit 0 |
+| `go test ./...` | backend/data | **PASS** | `cmd/data`, `internal/{chainrank,cryptorank,khala,llama,news,paritytest}` all `ok`; `internal/{cache,httpx}` report `[no test files]` |
+| `cargo check --all-targets` | backend/sync | **PASS** | finished clean |
+| `cargo test` | backend/sync | **PASS** | 17 tests: 3 + 2 + 12 across lib/bins/integration, 0 failed |
+| `bun run test:shapers` | frontend/web | **PASS** | 240 tests, 0 fail (tsc → node --test over 12 compiled suites). Executor parity subset (Phase 5 oracle): 155 tests, 0 fail across the 8 `executor-*-tests` suites — engine 20, exchange 1, plan 25, risk 39, runtime 12, store 41, worker 9, ui 8 (per-suite runs, all exit 0); the remaining 85 tests are the shaper/auth/rate-limit/db suites |
+| `bunx tsc --noEmit` | frontend/web | **PASS** | exit 0 |
+| `bun run build` | frontend/web | **PASS** | `next build` completed; full route table emitted |
+| `python3 scripts/checks/check-contract.py` | frontend/web | **PASS** | CR_MODES consistency + mutation-auth guards |
+| `python3 scripts/checks/check-deploy.py` | frontend/web | **PASS** | every ExecStart path must exist |
+| `python3 scripts/checks/check-structure.py` | frontend/web | **PASS** | DR-018 layer gate |
 
 Exact commands as (re-)run 2026-10-01 with their exit codes (captured `cmd; echo "EXIT: $?"`;
 post-Phase-1/2 tree, i.e. after the `database/` move — pre-move runs at the old paths also passed):
 
 | Exact command line (cwd) | Exit code |
 |---|---|
-| `go build ./...` (services/data, GOWORK=off) | 0 |
-| `go vet ./...` (services/data, GOWORK=off) | 0 |
-| `go test ./...` (services/data, GOWORK=off) | 0 |
-| `cargo check --all-targets` (services/sync) | 0 |
-| `cargo test` (services/sync) | 0 |
-| `bunx tsc --noEmit` (apps/web) | 0 |
-| `bun run test:shapers` (apps/web) | 0 |
-| `bun run build` (apps/web) | 0 |
-| `python3 scripts/checks/check-contract.py` (apps/web) | 0 (`CONTRACT_OK`) |
-| `python3 scripts/checks/check-deploy.py` (apps/web) | 0 (`check-deploy: OK (10 unit files: paths exist, ExecStart absolute, timer pairs present)`) |
-| `python3 scripts/checks/check-structure.py` (apps/web) | 0 (`STRUCTURE_OK (139 files across (src root)(1), app(74), cms(9), features(32), platform(21), shell(1), styles(1), ui(1))`) |
-| `bunx tsc -p tsconfig.shaper-tests.json` (apps/web; the tsc compile step of `test:shapers`) | 0 |
-| `node --require ./scripts/tests/alias-resolver.cjs --test .shaper-tests/scripts/tests/executor-<suite>-tests.js` × 8 suites (apps/web; per-suite parity breakdown in §5) | 0 each |
-| `bun run verify:executor` (apps/web) | **0 — `ALL PAPER-MODE CHECKS PASSED (§127)`** against the real stack (2026-10-01: Bun.sql + real `executor` schema on :5433 + real Valkey lock + real worker). Gate: `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex, fail-closed §128.23) |
+| `go build ./...` (backend/data, GOWORK=off) | 0 |
+| `go vet ./...` (backend/data, GOWORK=off) | 0 |
+| `go test ./...` (backend/data, GOWORK=off) | 0 |
+| `cargo check --all-targets` (backend/sync) | 0 |
+| `cargo test` (backend/sync) | 0 |
+| `bunx tsc --noEmit` (frontend/web) | 0 |
+| `bun run test:shapers` (frontend/web) | 0 |
+| `bun run build` (frontend/web) | 0 |
+| `python3 scripts/checks/check-contract.py` (frontend/web) | 0 (`CONTRACT_OK`) |
+| `python3 scripts/checks/check-deploy.py` (frontend/web) | 0 (`check-deploy: OK (10 unit files: paths exist, ExecStart absolute, timer pairs present)`) |
+| `python3 scripts/checks/check-structure.py` (frontend/web) | 0 (`STRUCTURE_OK (139 files across (src root)(1), app(74), cms(9), features(32), platform(21), shell(1), styles(1), ui(1))`) |
+| `bunx tsc -p tsconfig.shaper-tests.json` (frontend/web; the tsc compile step of `test:shapers`) | 0 |
+| `node --require ./scripts/tests/alias-resolver.cjs --test .shaper-tests/scripts/tests/executor-<suite>-tests.js` × 8 suites (frontend/web; per-suite parity breakdown in §5) | 0 each |
+| `bun run verify:executor` (frontend/web) | **0 — `ALL PAPER-MODE CHECKS PASSED (§127)`** against the real stack (2026-10-01: Bun.sql + real `executor` schema on :5433 + real Valkey lock + real worker). Gate: `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex, fail-closed §128.23) |
 
 **Pre-existing failures: none.** Every documented baseline command passes on this tree, including the live paper E2E above. The skips below are environmental, not failures.
 
 Environmental limitations (recorded as environmental, NOT failures — each blocked by its own gate):
-- `services/data` live-fetch tests: exact gate `FUDCOURT_DATA_LIVE=1` (unset ⇒ the live fetch tests
+- `backend/data` live-fetch tests: exact gate `FUDCOURT_DATA_LIVE=1` (unset ⇒ the live fetch tests
   skip themselves; offline they consume recorded fixtures via `FUDCOURT_DATA_FIXTURES_DIR`).
   Parity tests (`internal/paritytest`, `internal/cryptorank/{parity,slice_semantics}_test.go`)
   run offline against golden envelopes and are included in the `go test ./...` PASS above.
@@ -117,7 +117,7 @@ Environmental limitations (recorded as environmental, NOT failures — each bloc
   (unset ⇒ the step warns and skips; the live gate was not exercised locally).
 - ~~`bun run verify:executor`: exact gate `FUDCOURT_EXECUTOR_MASTER_KEY` = 64 hex chars~~
   **RESOLVED 2026-10-01** — a dev key was generated into the gitignored
-  `apps/web/.env.local` and the gate now runs: **`ALL PAPER-MODE CHECKS PASSED (§127)`**
+  `frontend/web/.env.local` and the gate now runs: **`ALL PAPER-MODE CHECKS PASSED (§127)`**
   (exit 0) against real Postgres :5433 + real Valkey + the real worker. The gate is
   listed in the passing table above; it is no longer an environmental skip. Its value
   is that the TS runtime is proven against the live data layer, not that the Go
@@ -135,7 +135,7 @@ committed) **AGREE with every offline claim**:
 | `CONTRACT_OK` | `check-contract.py` exit 0, `CONTRACT_OK` banner | **AGREE** |
 | `STRUCTURE_OK` | `check-structure.py` exit 0, `STRUCTURE_OK (139 files …)` | **AGREE** |
 | `check-deploy` OK | `check-deploy.py` exit 0, `check-deploy: OK (10 unit files …)` | **AGREE** |
-| Go ok (build/vet/test) | `go build/vet/test ./...` exit 0/0/0 (services/data) | **AGREE** |
+| Go ok (build/vet/test) | `go build/vet/test ./...` exit 0/0/0 (backend/data) | **AGREE** |
 | Cargo ok (check/test) | `cargo check --all-targets`/`cargo test` exit 0/0 (17 tests) | **AGREE** |
 | systemd units reinstalled | NOT covered by our offline run — live read-only check below | **CONFIRMED** (live) |
 | healthz green `:3101` | NOT covered by our offline run — curl below | **CONFIRMED** (live) |
@@ -172,18 +172,18 @@ $ systemctl list-unit-files 'fudcourt-*' --no-pager --no-legend          # syste
 ```
 Verdict per live claim: **"units reinstalled" — CONFIRMED** (7 user-scope units installed;
 web/data/reconciled `active running`, both timers `active waiting`; caveat: the
-`fudcourt-sync-rust.*` and `fudcourt-executor-worker.service` names from `deploy/systemd/`
+`fudcourt-sync-rust.*` and `fudcourt-executor-worker.service` names from `infrastructure/systemd/`
 are NOT installed in this user scope, and the Python `fudcourt-sync.service` is installed but
 `disabled`); **"healthz green :3101/:3102" — CONFIRMED** (both returned `{"ok":true,…}`,
 curl exit 0). Every command above exited 0 on the observed tree; nothing failed under
 concurrent modification, so no indeterminate results this round (`bun run build` was not
 re-run — its exit-0 result in the table above stands).
 
-`apps/web` package scripts (source of truth): `dev`, `build`, `start` (`bun --bun next start -p 3000`),
+`frontend/web` package scripts (source of truth): `dev`, `build`, `start` (`bun --bun next start -p 3000`),
 `test:shapers` (see above), `verify:executor` (`scripts/verify/executor-paper-e2e.ts`),
 `record:fixtures`, `dump:envelopes`, `generate:types` / `migrate` / `payload` (Payload CMS).
 
-## 3. apps/web — Next.js routes & pages
+## 3. frontend/web — Next.js routes & pages
 
 Route groups: `(frontend)` (store/admin surface) and `blog/(payload)` (Payload CMS admin + GraphQL).
 
@@ -216,8 +216,8 @@ Plus `sitemap.ts`, `robots.ts`, `globals.css`, root `layout.tsx`.
 `blog/page.tsx`, `blog/[slug]/page.tsx`. Collections live in `src/cms/collections/`
 (Posts, Users, Categories, Media) + `src/cms/migrations/`.
 
-## 4. Database schemas (`database/schema/*.sql` — moved here from `apps/web/db/`, Phase 2 of the domain restructure, 2026-10-01)
-> Amended 2026-10-01: `apps/web/db/` no longer exists; the schemas live at `database/schema/`
+## 4. Database schemas (`database/schema/*.sql` — moved here from `frontend/web/db/`, Phase 2 of the domain restructure, 2026-10-01)
+> Amended 2026-10-01: `frontend/web/db/` no longer exists; the schemas live at `database/schema/`
 > per `database/README.md`. File semantics unchanged (table/DDL ownership is documented at
 > top level in `docs/architecture/SCHEMA.md` §1–§2; `schema.sql` remains the Turso
 > source-of-truth dump, DR-019).
@@ -234,14 +234,14 @@ Ownership today (feature → tables):
   `trades`, `journal`, `ledger`
 - **markets/ticker** (web `src/features/ticker|markets/*`): `assets`, `venues`, `asset_history`, `price_history`
 - **executor** (web `src/platform/executor/*`): all `executor.*`
-- **analytics/sync pipeline**: `assets` rows are written by `services/sync` (Turso), then
+- **analytics/sync pipeline**: `assets` rows are written by `backend/sync` (Turso), then
   projected to Postgres by `pg-load.ts` (web scripts) — ownership is split across two apps today.
 - **DDL byte-identity (Phase-5 anchor): PASS** — `store.ts` `EXECUTOR_DDL` is asserted
   byte-identical (normalized) to `database/schema/executor-schema.sql` by
   `scripts/tests/executor-store-tests.ts` §59 ("no silent drift"); suite 41/41 green 2026-10-01
   (details in §5a).
 
-## 5. Executor runtime (`apps/web/src/platform/executor/`) — in-frontend execution engine
+## 5. Executor runtime (`frontend/web/src/platform/executor/`) — in-frontend execution engine
 
 | Module | Responsibility (from its exports) |
 |---|---|
@@ -297,16 +297,16 @@ chars; credential ops fail closed by design). It reached `-- schema + account` (
 before failing at `createCredential`. Verbatim error:
 ```
 error: FUDCOURT_EXECUTOR_MASTER_KEY missing or malformed (64 hex chars = 32 bytes required) - credential operations are fail-closed
-at masterKeyFromEnv (/home/dwizzy/fudcourt/apps/web/src/platform/executor/store.ts:256:15)
-at createCredential (/home/dwizzy/fudcourt/apps/web/src/platform/executor/store.ts:555:20)
-at /home/dwizzy/fudcourt/apps/web/scripts/verify/executor-paper-e2e.ts:100:29
+at masterKeyFromEnv (/home/dwizzy/fudcourt/frontend/web/src/platform/executor/store.ts:256:15)
+at createCredential (/home/dwizzy/fudcourt/frontend/web/src/platform/executor/store.ts:555:20)
+at /home/dwizzy/fudcourt/frontend/web/scripts/verify/executor-paper-e2e.ts:100:29
 ```
-**Go-side parity (2026-10-01, measured on this tree):** `services/executor` is a Go 1.25 module —
+**Go-side parity (2026-10-01, measured on this tree):** `backend/workers/executor` is a Go 1.25 module —
 `go build ./... && go vet ./... && go test ./...` green, 19 internal packages + `cmd/executor`,
 266+ test funcs (all three Go
 modules together: 550+ test funcs). Row-by-row TS↔Go status lives in
 [`parity-matrix.md`](parity-matrix.md) §cutover; every `DONE` row cites the Go suite that pins it.
-The offline composed artifact of that matrix is `services/executor/internal/e2e/` — 12 hermetic
+The offline composed artifact of that matrix is `backend/workers/executor/internal/e2e/` — 12 hermetic
 scenarios (create→place→fill→complete, TWAP multi-child schedule with the §107 sum bound, lease
 contention, restart-no-duplicate-order, cancel-resting, duplicate-start-noop,
 disconnect-degrade-then-recover, rejected-order-then-replaces, partial-fill-then-complete,
@@ -314,9 +314,9 @@ plan/risk sizing) driving `worker` + `paper` + `MemoryLock` + `MemoryStore` toge
 Postgres/Valkey/credentials/network (stable under `-race -count=3`). That harness is the Go half of
 the cutover gate; `verify:executor` above remains the live half and stays environment-gated.
 
-## 6. services/data (Go, was apps/apicalls) — data acquisition sidecar
+## 6. backend/data (Go, was apps/apicalls) — data acquisition sidecar
 
-Module `github.com/anvxxr-arch/fudcourt/services/data`; entrypoint `cmd/data` (serves :3101,
+Module `github.com/anvxxr-arch/fudcourt/backend/data`; entrypoint `cmd/data` (serves :3101,
 "acquisition sidecar: CryptoRank" per its unit; also exposes the other fetchers).
 
 | Package | Upstream | Role |
@@ -326,7 +326,7 @@ Module `github.com/anvxxr-arch/fudcourt/services/data`; entrypoint `cmd/data` (s
 | `internal/chainrank` | `https://www.chainrank.fyi` | ChainRank fetch/modes/shape |
 | `internal/cryptorank` | `https://cryptorank.io` | CryptoRank fetch + envelope/marshal/shapers/types/value; parity & slice-semantics tests |
 | `internal/khala` | `https://www.khala.io` | Khala research fetch/parse/shape |
-| `services/executor` env | `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex, REQUIRED, fail-closed §128.23), `FUDCOURT_EXECUTOR_PG_URL`, `VALKEY_ADDR` (empty ⇒ in-process locks), `VALKEY_PASSWORD` (empty ⇒ no AUTH; a backend that REQUIRES a password fails startup, it does not run degraded), `FUDCOURT_EXECUTOR_HEALTH_ADDR` (127.0.0.1:3104), `FUDCOURT_EXECUTOR_QUANTITY_STEP`, `FUDCOURT_EXECUTOR_MAX_IN_FLIGHT`, `FUDCOURT_EXECUTOR_READY_TIMEOUT_MS` | startup refuses a missing/weak key, a missing DSN, a nonpositive budget or an unparseable timeout |
+| `backend/workers/executor` env | `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex, REQUIRED, fail-closed §128.23), `FUDCOURT_EXECUTOR_PG_URL`, `VALKEY_ADDR` (empty ⇒ in-process locks), `VALKEY_PASSWORD` (empty ⇒ no AUTH; a backend that REQUIRES a password fails startup, it does not run degraded), `FUDCOURT_EXECUTOR_HEALTH_ADDR` (127.0.0.1:3104), `FUDCOURT_EXECUTOR_QUANTITY_STEP`, `FUDCOURT_EXECUTOR_MAX_IN_FLIGHT`, `FUDCOURT_EXECUTOR_READY_TIMEOUT_MS` | startup refuses a missing/weak key, a missing DSN, a nonpositive budget or an unparseable timeout |
 | `internal/cache` | filesystem (`FUDCOURT_DATA_CACHE_DIR`, `FUDCOURT_DATA_KHALA_CACHE_DIR`) + Valkey (`FUDCOURT_DATA_VALKEY_ADDR`, `FUDCOURT_DATA_VALKEY_PASSWORD`), TTL envs per source | shared response cache |
 | `internal/httpx` | — | JSON/HTTP helpers |
 | `internal/paritytest` | — | shared parity/golden-envelope test harness |
@@ -334,37 +334,37 @@ Module `github.com/anvxxr-arch/fudcourt/services/data`; entrypoint `cmd/data` (s
 Config: per-source TTLs (`FUDCOURT_DATA_{LLAMA,NEWS,CHAINRANK}_TTL`), `FUDCOURT_DATA_CACHE=off` switch,
 live tests behind `FUDCOURT_DATA_LIVE=1`. `bin/fudcourt-data` is the built binary referenced by the unit file.
 
-## 7. services/sync (Rust crate `fudcourt-sync`, was apps/sync)
+## 7. backend/sync (Rust crate `fudcourt-sync`, was apps/sync)
 
 Two binaries sharing `src/lib.rs`:
 
 - `src/main.rs` → **`fudcourt-sync`**: live multi-chain balance sync → Turso `assets` table.
   Pipeline `src/sync.rs` (prices → balances → Hyperliquid → print → Turso), ported from
-  `apps/web/scripts/sync-live.py` with byte-identical output rules (`pyfmt.rs` Python-identical
+  `frontend/web/scripts/sync-live.py` with byte-identical output rules (`pyfmt.rs` Python-identical
   number formatting; `db.rs` Turso HTTP pipeline client with the same wire protocol;
   `jsonrpc.rs` retry/honesty rules — a failed RPC call never becomes a zero balance;
   `chains.rs` chain/wallet/price-oracle registry transcribed from the Python original).
   Scheduled by `fudcourt-sync.timer` (every 5 min).
 - `src/bin/fudcourt-reconciled.rs` → **`fudcourt-reconciled`**: bounded HTTP/1.1 service
   (`src/server.rs`) serving `/api/reconcile` (:3102) — Rust port of
-  `apps/web/app/api/reconcile/route.ts` (DR-014); reconciliation math in `src/reconcile.rs`.
+  `frontend/web/app/api/reconcile/route.ts` (DR-014); reconciliation math in `src/reconcile.rs`.
 - Tests: `tests/reconcile.rs` + inline tests (17 total, all passing).
 
-Note: the Python originals (`apps/web/scripts/tools/sync-live.py`, web `api/reconcile`) still exist
-and are still wired to the **web** `fudcourt-sync.service`/`.timer` in `deploy/systemd/`; the Rust
-variants in `deploy/systemd/` (`fudcourt-sync-rust.*`) are the parallel "Rust" pair. Both are live in the tree.
+Note: the Python originals (`frontend/web/scripts/tools/sync-live.py`, web `api/reconcile`) still exist
+and are still wired to the **web** `fudcourt-sync.service`/`.timer` in `infrastructure/systemd/`; the Rust
+variants in `infrastructure/systemd/` (`fudcourt-sync-rust.*`) are the parallel "Rust" pair. Both are live in the tree.
 
 ## 8. Systemd units (WorkingDirectory / ExecStart)
 
 | Unit | WorkingDirectory | ExecStart | Purpose |
 |---|---|---|---|
-| `deploy/systemd/fudcourt-web.service` | `/home/dwizzy/fudcourt/apps/web` | `bun --bun …/next start -p 3100` | Next.js web :3100 |
-| `deploy/systemd/fudcourt-executor-worker.service` | `…/apps/web` | `bun …/apps/web/scripts/executor/worker.ts` | in-frontend executor worker |
-| `deploy/systemd/fudcourt-pgload.service` (+ `.timer`, 60s) | `…/apps/web` | `bun run …/scripts/tools/pg-load.ts` | Turso → Postgres read model (DR-019) |
-| `deploy/systemd/fudcourt-sync.service` (+ `.timer`, 5 min) | `…/apps/web` | `python3 …/scripts/tools/sync-live.py`, `ExecStopPost: bun run pg-load.ts` | **Python** balance sync → Turso |
-| `deploy/systemd/fudcourt-data.service` | `…/services/data` | `…/services/data/bin/fudcourt-data` | Go acquisition sidecar :3101 |
-| `deploy/systemd/fudcourt-sync-rust.service` (+ `.timer`, 5 min) | `…/services/sync` | `…/services/sync/target/release/fudcourt-sync` | **Rust** balance sync → Turso |
-| `deploy/systemd/fudcourt-reconciled.service` | `…/services/sync` | `…/services/sync/target/release/fudcourt-reconciled` | Rust reconcile service :3102 |
+| `infrastructure/systemd/fudcourt-web.service` | `/home/dwizzy/fudcourt/frontend/web` | `bun --bun …/next start -p 3100` | Next.js web :3100 |
+| `infrastructure/systemd/fudcourt-executor-worker.service` | `…/frontend/web` | `bun …/frontend/web/scripts/executor/worker.ts` | in-frontend executor worker |
+| `infrastructure/systemd/fudcourt-pgload.service` (+ `.timer`, 60s) | `…/frontend/web` | `bun run …/scripts/tools/pg-load.ts` | Turso → Postgres read model (DR-019) |
+| `infrastructure/systemd/fudcourt-sync.service` (+ `.timer`, 5 min) | `…/frontend/web` | `python3 …/scripts/tools/sync-live.py`, `ExecStopPost: bun run pg-load.ts` | **Python** balance sync → Turso |
+| `infrastructure/systemd/fudcourt-data.service` | `…/backend/data` | `…/backend/data/bin/fudcourt-data` | Go acquisition sidecar :3101 |
+| `infrastructure/systemd/fudcourt-sync-rust.service` (+ `.timer`, 5 min) | `…/backend/sync` | `…/backend/sync/target/release/fudcourt-sync` | **Rust** balance sync → Turso |
+| `infrastructure/systemd/fudcourt-reconciled.service` | `…/backend/sync` | `…/backend/sync/target/release/fudcourt-reconciled` | Rust reconcile service :3102 |
 
 Ingress: `fc.dwirijal.my.id` via Cloudflare Tunnel to the loopback origin (DR-002, fail-closed).
 
@@ -372,9 +372,9 @@ Ingress: `fc.dwirijal.my.id` via Cloudflare Tunnel to the loopback origin (DR-00
 
 | Job | Working dir | Steps |
 |---|---|---|
-| `web` | `apps/web` | bun install --frozen-lockfile → check-contract → check-deploy → check-structure → `tsc --noEmit` → `test:shapers` → live reconcile harness vs Rust `fudcourt-reconciled` (needs `TURSO_AUTH_TOKEN`, warns+skips otherwise; builds `services/sync` from the same commit) → `bun run build` |
-| `fudcourt-data` | `services/data` | `go build ./...` → `go vet ./...` → `go test ./...` (Go 1.24.1) |
-| `sync` | `services/sync` | `cargo build --release --bins` → `cargo test --release` (stable) |
+| `web` | `frontend/web` | bun install --frozen-lockfile → check-contract → check-deploy → check-structure → `tsc --noEmit` → `test:shapers` → live reconcile harness vs Rust `fudcourt-reconciled` (needs `TURSO_AUTH_TOKEN`, warns+skips otherwise; builds `backend/sync` from the same commit) → `bun run build` |
+| `fudcourt-data` | `backend/data` | `go build ./...` → `go vet ./...` → `go test ./...` (Go 1.24.1) |
+| `sync` | `backend/sync` | `cargo build --release --bins` → `cargo test --release` (stable) |
 | `hooks` | repo root | `bash -n scripts/githooks/pre-push` |
 
 Toolchain pins: Node 22 runtime, Bun 1.4.2, Go 1.24.1, Rust stable.

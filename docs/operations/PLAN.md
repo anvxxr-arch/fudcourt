@@ -58,7 +58,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 > on all 7 write handlers. Remaining risks tracked in ANALYSIS §5.
 
 ### SG-2.1 ✅ Schema versioning (R-1, K-1)
-- T-2.1.1 ✅ Dump live Turso schema → `apps/web/db/schema.sql` (`scripts/tools/dump-schema.mjs`, 9 objects)
+- T-2.1.1 ✅ Dump live Turso schema → `frontend/web/db/schema.sql` (`scripts/tools/dump-schema.mjs`, 9 objects)
 - T-2.1.2 ✅ Committed + `SCHEMA.md` annotated (generated file vs code-derived tables)
 - T-2.1.3 ✅ Drift alarm: `dump-schema.mjs --check` (live == committed, exit 1 on diff)
 
@@ -79,7 +79,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 ## G3 — ✅ Near-term product (P1)
 
 ### SG-3.1 ✅ Upstream monitoring (R-4)
-- T-3.1.1 ✅ `apps/web/scripts/verify/monitor.py` — 7-check smoke (unit, board, home
+- T-3.1.1 ✅ `frontend/web/scripts/verify/monitor.py` — 7-check smoke (unit, board, home
   non-empty+upstream, coins, converter, newstag keyed, funding-must-503),
   concurrent (wall = slowest check, ~1-2s warm), deterministic output
   (byte-stable = silent tick), retry only 429/5xx. Deployed to
@@ -276,7 +276,7 @@ found no inbound limit on the API (DR-004).
 ## G7 — 🔄 CryptoRank runtime cutover: Python helper → Go `fudcourt-data` sidecar (2026-09-29)
 Owner direction: one implementation of the CryptoRank contract, the Go one that
 holds a real browser TLS fingerprint (→ [DR-005](../records/DECISIONS.md)).
-- SG-7.1 ✅ `services/data` (Go, `module github.com/anvxxr-arch/fudcourt/services/data`,
+- SG-7.1 ✅ `backend/data` (Go, `module github.com/anvxxr-arch/fudcourt/backend/data`,
   `go 1.24.1`) — `internal/cryptorank` (mode/key/allowlist tables + disabled-mode
   refusal text), `internal/cryptorank` (tls-client `chrome_131` + HTTP/2, disk
   cache TTL, 429 backoff), `internal/cryptorank` (envelope types), `cmd/data`
@@ -294,16 +294,16 @@ holds a real browser TLS fingerprint (→ [DR-005](../records/DECISIONS.md)).
   `HELPER`, `runHelperOnce`/`runHelper` (429 backoff now in Go), the `newstag`
   soft-404 derivation and the funding/unlocks 503 branch (both now Go). Fail
   loud: sidecar unreachable → 502 `fudcourt-data unreachable: <reason>`.
-- SG-7.3 ✅ Ops: versioned unit `services/data/deploy/fudcourt-data.service`
+- SG-7.3 ✅ Ops: versioned unit `backend/data/infrastructure/fudcourt-data.service`
   (deployed to `~/.config/systemd/user/`, `Restart=always`, `RestartSec=5`,
   `KillSignal=SIGTERM`, `TimeoutStopSec=15`, cache `~/.cache/fudcourt-data`); pre-push
-  hook gained an `services/data/`/`\.go$` branch running `go build/vet/test`
+  hook gained an `backend/data/`/`\.go$` branch running `go build/vet/test`
   (offline, cached go1.24.1); CI gained an `fudcourt-data` job (setup-go 1.24.1,
-  cache on `services/data/go.sum`); root `.gitignore` ignores
-  `services/data/bin/` + `services/data/.cache/`.
+  cache on `backend/data/go.sum`); root `.gitignore` ignores
+  `backend/data/bin/` + `backend/data/.cache/`.
 - SG-7.4 ✅ One contract, two implementations, enforced offline:
-  `apps/web/scripts/checks/check-contract.py` now parses
-  `services/data/internal/cryptorank/modes.go` and asserts it equals
+  `frontend/web/scripts/checks/check-contract.py` now parses
+  `backend/data/internal/cryptorank/modes.go` and asserts it equals
   `lib/cryptorank.ts` — modes, disabled list, exchange/launchpool/nodesale/RWA
   whitelists, keyed + default-key maps — and asserts the route is still a
   proxy (no `execFile`/`cr_fetch`/`CR_PYTHON`/local `CR_MODES.includes`). If the
@@ -364,7 +364,7 @@ sequence; the ✅/~~strikethrough~~ marks below carry the current state.
   2026-09-29, read-only, scratch outside the repo) and `DESIGN.md` (decisions D1–D12
   each carrying its evidence). Frozen contract **v4** in DESIGN.md §3, re-checked
   against the landed Go types.
-- SG-8.2 ✅ **Go package** — `services/data/internal/khala/{modes,fetch,parse,shape}.go`
+- SG-8.2 ✅ **Go package** — `backend/data/internal/khala/{modes,fetch,parse,shape}.go`
   (+ `parse_test.go`, `re_debug_test.go`): one package, plain `net/http` (measured: a
   non-browser UA gets 200 on the homepage 259,008 B, a report page 468,140 B and the
   `framerusercontent.com` index; no challenge), `golang.org/x/net/html` (already in
@@ -410,11 +410,11 @@ sequence; the ✅/~~strikethrough~~ marks below carry the current state.
   this session: sweep **139/150** with khala **17/17** and cryptorank **58/58** — the 11
   fails are 1 known CoinGecko 403 passthrough + 10 session-gated probes unrunnable
   without `FUDCOURT_SESSION_SECRET`.
-- SG-8.4 ✅ **Thin verbatim proxy** — `apps/web/app/api/khala/route.ts`, cloned from
+- SG-8.4 ✅ **Thin verbatim proxy** — `frontend/web/app/api/khala/route.ts`, cloned from
   `app/api/cryptorank/route.ts`: forwards the query string untouched, `FUDCOURT_DATA_URL`
   base, `no-store`, 60 s timeout, `X-KH-*` pass-through, `fudcourt-data unreachable: <reason>`
   502. **Validates nothing** — the sidecar owns every param. **Landed.**
-- SG-8.5 ✅ **Typing/display mirror** — `apps/web/lib/khala.ts` (`KH_MODES`, `KH_KEY_RE`,
+- SG-8.5 ✅ **Typing/display mirror** — `frontend/web/lib/khala.ts` (`KH_MODES`, `KH_KEY_RE`,
   `KH_LIMIT_MIN/MAX`, `KH_DEFAULT_LIMIT`, `KhRow`/`KhReport`/`KhEnvelope`/`KhError`,
   `khalaUrl()`). It is a mirror **for typing only** and re-validates nothing (DR-006 D8
   as-built note); `check-contract.py` deliberately carries no khala table pair.
@@ -445,7 +445,7 @@ sequence; the ✅/~~strikethrough~~ marks below carry the current state.
   cold `latest` is up to N report fetches behind the homepage+sitemap pair; the cache and
   the ETag revalidation make the repeat case cheap, and the harness measures both.
 ---
-## G10 — ✅ `apps/web` runtime: Node → Bun (2026-09-29)
+## G10 — ✅ `frontend/web` runtime: Node → Bun (2026-09-29)
 Owner direction: *"frontend next js bun runtime"* — one runtime for the web app.
 Record: [DR-008](../records/DECISIONS.md) (options + the measured parity evidence). Numbered
 `G10` because the sibling `## G9` below ("Bun toolchain + Go weighting + Rust
@@ -463,9 +463,9 @@ DR-007's runtime clause only.
 - SG-10.2 ✅ **Runtime risk checks**: `@libsql/client` (Turso) returns rows under Bun;
   the signed-session payload+signature is **byte-identical** to Node's, so the switch
   cannot invalidate live cookies.
-- SG-10.3 ✅ **Cutover**: `apps/web/package.json` `start` → `bun --bun next start`;
+- SG-10.3 ✅ **Cutover**: `frontend/web/package.json` `start` → `bun --bun next start`;
   `fudcourt-web.service` `ExecStart` → `bun --bun …/next/dist/bin/next start -p 3100`
-  (absolute); unit now **versioned in-repo** at `apps/web/deploy/fudcourt-web.service`
+  (absolute); unit now **versioned in-repo** at `frontend/web/infrastructure/fudcourt-web.service`
   (was install-only, like the fudcourt-data unit before SG-7.3). Deployed + restarted.
 - SG-10.4 ✅ **Post-cutover parity on the live origin**: `BUILD_ID` unchanged
   (`OMhgA85taz_1n1flx_aT2` — the Node-built `.next` is served as-is), 17/17 page
@@ -477,7 +477,7 @@ DR-007's runtime clause only.
   latency within ±4 % on four routes — **no throughput claim**. The win is one runtime
   in the web stack; the cost is a one-line unit revert (`node_modules/.bin/next`), no
   rebuild, since Node stays installed.
-- SG-10.6 ⏳ **Residual, stated not hidden.** (1) ~~`apps/blog` (Payload) is still Node~~ — **resolved** by DR-015 (Bun) and then DR-017 (merged into apps/web); the item is kept as history. (1a) `apps/blog` (Payload) is still Node —
+- SG-10.6 ⏳ **Residual, stated not hidden.** (1) ~~`apps/blog` (Payload) is still Node~~ — **resolved** by DR-015 (Bun) and then DR-017 (merged into frontend/web); the item is kept as history. (1a) `apps/blog` (Payload) is still Node —
   its `payload` CLI and `ignoreBuildErrors` build were not in scope, and DR-007 already
   settled blog at install/build level. (2) CI keeps `bun run build` on the Node-executed
   path: CI's gate is the source build, and the runtime decision is a *serving* decision;
@@ -489,13 +489,13 @@ DR-007's runtime clause only.
 ## G11 — ✅ Repository structure pass: dead weight out, scripts grouped, unit paths guarded (2026-09-29)
 Owner direction: *"restructure folders to make it efficient, professional, rapi, maintainable,
 scalable"*. Everything below was executed and re-verified; nothing is a proposal.
-- SG-11.1 ✅ **Dead weight removed.** (a) `apps/web/scripts/archive/` — **33 tracked
+- SG-11.1 ✅ **Dead weight removed.** (a) `frontend/web/scripts/archive/` — **33 tracked
   throwaway `.mjs`** forensic one-offs (the Alchemy literal they carried was already
   mined and rotated per SECRETS §5). (b) The stale root `package.json` +
   `package-lock.json`: `npm run dev --workspace=…` could only fail ("No workspaces
   found") and the lock still listed `apps/balance` + `apps/gateway`, neither on disk.
   The root is now `.env .github .gitignore .vercel README.md apps docs scripts`.
-  (c) `apps/web/app/api/blog/` — an **empty** route directory. (d) my own spike
+  (c) `frontend/web/app/api/blog/` — an **empty** route directory. (d) my own spike
   worktree `fudcourt-bun` + branch `spike/bun-runtime` (landed as DR-008).
 - SG-11.2 ✅ **Scripts grouped by function** (was a flat 24-file directory that mixed
   gates, harnesses, a subprocess oracle and codegen):
@@ -515,9 +515,9 @@ scalable"*. Everything below was executed and re-verified; nothing is a proposal
   (`ExecMainStatus=2`) — the guard reproduces that failure verbatim in its negative
   test.
 - SG-11.4 ✅ **Every production entry point is now versioned in-repo** —
-  `apps/web/deploy/{fudcourt-web.service, fudcourt-sync.service, fudcourt-sync.timer}`,
-  `apps/blog/deploy/fudcourt-blog.service` (new at the time; **retired in DR-017**), alongside the existing
-  `services/data/deploy/fudcourt-data.service`. Each was diffed against the
+  `frontend/web/infrastructure/{fudcourt-web.service, fudcourt-sync.service, fudcourt-sync.timer}`,
+  `apps/blog/infrastructure/fudcourt-blog.service` (new at the time; **retired in DR-017**), alongside the existing
+  `backend/data/infrastructure/fudcourt-data.service`. Each was diffed against the
   installed unit (identical, comments aside). The two `fudcourt-sync.service`
   variants (Python oracle vs the sibling's Rust replacement) are cross-referenced in
   their headers, because systemd resolves by name and only one can be installed.
@@ -530,7 +530,7 @@ scalable"*. Everything below was executed and re-verified; nothing is a proposal
   envelopes; the Go parity test still finds `scripts/fixtures`; `sync-live.py` ran
   live (NET WORTH restored) and the **sync unit now reports `Result=success`** after
   the repoint.
-- SG-11.6 ⏳ **Residual, stated not hidden.** (1) `apps/web/vercel.json` does not exist
+- SG-11.6 ⏳ **Residual, stated not hidden.** (1) `frontend/web/vercel.json` does not exist
   and `.vercel/` is git-ignored yet holds live ids, so it was **left alone** — deleting
   host metadata is an operator action, not a refactor. (2) `verify-markets.py` 19/45:
   **every** failure is the upstream CoinGecko 403 (I re-proved it with a direct
@@ -555,7 +555,7 @@ program that direction names; the subgoals below are what this session measured.
 - SG-9.1 ✅ **Frontend/TypeScript toolchain = Bun 1.4.2** — both apps install with
   `bun install --frozen-lockfile`, run scripts with `bun run`/`bunx`, and own `bun.lock`;
   the two `package-lock.json` files are retired and CI moves to `oven-sh/setup-bun@v2`
-  (Node 22 stays the server *runtime* — **later superseded**: `apps/web` moved first,
+  (Node 22 stays the server *runtime* — **later superseded**: `frontend/web` moved first,
   DR-008, and `apps/blog`'s carve-out was measured away by DR-015, so no fudcourt unit
   runs on Node now). Evidence: sandbox `bun run build` RC=0 for web
   (70 MB) and blog (398 MB) before touching production; frozen installs RC=0 with the
@@ -571,17 +571,17 @@ program that direction names; the subgoals below are what this session measured.
   sidecar; route sweep **144/155** at the time (now **154/165** after the news + chainrank families added their checks) with khala
   17/17, cryptorank 58/58 and the whole API group 37/37 minus the one CoinGecko 403.
 - SG-9.3 ✅ **Go weighting: `llama` family moved into the sidecar** — new
-  `services/data/internal/llama/` package (modes/fetch/shape + tests) with an in-memory
+  `backend/data/internal/llama/` package (modes/fetch/shape + tests) with an in-memory
   TTL cache + single-flight, wired as `/api/llama` on the mux with its own `/healthz`
-  key, and `apps/web/app/api/llama/route.ts` reduced to a verbatim proxy
+  key, and `frontend/web/app/api/llama/route.ts` reduced to a verbatim proxy
   (`app/api/khala/route.ts` as the template). Acceptance is the existing live harness:
   Measured: `go build/vet/test` green (20 new package tests + 6 handler tests),
   `verify-llama.py` **51/51 against Go** (`--base :3101`) and **51/51 through the
   production :3100 proxy**, `/llama` + `/api/llama` 200 on the origin and the public
   hostname, `check-contract.py` OK with a new **llama LLAMA_MODES parity** row, the
   sweep gained 5 strict-param checks, and `bun run build` + `bunx tsc --noEmit` stay 0.
-- SG-9.4 ✅ **Rust service: the live balance sync** — `services/sync/` reproduces
-  `apps/web/scripts/tools/sync-live.py` (Turso `assets` + share %, Alchemy EVM RPC, Solana RPC,
+- SG-9.4 ✅ **Rust service: the live balance sync** — `backend/sync/` reproduces
+  `frontend/web/scripts/tools/sync-live.py` (Turso `assets` + share %, Alchemy EVM RPC, Solana RPC,
   Hyperliquid, the same "a failed RPC never becomes 0" rule), verified by running both
   binaries back to back and diffing the rows: **17 rows, zero symmetric difference, zero
   quantity mismatches and zero USD mismatches**, `NET WORTH: $170.46` on both (measured).
@@ -590,8 +590,8 @@ program that direction names; the subgoals below are what this session measured.
   which is wrong exactly when the product lands on a tie — `round(12.345, 2)` must be
   **12.35** (CPython) but the old form gave 12.34. Rounding now goes through Rust's
   correctly-rounded fixed-precision formatting, and the 5 crate tests assert measured
-  CPython values. Ops: versioned `services/sync/deploy/fudcourt-sync.{service,timer}`,
-  a CI `sync` job and a pre-push `cargo build/test` branch, `services/sync/target/`
+  CPython values. Ops: versioned `backend/sync/infrastructure/fudcourt-sync.{service,timer}`,
+  a CI `sync` job and a pre-push `cargo build/test` branch, `backend/sync/target/`
   gitignored. The Python script stays installed as the oracle and the rollback.
 - SG-9.5 ✅ **Live incident fixes found on the way** (both measured, both verified):
   `fudcourt-sync.service` had been failing every 5 min since ~09:40 because CoinGecko
@@ -600,7 +600,7 @@ program that direction names; the subgoals below are what this session measured.
   the `:3100` build on disk predated the khala route, so the cutover rebuild was required
   to serve `/khala` at all; the rebuild is what surfaced the two Go defects.
 - SG-9.6 ⏳ **Residual, stated not hidden.** (1) **K-11 — the operator must create
-  `FUDCOURT_SESSION_SECRET`**: it is absent from `apps/web/.env.local`, so
+  `FUDCOURT_SESSION_SECRET`**: it is absent from `frontend/web/.env.local`, so
   `/api/auth/login` → 500 and every tier gate fails closed; the 10 session-gated sweep
   probes cannot run until then. (2) `/api/markets` (CoinGecko) is 403 from this host at
   the upstream's discretion — the route fails loud, it does not fake a board. (3) Every
@@ -608,11 +608,11 @@ program that direction names; the subgoals below are what this session measured.
   this goal started, so this session edited in place and left committing to the operator;
   `git status` is the list, `git log` shows none of it.
 - SG-9.7 ✅ **Rust weighting: `/api/reconcile` served by a Rust HTTP service (DR-014)** —
-  `services/sync` now builds two binaries: the balance sync (`fudcourt-sync`) and
+  `backend/sync` now builds two binaries: the balance sync (`fudcourt-sync`) and
   `fudcourt-reconciled` (`127.0.0.1:3102`), a **zero-new-dependency** `tokio` TCP/HTTP
   server (bounded framing lives in `src/server.rs`; `tokio` gained `net`+`io-util`,
   `serde_json` gained the `preserve_order` *feature* — no new package).
-  `apps/web/app/api/reconcile/route.ts` is now a thin honest proxy (502 + the real
+  `frontend/web/app/api/reconcile/route.ts` is now a thin honest proxy (502 + the real
   reason when the service is down — there is NO silent fallback to TS), and
   `lib/reconcile.ts` keeps the original maths as the independent oracle. Evidence:
   `cargo test --release` **17/17** (12 new); `verify-reconcile.py` **28/28** at `:3102`;
@@ -687,7 +687,7 @@ program that direction names; the subgoals below are what this session measured.
   offline suite **80/80** (now a single `tsconfig.shaper-tests.json` project + an `@/`
   resolver shim, replacing four `tsc` flag-soup invocations that could not express
   `paths`). Dead artifacts removed: `.vercel/` (retired by DR-002, still held live ids)
-  and a stray nested `apps/web/apps/web/public/media` tree. `docs/` reorganized the same
+  and a stray nested `frontend/web/frontend/web/public/media` tree. `docs/` reorganized the same
   way — by the reader's question: `product/`, `architecture/`, `operations/`, `records/`
   — with all markdown links rewritten and validated (**0 broken**).
 
@@ -719,17 +719,17 @@ program that direction names; the subgoals below are what this session measured.
 - T-11.1.2 [OK] qualification split: in-package refs unqualified, the two
   external test files gained one import; `check-contract.py` re-pointed at
   `internal/cryptorank/modes.go` (parity assertion still active)
-### SG-11.2 [OK] apps/web: routes vs components vs state
+### SG-11.2 [OK] frontend/web: routes vs components vs state
 - T-11.2.1 [OK] `app/components/` → `src/components/` (18 files)
 - T-11.2.2 [OK] `lib/ui/shared.ts` → `src/styles/shared.ts`
 - T-11.2.3 [OK] `app/home-shell.tsx` → `app/store/store-shell.tsx` (+ `StoreShell`
   symbol; 18 route wrappers updated)
 - T-11.2.4 [OK] `app/admin/member-table.tsx` → `members-table.tsx`
 ### SG-11.3 [OK] Rust + blog + fudcourt-data script
-- T-11.3.1 [OK] `services/sync-rs` → `services/sync`, crate/binary `sync-rs` →
+- T-11.3.1 [OK] `backend/sync-rs` → `backend/sync`, crate/binary `sync-rs` →
   `fudcourt-sync`; CI job, pre-push branch, docs and both versioned units updated
-- T-11.3.2 [OK] `apps/blog/scripts/seed.ts` → `src/seed.ts` (import fixed) — later relocated to `apps/web/src/cms/seed.ts` by DR-017
-- T-11.3.3 [OK] `services/data/scripts/smoke.sh` → `smoke-data.sh`
+- T-11.3.2 [OK] `apps/blog/scripts/seed.ts` → `src/seed.ts` (import fixed) — later relocated to `frontend/web/src/cms/seed.ts` by DR-017
+- T-11.3.3 [OK] `backend/data/scripts/smoke.sh` → `smoke-data.sh`
 ### SG-11.4 [OK] Gates + live verification (the equivalence proof)
 - T-11.4.1 [OK] `go build/vet/test` green (cryptorank parity oracle included),
   `cargo build/test` 5/5, `tsc` 0, `test:shapers` 80/80, `build` 0,
@@ -750,7 +750,7 @@ program that direction names; the subgoals below are what this session measured.
 ---
 ## G12 - BACKEND: the `news` family moves into the Go sidecar (DR-012)
 > Owner direction, continued: *"backend framework weighted on go/rust"*. Fourth
-> acquisition family in `services/data`; first one whose upstream is a DOCUMENT.
+> acquisition family in `backend/data`; first one whose upstream is a DOCUMENT.
 ### SG-12.1 [OK] The Go package `internal/news`
 - T-12.1.1 [OK] `modes.go` — the feed table (`Sources`), `labelOf`, the strict
   `source`/`limit` validators (`LimitMin/Max = 1/100`, `LimitDefault = 30`) with
@@ -793,7 +793,7 @@ program that direction names; the subgoals below are what this session measured.
 ---
 ## G13 - BACKEND: the `chainrank` family moves into the Go sidecar (DR-013)
 > Owner direction, continued: *"backend framework weighted on go/rust"*. Fifth
-> acquisition family in `services/data`; reads only — the write surface stays
+> acquisition family in `backend/data`; reads only — the write surface stays
 > unproxied by design.
 ### SG-13.1 [OK] The Go package `internal/chainrank`
 - T-13.1.1 [OK] `modes.go` — the two-mode table, `UpstreamURL` (pagination
@@ -872,7 +872,7 @@ program that direction names; the subgoals below are what this session measured.
   budget, stable exit-leg client-order ids, `emergencyStop` (cancels managed
   orders, never closes positions)
 - T-14.2.4 [OK] `scripts/executor/worker.ts` composition root + versioned unit
-  `deploy/fudcourt-executor-worker.service` (Bun runtime, independent of
+  `infrastructure/fudcourt-executor-worker.service` (Bun runtime, independent of
   `fudcourt-web`: closing the browser never stops an execution)
 ### SG-14.3 [OK] Adapters (live + paper)
 - T-14.3.1 [OK] `platform/executor/exchange.ts` — the `ExchangeAdapter` interface

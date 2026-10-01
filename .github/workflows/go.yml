@@ -1,11 +1,11 @@
 name: go
-# Surface: the three Go modules — services/data (acquisition sidecar),
-# services/api (primary backend), services/executor (execution engine). They are
+# Surface: the three Go modules — backend/data (acquisition sidecar),
+# backend/api (primary backend), backend/executor (execution engine). They are
 # separate modules joined by go.work; each is still built/vetted/tested on its
 # own so a failure names the owner.
 #
 # This workflow always RUNS; the module jobs are skipped by the `changes` gate
-# when nothing under services/ moved, so a CSS-only PR compiles no Go. See
+# when nothing under backend/ moved, so a CSS-only PR compiles no Go. See
 # web.yml for why the filter is a job and not a workflow-level `paths:`.
 on:
   push:
@@ -31,9 +31,9 @@ jobs:
         with:
           filters: |
             modules:
-              - 'services/api/**'
-              - 'services/executor/**'
-              - 'services/data/**'
+              - 'backend/api/**'
+              - 'backend/workers/executor/**'
+              - 'backend/data/**'
               - 'go.work'
               - 'go.work.sum'
               - '.github/workflows/go.yml'
@@ -48,12 +48,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # services/data keeps its measured floor (fhttp/tls-client): go 1.24.1.
-          - module: services/data
+          # backend/data keeps its measured floor (fhttp/tls-client): go 1.24.1.
+          - module: backend/data
             go: '1.24.1'
-          - module: services/api
+          - module: backend/api
             go: '1.25.0'
-          - module: services/executor
+          - module: backend/workers/executor
             go: '1.25.0'
     defaults:
       run:

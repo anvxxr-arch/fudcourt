@@ -3,12 +3,12 @@
 contract, and the web BFF proxy table vs the Go api's.
 
 Why this is not a per-service unit test: it asserts a relationship between two
-modules that neither can see alone. `services/api` unit tests prove a handler
-answers; `packages/contracts/scripts/check-contract.mjs` proves the documented
+modules that neither can see alone. `backend/api` unit tests prove a handler
+answers; `shared/contracts/scripts/check-contract.mjs` proves the documented
 paths match the Next.js route files. NEITHER catches the drift this gate exists
 for:
 
-  1. a route registered in `services/api/cmd/api/main.go` that the contract
+  1. a route registered in `backend/api/cmd/api/main.go` that the contract
      never documented (a Go-only endpoint a client can never discover), or a
      contract path for a Go-owned surface that Go does not serve;
   2. a web route that proxies to the Go api on a path the Go api does not
@@ -32,9 +32,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-GO_MAIN = ROOT / "services" / "api" / "cmd" / "api" / "main.go"
-OPENAPI = ROOT / "packages" / "contracts" / "openapi" / "fudcourt.yaml"
-WEB_API = ROOT / "apps" / "web" / "src" / "app" / "(frontend)" / "api"
+GO_MAIN = ROOT / "backend" / "api" / "cmd" / "api" / "main.go"
+OPENAPI = ROOT / "shared" / "contracts" / "openapi" / "fudcourt.yaml"
+WEB_API = ROOT / "frontend" / "web" / "src" / "app" / "(frontend)" / "api"
 
 fails: list[str] = []
 
@@ -75,7 +75,7 @@ proxies = web_proxy_targets()
 undocumented = sorted(api_paths - doc_paths)
 if undocumented:
     fails.append(
-        "services/api registers paths the contract does not document "
+        "backend/api registers paths the contract does not document "
         f"(a client cannot discover these): {undocumented}"
     )
 

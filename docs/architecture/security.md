@@ -1,24 +1,24 @@
 # Security model
 > Reality-first. Written 2026-10-01. Every claim names a file.
-> Sources: `apps/web/src/platform/auth/{session,guard,mutation}.ts`,
-> `apps/web/src/middleware.ts`, `apps/web/src/platform/executor/store.ts`,
-> `apps/web/src/platform/executor/{runtime,exchange,types,lock}.ts`,
+> Sources: `frontend/web/src/platform/auth/{session,guard,mutation}.ts`,
+> `frontend/web/src/middleware.ts`, `frontend/web/src/platform/executor/store.ts`,
+> `frontend/web/src/platform/executor/{runtime,exchange,types,lock}.ts`,
 > `database/schema/executor-schema.sql`, PRD §43–§47, §108–§110,
-> `docs/operations/SECRETS.md`, `services/api/internal/audit/audit.go`.
+> `docs/operations/SECRETS.md`, `backend/api/internal/audit/audit.go`.
 
 ## 1. Session auth
 - **Discord OAuth2 + one HMAC-signed cookie.** `fud_session` is HMAC-SHA256,
   httpOnly + Secure + SameSite=Lax (docs/architecture/ARCHITECTURE.md §5);
-  sign/verify in `apps/web/src/platform/auth/session.ts`.
+  sign/verify in `frontend/web/src/platform/auth/session.ts`.
 - **`FUDCOURT_SESSION_SECRET` fail-closed, ≥ 32 chars.** `sessionSecret()`
   (`session.ts`) returns null below 32 chars; without a valid secret **no
   session can be signed or verified** — every tier is unreachable, reads return
   null, signing throws. A forged/stale cookie degrades to anonymous
   (`readSession`), never to an error page.
 - **Tier guard: `public < member < team < admin`, per path.** The single route
-  policy is `requiredTierForPath` in `apps/web/src/platform/auth/guard.ts`
+  policy is `requiredTierForPath` in `frontend/web/src/platform/auth/guard.ts`
   (`/team`→team, `/admin`→admin, `/member`→member, `/executor`→team + team API
-  routes); `apps/web/src/middleware.ts` consumes it before a route runs —
+  routes); `frontend/web/src/middleware.ts` consumes it before a route runs —
   protected pages redirect to `/login?next=…`, protected APIs get JSON 401.
   `hasTier` is the rank comparison (admin > team > member); pages and API
   handlers re-check server-side (`requireTier`, `mutation.ts`). Missing
@@ -52,14 +52,14 @@ Plaintext key material (API secret, full API key, signed payload, auth headers
 | logs | PRD §109 allowed list only (exchange, account id, execution id, symbol, order id, status, latency, error code) | PRD §109 |
 | events | events never carry credentials/secrets | `docs/architecture/events.md` §4 |
 | analytics | analytics tables (`assets`, `asset_history`, `price_history`) hold market data only — no credential columns exist | `database/schema/schema.sql` |
-| audit | `Redact` replaces values under sensitive keys with `[REDACTED]`, recursively, before storage | `services/api/internal/audit/audit.go` |
+| audit | `Redact` replaces values under sensitive keys with `[REDACTED]`, recursively, before storage | `backend/api/internal/audit/audit.go` |
 | frontend state | secrets leave the browser exactly once (connect form) and are cleared immediately; the API only ever answers with the masked key | `ui.tsx` comment + PRD §109 |
-| URLs | secrets never travel in URLs; request URLs carry ids and filters only | `apps/web/src/features/executor/client.ts` |
-| errors | `mapError` + `SECRET_PATTERNS` sanitize adapter errors so no key/secret/passphrase or signed payload can appear in an `ExecutorError` | `apps/web/src/platform/executor/exchange.ts` (PRD §109) |
+| URLs | secrets never travel in URLs; request URLs carry ids and filters only | `frontend/web/src/features/executor/client.ts` |
+| errors | `mapError` + `SECRET_PATTERNS` sanitize adapter errors so no key/secret/passphrase or signed payload can appear in an `ExecutorError` | `frontend/web/src/platform/executor/exchange.ts` (PRD §109) |
 
 Persistence stores only `api_key_masked` + the sealed envelope; the E2E asserts
 a secret appears in neither API payloads nor raw DB rows (DR-021 measured
-evidence; `apps/web/scripts/tests/executor-store-tests.ts` §44/§109 tests).
+evidence; `frontend/web/scripts/tests/executor-store-tests.ts` §44/§109 tests).
 
 ## 4. Withdrawal permission policy
 **FUDCourt NEVER requests, holds, or uses withdrawal capability** (PRD §43:
@@ -87,9 +87,9 @@ Every safety control fails **closed** (refuse/pause/no-op), never open:
 | Credential master key | `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex) | credential operations throw; nothing is stored or decrypted | `store.ts` |
 | Execution lock | Valkey `execution:{id}:lock`, `SET NX PX` + compare-and-act Lua; Go `internal/lock` mirrors it | any lock error ⇒ `acquire` false ("the caller must not trade"), `Renew` false (lease lost); only `release` is best-effort | `lock.ts` ("FAIL-CLOSED … a lock that fails open means duplicate orders"), `internal/lock/lock.go` |
 | Lifecycle transitions | table-driven `EXECUTION_TRANSITIONS` | illegal transition refused (409 naming both states); terminal states accept nothing | `types.ts`, `internal/executor/lifecycle.go` |
-| Live tests | opt-in per service via env; never in default runs | skip unless explicitly enabled | `services/data`: `FUDCOURT_DATA_LIVE=1` gates `internal/cryptorank/live_test.go` (README §live smoke); executor suites run OFFLINE, no venue (`executor-worker-tests.ts` header); `bun run verify:executor` is env-gated on `FUDCOURT_EXECUTOR_MASTER_KEY` and was **run green** on 2026-10-01 with a dev key in the gitignored `apps/web/.env.local` (`current.md` §2) |
+| Live tests | opt-in per service via env; never in default runs | skip unless explicitly enabled | `backend/data`: `FUDCOURT_DATA_LIVE=1` gates `internal/cryptorank/live_test.go` (README §live smoke); executor suites run OFFLINE, no venue (`executor-worker-tests.ts` header); `bun run verify:executor` is env-gated on `FUDCOURT_EXECUTOR_MASTER_KEY` and was **run green** on 2026-10-01 with a dev key in the gitignored `frontend/web/.env.local` (`current.md` §2) |
 
 Reality note (2026-10-01): the tree contains **no** `FUDCOURT_LIVE_TESTS`
-flag and no `services/data/tests/live/` directory — the live-test gate that
-exists today is `FUDCOURT_DATA_LIVE=1` in `services/data`. Any `FUDCOURT_LIVE_TESTS`
+flag and no `backend/data/tests/live/` directory — the live-test gate that
+exists today is `FUDCOURT_DATA_LIVE=1` in `backend/data`. Any `FUDCOURT_LIVE_TESTS`
 convention is in flight and must be labelled as such until it lands.

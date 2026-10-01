@@ -1,15 +1,15 @@
 # Events — canonical contracts
-> Reality-first: everything here is read off `packages/contracts/` (landed),
-> `apps/web/src/platform/executor/types.ts` and
-> `services/executor/internal/executor/enums.go`. Written 2026-10-01.
-> Sources: `packages/contracts/events/catalog.json`,
-> `packages/contracts/events/event.schema.json`,
-> `packages/contracts/schemas/event-envelope.json`,
-> `packages/contracts/events/README.md`, PRD §63.
+> Reality-first: everything here is read off `shared/contracts/` (landed),
+> `frontend/web/src/platform/executor/types.ts` and
+> `backend/workers/executor/internal/executor/enums.go`. Written 2026-10-01.
+> Sources: `shared/contracts/events/catalog.json`,
+> `shared/contracts/events/event.schema.json`,
+> `shared/contracts/schemas/event-envelope.json`,
+> `shared/contracts/events/README.md`, PRD §63.
 
 ## 1. Canonical envelope
 Every domain event is the envelope of
-`packages/contracts/schemas/event-envelope.json`:
+`shared/contracts/schemas/event-envelope.json`:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -30,14 +30,14 @@ are never invented outside the schema.
 within the same version — unknown payload keys are allowed and MUST be ignored.
 A **breaking** change (renaming/removing a key, changing a type or meaning)
 bumps `event_version`. (Verbatim rule in `event-envelope.json` description and
-`catalog.json` `payload_policy`; `packages/contracts/README.md` compatibility
+`catalog.json` `payload_policy`; `shared/contracts/README.md` compatibility
 rule: additive changes only per release, breaking changes require a versioned
 path.)
 
 ## 2. The 23 ExecutionEventName values
 The immutable append-only event vocabulary of the execution log. Rows 1–19
-are the exact legacy list shared 1:1 by `apps/web/src/platform/executor/types.ts`
-(`ExecutionEventName`) and `services/executor/internal/executor/enums.go`;
+are the exact legacy list shared 1:1 by `frontend/web/src/platform/executor/types.ts`
+(`ExecutionEventName`) and `backend/workers/executor/internal/executor/enums.go`;
 rows 20–23 are the 2026-10-01 catalog additions, carried by `enums.go` and
 `catalog.json` but not yet by `types.ts` (no producer emits them yet):
 
@@ -78,12 +78,12 @@ product here"); the row shape is `ExecutionEventRecord` (`types.ts`:
 `id`, `executionId`, `name`, `payload`, `createdAt`).
 
 ## 3. Alias map ↔ objective catalog names
-`packages/contracts/events/catalog.json` is the single source of truth for
+`shared/contracts/events/catalog.json` is the single source of truth for
 stable `event_type` ids. Canonical ids are **PascalCase** (the objective
 catalog names); the legacy TS SCREAMING_SNAKE names are accepted aliases of the
 same stable id at `event_version` 1 (emitters SHOULD emit the canonical id;
 consumers MUST accept both spellings — `catalog.json` `alias_policy`).
-Generated copies (`packages/sdk-ts/src/generated/events.ts`) come from
+Generated copies (`shared/sdk/typescript/src/generated/events.ts`) come from
 `bun run generate` — never hand-edited.
 
 | Canonical id (`event_type`) | Legacy alias (`ExecutionEventName`) |
@@ -116,7 +116,7 @@ Five further canonical ids exist with **no** legacy alias (they are new to the
 catalog, payloads must not contain key material):
 `CredentialCreated`, `CredentialRevoked`, `ExchangeAccountConnected`,
 `ReconciliationStarted`, `ReconciliationCompleted` — 28 catalog entries total
-(`packages/contracts/events/catalog.json`; 24 as recorded in the
+(`shared/contracts/events/catalog.json`; 24 as recorded in the
 `docs/architecture/migration-plan.md` Phase 3 amendment, before the four
 2026-10-01 additions).
 
@@ -125,19 +125,19 @@ catalog, payloads must not contain key material):
 passphrases, signed payloads, auth headers. This is stated in three places and
 enforced by redaction on the audit side:
 
-- `packages/contracts/schemas/event-envelope.json`: payload "Never contains
+- `shared/contracts/schemas/event-envelope.json`: payload "Never contains
   credentials or secrets."
-- `packages/contracts/events/catalog.json` `payload_policy`: "Events MUST NOT
+- `shared/contracts/events/catalog.json` `payload_policy`: "Events MUST NOT
   carry credentials or secrets of any kind." (and `CredentialCreated`: "Payload
   MUST NOT contain key material.")
 - Audit-side enforcement: the `Redact` rule in
-  `services/api/internal/audit/audit.go` — any metadata value under a key whose
+  `backend/api/internal/audit/audit.go` — any metadata value under a key whose
   name case-insensitively contains `secret`, `token`, `password`, `passphrase`,
   `api_key`, `api_secret`, `private_key`, `authorization` or `cookie` becomes
   `[REDACTED]`; redaction recurses through maps AND slices, never mutates its
   input. The same rule applies to anything event/audit-bound.
 
-Producers back this up: `apps/web/src/platform/executor/exchange.ts`
+Producers back this up: `frontend/web/src/platform/executor/exchange.ts`
 sanitizes adapter errors (`SECRET_PATTERNS`) so no key/secret/passphrase or
 signed payload can appear in an `ExecutorError` (PRD §109); the event payloads
 emitted from `runtime.ts`/`worker.ts` carry ids, quantities, prices, statuses
