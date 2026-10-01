@@ -455,6 +455,55 @@ func TestPaperDisconnectDegradesThenRecovers(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// §8.15/§28 — TWAP releases its plan as slices over the window
+// ---------------------------------------------------------------------------
+
+// TestPaperTwapSlices drives a TWAP execution across several ticks and proves
+// the schedule releases the plan as multiple children (never one lump), that the
+// sum never exceeds the plan (§107), and that it lands FILLED.
+func TestPaperTwapSlices(t *testing.T) {
+	ctx := context.Background()
+	h := newHarness(t, "w1", nil)
+	// initialState/planSlices read the schedule from the TOP-LEVEL
+	// ExecutionConfig.DurationMs; Twap.Slices overrides the slice count.
+	rec := execRec("e6", executor.StrategyTWAP, "0.03",
+		executor.EntryDefinition{Kind: "market"},
+		executor.ExecutionConfig{DurationMs: 3000, Twap: &executor.TwapConfig{Slices: 3, DurationMs: 3000}})
+	if err := h.store.SaveExecution(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.w.StartExecution(ctx, "e6"); err != nil {
+		t.Fatalf("StartExecution: %v", err)
+	}
+	// Recovery, then enough passes to release every slice and complete. With no
+	// touch price each slice falls back to a market order that fills at once.
+	for range 6 {
+		h.tick()
+	}
+	rows := h.children(t, "e6")
+	if len(rows) < 2 {
+		t.Fatalf("TWAP placed %d children, want >= 2 slices", len(rows))
+	}
+	ids := map[string]bool{}
+	sum := "0"
+	for _, c := range rows {
+		if ids[c.ClientOrderID] {
+			t.Fatalf("duplicate slice id %s", c.ClientOrderID)
+		}
+		ids[c.ClientOrderID] = true
+		sum, _ = decimal.Add(sum, c.Quantity)
+	}
+	leDec(t, sum, "0.03", "sum(slice quantities) vs planned (§107)")
+	after, _ := h.store.Execution("e6")
+	if after.Status != executor.StatusFilled {
+		t.Fatalf("TWAP final status = %s, want FILLED", after.Status)
+	}
+	if n := openEntryChildren(rows); n != 0 {
+		t.Fatalf("%d TWAP slices left open, want 0", n)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // §127.1 — plan + risk-based sizing (create → size)
 // ---------------------------------------------------------------------------
 
