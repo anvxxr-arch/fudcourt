@@ -648,6 +648,49 @@ func TestPaperPauseResume(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 10 — reconciliation mismatch: local state diverges from the venue
+// ---------------------------------------------------------------------------
+
+// TestPaperReconcileExternalMismatch exercises §94: an entry child recorded
+// OPEN locally whose order has vanished from the venue (here, cancelled out of
+// band) is marked UNKNOWN with an EXTERNAL_STATE_CHANGE event — the runtime never
+// trusts local state over the venue, and it does not silently re-place.
+func TestPaperReconcileExternalMismatch(t *testing.T) {
+	ctx := context.Background()
+	h := newHarness(t, "w1", nil)
+	rec := execRec("e10", executor.StrategyLimit, "0.01",
+		executor.EntryDefinition{Kind: "limit", Price: "90000"}, executor.ExecutionConfig{})
+	if err := h.store.SaveExecution(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.w.StartExecution(ctx, "e10"); err != nil {
+		t.Fatalf("StartExecution: %v", err)
+	}
+	h.tick() // recovery
+	h.tick() // place the resting limit
+	rows := h.children(t, "e10")
+	if len(rows) != 1 || rows[0].Status != executor.ChildOpen || rows[0].ExchangeOrderID == nil {
+		t.Fatalf("want one OPEN child with a venue id, got %+v", rows)
+	}
+	// The order disappears from the venue between passes (cancelled/filled by
+	// someone else — a reconcile mismatch).
+	if _, err := h.venue.CancelOrder(ctx, "BTC/USDT", *rows[0].ExchangeOrderID); err != nil {
+		t.Fatalf("external cancel: %v", err)
+	}
+	h.tick()
+	after := h.children(t, "e10")
+	if len(after) != 1 {
+		t.Fatalf("children = %d, want 1", len(after))
+	}
+	if after[0].Status != executor.ChildUnknown {
+		t.Fatalf("mismatched child status = %s, want UNKNOWN", after[0].Status)
+	}
+	if !hasEvent(h.events(), executor.EventExternalStateChange) {
+		t.Fatal("a reconcile mismatch must emit EXTERNAL_STATE_CHANGE")
+	}
+}
+
+// ---------------------------------------------------------------------------
 // §127.1 — plan + risk-based sizing (create → size)
 // ---------------------------------------------------------------------------
 
