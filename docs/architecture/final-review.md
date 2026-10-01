@@ -261,6 +261,16 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    (`git worktree --detach HEAD` + the harness → `TestPaperMarketLifecycle` and
    `TestPaperRestartNoDuplicateOrder` fail there), fixed (`9688722`) by persisting the engine state
    **before** acting, green after (`5f8a8ba` adds the harness).
+5. **`ValkeyLock.do` AUTH handshake surfaced as a bare `io: read/write on closed pipe`** — the
+   `TestValkeyLockAuthHandshake` wire test failed intermittently (5s ctx timeout on the SET write)
+   because every dial/transport/protocol error returned through `Acquire`'s `ErrUnavailable` wrapper
+   with no label, so the failing phase was invisible. Root cause was NOT in the test: the harness
+   (`fakeValkey`) was already correct — `Dial` reserves both steps for a `multi` AUTH step and
+   `serve` replays step idx+1 on the same connection. Fixed in production code (`024fadd`): each
+   write/read in `do` now wraps its error with a context label (`lock: AUTH write/read`,
+   `lock: command write/read`). Verified: `go test -race ./internal/lock/` green 3× consecutively,
+   and `TestValkeyLockAuthHandshake`/`TestValkeyLockAuthRejected` both pass. No behavior change —
+   the fail-closed contract is untouched; only the error string carries more information.
 6. **`internal/worker.isRetryable` misclassified every venue error as retryable** — it looked for a
    `Retryable() bool` *method* by unwrapping the error chain, but adapters and the `paper` simulator
    put retryability in `exchange.VenueError.Class.Retryable`, a **field**; nothing implements the
@@ -273,16 +283,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    `exchange.Classify` (resolves `VenueError.Class`, an explicit `Retryable()` signal, and
    deadlines) — only an explicit non-retryable class rejects, and an *unclassifiable* error still
    keeps `SUBMITTING` so reconciliation decides (§66).
-5. **`ValkeyLock.do` AUTH handshake surfaced as a bare `io: read/write on closed pipe`** — the
-   `TestValkeyLockAuthHandshake` wire test failed intermittently (5s ctx timeout on the SET write)
-   because every dial/transport/protocol error returned through `Acquire`'s `ErrUnavailable` wrapper
-   with no label, so the failing phase was invisible. Root cause was NOT in the test: the harness
-   (`fakeValkey`) was already correct — `Dial` reserves both steps for a `multi` AUTH step and
-   `serve` replays step idx+1 on the same connection. Fixed in production code (`024fadd`): each
-   write/read in `do` now wraps its error with a context label (`lock: AUTH write/read`,
-   `lock: command write/read`). Verified: `go test -race ./internal/lock/` green 3× consecutively,
-   and `TestValkeyLockAuthHandshake`/`TestValkeyLockAuthRejected` both pass. No behavior change —
-   the fail-closed contract is untouched; only the error string carries more information.
+
 7. **Composed Go paper harness gained the TWAP vector** (`994e5aa`) — `TestPaperTwapSlices`
    proves a TWAP execution releases its plan as multiple children over the window, each slice
    sized from the remaining plan, and the window closes with the plan fully released even when
