@@ -28,11 +28,11 @@ apps/web/media/
 .DS_Store
 # compiled addons
 *.node
-# go (apps/apicalls)
-apps/apicalls/bin/
-apps/apicalls/.cache/
-# rust (apps/sync; target/ is also covered by apps/sync/.gitignore)
-apps/sync/target/
+# go (services/data)
+services/data/bin/
+services/data/.cache/
+# rust (services/sync; target/ is also covered by services/sync/.gitignore)
+services/sync/target/
 # live verifier reports (regenerated on every run; the tracked artifacts live in
 # apps/web/scripts/fixtures/, which is the reviewed record)
 apps/web/scripts/**/*-report.json

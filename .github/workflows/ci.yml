@@ -50,8 +50,8 @@ jobs:
             exit 0
           fi
           # Build the Rust service this route proxies to, from this same commit.
-          cargo build --release --manifest-path ../sync/Cargo.toml
-          ../sync/target/release/fudcourt-reconciled &
+          cargo build --release --manifest-path ../../services/sync/Cargo.toml
+          ../../services/sync/target/release/fudcourt-reconciled &
           SVC=$!
           trap 'kill $SVC 2>/dev/null || true' EXIT
           for _ in $(seq 1 30); do
@@ -66,13 +66,13 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: apps/apicalls
+        working-directory: services/data
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.1'
-          cache-dependency-path: apps/apicalls/go.sum
+          cache-dependency-path: services/data/go.sum
       - name: Build
         run: go build ./...
       - name: Vet
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: apps/sync
+        working-directory: services/sync
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable

@@ -90,8 +90,8 @@ One private surface where the owner can answer, at any moment:
 ### NFR-3 — Operations
 - Local: systemd --user units `fudcourt-web` (dashboard **and** blog), `fudcourt-apicalls`, `fudcourt-reconciled`, `fudcourt-sync.timer`; enabled at boot. `fudcourt-blog` was retired by the DR-017 merge.
 - Build gate: `unset NODE_ENV` before any `bun install`/`bun run build` (env trap).
-- Runtime split (owner direction): acquisition families in Go (`apps/apicalls`), the
-  balance sync in Rust (`apps/sync`), the UI/API surface in TypeScript on Bun
+- Runtime split (owner direction): acquisition families in Go (`services/data`), the
+  balance sync in Rust (`services/sync`), the UI/API surface in TypeScript on Bun
   (`apps/web` only — the blog merged into it, DR-017); Python remains the verification-oracle language.
   See docs/records/DECISIONS.md DR-005/DR-006/DR-007/DR-008/DR-009/DR-010/DR-012/DR-013.
 - Git: commits authored `Fox <fox@local>`; debug artifacts never committed.

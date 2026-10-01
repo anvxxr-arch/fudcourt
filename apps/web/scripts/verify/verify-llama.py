@@ -253,10 +253,10 @@ def verify_ui_wiring(base: str) -> None:
     ]:
         check(frag in route, label, "")
     # The route is a VERBATIM PROXY to the Go sidecar (PLAN G9 SG-9.3): mode
-    # validation moved to apps/apicalls/internal/llama, so the pre-cutover
+    # validation moved to services/data/internal/llama, so the pre-cutover
     # `LLAMA_MODES.includes(mode)` assertion is replaced by the proxy contract —
     # the route must reach the sidecar and must not re-implement the mode table.
-    go_llama = root.parent / "apicalls" / "internal" / "llama" / "modes.go"
+    go_llama = root.parent.parent / "services" / "data" / "internal" / "llama" / "modes.go"
     if go_llama.exists():
         go_modes = set(re.findall(r'"(chains|protocols|historical)"', go_llama.read_text()))
         check(declared == go_modes,

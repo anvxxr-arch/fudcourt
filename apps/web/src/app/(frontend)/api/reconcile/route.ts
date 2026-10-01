@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 /**
  * Wallet reconciliation. THIN, HONEST PROXY to the Rust service
- * `fudcourt-reconciled` (apps/sync, 127.0.0.1:3102) — DR-014.
+ * `fudcourt-reconciled` (services/sync, 127.0.0.1:3102) — DR-014.
  *
  * WHY A PROXY: the reconciliation maths is now a Rust implementation
- * (`apps/sync/src/reconcile.rs`) with the original TS shaper kept beside it
+ * (`services/sync/src/reconcile.rs`) with the original TS shaper kept beside it
  * (`lib/reconcile.ts`) as the independent oracle. Both were diffed section by
  * section on live data (`scripts/tools/parity-reconcile.ts`: identical rows,
  * wallets and walletSummary, key order included) before this route was pointed at

@@ -264,7 +264,7 @@ fingerprint. A spike asked whether Go could hold that fingerprint natively.
    *second* client).
 3. **Go runtime + Python oracle** — Go serves, `cr_fetch.py` is retained solely
    as the verifier's independent cross-check.
-**Decision. (3).** `apps/apicalls` (Go, `fudcourt-apicalls` on
+**Decision. (3).** `services/data` (Go, `fudcourt-apicalls` on
 `127.0.0.1:3101`) owns mode/key validation, the disabled-mode refusal, the disk
 cache, the 429 backoff and the fetch. `app/api/cryptorank/route.ts` becomes a
 thin honest proxy: same query string forwarded verbatim, upstream status/body
@@ -290,7 +290,7 @@ TS — a second implementation of a rule is a second place for it to drift.
 - **New failure mode: the sidecar is a dependency.** If `apicalls` is down the
   board is down — by design loudly (502 naming the real reason), never a fake
   200. The unit is `Restart=always`/`RestartSec=5` and versioned at
-  `apps/apicalls/deploy/fudcourt-apicalls.service`.
+  `services/data/deploy/fudcourt-apicalls.service`.
 - **`tofu`-class risk: Cloudflare rule rotation.** The bundled `chrome_131`
   profile can stop matching (or start binding to a JA4/JA4H hash the profile does
   not cover) and a pinned binary would then get 403s silently. Mitigation: the
@@ -304,7 +304,7 @@ TS — a second implementation of a rule is a second place for it to drift.
   pre-push hook builds offline against the cached toolchain.
 - One contract, two implementations is now enforced offline:
   `apps/web/scripts/checks/check-contract.py` parses the Go table in
-  `apps/apicalls/internal/cryptorank/modes.go` and asserts it equals the TS mirror
+  `services/data/internal/cryptorank/modes.go` and asserts it equals the TS mirror
   in `lib/cryptorank.ts` (modes, disabled set, exchange/launchpool/nodesale/RWA
   whitelists, keyed + default-key maps), and additionally asserts the route is
   still a proxy (no `execFile`, no python path, no local validation).
@@ -351,7 +351,7 @@ double space the page itself publishes before `- Khala Research`), and `fetch` s
 `If-None-Match` on `?fresh=1`, letting a 304 answer the live-refetch request with a cache
 `HIT`. `verify-khala.py` against the served sidecar: **136 passed / 0 failed / 0 skipped**.
 
-Landed and read: `apps/apicalls/internal/khala/{modes,fetch,parse,
+Landed and read: `services/data/internal/khala/{modes,fetch,parse,
 shape}.go` (+ tests, 6 fixtures in `testdata/`), `apps/web/app/api/khala/route.ts`,
 `apps/web/lib/khala.ts`, `KhalaPage.tsx`, `app/khala/page.tsx`, the `store-shell.tsx`
 tab/render, `lib/public-routes.ts`, `ROUTE_COST.khala = 2`, and
@@ -395,7 +395,7 @@ modified; the repo never imports or executes it). Design record:
    mirrors three separate upstream artifacts (a Python helper `cr_fetch.py`, TS shapers
    `lib/shapers.ts`, a TS mode table `lib/cryptorank.ts`) — which is why
    `check-contract.py` has a genuine `CR_MODES ↔ Modes` parity check to run. khala has
-   **one artifact (the site)** and three modes: `apps/apicalls/internal/khala/`
+   **one artifact (the site)** and three modes: `services/data/internal/khala/`
    (`modes.go`, `fetch.go`, `parse.go`, `shape.go`) is a single package, and the TS
    route `apps/web/app/api/khala/route.ts` is a **pure verbatim proxy that validates
    nothing**. A `lib/khala.ts` would create exactly the drift cryptorank's own route
@@ -422,9 +422,9 @@ modified; the repo never imports or executes it). Design record:
    (18 of 216 index paragraphs absent from the rendered page) and whose
    `searchIndex-<hash>.json` stem rotates on every republish, so it must never be
    hard-coded). The HTML parse uses `golang.org/x/net/html`, **already** in
-   `apps/apicalls/go.sum` (`v0.48.0`) — **no new dependency**.
+   `services/data/go.sum` (`v0.48.0`) — **no new dependency**.
 4. **The envelope mirrors the house envelope; no new shape.** Contract v4 is flat, like
-   `CrEnvelope` in `apps/apicalls/internal/cryptorank/types.go`: `upstream` is a scalar
+   `CrEnvelope` in `services/data/internal/cryptorank/types.go`: `upstream` is a scalar
    **string** (homepage for `reports`/`latest`, the report URL for `report`); there is
    **no `derived` field** — all provenance lives in **`slice` (string, populated on every
    mode)**, the same field `CrEnvelope` already uses for slice provenance; payload keys
@@ -629,7 +629,7 @@ sidecar already owned cryptorank (DR-005) and khala (DR-006) while `llama`
 (DeFiLlama TVL) still validated, fetched, cached, sorted and trimmed inside the
 Next.js route (`lib/rate-limit.ts` outbound limiter, 177-line route).
 **Decision.** Port it the same way, third family, third package:
-`apps/apicalls/internal/llama/{modes,fetch,shape}.go` + tests, wired as
+`services/data/internal/llama/{modes,fetch,shape}.go` + tests, wired as
 `/api/llama` on the sidecar mux with its own `/healthz` key, and
 `apps/web/app/api/llama/route.ts` reduced to a verbatim proxy cloned from
 `app/api/khala/route.ts`. `lib/llama.ts` stays as the typing/display mirror.
@@ -664,10 +664,10 @@ Next.js route (`lib/rate-limit.ts` outbound limiter, 177-line route).
   asserted by a test so the difference stays on purpose.
 ---
 ## DR-010 — Rust service: the live balance sync (2026-09-29)
-**Status:** accepted; `apps/sync` builds, passes its tests and produces
+**Status:** accepted; `services/sync` builds, passes its tests and produces
 byte-comparable rows to the Python original. **Not yet cut over on the systemd
 side** — the timer still runs the Python unit (rollback path kept warm), and the
-Rust units are versioned at `apps/sync/deploy/`.
+Rust units are versioned at `services/sync/deploy/`.
 **Context.** Owner direction names Rust. The only Python *runtime* path left was
 `apps/web/scripts/tools/sync-live.py` (5-min timer → 6 Alchemy EVM chains + Solana +
 Hyperliquid + a spot-price oracle → Turso `assets`). DR-005's precedent for a
@@ -705,7 +705,7 @@ row-for-row — which is what makes this a port rather than a second opinion.
   and the Python unit stays installed as the rollback; the repo now carries both
   versioned units plus a `sync` CI job (`cargo build/test`) and a pre-push
   `cargo build/test` branch.
-- `apps/sync/target/` is gitignored; the release binary is a build artifact,
+- `services/sync/target/` is gitignored; the release binary is a build artifact,
   so the timer must be pointed at a built binary (the unit documents this).
 - The oracle is not deleted: `sync-live.py` remains the independent check, the
   same relationship DR-005 established between the Go sidecar and `cr_fetch.py`.
@@ -722,7 +722,7 @@ directory per family while `khala` and `llama` each had one; `apps/web/app/`
 mixed components with routes (`app/components/`); a stylesheet helper sat at
 `lib/ui/shared.ts` (a directory named for the thing it holds, not its role);
 one 9 KB state container (`app/home-shell.tsx`) was a route-sibling file; the
-Rust service lived at `apps/sync-rs` (repo-name suffix) with a `sync-rs` binary.
+Rust service lived at `services/sync-rs` (repo-name suffix) with a `sync-rs` binary.
 **Options.** (1) Rename only the top offenders; (2) restructure to per-family
 and per-role directories, including the Go package merge and the Rust rename;
 (3) leave the Go packages alone (a rename buys no behaviour).
@@ -730,14 +730,14 @@ and per-role directories, including the Go package merge and the Rust rename;
 mechanical and covered by a gate that fails loudly if it drifts:
 | Before | After | Rationale |
 |---|---|---|
-| `apps/apicalls/internal/{crfetch,crmodes,crshape}` | `internal/cryptorank/` (one package, 11 files) | matches `internal/khala` and `internal/llama`: one family, one package. No symbol collided — checked programmatically before the move (0 collisions over 211 package-level names) |
+| `services/data/internal/{crfetch,crmodes,crshape}` | `internal/cryptorank/` (one package, 11 files) | matches `internal/khala` and `internal/llama`: one family, one package. No symbol collided — checked programmatically before the move (0 collisions over 211 package-level names) |
 | `apps/web/app/components/` | `apps/web/src/components/` | Next.js route tree (`app/`) holds routes; React panels are not routes |
 | `apps/web/lib/ui/shared.ts` | `apps/web/src/styles/shared.ts` | the directory names the *role* (design tokens + view types), not the layer |
 | `apps/web/app/home-shell.tsx` | `apps/web/app/store/store-shell.tsx` | it is a client state container, not a route; `store/` makes that a rule, not a convention |
 | `apps/web/app/admin/member-table.tsx` | `apps/web/app/admin/members-table.tsx` | one table, plural noun |
-| `apps/sync-rs/` (crate `sync-rs`) | `apps/sync/` (crate/binary `fudcourt-sync`) | drop the repo-name suffix; the binary is `fudcourt-sync`, matching the unit name |
+| `services/sync-rs/` (crate `sync-rs`) | `services/sync/` (crate/binary `fudcourt-sync`) | drop the repo-name suffix; the binary is `fudcourt-sync`, matching the unit name |
 | `apps/blog/scripts/seed.ts` | `apps/blog/src/seed.ts` | it imports `./payload.config` and is run by `payload run`; nothing else lives in `scripts/` |
-| `apps/apicalls/scripts/smoke.sh` | `scripts/smoke-apicalls.sh` | the one script in the dir names its target, so it stays unambiguous when copied out |
+| `services/data/scripts/smoke.sh` | `scripts/smoke-apicalls.sh` | the one script in the dir names its target, so it stays unambiguous when copied out |
 **What was deliberately NOT renamed.** The `apps/<slug>` names themselves
 (`web` / `blog` / `apicalls` / `sync`) are referenced by systemd units,
 `WorkingDirectory=`, the Bun lockfile paths and every doc; churn there is
@@ -785,7 +785,7 @@ follow the one-job rule.
 - A final sweep of *code* comments and unit text found 11 more stale references
   (Go package docs still calling the merged package `crfetch`/`crmodes`/`crshape`,
   a `go test ./internal/crfetch/` invocation inside a live-test header, and the
-  Python-unit comment pointing the Rust swap at `apps/sync-rs/deploy/`). All were
+  Python-unit comment pointing the Rust swap at `services/sync-rs/deploy/`). All were
   updated; the one deliberate survivor is `DefaultCacheDir = "~/.cache/crfetch"`,
   which is a real runtime path shared with the Python oracle and must NOT move.
   `check-deploy.py` (newly observed in the pre-push hook) keeps every versioned
@@ -793,7 +793,7 @@ follow the one-job rule.
 - One unit (the systemd sync) was installed and then **restored to the prior
   Python runtime**: the dry-run of the Rust binary passed (`Result=success`,
   status 0), but cutover was out of scope for a naming change (DR-010 keeps it
-  open). Only the unit *stub* in `apps/sync/deploy/` reflects the new paths.
+  open). Only the unit *stub* in `services/sync/deploy/` reflects the new paths.
 ---
 ## DR-012 — Backend weighting: the `news` family moves into the Go sidecar (2026-09-29)
 **Status:** accepted, deployed (`fudcourt-apicalls` :3101 serves `/api/news`;
@@ -928,7 +928,7 @@ and `/api/reconcile` — the wallet reconciliation board — was the last non-au
 non-browser route doing its own work in TypeScript: three Turso SELECTs and the
 accumulation maths, inline in the route.
 **Options.** (1) Leave it in TS; (2) port it to Go, joining the acquisition
-sidecar; (3) port it to Rust and serve it from `apps/sync`.
+sidecar; (3) port it to Rust and serve it from `services/sync`.
 **Decision. (3); (1) and (2) rejected explicitly.** (2) would have put it in a
 service whose stated job is *upstream acquisition* — this route acquires nothing
 and reads our own database. (3) puts it beside the crate that already owns the
@@ -990,7 +990,7 @@ the Next route is its only client, exactly like the Go sidecar.
   the stablecoin-only behaviour stops holding) and documented in the module header.
 - Loopback-only, no auth of its own, exactly like the Go sidecar: middleware +
   `lib/guard.ts` still own the team-tier gate, and the route adds none.
-- Ops: versioned `apps/sync/deploy/fudcourt-reconciled.service` (enabled + started,
+- Ops: versioned `services/sync/deploy/fudcourt-reconciled.service` (enabled + started,
   `Restart=always`, `EnvironmentFile=/home/dwizzy/fudcourt/.env`), the binary refuses
   to start without `TURSO_AUTH_TOKEN` (a service that silently reconciled against
   nothing would answer `{"rows": []}` and look healthy), and the crate grew a
@@ -1070,7 +1070,7 @@ reader has to re-litigate.
   (2 files each), as does the shared escaping helper.
 - **The Rust service uses no web framework either:** `fudcourt-reconciled` is
   `tokio::net::TcpListener` plus ~40 lines of bounded HTTP/1.1 framing
-  (`apps/sync/src/server.rs`), chosen in DR-014 specifically so the port added **zero
+  (`services/sync/src/server.rs`), chosen in DR-014 specifically so the port added **zero
   new crates**.
 **Options.** (1) Adopt a Go framework (gin/echo/chi) for the sidecar and an
 equivalent (axum/actix) for Rust; (2) keep stdlib routing and hand-rolled framing, and

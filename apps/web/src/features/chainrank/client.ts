@@ -83,7 +83,7 @@ export const CR_PAGE_SIZE_MAX = 200;
 /* ---------------------------------------------------------------------------
  * TYPING / DISPLAY MIRROR ONLY (DR-013).
  *
- * The runtime lives in Go: apps/apicalls/internal/chainrank owns the mode table,
+ * The runtime lives in Go: services/data/internal/chainrank owns the mode table,
  * the upstream URL construction, the shape check, the cache and the refusal
  * messages. app/api/chainrank/route.ts validates nothing and forwards every
  * status/body verbatim, so nothing below may grow a guard: a second validator is

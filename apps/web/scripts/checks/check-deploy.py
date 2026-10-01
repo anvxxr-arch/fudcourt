@@ -5,7 +5,7 @@ something that exists.
 
 Why this exists
 ---------------
-Each `apps/*/deploy/fudcourt-*.service` is a *copy* of a systemd user unit that is
+Each `{apps,services}/*/deploy/fudcourt-*.service` is a *copy* of a systemd user unit that is
 installed on the host, and its `ExecStart=` / `Documentation=` lines carry absolute
 paths back into this repo. So a file move can break production silently: today's
 `scripts/` reorg moved `sync-live.py` into `scripts/tools/`, the timer kept firing
@@ -33,7 +33,12 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[4]  # scripts/checks/ -> scripts -> web -> apps -> repo
-UNITS = sorted(p for p in REPO.glob("apps/*/deploy/*") if p.suffix in (".service", ".timer"))
+UNITS = sorted(
+    p
+    for base in ("apps", "services")
+    for p in REPO.glob(f"{base}/*/deploy/*")
+    if p.suffix in (".service", ".timer")
+)
 # Directives that must hold a repo path (or an absolute path) rather than a bare binary.
 PATH_DIRECTIVES = ("ExecStart", "ExecStartPre", "ExecReload", "Documentation")
 # A bare command (no slash) is only acceptable for system binaries systemd can find
@@ -57,7 +62,7 @@ def directive(line: str) -> str | None:
 
 def main() -> int:
     if not UNITS:
-        print("check-deploy: no unit files found under apps/*/deploy/ (layout drift?)")
+        print("check-deploy: no unit files found under {apps,services}/*/deploy/ (layout drift?)")
         return 1
 
     names: dict[str, list[str]] = {}

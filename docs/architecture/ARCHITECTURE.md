@@ -52,7 +52,7 @@ origin; DR-002 — no third-party deploy target, ever).
    │  app/api/* = 21: 18 data (17 family §4 + /admin/members §5) + 3 auth     │
    └──────┬────────────────────────────────────────────┬──────────────────────┘
           │ Turso (treasury, synced every 5 min        │ keyless upstreams:
-          │ by fudcourt-sync.timer → apps/sync,     │ chainrank.fyi RE,
+          │ by fudcourt-sync.timer → services/sync,     │ chainrank.fyi RE,
           │ the Rust port; sync-live.py = oracle)      │ api.llama.fi (served by
           ▼                                            │ apicalls §4 llama),
    ┌────────────────────┐                              │ dexscreener,
@@ -69,7 +69,7 @@ origin; DR-002 — no third-party deploy target, ever).
           │ cryptorank.io, api.llama.fi and khala.io are NOT fetched here any
           ▼ more — /api/{cryptorank,llama,khala} are thin proxies (no validation,
             no shaping; body+status forwarded verbatim; DR-005/006/008)
-   ┌───────── apps/apicalls (Go, fudcourt-apicalls :3101) ──────────┐
+   ┌───────── services/data (Go, fudcourt-apicalls :3101) ──────────┐
    │  three families, three clients (DR-005/006/008):               │
    │  · cryptorank: mode/key validation, disabled-mode refusal      │
    │    (503), disk cache, 429 backoff, tls-client chrome_131       │
@@ -86,7 +86,7 @@ a self-confirmation); it is no longer a runtime path — [DR-005](../records/DEC
 
 The **`khala`** family lives in the same sidecar (PLAN G8, [DR-006](../records/DECISIONS.md))
 with a deliberately **different client**: a plain `net/http` fetcher in a single Go
-package `apps/apicalls/internal/khala/`, plus a typing-only TS mirror
+package `services/data/internal/khala/`, plus a typing-only TS mirror
 (`src/features/khala/client.ts`). Measured upstream (2026-09-29): khala.io answers **200** to a
 non-browser UA with no Cloudflare in the path at all, so the `chrome_131`
 ClientHello stack above is **required for cryptorank only and must never be
@@ -95,13 +95,13 @@ the sidecar's mux and served (measured: `:3101/healthz` →
 `{"build":"28 modes","khala":"3 modes","llama":"3 modes"}`; `/api/khala` → 200).
 
 The **`llama`** family joined the same sidecar the same day (PLAN G9 SG-9.3,
-[DR-009](../records/DECISIONS.md)) as `apps/apicalls/internal/llama/`: a JSON pass-through
+[DR-009](../records/DECISIONS.md)) as `services/data/internal/llama/`: a JSON pass-through
 with the sort/trim the TS route used to do, its own 15 s in-process TTL cache and
 single-flight, and the strict `top`/`days` matrix — with the TS route reduced to a
 verbatim proxy. Three families, three clients, three caches: cryptorank needs the
 browser fingerprint, khala and llama need nothing but `net/http`.
 
-The 5-minute treasury sync is now also a Rust service, `apps/sync` ([DR-010](../records/DECISIONS.md)):
+The 5-minute treasury sync is now also a Rust service, `services/sync` ([DR-010](../records/DECISIONS.md)):
 same Turso pipeline, same Alchemy/Solana/Hyperliquid reads, verified row-for-row
 against the Python oracle `sync-live.py`, which stays installed as the rollback.
 
@@ -155,15 +155,15 @@ reverse-engineering or public feeds only). Each family: one route, one `src/feat
 | Family | Upstream | Route(s) | Contract | Verifier | Trust |
 |---|---|---|---|---|---|
 | **treasury** | Turso DB (own data) | `/api/all`, `/coins`, `/wallets`, `/reconcile`, `/transactions(+/[id])` | `src/platform/db/client.ts` (env-ref only); `/reconcile` is a proxy to the **Rust** `fudcourt-reconciled` `:3102` (DR-014) | `check-contract.py` (mutation-guard) + `sync-live.py` fail-loud + `verify-reconcile.py` (28 checks incl. live TS↔Rust parity) | INTERNAL |
-| **cryptorank** | cryptorank.io SSR (RE) — fetched by the Go `apicalls` sidecar :3101, not by the route | `/api/cryptorank` (28 modes, thin proxy to `apicalls`) | runtime: `apps/apicalls/internal/cryptorank` · TS mirror `src/features/cryptorank/client.ts` + `src/features/cryptorank/shapers.ts` | `verify-cryptorank.py` 244 checks (oracle `scripts/oracle/cr_fetch.py`) · 3-gate · shaper fixtures 56/56 | GATED |
-| **chainrank** | chainrank.fyi — fetched by the Go `apicalls` sidecar :3101, not by the route | `/api/chainrank` (2 modes, thin verbatim proxy to `apicalls`) | runtime: **`apps/apicalls/internal/chainrank`** (mode table, pagination relayed verbatim into the upstream URL and the cache key, explicit 32-entry cache ceiling, shape check); `src/features/chainrank/client.ts` is the typing/display mirror + the documented write surface | `verify-chainrank.py` 50 checks (incl. the relay matrix vs real upstream) | GATED |
-| **llama** | api.llama.fi — fetched by the Go `apicalls` sidecar :3101, not by the route | `/api/llama` (3 modes, thin proxy to `apicalls`) | runtime: **`apps/apicalls/internal/llama`** (mode table, strict `top`/`days`, in-process 15 s TTL cache + single-flight, sort/trim); `src/features/llama/client.ts` is the typing/display mirror | `verify-llama.py` 51 checks (incl. anti-fake parity against a direct `/v2/chains`) | GATED |
+| **cryptorank** | cryptorank.io SSR (RE) — fetched by the Go `apicalls` sidecar :3101, not by the route | `/api/cryptorank` (28 modes, thin proxy to `apicalls`) | runtime: `services/data/internal/cryptorank` · TS mirror `src/features/cryptorank/client.ts` + `src/features/cryptorank/shapers.ts` | `verify-cryptorank.py` 244 checks (oracle `scripts/oracle/cr_fetch.py`) · 3-gate · shaper fixtures 56/56 | GATED |
+| **chainrank** | chainrank.fyi — fetched by the Go `apicalls` sidecar :3101, not by the route | `/api/chainrank` (2 modes, thin verbatim proxy to `apicalls`) | runtime: **`services/data/internal/chainrank`** (mode table, pagination relayed verbatim into the upstream URL and the cache key, explicit 32-entry cache ceiling, shape check); `src/features/chainrank/client.ts` is the typing/display mirror + the documented write surface | `verify-chainrank.py` 50 checks (incl. the relay matrix vs real upstream) | GATED |
+| **llama** | api.llama.fi — fetched by the Go `apicalls` sidecar :3101, not by the route | `/api/llama` (3 modes, thin proxy to `apicalls`) | runtime: **`services/data/internal/llama`** (mode table, strict `top`/`days`, in-process 15 s TTL cache + single-flight, sort/trim); `src/features/llama/client.ts` is the typing/display mirror | `verify-llama.py` 51 checks (incl. anti-fake parity against a direct `/v2/chains`) | GATED |
 | **dex** | dexscreener | `/api/dex` | `src/features/dex/client.ts` | `verify-dex.py` | GATED |
 | **signals** | data-public.vercel.app (external dataset) | `/api/signals` | route-local | `verify-signals.py` | GATED |
 | **markets** | api.coingecko.com (`/coins/markets`, top-250 pool) | `/api/markets` | `src/features/markets/client.ts` | `verify-markets.py` 49 checks (GATE2 llama · GATE3 cryptorank, 3%) | GATED |
 | **ticker** | 10 CEX natives via CCXT (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) | `/api/ticker`, `/api/ticker/instruments`, `/api/ticker/instrument` | `src/features/ticker/client.ts` | route sweep (status/shape/400 contract); deep verifier pending | **SMOKE** — deep verifier pending |
-| **news** | cointelegraph.com/rss — fetched by the Go `apicalls` sidecar :3101, not by the route | `/api/news` (thin verbatim proxy to `apicalls`) | runtime: **`apps/apicalls/internal/news`** (feed table, strict `source`/`limit` 1..100, RSS parse into the six-key projection, in-process 15 s TTL cache + single-flight keyed on the FEED URL); `src/features/news/client.ts` is the typing/display mirror | `verify-news.py` 50 checks (incl. anti-fake parity against a direct feed fetch) | GATED |
-| **khala** (wired: the sidecar mux serves `/api/khala`; `verify-khala.py` **136/0/0**) | khala.io (Framer SSR; `framerusercontent.com` search index unused by design) | `/api/khala` (**3 modes**: `reports`, `report`, `latest`; thin verbatim proxy to `apicalls`; `upstream` scalar, provenance in `slice`, structured `body` — no HTML shipped) | runtime: **`apps/apicalls/internal/khala`** — one Go package (no 3-way split: this family has one upstream artifact, not three). Its TS side is a **typing/display mirror only** (`src/features/khala/client.ts`: mode list, key regex, `limit` bounds, envelope types) — the route validates nothing, so the sidecar stays the single validator; that is why `check-contract.py` carries **no** khala table pair (contrast the cryptorank row above, whose two real mode tables are kept equal by that gate) — [DR-006](../records/DECISIONS.md) | `verify-khala.py` — **written, not run by this doc's author**; its recorded artifact `scripts/khala-report.json` (scratch `:4101` adapter) reports **133 pass / 1 fail / 0 skip**; 2 independent ground-truth gates (sitemap slug-set equality · site title/date parity, oracle = direct khala.io fetches) | **SMOKE** — GATED not claimed until it runs green against a served endpoint |
+| **news** | cointelegraph.com/rss — fetched by the Go `apicalls` sidecar :3101, not by the route | `/api/news` (thin verbatim proxy to `apicalls`) | runtime: **`services/data/internal/news`** (feed table, strict `source`/`limit` 1..100, RSS parse into the six-key projection, in-process 15 s TTL cache + single-flight keyed on the FEED URL); `src/features/news/client.ts` is the typing/display mirror | `verify-news.py` 50 checks (incl. anti-fake parity against a direct feed fetch) | GATED |
+| **khala** (wired: the sidecar mux serves `/api/khala`; `verify-khala.py` **136/0/0**) | khala.io (Framer SSR; `framerusercontent.com` search index unused by design) | `/api/khala` (**3 modes**: `reports`, `report`, `latest`; thin verbatim proxy to `apicalls`; `upstream` scalar, provenance in `slice`, structured `body` — no HTML shipped) | runtime: **`services/data/internal/khala`** — one Go package (no 3-way split: this family has one upstream artifact, not three). Its TS side is a **typing/display mirror only** (`src/features/khala/client.ts`: mode list, key regex, `limit` bounds, envelope types) — the route validates nothing, so the sidecar stays the single validator; that is why `check-contract.py` carries **no** khala table pair (contrast the cryptorank row above, whose two real mode tables are kept equal by that gate) — [DR-006](../records/DECISIONS.md) | `verify-khala.py` — **written, not run by this doc's author**; its recorded artifact `scripts/khala-report.json` (scratch `:4101` adapter) reports **133 pass / 1 fail / 0 skip**; 2 independent ground-truth gates (sitemap slug-set equality · site title/date parity, oracle = direct khala.io fetches) | **SMOKE** — GATED not claimed until it runs green against a served endpoint |
 
 House rules every family obeys (see `docs/product/ANALYSIS.md` + PLAN):
 
@@ -247,7 +247,7 @@ implies team implies member.
 
 | Tier | What | Where it runs |
 |---|---|---|
-| Offline | `check-contract.py` (CR_MODES ↔ sweep consistency + **TS↔Go mode-table parity** + **khala KH_MODES parity** + **news NEWS_SOURCES parity** + **chainrank CR_MODES parity** + mutation-guard + proxy-shape), `test:shapers` (`80 tests` = 56 shaper/fixture + 11 auth + 13 rate-limit, over 26 gz fixtures, sha256 over raw payload), `tsc`, both builds (Bun), `cargo build/test` (apps/sync), `go build/vet/test` (apps/apicalls: cryptorank + khala + llama + news + chainrank packages, 111 tests) | pre-push hook + CI on every push |
+| Offline | `check-contract.py` (CR_MODES ↔ sweep consistency + **TS↔Go mode-table parity** + **khala KH_MODES parity** + **news NEWS_SOURCES parity** + **chainrank CR_MODES parity** + mutation-guard + proxy-shape), `test:shapers` (`80 tests` = 56 shaper/fixture + 11 auth + 13 rate-limit, over 26 gz fixtures, sha256 over raw payload), `tsc`, both builds (Bun), `cargo build/test` (services/sync), `go build/vet/test` (services/data: cryptorank + khala + llama + news + chainrank packages, 111 tests) | pre-push hook + CI on every push |
 | Live | per-family verifiers (§4) — plus `verify-khala.py` **green against the served sidecar: 136 pass / 0 fail / 0 skip, 6.7 s** (`--base http://127.0.0.1:3101`; GATED met 2026-09-29, PLAN G8 ✅), cryptorank harness (244 checks; since DR-005 run it against the Go sidecar for a full pass — through :3100 the DR-004 inbound budget stops a ~55-call run, PLAN G7 SG-7.6), route sweep **154/165** (18 page checks = 13 HTML + `/robots.txt` + `/sitemap.xml` + 3 real-404 retired/unknown · 7 gate-307 · 47 API incl. the whole ticker, llama, news and chainrank families · 7 mut no-session 401 · 10 session-gated probes · 58 CR · 17 khala; 11 fails = 1 CoinGecko 403 passthrough + 10 session-gated probes unrunnable because no `FUDCOURT_SESSION_SECRET` exists on this host, ANALYSIS K-11), DOM audit of the /tracker board (asserts /api/markets is proxied and the browser never calls CoinGecko) | on demand + this repo's loop |
 | Continuous | `monitor.py` — unit active + 8 endpoint checks (board page, 5 cryptorank modes incl. decoy-refusal 503, markets, news), deterministic output, parallel | cron `f191fe6df16c` every 15 min, silent when `HEALTHY` |
 
@@ -255,9 +255,9 @@ implies team implies member.
 
 - **Production = this homeserver.** Units: `fudcourt-web` (`127.0.0.1:3100`),
   `fudcourt-apicalls` (Go acquisition sidecar, `127.0.0.1:3101`, unit versioned
-  at `apps/apicalls/deploy/fudcourt-apicalls.service`),
+  at `services/data/deploy/fudcourt-apicalls.service`),
   `fudcourt-reconciled` (**Rust** `/api/reconcile` service, `127.0.0.1:3102`, unit
-  versioned at `apps/sync/deploy/fudcourt-reconciled.service`; DR-014),
+  versioned at `services/sync/deploy/fudcourt-reconciled.service`; DR-014),
   `fudcourt-sync.timer` (5 min). **`fudcourt-blog` is retired (DR-017)**: the blog
   is served by `fudcourt-web` at `/blog`, so there is no second Next process.
 - Origin binds loopback; the **only** path in is the tunnel ingress
@@ -336,7 +336,7 @@ USDT linear perps) and the funds never leave the exchange. Records:
 | Web app + API | `apps/web`, `:3100`, `src/app/(frontend)/api/executor/**` | one origin, one session, one tier gate (`/executor` and `/api/executor` are `team` — the same tier as the treasury surface it sits beside) |
 | Worker service | `apps/web/scripts/executor/worker.ts`, unit `deploy/fudcourt-executor-worker.service` (Bun, versioned in-repo) | **independent of `fudcourt-web`**: closing the browser or restarting the web unit never stops an execution |
 | Valkey lease | `src/platform/executor/lock.ts` | one worker owns one execution; **FAIL-CLOSED** — a lock that fails open means duplicate orders, so any Valkey error makes `acquire` false and the worker does not trade (the inverse of the JSON cache in `platform/cache/valkey.ts`, which fails open) |
-| Postgres store | `src/platform/executor/store.ts` → `executor` schema | its own schema, never `public`: the treasury read model is pruned wholesale by the Turso→Postgres mirror, and the executor writes live data. No migration runner — the embedded DDL is asserted byte-identical to `db/executor-schema.sql` |
+| Postgres store | `src/platform/executor/store.ts` → `executor` schema | its own schema, never `public`: the treasury read model is pruned wholesale by the Turso→Postgres mirror, and the executor writes live data. No migration runner — the embedded DDL is asserted byte-identical to `database/schema/executor-schema.sql` |
 | Adapters | `src/platform/executor/exchange.ts` | one translation layer per venue; paper and live implement the SAME interface, so the worker has a single code path |
 
 **Determinism, ownership and the switch.** Time comes from the tick clock and

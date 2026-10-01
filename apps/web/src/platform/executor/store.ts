@@ -91,7 +91,7 @@ function db(): ExecutorSql {
 }
 
 // ---------------------------------------------------------------------------
-// DDL — kept byte-equivalent to the tracked db/executor-schema.sql (commentary
+// DDL — kept byte-equivalent to the tracked database/schema/executor-schema.sql (commentary
 // lines excluded); no separate migration runner exists.
 // ---------------------------------------------------------------------------
 export const EXECUTOR_DDL = `CREATE SCHEMA IF NOT EXISTS executor;

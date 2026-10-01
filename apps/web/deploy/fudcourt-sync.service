@@ -9,10 +9,10 @@
 # by *name*, so only one can ever be installed:
 #
 #   apps/web/deploy/fudcourt-sync.service      <-- installed now (Python oracle)
-#   apps/sync/deploy/fudcourt-sync.service  <-- the Rust replacement (not installed)
+#   services/sync/deploy/fudcourt-sync.service  <-- the Rust replacement (not installed)
 #
 # Swapping is therefore a copy + reload, never "both":
-#     cp apps/sync/deploy/fudcourt-sync.{service,timer} ~/.config/systemd/user/
+#     cp services/sync/deploy/fudcourt-sync.{service,timer} ~/.config/systemd/user/
 #     systemctl --user daemon-reload && systemctl --user restart fudcourt-sync.timer
 # Column the diff changes: ExecStart, WorkingDirectory, Documentation, and the
 # Description suffix `(Rust)`.

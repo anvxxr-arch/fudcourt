@@ -19,7 +19,7 @@ Completed/Changed/Moved/Created/Deleted/Tests/Builds/Known failures/Risks/Next.
 | # | Phase | Scope | Acceptance |
 |---|---|---|---|
 | 0 | Audit + baseline | repo-wide inspection, `current.md`/`target.md`/`domain-map.md`/`migration-plan.md`, `docs/operations/BASELINE.md` | no production refactor |
-| 1 | Top-level service restructure | `apps/apicalls → services/data`, `apps/sync → services/sync`; update module paths, CI, hook, scripts, units, docs | web/Go/Rust build+test ≥ baseline |
+| 1 | Top-level service restructure | `services/data → services/data`, `services/sync → services/sync`; update module paths, CI, hook, scripts, units, docs | web/Go/Rust build+test ≥ baseline |
 | 2 | Database ownership | `apps/web/db → database/schema`; table-ownership doc; update drift gates | schema drift gate + store tests green |
 | 3 | Contracts | `packages/contracts` (openapi/events/schemas), `packages/config`, `packages/sdk-ts` generated types | contract docs cover real current routes; sdk types generated from the OpenAPI |
 | 4 | Go API | `services/api` (cmd + internal), health/readiness, structured logs, request-id correlation, error envelope | `go build/test` green; serves `/healthz`+`/readyz` |

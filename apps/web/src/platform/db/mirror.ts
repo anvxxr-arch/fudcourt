@@ -45,7 +45,7 @@ const PG_URL = process.env.FUDCOURT_PG_URL || 'postgres://fudcourt@127.0.0.1:543
 
 type Table = { name: string; cols: string[]; pk: string[] };
 
-// Mirrors db/schema.sql (+ the columns sync-live.py appends). `id` columns are
+// Mirrors database/schema/schema.sql (+ the columns sync-live.py appends). `id` columns are
 // carried so the sequence can be advanced past the imported ids.
 const TABLES: Table[] = [
   { name: 'accounts', cols: ['code', 'name', 'type', 'statement'], pk: ['code'] },

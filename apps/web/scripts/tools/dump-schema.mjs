@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 // Dump / check the live Turso schema (R-1, PLAN SG-2.1).
-//   node scripts/tools/dump-schema.mjs          -> writes db/schema.sql
+//   node scripts/tools/dump-schema.mjs          -> writes database/schema/schema.sql
 //   node scripts/tools/dump-schema.mjs --check  -> exits 1 if live != committed (drift alarm)
 // Root .env supplies TURSO_AUTH_TOKEN (same walk-up rule as sync-live.py).
 // Never prints secret values.
 import fs from 'node:fs';
 import path from 'node:path';
 
-const webroot = path.resolve(new URL('.', import.meta.url).pathname, '../..');     // apps/web (this file is scripts/tools/)
 const root = path.resolve(new URL('.', import.meta.url).pathname, '../../../..');   // repo root (.env)
 function loadEnv() {
   const p = path.join(root, '.env');
@@ -36,16 +35,16 @@ const header = [
 const body = res.rows.map((r) => `${r.sql};`).join('\n\n') + '\n';
 const dump = header + body;
 
-const out = path.join(webroot, 'db', 'schema.sql');
+const out = path.join(root, 'database', 'schema', 'schema.sql');
 const check = process.argv.includes('--check');
 
 if (check) {
   const committed = fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : '';
   if (committed === dump) {
-    console.log('SCHEMA_OK (live == db/schema.sql)');
+    console.log('SCHEMA_OK (live == database/schema/schema.sql)');
     process.exit(0);
   }
-  console.error('SCHEMA_DRIFT: live schema differs from db/schema.sql');
+  console.error('SCHEMA_DRIFT: live schema differs from database/schema/schema.sql');
   const a = new Set(committed.split('\n'));
   const b = new Set(dump.split('\n'));
   for (const l of b) if (!a.has(l)) console.error('  + ' + l.slice(0, 160));

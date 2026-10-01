@@ -3,7 +3,7 @@
 Two databases + one API envelope contract. Verified 2026-09-27 against remote
 head `957836d`.
 
-> ✅ **Versioned since 2026-09-28 (R-1):** `apps/web/db/schema.sql` is a
+> ✅ **Versioned since 2026-09-28 (R-1):** `database/schema/schema.sql` is a
 > generated dump of the live Turso schema — regenerate with
 > `node apps/web/scripts/tools/dump-schema.mjs`, drift-check with `--check`
 > (exits 1 on mismatch; wired into the offline contract gate). The column
@@ -115,7 +115,7 @@ Indexes: btree on `order`, `parent_id`, `slug`, FK columns, `updated_at/created_
 Row nullability rule: **any absent upstream metric is `null` and renders `—`;
 `0` is never substituted.**
 ### 3.1b `khala` envelopes (`/api/khala`, a thin proxy to the Go `apicalls` sidecar)
-A sibling of §3.1, using the **same flat `CrEnvelope` convention** (`apps/apicalls/internal/cryptorank/types.go`):
+A sibling of §3.1, using the **same flat `CrEnvelope` convention** (`services/data/internal/cryptorank/types.go`):
 common fields + per-mode payload keys alongside each other, and the one-line tag rule
 **optional ⇒ the key is ABSENT; nullable ⇒ a present `null`**. Three modes, frozen in
 [`/home/dwizzy/khala-probe/DESIGN.md`](/home/dwizzy/khala-probe/DESIGN.md) §3 and
@@ -241,7 +241,7 @@ khala-specific rules (all measured — see DESIGN.md D2/D4/D5/D6/D7/D10):
   it would 400 the flagship report — and `cryptorank.KeyRe`'s 64-char cap (which would 400
   five of the eight) is deliberately **not** reused.
 ### 3.1c `news` envelope (`/api/news`, a thin proxy to the Go `apicalls` sidecar)
-The Go side (`apps/apicalls/internal/news`) owns the feed table, the strict
+The Go side (`services/data/internal/news`) owns the feed table, the strict
 `source`/`limit` validation, the RSS parse and the 15 s cache; the route validates
 nothing ([DR-012](../records/DECISIONS.md)). Verified live 2026-09-29 by `verify-news.py`
 (**50/50** on `:3101` and through `:3100`).
@@ -278,7 +278,7 @@ Rules (all asserted by `verify-news.py`):
   default — the port's whole point, since the original TS route turned an unknown
   source into a silent empty 200 and clamped `limit`.
 ### 3.1d `chainrank` envelopes (`/api/chainrank`, a thin proxy to the Go `apicalls` sidecar)
-The Go side (`apps/apicalls/internal/chainrank`) owns the two-mode table, the
+The Go side (`services/data/internal/chainrank`) owns the two-mode table, the
 upstream URL construction (pagination relayed VERBATIM), the 32-entry cache and
 the shape check; the route validates nothing ([DR-013](../records/DECISIONS.md)). Verified
 live 2026-09-29 by `verify-chainrank.py` (**50/50** on `:3101` and through `:3100`).

@@ -29,7 +29,7 @@ Analyzed at remote head `957836d` (2026-09-27), local `main` identical
 
 **Layering is clean:** UI (`CryptorankPage.tsx` + 11 pages) → mode-only API
 routes (client can never pass a raw path) → **for cryptorank a Go sidecar
-(`apps/apicalls` :3101) holding the allowlist, the cache and the
+(`services/data` :3101) holding the allowlist, the cache and the
 browser-fingerprint fetch**; every other family still uses `lib/rate-limit.ts` →
 third-party HTML/JSON → shapers → typed envelope. Each layer has one job and
 its own failure vocabulary. Since DR-005 the TS route for cryptorank is a pure

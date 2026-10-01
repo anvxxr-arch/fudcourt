@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * news read proxy (Cointelegraph RSS). Source/limit input, never a raw path.
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `apicalls` (apps/apicalls, 127.0.0.1:3101), exactly like
+ * `apicalls` (services/data, 127.0.0.1:3101), exactly like
  * app/api/khala/route.ts, app/api/llama/route.ts and
  * app/api/cryptorank/route.ts. The Go side owns the feed table, the strict
  * `source`/`limit` validation (known source; integer, 1..100, never clamped),
@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * Everything is forwarded VERBATIM — status, body and the `X-Cache` /
  * `Cache-Control` headers — so the public surface on :3100 is
  * GET /api/news?source=<cointelegraph>[&limit=<n>]
- * with the wire contract the Go side froze (apps/apicalls/internal/news).
+ * with the wire contract the Go side froze (services/data/internal/news).
  *
  * Single source of truth: the feed table and every refusal live in Go ONLY.
  * Re-validating here would be a second implementation waiting to drift, which

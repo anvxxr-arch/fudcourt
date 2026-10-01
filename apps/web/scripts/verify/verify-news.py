@@ -256,7 +256,7 @@ def verify_ui_wiring(base: str) -> None:
     # The feed table: one contract, two spellings.
     m_src = re.search(r"NEWS_SOURCES = \[([^\]]+)\]", lib)
     ts_sources = set(re.findall(r"'([a-z0-9-]+)'", m_src.group(1) if m_src else ""))
-    go_modes = root.parent / "apicalls" / "internal" / "news" / "modes.go"
+    go_modes = root.parent.parent / "services" / "data" / "internal" / "news" / "modes.go"
     if go_modes.exists():
         go_sources = set(re.findall(r'Name:\s*"([a-z0-9-]+)"', go_modes.read_text()))
         check(ts_sources == go_sources and len(ts_sources) == 1,

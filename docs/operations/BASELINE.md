@@ -20,8 +20,8 @@
 
 | # | Command | Working dir | Result |
 |---|---|---|---|
-| 1 | `go build ./... && go vet ./... && go test ./...` | `apps/apicalls` | **PASS** — 8 packages, all green (cmd + 7 internal), 0 failures |
-| 2 | `cargo build --release --bins && cargo test --release` | `apps/sync` | **PASS** — 2 binaries, **17 tests, 5 suites, 0 fail** |
+| 1 | `go build ./... && go vet ./... && go test ./...` | `services/data` | **PASS** — 8 packages, all green (cmd + 7 internal), 0 failures |
+| 2 | `cargo build --release --bins && cargo test --release` | `services/sync` | **PASS** — 2 binaries, **17 tests, 5 suites, 0 fail** |
 | 3 | `python3 scripts/checks/check-contract.py` | `apps/web` | **PASS** — `CONTRACT_OK` (28 CR modes TS↔Go parity, khala/llama/news/chainrank parity, proxy-shape + mutation guards) |
 | 4 | `python3 scripts/checks/check-deploy.py` | `apps/web` | **PASS** — `check-deploy: OK (10 unit files)` |
 | 5 | `python3 scripts/checks/check-structure.py` | `apps/web` | **PASS** — `STRUCTURE_OK (139 files)` |
@@ -38,8 +38,8 @@ runs are cited in `docs/records/DECISIONS.md` (DR-005/006/009/014/019/020/021).
 
 ```text
 apps/web        Next.js 16 + Payload CMS + TS CEX executor runtime + executor worker
-apps/apicalls   Go acquisition sidecar (cryptorank, chainrank, llama, news, khala) :3101
-apps/sync       Rust crate: fudcourt-sync (balance sync) + fudcourt-reconciled :3102
+services/data   Go acquisition sidecar (cryptorank, chainrank, llama, news, khala) :3101
+services/sync       Rust crate: fudcourt-sync (balance sync) + fudcourt-reconciled :3102
 ```
 
 Deploy units versioned in-repo: 10 unit files under `apps/*/deploy/`

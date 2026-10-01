@@ -380,7 +380,7 @@ for q, want in CR:
     st, b = hit(f"/api/cryptorank?{q}", timeout=120)
     rec("cr", f"/api/cryptorank?{q}", st, want, b)
 print("=== F. khala: 3 modes + strict params + real-404 decoy ===", flush=True)
-# khala is the second sidecar-resident family (apps/apicalls, package
+# khala is the second sidecar-resident family (services/data, package
 # internal/khala). `key` belongs to mode=report only; `limit` to latest
 # (1..50 strict) -- never clamped, never silently ignored. The deep contract
 # (dates, ISO parity, body fidelity, sitemap equality) lives in

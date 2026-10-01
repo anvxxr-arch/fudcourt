@@ -65,7 +65,7 @@ apps/
 tree (`api/`, one wrapper per deep link) plus `app/store/store-shell.tsx` (the SPA
 state container), `src/components/` the 18 panel components and `src/styles/` the
 design tokens + view types. The Go sidecar is one package per family —
-`internal/{cryptorank,khala,llama,news,chainrank}` — and `apps/sync/` is the Rust
+`internal/{cryptorank,khala,llama,news,chainrank}` — and `services/sync/` is the Rust
 crate behind both of its services (`fudcourt-sync`, `fudcourt-reconciled`).
 `/api/reconcile` is a thin proxy to `fudcourt-reconciled` on `:3102` (DR-014), with
 `lib/reconcile.ts` kept as the independent oracle rather than a fallback path.

@@ -7,7 +7,7 @@
    regression guard for the 2026-09-28 incident where an unguarded DELETE probe
    hit real data, and for the retired x-fud-token that leaked into the client
    bundle).
-3. ONE CONTRACT, TWO IMPLEMENTATIONS: the Go sidecar (apps/apicalls) owns the
+3. ONE CONTRACT, TWO IMPLEMENTATIONS: the Go sidecar (services/data) owns the
    CryptoRank mode/key tables at runtime, so its table in
    internal/cryptorank/modes.go must EQUAL the TS table in src/features/cryptorank/client.ts --
    mode list, disabled list, the exchange/launchpool/nodesale/RWA whitelists
@@ -31,10 +31,10 @@ ROOT = Path(__file__).resolve().parents[2]  # apps/web (this file is scripts/che
 # route tree is at SRC/app; a `lib/` no longer exists — putting one back would
 # make the feature lookups below fail loudly, which is the intended behaviour.
 SRC = ROOT / "src"
-# Normally apps/apicalls/internal/cryptorank/modes.go; overridable so the parity
+# Normally services/data/internal/cryptorank/modes.go; overridable so the parity
 # gate can be exercised (and so CI survives a different checkout layout).
 GO_TABLE = Path(os.environ.get(
-    "APICALLS_MODES_GO", ROOT.parent / "apicalls" / "internal" / "cryptorank" / "modes.go"))
+    "APICALLS_MODES_GO", ROOT.parent.parent / "services" / "data" / "internal" / "cryptorank" / "modes.go"))
 fails = []
 def modes_from_lib() -> set:
     src = (SRC / "features" / "cryptorank" / "client.ts").read_text()
@@ -95,7 +95,7 @@ def keys_of(body: str | None, quote: str = '"') -> set | None:
 def check_go_table() -> bool:
     """Go cryptorank table must equal the TS table (both languages, same contract)."""
     if not GO_TABLE.exists():
-        print(f"SKIP: apps/apicalls mode table not found at {GO_TABLE}")
+        print(f"SKIP: services/data mode table not found at {GO_TABLE}")
         return False
     ts = (SRC / "features" / "cryptorank" / "client.ts").read_text()
     go = GO_TABLE.read_text()
@@ -143,7 +143,7 @@ def check_route_is_proxy(rel: str = "cryptorank", needles=("execFile", "child_pr
     for needle in needles:
         if needle in src:
             fails.append(f"src/app/(frontend)/api/{rel}/route.ts: {needle!r} present — the route must be "
-                         f"a thin proxy to apps/apicalls (Go owns validation)")
+                         f"a thin proxy to services/data (Go owns validation)")
     if "APICALLS" not in src:
         fails.append(f"src/app/(frontend)/api/{rel}/route.ts: no APICALLS upstream base — proxy wiring lost")
     return True
@@ -163,7 +163,7 @@ check_route_is_proxy()
 # family does (same convention as modes_from_sweep).
 KH_TS = SRC / "features" / "khala" / "client.ts"
 KH_GO = Path(os.environ.get("APICALLS_KHALA_GO",
-                            ROOT.parent / "apicalls" / "internal" / "khala" / "modes.go"))
+                            ROOT.parent.parent / "services" / "data" / "internal" / "khala" / "modes.go"))
 kh_parity = "khala absent"
 if KH_TS.exists() and KH_GO.exists():
     kh_ts_modes = set(re.findall(
@@ -184,11 +184,11 @@ elif KH_TS.exists() or KH_GO.exists():
 if check_route_is_proxy("khala"):
     kh_parity += ", route is a proxy"
 # llama: the THIRD sidecar-resident family (PLAN G9 SG-9.3). Same convention as
-# khala -- src/features/llama/client.ts carries the TS mode list, apps/apicalls/internal/llama/
+# khala -- src/features/llama/client.ts carries the TS mode list, services/data/internal/llama/
 # modes.go the Go one, and the route must be the verbatim proxy.
 LL_TS = SRC / "features" / "llama" / "client.ts"
 LL_GO = Path(os.environ.get("APICALLS_LLAMA_GO",
-                            ROOT.parent / "apicalls" / "internal" / "llama" / "modes.go"))
+                            ROOT.parent.parent / "services" / "data" / "internal" / "llama" / "modes.go"))
 ll_parity = "llama absent"
 if LL_TS.exists() and LL_GO.exists():
     ll_ts_modes = set(re.findall(
@@ -211,13 +211,13 @@ if check_route_is_proxy("llama", ("execFile", "child_process", "limitedFetch",
     ll_parity += ", route is a proxy"
 # news: the FOURTH sidecar-resident family (PLAN G12 SG-12.3), and the first
 # whose upstream is a DOCUMENT rather than a JSON API. Same convention as
-# llama -- src/features/news/client.ts carries the TS feed list, apps/apicalls/internal/news/
+# llama -- src/features/news/client.ts carries the TS feed list, services/data/internal/news/
 # modes.go the Go one, and the route must be the verbatim proxy. The RSS parser
 # itself must not come back: src/features/llama/client.ts-style mirror has no parse code, and a
 # route that regrows one is the drift this row exists to catch.
 NW_TS = SRC / "features" / "news" / "client.ts"
 NW_GO = Path(os.environ.get("APICALLS_NEWS_GO",
-                            ROOT.parent / "apicalls" / "internal" / "news" / "modes.go"))
+                            ROOT.parent.parent / "services" / "data" / "internal" / "news" / "modes.go"))
 nw_parity = "news absent"
 if NW_TS.exists() and NW_GO.exists():
     nw_ts_sources = set(re.findall(
@@ -254,7 +254,7 @@ if check_route_is_proxy("news", ("execFile", "child_process", "limitedFetch",
 # board must show).
 CH_TS = SRC / "features" / "chainrank" / "client.ts"
 CH_GO = Path(os.environ.get("APICALLS_CHAINRANK_GO",
-                            ROOT.parent / "apicalls" / "internal" / "chainrank" / "modes.go"))
+                            ROOT.parent.parent / "services" / "data" / "internal" / "chainrank" / "modes.go"))
 ch_parity = "chainrank absent"
 if CH_TS.exists() and CH_GO.exists():
     ch_ts_modes = set(re.findall(

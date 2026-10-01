@@ -1,0 +1,23 @@
+[Unit]
+Description=FUD Court apicalls (Go acquisition sidecar: CryptoRank) :3101
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/dwizzy/fudcourt/services/data
+Environment=APICALLS_ADDR=127.0.0.1:3101
+Environment=APICALLS_CACHE_DIR=/home/dwizzy/.cache/apicalls
+# Shared L2 (Valkey) — DR-019. Survives a sidecar restart, so a deploy no longer
+# throws away every cached upstream body. The unit does not Require= it: the L2
+# is an optimisation and the sidecar must start without it.
+Environment=APICALLS_VALKEY_ADDR=127.0.0.1:6379
+Environment=APICALLS_VALKEY_PASSWORD=valkey_dev
+ExecStart=/home/dwizzy/fudcourt/services/data/bin/apicalls
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+[Install]
+WantedBy=default.target

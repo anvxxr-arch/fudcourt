@@ -31,8 +31,8 @@ fudcourt/
 ├── services/
 │   ├── api/                    # Go: primary backend API (modular domains)
 │   ├── executor/               # Go: execution engine, risk, sizing, strategies, adapters
-│   ├── data/                   # Go: external data aggregation (was apps/apicalls)
-│   └── sync/                   # Rust: streams, normalization, reconciliation (was apps/sync)
+│   ├── data/                   # Go: external data aggregation (was services/data)
+│   └── sync/                   # Rust: streams, normalization, reconciliation (was services/sync)
 ├── packages/
 │   ├── contracts/              # openapi/ + events/ + schemas/ — canonical contracts
 │   ├── sdk-ts/                 # generated/typed TS client from contracts

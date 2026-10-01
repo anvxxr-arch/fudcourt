@@ -12,7 +12,7 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 
 | Name | Consumers (first-party) | Home (file) | Production consumer | CI needs it? |
 |------|------------------------|-------------|---------------------|--------------|
-| `TURSO_AUTH_TOKEN` | `apps/web/lib/db.ts`, `apps/sync/src/db.rs`, `scripts/tools/sync-live.py`, `scripts/tools/dump-schema.mjs` | `./.env` (root) + `apps/web/.env.local` | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`; it REFUSES TO START without the token) | no |
+| `TURSO_AUTH_TOKEN` | `apps/web/lib/db.ts`, `services/sync/src/db.rs`, `scripts/tools/sync-live.py`, `scripts/tools/dump-schema.mjs` | `./.env` (root) + `apps/web/.env.local` | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`; it REFUSES TO START without the token) | no |
 | `ALCHEMY_KEY` | `apps/web/scripts/tools/sync-live.py` (live ETH RPC) + `apps/web/scripts/archive/*.mjs` (forensic one-offs **deleted 2026-09-29**, after the rotation was recorded) | `./.env` (root) | `fudcourt-sync.timer` | no |
 | `FUDCOURT_BOT_TOKEN` | `app/api/auth/callback` + `app/admin` (reads guild member roles with the bot) | `apps/web/.env.local` | `fudcourt-web` | no |
 | `FUDCOURT_CLIENT_SECRET` | `app/api/auth/callback` (OAuth code exchange) | `apps/web/.env.local` | `fudcourt-web` | no |

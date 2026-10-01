@@ -497,8 +497,9 @@ test('§59: the DDL uniqueness constraints are the ones the SQL statements confl
   assert.match(EXECUTOR_DDL, /UNIQUE \(execution_id, client_order_id\)/);
 });
 
-test('§59: the embedded DDL matches the tracked db/executor-schema.sql (no silent drift)', () => {
-  const tracked = readFileSync(join(__dirname, '..', '..', '..', 'db', 'executor-schema.sql'), 'utf8');
+test('§59: the embedded DDL matches the tracked database/schema/executor-schema.sql (no silent drift)', () => {
+  // __dirname = apps/web/.shaper-tests/scripts/tests → 5 up = repo root
+  const tracked = readFileSync(join(__dirname, '..', '..', '..', '..', '..', 'database', 'schema', 'executor-schema.sql'), 'utf8');
   const normalize = (text: string): string =>
     text
       .split('\n')
@@ -506,7 +507,7 @@ test('§59: the embedded DDL matches the tracked db/executor-schema.sql (no sile
       .map((line) => line.trimEnd())
       .join('\n')
       .trim();
-  assert.equal(normalize(EXECUTOR_DDL), normalize(tracked), 'store.ts EXECUTOR_DDL and db/executor-schema.sql drifted apart');
+  assert.equal(normalize(EXECUTOR_DDL), normalize(tracked), 'store.ts EXECUTOR_DDL and database/schema/executor-schema.sql drifted apart');
 });
 
 test('§59: ensureExecutorSchema creates the schema first and sends one statement per round trip', async () => {

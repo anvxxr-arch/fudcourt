@@ -1,7 +1,7 @@
 # FUD Court sync timer — drives fudcourt-sync.service every 5 min.
 #
 # DEPLOYED as `~/.config/systemd/user/fudcourt-sync.timer`. Byte-identical in intent
-# to apps/sync-rs/deploy/fudcourt-sync.timer (that one carries only the Rust-side
+# to services/sync-rs/deploy/fudcourt-sync.timer (that one carries only the Rust-side
 # prose); this timer references the unit by name, so it is runtime-agnostic — the
 # Python and Rust variants share it unchanged.
 #

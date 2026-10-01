@@ -1,7 +1,7 @@
 [Unit]
 Description=FUD Court Turso -> Postgres read-model projection (DR-019)
 Documentation=file:///home/dwizzy/fudcourt/apps/web/scripts/tools/pg-load.ts
-Documentation=file:///home/dwizzy/fudcourt/apps/web/db/pg-schema.sql
+Documentation=file:///home/dwizzy/fudcourt/database/schema/pg-schema.sql
 After=network-online.target postgresql@17-main.service
 Wants=network-online.target
 [Service]

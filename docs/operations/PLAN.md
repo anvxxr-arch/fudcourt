@@ -276,7 +276,7 @@ found no inbound limit on the API (DR-004).
 ## G7 — 🔄 CryptoRank runtime cutover: Python helper → Go `apicalls` sidecar (2026-09-29)
 Owner direction: one implementation of the CryptoRank contract, the Go one that
 holds a real browser TLS fingerprint (→ [DR-005](../records/DECISIONS.md)).
-- SG-7.1 ✅ `apps/apicalls` (Go, `module github.com/anvxxr-arch/fudcourt/apps/apicalls`,
+- SG-7.1 ✅ `services/data` (Go, `module github.com/anvxxr-arch/fudcourt/services/data`,
   `go 1.24.1`) — `internal/cryptorank` (mode/key/allowlist tables + disabled-mode
   refusal text), `internal/cryptorank` (tls-client `chrome_131` + HTTP/2, disk
   cache TTL, 429 backoff), `internal/cryptorank` (envelope types), `cmd/apicalls`
@@ -294,16 +294,16 @@ holds a real browser TLS fingerprint (→ [DR-005](../records/DECISIONS.md)).
   `HELPER`, `runHelperOnce`/`runHelper` (429 backoff now in Go), the `newstag`
   soft-404 derivation and the funding/unlocks 503 branch (both now Go). Fail
   loud: sidecar unreachable → 502 `apicalls unreachable: <reason>`.
-- SG-7.3 ✅ Ops: versioned unit `apps/apicalls/deploy/fudcourt-apicalls.service`
+- SG-7.3 ✅ Ops: versioned unit `services/data/deploy/fudcourt-apicalls.service`
   (deployed to `~/.config/systemd/user/`, `Restart=always`, `RestartSec=5`,
   `KillSignal=SIGTERM`, `TimeoutStopSec=15`, cache `~/.cache/apicalls`); pre-push
-  hook gained an `apps/apicalls/`/`\.go$` branch running `go build/vet/test`
+  hook gained an `services/data/`/`\.go$` branch running `go build/vet/test`
   (offline, cached go1.24.1); CI gained an `apicalls` job (setup-go 1.24.1,
-  cache on `apps/apicalls/go.sum`); root `.gitignore` ignores
-  `apps/apicalls/bin/` + `apps/apicalls/.cache/`.
+  cache on `services/data/go.sum`); root `.gitignore` ignores
+  `services/data/bin/` + `services/data/.cache/`.
 - SG-7.4 ✅ One contract, two implementations, enforced offline:
   `apps/web/scripts/checks/check-contract.py` now parses
-  `apps/apicalls/internal/cryptorank/modes.go` and asserts it equals
+  `services/data/internal/cryptorank/modes.go` and asserts it equals
   `lib/cryptorank.ts` — modes, disabled list, exchange/launchpool/nodesale/RWA
   whitelists, keyed + default-key maps — and asserts the route is still a
   proxy (no `execFile`/`cr_fetch`/`CR_PYTHON`/local `CR_MODES.includes`). If the
@@ -364,7 +364,7 @@ sequence; the ✅/~~strikethrough~~ marks below carry the current state.
   2026-09-29, read-only, scratch outside the repo) and `DESIGN.md` (decisions D1–D12
   each carrying its evidence). Frozen contract **v4** in DESIGN.md §3, re-checked
   against the landed Go types.
-- SG-8.2 ✅ **Go package** — `apps/apicalls/internal/khala/{modes,fetch,parse,shape}.go`
+- SG-8.2 ✅ **Go package** — `services/data/internal/khala/{modes,fetch,parse,shape}.go`
   (+ `parse_test.go`, `re_debug_test.go`): one package, plain `net/http` (measured: a
   non-browser UA gets 200 on the homepage 259,008 B, a report page 468,140 B and the
   `framerusercontent.com` index; no challenge), `golang.org/x/net/html` (already in
@@ -517,7 +517,7 @@ scalable"*. Everything below was executed and re-verified; nothing is a proposal
 - SG-11.4 ✅ **Every production entry point is now versioned in-repo** —
   `apps/web/deploy/{fudcourt-web.service, fudcourt-sync.service, fudcourt-sync.timer}`,
   `apps/blog/deploy/fudcourt-blog.service` (new at the time; **retired in DR-017**), alongside the existing
-  `apps/apicalls/deploy/fudcourt-apicalls.service`. Each was diffed against the
+  `services/data/deploy/fudcourt-apicalls.service`. Each was diffed against the
   installed unit (identical, comments aside). The two `fudcourt-sync.service`
   variants (Python oracle vs the sibling's Rust replacement) are cross-referenced in
   their headers, because systemd resolves by name and only one can be installed.
@@ -571,7 +571,7 @@ program that direction names; the subgoals below are what this session measured.
   sidecar; route sweep **144/155** at the time (now **154/165** after the news + chainrank families added their checks) with khala
   17/17, cryptorank 58/58 and the whole API group 37/37 minus the one CoinGecko 403.
 - SG-9.3 ✅ **Go weighting: `llama` family moved into the sidecar** — new
-  `apps/apicalls/internal/llama/` package (modes/fetch/shape + tests) with an in-memory
+  `services/data/internal/llama/` package (modes/fetch/shape + tests) with an in-memory
   TTL cache + single-flight, wired as `/api/llama` on the mux with its own `/healthz`
   key, and `apps/web/app/api/llama/route.ts` reduced to a verbatim proxy
   (`app/api/khala/route.ts` as the template). Acceptance is the existing live harness:
@@ -580,7 +580,7 @@ program that direction names; the subgoals below are what this session measured.
   production :3100 proxy**, `/llama` + `/api/llama` 200 on the origin and the public
   hostname, `check-contract.py` OK with a new **llama LLAMA_MODES parity** row, the
   sweep gained 5 strict-param checks, and `bun run build` + `bunx tsc --noEmit` stay 0.
-- SG-9.4 ✅ **Rust service: the live balance sync** — `apps/sync/` reproduces
+- SG-9.4 ✅ **Rust service: the live balance sync** — `services/sync/` reproduces
   `apps/web/scripts/tools/sync-live.py` (Turso `assets` + share %, Alchemy EVM RPC, Solana RPC,
   Hyperliquid, the same "a failed RPC never becomes 0" rule), verified by running both
   binaries back to back and diffing the rows: **17 rows, zero symmetric difference, zero
@@ -590,8 +590,8 @@ program that direction names; the subgoals below are what this session measured.
   which is wrong exactly when the product lands on a tie — `round(12.345, 2)` must be
   **12.35** (CPython) but the old form gave 12.34. Rounding now goes through Rust's
   correctly-rounded fixed-precision formatting, and the 5 crate tests assert measured
-  CPython values. Ops: versioned `apps/sync/deploy/fudcourt-sync.{service,timer}`,
-  a CI `sync` job and a pre-push `cargo build/test` branch, `apps/sync/target/`
+  CPython values. Ops: versioned `services/sync/deploy/fudcourt-sync.{service,timer}`,
+  a CI `sync` job and a pre-push `cargo build/test` branch, `services/sync/target/`
   gitignored. The Python script stays installed as the oracle and the rollback.
 - SG-9.5 ✅ **Live incident fixes found on the way** (both measured, both verified):
   `fudcourt-sync.service` had been failing every 5 min since ~09:40 because CoinGecko
@@ -608,7 +608,7 @@ program that direction names; the subgoals below are what this session measured.
   this goal started, so this session edited in place and left committing to the operator;
   `git status` is the list, `git log` shows none of it.
 - SG-9.7 ✅ **Rust weighting: `/api/reconcile` served by a Rust HTTP service (DR-014)** —
-  `apps/sync` now builds two binaries: the balance sync (`fudcourt-sync`) and
+  `services/sync` now builds two binaries: the balance sync (`fudcourt-sync`) and
   `fudcourt-reconciled` (`127.0.0.1:3102`), a **zero-new-dependency** `tokio` TCP/HTTP
   server (bounded framing lives in `src/server.rs`; `tokio` gained `net`+`io-util`,
   `serde_json` gained the `preserve_order` *feature* — no new package).
@@ -726,10 +726,10 @@ program that direction names; the subgoals below are what this session measured.
   symbol; 18 route wrappers updated)
 - T-11.2.4 [OK] `app/admin/member-table.tsx` → `members-table.tsx`
 ### SG-11.3 [OK] Rust + blog + apicalls script
-- T-11.3.1 [OK] `apps/sync-rs` → `apps/sync`, crate/binary `sync-rs` →
+- T-11.3.1 [OK] `services/sync-rs` → `services/sync`, crate/binary `sync-rs` →
   `fudcourt-sync`; CI job, pre-push branch, docs and both versioned units updated
 - T-11.3.2 [OK] `apps/blog/scripts/seed.ts` → `src/seed.ts` (import fixed) — later relocated to `apps/web/src/cms/seed.ts` by DR-017
-- T-11.3.3 [OK] `apps/apicalls/scripts/smoke.sh` → `smoke-apicalls.sh`
+- T-11.3.3 [OK] `services/data/scripts/smoke.sh` → `smoke-apicalls.sh`
 ### SG-11.4 [OK] Gates + live verification (the equivalence proof)
 - T-11.4.1 [OK] `go build/vet/test` green (cryptorank parity oracle included),
   `cargo build/test` 5/5, `tsc` 0, `test:shapers` 80/80, `build` 0,
@@ -750,7 +750,7 @@ program that direction names; the subgoals below are what this session measured.
 ---
 ## G12 - BACKEND: the `news` family moves into the Go sidecar (DR-012)
 > Owner direction, continued: *"backend framework weighted on go/rust"*. Fourth
-> acquisition family in `apps/apicalls`; first one whose upstream is a DOCUMENT.
+> acquisition family in `services/data`; first one whose upstream is a DOCUMENT.
 ### SG-12.1 [OK] The Go package `internal/news`
 - T-12.1.1 [OK] `modes.go` — the feed table (`Sources`), `labelOf`, the strict
   `source`/`limit` validators (`LimitMin/Max = 1/100`, `LimitDefault = 30`) with
@@ -793,7 +793,7 @@ program that direction names; the subgoals below are what this session measured.
 ---
 ## G13 - BACKEND: the `chainrank` family moves into the Go sidecar (DR-013)
 > Owner direction, continued: *"backend framework weighted on go/rust"*. Fifth
-> acquisition family in `apps/apicalls`; reads only — the write surface stays
+> acquisition family in `services/data`; reads only — the write surface stays
 > unproxied by design.
 ### SG-13.1 [OK] The Go package `internal/chainrank`
 - T-13.1.1 [OK] `modes.go` — the two-mode table, `UpstreamURL` (pagination

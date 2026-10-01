@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * chainrank read proxy (chainrank.fyi). Mode + pagination input, never a raw path.
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `apicalls` (apps/apicalls, 127.0.0.1:3101), exactly like
+ * `apicalls` (services/data, 127.0.0.1:3101), exactly like
  * app/api/khala/route.ts, app/api/llama/route.ts, app/api/news/route.ts and
  * app/api/cryptorank/route.ts. The Go side owns the mode table, the upstream
  * URL construction, the 15s TTL cache + single-flight keyed on that URL, the
@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * VERBATIM — status, body and the `X-Cache` / `Cache-Control` headers — so the
  * public surface on :3100 is
  * GET /api/chainrank?mode=<stats|listings>[&page=<n>][&pageSize=<n>]
- * with the wire contract the Go side froze (apps/apicalls/internal/chainrank).
+ * with the wire contract the Go side froze (services/data/internal/chainrank).
  *
  * The relay-verbatim rule is why this route must NOT clamp pagination:
  * upstream silently clamps page<1 to 1 and caps pageSize at 200, so a local
