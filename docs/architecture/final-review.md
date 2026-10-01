@@ -197,8 +197,13 @@ host unit's `ExecStart`).
    unblocks debt items 1–4 at once.
 2. **Then** execute the Phase 8 move (`apps/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
    repointing the 77 references in one commit.
-3. **Wire the sync oracle gate** (`verify-sync.py --fixtures`) into `verify-all.sh` and populate
-   `tests/oracle/`.
+3. **Sync oracle gate — DONE (uncommitted, by the concurrent writer).** `verify-sync.py`
+   (fixture replay, no `--fixtures` flag needed) is wired into `verify-all.sh` and passes:
+   `SYNC_ORACLE_OK (34 rows, 40 request keys)` — Python oracle and Rust `fudcourt-sync` produce
+   **byte-identical** `assets` projections from `tests/oracle/fixtures/capture.json` (40 recorded
+   responses across rpc/hl/prices), and no Turso write is issued. The gate and its `oracle.rs`
+   seam are the writer's Phase 6 work, left uncommitted on the tree; the review records it as
+   verified, not as committed.
 4. **Commit per phase** before stacking more change (see §10).
 5. **Optional perf work** (only on measurement): executor exchange-metadata caching, connection
    pooling — none attempted here because no benchmark showed a problem (objective: "Do not
