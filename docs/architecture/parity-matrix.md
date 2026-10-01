@@ -26,7 +26,7 @@ Status values: `DONE` (parity vectors ported + green), `IN FLIGHT` (slice runnin
 
 | Gate | Proof required | Status |
 |---|---|---|
-| All rows 1–9 `DONE` | this matrix | **DONE 2026-10-01** (19 packages green, 266 test funcs) |
+| All rows 1–9 `DONE` | this matrix | **DONE 2026-10-01** (19 packages green, 266+ test funcs) |
 | Composed Go paper E2E harness (`internal/e2e/paper_e2e_test.go`) drives worker + paper venue + lease + store together through the §127 scenario | `go test ./services/executor/internal/e2e/` | **DONE 2026-10-01** — 12 tests, hermetic (no PG/Valkey/creds/network), covers create→place→fill→complete, TWAP multi-child schedule (§107), lease contention, restart-no-duplicate-order, cancel-resting, duplicate-start-noop, disconnect-degrade-then-recover, rejected-order-then-replaces, partial-fill-then-complete, pause/resume, reconciliation-mismatch (§94), plan/risk sizing; stable under `-race -count=3` |
 | `verify:executor` (`executor-paper-e2e.ts`) green against the **Go** worker | run output, env-gated on `FUDCOURT_EXECUTOR_MASTER_KEY` (verbatim error in `current.md` §5a) | OPEN (needs `FUDCOURT_EXECUTOR_PG_URL` + master key — the TS harness exercises the TS runtime against live Postgres/Valkey, so it is the *live* half of the gate; the offline Go half above is now proven) |
 | EXECUTOR DDL lifted to `database/schema/executor-schema.sql` as the sole owner (store DDL byte-identity stays PASS) | `database/schema/executor-schema.sql` + store tests | OPEN |

@@ -300,8 +300,8 @@ at /home/dwizzy/fudcourt/apps/web/scripts/verify/executor-paper-e2e.ts:100:29
 ```
 **Go-side parity (2026-10-01, measured on this tree):** `services/executor` is a Go 1.25 module —
 `go build ./... && go vet ./... && go test ./...` green, 19 internal packages + `cmd/executor`,
-266 test funcs (all three Go
-modules together: 556 test funcs). Row-by-row TS↔Go status lives in
+266+ test funcs (all three Go
+modules together: 550+ test funcs). Row-by-row TS↔Go status lives in
 [`parity-matrix.md`](parity-matrix.md) §cutover; every `DONE` row cites the Go suite that pins it.
 The offline composed artifact of that matrix is `services/executor/internal/e2e/` — 12 hermetic
 scenarios (create→place→fill→complete, TWAP multi-child schedule with the §107 sum bound, lease
