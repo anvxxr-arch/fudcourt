@@ -92,6 +92,54 @@ jobs:
         run: cargo build --release --bins
       - name: Test
         run: cargo test --release
+  api:
+    name: "api+executor - build, vet, test (Go backend modules)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.0'
+          cache-dependency-path: |
+            services/api/go.sum
+            services/executor/go.sum
+      - name: Build
+        run: go build ./services/api/... ./services/executor/...
+      - name: Vet
+        run: go vet ./services/api/... ./services/executor/...
+      - name: Test
+        run: go test ./services/api/... ./services/executor/...
+  contracts:
+    name: "contracts - drift gate + generated SDK typecheck"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - name: "Contracts drift gate (OpenAPI enums vs types.ts, route coverage, event catalog)"
+        run: node packages/contracts/scripts/check-contract.mjs
+      - name: "Generated SDK matches its sources (openapi + event catalog)"
+        working-directory: packages/sdk-ts
+        run: |
+          set -euo pipefail
+          bun install --frozen-lockfile
+          # Regenerate and compare against the tree copy — catches stale or
+          # hand-edited src/generated regardless of git state (generate is
+          # deterministic: same inputs -> byte-identical output).
+          tmp=$(mktemp -d)
+          cp -r src/generated "$tmp/generated"
+          bun run generate
+          if ! diff -r "$tmp/generated" src/generated; then
+            echo "::error::src/generated is stale vs packages/contracts — run 'cd packages/sdk-ts && bun run generate' and commit"
+            exit 1
+          fi
+      - name: "SDK typecheck (strict)"
+        working-directory: packages/sdk-ts
+        run: bun run typecheck
   hooks:
     name: "pre-push hook syntax"
     runs-on: ubuntu-latest

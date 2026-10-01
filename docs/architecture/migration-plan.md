@@ -111,6 +111,17 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
   until the proxy is proven); Tunnel ingress unchanged.
 
 ## Phase 5 — executor TS → Go incremental port (`services/executor`)
+> **Amended 2026-10-01 (port IN FLIGHT, measured green):** `services/executor` is a
+> Go 1.25 module (`go.work` member). Landed and verified green (`go build/vet/test
+> ./...` fresh pass, 174 test funcs): `internal/{executor (records/enums/lifecycle/
+> types), decimal, execution, idempotency, orders, risk, sizing, strategy, worker,
+> planner (pkg present), lock}` and `internal/exchange` (interface, registry,
+> classify/symbols/credentials/http) with adapters `binance`, `bybit`, `mexc` and
+> `paper` (same-interface simulated matcher). Exchange+lock slice alone: 108 test
+> funcs / 390 cases, classifier/symbol/signing/error-mapping parity with
+> `exchange.ts` documented in code. **Still in flight:** planner/worker/
+> persistence/cmd/executor wiring per the slice queue. **The [parity matrix](parity-matrix.md) gates
+> any TS deletion — the TS executor remains the production executor until then.**
 
 Port order chosen so parity tests can gate each deletion (per module in `current.md` §5):
 

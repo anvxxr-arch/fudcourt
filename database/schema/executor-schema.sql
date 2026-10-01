@@ -1,7 +1,7 @@
 -- Executor domain schema (PRD §59–§63, §110) — the tracked DDL for the
 -- executor.* Postgres schema.
 --
--- WHY A SEPARATE SCHEMA: the treasury read model (db/pg-schema.sql, `public`) is
+-- WHY A SEPARATE SCHEMA: the treasury read model (database/schema/pg-schema.sql, `public`) is
 -- pruned and overwritten wholesale by the Turso->Postgres mirror; the executor
 -- writes live data and must never share that blast radius. Everything here lives
 -- in `executor` and nothing in `platform/db/mirror.ts` touches it.
