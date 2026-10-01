@@ -242,6 +242,8 @@ if not m or r.status_code != 200:
     print(json.dumps({{"ok": False, "status": r.status_code}})); sys.exit(0)
 pp = json.loads(m.group(1))["props"]["pageProps"]
 rows = pp.get("coins") or pp.get("fallbackData") or []
+if isinstance(rows, dict):  # upstream wraps the list: {{"coins":{{"data":[...],"total":N}}}}
+    rows = rows.get("data") or []
 tbl = pp.get("fallbackTableData") or {{}}
 if tbl.get("data"): rows = tbl["data"]
 first = rows[0] if rows else {{}}
