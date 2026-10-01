@@ -124,7 +124,7 @@ Items 1–4 are the *same* dependency: the executor cutover. They are a single d
 
 | # | Objective "done when" | Status | Evidence (this tree, 2026-10-01) |
 | --- | --- | --- | --- |
-| 1 | `apps/web` no longer owns executor runtime | **PARTIAL — gated** | `apps/web/src/platform/executor/` = 7,974 LOC across 10 modules still present; cutover blocked on the Go paper harness + credentials (§9.1) |
+| 1 | `apps/web` no longer owns executor runtime | **PARTIAL — gated** | `apps/web/src/platform/executor/*.ts` = 7,974 LOC (9 files) + `scripts/executor/worker.ts` = 55 → 8,029 total, still present; cutover blocked on the Go paper harness + credentials (§9.1) |
 | 2 | `apps/web` no longer owns DB schema | MET | `find apps/web -name '*.sql'` → none; DDL lives in `database/schema/{schema,pg-schema,executor-schema}.sql` |
 | 3 | `apps/apicalls` → `services/data` | MET | `apps/apicalls` absent; `services/data/{cmd/apicalls,internal/*}`, module path rewritten |
 | 4 | Rust sync under `services/sync` | MET | `services/sync/{src,tests,Cargo.toml}`; `cargo test --release` green |
@@ -220,10 +220,17 @@ host unit's `ExecStart`).
    **Precision (verified this session):** `apps/web/scripts/verify/executor-paper-e2e.ts`
    imports `@/platform/executor/{store,worker,plan,runtime,lock}` — it exercises the **TS**
    runtime against the real Postgres/Valkey, so it is *not yet* the "against the Go worker" gate
-   the parity matrix names; a Go-side paper harness (driving `services/executor/cmd/executor`
-   through the same §127 scenario) still has to be written. For the same reason it was **not run
-   here**: it would create the `executor` schema in the shared local Postgres for a gate that does
-   not yet prove Go parity (and the concurrent writer is actively editing that exact code).
+   the parity matrix names. The Go side has the pieces but not the composition:
+   `internal/exchange/paper` is unit-tested **in-package** (`paper_test.go`, `match.go`), and
+   `internal/worker` is tested with a **fake exchange + fake store**
+   (`TestRestartDoesNotDoubleSubmit`, `TestStartExecutionIdempotent`, `TestRiskStopPath`, …), but
+   **no test drives `worker` + `paper` together** through the §127 scenario (create → size →
+   schedule → fill → risk update → TWAP → cancel → restart-recover). That composed Go paper harness
+   is the missing artifact; it can run offline against the existing fake worker store + the paper
+   adapter, and it is what would let the cutover row turn green. For that reason
+   `executor-paper-e2e.ts` was **not run here**: it would create the `executor` schema in the shared
+   local Postgres for a gate that does not yet prove Go parity (and the concurrent writer is
+   actively editing `services/executor` this session, so a competing new test file there is unsafe).
 2. **Then** execute the Phase 8 move (`apps/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
    repointing the 77 references in one commit.
 3. **Sync oracle gate — DONE (uncommitted, by the concurrent writer).** `verify-sync.py`
