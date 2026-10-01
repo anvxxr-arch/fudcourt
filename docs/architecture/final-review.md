@@ -140,7 +140,7 @@ Items 1–4 are the *same* dependency: the executor cutover. They are a single d
 | 13 | CI is domain-aware | MET | `.github/workflows/{web,go,rust,contracts,integration}.yml` |
 | 14 | services do not import each other's impl | MET | each Go module imports only its own path (§5) |
 | 15 | existing product behavior compatible | MET | `verify-all.sh` green; host units active |
-| 16 | migrated executor has parity tests | **PARTIAL** | `parity-matrix.md` rows 1–9 DONE, cutover rows OPEN; Go side has 240 funcs but no Go paper harness (§9.1) |
+| 16 | migrated executor has parity tests | **PARTIAL** | `parity-matrix.md` rows 1–9 DONE; the offline **composed Go paper harness** is now DONE (`internal/e2e`, 10 tests); 252 Go funcs. Remaining cutover rows (live PG e2e, TS deletion) OPEN → §9.1 |
 | 17 | build/test status documented | MET | §7 + `scripts/verify/verify-all.sh` |
 
 ### Objective "Goal terukur" acceptance metrics (re-derived this session)
