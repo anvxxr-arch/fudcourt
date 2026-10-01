@@ -3,8 +3,9 @@
 > Phase 0 design artifact. This is the intended end-state for the restructure planned in
 > `migration-plan.md`; nothing here exists yet except where noted. Ground rules come from the
 > product scope in `docs/prd/cex-executor.md` (CEX executor: planner, risk, sizing, strategies
-> TWAP/VWAP/iceberg/smart-limit, exchange adapters binance/bybit/mexc, worker, state machine)
-> and the current inventory in `current.md`.
+> market/limit/TWAP/adaptive-TWAP/iceberg/chase-limit/scale — note the objective's sketch also
+> names VWAP and smart-limit, which have no TS oracle and are not ported, exchange adapters
+> binance/bybit/mexc, worker, state machine) and the current inventory in `current.md`.
 
 ## 1. Layout
 
@@ -14,9 +15,11 @@ apps/
 services/
   api/                    Go — auth, accounts, members, portfolio, wallets, transactions,
                           treasury, markets, executor orchestration (command API)
-  executor/               Go — planner, risk, sizing, strategies (TWAP, VWAP, iceberg,
-                          smartlimit), exchange adapters (binance, bybit, mexc), worker,
-                          execution state machine, persistence (executor.* schema)
+  executor/               Go — planner, risk, sizing, strategies (market, limit, TWAP,
+                          adaptive TWAP, iceberg, chase-limit, scale in/out — VWAP/smart-limit
+                          are not implemented in the TS oracle and are out of scope), exchange
+                          adapters (binance, bybit, mexc), worker, execution state machine,
+                          persistence (executor.* schema)
   data/                   Go — upstream acquisition, moved from apps/apicalls:
                           llama, cryptorank, khala, chainrank, news (+ cache, httpx)
   sync/                   Rust — websocket streams, reconciliation, event normalization

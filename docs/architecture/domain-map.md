@@ -27,7 +27,7 @@
 | executor orchestration (command/API) | web | `apps/web/src/app/(frontend)/api/executor/**` (16 routes) | `services/api` (executor orchestration) |
 | executor planning | web | `apps/web/src/platform/executor/plan.ts` | `services/executor` (planner) |
 | risk & sizing | web | `apps/web/src/platform/executor/risk.ts` | `services/executor` (risk, sizing) |
-| strategies (TWAP/VWAP/iceberg/smartlimit) | web | `apps/web/src/platform/executor/engine.ts` (`defaultSlices`, `createStrategy`, `strategyStep/OnFill/Progress`) | `services/executor` (strategies) |
+| strategies (market/limit/TWAP/adaptive-TWAP/iceberg/chase-limit/scale — **not** VWAP or smart-limit) | web | `apps/web/src/platform/executor/engine.ts` (`defaultSlices`, `createStrategy`, `strategyStep/OnFill/Progress`) | `services/executor` (strategies) |
 | exchange adapters (binance/bybit/mexc) | web | `apps/web/src/platform/executor/exchange.ts` (`CcxtLike`, symbol mapping) | `services/executor` (exchange adapters) |
 | exchange signing / keys | web | `apps/web/src/platform/executor/store.ts` (`masterKeyFromEnv`) + `exchange.ts` | `services/executor` (signing) |
 | execution worker | web (Bun) | `apps/web/scripts/executor/worker.ts` + `src/platform/executor/worker.ts` | `services/executor` (worker) |
