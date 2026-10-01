@@ -63,29 +63,40 @@ type config struct {
 	stepFallback string
 }
 
+// loadConfigFrom is loadConfig with an injectable env lookup (tests pin the
+// exact refusal and default surface without touching the process env).
+func loadConfigFrom(getenv func(string) string) (config, error) {
+	return loadConfigWith(getenv)
+}
+
 // loadConfig reads and validates the environment. Every refusal names the
 // exact key and the problem (objective §43): nothing defaults silently.
 func loadConfig() (config, error) {
+	return loadConfigWith(os.Getenv)
+}
+
+// loadConfigWith is the implementation both entry points share.
+func loadConfigWith(getenv func(string) string) (config, error) {
 	var c config
 	var err error
 
-	c.masterKey, err = credentials.MasterKeyFromEnv(os.Getenv)
+	c.masterKey, err = credentials.MasterKeyFromEnv(getenv)
 	if err != nil {
 		return c, err
 	}
 
-	c.pgURL = strings.TrimSpace(os.Getenv("FUDCOURT_EXECUTOR_PG_URL"))
+	c.pgURL = strings.TrimSpace(getenv("FUDCOURT_EXECUTOR_PG_URL"))
 	if c.pgURL == "" {
 		return c, errors.New("FUDCOURT_EXECUTOR_PG_URL is required (Postgres is the durable truth, objective §39)")
 	}
 
-	c.owner = strings.TrimSpace(os.Getenv("FUDCOURT_EXECUTOR_OWNER"))
+	c.owner = strings.TrimSpace(getenv("FUDCOURT_EXECUTOR_OWNER"))
 	if c.owner == "" {
 		c.owner = defaultOwner()
 	}
 
 	c.maxInFlight = 8
-	if v := strings.TrimSpace(os.Getenv("FUDCOURT_EXECUTOR_MAX_INFLIGHT")); v != "" {
+	if v := strings.TrimSpace(getenv("FUDCOURT_EXECUTOR_MAX_INFLIGHT")); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n <= 0 {
 			return c, fmt.Errorf("FUDCOURT_EXECUTOR_MAX_INFLIGHT must be a positive integer, got %q", v)
@@ -94,7 +105,7 @@ func loadConfig() (config, error) {
 	}
 
 	c.tick = 5 * time.Second
-	if v := strings.TrimSpace(os.Getenv("FUDCOURT_EXECUTOR_TICK_MS")); v != "" {
+	if v := strings.TrimSpace(getenv("FUDCOURT_EXECUTOR_TICK_MS")); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 0 {
 			return c, fmt.Errorf("FUDCOURT_EXECUTOR_TICK_MS must be a non-negative integer, got %q", v)
@@ -102,14 +113,14 @@ func loadConfig() (config, error) {
 		c.tick = time.Duration(n) * time.Millisecond
 	}
 
-	c.valkeyAddr = strings.TrimSpace(os.Getenv("VALKEY_ADDR"))
+	c.valkeyAddr = strings.TrimSpace(getenv("VALKEY_ADDR"))
 
 	// The clamp grid fallback. The plan's own precision (constraints) wins per
 	// execution; this only applies when a plan carries no precision, and it is
 	// the value the operator pinned at deploy time — never a guessed venue
 	// default. Placing off-grid is refused by the clamp, so a WRONG value is
 	// loud (no placement or absurd fragments), not a silent sizing error.
-	c.stepFallback = strings.TrimSpace(os.Getenv("FUDCOURT_EXECUTOR_QUANTITY_STEP"))
+	c.stepFallback = strings.TrimSpace(getenv("FUDCOURT_EXECUTOR_QUANTITY_STEP"))
 	if c.stepFallback == "" {
 		c.stepFallback = "0.0001"
 	}
