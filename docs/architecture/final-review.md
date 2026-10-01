@@ -247,7 +247,7 @@ carries the writer's uncommitted edits above.
 
 ## 8. Known regressions
 
-\*\*None outstanding.\*\* Eight failures were found and fixed; all were pre-existing in the
+**None outstanding.** Eight failures were found and fixed; all were pre-existing in the
 working tree or in the branch's committed history (none caused by this session's changes — checked
 against the baseline and against `94a2ee1`/`642e7ef`):
 1. `services/api/cmd/api/main.go:5` — a comment line missing its `//` (`notifications, jobs.`),
