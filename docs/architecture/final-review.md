@@ -159,21 +159,17 @@ One command: `bash scripts/verify/verify-all.sh` → **`VERIFY_ALL_OK`** (exit 0
 | pre-push hook syntax | PASS |
 | web typecheck + shaper fixtures | PASS (**188** tests) |
 
-**Note on `services/executor` (a second writer is active on this branch).** All the gates above are
-green *except* `services/executor/internal/lock`: the working tree contains an **uncommitted,
-actively-moving edit by a concurrent writer** in `services/executor/internal/lock/valkey_test.go`
-(134 insertions vs HEAD, which is clean). It now compiles (`type fakeValkey` at line 58) but its
-scripted fake-Valkey server does not serve the scripted steps, so 3 lock tests fail with
-`write pipe: i/o timeout` (75s of timeouts) — e.g. `Acquire = false, ... backend unavailable; want
-true, nil`. That file is their work-in-progress, **not committed by this session**; it is left
-untouched rather than "completed" or committed half-done. **Provenance proof:** the file is a
-97-insertion uncommitted diff (`git diff --numstat`) while `git show HEAD:…` is clean, and
-`services/executor/internal/lock` **passed** in this session's first baseline run before their edit
-landed — so the failure belongs to the uncommitted diff, not to committed code. Every other gate in
-the table passes on the current tree, verified individually:
-`check-deploy` OK (13 units), `check-structure` OK (139 files), `check-contract` OK (28 CR modes +
-5 family parities), `check-contract.mjs` CONTRACTS_OK, `check-api-contract.py` API_CONTRACT_OK,
-`go build/vet/test` OK for `services/api` **and** `services/data`, `bash -n pre-push` OK.
+**`bash scripts/verify/verify-all.sh` → `VERIFY_ALL_OK` (exit 0)**, verified on the current tree
+this session. Earlier in the session the `services/executor/internal/lock` package was red while a
+concurrent writer held an incomplete uncommitted edit of `valkey_test.go` (scripted fake-Valkey
+server not serving steps → `i/o timeout`) plus throwaway `zz_probe*_test.go` scratch files; that
+writer has since reverted their scratch work and the package is green again — the note is retained
+only as a record that the mid-session red was theirs, never committed by this session. Every gate
+in the table above passes now, verified individually as well:
+`check-deploy` OK, `check-structure` OK (139 files), `check-contract` OK (28 CR modes + 5 family
+parities), `check-contract.mjs` CONTRACTS_OK, `check-api-contract.py` API_CONTRACT_OK,
+`go build/vet/test` OK for all three Go modules, `cargo build/test` OK for `services/sync`,
+`bash -n pre-push` OK.
 
 Verification of the two fixes made this session (each proven, not asserted):
 - **Deploy gate** (`check-deploy.py`): simulated a fresh clone by deleting
