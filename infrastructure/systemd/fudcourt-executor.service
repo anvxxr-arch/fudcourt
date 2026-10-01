@@ -16,6 +16,15 @@
 # Until they are present the Go worker exits non-zero at startup and this
 # unit would crash-loop — leave it masked, do not enable.
 #
+# TWO KEYS ARE STILL MISSING FROM frontend/web/.env.local AND MUST BE ADDED by
+# the operator before this unit can start (both are absent there today; the
+# template frontend/web/.env.example documents them):
+#   FUDCOURT_SESSION_SECRET      >= 32 chars, byte-identical to the value the web
+#                                tier signs cookies with (see COUPLING below)
+#   FUDCOURT_EXECUTOR_PG_URL     the DSN THIS binary requires — note it is NOT
+#                                the web tier's FUDCOURT_PG_URL; the two names
+#                                are distinct and must both be present.
+#
 # OPERATIONS (§34): the process serves TWO loopback-only HTTP surfaces:
 #   127.0.0.1:3104  /healthz (liveness, no dependencies) and /readyz
 #                   (Postgres + lock-backend readiness, 503 while either is
