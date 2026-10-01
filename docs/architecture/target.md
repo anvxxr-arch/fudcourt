@@ -1,161 +1,115 @@
-# Target Architecture — FUDCourt
+# Target Architecture — domain-oriented monorepo
 
-> Phase 0 deliverable of the domain restructure (2026-10-01). This is the
-> destination; `current.md` is the reality; `migration-plan.md` is the ordered
-> path between them. Evidence-first rule from `ARCHITECTURE.md` applies here too:
-> when this file and the code disagree, the code wins and this file is wrong.
+> Phase 0 design artifact. This is the intended end-state for the restructure planned in
+> `migration-plan.md`; nothing here exists yet except where noted. Ground rules come from the
+> product scope in `docs/prd/cex-executor.md` (CEX executor: planner, risk, sizing, strategies
+> TWAP/VWAP/iceberg/smart-limit, exchange adapters binance/bybit/mexc, worker, state machine)
+> and the current inventory in `current.md`.
 
-## North star
+## 1. Layout
 
-```text
-Modular monorepo
-+ domain-driven boundaries
-+ Go-first backend
-+ specialized Rust
-+ thin Next.js frontend
-+ PostgreSQL durable truth
-+ Valkey ephemeral coordination
-+ contract-first communication
-+ independently deployable runtime services
+```
+apps/
+  web/                    Next.js + Bun — FRONTEND ONLY (pages, UI, typed API client)
+services/
+  api/                    Go — auth, accounts, members, portfolio, wallets, transactions,
+                          treasury, markets, executor orchestration (command API)
+  executor/               Go — planner, risk, sizing, strategies (TWAP, VWAP, iceberg,
+                          smartlimit), exchange adapters (binance, bybit, mexc), worker,
+                          execution state machine, persistence (executor.* schema)
+  data/                   Go — upstream acquisition, moved from apps/apicalls:
+                          llama, cryptorank, khala, chainrank, news (+ cache, httpx)
+  sync/                   Rust — websocket streams, reconciliation, event normalization
+                          (today's fudcourt-sync + fudcourt-reconciled, specialized further)
+packages/
+  contracts/              openapi/, events/, schemas/ — the ONLY shared artifacts
+  sdk-ts/                 generated/hand-maintained TS client over contracts (consumed by apps/web)
+  config/                 shared toolchain/lint/tsconfig/env schema
+database/
+  migrations/  schema/  seeds/  fixtures/
+tests/
+  integration/  e2e/  fixtures/  oracle/
+deploy/
+  systemd/  docker/  compose/
+scripts/
+  dev/  verify/  database/  release/
 ```
 
-One line: **Go decides. Rust observes/reconciles fast. PostgreSQL remembers.
-Valkey coordinates. Next.js presents. Contracts connect everything.**
+## 2. Domain → service
 
-## Target repository tree
-
-```text
-fudcourt/
-├── apps/
-│   └── web/                    # Next.js 16 + Payload CMS: UI, SSR, thin BFF
-├── services/
-│   ├── api/                    # Go: primary backend API (modular domains)
-│   ├── executor/               # Go: execution engine, risk, sizing, strategies, adapters
-│   ├── data/                   # Go: external data aggregation (was services/data)
-│   └── sync/                   # Rust: streams, normalization, reconciliation (was services/sync)
-├── packages/
-│   ├── contracts/              # openapi/ + events/ + schemas/ — canonical contracts
-│   ├── sdk-ts/                 # generated/typed TS client from contracts
-│   └── config/                 # shared technical configuration conventions
-├── database/
-│   └── schema/                 # canonical DDL + table-ownership map
-├── tests/
-│   ├── integration/            # cross-service behavior
-│   ├── e2e/                    # system-level, paper exchange
-│   ├── fixtures/               # recorded payloads (tamper-evident)
-│   └── oracle/                 # independent-oracle scripts (anti-self-confirmation)
-├── deploy/
-│   ├── systemd/                # versioned user units (single home, was apps/*/deploy)
-│   ├── docker/                 # container definitions if/when needed
-│   └── compose/                # local dev stack (Postgres + Valkey)
-├── scripts/{dev,verify,database,release}/
-├── docs/{architecture,operations,records,prd,product}/
-├── .github/workflows/          # path-filtered: web, go, rust, contracts, integration
-├── go.work                     # Go workspace: services/* modules
-├── Cargo.toml                  # Rust workspace: services/sync
-├── package.json / bun.lock     # JS workspace root (task running + tooling)
-└── README.md
-```
-
-Adaptation notes (repo evidence governs, objective says "adapt where
-appropriate"):
-
-- `database/migrations`, `seeds`, `fixtures` appear **only when real content
-  exists**. Today's schema has exactly three DDL documents and two documented
-  "no migration runner" decisions (DR-020 executor DDL; Payload CMS owns its own
-  Neon migrations under `apps/web/src/cms/migrations`). No fake migration
-  framework is introduced (objective §57).
-- `deploy/docker` and `deploy/compose` are created when there is a real
-  container/compose need; the homeserver is systemd (DR-002).
-- Unit **names** on the host (`fudcourt-web`, `fudcourt-apicalls`,
-  `fudcourt-reconciled`, `fudcourt-sync.timer`, `fudcourt-executor-worker`,
-  `fudcourt-pgload`) are an operational identity; directory moves never silently
-  rename a running unit.
-
-## Target runtime processes
-
-| Process | Language | Role | Decides? |
-|---|---|---|---|
-| `web` (Next.js) | TS | UI, SSR, forms, presentation, thin BFF, Payload CMS | no — presents |
-| `api` (Go) | Go | identity, authorization, entitlements, credentials, exchange accounts, instruments, ledger, portfolio, treasury, wallets, transactions, notifications, audit, jobs | yes — business rules |
-| `executor` (Go) | Go | execution lifecycle, planner, risk, sizing, strategies, orders, exchange adapters, worker, recovery | yes — execution decisions |
-| `data` (Go) | Go | external data aggregation & normalization (cryptorank, chainrank, llama, news, khala; later market data) | yes — provider contract rules |
-| `sync` (Rust) | Rust | exchange streams, event normalization, reconciliation | no — observes and reports facts |
-
-Exactly these five. Domains are **modules inside processes**, not processes
-(§51): `identity-service`, `ledger-service` etc. are explicitly *not* created.
-A domain earns its own process only via the extraction criteria in
-`migration-plan.md` (independent scaling/availability/security/throughput).
-
-## Dependency rules
-
-Allowed: `web → sdk-ts, api`; `api → contracts, PostgreSQL, Valkey, executor API,
-data API`; `executor → contracts, PostgreSQL, Valkey, exchange adapters`;
-`data → contracts, external providers`; `sync → contracts, PostgreSQL, Valkey,
-exchange streams`.
-
-Forbidden: `web → executor internals / exchange signing / executor workers`;
-`executor → Next.js source`; `sync → frontend source`; `data → executor
-internals`; **any service → another service's internal packages**. Services
-share contracts, generated clients and technical configuration — never business
-implementations.
-
-## Data ownership
-
-- **PostgreSQL = durable truth**: financial records, executions, orders, fills,
-  events, credentials (sealed), audit, user/account state, durable jobs.
-- **Valkey = ephemeral**: cache, distributed locks (execution/account
-  sync/reconciliation), rate-limit state, pub/sub. Never the only copy of
-  anything that matters (objective §39; DR-021's fail-closed execution lease is
-  a lock, and durable execution state is in `executor.*`).
-- **Turso (libsql)** is the *current* system of record for the treasury family
-  (DR-019) with a local Postgres+TimescaleDB read model. Target direction keeps
-  PostgreSQL as canonical for executor/financial records already; the treasury
-  store migration is deliberately **not** part of this restructure (no
-  destructive DB migration, §11) and is tracked as P1 debt.
-
-## Domain placement (one-line ownership)
-
-| Domain | Home | Answers |
+| Domain | Owns | Service |
 |---|---|---|
-| identity | `services/api/internal/identity` | who is this actor? (users, sessions, roles, tokens) |
-| authorization | `services/api/internal/authorization` (colocated with identity initially) | may this actor do this? |
-| entitlements | `services/api/internal/entitlements` | what does the plan/membership allow? |
-| credentials | `services/api/internal/credentials` | sealed exchange secrets, rotation, revocation |
-| exchangeaccounts | `services/api/internal/exchangeaccounts` | user's connected venue accounts |
-| instruments | `services/api/internal/instruments` | canonical instrument normalization |
-| market data | `services/data/internal/marketdata` | tickers/candles/books (future) |
-| external data | `services/data/internal/{cryptorank,chainrank,llama,news,khala}` | provider aggregation (exists today) |
-| executor | `services/executor` | execution lifecycle + orchestration |
-| risk | `services/executor/internal/risk` | how much may this execution risk? |
-| sizing | `services/executor/internal/sizing` | what quantity represents that risk? |
-| orders | `services/executor/internal/orders` | canonical order/fill lifecycle |
-| strategy | `services/executor/internal/strategy` | market/limit/twap/… decisions |
-| exchange | `services/executor/internal/exchange` | venue adapters behind one interface |
-| ledger | `services/api/internal/ledger` | canonical financial movement record |
-| portfolio | `services/api/internal/portfolio` | derived holdings/PnL/exposure view |
-| treasury | `services/api/internal/treasury` | internal capital tracking |
-| wallets | `services/api/internal/wallets` | blockchain wallet metadata |
-| transactions | `services/api/internal/transactions` | user-visible history (derived) |
-| notifications | `services/api/internal/notifications` | Discord/Telegram/email/push delivery |
-| audit | `services/api/internal/audit` | append-only actor/action/resource record |
-| jobs | `services/api/internal/jobs` | scheduled sync/refresh/maintenance |
-| observability | `services/*/internal/platform` | logs, health, correlation ids |
+| auth, accounts, members | users, sessions, roles | services/api |
+| portfolio, wallets, transactions, treasury | balances, ledger, reconciliation queries | services/api |
+| markets | venues, assets, prices (read side) | services/api |
+| executor orchestration | execution commands (create/start/pause/resume/cancel/emergency), authz, audit | services/api |
+| execution engine | planner, risk, sizing, strategies, adapters, worker, FSM, `executor.*` writes | services/executor |
+| data acquisition | llama, cryptorank, khala, chainrank, news | services/data |
+| streams & reconciliation | websocket ingestion, event normalization, reconcile maths | services/sync |
 
-Full map with current code anchors: `domain-map.md`.
+## 3. Dependency rules (allowed / forbidden)
 
-## Performance posture
+RFC 2119. These rules are the acceptance criteria for later phases and SHOULD be enforced by
+`scripts/checks` + CI once the phases land.
 
-Internal APIs (no external provider): p50 < 20 ms, p95 < 100 ms, p99 < 250 ms
-aspirational. Executor planning: risk/sizing in very low milliseconds. Design
-rules: pooled connections, instrument-metadata cache (never per child order),
-bounded worker concurrency, context deadlines, no unbounded goroutines, no
-JSON churn in hot paths. Measure before optimizing (DR-019's pattern).
+### 3.1 Allowed
 
-## Security posture
+- `apps/web` MAY import `packages/sdk-ts`, `packages/config`, `packages/contracts` (types only).
+- Every service MAY import `packages/contracts` and `packages/config`.
+- `services/api` MAY call `services/executor`, `services/data`, `services/sync` over HTTP/contracts.
+- `services/data`, `services/sync` MAY share `database/schema` definitions via `packages/contracts`
+  (SQL/DDL versions), never via source imports.
 
-Encrypted exchange credentials (AES-256-GCM per field, master key outside the
-DB — DR-021), `credential_id` references everywhere except the single
-server-side reveal path, no secrets in logs/events/audit/URLs/frontend state,
-fail-closed auth and live-trading kill switch, idempotent execution commands,
-DB-enforced uniqueness for execution/order/event ids, append-only audit.
+### 3.2 Forbidden
+
+- `apps/web` MUST NOT own or contain: executor runtime, risk, sizing, strategy logic, exchange
+  signing/keys, workers, locks, or execution persistence. (Today `src/platform/executor/` and
+  `scripts/executor/` violate this — Phase 5 removes them.)
+- Services MUST NOT import each other's implementation — contracts only. No shared Go/Rust/TS
+  source across service boundaries.
+- `services/api` MUST NOT reach into `executor.*` tables directly; it commands `services/executor`
+  through the orchestration contract. (Today the web routes write `executor.*` via
+  `src/platform/executor/store.ts` — Phase 5 changes the owner to services/executor.)
+- `apps/web` MUST NOT talk to exchanges or hold API keys/secrets beyond session cookies.
+  (Today `exchange.ts` + `store.ts` `masterKeyFromEnv` live in web — Phase 5.)
+- UI/shell layers MUST NOT be imported by platform/feature layers below them (today
+  `src/shell/store-shell.tsx` imports feature pages; acceptable inside `apps/web` as long as it
+  stays a UI-only app, but platform code MUST NOT import features — see domain-map.md).
+- `database/*` is owned by migrations tooling only; services MUST NOT embed DDL strings once
+  Phase 2 lands (today `store.ts` carries `EXECUTOR_DDL` — Phase 2/5 move it to
+  `database/schema/executor.sql` + generated migrations).
+
+## 4. Contracts (`packages/contracts`)
+
+- `openapi/` — HTTP surfaces: api (auth/accounts/portfolio/markets/executor commands),
+  executor (internal), data, sync.
+- `events/` — execution lifecycle events (execution_events), stream normalization envelopes.
+- `schemas/` — DDL + JSON schemas for `users/members/wallets/portfolio`, `execution*`, `analytics`.
+Compatibility rule: additive changes only per release; breaking changes REQUIRE a versioned path.
+
+## 5. Persistence ownership
+
+| Tables | Owner |
+|---|---|
+| users, members, wallets, portfolio (+accounts, trades, journal, ledger, transactions) | services/api |
+| execution, execution_orders, execution_fills, execution_events (today `executor.executions`, `executor.child_orders`, `executor.fills`, `executor.execution_events` + plans/snapshots/risk_profiles/audit_logs) | services/executor |
+| analytics (today `assets`, `asset_history`, `price_history` written by sync, projected by pg-load) | services/data + services/sync |
+
+SQLite/Turso remains the source of truth for balances; Postgres remains the read model
+(DR-019). That split is unchanged by the restructure — only the code owning each write path moves.
+
+## 6. Deploy target
+
+- `deploy/systemd/` — one unit set per service: `fudcourt-api`, `fudcourt-executor`,
+  `fudcourt-data`, `fudcourt-sync`, `fudcourt-web`, plus timers (`pgload`, `sync`).
+  The dual Python/Rust sync units collapse to the Rust service after Phase 6 parity is proven.
+- `deploy/docker|compose/` — local dev orchestration mirroring the systemd topology.
+- Ingress unchanged: Cloudflare Tunnel → loopback origin (DR-002), fail-closed.
+
+## 7. Tests target
+
+- `tests/integration` — cross-service contract tests (generated from `packages/contracts`).
+- `tests/e2e` — browser/user journeys (executor wizard paper-trade path included).
+- `tests/fixtures` + `tests/oracle` — recorded upstream envelopes and the Python-oracle
+  parity harness currently under `apps/web/scripts/{fixtures,oracle,verify}`.
+- Unit tests live next to their service (Go `*_test.go`, Rust `tests/`, web vitest/node --test).
