@@ -104,10 +104,9 @@ post-Phase-1/2 tree, i.e. after the `database/` move — pre-move runs at the ol
 | `python3 scripts/checks/check-structure.py` (apps/web) | 0 (`STRUCTURE_OK (139 files across (src root)(1), app(74), cms(9), features(32), platform(21), shell(1), styles(1), ui(1))`) |
 | `bunx tsc -p tsconfig.shaper-tests.json` (apps/web; the tsc compile step of `test:shapers`) | 0 |
 | `node --require ./scripts/tests/alias-resolver.cjs --test .shaper-tests/scripts/tests/executor-<suite>-tests.js` × 8 suites (apps/web; per-suite parity breakdown in §5) | 0 each |
-| `bun run verify:executor` (apps/web) | **1 — environmental skip, not a failure** (exact gate + verbatim error in §5) |
+| `bun run verify:executor` (apps/web) | **0 — `ALL PAPER-MODE CHECKS PASSED (§127)`** against the real stack (2026-10-01: Bun.sql + real `executor` schema on :5433 + real Valkey lock + real worker). Gate: `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex, fail-closed §128.23) |
 
-**Pre-existing failures: none.** Every documented baseline command passes on this tree.
-The non-zero exits above and the skips below are environmental, not failures.
+**Pre-existing failures: none.** Every documented baseline command passes on this tree, including the live paper E2E above. The skips below are environmental, not failures.
 
 Environmental limitations (recorded as environmental, NOT failures — each blocked by its own gate):
 - `services/data` live-fetch tests: exact gate `APICALLS_LIVE=1` (unset ⇒ the live fetch tests
@@ -116,9 +115,13 @@ Environmental limitations (recorded as environmental, NOT failures — each bloc
   run offline against golden envelopes and are included in the `go test ./...` PASS above.
 - CI's "Reconcile contract vs the Rust service" job step: exact gate `TURSO_AUTH_TOKEN` set
   (unset ⇒ the step warns and skips; the live gate was not exercised locally).
-- `bun run verify:executor`: exact gate `FUDCOURT_EXECUTOR_MASTER_KEY` = 64 hex chars
-  (unset/malformed ⇒ `masterKeyFromEnv` throws and credential ops fail closed; verbatim
-  output in §5).
+- ~~`bun run verify:executor`: exact gate `FUDCOURT_EXECUTOR_MASTER_KEY` = 64 hex chars~~
+  **RESOLVED 2026-10-01** — a dev key was generated into the gitignored
+  `apps/web/.env.local` and the gate now runs: **`ALL PAPER-MODE CHECKS PASSED (§127)`**
+  (exit 0) against real Postgres :5433 + real Valkey + the real worker. The gate is
+  listed in the passing table above; it is no longer an environmental skip. Its value
+  is that the TS runtime is proven against the live data layer, not that the Go
+  worker is — the Go cutover row stays `OPEN` in `parity-matrix.md` by design.
 
 ### 2a. Independent cross-check vs `4e8ba91` commit-message claims (added 2026-10-01)
 The `4e8ba91 phase 1-2` commit message claims full verification. Our own re-runs (the

@@ -113,7 +113,7 @@ ledger; portfolio is derived; append-only events). Current-state highlights:
 
 | # | Item | Evidence | Blocked on |
 | --- | --- | --- | --- |
-| 1 | **TS executor still in `apps/web`** — 8,029 LOC, 10 modules (`engine,exchange,lock,plan,risk,runtime,store,types,worker` + `scripts/executor/worker.ts`) | `wc -l apps/web/src/platform/executor/*.ts`; parity matrix rows 1–9 `DONE`, **offline composed Go harness `DONE`** (`internal/e2e`), live cutover rows `OPEN` | `verify:executor` (`executor-paper-e2e.ts`) + a live `cmd/executor` run need `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY` (and, for `cmd`, a real venue credential — no paper branch) — **not in the repo** (`apps/web/.env.local` lacks the master key; host `.env` has only `ALCHEMY_KEY`,`TURSO_AUTH_TOKEN`) |
+| 1 | **TS executor still in `apps/web`** — 8,029 LOC, 10 modules (`engine,exchange,lock,plan,risk,runtime,store,types,worker` + `scripts/executor/worker.ts`) | `wc -l apps/web/src/platform/executor/*.ts`; parity matrix rows 1–9 `DONE`, **offline composed Go harness `DONE`** (`internal/e2e`), live cutover rows `OPEN` | `verify:executor` (`executor-paper-e2e.ts`) + a live `cmd/executor` run need `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY` (and, for `cmd`, a real venue credential — no paper branch). **`verify:executor` is now green** (2026-10-01: `ALL PAPER-MODE CHECKS PASSED (§127)` — a dev master key was generated into the gitignored `apps/web/.env.local`; Postgres :5433 and Valkey :6379 are live locally). What stays OPEN is the Go-worker cutover: `cmd/executor` exposes only `/healthz` + `/readyz`, so the 13 `/api/executor/*` routes still have no Go counterpart and the TS runtime remains the production path |
 | 2 | **15 web route handlers still import `platform/executor`** | `grep -rl platform/executor apps/web/src/app` | #1 |
 | 3 | **EXECUTOR DDL still embedded in `store.ts`** | migration-plan Phase 2 amendment; `executor-store-tests.ts` §59 pins byte-identity to `database/schema/executor-schema.sql` | #1 |
 | 4 | **Phase 8 move of `apps/web/scripts/verify/*` not executed (scoped, deliberate)** — the `verify-*.py` harnesses statically read `apps/web/src/**` (routes, UI components, shell) and write report JSON beside themselves; they are **web-app harnesses**, not cross-service tests. Cross-service scope is satisfied by `tests/integration/api/` + the per-service in-repo suites. | 77 references to `scripts/verify`; `grep` shows each harness opening `(root / "src/...")` with `root = ...parents[2]` = `apps/web` | migration-plan Phase 8 is *ordered after* Phase 7; Phase 7 requires #1. Moving them now is churn against a green, host-operator-expected report path |
@@ -330,9 +330,11 @@ against the baseline and against `94a2ee1`/`642e7ef`):
 
 ## 9. Recommended next steps
 
-1. **Close the executor cutover (the one unblocker).** Provision `FUDCOURT_EXECUTOR_PG_URL`
-   and `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex), run `executor-paper-e2e.ts` against the Go
-   worker, then delete the TS executor + re-point the 15 route handlers still importing
+1. **Close the executor cutover (the one unblocker).** Two preconditions, in order: (a) build
+   the Go HTTP surface for the 16 `/api/executor/*` endpoints (neither `services/api` nor
+   `cmd/executor` serves them today), then (b) provision `FUDCOURT_EXECUTOR_PG_URL` +
+   `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex) and run the gate against the Go worker; only then
+   delete the TS executor + re-point the 15 route handlers still importing
    `platform/executor` (Phase 5/7). This unblocks debt items 1–4 at once.
    **Precision (verified this session):** `apps/web/scripts/verify/executor-paper-e2e.ts`
    imports `@/platform/executor/{store,worker,plan,runtime,lock}` — it exercises the **TS**
@@ -351,10 +353,22 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    `ExchangeBinance`/`ExchangeBybit`/`ExchangeMEXC` and has **no `paper` branch**, so a live run needs
    a real venue credential; and the credential is a sealed envelope (`exchange_accounts
    .api_key_encrypted`) that only `FUDCOURT_EXECUTOR_MASTER_KEY` can open, which the repo does not
-   carry. A throwaway Postgres + Valkey can be provisioned locally, but not a venue key. For that
-   same reason `executor-paper-e2e.ts` was **not run here**: it exercises the **TS** runtime against
-   the shared local Postgres (not the Go worker) and would create the `executor` schema for a gate
-   that does not prove Go parity.
+   carry. A throwaway Postgres + Valkey can be provisioned locally, but not a venue key.
+   **Update (`8ed4dba`, later same day):** the writer made `executor-paper-e2e.ts` pass
+   end-to-end against the real Postgres + Valkey. That is a **TS-runtime** proof, not Go
+   parity — the harness imports `@/platform/executor/{store,lock,worker,plan,runtime}` and
+   its own header says so.
+   **The larger, structural blocker (found this audit):** the cutover is not only
+   credential-gated, it is **surface-gated**. The 16 `/api/executor/*` endpoints exist
+   *only* in the TS route handlers — `services/api` exposes no `executor` domain (its live
+   routes are auth/admin/oauth/discord only) and `cmd/executor` "is not a request server"
+   (`/healthz` + `/readyz` only). So there is no Go HTTP surface for those 16 routes, and a
+   TS-only deletion would break production (the objective forbids that: "behavior tetap
+   jalan selama restrukturisasi"). Closing the cutover therefore requires **building the Go
+   executor/API surface first**, then re-pointing the handlers, then deleting TS — in that
+   order. This is a code task, not a credentials task, but it is owned by the concurrent
+   writer's `services/executor`/`services/api` lane; doing it from here would collide with
+   their in-flight commits.
 2. **Then** execute the Phase 8 move (`apps/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
    repointing the 77 references in one commit.
 3. **Sync oracle gate — DONE and committed.** `apps/web/scripts/verify/verify-sync.py`

@@ -87,7 +87,7 @@ Every safety control fails **closed** (refuse/pause/no-op), never open:
 | Credential master key | `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex) | credential operations throw; nothing is stored or decrypted | `store.ts` |
 | Execution lock | Valkey `execution:{id}:lock`, `SET NX PX` + compare-and-act Lua; Go `internal/lock` mirrors it | any lock error ⇒ `acquire` false ("the caller must not trade"), `Renew` false (lease lost); only `release` is best-effort | `lock.ts` ("FAIL-CLOSED … a lock that fails open means duplicate orders"), `internal/lock/lock.go` |
 | Lifecycle transitions | table-driven `EXECUTION_TRANSITIONS` | illegal transition refused (409 naming both states); terminal states accept nothing | `types.ts`, `internal/executor/lifecycle.go` |
-| Live tests | opt-in per service via env; never in default runs | skip unless explicitly enabled | `services/data`: `APICALLS_LIVE=1` gates `internal/cryptorank/live_test.go` (README §live smoke); executor suites run OFFLINE, no venue (`executor-worker-tests.ts` header); `bun run verify:executor` is env-gated on `FUDCOURT_EXECUTOR_MASTER_KEY` (`docs/architecture/current.md` §5a) |
+| Live tests | opt-in per service via env; never in default runs | skip unless explicitly enabled | `services/data`: `APICALLS_LIVE=1` gates `internal/cryptorank/live_test.go` (README §live smoke); executor suites run OFFLINE, no venue (`executor-worker-tests.ts` header); `bun run verify:executor` is env-gated on `FUDCOURT_EXECUTOR_MASTER_KEY` and was **run green** on 2026-10-01 with a dev key in the gitignored `apps/web/.env.local` (`current.md` §2) |
 
 Reality note (2026-10-01): the tree contains **no** `FUDCOURT_LIVE_TESTS`
 flag and no `services/data/tests/live/` directory — the live-test gate that
