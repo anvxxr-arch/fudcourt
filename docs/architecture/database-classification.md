@@ -37,7 +37,7 @@ Payload from `DATABASE_URL` (`frontend/web/src/cms/payload.config.ts:44-46`).
 ## 1. Turso (`database/schema/schema.sql`) — 8 tables + 1 SQLite internal
 
 Writers: `backend/sync` (Rust) for `assets`; the Next `(frontend)` API routes for
-`transactions`/`wallets`; `frontend/web/scripts/tools/sync-live.py` (legacy oracle) also
+`transactions`/`wallets`; `tests/oracle/sync-live.py` (legacy oracle) also
 `assets`. Readers: `frontend/web/src/platform/db/mirror.ts` (projects all 8 into
 Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 

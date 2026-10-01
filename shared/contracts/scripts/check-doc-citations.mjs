@@ -48,51 +48,29 @@
  *   "`common/symbol.json` … abbreviate shared/contracts/schemas/<same>"). A token is a FAILURE only
  *   when NONE of its candidate expansions resolves on disk.
  *
- * NAMED ALLOWANCES — the 24 tokens that legitimately do not resolve today, each with its reason.
- *   A citation on this list is not a failure; the summary reports the total as `allowances=<N>`.
- *   The list is exactly the miss set measured on 2026-10-01 (45 occurrences over the 8 documents).
- *   A token NOT on this list that does not resolve is a failure — that is the entire point.
+ * NAMED ALLOWANCES — the four tokens that legitimately do not resolve, each deliberately retained
+ *   as a historical reference, not a stale path. A citation here is not a failure; the summary
+ *   reports the total as `allowances=<N>`. A token NOT on this list that does not resolve IS a
+ *   failure — that is the entire point. (Stale paths were rewritten to their post-relocation home
+ *   rather than excused; see the note on the 2026-10-01 tightening below.)
  *
- *   1. Pre-relocation script paths (2 tokens, 6 occurrences). A concurrent actor relocated
- *      `frontend/web/scripts/**` (the move landed as commit `d4119ca`, "phase-7 relocation of
- *      repo-level tooling out of frontend/web/scripts"): `tools/` went to `tests/oracle/` +
- *      `tests/e2e/executor/`, `checks/`/`verify/` to `scripts/verify/`. The canonical docs were
- *      written before that move and cite the old shape as history, so
- *      `frontend/web/scripts/tools/dump-envelopes.ts` (new home `tests/oracle/dump-envelopes.ts`) and
- *      `frontend/web/scripts/tools/sync-live.py` (new home `tests/oracle/sync-live.py`) still miss
- *      as written. NOTE: the docs also cite `frontend/web/scripts/tools/pg-load.ts` (source-catalog.md
- *      §6) and `frontend/web/scripts/checks/check-structure.py`, both of which RESOLVE (those tools
- *      were not among the relocated ones), so neither is on this list.
- *   2. `backend/api/bin/fudcourt-api` (2) — a build artifact (`go build -o bin/fudcourt-api`), absent
- *      from a clean tree by design; source-catalog.md §6 says so at the citation.
- *   3. Executor pre-regroup shapes (12 tokens, 20 occurrences): `internal/exchange`,
- *      `internal/exchange/{binance/binance.go,binance/parse.go,bybit/parse.go,mexc/parse.go}`,
- *      `internal/orders`, `internal/executor`, `internal/decimal/decimal.go`,
- *      `internal/idempotency/idempotency.go`, `internal/strategy/strategies.go`,
- *      `internal/worker/tick.go`, `internal/lock/valkey.go`. The executor tree was regrouped
- *      mid-audit to `internal/{exchanges,core/orders,core/execution,platform/decimal,
- *      runtime/idempotency,strategies}`; the documents record the move and keep the old shapes as
- *      evidence of it (canonical-model.md header "path flux"). `internal/repository` is NOT on this
- *      list — that one still resolves.
- *   4. `database/schema/analytics.sql` (2) — cited as a reference that does NOT exist, which is the
- *      documents' own finding ("**Does not exist** (referenced by an older doc)").
- *   5. `finance/treasury.go` (1) — short form dropping the package directory; the file is
- *      `backend/api/internal/finance/treasury/treasury.go`, not `.../finance/treasury.go`.
- *   6. `backend/api/markets/reference` (4) — short form eliding the `internal` segment; the real
- *      package prefix is `backend/api/internal/markets/reference` (schemas/README.md §2.2).
- *   7. `frontend/web/src/platform/executor/ui.tsx` (1) — a pre-move path, recorded in the same
- *      sentence as its new home (`frontend/web/src/features/executor/ui.tsx`) as evidence of the move.
- *   8. `scripts/check-contract.mjs` (2) — the pre-relocation path of the contracts gate; it is now
- *      `shared/contracts/scripts/check-contract.mjs` and schemas/README.md §3/§6 cite the old shape.
- *   9. `accounts/exchange.ExchangeAccount` (2) — a symbol, not a path: the doc concatenates the
- *      package path and the Go type in one token (`accounts/exchange` + `.ExchangeAccount`).
- *  10. `markets/client.ts` (3), `research/llama/shape.go` (1), `research/chainrank` (1) —
- *      de-contextualised short forms inside a cell that repeats the family prefix earlier
- *      (`features/markets/client.ts`, `…/research/llama/shape.go`); the expansions resolve, the
- *      truncated token does not.
+ *   1. `frontend/web/scripts/tools/dump-envelopes.ts` (1) — canonical-model.md's "path
+ *      re-verification" note: "*it was `frontend/web/scripts/tools/dump-envelopes.ts` when this note
+ *      was written*". The sentence names the file's new home (`tests/oracle/dump-envelopes.ts`) one
+ *      clause earlier; the old path is kept as the record of the move.
+ *   2. `frontend/web/src/platform/executor/ui.tsx` (1) — the same note's "→" clause, naming the old
+ *      path and its new home (`frontend/web/src/features/executor/ui.tsx`) in one sentence.
+ *   3. `backend/api/bin/fudcourt-api` (2) — a build artifact (`go build -o bin/fudcourt-api`), absent
+ *      from a clean tree by design; both citations say so ("build artifact, absent from a clean tree").
+ *   4. `database/schema/analytics.sql` (2) — cited as a reference that does NOT exist; the citation
+ *      *is* the finding ("**Does not exist** (referenced by an older doc)").
  *  Deliberately NOT on this list, though they look similar: `backend/api markets/instruments` and
- *  its siblings (whitespace ⇒ skipped as prose, never counted) and `database/migrations/`
- *  (trailing `/` ⇒ skipped, never counted). Nothing that is counted is excused without a reason.
+ *  its siblings (whitespace ⇒ skipped as prose, never counted), `database/migrations/` (trailing `/`
+ *  ⇒ skipped, never counted), and every `{...}` / `…` / glob form. Nothing counted is excused without
+ *  a reason. Until 2026-10-01 this list also excused 20 stale executor/script paths (singular
+ *  `internal/exchange/*`, `internal/{orders,executor,decimal,idempotency,strategy,worker,lock}`,
+ *  `frontend/web/scripts/tools/{dump-envelopes.ts,sync-live.py}`); they were rewritten in the docs
+ *  to their post-`d4119ca` homes, so the allowance list is now history-only.
  *
  * WHAT IT CANNOT CATCH (stated here, not implied)
  *   - a path that exists on disk but is the WRONG file (rename with a same-named sibling) — this is
@@ -105,12 +83,12 @@
  *     are stripped, never checked. The docs' own §"verification" sections carry the `path:symbol`
  *     claims; this gate only proves the file is there.
  *
- * INITIAL STATE OF THE TREE (recorded 2026-10-01, deliberately in the header so this gate's verdict
- * and the acceptance scorecard are comparable): 8 documents, 900 path-shaped citation occurrences
- * (269 distinct tokens), of which 855 occurrences resolve and 45 occurrences (24 distinct tokens,
- * the allowance list above) are covered by a named reason. No unallowed miss. The citation count is
- * reported but deliberately NOT pinned as a threshold, so the gate fails on a broken citation and
- * never on a doc edit that adds a valid one.
+ * INITIAL STATE OF THE TREE (re-measured 2026-10-01 after the post-relocation path sweep, so this
+ * gate's verdict and the acceptance scorecard are comparable): 8 documents, 897 path-shaped citation
+ * occurrences (distinct tokens counted in the run), of which all but 6 occurrences (the four
+ * deliberate historical references above) resolve. No unallowed miss. The citation count is reported
+ * but deliberately NOT pinned as a threshold, so the gate fails on a broken citation and never on a
+ * doc edit that adds a valid one. (Before the sweep: 900 occurrences, 45 across 24 allowance tokens.)
  */
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
@@ -159,35 +137,12 @@ const SCHEMA_DIRS = ['common', 'accounts', 'assets', 'markets', 'trading', 'fina
 // Named allowances — see header. Keys are the exact citation token; values are one-line reasons.
 // ---------------------------------------------------------------------------
 const ALLOWANCES = new Map([
-  // 1. pre-relocation script paths (concurrent relocation staged-but-uncommitted as of 2026-10-01)
-  ['frontend/web/scripts/tools/dump-envelopes.ts', 'pre-relocation path; the tooling relocation landed as d4119ca (new home tests/oracle/dump-envelopes.ts) but the canonical docs still cite the old shape as history'],
-  ['frontend/web/scripts/tools/sync-live.py', 'pre-relocation path; the tooling relocation landed as d4119ca (new home tests/oracle/sync-live.py) but the canonical docs still cite the old shape as history'],
-  // 2. build artifact
-  ['backend/api/bin/fudcourt-api', 'build artifact, absent from a clean tree by design (source-catalog.md §6)'],
-  // 3. executor pre-regroup shapes (the tree was regrouped mid-audit; the docs keep the old shapes as evidence)
-  ['backend/workers/executor/internal/exchange', 'executor pre-regroup package path (→ internal/exchanges); recorded as evidence of the mid-audit move'],
-  ['backend/workers/executor/internal/exchange/binance/binance.go', 'executor pre-regroup path (→ internal/exchanges/binance/binance.go)'],
-  ['backend/workers/executor/internal/exchange/binance/parse.go', 'executor pre-regroup path (→ internal/exchanges/binance/parse.go)'],
-  ['backend/workers/executor/internal/exchange/bybit/parse.go', 'executor pre-regroup path (→ internal/exchanges/bybit/parse.go)'],
-  ['backend/workers/executor/internal/exchange/mexc/parse.go', 'executor pre-regroup path (→ internal/exchanges/mexc/parse.go)'],
-  ['backend/workers/executor/internal/orders', 'executor pre-regroup package path (→ internal/core/orders)'],
-  ['backend/workers/executor/internal/executor', 'executor pre-regroup package path (→ internal/core/execution)'],
-  ['backend/workers/executor/internal/decimal/decimal.go', 'executor pre-regroup path (→ internal/platform/decimal/decimal.go)'],
-  ['backend/workers/executor/internal/idempotency/idempotency.go', 'executor pre-regroup path (→ internal/runtime/idempotency/idempotency.go)'],
-  ['backend/workers/executor/internal/strategy/strategies.go', 'executor pre-regroup path (→ internal/strategies/strategies.go)'],
-  ['backend/workers/executor/internal/worker/tick.go', 'executor pre-regroup path (worker not yet landed in the regrouped tree)'],
-  ['backend/workers/executor/internal/lock/valkey.go', 'executor pre-regroup path (lock package regrouped under internal/runtime)'],
-  // 4. a cited reference that does not exist — the documents' own finding
-  ['database/schema/analytics.sql', 'cited reference that does not exist — the documents\' own finding ("**Does not exist**")'],
-  // 5-10. de-contextualised short forms and a symbol token (the real target resolves; the token as written does not)
-  ['finance/treasury.go', 'short form dropping the package directory (the file is backend/api/internal/finance/treasury/treasury.go)'],
-  ['backend/api/markets/reference', 'short form eliding the `internal` segment (the real prefix is backend/api/internal/markets/reference)'],
-  ['frontend/web/src/platform/executor/ui.tsx', 'pre-move path, recorded in the same sentence as its new home (→ frontend/web/src/features/executor/ui.tsx)'],
-  ['scripts/check-contract.mjs', 'pre-relocation path of the contracts gate (→ shared/contracts/scripts/check-contract.mjs)'],
-  ['accounts/exchange.ExchangeAccount', 'symbol, not a path; the doc writes package + type in one token (`accounts/exchange` + `.ExchangeAccount`)'],
-  ['markets/client.ts', 'de-contextualised short form of features/markets/client.ts inside a cell that repeats the family prefix'],
-  ['research/llama/shape.go', 'de-contextualised short form of backend/data/internal/research/llama/shape.go (the `…/` prefix is prose)'],
-  ['research/chainrank', 'de-contextualised short form of backend/data/internal/research/chainrank'],
+  // Deliberately retained historical references — the citation is the record of the move / the
+  // absence itself, never a stale path that should have been rewritten.
+  ['frontend/web/scripts/tools/dump-envelopes.ts', 'deliberately retained historical reference: canonical-model.md "path re-verification" note records "*it was frontend/web/scripts/tools/dump-envelopes.ts when this note was written*" beside the new home tests/oracle/dump-envelopes.ts'],
+  ['frontend/web/src/platform/executor/ui.tsx', 'deliberately retained historical reference: the same note names the old path and its new home (frontend/web/src/features/executor/ui.tsx) in one "→" clause'],
+  ['backend/api/bin/fudcourt-api', 'build artifact (go build -o bin/fudcourt-api), absent from a clean tree by design; both citations say so'],
+  ['database/schema/analytics.sql', 'cited reference that does NOT exist — the citation is the finding ("**Does not exist** (referenced by an older doc)")'],
 ]);
 // Tokens that are glob/prose shapes the walk must not even consider. Kept explicit so an unexpected
 // token cannot be excused as "probably one of these".

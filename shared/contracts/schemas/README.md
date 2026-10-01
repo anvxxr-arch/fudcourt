@@ -78,10 +78,10 @@ it is computed.
 | [`accounts/exchange-account.json`](accounts/exchange-account.json) | CANONICAL | `backend/api accounts/exchange` (+ executor store) | minted uuid |
 | [`accounts/balance.json`](accounts/balance.json) | CANONICAL | `backend/workers/executor` / `backend/api finance/ledger` | via account+asset |
 | [`accounts/account-equity.json`](accounts/account-equity.json) | CANONICAL | `backend/workers/executor` | via account |
-| [`assets/asset.json`](assets/asset.json) | **CANONICAL** | **`backend/api/markets/reference`** (new) | `asset_id` minted; instance in `shared/contracts/data/reference.json` |
-| [`assets/token.json`](assets/token.json) | **CANONICAL** | **`backend/api/markets/reference`** (new) | `token_id` minted over `chain/address`; instance in `reference.json` |
-| [`assets/chain.json`](assets/chain.json) | **CANONICAL** | **`backend/api/markets/reference`** (new) | `chain_id` minted; instance in `reference.json`; `backend/sync/src/chains.rs` is still a separate private table |
-| [`markets/venue.json`](markets/venue.json) | **CANONICAL** | **`backend/api/markets/reference`** (new) | `venue_id` minted; instance in `reference.json`; the three inline allowlists are now redundant |
+| [`assets/asset.json`](assets/asset.json) | **CANONICAL** | **`backend/api/internal/markets/reference`** (new) | `asset_id` minted; instance in `shared/contracts/data/reference.json` |
+| [`assets/token.json`](assets/token.json) | **CANONICAL** | **`backend/api/internal/markets/reference`** (new) | `token_id` minted over `chain/address`; instance in `reference.json` |
+| [`assets/chain.json`](assets/chain.json) | **CANONICAL** | **`backend/api/internal/markets/reference`** (new) | `chain_id` minted; instance in `reference.json`; `backend/sync/src/chains.rs` is still a separate private table |
+| [`markets/venue.json`](markets/venue.json) | **CANONICAL** | **`backend/api/internal/markets/reference`** (new) | `venue_id` minted; instance in `reference.json`; the three inline allowlists are now redundant |
 | [`markets/instrument.json`](markets/instrument.json) | CANONICAL | `backend/api markets/instruments` | **`instrument_id`, no minter** |
 | [`markets/ticker.json`](markets/ticker.json) | CANONICAL | `backend/api markets/overview` | via instrument+venue |
 | [`markets/price.json`](markets/price.json) | CANONICAL | **absent** | schema only |
@@ -126,7 +126,7 @@ it is computed.
 | Describes | something that **happened** | something that **is** |
 | Ids | 28 stable `event_type` ids (PascalCase) + SCREAMING_SNAKE aliases | entity ids (`*_id`) |
 | Versioning | `event_version` starts at 1; additive changes keep it, breaking bumps it | none — these are the current shape |
-| Drift gate | `scripts/check-contract.mjs` (c) pins catalogue ↔ `event.schema.json`, and (a) pins `ExecutionStatus`/`ChildOrderStatus`/`ExecutionEventName` ↔ `frontend/web/src/platform/executor/types.ts` and the OpenAPI enums | **not** covered by a gate yet (see §5) |
+| Drift gate | `shared/contracts/scripts/check-contract.mjs` (c) pins catalogue ↔ `event.schema.json`, and (a) pins `ExecutionStatus`/`ChildOrderStatus`/`ExecutionEventName` ↔ `frontend/web/src/platform/executor/types.ts` and the OpenAPI enums | **not** covered by a gate yet (see §5) |
 | Extra keys | payload is free-form and additive by policy | objects are **closed** (`additionalProperties: false`) where the value set is closed, so an unknown key is a schema error, not an extension |
 
 Two deliberate refusals to duplicate:
@@ -183,5 +183,5 @@ of truth, and `openapi/fudcourt.yaml` remains the HTTP contract. The same is tru
 registry: `shared/contracts/data/reference.json` has a producer
 (`backend/api/internal/markets/reference/cmd/emit`) and a drift test
 (`TestReferenceArtifactIsCurrent`), but **no HTTP route and no consumer** yet. Extending
-`scripts/check-contract.mjs` to validate these files is Phase 7/8 work
+`shared/contracts/scripts/check-contract.mjs` to validate these files is Phase 7/8 work
 (`canonical-model.md` §9.1); nothing in this directory changes behaviour today.

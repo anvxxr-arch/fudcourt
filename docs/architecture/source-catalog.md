@@ -212,7 +212,7 @@ Polygon, Arbitrum, Optimism; USDC on Base. ERC-20 selector `0x70a08231`.
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `llama-coins-prices` | `GET https://coins.llama.fi/prices/current/{ids}` | DefiLlama (coins) | MARKET_DATA | USD price per CoinGecko-slug id (ETH, BNB, POL, SOL, USDT, USDC) | `backend/sync/src/streams/sync.rs:77` (`LLAMA_IDS` in `chains.rs`) | Price (target) | PERIODIC | NONE | keyless | active | capture key `prices|https://coins.llama.fi/prices/current/coingecko:ethereum,…` |
 
-Same feed used by the Python oracle path (`frontend/web/scripts/tools/sync-live.py:57`,
+Same feed used by the Python oracle path (`tests/oracle/sync-live.py:57`,
 `LLAMA_URL`).
 
 **Hard rule preserved in code:** a failed RPC or missing price *raises*; it never
@@ -222,13 +222,13 @@ becomes a 0 balance/valuation (`sync.rs` doc header, `jsonrpc.rs`).
 
 ## 4. CEX execution feeds — Go executor worker (`backend/workers/executor`)
 
-Venue boundary: `internal/exchange/exchange.go` (`Exchange` interface). Adapters:
+Venue boundary: `internal/exchanges/interface.go` (`Exchange` interface). Adapters:
 `binance/`, `bybit/`, `mexc/`, `paper/`. Symbols are normalized through
-`internal/exchange/symbols.go` (`BTC/USDT` canonical ⇄ venue wire form).
+`internal/exchanges/symbols.go` (`BTC/USDT` canonical ⇄ venue wire form).
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `binance-account` | `GET /api/v3/account` + `GET /fapi/v2/positionRisk` | Binance | CEX | asset free/locked balances; futures position risk rows | `backend/workers/executor/internal/exchange/binance/binance.go` | Balance + Position (target) | REALTIME | SNAPSHOT (`executor.balance_snapshots` / `positions_snapshots`) | per-account HMAC key (`executor.exchange_accounts.api_key_encrypted`) | active | `DefaultBaseURL = "https://api.binance.com"` |
+| `binance-account` | `GET /api/v3/account` + `GET /fapi/v2/positionRisk` | Binance | CEX | asset free/locked balances; futures position risk rows | `backend/workers/executor/internal/exchanges/binance/binance.go` | Balance + Position (target) | REALTIME | SNAPSHOT (`executor.balance_snapshots` / `positions_snapshots`) | per-account HMAC key (`executor.exchange_accounts.api_key_encrypted`) | active | `DefaultBaseURL = "https://api.binance.com"` |
 | `binance-ticker` | `GET /api/v3/ticker/bookTicker` | Binance | CEX/MARKET_DATA | bid/ask book ticker | same | Ticker (target) | REALTIME | EPHEMERAL | keyless | active | adapter path list |
 | `binance-orders` | `POST /api/v3/order`, `GET /api/v3/order`, `GET /api/v3/openOrders`, `DELETE /api/v3/order` | Binance | CEX | normalized order (status, executed qty, fills) | same | Order (target) | REALTIME | EVENT (`executor.child_orders`, `execution_events`) | account key | active | `internal/orders/orders.go` |
 | `binance-fills` | `GET /api/v3/myTrades` | Binance | CEX | trade prints (price, qty, commission, tradeId) | same | Fill (target) | REALTIME | EVENT (`executor.fills`, unique `(account_id, exchange_trade_id)`) | account key | active | `insertFill` dedup comment |
@@ -242,7 +242,7 @@ Venue boundary: `internal/exchange/exchange.go` (`Exchange` interface). Adapters
 | `mexc-ticker` | `/api/v1/contract/ticker` | MEXC | CEX/MARKET_DATA | ticker rows | same | Ticker (target) | REALTIME | EPHEMERAL | keyless | active |
 | `mexc-orders` | `/api/v1/contract/submit|cancel|order/…` | MEXC | CEX | normalized orders | same | Order (target) | REALTIME | EVENT | account key | active |
 | `mexc-fills` | `/api/v1/contract/fills` | MEXC | CEX | fills | same | Fill (target) | REALTIME | EVENT | account key | active |
-| `paper-venue` | in-process simulator, **no network** | FUDCourt (self) | INTERNAL | synthetic mark/bid/ask, deterministic fills, fees, slippage | `.../exchange/paper/{config.go,match.go,paper.go}` | Ticker + Order + Fill (target) | n/a | EVENT (`executor.*`) | none (marks injected as config data, no credentials) | active | `PaperConfig.Marks` — "the paper venue has no order book" |
+| `paper-venue` | in-process simulator, **no network** | FUDCourt (self) | INTERNAL | synthetic mark/bid/ask, deterministic fills, fees, slippage | `.../exchanges/paper/{config.go,match.go,paper.go}` | Ticker + Order + Fill (target) | n/a | EVENT (`executor.*`) | none (marks injected as config data, no credentials) | active | `PaperConfig.Marks` — "the paper venue has no order book" |
 
 Venue id ↔ default host are the only hardcoded roots; `Config.BaseURL` overrides
 (tests use this). Live trading is gated by `FUDCOURT_EXECUTOR_LIVE`.
@@ -285,12 +285,12 @@ These are *stored* sources — the repo both writes and reads them.
 | `executor-postgres` | `executor.*` schema | self-hosted Postgres | INTERNAL | accounts+credentials, executions, plans, child orders, fills, events, snapshots, risk profiles, audit logs | DDL `database/schema/executor-schema.sql`; writers `frontend/web/src/platform/executor/store.ts` + the `backend/workers/executor/internal/repository` package (store.go, credentials.go) | (execution system of record) | REALTIME | CANONICAL/EVENT | `FUDCOURT_EXECUTOR_PG_URL` (Go), Postgres DSN via web env | active | `ensureExecutorSchema()` / `EXECUTOR_DDL` |
 | `neon-payload` | Neon Postgres (`DATABASE_URL`, pooled `…neon.tech/neondb`) | Neon | CMS | Payload tables (`posts`, `categories`, `media`, `users`, …) | `frontend/web/src/cms/payload.config.ts:44-46`, DDL `src/cms/migrations/20260917_194354.ts` | NewsArticle/CMS content (target) | MANUAL | CANONICAL | `DATABASE_URL`, `PAYLOAD_SECRET` | active | `postgresAdapter({ connectionString: process.env.DATABASE_URL })` |
 | `payload-media-files` | Uploaded media on disk (`frontend/web/media`) | self-hosted | CMS | image/PDF blobs + metadata | `src/cms/collections/Media.ts` (`staticDir: 'media'`) | MediaAsset (target) | MANUAL | CANONICAL | `PAYLOAD_SECRET` (admin session) | active | Media collection config |
-| `valkey-cache` | Valkey/Redis cache & lock | self-hosted | INTERNAL | cached upstream envelopes, executor leases | `backend/data/platform/cache/cache.go`, `backend/workers/executor/internal/lock/valkey.go` | (cache) | REALTIME | EPHEMERAL | `FUDCOURT_DATA_VALKEY_PASSWORD`, `VALKEY_PASSWORD`, `FUDCOURT_VALKEY_URL` | active | `fudcourt-data.service` env line `FUDCOURT_DATA_VALKEY_ADDR` |
+| `valkey-cache` | Valkey/Redis cache & lock | self-hosted | INTERNAL | cached upstream envelopes, executor leases | `backend/data/platform/cache/cache.go`, `backend/workers/executor/internal/platform/lock/valkey.go` | (cache) | REALTIME | EPHEMERAL | `FUDCOURT_DATA_VALKEY_PASSWORD`, `VALKEY_PASSWORD`, `FUDCOURT_VALKEY_URL` | active | `fudcourt-data.service` env line `FUDCOURT_DATA_VALKEY_ADDR` |
 | `cr-disk-cache` | On-disk per-route JSON cache `~/.cache/crfetch` (shared with the Python helper) | self-hosted | INTERNAL | cached `HelperOut` envelopes | `backend/data/internal/research/cryptorank/fetch.go` (`DefaultCacheDir`, `writeCache`) | (cache) | REALTIME | EPHEMERAL | keyless | active | `fudcourt-data.service` `FUDCOURT_DATA_CACHE_DIR` |
 | `fixtures-recorded` | `tests/fixtures/` (26 `.json.gz` payloads) + `MANIFEST.json` | CryptoRank (recorded 2026-09-27) | RESEARCH (frozen) | 26 raw `HelperOut` payloads, sha256-pinned | `tests/oracle/record-fixtures.ts`, manifest `MANIFEST.json` | raw fixture | STATIC | HISTORICAL | `CR_PYTHON` (path only) | active (test oracle) | `sha256` + `jsonBytes` per mode |
 | `fixtures-expected` | `tests/fixtures/expected/` (one JSON per mode) | FUDCourt (frozen envelopes) | INTERNAL | expected envelope output per mode for the Go/TS parity diff | `tests/oracle/dump-envelopes.ts` | test oracle | STATIC | HISTORICAL | keyless | active | `dump:envelopes` script |
 | `oracle-capture` | `tests/oracle/fixtures/capture.json` (40 keys) | recorded RPC/price/Hyperliquid responses | INTERNAL (test) | replay bodies keyed `rpc\|<url with ALCHEMY redacted>\|<method>\|<params>` / `prices\|<url>` / `hl\|<body>` | `backend/sync/src/oracle.rs` | test oracle | STATIC | HISTORICAL | keyless (keys carry `/v2/{ALCHEMY}` placeholder, never a real key) | active | `capture.json` keys + `oracle.rs` doc |
-| `python-sync-oracle` | `frontend/web/scripts/tools/sync-live.py` | FUDCourt (legacy producer) | INTERNAL | same pipeline as the Rust sync; oracle for cross-implementation gate | `frontend/web/scripts/tools/sync-live.py` | — | PERIODIC | SNAPSHOT | `ALCHEMY_KEY`, `TURSO_AUTH_TOKEN` | served (unit still defined) | `fudcourt-sync.service`/`.timer` |
+| `python-sync-oracle` | `tests/oracle/sync-live.py` | FUDCourt (legacy producer) | INTERNAL | same pipeline as the Rust sync; oracle for cross-implementation gate | `tests/oracle/sync-live.py` | — | PERIODIC | SNAPSHOT | `ALCHEMY_KEY`, `TURSO_AUTH_TOKEN` | served (unit still defined) | `fudcourt-sync.service`/`.timer` |
 | `cr-fetch-python-helper` | `tests/oracle/cr_fetch.py` | FUDCourt (legacy producer) | INTERNAL | `HelperOut` stdout per mode (the Go service is its port) | `tests/oracle/cr_fetch.py` | — | on demand | NONE | keyless | served (tooling/oracle only) | `records-fixtures.ts` `HELPER` path |
 | `payload-seed` | `frontend/web/src/cms/seed.ts` | FUDCourt (operator) | CMS | 2 categories + 3 posts + sharp-generated hero images | `src/cms/seed.ts` | NewsArticle/CMS (target) | MANUAL | CANONICAL | `DATABASE_URL` | scaffolded (run by hand: `bunx payload run src/cms/seed.ts`) | file header |
 
