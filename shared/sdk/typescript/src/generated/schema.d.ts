@@ -844,9 +844,9 @@ export interface paths {
          * Wallet reconciliation (Rust `fudcourt-reconciled`, DR-014)
          * @description Verbatim pass-through of the Rust service's JSON — only the body's
          *     `source` field names the implementation that produced the numbers. NO
-         *     silent fallback to the TS oracle (`lib/reconcile.ts` is a test
+         *     silent fallback to the TS oracle (`frontend/web/src/features/treasury/reconcile.ts` is a test
          *     artifact): service down ⇒ 502 with the real reason. Team-tier read
-         *     (middleware + lib/guard.ts). Headers `X-Reconcile-Upstream`,
+         *     (middleware + `frontend/web/src/platform/auth/guard.ts`). Headers `X-Reconcile-Upstream`,
          *     `Cache-Control: no-store`.
          */
         get: operations["getReconcile"];

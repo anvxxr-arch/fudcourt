@@ -23,7 +23,7 @@ migration: the endpoint list mirrors the header of
 `frontend/web/src/features/executor/client.ts`, the schemas mirror the frozen types
 in `frontend/web/src/platform/executor/types.ts` exactly, and the response
 envelopes mirror the route handlers under the Next.js app api tree
-(`frontend/web/src/app/(frontend)/api/executor/**/route.ts`).
+(`frontend/web/src/app/(frontend)/api/executor/*/route.ts`).
 
 ## File map
 
@@ -35,7 +35,7 @@ envelopes mirror the route handlers under the Next.js app api tree
 | `events/README.md` | Envelope field table, naming/alias rules, no-secrets rule, evolution rules. |
 | `schemas/event-envelope.json` | The shared event envelope (`event_id`, `event_type`, `event_version`, `occurred_at`, `request_id`, `actor_id`, `resource_id`, `payload`). |
 | `schemas/error-envelope.json` | The normalized error model (`code`, `message`, `request_id`) with the 12 error codes (`validation`, `authorization`, `credential`, `exchange`, `insufficient_balance`, `risk_limit`, `rate_limit`, `timeout`, `network`, `conflict`, `not_found`, `internal`). |
-| `scripts/check-contract.mjs` | Offline drift gate (see below). |
+| `scripts/check-contract.mjs` | Offline drift gate (see below; run it as `node shared/contracts/scripts/check-contract.mjs`). |
 
 ## Versioning and evolution
 
@@ -68,7 +68,7 @@ envelopes mirror the route handlers under the Next.js app api tree
 3. `shared/sdk/typescript/src/client.ts` types every endpoint against the generated
    schema (no duplicated field definitions), and `src/events.ts` re-exports the
    generated catalog types.
-4. `bun run check:contracts` runs `scripts/check-contract.mjs`, which fails the
+4. `bun run check:contracts` runs `shared/contracts/scripts/check-contract.mjs`, which fails the
    build if the OpenAPI enums drift from `types.ts`, if a documented path loses
    its route handler (or an executor handler is undocumented), or if the event
    catalog stops covering the TS `ExecutionEventName` values.

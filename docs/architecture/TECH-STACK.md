@@ -2,9 +2,10 @@
 
 Verified against head `5e68576` (= `origin/main`), 2026-09-29.
 
-## 1. Languages (measured line counts, `apps/`, 2026-09-29 10:18 UTC)
+## 1. Languages (measured line counts, `apps/` as the tree then stood, 2026-09-29 10:18 UTC)
 
-Measured with `find apps -name "*.<ext>"`, excluding `node_modules/`, `.next/`,
+Measured with `find frontend/web -name "*.<ext>"` (the path was `apps/web` when the
+snapshot was taken), excluding `node_modules/`, `.next/`,
 the generated `.shaper-tests/` build dir (`scripts/archive/` no longer exists:
 30 dead throwaway `.mjs` were removed in the 2026-09-29 structure pass); lines are
 `cat` (blank lines included) piped to `wc -l` over that file set. The table is
@@ -17,7 +18,7 @@ number (file counts are stable).
 | Language | Files | Lines | Share | Role |
 |----------|------:|------:|------:|------|
 | TypeScript (`.ts`) | 65 | 9,208 | 30% | API routes (now proxies), data libs, contracts |
-| TSX (`.tsx`) | 47 | 6,519 | 21% | React UI (18 panel components `src/components/*.tsx` + `app/` route wrappers and `app/store/store-shell.tsx`) |
+| TSX (`.tsx`) | 47 | 6,519 | 21% | React UI (presentational primitives `src/components/ui/*.tsx` + `app/` route wrappers and `src/components/layout/store-shell.tsx`) |
 | Python (`.py`) | 15 | 6,391 | 21% | Verification harnesses (six `verify-*.py`) + the fetch oracle (`cr_fetch.py`) |
 | **Go (`.go`)** | **39** | **13,986** | **46%** | `backend/data`: the acquisition sidecar — FIVE families, one process (`cryptorank` tls-client fetch; `khala`, `llama`, `news`, `chainrank` plain `net/http`) plus `httpx` and the served-bytes parity oracle |
 | MTScript (`.mts`) | 1 | 75 | <1% | Limiter stress harness |
@@ -31,7 +32,7 @@ place where the client must *be* a real TLS stack rather than shell out to one.
 **Verification/automation language: Python** — chosen because the
 reverse-engineering probes need `curl_cffi` (TLS-impersonating Chrome) and
 Playwright, both Python-first. Since DR-005 the Python fetch path
-(`scripts/oracle/cr_fetch.py`) exists **only** as `verify-cryptorank.py`'s independent
+(`frontend/web/scripts/oracle/cr_fetch.py`) exists **only** as `verify-cryptorank.py`'s independent
 oracle.
 
 ## 2. Frameworks & runtimes
@@ -48,7 +49,7 @@ oracle.
 | Node.js | v22.22.3 runtime; `@types/node` 20 (web) / 22 (root + blog) | **fallback runtime only**: Node is still installed for rollback (DR-008) and for `node --test` inside `test:shapers`, but **no fudcourt unit runs on it** — the blog merged into `frontend/web` (DR-017) and the last unit on Node moved to `bun --bun next start` in [DR-015](../records/DECISIONS.md) |
 | **Bun** | **1.4.2** | installer, task runner and lockfile owner for both apps (`bun install --frozen-lockfile`, `bun run …`, `bunx`) *and*, since [DR-008](../records/DECISIONS.md), the **runtime of `frontend/web`**: `fudcourt-web.service` is `bun --bun …/next start -p 3100` (measured: the :3100 process's `/proc/<pid>/exe` is `~/.bun/bin/bun`), and `package.json`'s `start` is `bun --bun next start`. Equivalence evidence — build RC=0, same `BUILD_ID`, 15/15 pages, 401 gates, `X-RateLimit-*`, byte-identical `/api/khala` body, byte-identical session signature, ccxt cold sweep 71.2 s (Node parity) — is in DR-008; the toolchain half is [DR-007](../records/DECISIONS.md) |
 | Python | 3.12 (local `python3 -V` = 3.12.14) | harnesses + verification oracles (`cr_fetch.py`, `sync-live.py`). Still the language of the verify loop; no longer a runtime path (DR-005 moved the cryptorank fetch into Go, PLAN G9 SG-9.4 moved the balance sync into Rust) |
-| **Backend framework** | **none, deliberately** ([DR-016](../records/DECISIONS.md)) | Go: stdlib `net/http` + `http.NewServeMux` (no gin/echo/chi/fiber); Rust: `tokio::net` + hand-rolled bounded HTTP/1.1 framing (zero new crates). The only HTTP client library in the backend is `tls-client`, confined to `internal/cryptorank` where the Cloudflare ClientHello-fingerprint requirement lives — the other five Go packages use plain `net/http` |
+| **Backend framework** | **none, deliberately** ([DR-016](../records/DECISIONS.md)) | Go: stdlib `net/http` + `http.NewServeMux` (no gin/echo/chi/fiber); Rust: `tokio::net` + hand-rolled bounded HTTP/1.1 framing (zero new crates). The only HTTP client library in the backend is `tls-client`, confined to `backend/data/internal/research/cryptorank` where the Cloudflare ClientHello-fingerprint requirement lives — the other five Go packages use plain `net/http` |
 | **Rust** | **1.98.1** (`cargo`) | `backend/sync` — two binaries: the live multi-chain balance sync -> Turso `assets` (Alchemy EVM RPC, Solana RPC, Hyperliquid, `coins.llama.fi` prices), parity-checked against the Python oracle; and `fudcourt-reconciled`, the `/api/reconcile` HTTP service (**zero new crates**, `tokio::net` framing) whose output is diffed byte-for-byte against the TS shaper. Versioned units at `infrastructure/systemd/fudcourt-{sync-rust,reconciled}.service` |
 
 ## 3. Data stores
@@ -60,7 +61,7 @@ oracle.
 
 No local database: both stores are managed cloud. The Turso schema **is**
 versioned: `database/schema/schema.sql` (9 `CREATE TABLE`s incl. `sqlite_sequence`,
-tracked) with a drift alarm at `node scripts/tools/dump-schema.mjs --check` (R-1).
+tracked) with a drift alarm at `node frontend/web/scripts/tools/dump-schema.mjs --check` (R-1).
 
 ## 4. Infrastructure
 
@@ -70,9 +71,9 @@ tracked) with a drift alarm at `node scripts/tools/dump-schema.mjs --check` (R-1
 | Local CryptoRank sidecar | `fudcourt-data.service` (systemd --user) → `backend/data/bin/fudcourt-data`, `:3101`; cache `~/.cache/fudcourt-data`, `Restart=always`. Unit versioned at `infrastructure/systemd/fudcourt-data.service` (identical to the installed unit) |
 | Local Rust reconcile service | `fudcourt-reconciled.service` (systemd --user) → `backend/sync/target/release/fudcourt-reconciled`, `127.0.0.1:3102`, `Restart=always`, `EnvironmentFile` the repo `.env`; enabled at boot. **Zero new crates** (tokio `net`+`io-util`; serde_json `preserve_order` is a feature, not a package). Unit versioned at `infrastructure/systemd/fudcourt-reconciled.service` (identical to the installed unit). `/api/reconcile` on `:3100` proxies to it (DR-014) |
 | Local blog | **Retired as a unit (DR-017)** — the blog is served by `fudcourt-web` on `:3100` at `/blog` (public), `/blog/cms/admin` (Payload admin) and `/blog/cms/api/*` (Payload REST/GraphQL). `fudcourt-blog.service` and `:3001` no longer exist; the retirement tombstone is `infrastructure/systemd/RETIRED-fudcourt-blog.service.txt` |
-| Live sync | `fudcourt-sync.timer` → `OnUnitActiveSec=5min` → `fudcourt-sync.service` (`/usr/bin/python3 .../scripts/tools/sync-live.py`) → Turso `assets` |
+| Live sync | `fudcourt-sync.timer` → `OnUnitActiveSec=5min` → `fudcourt-sync.service` (`/usr/bin/python3 .../frontend/web/scripts/tools/sync-live.py`) → Turso `assets` |
 | Deploy | Self-hosted only (DR-002: no third-party deploy target; the Vercel projects are unused/deletable — `frontend/web/vercel.json` no longer exists, the orphan `.vercel/` link dir is gitignored). The legacy `/portfolio` redirect lives in `frontend/web/next.config.js`: `redirects` `/portfolio` → `/team/portfolio` (307) + `rewrites` `/portfolio/:path*` → `/:path*` |
-| Monorepo layout | frontend/web + backend/data (+ backend/sync) on disk; **apps/blog is gone (DR-017)**; **no npm `workspaces` field** anywhere (root `package.json` has none — per-app install, each app owns its lockfile, and `npm run <script> --workspace=…` fails with "No workspaces found"). Each app's lockfile is `bun.lock` (Bun 1.4.2) and installs are `bun install --frozen-lockfile`; the `package-lock.json` files were retired in the same change (DR-007), so `npm ci` is no longer a supported path. Root `package-lock.json` is stale: it still lists `apps/balance` and `apps/gateway`, neither present on disk |
+| Monorepo layout | frontend/web + backend/data (+ backend/sync, backend/api, backend/workers/executor) on disk; **apps/blog is gone (DR-017)**; **no npm `workspaces` field** anywhere (root `package.json` has none — per-app install, each app owns its lockfile, and `npm run <script> --workspace=…` fails with "No workspaces found"). Each app's lockfile is `bun.lock` (Bun 1.4.2) and installs are `bun install --frozen-lockfile`; `npm ci` is not a supported path. **No `package-lock.json` exists anywhere in the tree today** (the root one that once listed the long-gone `apps/balance` / `apps/gateway` has been removed) |
 | Git remote | `github.com/anvxxr-arch/fudcourt`, branch `main` |
 
 ## 5. Market-data acquisition stack (no API keys, by decision)
@@ -90,7 +91,7 @@ Browser/agent  ──►  GET /api/cryptorank?mode=…[&key=…][&fresh=1]   (:3
                         ▼
                  cryptorank.io  <script id="__NEXT_DATA__"> SSR payload
                         ▼
-                 internal/cryptorank (Go) → JSON envelope  →  proxy  →  UI panels
+                 backend/data/internal/research/cryptorank (Go) → JSON envelope  →  proxy  →  UI panels
 ```
 
 - **Why Go, measured (spike 2026-09-29, `/home/dwizzy/apicalls-probe/RESULTS.txt`):**
@@ -107,19 +108,19 @@ Browser/agent  ──►  GET /api/cryptorank?mode=…[&key=…][&fresh=1]   (:3
   every non-browser client; market pages serve full SSR payloads.
 - **Verification stack:** `verify-cryptorank.py` (244 checks incl. ground truth vs
   coins.llama.fi + CoinGecko + publisher-title/oembed GATE3). It keeps driving
-  the **Python** oracle `scripts/oracle/cr_fetch.py` against the same upstream while
+  the **Python** oracle `frontend/web/scripts/oracle/cr_fetch.py` against the same upstream while
   checking the **Go-served** origin, so the two clients still cross-check each
   other (DR-005); plus Playwright DOM audit (`frontend/web/scripts/verify/dom_audit.py`,
   4 checks — measured 3 passed / 1 failed: `/tracker` table rows = 0), plus sibling harnesses
   `verify-{llama,news,chainrank,dex,signals}.py` and `verify-limiter.mts`.
-- **Offline shaper tests:** `npm run test:shapers` (node --test, 79 tests = 56
-  shaper/fixture + 11 auth + 12 rate-limit, ~0.5s)
-  runs `lib/shapers.ts` against 26 recorded upstream payloads (`.json.gz`) in
-  `scripts/fixtures/` (sha256-pinned in `MANIFEST.json`: 26 pinned hashes,
-  re-record with `bun run record:fixtures`; `ls scripts/fixtures/*.gz | wc -l` = 26). Wired into the pre-push hook and the CI web job, so
+- **Offline shaper tests:** `bun run test:shapers` (node --test; shaper/fixture + auth
+  + inbound rate-limit suites, ~0.5s)
+  runs `frontend/web/src/features/cryptorank/shapers.ts` against 26 recorded upstream payloads (`.json.gz`) in
+  `frontend/web/scripts/fixtures/` (sha256-pinned in `MANIFEST.json`: 26 pinned hashes,
+  re-record with `bun run record:fixtures`; `ls frontend/web/scripts/fixtures/*.gz | wc -l` = 26). Wired into the pre-push hook and the CI web job, so
   upstream template drift is a red test instead of a silent UI change.
   `frontend/web/scripts/checks/check-contract.py` additionally asserts the Go mode table in
-  `backend/data/internal/cryptorank/modes.go` **equals** its TS mirror, so the two
+  `backend/data/internal/research/cryptorank/modes.go` **equals** its TS mirror, so the two
   languages can no longer disagree about what a mode is.
 
 ## 6. External data sources (independent truth)
@@ -156,8 +157,9 @@ docs/records/           why each decision was made     (DECISIONS, append-only)
 ```
 Turso (libsql, neon primary)   SYSTEM OF RECORD — the Rust reconciler, sync-live.py
                                and the app's POSTs all write here
-  |  scripts/tools/pg-load.ts  idempotent projection, every 60 s + after each
-  v                            write + ExecStartPost of fudcourt-sync.service
+  |  frontend/web/scripts/    idempotent projection, every 60 s + after each
+  |  tools/pg-load.ts         write + ExecStartPost of fudcourt-sync.service
+  v
 PostgreSQL 17 + TimescaleDB    READ MODEL (local, :5433, db `fudcourt`)
   - accounts/assets/journal/ledger/trades/transactions/venues/wallets
   - asset_history, price_history  hypertables (time series; 90-day retention)
@@ -165,10 +167,10 @@ PostgreSQL 17 + TimescaleDB    READ MODEL (local, :5433, db `fudcourt`)
 Bun.sql                        query() reads local; execute() writes Turso then projects
 
 Valkey :6379                   shared L2, survives restarts
-  - sidecar (internal/cache, valkey-go)     llama / chainrank / news
+  - sidecar (backend/data/platform/cache, valkey-go)  llama / chainrank / news
   - web (platform/cache/valkey.ts, Bun)     the ticker venue sweep
   Both FAIL OPEN: disabled/unreachable/unreadable all mean "do the work as before".
 ```
-The read-model split is gated by `scripts/tools/parity-pg.ts` (the app's own
+The read-model split is gated by `frontend/web/scripts/tools/parity-pg.ts` (the app's own
 `DASHBOARD_READS` run against both engines). SQLite dialect is translated in one
 place, `toPostgres` in `platform/db/mirror.ts`.

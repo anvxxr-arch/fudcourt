@@ -16,10 +16,10 @@ by the question you arrive with: `docs/product/` (PRD, analysis, recommendations
 schema), `docs/operations/` (PLAN, [SECRETS](docs/operations/SECRETS.md), changelog),
 `docs/records/` ([DECISIONS](docs/records/DECISIONS.md)).
 
-**Layout in one line** ([DR-018](docs/records/DECISIONS.md)): one `src/` tree —
-`src/app/` routes only, `src/features/<family>/` one vertical slice per data family,
-`src/platform/` shared infrastructure, `src/ui` + `src/styles` leaves — enforced by
-`scripts/checks/check-structure.py`.
+**Layout in one line** ([DR-018](docs/records/DECISIONS.md)): one `src/` tree in
+`frontend/web` — `src/app/` routes only, `src/features/<family>/` one vertical slice per
+data family, `src/platform/` shared infrastructure, `src/components/` (ui + layout) and
+`src/styles/` leaves — enforced by `frontend/web/scripts/checks/check-structure.py`.
 
 > **Hosting:** self-hosted on the homeserver — production = the systemd units
 > (`fudcourt-web` :3100 — dashboard + blog, `fudcourt-data` :3101,
@@ -31,9 +31,10 @@ schema), `docs/operations/` (PLAN, [SECRETS](docs/operations/SECRETS.md), change
 ## Run
 
 ```bash
+# from the repo root
 cd backend/data && go build -o bin/fudcourt-data ./cmd/data && ./bin/fudcourt-data
                                          # CryptoRank sidecar -> :3101 (unit: infrastructure/systemd/fudcourt-data.service)
-cd frontend/web  && bun install && bun run dev # dashboard + blog + proxy -> :3000
+cd ../../frontend/web && bun install && bun run dev # dashboard + blog + proxy -> :3000
                                           # (prod unit: :3100, served by Bun — DR-008/DR-017)
                                           # blog: /blog (public), /blog/cms/admin (Payload)
 unset NODE_ENV                           # dev/build must never inherit production
@@ -49,7 +50,7 @@ strict `top`/`days`), the **`news`** family (Cointelegraph RSS: strict
 family (chainrank.fyi reads, pagination relayed verbatim) and `backend/sync` holds
 the Rust port of the 5-minute balance sync. The same sidecar is the home of the **`khala`** family — research reports from
 **khala.io** (Framer SSR, keyless), three modes (`reports`/`report`/`latest`), one Go
-package with a plain `net/http` client; the TS side (`lib/khala.ts`) is a typing-only
+package with a plain `net/http` client; the TS side (`frontend/web/src/features/khala/client.ts`) is a typing-only
 mirror and the route only proxies — the Go side does every validation. It is **served**:
 `/api/khala` is registered on the sidecar and `/khala` renders on :3100 and on the public
 hostname ([DR-006](docs/records/DECISIONS.md); harness `verify-khala.py` 136/0) · design record
@@ -65,15 +66,16 @@ bun run verify   # = bash scripts/verify/verify-all.sh: EVERY offline gate in on
                  #  go build/vet/test x3 modules, cargo build/test, hook syntax,
                  #  frontend/web typecheck + shaper fixtures)
 ```
-The gates individually:
-
+The gates individually (each line runs from the cwd its `cd` leaves it in):
 ```bash
 cd backend/data
 go build -o bin/fudcourt-data ./cmd/data  # build the sidecar (go >= 1.24.1)
 go test ./...                            # offline: mode-table + shaping tests
-cd ../web
-python3 scripts/checks/check-contract.py   # offline: CR_MODES + TS-Go mode-table parity + mutation-auth guards
-bun run test:shapers                # offline: 80 tests (shapers + auth + inbound rate limit)
+cd ../sync && cargo test --release  # offline: the Rust sync crate (parity-checked
+                                      # against the repo-root path frontend/web/scripts/tools/sync-live.py)
+cd ../../frontend/web
+python3 scripts/checks/check-contract.py     # offline: CR_MODES + TS-Go mode-table parity + mutation-auth guards
+bun run test:shapers                # offline: shaper + auth + inbound rate-limit tests
 bunx tsc --noEmit && bun run build  # typecheck + Next 16 build (Bun is the runner: DR-007)
 python3 scripts/verify/verify-sync.py         # OFFLINE: sync oracle gate — Python sync-live.py vs
                                               # Rust fudcourt-sync byte-identical replay (tests/oracle fixtures)
@@ -83,14 +85,13 @@ python3 scripts/verify/verify-khala.py       # LIVE: khala harness (136 checks; 
 python3 scripts/verify/verify-llama.py       # LIVE: DeFiLlama harness (51 checks; green on :3101/:3100)
 python3 scripts/verify/verify-news.py        # LIVE: Cointelegraph RSS harness (50 checks; green on :3101/:3100)
 python3 scripts/verify/verify-chainrank.py   # LIVE: chainrank harness (50 checks; green on :3101/:3100)
-cd ../sync && cargo test --release  # offline: the Rust sync crate (parity-checked
-                                      # against ../web/scripts/tools/sync-live.py)
 node scripts/tools/dump-schema.mjs --check  # schema drift alarm vs database/schema/schema.sql
 ```
-
-CI (`.github/workflows/ci.yml`) runs the offline gates on every push: contract,
-typecheck, build, shaper fixture tests, reconcile contract (live), Go build/vet/test,
-Rust build/test.
+CI is five path-filtered workflows — `web.yml` (contract/structure/deploy gates,
+typecheck, shaper fixtures, build), `go.yml` (build/vet/test per Go module),
+`rust.yml` (`backend/sync`), `contracts.yml` (contracts drift + generated SDK) and
+`integration.yml` (the offline aggregate `scripts/verify/verify-all.sh` plus the live
+reconcile contract). Each ends in a required `gate` job.
 
 ## House rules
 
