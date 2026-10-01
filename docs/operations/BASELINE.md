@@ -38,14 +38,17 @@ runs are cited in `docs/records/DECISIONS.md` (DR-005/006/009/014/019/020/021).
 
 ```text
 apps/web        Next.js 16 + Payload CMS + TS CEX executor runtime + executor worker
+services/api        Go primary backend (identity, admin, portfolio, treasury, ...) :3103
 services/data   Go acquisition sidecar (cryptorank, chainrank, llama, news, khala) :3101
 services/sync       Rust crate: fudcourt-sync (balance sync) + fudcourt-reconciled :3102
+services/executor   Go execution worker; loopback health only (/healthz + /readyz) :3104
 ```
 
-Deploy units versioned in-repo: 10 unit files under `deploy/systemd/`
-(`fudcourt-web`, `fudcourt-executor-worker`, `fudcourt-pgload`, `fudcourt-sync`
-(Python oracle variant + Rust variant), `fudcourt-sync.timer`, `fudcourt-apicalls`,
-`fudcourt-reconciled`).
+Deploy units versioned in-repo: 12 unit files under `deploy/systemd/`
+(`fudcourt-web`, `fudcourt-api`, `fudcourt-executor`, `fudcourt-executor-worker`,
+`fudcourt-pgload`, `fudcourt-sync` (Python oracle variant + Rust variant),
+`fudcourt-sync.timer`, `fudcourt-data`, `fudcourt-reconciled`,
+`fudcourt-pgload.timer`).
 
 ## Regression rule for the migration
 
