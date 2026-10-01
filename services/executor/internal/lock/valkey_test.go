@@ -29,6 +29,12 @@ func wantSet(key, token, ttlMs string) string {
 		len(key), key, len(token), token, len(ttlMs), ttlMs)
 }
 
+// wantPing renders the exact `PING` request bytes. Written literally like its
+// neighbours so a framing change in encodeCommand cannot cancel itself out.
+func wantPing() string {
+	return "*1\r\n$4\r\nPING\r\n"
+}
+
 func wantEval(script, key, token string) string {
 	return fmt.Sprintf("*5\r\n$4\r\nEVAL\r\n$%d\r\n%s\r\n$1\r\n1\r\n$%d\r\n%s\r\n$%d\r\n%s\r\n",
 		len(script), script, len(key), key, len(token), token)
@@ -658,4 +664,66 @@ func TestValkeyLockAuthRejected(t *testing.T) {
 		t.Fatal("AUTH rejection must carry a fail-closed error, not nil")
 	}
 	f.verify(t)
+}
+
+// Ping is the startup gate a worker must pass before it may trade: it proves
+// the same path a lease uses (dial, plus the AUTH handshake when a password is
+// set) actually works. A worker that skipped it would run with locks that fail
+// open on every call — the exact silent-degrade this must never allow.
+func TestValkeyLockPing(t *testing.T) {
+	t.Run("passwordless instance", func(t *testing.T) {
+		f := newFakeValkey(fakeStep{want: wantPing(), reply: "+PONG\r\n"})
+		l := newTestValkey(t, f)
+		if err := l.Ping(testCtx(t), time.Second); err != nil {
+			t.Fatalf("Ping = %v; want nil", err)
+		}
+	})
+	t.Run("authenticated instance sends AUTH before PING", func(t *testing.T) {
+		// One connection, two commands: AUTH then PING, exactly as a lease
+		// would drive it. If the handshake were skipped the fake records a
+		// mismatched request and the test fails on the expected bytes.
+		f := newFakeValkey(
+			fakeStep{want: wantAuth("sekrit"), reply: "+OK\r\n", multi: true},
+			fakeStep{want: wantPing(), reply: "+PONG\r\n"},
+		)
+		l := newTestValkeyPassword(t, f, "sekrit", "abcd")
+		if err := l.Ping(testCtx(t), time.Second); err != nil {
+			t.Fatalf("Ping = %v; want nil", err)
+		}
+		if f.dials != 1 {
+			t.Errorf("dials = %d; want 1 (AUTH and PING share the connection)", f.dials)
+		}
+	})
+	t.Run("wrong password fails closed", func(t *testing.T) {
+		f := newFakeValkey(fakeStep{want: wantAuth("sekrit"), reply: "-ERR WRONGPASS invalid username-password pair\r\n", multi: true})
+		l := newTestValkeyPassword(t, f, "sekrit", "abcd")
+		err := l.Ping(testCtx(t), time.Second)
+		if err == nil {
+			t.Fatal("Ping = nil on WRONGPASS; want an error (worker must refuse to start)")
+		}
+		if !strings.Contains(err.Error(), "WRONGPASS") {
+			t.Errorf("Ping error = %q; want the server's reason (operator needs it)", err.Error())
+		}
+	})
+	t.Run("dead backend fails closed", func(t *testing.T) {
+		f := newFakeValkey(fakeStep{dialErr: "connection refused"})
+		l := newTestValkey(t, f)
+		if err := l.Ping(testCtx(t), time.Second); err == nil {
+			t.Fatal("Ping = nil on dial error; want an error")
+		}
+	})
+	t.Run("non-PONG reply is an error, not a pass", func(t *testing.T) {
+		f := newFakeValkey(fakeStep{want: wantPing(), reply: "-ERR not allowed\r\n"})
+		l := newTestValkey(t, f)
+		if err := l.Ping(testCtx(t), time.Second); err == nil {
+			t.Fatal("Ping = nil on an error reply; want an error")
+		}
+	})
+	t.Run("zero timeout still bounds the round trip", func(t *testing.T) {
+		f := newFakeValkey(fakeStep{want: wantPing(), reply: "+PONG\r\n"})
+		l := newTestValkey(t, f)
+		if err := l.Ping(testCtx(t), 0); err != nil {
+			t.Fatalf("Ping(0) = %v; want nil (0 must mean the default bound, not an unbounded wait)", err)
+		}
+	})
 }

@@ -55,15 +55,16 @@ import (
 // config is the validated service configuration. Every field is required
 // unless documented optional.
 type config struct {
-	masterKey    string
-	pgURL        string
-	owner        string
-	maxInFlight  int
-	tick         time.Duration
-	valkeyAddr   string
-	stepFallback string
-	healthAddr   string
-	readyTimeout time.Duration
+	masterKey      string
+	pgURL          string
+	owner          string
+	maxInFlight    int
+	tick           time.Duration
+	valkeyAddr     string
+	valkeyPassword string
+	stepFallback   string
+	healthAddr     string
+	readyTimeout   time.Duration
 }
 
 // defaultHealthAddr is loopback-only like every FUDCourt service (DR-002).
@@ -120,6 +121,7 @@ func loadConfigWith(getenv func(string) string) (config, error) {
 	}
 
 	c.valkeyAddr = strings.TrimSpace(getenv("VALKEY_ADDR"))
+	c.valkeyPassword = strings.TrimSpace(getenv("VALKEY_PASSWORD"))
 
 	c.healthAddr = strings.TrimSpace(getenv("FUDCOURT_EXECUTOR_HEALTH_ADDR"))
 	if c.healthAddr == "" {
@@ -249,13 +251,21 @@ func main() {
 
 	var lease lock.ExecutionLock
 	if cfg.valkeyAddr != "" {
-		vl, err := lock.NewValkeyLock(lock.ValkeyConfig{Address: cfg.valkeyAddr})
+		vl, err := lock.NewValkeyLock(lock.ValkeyConfig{Address: cfg.valkeyAddr, Password: cfg.valkeyPassword})
 		if err != nil {
 			slog.Error("executor: valkey lock refused", "error", err)
 			os.Exit(1)
 		}
+		// A password-protected Valkey must not come back as NOAUTH: the probe
+		// above proves the password works with a round trip before any
+		// execution starts (the worker would otherwise run believing leases
+		// work while every Acquire fails open).
+		if err := vl.Ping(ctx, 2*time.Second); err != nil {
+			slog.Error("executor: valkey lock refused (auth or connectivity)", "addr", cfg.valkeyAddr, "error", err)
+			os.Exit(1)
+		}
 		lease = vl
-		slog.Info("executor: distributed leases", "addr", cfg.valkeyAddr)
+		slog.Info("executor: distributed leases", "addr", cfg.valkeyAddr, "authenticated", cfg.valkeyPassword != "")
 	} else {
 		lease = lock.NewMemoryLock(lock.MemoryConfig{})
 		slog.Info("executor: in-process leases (VALKEY_ADDR unset — single-host mode)")

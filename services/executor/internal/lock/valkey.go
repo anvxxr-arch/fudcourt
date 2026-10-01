@@ -201,6 +201,27 @@ func (l *ValkeyLock) Release(ctx context.Context, executionID, owner string) err
 	return nil
 }
 
+// Ping does one real round trip — dial, plus AUTH when a password is set — so
+// it answers the same question a lease would. It is the startup gate: a worker
+// that cannot authenticate must refuse to start rather than trade with locks
+// that fail open on every call. A single PING is enough because the handshake
+// is where a bad password surfaces (-ERR), not the command body.
+func (l *ValkeyLock) Ping(ctx context.Context, timeout time.Duration) error {
+	if timeout <= 0 {
+		timeout = 2 * time.Second
+	}
+	pctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	rep, err := l.do(pctx, "PING")
+	if err != nil {
+		return err
+	}
+	if rep.kind != '+' {
+		return fmt.Errorf("lock: unexpected PING reply %s", rep.String())
+	}
+	return nil
+}
+
 // do runs exactly one command on a fresh connection and parses one reply (see
 // the one-command-per-dial rationale on ValkeyLock). Deadlines come from ctx:
 // if the caller set one, it is installed on the connection; a caller that
