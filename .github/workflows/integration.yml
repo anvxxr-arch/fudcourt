@@ -8,7 +8,8 @@ name: integration
 #      typecheck + shaper fixtures.
 #   2. the LIVE reconcile contract: builds the Rust service from this same
 #      commit, starts it, and diffs `/api/reconcile` byte-for-byte against the
-#      TS shaper — the web path really is served by Rust. Secret-gated on
+#      TS shaper (harness: repo-root scripts/verify/verify-reconcile.py) — the
+#      web path really is served by Rust. Secret-gated on
 #      TURSO_AUTH_TOKEN (skipped with a warning, never silently passed).
 #
 # This workflow always RUNS; the live job is skipped without the secret.
@@ -79,7 +80,9 @@ jobs:
             curl -sf --max-time 2 http://127.0.0.1:3102/healthz >/dev/null && break
             sleep 1
           done
-          python3 scripts/verify/verify-reconcile.py --base http://127.0.0.1:3102
+          # verify-reconcile.py moved to the repo-root scripts/verify/ (it is a
+          # repo-wide gate; this job's cwd is frontend/web for bun install/lockfile).
+          python3 ../../scripts/verify/verify-reconcile.py --base http://127.0.0.1:3102
   gate:
     name: "integration - gate (required)"
     needs: [offline, reconcile-live]
