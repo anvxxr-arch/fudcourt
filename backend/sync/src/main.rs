@@ -1,27 +1,24 @@
 //! fudcourt live multi-chain balance sync -> Turso `assets` table.
 //!
-//! HARD RULES (inherited from apps/web/scripts/sync-live.py, which stays in
-//! place as the oracle this binary is measured against):
+//! HARD RULES (inherited from frontend/web/scripts/tools/sync-live.py, which
+//! stays in place as the oracle this binary is measured against):
 //!   * exact wallet address, exact balance, exact hash
 //!   * a failed RPC NEVER becomes 0 -- it raises, so we never fake a zero
 //!     balance
 //!   * a missing credential STOPS the run loudly; no fallback could ever do
 //!     anything but yield garbage credentials
 
-mod chains;
-mod jsonrpc;
-mod sync;
+use fudcourt_sync::oracle;
+use fudcourt_sync::streams::sync;
 
-// Shared with the `fudcourt-reconciled` binary through the library: the Turso
-// client and the CPython-exact float rendering (DR-014 added the second
-// consumer, which is what made a library surface worth having), plus the
-// oracle replay seam (`crate::oracle` in the bin-local sync/jsonrpc modules).
-use fudcourt_sync::{db, oracle, pyfmt};
+// The pipeline stages and shared primitives come from the library
+// (`fudcourt_sync`): the Turso client from `persistence`, the sync pipeline
+// from `streams`, and the Python-parity oracle replay seam at the crate root.
 
 use std::path::{Path, PathBuf};
 
 /// `load_env()` -- nearest `.env` walking up from the executable (release
-/// binary lives in `services/sync-rs/target/release/`, so this reaches the repo
+/// binary lives in `backend/sync/target/release/`, so this reaches the repo
 /// root exactly like the script's `Path(__file__).resolve().parent` walk).
 /// `os.environ.setdefault` semantics: an existing non-empty var wins.
 fn load_env() {

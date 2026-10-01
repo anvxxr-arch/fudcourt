@@ -1,6 +1,7 @@
 //! The Turso read for `/api/reconcile`, plus the pure reconciliation maths.
 //!
-//! This is the Rust port of `apps/web/app/api/reconcile/route.ts` (DR-014): the
+//! This is the Rust port of
+//! `frontend/web/src/app/(frontend)/api/reconcile/route.ts` (DR-014): the
 //! same three SELECTs, the same accumulation rules and the same sort/summary
 //! passes, so the TS route can become a verbatim proxy and the two
 //! implementations can be diffed against each other on live data.
@@ -29,7 +30,7 @@ use std::collections::HashMap;
 
 use serde_json::{json, Value};
 
-use crate::db::{Db, Row};
+use crate::persistence::db::{Db, Row};
 
 /// One reconciliation row, in the wire order the TS route emitted.
 #[derive(Debug, Clone, PartialEq)]

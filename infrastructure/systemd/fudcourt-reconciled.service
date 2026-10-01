@@ -1,7 +1,7 @@
 [Unit]
 Description=FUD Court reconcile (Rust /api/reconcile service) :3102
 Documentation=file:///home/dwizzy/fudcourt/backend/sync/src/bin/fudcourt-reconciled.rs
-Documentation=file:///home/dwizzy/fudcourt/backend/sync/src/server.rs
+Documentation=file:///home/dwizzy/fudcourt/backend/sync/src/reconciliation/server.rs
 Documentation=file:///home/dwizzy/fudcourt/docs/records/DECISIONS.md
 After=network-online.target
 Wants=network-online.target

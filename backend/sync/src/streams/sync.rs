@@ -6,8 +6,8 @@
 //!   * rows are written exactly as read from the chains
 
 use crate::chains::*;
-use crate::db::{Db, Row};
 use crate::jsonrpc::{hexint, pad_addr, rpc};
+use crate::persistence::db::{Db, Row};
 use crate::pyfmt::{fixed2, fixed4, fixed8, json_str, repr, round10, round2, round4};
 use reqwest::Client;
 use serde_json::{json, Value};

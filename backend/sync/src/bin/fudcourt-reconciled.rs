@@ -29,7 +29,8 @@ use std::path::{Path, PathBuf};
 use reqwest::Client;
 
 // The modules live in the crate's library, shared with `fudcourt-sync`.
-use fudcourt_sync::{db, server};
+use fudcourt_sync::persistence::db;
+use fudcourt_sync::reconciliation::server;
 
 /// Walk up from this binary to the repo-root `.env` and export its keys, the same
 /// rule the sync binary and the Python oracle use. Never prints a value.
