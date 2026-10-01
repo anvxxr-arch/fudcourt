@@ -1,0 +1,510 @@
+// Package e2e is the composed Go paper harness the cutover gate needs
+// (docs/architecture/parity-matrix.md, PRD §127). The pieces it composes are
+// each unit-tested in their own packages — internal/exchange/paper (the
+// simulator), internal/worker (the runtime loop), internal/lock (the lease) —
+// but nothing until now drove them TOGETHER, so "the Go worker executes a
+// paper trade end to end" was an untested claim.
+//
+// WHY A NEW PACKAGE, NOT A _test.go NEXT TO THE CODE: the harness must exercise
+// the PUBLIC surface of the worker, the lease and the paper venue exactly as a
+// composition root does (cmd/executor). Keeping it in internal/e2e means it can
+// only use exported symbols — if a refactor unexports something the harness
+// needs, this test fails to compile, which is the boundary telling the truth.
+//
+// HERMETIC: no Postgres, no Valkey, no network, no credentials, no sleeping.
+// Persistence is worker.MemoryStore, the lease is lock.MemoryLock, the venue is
+// exchange/paper, and time is a lock.FixedClock the test advances by hand. This
+// is what makes the §127 scenario runnable in `go test` on any machine, which
+// is precisely what the executor-cutover definition-of-done asks for.
+package e2e
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/decimal"
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/exchange"
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/exchange/paper"
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/executor"
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/lock"
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/planner"
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/risk"
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/sizing"
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/worker"
+)
+
+const baseMs = 1_700_000_000_000
+
+// leaseAdapter bridges lock.ExecutionLock (context + Duration) to worker.Lock
+// (no context, TTL in ms). cmd/executor has an identical adapter; the worker
+// deliberately does not import internal/lock, so the composition root supplies
+// the seam. Duplicating the four lines here keeps the harness on the PUBLIC
+// boundary instead of reaching into package main.
+type leaseAdapter struct{ lock lock.ExecutionLock }
+
+func (a leaseAdapter) Acquire(id, owner string, ttlMs int64) (bool, error) {
+	return a.lock.Acquire(context.Background(), id, owner, time.Duration(ttlMs)*time.Millisecond)
+}
+func (a leaseAdapter) Renew(id, owner string, ttlMs int64) (bool, error) {
+	return a.lock.Renew(context.Background(), id, owner, time.Duration(ttlMs)*time.Millisecond)
+}
+func (a leaseAdapter) Release(id, owner string) error {
+	return a.lock.Release(context.Background(), id, owner)
+}
+
+var _ worker.Lock = leaseAdapter{}
+
+// harness is one composed stack: store + lease + venue + clock + worker.
+type harness struct {
+	store *worker.MemoryStore
+	lease *lock.MemoryLock
+	venue *paper.Paper
+	clock *lock.FixedClock
+	w     *worker.Worker
+}
+
+func newHarness(t *testing.T, owner string, mut func(*paper.PaperConfig)) *harness {
+	t.Helper()
+	clk := lock.NewFixedClock(baseMs)
+	pcfg := paper.PaperConfig{
+		MarketType: executor.MarketLinearPerp,
+		Clock:      exchange.FixedClock{Millis: baseMs},
+		Balances:   []executor.Balance{{Asset: "USDT", Free: "1000000", Used: "0"}},
+		Marks:      map[string]string{"BTC/USDT": "100000"},
+		FillRate:   "1", // full fill per pass: deterministic for the harness
+		// SpreadBps 0 defaults to no bid/ask (honest nil touch), which makes a
+		// TWAP slice fall back to a market order that fills at once.
+	}
+	if mut != nil {
+		mut(&pcfg)
+	}
+	venue, err := paper.NewPaper(pcfg)
+	if err != nil {
+		t.Fatalf("paper.NewPaper: %v", err)
+	}
+	st := worker.NewMemoryStore()
+	lease := lock.NewMemoryLock(lock.MemoryConfig{Clock: clk})
+	w, err := worker.New(worker.Config{
+		Owner:        owner,
+		Tick:         0, // manual Tick() only — the deterministic mode
+		LockTTL:      time.Minute,
+		MaxInFlight:  4,
+		Clock:        clk,
+		Store:        st,
+		Lock:         leaseAdapter{lease},
+		Exchanges:    func(executor.ExecutionRecord) (exchange.Exchange, error) { return venue, nil },
+		QuantityStep: func(executor.ExecutionRecord) string { return "0.0001" },
+	})
+	if err != nil {
+		t.Fatalf("worker.New: %v", err)
+	}
+	return &harness{store: st, lease: lease, venue: venue, clock: clk, w: w}
+}
+
+// tick advances the clock one second and runs one scheduler pass. The clock
+// move is load-bearing: the strategy ledger frees a phantom child's room only
+// once its CreatedAt is strictly older than the tick's now, so two passes at
+// the same instant would look like one.
+func (h *harness) tick() {
+	h.clock.Advance(time.Second)
+	h.w.Tick(context.Background())
+}
+
+func execRec(id string, strat executor.ExecutionStrategy, planned string,
+	entry executor.EntryDefinition, xcfg executor.ExecutionConfig) executor.ExecutionRecord {
+	return executor.ExecutionRecord{
+		ID:                id,
+		UserID:            "u1",
+		AccountID:         "acct1",
+		Exchange:          executor.ExchangeBinance,
+		Symbol:            "BTC/USDT",
+		MarketType:        executor.MarketLinearPerp,
+		Side:              executor.SideBuy,
+		Intent:            executor.IntentOpen,
+		Status:            executor.StatusReady,
+		Mode:              executor.ModePaper,
+		SizingMode:        executor.SizingRiskUSD,
+		SizingValue:       "40",
+		EntryDefinition:   entry,
+		TakeProfit:        []executor.TakeProfitLevel{},
+		ExecutionStrategy: strat,
+		ExecutionConfig:   xcfg,
+		PlannedQuantity:   planned,
+		CreatedAt:         baseMs,
+		StartedAt:         baseMs,
+	}
+}
+
+func (h *harness) children(t *testing.T, id string) []executor.ChildOrderRecord {
+	t.Helper()
+	rows, err := h.store.ListChildOrders(context.Background(), id)
+	if err != nil {
+		t.Fatalf("ListChildOrders(%s): %v", id, err)
+	}
+	return rows
+}
+
+func (h *harness) events() []executor.ExecutionEventRecord {
+	return h.store.Events()
+}
+
+func hasEvent(evs []executor.ExecutionEventRecord, name executor.ExecutionEventName) bool {
+	for _, e := range evs {
+		if e.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func gtZero(t *testing.T, s, label string) {
+	t.Helper()
+	c, err := decimal.Cmp(s, "0")
+	if err != nil || c <= 0 {
+		t.Fatalf("%s = %q, want > 0 (err=%v)", label, s, err)
+	}
+}
+
+func leDec(t *testing.T, got, bound, label string) {
+	t.Helper()
+	c, err := decimal.Cmp(got, bound)
+	if err != nil || c > 0 {
+		t.Fatalf("%s = %q, want <= %q (err=%v)", label, got, bound, err)
+	}
+}
+
+// openEntryChildren counts entry children still resting at the venue.
+func openEntryChildren(rows []executor.ChildOrderRecord) int {
+	n := 0
+	for _, c := range rows {
+		if c.IsExit {
+			continue
+		}
+		switch c.Status {
+		case executor.ChildOpen, executor.ChildPartial, executor.ChildSubmitting:
+			n++
+		}
+	}
+	return n
+}
+
+// ---------------------------------------------------------------------------
+// §127.2–§127.3 — create → recovery → place → fill → complete
+// ---------------------------------------------------------------------------
+
+// TestPaperMarketLifecycle is the core PRD §127 scenario: a market execution
+// runs through the real worker against the real paper venue, places exactly one
+// child, fills it, and lands FILLED via EXECUTION_COMPLETED.
+func TestPaperMarketLifecycle(t *testing.T) {
+	ctx := context.Background()
+	h := newHarness(t, "w1", nil)
+	rec := execRec("e1", executor.StrategyMarket, "0.01",
+		executor.EntryDefinition{Kind: "market"}, executor.ExecutionConfig{})
+	if err := h.store.SaveExecution(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+
+	// §127.2 — the start intent is applied through the worker (READY → RUNNING).
+	started, err := h.w.StartExecution(ctx, "e1")
+	if err != nil {
+		t.Fatalf("StartExecution: %v", err)
+	}
+	if started.Status != executor.StatusRunning {
+		t.Fatalf("status after start = %s, want RUNNING", started.Status)
+	}
+	if !hasEvent(h.events(), executor.EventExecutionStarted) {
+		t.Fatal("start must emit EXECUTION_STARTED")
+	}
+
+	// Pass 1 is recovery (PRD §114): reconcile with the venue, place NOTHING.
+	h.tick()
+	if n := len(h.children(t, "e1")); n != 0 {
+		t.Fatalf("recovery pass created %d children, want 0", n)
+	}
+
+	// Pass 2 drives one strategy step: one market child, filled immediately.
+	h.tick()
+	rows := h.children(t, "e1")
+	if len(rows) != 1 {
+		t.Fatalf("children = %d, want exactly 1", len(rows))
+	}
+	if rows[0].ClientOrderID != "fud_e1_0" {
+		t.Fatalf("client order id = %q, want fud_e1_0 (deterministic §23)", rows[0].ClientOrderID)
+	}
+	if rows[0].Status != executor.ChildFilled {
+		t.Fatalf("child status = %s, want FILLED (paper fills a market order at once)", rows[0].Status)
+	}
+	if c, err := decimal.Cmp(rows[0].FilledQuantity, "0.01"); err != nil || c != 0 {
+		t.Fatalf("filled quantity = %q, want 0.01", rows[0].FilledQuantity)
+	}
+	if !hasEvent(h.events(), executor.EventOrderSubmitted) {
+		t.Fatal("placement must emit ORDER_SUBMITTED")
+	}
+
+	// Pass 3 sees the fill and completes the execution.
+	h.tick()
+	after, ok := h.store.Execution("e1")
+	if !ok {
+		t.Fatal("execution e1 vanished")
+	}
+	if after.Status != executor.StatusFilled {
+		t.Fatalf("final status = %s, want FILLED", after.Status)
+	}
+	if !hasEvent(h.events(), executor.EventExecutionCompleted) {
+		t.Fatal("completion must emit EXECUTION_COMPLETED")
+	}
+	if n := openEntryChildren(h.children(t, "e1")); n != 0 {
+		t.Fatalf("%d entry children left open after completion, want 0", n)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// §127.4 — the lease: a second worker cannot double-drive
+// ---------------------------------------------------------------------------
+
+// TestPaperLeaseContention proves the §65 fail-closed lease on the real
+// MemoryLock: while one owner holds the lease a second is refused, and the
+// lease becomes re-acquirable once released.
+func TestPaperLeaseContention(t *testing.T) {
+	ctx := context.Background()
+	h := newHarness(t, "w1", nil)
+	ttl := time.Minute
+
+	ok, err := h.lease.Acquire(ctx, "e1", "worker-a", ttl)
+	if err != nil || !ok {
+		t.Fatalf("first acquire = (%v,%v), want (true,nil)", ok, err)
+	}
+	ok, err = h.lease.Acquire(ctx, "e1", "worker-b", ttl)
+	if err != nil || ok {
+		t.Fatalf("second acquire = (%v,%v), want (false,nil) — the lease is held", ok, err)
+	}
+	if err := h.lease.Release(ctx, "e1", "worker-a"); err != nil {
+		t.Fatalf("release: %v", err)
+	}
+	ok, err = h.lease.Acquire(ctx, "e1", "worker-b", ttl)
+	if err != nil || !ok {
+		t.Fatalf("re-acquire after release = (%v,%v), want (true,nil)", ok, err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// §127.5 — worker restart never duplicates a venue order
+// ---------------------------------------------------------------------------
+
+// TestPaperRestartNoDuplicateOrder drives an execution to a filled child, then
+// restarts the worker over the SAME store (a fresh Worker = a fresh process) and
+// proves recovery ADOPTS the existing child instead of re-placing it (§66/§114).
+func TestPaperRestartNoDuplicateOrder(t *testing.T) {
+	ctx := context.Background()
+	h := newHarness(t, "w1", nil)
+	rec := execRec("e2", executor.StrategyMarket, "0.01",
+		executor.EntryDefinition{Kind: "market"}, executor.ExecutionConfig{})
+	if err := h.store.SaveExecution(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.w.StartExecution(ctx, "e2"); err != nil {
+		t.Fatalf("StartExecution: %v", err)
+	}
+	h.tick() // recovery
+	h.tick() // place + fill
+	before := h.children(t, "e2")
+	if len(before) != 1 {
+		t.Fatalf("pre-restart children = %d, want 1", len(before))
+	}
+	beforeID := before[0].ClientOrderID
+
+	// Restart: a brand-new worker over the same durable store.
+	h.w = func() *worker.Worker {
+		w, err := worker.New(worker.Config{
+			Owner: "w2", Tick: 0, LockTTL: time.Minute, MaxInFlight: 4,
+			Clock: h.clock, Store: h.store, Lock: leaseAdapter{h.lease},
+			Exchanges:    func(executor.ExecutionRecord) (exchange.Exchange, error) { return h.venue, nil },
+			QuantityStep: func(executor.ExecutionRecord) string { return "0.0001" },
+		})
+		if err != nil {
+			t.Fatalf("restart worker.New: %v", err)
+		}
+		return w
+	}()
+
+	h.tick() // restarted recovery pass: adopt, place nothing
+	rows := h.children(t, "e2")
+	if len(rows) != 1 || rows[0].ClientOrderID != beforeID {
+		t.Fatalf("after restart children = %+v, want exactly the adopted %s", rows, beforeID)
+	}
+	seen := map[string]bool{}
+	for _, c := range rows {
+		if seen[c.ClientOrderID] {
+			t.Fatalf("duplicate client order id %s after restart", c.ClientOrderID)
+		}
+		seen[c.ClientOrderID] = true
+	}
+	h.tick() // restarted placement pass: no room, no re-create
+	rows = h.children(t, "e2")
+	if len(rows) != 1 {
+		t.Fatalf("post-restart placement created a duplicate: %d children, want 1", len(rows))
+	}
+	after, _ := h.store.Execution("e2")
+	if after.Status != executor.StatusFilled {
+		t.Fatalf("status after restart = %s, want FILLED", after.Status)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// §127.6 — cancel a resting entry safely
+// ---------------------------------------------------------------------------
+
+// TestPaperCancelRestingOrder rests a limit child, requests a cancel, and proves
+// the worker cancels the entry and lands CANCELLED with no open entry left.
+func TestPaperCancelRestingOrder(t *testing.T) {
+	ctx := context.Background()
+	h := newHarness(t, "w1", nil)
+	// A buy limit well below the mark never crosses, so the child rests OPEN.
+	rec := execRec("e3", executor.StrategyLimit, "0.01",
+		executor.EntryDefinition{Kind: "limit", Price: "90000"}, executor.ExecutionConfig{})
+	if err := h.store.SaveExecution(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.w.StartExecution(ctx, "e3"); err != nil {
+		t.Fatalf("StartExecution: %v", err)
+	}
+	h.tick() // recovery
+	h.tick() // place the resting limit
+	rows := h.children(t, "e3")
+	if len(rows) != 1 || rows[0].Status != executor.ChildOpen {
+		t.Fatalf("want one OPEN resting child, got %+v", rows)
+	}
+
+	// The cancel intent arrives as a status transition, exactly as the API does.
+	cur, _ := h.store.Execution("e3")
+	cur.Status = executor.StatusCancelRequested
+	if err := h.store.SaveExecution(ctx, cur); err != nil {
+		t.Fatal(err)
+	}
+	h.tick()
+
+	after, _ := h.store.Execution("e3")
+	if after.Status != executor.StatusCancelled {
+		t.Fatalf("status after cancel = %s, want CANCELLED", after.Status)
+	}
+	if n := openEntryChildren(h.children(t, "e3")); n != 0 {
+		t.Fatalf("%d entry children left open after cancel, want 0", n)
+	}
+	if !hasEvent(h.events(), executor.EventExecutionCancelled) {
+		t.Fatal("cancel must emit EXECUTION_CANCELLED")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// §23 — duplicate start is a no-op
+// ---------------------------------------------------------------------------
+
+func TestPaperDuplicateStartIsNoOp(t *testing.T) {
+	ctx := context.Background()
+	h := newHarness(t, "w1", nil)
+	rec := execRec("e4", executor.StrategyMarket, "0.01",
+		executor.EntryDefinition{Kind: "market"}, executor.ExecutionConfig{})
+	if err := h.store.SaveExecution(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.w.StartExecution(ctx, "e4"); err != nil {
+		t.Fatal(err)
+	}
+	n1 := len(h.events())
+	if _, err := h.w.StartExecution(ctx, "e4"); err != nil {
+		t.Fatalf("duplicate start returned error: %v", err)
+	}
+	if n2 := len(h.events()); n2 != n1 {
+		t.Fatalf("duplicate start appended %d events, want 0 (no-op §23)", n2-n1)
+	}
+	if _, err := h.w.StartExecution(ctx, "nope"); err == nil {
+		t.Fatal("start of an unknown execution must be refused")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// §76/§127 — a transport failure degrades to no-placement, then recovers
+// ---------------------------------------------------------------------------
+
+// TestPaperDisconnectDegradesThenRecovers arms the paper venue to fail the next
+// exchange call: the worker must place NOTHING while degraded and record an
+// EXTERNAL_STATE_CHANGE, then place normally on the next pass.
+func TestPaperDisconnectDegradesThenRecovers(t *testing.T) {
+	ctx := context.Background()
+	h := newHarness(t, "w1", func(c *paper.PaperConfig) { c.TimeoutCalls = 1 })
+	rec := execRec("e5", executor.StrategyMarket, "0.01",
+		executor.EntryDefinition{Kind: "market"}, executor.ExecutionConfig{})
+	if err := h.store.SaveExecution(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.w.StartExecution(ctx, "e5"); err != nil {
+		t.Fatalf("StartExecution: %v", err)
+	}
+	h.tick() // recovery pass: the armed timeout fires on the first venue call
+	if n := len(h.children(t, "e5")); n != 0 {
+		t.Fatalf("degraded pass created %d children, want 0", n)
+	}
+	if !hasEvent(h.events(), executor.EventExternalStateChange) {
+		t.Fatal("a failed venue call must surface as EXTERNAL_STATE_CHANGE")
+	}
+	h.tick() // timeout slot consumed: the venue answers, placement proceeds
+	if n := len(h.children(t, "e5")); n != 1 {
+		t.Fatalf("recovered pass created %d children, want 1", n)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// §127.1 — plan + risk-based sizing (create → size)
+// ---------------------------------------------------------------------------
+
+// TestPaperPlanRiskSizing exercises the deterministic planner the executor
+// creates an execution from: a $40 risk budget at 100,000 with a 98,000 stop
+// sizes ~0.02 BTC and never exceeds the budget.
+func TestPaperPlanRiskSizing(t *testing.T) {
+	sp := func(v string) *string { return &v }
+	instr := risk.InstrumentMetadata{
+		Symbol: "BTC/USDT", MarketType: executor.MarketLinearPerp, Exchange: executor.ExchangeBinance,
+		BaseAsset: "BTC", QuoteAsset: "USDT", SettlementAsset: "USDT",
+		TickSize: "0.01", StepSize: "0.0001", MinQuantity: sp("0.0001"), MinNotional: sp("5"),
+		ContractMultiplier: "1", MaxLeverage: sp("125"), MaintenanceMarginRate: sp("0.004"),
+	}
+	bals := risk.BalanceSnapshot{
+		FuturesAvailable: sp("4800"), FuturesEquity: sp("5000"), TotalExchangeEquity: sp("5000"),
+	}
+	profile := executor.RiskProfile{
+		DefaultRiskMode: "risk_usd", DefaultRisk: "40", MaxRiskPerTradePct: "2",
+		MaxOpenRiskPct: "5", MaxDailyLossPct: "5", MaxLeverage: "10",
+		DefaultMarginMode: executor.MarginIsolated, DefaultExecutionUrgency: executor.UrgencyBalanced,
+	}
+	res, err := planner.PlanExecution(planner.PlanInputs{
+		Request: planner.ExecutionRequest{
+			AccountID: "acct1", Symbol: "BTC/USDT", MarketType: executor.MarketLinearPerp,
+			Side: executor.SideBuy, Intent: executor.IntentOpen,
+			Entry:       executor.EntryDefinition{Kind: "market"},
+			StopLoss:    &executor.PriceDefinition{Kind: "stop", Price: "98000"},
+			TakeProfits: []executor.TakeProfitLevel{{Price: "106000"}},
+			Sizing:      executor.SizingDefinition{Mode: executor.SizingRiskUSD, Amount: "40"},
+			Leverage:    &sizing.LeverageSpec{Mode: executor.LeverageManual, Leverage: "5"},
+			Execution:   planner.ExecutionSpec{Type: executor.StrategyMarket},
+		},
+		Market: &planner.MarketSnapshot{
+			Symbol: "BTC/USDT", Bid: sp("99999"), Ask: sp("100001"),
+			Mid: "100000", Last: "100000", Timestamp: baseMs,
+		},
+		Exchange:      executor.ExchangeBinance,
+		Instrument:    instr,
+		FeeModel:      risk.FeeModel{MakerBps: "0", TakerBps: "0"},
+		SlippageModel: risk.SlippageModel{SlippageBps: "0", SafetyReservePct: "0"},
+		Balances:      &bals,
+		RiskProfile:   &profile,
+	})
+	if err != nil {
+		t.Fatalf("PlanExecution: %v", err)
+	}
+	gtZero(t, res.Quantity, "planned quantity")
+	if res.Risk.EstimatedTotalRisk == nil {
+		t.Fatal("risk budget present ⇒ estimated total risk must be reported, not nil")
+	}
+	leDec(t, *res.Risk.EstimatedTotalRisk, "40", "estimated total risk")
+}
