@@ -142,6 +142,31 @@ Items 1–4 are the *same* dependency: the executor cutover. They are a single d
 | 16 | migrated executor has parity tests | **PARTIAL** | `parity-matrix.md` rows 1–9 DONE, cutover rows OPEN; Go side has 240 funcs but no Go paper harness (§9.1) |
 | 17 | build/test status documented | MET | §7 + `scripts/verify/verify-all.sh` |
 
+### Objective "Goal terukur" acceptance metrics (re-derived this session)
+
+The DoD rows above answer the prose "definition of done"; below is the objective's
+separate **acceptance-metrics** block, each proven by a command (not asserted).
+"0 executor logic in `apps/web`" is the one metric still open — it is the same gated
+cutover as DoD row 1, and the yardstick's own escape ("stop if it requires credentials
+unavailable in the repository") applies.
+
+| Metric | Required | Evidence (current tree) |
+| --- | --- | --- |
+| DB schema files inside `apps/web` | 0 | `find apps/web -name '*.sql'` → **0** |
+| exchange credentials / signing handled by frontend | 0 | signing hits in `apps/web` are a **session-cookie HMAC** (`platform/auth/session.ts`, `middleware.ts`), TS **type** "signatures", and the mask-on-error path of the **gated** `platform/executor/exchange.ts` (redacts `apiKey`/`secret`/`X-MBX-APIKEY`). No exchange signing exists outside that gated adapter. |
+| cross-service implementation imports | 0 | `grep` for `services/{api,executor,data}/` imports inside the Go services → **none**; `services/data` mentions `executor` nowhere; `services/sync` only names TS files in *provenance comments* (`src/{main,chains,reconcile}.rs`), not imports |
+| canonical risk engine | 1 | exactly one `risk.go` → `services/executor/internal/risk/risk.go` (+31 test funcs) |
+| canonical sizing implementation | 1 | exactly one `sizing.go` → `services/executor/internal/sizing/sizing.go` (+16 test funcs) |
+| canonical exchange abstraction | 1 | `services/executor/internal/exchange/{exchange,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package (85 test funcs) |
+| contract source of truth | 1 | `packages/contracts/`: `openapi/fudcourt.yaml`, `events/{catalog,event.schema}.json`, `schemas/{error,event}-envelope.json`, gated by `CONTRACTS_OK` |
+| core executor logic inside `apps/web` | 0 | **OPEN** — 8,029 LOC still in `apps/web/src/platform/executor/*.ts` + `scripts/executor/worker.ts`; gated cutover (§9.1), DoD row 1 |
+| independently deployable: web / api / data / executor / sync | 5 | `deploy/systemd/fudcourt-{web,api,data,executor,sync}.service` all present; `check-deploy` OK; `/api` independently built (`go build ./...` OK) |
+| ownership discoverable | — | gate `check-structure.py` OK (DR-018 layers), i.e. a stray cross-boundary file fails CI |
+
+Cross-checked gates for the block above (all green this session): `check-structure` OK,
+`check-deploy` OK, `check-contract.mjs` `CONTRACTS_OK`, `check-api-contract.py`
+`API_CONTRACT_OK`, `go build` OK for `services/api` and `services/data`.
+
 ## 7. Test / build results (current working tree, 2026-10-01)
 
 One command: `bash scripts/verify/verify-all.sh` → **`VERIFY_ALL_OK`** (exit 0). Per gate:
