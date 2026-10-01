@@ -161,17 +161,33 @@ Verification of the two fixes made this session (each proven, not asserted):
   proxy route with no Go counterpart → gate FAILS naming the 502-in-production path;
   removed it → gate PASSES.
 
+**Committed HEAD is green (verified in an isolated `git worktree --detach HEAD`).**
+A clean checkout of HEAD builds and tests clean across every module:
+`go test ./...` OK for `services/executor`, `services/api`, `services/data`;
+`cargo test --release` OK for `services/sync`. Doing this in a worktree (not the
+shared tree) is what makes the claim about *committed* state — the shared tree
+carries the writer's uncommitted edits above.
+
 ## 8. Known regressions
 
-**None.** Two failures existed in the working tree before this session and are now fixed:
+**None outstanding.** Three failures were found and fixed this session; all were pre-existing in the
+working tree or in the branch's committed history (none caused by this session's changes — checked
+against the baseline and against `94a2ee1`/`642e7ef`):
 1. `services/api/cmd/api/main.go:5` — a comment line missing its `//` (`notifications, jobs.`),
    a Go **syntax error** that failed `go build ./services/api/...`. Fixed (line is a comment again).
 2. `packages/contracts/openapi/fudcourt.yaml` — referenced **29 undefined components**
    (`RateLimited`, `MutationUnauthorized`, and 27 data-surface schemas), so `bun run generate`
    failed and the whole SDK/contract gate was red. Fixed by defining every referenced component.
-
-The tree is green after both fixes; `git status` at the time of writing showed
-42 modified / 13 deleted / 9 untracked, all of which are this branch's in-flight work (§9).
+3. **`services/executor/cmd/executor` test did not compile at HEAD** — commit `642e7ef` landed
+   `main_test.go` ahead of its `main.go`/`Acquire` implementation (`undefined: loadConfigFrom`);
+   production `go build ./...` still passed, so only the *test* target was red. The writer's working
+   tree held the coherent completion; this session landed it (`befd141`, `25cd532`) and verified HEAD
+   in an isolated worktree. The "split by 7d90520" wording in `befd141`'s message is wrong and is
+   corrected here: `git show --stat 7d90520 -- services/executor/cmd/executor/` is empty.
+The `apps/web/deploy/*` → `deploy/systemd/` consolidation was also captured mid-edit (over-broad
+`git add` of the writer's staged files) and has been restored to the coherent, host-matching pair
+(`5f2d3f9`; `check-deploy` OK, and the checked-in `fudcourt-sync.service` byte-matches the installed
+host unit's `ExecStart`).
 
 ## 9. Recommended next steps
 
