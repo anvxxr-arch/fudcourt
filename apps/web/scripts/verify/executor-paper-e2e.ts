@@ -230,23 +230,32 @@ check('a flat account may open', statusOf(flatOpen) === 0, `status=${statusOf(fl
 
 // A long exists; a SHORT opening would net through flat rather than add.
 venuePositions = [{ symbol: 'BTC/USDT', quantity: 0.5 }];
-const shortIntoLong = await runtimeModule.createExecution(store, SESSION_USER, { ...request, side: 'sell', mode: 'paper' });
+// A sell is not the buy plan with the sign flipped: validation is DIRECTION
+// aware (buy ⇒ stop below entry, stop above for a sell), so a sell request must
+// carry its own inverted bracket or it is refused as malformed (correctly)
+// before any position policy can see it.
+const sellRequest = { ...request, side: 'sell' as const, stopLoss: { price: 102_000 }, takeProfits: [{ price: 94_000 }] };
+const shortIntoLong = await runtimeModule.createExecution(store, SESSION_USER, { ...sellRequest, mode: 'paper' });
 check('an opposing short is refused with 409', statusOf(shortIntoLong) === 409, `status=${statusOf(shortIntoLong)}`);
-check('the refusal names the netting risk', JSON.stringify(shortIntoLong).includes('net through'), JSON.stringify(shortIntoLong).slice(0, 160));
+// The refusal is a NextResponse, so its body must be READ, not stringified
+// (JSON.stringify of a Response is always "{}"). A body is also single-use, so
+// it is read ONCE and both the assertion and the failure detail use that text.
+const nettingBody = await (shortIntoLong as Response).text();
+check('the refusal names the netting risk', nettingBody.includes('net through'), nettingBody.slice(0, 160));
 
 // Same direction is an explicit ADD, not a refusal.
 const addToLong = await runtimeModule.createExecution(store, SESSION_USER, { ...request, side: 'buy', mode: 'paper' });
 check('adding to a long in the same direction is allowed', statusOf(addToLong) === 0, `status=${statusOf(addToLong)}`);
 
 // A reduce must never be gated, whatever the venue says.
-const reduceLong = await runtimeModule.createExecution(store, SESSION_USER, { ...request, side: 'sell', intent: 'reduce', mode: 'paper' });
-check('a reduce against an existing long is never refused', statusOf(reduceLong) === 0, `status=${statusOf(reduceLong)}`);
+const reduceLong = await runtimeModule.createExecution(store, SESSION_USER, { ...sellRequest, intent: 'reduce' as const, mode: 'paper' });
+check('a reduce against an existing long is never refused', statusOf(reduceLong) === 0, `status=${statusOf(reduceLong)} :: ${JSON.stringify(reduceLong).slice(0,300)}`);
 
 const rowsAfter = (await store.listExecutions(USER, { limit: 100 })).length;
 check(
-  'only the two permitted openings created rows — refusals left nothing to reconcile',
-  rowsAfter === rowsBefore + 2,
-  `rows ${rowsBefore} → ${rowsAfter} (+2 permitted; the refused short added none)`,
+  'only the permitted requests created rows — refusals left nothing to reconcile',
+  rowsAfter === rowsBefore + 3,
+  `rows ${rowsBefore} → ${rowsAfter} (+3 permitted: flat open, add to long, reduce; the refused short added none)`,
 );
 
 runtimeModule.resetPlanAdapterFactory();
@@ -382,6 +391,20 @@ check('no plaintext secret in the account list payload', !serialised.includes('e
 const rowBlob = JSON.stringify(await pg().unsafe('select api_secret_encrypted from executor.exchange_accounts where id = $1', [account.id]));
 check('no plaintext secret in the database row', !rowBlob.includes('e2e-secret'));
 
+// The netting section above intentionally let three successful openings through
+// the real createExecution path, so those rows persist and would otherwise show
+// up as committed open risk in the rollup below — making a deterministic check
+// read as flaky. They are this test's own scaffolding, not user state: drop them
+// (children first, foreign keys) so the §73/§74 assertions see only the
+// lifecycle execution they are about.
+{
+  const scaffolding = 'SELECT id FROM executor.executions WHERE user_id = $1 AND id <> $2';
+  await pg().unsafe(`DELETE FROM executor.fills WHERE execution_id IN (${scaffolding})`, [USER, execution.id]);
+  await pg().unsafe(`DELETE FROM executor.child_orders WHERE execution_id IN (${scaffolding})`, [USER, execution.id]);
+  await pg().unsafe(`DELETE FROM executor.execution_events WHERE execution_id IN (${scaffolding})`, [USER, execution.id]);
+  await pg().unsafe(`DELETE FROM executor.execution_plans WHERE execution_id IN (${scaffolding})`, [USER, execution.id]);
+  await pg().unsafe(`DELETE FROM executor.executions WHERE user_id = $1 AND id <> $2`, [USER, execution.id]);
+}
 // ---------------------------------------------------------------------------
 section('portfolio risk gates (§73 open risk, §74 daily loss)');
 const DAY_START = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
