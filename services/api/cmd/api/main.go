@@ -2,7 +2,12 @@
 // target.md): one process hosting the bounded contexts under internal/ —
 // identity, authorization, entitlements, credentials, exchangeaccounts,
 // instruments, markets, ledger, portfolio, treasury, wallets, transactions,
-// notifications, jobs.
+// notifications, jobs, and the /api/admin/members plane (admin/members/route.ts
+// port). The admin context is a route plane here, not an internal package:
+// it reuses identity.TierAdmin ("admin") and the existing handlers in
+// cmd/api/{routes,errors}.go. Splitting it into internal/admin is deferred
+// (docs/architecture/final-review.md §6, debt item 5) — the comment must not
+// claim a package that does not exist.
 //
 // Deliberately NOT one process per domain (objective §51): domains are modules;
 // extraction needs an operational reason.

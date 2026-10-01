@@ -117,3 +117,49 @@ func validExecutionID(s string) bool {
 	}
 	return true
 }
+
+// RequestID mints a per-placement request id: `req_<executionID>_<sequence>`.
+//
+// PRD §66 / objective §23 names four identifiers that must exist before any
+// live-mode cutover: execution_id, request_id, client_order_id, event_id. Three
+// were already here; this is the fourth. It is NOT the same thing as
+// ClientOrderID: the request id identifies the placement REQUEST (one per
+// SubmitOrder call, so a retried submit is a duplicate request), while the
+// client order id identifies the VENUE order it maps onto (a retry maps to the
+// same order). Confusing the two is how a restart re-sends an order: the worker
+// would see a "new" request id and place a second venue order for an execution
+// that already has one.
+//
+// INVARIANT: ParseRequestID(RequestID(executionID, sequence)) returns exactly
+// (executionID, sequence); foreign ids are refused, so a request id can never be
+// mistaken for a client order id or vice versa (different prefixes).
+func RequestID(executionID string, sequence int) string {
+	return "req_" + executionID + "_" + strconv.Itoa(sequence)
+}
+
+// ParseRequestID splits a request id into (executionID, sequence). Only ids
+// this package could have minted are accepted; a foreign id (e.g. a client
+// order id `fud_...`) is refused, which is the whole point of the distinct
+// prefix — the two id spaces must never be cross-parsed. It reuses the
+// sequence/execution validators rather than ParseClientOrderID, which would
+// reject the `req_` prefix it does not own.
+func ParseRequestID(id string) (string, int, error) {
+	if !strings.HasPrefix(id, "req_") {
+		return "", 0, ErrForeignID
+	}
+	rest := id[len("req_"):]
+	i := strings.LastIndexByte(rest, '_')
+	if i <= 0 || i == len(rest)-1 {
+		return "", 0, ErrForeignID
+	}
+	executionID := rest[:i]
+	seqText := rest[i+1:]
+	if !canonicalSequence(seqText) || !validExecutionID(executionID) {
+		return "", 0, ErrForeignID
+	}
+	sequence, err := strconv.Atoi(seqText)
+	if err != nil || sequence < 0 {
+		return "", 0, ErrForeignID
+	}
+	return executionID, sequence, nil
+}
