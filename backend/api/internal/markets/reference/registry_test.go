@@ -280,7 +280,7 @@ func TestSchemaLegalProviderSpellingsResolve(t *testing.T) {
 		{ProviderDefiLlama, "coingecko:solana", "SOL", "backend/sync/src/chains.rs LLAMA_IDS"},
 		{ProviderDefiLlama, "coingecko:tether", "USDT", "backend/sync/src/chains.rs LLAMA_IDS"},
 		{ProviderDefiLlama, "coingecko:usd-coin", "USDC", "backend/sync/src/chains.rs LLAMA_IDS"},
-		{ProviderCryptoRank, "bitcoin", "BTC", "frontend/web/scripts/fixtures/coins.json.gz (row exists; asset not seeded - see the miss list)"},
+		{ProviderCryptoRank, "bitcoin", "BTC", "tests/fixtures/coins.json.gz (moved from frontend/web/scripts/fixtures/ by fd17dc6; row exists; asset not seeded - see the miss list)"},
 	}
 	for _, tc := range cases {
 		id, err := ref.Resolve(tc.provider, tc.id)

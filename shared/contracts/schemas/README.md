@@ -35,12 +35,17 @@ schemas/
   defi/              protocol, pool
   research/          provider-shaped market rows + news/report documents
   signals/           signal, scoreboard
-  events/            (pre-existing) the event catalogue — see §5
   error-envelope.json, event-envelope.json   (pre-existing, untouched)
 ```
 
-Every directory exists because at least one concept in it is implemented or consumed today. No
-directory is empty.
+Every directory **in this tree** exists because at least one concept in it is implemented or
+consumed today, and no directory **in this tree** is empty. (Neither claim is about `events/`,
+which is not a child — see the next paragraph.)
+
+**`events/` is not in this tree.** The event catalogue (`catalog.json`, `event.schema.json`) is a
+**sibling** of `schemas/` under `shared/contracts/` — it is [`../events/`](../events/), not
+`schemas/events/`, and it is a different contract (see §3). `schemas/event-envelope.json` is the
+only event artifact that lives here.
 
 ## 2. Layer of each file
 

@@ -77,7 +77,8 @@ type seedVenue struct {
 //
 //   - provider ids: ONLY the CryptoRank chain slug, under the surface-qualified
 //     provider `cryptorank-chain`, taken from the recorded chain fixture
-//     frontend/web/scripts/fixtures/blockchains.json.gz
+//     tests/fixtures/blockchains.json.gz (moved from
+//     frontend/web/scripts/fixtures/ by fd17dc6)
 //     pageProps.blockchains[] (Ethereum=ethereum, BNB=bnb,
 //     Polygon=matic-network, Solana=solana, Arbitrum=arbitrum, Base=base,
 //     Optimism=optimism).
@@ -133,7 +134,8 @@ func seedChains() []seedChain {
 // (the same slug the id is built from). Names and provider ids come
 // from the same places as the chains above; the CryptoRank values are the
 // recorded fixture's coin keys
-// (frontend/web/scripts/fixtures/coins.json.gz pageProps.coins[]:
+// (tests/fixtures/coins.json.gz, moved from frontend/web/scripts/fixtures/ by
+// fd17dc6; pageProps.coins[]:
 // bitcoin, ethereum, tether, bnb, usdcoin, solana, polygon-ecosystem-token,
 // hyperliquid).
 //

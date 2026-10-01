@@ -366,10 +366,20 @@ document**.
 | `fudcourt-sync-rust.service` + `.timer` (5 min) | Rust `fudcourt-sync` | §3 Alchemy/Solana/Hyperliquid/coins.llama.fi → Turso `assets` | `NODE_ENV=` (unit loads repo `.env` itself) |
 | `fudcourt-sync.service` + `.timer` (5 min) | `python3 sync-live.py` | same pipeline, legacy oracle | inline env only |
 | `fudcourt-executor.service` | Go `fudcourt-executor` (CEX runtime) | §4 venue order/balance/position feeds | `frontend/web/.env.local` |
-| `fudcourt-executor-worker.service` | bun `frontend/web/scripts/executor/worker.ts` | same, TS runtime (effective default — see *Gaps*) | `frontend/web/.env.local`, `NODE_ENV=production` |
+| `fudcourt-executor-worker.service` | bun `frontend/web/scripts/executor/worker.ts` | same feeds, TS runtime — **FALLBACK only** (the Go `fudcourt-executor.service` is the production executor; this unit is retained until the cutover row `verify:executor` (`tests/e2e/executor/executor-paper-e2e.ts`) proves green) | `frontend/web/.env.local`, `NODE_ENV=production` |
 | `fudcourt-pgload.service` + `.timer` (60 s) | bun `frontend/web/scripts/tools/pg-load.ts` | Turso → Postgres projection | `frontend/web/.env.local` |
 | `RETIRED-fudcourt-apicalls.service.txt` | — | retired CryptoRank sidecar (predecessor of `fudcourt-data`) | tombstone file |
 | `RETIRED-fudcourt-blog.service.txt` | — | retired separate blog app (merged by DR-017) | tombstone file |
+**Executor runtime ownership (RESOLVED — was the former "two executor runtimes" gap).** The Go
+worker (`backend/workers/executor`; unit `fudcourt-executor.service`) **is the production
+executor**; the TypeScript worker (`frontend/web/scripts/executor/worker.ts`; unit
+`fudcourt-executor-worker.service`) is retained **only as a fallback** until the cutover row
+`verify:executor` proves green, and is **not** the effective default. Parity rows 1–9 of
+`docs/architecture/parity-matrix.md` are `DONE`. `infrastructure/systemd/fudcourt-executor.service`
+also carries a **PROVISIONING GATE** — the Go unit stays masked until
+`FUDCOURT_EXECUTOR_MASTER_KEY`, `FUDCOURT_EXECUTOR_PG_URL` and `VALKEY_ADDR` exist (§40 fail-closed
+startup; all three live in `frontend/web/.env.local`). Evidence: the two unit headers cited in
+this table and `docs/architecture/parity-matrix.md` rows 1–9.
 
 ---
 
