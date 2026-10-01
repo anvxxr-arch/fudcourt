@@ -504,6 +504,97 @@ func TestPaperTwapSlices(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 10 — a venue rejection is recorded and the plan recovers
+// ---------------------------------------------------------------------------
+
+// TestPaperRejectedOrderThenReplaces arms one simulated venue rejection: the
+// first placement lands REJECTED with an ORDER_REJECTED event, the room is freed
+// (§107), and a later pass re-places and fills.
+func TestPaperRejectedOrderThenReplaces(t *testing.T) {
+	ctx := context.Background()
+	h := newHarness(t, "w1", func(c *paper.PaperConfig) {
+		c.RejectOrders = 1
+		c.RejectCode = "MIN_NOTIONAL"
+		c.RejectCategory = executor.ErrInvalidOrder
+	})
+	rec := execRec("e7", executor.StrategyMarket, "0.01",
+		executor.EntryDefinition{Kind: "market"}, executor.ExecutionConfig{})
+	if err := h.store.SaveExecution(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.w.StartExecution(ctx, "e7"); err != nil {
+		t.Fatalf("StartExecution: %v", err)
+	}
+	h.tick() // recovery
+	h.tick() // placement: the armed rejection fires
+	if !hasEvent(h.events(), executor.EventOrderRejected) {
+		t.Fatal("a venue rejection must emit ORDER_REJECTED")
+	}
+	rows := h.children(t, "e7")
+	if len(rows) != 1 || rows[0].Status != executor.ChildRejected {
+		t.Fatalf("after rejection children = %+v, want one REJECTED", rows)
+	}
+	// The rejection released the room (§107): a later pass re-places and fills.
+	h.tick()
+	h.tick()
+	after, _ := h.store.Execution("e7")
+	if after.Status != executor.StatusFilled {
+		t.Fatalf("final status = %s, want FILLED after the rejection cleared", after.Status)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Phase 10 — a partial fill is tracked, then the remainder completes
+// ---------------------------------------------------------------------------
+
+// TestPaperPartialFillThenComplete paces the venue at half-fill per matching
+// pass. The worker's own reconcile sees fill truth only through GetOpenOrders
+// (a fully filled order leaves the open book), so final fills arrive through the
+// fill-INGESTION seam (PRD §94) — which this test composes by writing the child
+// row exactly as the sync service does. It proves both halves: the worker tracks
+// a partial fill, and completes once the ingested fill catches up to the plan.
+func TestPaperPartialFillThenComplete(t *testing.T) {
+	ctx := context.Background()
+	h := newHarness(t, "w1", func(c *paper.PaperConfig) { c.FillRate = "0.5" })
+	rec := execRec("e8", executor.StrategyMarket, "0.02",
+		executor.EntryDefinition{Kind: "market"}, executor.ExecutionConfig{})
+	if err := h.store.SaveExecution(ctx, rec); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.w.StartExecution(ctx, "e8"); err != nil {
+		t.Fatalf("StartExecution: %v", err)
+	}
+	h.tick() // recovery
+	h.tick() // placement: the venue fills half at once
+	rows := h.children(t, "e8")
+	if len(rows) != 1 {
+		t.Fatalf("children = %d, want 1", len(rows))
+	}
+	if rows[0].Status != executor.ChildPartial {
+		t.Fatalf("first pass status = %s, want PARTIAL (FillRate 0.5)", rows[0].Status)
+	}
+	gtZero(t, rows[0].FilledQuantity, "partial fill quantity")
+	leDec(t, rows[0].FilledQuantity, "0.02", "partial fill quantity")
+	if mid, _ := h.store.Execution("e8"); mid.Status != executor.StatusPartiallyFilled {
+		t.Fatalf("status after a partial fill = %s, want PARTIALLY_FILLED", mid.Status)
+	}
+
+	// Fill-ingestion seam (sync service): the remainder of the order filled at
+	// the venue, so the child row is advanced to its terminal fill.
+	c := rows[0]
+	c.FilledQuantity = "0.02"
+	c.Status = executor.ChildFilled
+	if err := h.store.SaveChildOrder(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	h.tick() // the worker now sees done == planned and completes
+	after, _ := h.store.Execution("e8")
+	if after.Status != executor.StatusFilled {
+		t.Fatalf("final status = %s, want FILLED once the fill is ingested", after.Status)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // §127.1 — plan + risk-based sizing (create → size)
 // ---------------------------------------------------------------------------
 

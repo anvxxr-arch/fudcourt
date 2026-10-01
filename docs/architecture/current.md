@@ -298,6 +298,17 @@ at masterKeyFromEnv (/home/dwizzy/fudcourt/apps/web/src/platform/executor/store.
 at createCredential (/home/dwizzy/fudcourt/apps/web/src/platform/executor/store.ts:555:20)
 at /home/dwizzy/fudcourt/apps/web/scripts/verify/executor-paper-e2e.ts:100:29
 ```
+**Go-side parity (2026-10-01, measured on this tree):** `services/executor` is a Go 1.25 module —
+`go build ./... && go vet ./... && go test ./...` green, 18 packages, 252 test funcs (all three Go
+modules together: 542 test funcs). Row-by-row TS↔Go status lives in
+[`parity-matrix.md`](parity-matrix.md) §cutover; every `DONE` row cites the Go suite that pins it.
+The offline composed artifact of that matrix is `services/executor/internal/e2e/` — 10 hermetic
+scenarios (create→place→fill→complete, TWAP multi-child schedule with the §107 sum bound, lease
+contention, restart-no-duplicate-order, cancel-resting, duplicate-start-noop,
+disconnect-degrade-then-recover, rejected-order-then-replaces, partial-fill-then-complete,
+plan/risk sizing) driving `worker` + `paper` + `MemoryLock` + `MemoryStore` together with no
+Postgres/Valkey/credentials/network (stable under `-race -count=3`). That harness is the Go half of
+the cutover gate; `verify:executor` above remains the live half and stays environment-gated.
 
 ## 6. services/data (Go, was apps/apicalls) — data acquisition sidecar
 

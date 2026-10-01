@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/anvxxr-arch/fudcourt/services/executor/internal/decimal"
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/exchange"
 	"github.com/anvxxr-arch/fudcourt/services/executor/internal/executor"
 	"github.com/anvxxr-arch/fudcourt/services/executor/internal/strategy"
 )
@@ -70,22 +71,30 @@ func childRowID(executionID, clientOrderID string) string {
 }
 
 // isRetryable reports whether an error is one of the retryable classes
-// (PRD §78: network/rate-limit/overload). Adapters classify their errors with a
-// Retryable() bool method; an unclassifiable error keeps the row SUBMITTING (the
-// safest choice: the venue may have taken the order; reconciliation decides).
+// (PRD §78: network/rate-limit/overload).
+//
+// The retry set lives on exchange.VenueError.Class.Retryable — a *field*, not a
+// method — and on the adapter/simulator classes, so the check MUST go through
+// exchange.Classify, which resolves all three shapes (a VenueError carries its
+// classification, a retryable signal declares Retryable(), a deadline is a
+// network class). Looking only for a `Retryable() bool` METHOD returns the
+// fail-safe default true for every venue failure, which silently leaves a
+// REJECTED order (invalid_order / permission_error / insufficient_balance)
+// stuck SUBMITTING forever instead of rejecting it and freeing the room (§107).
+//
+// An UNCLASSIFIABLE error (no VenueError, no signal, no timeout → unknown)
+// still defaults to retryable: the venue may have taken the order, so the row
+// stays SUBMITTING and reconciliation decides (§66). Only an explicit
+// non-retryable classification rejects.
 func isRetryable(err error) bool {
-	type unwrapper interface{ Unwrap() error }
-	for e := err; e != nil; {
-		if r, ok := e.(interface{ Retryable() bool }); ok {
-			return r.Retryable()
-		}
-		u, ok := e.(unwrapper)
-		if !ok {
-			break
-		}
-		e = u.Unwrap()
+	if err == nil {
+		return false
 	}
-	return true
+	class := exchange.Classify(err)
+	if class.Category == executor.ErrUnknown {
+		return true // unclassifiable: keep SUBMITTING, let reconciliation decide
+	}
+	return class.Retryable
 }
 
 // strPtr returns a pointer to s, or nil for the empty string — nullable decimal

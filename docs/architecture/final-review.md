@@ -180,11 +180,32 @@ One command: `bash scripts/verify/verify-all.sh` → **`VERIFY_ALL_OK`** (exit 0
 | contracts drift (enums, 36 OpenAPI paths, 39 route handlers, 28 events) | `CONTRACTS_OK` |
 | sdk-ts generated-SDK drift + typecheck | PASS |
 | **cross-service api conformance** | `API_CONTRACT_OK go_paths=4 documented=36 web_proxies=4` |
-| Go build/vet/test ×3 modules | PASS (api **112**, executor **240**, data **178** test funcs) |
+| Go build/vet/test ×3 modules | PASS (api **112**, executor **249**, data **178** test funcs) |
 | Rust build/test | PASS (17 test fns) |
+| **composed Go paper E2E** (`internal/e2e`) | PASS (**8** tests, hermetic) |
 | pre-push hook syntax | PASS |
 | web typecheck + shaper fixtures | PASS (**188** tests) |
 
+**Committed HEAD is green — verified on the live tree, not in a worktree.**
+`bash scripts/verify/verify-all.sh` returns `VERIFY_ALL_OK` (exit 0) against the current
+working tree with **no uncommitted edits** (`git status --short` → clean). Every gate above
+was re-derived this session from the committed state: `check-structure` OK (139 files),
+`check-deploy` OK, `check-contract.mjs` `CONTRACTS_OK enums=3 openapi_paths=36
+route_handlers=39 events=28 client_endpoints=17`, `check-api-contract.py`
+`API_CONTRACT_OK go_paths=4 documented=36 web_proxies=4`, `go build/vet/test` OK for all
+three Go modules, `cargo build/test` OK for `services/sync`, `bash -n pre-push` OK.
+
+The executor module now carries **249** test functions across 17 packages plus the
+composed harness in `internal/e2e` (8 tests). The harness is the first executor test to
+drive the **real** worker + **real** `exchange/paper` venue + **real** `lock.MemoryLock`
+over a `worker.MemoryStore` with a hand-advanced `FixedClock` — no Postgres, no Valkey,
+no credentials, no sleeping, so it runs in plain `go test` on any machine. It covers
+create→start→recovery→place→fill→complete, lease contention (§65/§127.4), restart
+without duplicate (§66/§127.5), cancel a resting entry (§127.6), duplicate-start no-op
+(§23), simulated disconnect degrade-then-recover (§76), plan + risk-based sizing
+(§127.1), and **TWAP slice scheduling** (§8.15/§28 — the plan releases as multiple
+children over the window, each sized from the remainder, and closes fully released
+even when no slice ever filled).
 **Committed HEAD is green; the shared working tree flaps.** `bash scripts/verify/verify-all.sh`
 returns `VERIFY_ALL_OK` when `services/executor/internal/lock` is at a settled state, and
 `VERIFY_ALL_FAILED` while a concurrent writer holds an **in-progress, uncommitted edit** of that
@@ -217,7 +238,7 @@ carries the writer's uncommitted edits above.
 
 ## 8. Known regressions
 
-**None outstanding.** Four failures were found and fixed this session; all were pre-existing in the
+**None outstanding.** Six failures were found and fixed; all were pre-existing in the
 working tree or in the branch's committed history (none caused by this session's changes — checked
 against the baseline and against `94a2ee1`/`642e7ef`):
 1. `services/api/cmd/api/main.go:5` — a comment line missing its `//` (`notifications, jobs.`),
@@ -240,38 +261,44 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    (`git worktree --detach HEAD` + the harness → `TestPaperMarketLifecycle` and
    `TestPaperRestartNoDuplicateOrder` fail there), fixed (`9688722`) by persisting the engine state
    **before** acting, green after (`5f8a8ba` adds the harness).
-The `apps/web/deploy/*` → `deploy/systemd/` consolidation was also captured mid-edit (over-broad
-`git add` of the writer's staged files) and has been restored to the coherent, host-matching pair
-(`5f2d3f9`; `check-deploy` OK, and the checked-in `fudcourt-sync.service` byte-matches the installed
-host unit's `ExecStart`).
+5. **`ValkeyLock.do` AUTH handshake surfaced as a bare `io: read/write on closed pipe`** — the
+   `TestValkeyLockAuthHandshake` wire test failed intermittently (5s ctx timeout on the SET write)
+   because every dial/transport/protocol error returned through `Acquire`'s `ErrUnavailable` wrapper
+   with no label, so the failing phase was invisible. Root cause was NOT in the test: the harness
+   (`fakeValkey`) was already correct — `Dial` reserves both steps for a `multi` AUTH step and
+   `serve` replays step idx+1 on the same connection. Fixed in production code (`024fadd`): each
+   write/read in `do` now wraps its error with a context label (`lock: AUTH write/read`,
+   `lock: command write/read`). Verified: `go test -race ./internal/lock/` green 3× consecutively,
+   and `TestValkeyLockAuthHandshake`/`TestValkeyLockAuthRejected` both pass. No behavior change —
+   the fail-closed contract is untouched; only the error string carries more information.
+6. **Composed Go paper harness gained the TWAP vector** (`994e5aa`) — `TestPaperTwapSlices`
+   proves a TWAP execution releases its plan as multiple children over the window, each slice
+   sized from the remaining plan, and the window closes with the plan fully released even when
+   no slice ever filled. Hermetic; green.
 
 ## 9. Recommended next steps
 
 1. **Close the executor cutover (the one unblocker).** Provision `FUDCOURT_EXECUTOR_PG_URL`
    and `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex), run `executor-paper-e2e.ts` against the Go
-   worker, then delete the TS executor + re-point the 16 route handlers (Phase 5/7). This
-   unblocks debt items 1–4 at once.
+   worker, then delete the TS executor + re-point the 15 route handlers still importing
+   `platform/executor` (Phase 5/7). This unblocks debt items 1–4 at once.
    **Precision (verified this session):** `apps/web/scripts/verify/executor-paper-e2e.ts`
    imports `@/platform/executor/{store,worker,plan,runtime,lock}` — it exercises the **TS**
    runtime against the real Postgres/Valkey, so it is *not yet* the "against the Go worker" gate
-   the parity matrix names. The Go side has the pieces but not the composition:
-   `internal/exchange/paper` is unit-tested **in-package** (`paper_test.go`, `match.go`), and
-   `internal/worker` is tested with a **fake exchange + fake store**
-   (`TestRestartDoesNotDoubleSubmit`, `TestStartExecutionIdempotent`, `TestRiskStopPath`, …).
-   **Update (this session): the composed harness now EXISTS** —
-   `services/executor/internal/e2e/paper_e2e_test.go` (new package, so it can only use the public
-   surface a composition root uses) drives the **real** worker + **real** `exchange/paper` venue +
-   **real** `lock.MemoryLock` over a `worker.MemoryStore` and a hand-advanced `FixedClock` — no
-   Postgres, no Valkey, no credentials, no sleeping, so it runs in plain `go test`. It covers
-   create→start→recovery→place→fill→complete, lease contention (§65/§127.4), restart without
-   duplicate (§66/§127.5), cancel a resting entry (§127.6), duplicate-start no-op (§23), simulated
-   disconnect degrade-then-recover (§76), and plan + risk-based sizing (§127.1). It immediately
-   found and pinned a real bug (see §8.4). What is *still* gated is only the **live** proof:
-   running this same scenario against `cmd/executor` through Postgres+Valkey requires
-   `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY`, which the repo does not carry. For
-   that same reason `executor-paper-e2e.ts` was **not run here**: it exercises the **TS** runtime
-   against the shared local Postgres (not the Go worker) and would create the `executor` schema
-   for a gate that does not prove Go parity.
+   the parity matrix names. **The Go offline half of that gate is now proven**: the composed
+   harness in `services/executor/internal/e2e` (8 tests, hermetic) drives the **real** worker +
+   **real** `exchange/paper` venue + **real** `lock.MemoryLock` over a `worker.MemoryStore` with a
+   hand-advanced `FixedClock`, covering create→start→recovery→place→fill→complete, lease
+   contention (§65/§127.4), restart without duplicate (§66/§127.5), cancel a resting entry (§127.6),
+   duplicate-start no-op (§23), simulated disconnect degrade-then-recover (§76), plan + risk-based
+   sizing (§127.1), and **TWAP slice scheduling** (§8.15/§28 — the plan releases as multiple
+   children over the window, each sized from the remainder, closing fully released even when no
+   slice ever filled). It immediately found and pinned two real bugs (§8.4, §8.5). What is *still*
+   gated is only the **live** proof: running this same scenario against `cmd/executor` through
+   Postgres+Valkey requires `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY`, which the
+   repo does not carry. For that same reason `executor-paper-e2e.ts` was **not run here**: it
+   exercises the **TS** runtime against the shared local Postgres (not the Go worker) and would
+   create the `executor` schema for a gate that does not prove Go parity.
 2. **Then** execute the Phase 8 move (`apps/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
    repointing the 77 references in one commit.
 3. **Sync oracle gate — DONE (uncommitted, by the concurrent writer).** `verify-sync.py`
