@@ -26,9 +26,6 @@ step "structure gate (DR-018 layers)"
 step "web contract gate (CR_MODES + mutation-auth guards)"
 (cd frontend/web && python3 scripts/checks/check-contract.py) || fail web-contract
 
-step "deploy-unit guard (ExecStart paths, timer pairs)"
-(cd frontend/web && python3 scripts/checks/check-deploy.py) || fail deploy
-
 step "shared/contracts drift gate"
 node shared/contracts/scripts/check-contract.mjs || fail contracts
 
@@ -49,6 +46,14 @@ go build ./backend/data/... && go vet ./backend/data/... && go test ./backend/da
 
 step "cargo build/test (backend/sync)"
 (cd backend/sync && cargo fmt --check && cargo build --release --quiet && cargo test --release --quiet) || fail rust
+
+# Ordered AFTER the cargo build on purpose: check-deploy requires every ExecStart target to
+# exist, and the two Rust units (fudcourt-sync-rust / fudcourt-reconciled) are NOT
+# self-provisioning the way the Go units are (they carry no ExecStartPre=go build), so
+# backend/sync/target/release/* must already be built — running this before the cargo step
+# is red on a clean checkout.
+step "deploy-unit guard (ExecStart paths, timer pairs)"
+(cd frontend/web && python3 scripts/checks/check-deploy.py) || fail deploy
 
 step "sync oracle gate (Python oracle vs Rust replay, byte-identical projection)"
 python3 scripts/verify/verify-sync.py >/dev/null || fail sync-oracle
