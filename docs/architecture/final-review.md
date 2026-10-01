@@ -137,6 +137,18 @@ One command: `bash scripts/verify/verify-all.sh` → **`VERIFY_ALL_OK`** (exit 0
 | pre-push hook syntax | PASS |
 | web typecheck + shaper fixtures | PASS (**188** tests) |
 
+**Note on `services/executor` (a second writer is active on this branch).** All the gates above are
+green *except* the last one that touches `services/executor`: at the time of writing the working tree
+contains an **incomplete, uncommitted edit by a concurrent writer** in
+`services/executor/internal/lock/valkey_test.go` — it references an undefined `fakeValkey` type
+(`go vet` → `undefined: fakeValkey`) and has carried literal CR bytes inside Go string literals
+(`string literal not terminated`). That file is their work-in-progress, **not committed by this
+session** (HEAD's copy is clean); it is being left untouched rather than "completed" or committed
+half-done. Every other gate in the table passes on the current tree, verified individually:
+`check-deploy` OK (13 units), `check-structure` OK (139 files), `check-contract` OK (28 CR modes +
+5 family parities), `check-contract.mjs` CONTRACTS_OK, `check-api-contract.py` API_CONTRACT_OK,
+`go build/vet/test` OK for `services/api` **and** `services/data`, `bash -n pre-push` OK.
+
 Verification of the two fixes made this session (each proven, not asserted):
 - **Deploy gate** (`check-deploy.py`): simulated a fresh clone by deleting
   `services/{data,executor}/bin/*` → gate still PASS; then pointed one unit at a
