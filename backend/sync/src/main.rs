@@ -1,6 +1,6 @@
 //! fudcourt live multi-chain balance sync -> Turso `assets` table.
 //!
-//! HARD RULES (inherited from frontend/web/scripts/tools/sync-live.py, which
+//! HARD RULES (inherited from tests/oracle/sync-live.py, which
 //! stays in place as the oracle this binary is measured against):
 //!   * exact wallet address, exact balance, exact hash
 //!   * a failed RPC NEVER becomes 0 -- it raises, so we never fake a zero

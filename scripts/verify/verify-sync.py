@@ -40,7 +40,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]  # .../fudcourt  (verify/ -> scripts/ -> root)
 FIXTURE = REPO / "tests" / "oracle" / "fixtures" / "capture.json"
-PY_ORACLE = REPO / "frontend" / "web" / "scripts" / "tools" / "sync-live.py"
+PY_ORACLE = REPO / "tests" / "oracle" / "sync-live.py"
 RUST_BIN = REPO / "backend" / "sync" / "target" / "release" / "fudcourt-sync"
 
 BEGIN = "#ASSETS-PROJECTION-BEGIN"

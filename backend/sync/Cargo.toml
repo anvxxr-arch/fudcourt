@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "fudcourt Rust services: the live multi-chain balance sync (Turso `assets` table) and the /api/reconcile HTTP service (DR-014)"
 
-# Single crate, no workspace. The Python original in frontend/web/scripts/tools/sync-live.py
+# Single crate, no workspace. The Python original in tests/oracle/sync-live.py
 # is kept in place as the independent oracle (DR-005 pattern).
 [lib]
 name = "fudcourt_sync"

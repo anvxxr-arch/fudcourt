@@ -1,7 +1,7 @@
 # FUD Court live multi-chain balance sync -> Turso
 #
 # DEPLOYED variant: this is what `~/.config/systemd/user/fudcourt-sync.service` runs
-# today — the **Python oracle** `frontend/web/scripts/tools/sync-live.py`. It is the
+# today — the **Python oracle** `tests/oracle/sync-live.py`. It is the
 # independent cross-check for the Rust service, per DR-005's oracle rule.
 #
 # ============================ READ THIS BEFORE SWAPPING ============================
@@ -25,15 +25,21 @@
 # was repointed. Path changes here must land together with the move.
 [Unit]
 Description=FUD Court live multi-chain balance sync -> Turso
-Documentation=file:///home/dwizzy/fudcourt/frontend/web/scripts/tools/sync-live.py
+Documentation=file:///home/dwizzy/fudcourt/tests/oracle/sync-live.py
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
+# The script walks up from its own location to the repo-root `.env`, so its own
+# credential read does not depend on the cwd — but the ExecStartPost below does:
+# bun only auto-loads frontend/web/.env.local (where FUDCOURT_PG_URL lives) when
+# the cwd is frontend/web. At the repo root bun loads the root `.env` instead
+# (TURSO only), pg-load falls back to a passwordless URL and Postgres answers
+# 28P01 — measured: rc=1 at the repo root, rc=0 here, same binary and file.
 WorkingDirectory=/home/dwizzy/fudcourt/frontend/web
 Environment=NODE_ENV=
-ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/frontend/web/scripts/tools/sync-live.py
+ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/tests/oracle/sync-live.py
 # The projection (DR-019) after every sync. This unit is one-shot and runs every
 # 5 minutes, so projecting here bounds read-model staleness to the sync interval
 # rather than to the 60 s timer alone — and a sync that fail-louds leaves the

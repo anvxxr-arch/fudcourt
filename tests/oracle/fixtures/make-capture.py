@@ -38,7 +38,7 @@ from pathlib import Path
 PLACEHOLDER_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 ALCHEMY_REDACTED = "{ALCHEMY}"
 
-# --- mirrored verbatim from frontend/web/scripts/tools/sync-live.py ------------
+# --- mirrored verbatim from tests/oracle/sync-live.py --------------------------
 WALLETS = [
     ("Main", "0x6816ba2cb2bc013a78225228a153586ca63b1548", "evm"),
     ("Hanif", "0xB0be41f0e7F0AD49622B292dA1322c2BEA46fA1b", "evm"),

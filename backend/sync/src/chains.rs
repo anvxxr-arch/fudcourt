@@ -1,5 +1,5 @@
 //! Chain / wallet / price-oracle registry, transcribed from the Python
-//! original (`frontend/web/scripts/tools/sync-live.py`).
+//! original (`tests/oracle/sync-live.py`).
 
 pub struct EvmChain {
     pub name: &'static str,
