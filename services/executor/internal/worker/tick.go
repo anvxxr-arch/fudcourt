@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/anvxxr-arch/fudcourt/services/executor/internal/exchange"
 	"github.com/anvxxr-arch/fudcourt/services/executor/internal/execution"
 	"github.com/anvxxr-arch/fudcourt/services/executor/internal/executor"
-	"github.com/anvxxr-arch/fudcourt/services/executor/internal/exchange"
 	"github.com/anvxxr-arch/fudcourt/services/executor/internal/idempotency"
 	"github.com/anvxxr-arch/fudcourt/services/executor/internal/orders"
 	"github.com/anvxxr-arch/fudcourt/services/executor/internal/strategy"
@@ -88,12 +88,16 @@ func (w *Worker) drive(ctx context.Context, rec executor.ExecutionRecord, placem
 	sctx := w.strategyContext(ctx, rec, ex, venueOrders, placementEnabled)
 	newState, actions := strat.Step(state, sctx)
 
-	// ---- 5. execute actions behind the hard clamp (§107) -------------------
-	stopped := w.runActions(ctx, rec, ex, actions, placementEnabled)
-
-	// ---- 6. persist opaque strategy state (PRD §130) -----------------------
+	// ---- 5. persist opaque strategy state BEFORE acting (PRD §130) ---------
+	// MUST precede runActions: a pass that lands a terminal/paused status
+	// (complete/cancel/risk-stop) writes that status to the row inside
+	// runActions, so re-saving `rec` afterwards would restore the PRE-action
+	// status — silently resurrecting a completed execution as RUNNING forever.
 	rec.EngineState = newState
 	_ = w.cfg.Store.SaveExecution(ctx, rec)
+
+	// ---- 6. execute actions behind the hard clamp (§107) -------------------
+	stopped := w.runActions(ctx, rec, ex, actions, placementEnabled)
 	if stopped {
 		return
 	}
@@ -235,19 +239,19 @@ func (w *Worker) placeChild(ctx context.Context, rec executor.ExecutionRecord, e
 		return true // lease lost: stop this pass entirely
 	}
 	_ = w.cfg.Store.SaveChildOrder(ctx, executor.ChildOrderRecord{
-		ID:              childRowID(rec.ID, req.ClientOrderID),
-		ExecutionID:     rec.ID,
-		ClientOrderID:   req.ClientOrderID,
-		Symbol:          req.Symbol,
-		Side:            req.Side,
-		Type:            req.OrderType,
-		Price:           strPtr(req.Price),
-		Quantity:        req.Quantity,
-		FilledQuantity:  "0",
-		Status:          executor.ChildSubmitting,
-		IsExit:          req.ReduceOnly,
-		SubmittedAt:     now,
-		UpdatedAt:       now,
+		ID:             childRowID(rec.ID, req.ClientOrderID),
+		ExecutionID:    rec.ID,
+		ClientOrderID:  req.ClientOrderID,
+		Symbol:         req.Symbol,
+		Side:           req.Side,
+		Type:           req.OrderType,
+		Price:          strPtr(req.Price),
+		Quantity:       req.Quantity,
+		FilledQuantity: "0",
+		Status:         executor.ChildSubmitting,
+		IsExit:         req.ReduceOnly,
+		SubmittedAt:    now,
+		UpdatedAt:      now,
 	})
 	placed, err := ex.CreateOrder(context.Background(), req)
 	if err != nil {
