@@ -326,6 +326,7 @@ Module `github.com/anvxxr-arch/fudcourt/services/data`; entrypoint `cmd/apicalls
 | `internal/chainrank` | `https://www.chainrank.fyi` | ChainRank fetch/modes/shape |
 | `internal/cryptorank` | `https://cryptorank.io` | CryptoRank fetch + envelope/marshal/shapers/types/value; parity & slice-semantics tests |
 | `internal/khala` | `https://www.khala.io` | Khala research fetch/parse/shape |
+| `services/executor` env | `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex, REQUIRED, fail-closed §128.23), `FUDCOURT_EXECUTOR_PG_URL`, `VALKEY_ADDR` (empty ⇒ in-process locks), `VALKEY_PASSWORD` (empty ⇒ no AUTH; a backend that REQUIRES a password fails startup, it does not run degraded), `FUDCOURT_EXECUTOR_HEALTH_ADDR` (127.0.0.1:3104), `FUDCOURT_EXECUTOR_QUANTITY_STEP`, `FUDCOURT_EXECUTOR_MAX_IN_FLIGHT`, `FUDCOURT_EXECUTOR_READY_TIMEOUT_MS` | startup refuses a missing/weak key, a missing DSN, a nonpositive budget or an unparseable timeout |
 | `internal/cache` | filesystem (`APICALLS_CACHE_DIR`, `APICALLS_KHALA_CACHE_DIR`) + Valkey (`APICALLS_VALKEY_ADDR`, `APICALLS_VALKEY_PASSWORD`), TTL envs per source | shared response cache |
 | `internal/httpx` | — | JSON/HTTP helpers |
 | `internal/paritytest` | — | shared parity/golden-envelope test harness |
