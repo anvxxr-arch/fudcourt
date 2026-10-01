@@ -21,7 +21,20 @@
         "name": "next"
       }
     ],
-    "target": "ES2017"
+    "target": "ES2017",
+    "paths": {
+      "@payload-config": [
+        "./src/cms/payload.config.ts"
+      ],
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "baseUrl": ".",
+    "types": [
+      "bun",
+      "node"
+    ]
   },
   "include": [
     "next-env.d.ts",

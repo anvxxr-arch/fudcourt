@@ -1,0 +1,153 @@
+{
+  "cache": "MISS",
+  "count": 12,
+  "fetchedAt": 1790597944,
+  "fundingRounds": [
+    {
+      "coinIcon": "https://images.cryptorank.io/coins/60x60.limited1790581211738.png",
+      "coinKey": "limited",
+      "coinName": "Limited",
+      "date": "2026-09-25T00:00:00.000Z",
+      "funds": [
+        "Third Prime",
+        "Digital Currency Group (DCG)",
+        "ParaFi Capital",
+        "Collab+Currency",
+        "North Island Ventures",
+        "Pharsalus Capital",
+        "Onigiri Capital",
+        "The House Fund",
+        "1982 Ventures"
+      ],
+      "raiseUsd": 11500000,
+      "type": "Extended Seed",
+      "valuationUsd": null
+    },
+    {
+      "coinIcon": "https://images.cryptorank.io/coins/60x60.coin_glass1790340977890.png",
+      "coinKey": "coin-glass",
+      "coinName": "CoinGlass",
+      "date": "2026-09-25T00:00:00.000Z",
+      "funds": [
+        "CoinMarketCap"
+      ],
+      "raiseUsd": null,
+      "type": "M&A",
+      "valuationUsd": null
+    },
+    {
+      "coinIcon": "https://images.cryptorank.io/coins/60x60.function_space1790326983957.png",
+      "coinKey": "function-space",
+      "coinName": "functionSPACE",
+      "date": "2026-09-24T00:00:00.000Z",
+      "funds": [
+        "Maven 11 Capital",
+        "Blockwall",
+        "SMAPE Capital"
+      ],
+      "raiseUsd": 1700000,
+      "type": "PRE SEED",
+      "valuationUsd": null
+    },
+    {
+      "coinIcon": "https://images.cryptorank.io/coins/60x60.hifi1790253054705.png",
+      "coinKey": "hifi",
+      "coinName": "HIFI",
+      "date": "2026-09-24T00:00:00.000Z",
+      "funds": [
+        "Left Lane Capital",
+        "Antler"
+      ],
+      "raiseUsd": 37000000,
+      "type": "SERIES A",
+      "valuationUsd": null
+    },
+    {
+      "coinIcon": null,
+      "coinKey": null,
+      "coinName": null,
+      "date": "2026-09-24T00:00:00.000Z",
+      "funds": [],
+      "raiseUsd": 518000000,
+      "type": null,
+      "valuationUsd": null
+    },
+    {
+      "coinIcon": "https://images.cryptorank.io/coins/60x60.crest1790177583792.png",
+      "coinKey": "crest",
+      "coinName": "Crest",
+      "date": "2026-09-23T00:00:00.000Z",
+      "funds": [
+        "Citrea"
+      ],
+      "raiseUsd": null,
+      "type": "M&A",
+      "valuationUsd": null
+    }
+  ],
+  "global": {
+    "allCurrencies": 39406,
+    "btcDominance": 56.646393,
+    "btcDominanceChangePercent": -0.43,
+    "ethDominance": 11.05,
+    "ethDominanceChangePercent": 0.15,
+    "gasGwei": 0.402327073,
+    "totalMarketCap": 2943362656512,
+    "totalMarketCapChangePercent": -1.78,
+    "totalVolume24h": 40180880206,
+    "totalVolume24hChangePercent": 40.43
+  },
+  "kind": "home",
+  "slice": "homepage slice: 6 most recent rounds + 6 upcoming IDOs; the full fundraising boards (/funding-rounds, /ico*) are WAF-challenged to every non-browser client",
+  "upcomingIco": [
+    {
+      "date": "Tue Sep 29 2026 00:00:00 GMT+0000 (Coordinated Universal Time)",
+      "key": "jumper-exchange",
+      "name": "Jumper",
+      "platform": "LEGION",
+      "raiseUsd": 3000000,
+      "symbol": "JUMP"
+    },
+    {
+      "date": "Tue Nov 24 2026 00:00:00 GMT+0000 (Coordinated Universal Time)",
+      "key": "cineflicks",
+      "name": "Cineflicks",
+      "platform": null,
+      "raiseUsd": 40000000,
+      "symbol": "CNF"
+    },
+    {
+      "date": "Fri Jan 01 2027 00:00:00 GMT+0000 (Coordinated Universal Time)",
+      "key": "battle-town",
+      "name": "Battle Town",
+      "platform": null,
+      "raiseUsd": 13471000,
+      "symbol": "BTOWN"
+    },
+    {
+      "date": null,
+      "key": "metacces",
+      "name": "Metacces",
+      "platform": null,
+      "raiseUsd": 25000000,
+      "symbol": "ACCES"
+    },
+    {
+      "date": null,
+      "key": "yoog",
+      "name": "YOOG",
+      "platform": null,
+      "raiseUsd": 8100000,
+      "symbol": "YOOG"
+    },
+    {
+      "date": null,
+      "key": "stackos-sfx",
+      "name": "StackOS",
+      "platform": "Tokensoft",
+      "raiseUsd": 5000000,
+      "symbol": "SFX"
+    }
+  ],
+  "upstream": "https://cryptorank.io/"
+}

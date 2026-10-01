@@ -15,9 +15,8 @@ tsconfig.tsbuildinfo
 # vercel
 .vercel
 
-# payload
-apps/blog/media/
-apps/blog/.payload/
+# payload (the CMS merged into apps/web in DR-017; uploads land in apps/web/media/)
+apps/web/media/
 
 # test build output
 .shaper-tests/
@@ -26,4 +25,14 @@ apps/blog/.payload/
 *.log
 
 # os
-.DS_Store*.node
+.DS_Store
+# compiled addons
+*.node
+# go (apps/apicalls)
+apps/apicalls/bin/
+apps/apicalls/.cache/
+# rust (apps/sync; target/ is also covered by apps/sync/.gitignore)
+apps/sync/target/
+# live verifier reports (regenerated on every run; the tracked artifacts live in
+# apps/web/scripts/fixtures/, which is the reviewed record)
+apps/web/scripts/**/*-report.json

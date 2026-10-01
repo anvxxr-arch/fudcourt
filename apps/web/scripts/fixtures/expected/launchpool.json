@@ -1,0 +1,676 @@
+{
+  "cache": "MISS",
+  "count": 50,
+  "fetchedAt": 1790597960,
+  "kind": "launchpool",
+  "launchpoolRows": [
+    {
+      "category": "Blockchain",
+      "key": "gno-land",
+      "launchpads": [
+        "KuCoin Spotlight"
+      ],
+      "name": "Gno.land",
+      "priceUsd": 0.072301863379,
+      "symbol": "GNOT",
+      "till": "2026-09-26T00:00:00.000Z",
+      "totalRaiseUsd": 3000000,
+      "when": "2026-09-16T00:00:00.000Z"
+    },
+    {
+      "category": "AI",
+      "key": "fastx-network",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "FastX Network",
+      "priceUsd": 0.360893804108,
+      "symbol": "FXNW",
+      "till": "2026-09-25T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-09-22T00:00:00.000Z"
+    },
+    {
+      "category": "Infrastructure",
+      "key": "marscat",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "MarsCat",
+      "priceUsd": 0.769640334992,
+      "symbol": "MCAT",
+      "till": "2026-09-24T00:00:00.000Z",
+      "totalRaiseUsd": 3000000,
+      "when": "2026-09-10T00:00:00.000Z"
+    },
+    {
+      "category": "AI",
+      "key": "cluster-protocol",
+      "launchpads": [
+        "Bitget",
+        "Gate Launchpad"
+      ],
+      "name": "Cluster Protocol",
+      "priceUsd": 0.012664051198,
+      "symbol": "CP",
+      "till": "2026-09-21T00:00:00.000Z",
+      "totalRaiseUsd": 7750000,
+      "when": "2026-09-02T00:00:00.000Z"
+    },
+    {
+      "category": "Infrastructure",
+      "key": "aligned-layer",
+      "launchpads": [
+        "Bitget",
+        "Gate Launchpad"
+      ],
+      "name": "Aligned",
+      "priceUsd": 0.006395195356,
+      "symbol": "ALIGN",
+      "till": "2026-09-11T00:00:00.000Z",
+      "totalRaiseUsd": 45266666.68,
+      "when": "2026-08-21T00:00:00.000Z"
+    },
+    {
+      "category": "AI",
+      "key": "dgrid",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "DGrid",
+      "priceUsd": 1.01415045654,
+      "symbol": "DGAI",
+      "till": "2026-09-09T00:00:00.000Z",
+      "totalRaiseUsd": 5000000,
+      "when": "2026-08-26T00:00:00.000Z"
+    },
+    {
+      "category": "Meme",
+      "key": "pipedog-rh",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "pipedog",
+      "priceUsd": 0.001833199869,
+      "symbol": "PIPEDOG",
+      "till": "2026-08-31T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-08-17T00:00:00.000Z"
+    },
+    {
+      "category": "AI",
+      "key": "dappos",
+      "launchpads": [
+        "Bitget",
+        "Gate Launchpad"
+      ],
+      "name": "DappOS",
+      "priceUsd": 0.212447521313,
+      "symbol": "DOS",
+      "till": "2026-08-24T00:00:00.000Z",
+      "totalRaiseUsd": 20500000,
+      "when": "2026-08-10T00:00:00.000Z"
+    },
+    {
+      "category": "Tokenized Assets",
+      "key": "sandisk-corporation-xstock",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "Sandisk tokenized stock (xStock)",
+      "priceUsd": 1725.966221617664,
+      "symbol": "SNDKx",
+      "till": "2026-08-20T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-08-06T00:00:00.000Z"
+    },
+    {
+      "category": null,
+      "key": "scpx-pre-ipo-perp",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "SPCX PRE-IPO PERP (Derivatives)",
+      "priceUsd": 149.965977351734,
+      "symbol": "SPCX",
+      "till": "2026-08-11T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-07-28T00:00:00.000Z"
+    },
+    {
+      "category": "DeFi",
+      "key": "solstice",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "Solstice",
+      "priceUsd": 0.066324069383,
+      "symbol": "SLX",
+      "till": "2026-08-06T00:00:00.000Z",
+      "totalRaiseUsd": 371048.99,
+      "when": "2026-07-16T00:00:00.000Z"
+    },
+    {
+      "category": "Exchange",
+      "key": "ant-fun-new",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "ANT.FUN",
+      "priceUsd": 0.013878702394,
+      "symbol": "ANTFUN",
+      "till": "2026-08-04T00:00:00.000Z",
+      "totalRaiseUsd": 5000000,
+      "when": "2026-07-21T00:00:00.000Z"
+    },
+    {
+      "category": "AI",
+      "key": "aeon-xyz",
+      "launchpads": [
+        "Bitget"
+      ],
+      "name": "AEON",
+      "priceUsd": 0.052551732763,
+      "symbol": "AEON",
+      "till": "2026-08-01T00:00:00.000Z",
+      "totalRaiseUsd": 8000000,
+      "when": "2026-07-27T00:00:00.000Z"
+    },
+    {
+      "category": "Tokenized Assets",
+      "key": "tether-gold",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "Tether Gold",
+      "priceUsd": 4169.445234729947,
+      "symbol": "XAUT",
+      "till": "2026-07-16T00:00:00.000Z",
+      "totalRaiseUsd": 88000,
+      "when": "2026-07-09T00:00:00.000Z"
+    },
+    {
+      "category": "Tokenized Assets",
+      "key": "spacex-tokenized-stock-ondo",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "SpaceX Tokenized Stock (Ondo)",
+      "priceUsd": 149.699031129176,
+      "symbol": "SPCXon",
+      "till": "2026-07-03T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-06-18T00:00:00.000Z"
+    },
+    {
+      "category": "DeFi",
+      "key": "kaskad",
+      "launchpads": [
+        "MEXC"
+      ],
+      "name": "Kaskad",
+      "priceUsd": 0.003137698543,
+      "symbol": "KSKD",
+      "till": "2026-06-25T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-05-25T00:00:00.000Z"
+    },
+    {
+      "category": "Blockchain",
+      "key": "nexus-laboratories",
+      "launchpads": [
+        "MEXC"
+      ],
+      "name": "Nexus",
+      "priceUsd": 8.33046e-7,
+      "symbol": "NEX",
+      "till": "2026-06-20T00:00:00.000Z",
+      "totalRaiseUsd": 27200000,
+      "when": "2026-05-20T00:00:00.000Z"
+    },
+    {
+      "category": "Blockchain",
+      "key": "citrea",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "Citrea",
+      "priceUsd": 0.011832570004,
+      "symbol": "CTR",
+      "till": "2026-06-16T00:00:00.000Z",
+      "totalRaiseUsd": 16700000,
+      "when": "2026-05-26T00:00:00.000Z"
+    },
+    {
+      "category": "Payments",
+      "key": "tea",
+      "launchpads": [
+        "KuCoin Spotlight"
+      ],
+      "name": "tea",
+      "priceUsd": 0.000044461459,
+      "symbol": "TEA",
+      "till": "2026-06-14T00:00:00.000Z",
+      "totalRaiseUsd": 19900000,
+      "when": "2026-06-03T00:00:00.000Z"
+    },
+    {
+      "category": "NFT",
+      "key": "arena-two",
+      "launchpads": [
+        "KuCoin Spotlight"
+      ],
+      "name": "Arena Two",
+      "priceUsd": 0.000252895104,
+      "symbol": "ATWO",
+      "till": "2026-05-25T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-05-18T00:00:00.000Z"
+    },
+    {
+      "category": "AI",
+      "key": "emblem-vault",
+      "launchpads": [
+        "MEXC"
+      ],
+      "name": "Emblem Vault",
+      "priceUsd": 0.004164584108,
+      "symbol": "EMBLEM",
+      "till": "2026-05-15T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-04-15T00:00:00.000Z"
+    },
+    {
+      "category": "RWA",
+      "key": "kaio",
+      "launchpads": [
+        "Bitget"
+      ],
+      "name": "KAIO",
+      "priceUsd": 0.027460806797,
+      "symbol": "KAIO",
+      "till": "2026-05-13T00:00:00.000Z",
+      "totalRaiseUsd": 19000000,
+      "when": "2026-05-06T00:00:00.000Z"
+    },
+    {
+      "category": "AI",
+      "key": "gensyn",
+      "launchpads": [
+        "Bitget"
+      ],
+      "name": "Gensyn",
+      "priceUsd": 0.020352133947,
+      "symbol": "AI",
+      "till": "2026-05-06T00:00:00.000Z",
+      "totalRaiseUsd": 66740000,
+      "when": "2026-05-01T00:00:00.000Z"
+    },
+    {
+      "category": "Blockchain",
+      "key": "digital-asset",
+      "launchpads": [
+        "Bitget",
+        "Bybit",
+        "Gate Launchpad",
+        "KuCoin Spotlight"
+      ],
+      "name": "Canton Network",
+      "priceUsd": 0.131808333656,
+      "symbol": "CC",
+      "till": "2026-05-01T00:00:00.000Z",
+      "totalRaiseUsd": 812200000,
+      "when": "2025-11-07T00:00:00.000Z"
+    },
+    {
+      "category": "RWA",
+      "key": "staynex",
+      "launchpads": [
+        "KuCoin Spotlight"
+      ],
+      "name": "Staynex",
+      "priceUsd": 0.000006337324,
+      "symbol": "STAY",
+      "till": "2026-05-01T00:00:00.000Z",
+      "totalRaiseUsd": 2746999,
+      "when": "2026-04-23T00:00:00.000Z"
+    },
+    {
+      "category": "Blockchain",
+      "key": "midnight-network",
+      "launchpads": [
+        "Bitget",
+        "Bybit",
+        "Gate Launchpad",
+        "KuCoin Spotlight"
+      ],
+      "name": "Midnight Network",
+      "priceUsd": 0.027047727244,
+      "symbol": "NIGHT",
+      "till": "2026-04-16T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2025-12-09T00:00:00.000Z"
+    },
+    {
+      "category": "DeFi",
+      "key": "wllfi",
+      "launchpads": [
+        "MEXC"
+      ],
+      "name": "World Liberty Financial",
+      "priceUsd": 0.056736555553,
+      "symbol": "WLFI",
+      "till": "2026-04-10T00:00:00.000Z",
+      "totalRaiseUsd": 715080000,
+      "when": "2026-04-03T00:00:00.000Z"
+    },
+    {
+      "category": "Blockchain",
+      "key": "mezo",
+      "launchpads": [
+        "Bitget",
+        "KuCoin Spotlight"
+      ],
+      "name": "Mezo",
+      "priceUsd": 0.004272453239,
+      "symbol": "MEZO",
+      "till": "2026-04-08T00:00:00.000Z",
+      "totalRaiseUsd": 28500000,
+      "when": "2026-04-01T00:00:00.000Z"
+    },
+    {
+      "category": "Exchange",
+      "key": "edgex",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "edgeX",
+      "priceUsd": 0.566338762425,
+      "symbol": "EDGE",
+      "till": "2026-04-07T00:00:00.000Z",
+      "totalRaiseUsd": 41000,
+      "when": "2026-03-31T00:00:00.000Z"
+    },
+    {
+      "category": "DePIN",
+      "key": "worldland",
+      "launchpads": [
+        "KuCoin Spotlight"
+      ],
+      "name": "WorldLand",
+      "priceUsd": 0.00199953403,
+      "symbol": "WL",
+      "till": "2026-04-07T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-03-30T00:00:00.000Z"
+    },
+    {
+      "category": "Blockchain",
+      "key": "ice-open-network",
+      "launchpads": [
+        "KuCoin Spotlight"
+      ],
+      "name": "Ice Open Network",
+      "priceUsd": 0.000089753941,
+      "symbol": "ION",
+      "till": "2026-03-30T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-03-23T00:00:00.000Z"
+    },
+    {
+      "category": "GameFi",
+      "key": "nexira",
+      "launchpads": [
+        "BingX",
+        "KuCoin Spotlight"
+      ],
+      "name": "Nexira",
+      "priceUsd": 0.001778815328,
+      "symbol": "NEXI",
+      "till": "2026-03-18T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-03-06T00:00:00.000Z"
+    },
+    {
+      "category": "Social",
+      "key": "idos",
+      "launchpads": [
+        "Gate Launchpad",
+        "KuCoin Spotlight"
+      ],
+      "name": "idOS",
+      "priceUsd": 0.00810430843,
+      "symbol": "IDOS",
+      "till": "2026-03-17T00:00:00.000Z",
+      "totalRaiseUsd": 5486000,
+      "when": "2026-03-04T00:00:00.000Z"
+    },
+    {
+      "category": "Prediction Markets",
+      "key": "opinion-labs",
+      "launchpads": [
+        "Binance"
+      ],
+      "name": "Opinion",
+      "priceUsd": 0.050988168437,
+      "symbol": "OPN",
+      "till": "2026-03-05T00:00:00.000Z",
+      "totalRaiseUsd": 25005999.856,
+      "when": "2026-03-03T00:00:00.000Z"
+    },
+    {
+      "category": "Social",
+      "key": "creator",
+      "launchpads": [
+        "KuCoin Spotlight"
+      ],
+      "name": "CReaToR",
+      "priceUsd": 0.000029657882,
+      "symbol": "CRTR",
+      "till": "2026-03-02T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-02-22T00:00:00.000Z"
+    },
+    {
+      "category": "DeFi",
+      "key": "echelon-market",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "Echelon",
+      "priceUsd": 0.05983518152,
+      "symbol": "ELON",
+      "till": "2026-02-25T00:00:00.000Z",
+      "totalRaiseUsd": 3500000,
+      "when": "2026-02-04T00:00:00.000Z"
+    },
+    {
+      "category": "Blockchain",
+      "key": "aztec",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "Aztec",
+      "priceUsd": 0.018353581582,
+      "symbol": "AZTEC",
+      "till": "2026-02-22T00:00:00.000Z",
+      "totalRaiseUsd": 183765601.9424,
+      "when": "2026-02-12T00:00:00.000Z"
+    },
+    {
+      "category": "Infrastructure",
+      "key": "zama",
+      "launchpads": [
+        "Bitget",
+        "Bybit",
+        "KuCoin Spotlight"
+      ],
+      "name": "Zama",
+      "priceUsd": 0.082765629352,
+      "symbol": "ZAMA",
+      "till": "2026-02-17T00:00:00.000Z",
+      "totalRaiseUsd": 184834999.8064,
+      "when": "2026-02-02T00:00:00.000Z"
+    },
+    {
+      "category": "RWA",
+      "key": "plusmore",
+      "launchpads": [
+        "MEXC"
+      ],
+      "name": "PlusMore",
+      "priceUsd": 0.034979886815,
+      "symbol": "PLUS",
+      "till": "2026-02-12T00:00:00.000Z",
+      "totalRaiseUsd": 2350000,
+      "when": "2026-01-12T00:00:00.000Z"
+    },
+    {
+      "category": "Privacy",
+      "key": "penxchain",
+      "launchpads": [
+        "Finceptor"
+      ],
+      "name": "PENXCHAIN",
+      "priceUsd": null,
+      "symbol": "PENX",
+      "till": "2026-02-05T00:00:00.000Z",
+      "totalRaiseUsd": 430000,
+      "when": "2026-02-03T00:00:00.000Z"
+    },
+    {
+      "category": "Social",
+      "key": "3-kds",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "3KDS",
+      "priceUsd": 0.000702508613,
+      "symbol": "3KDS",
+      "till": "2026-02-03T00:00:00.000Z",
+      "totalRaiseUsd": 2850000,
+      "when": "2026-01-27T00:00:00.000Z"
+    },
+    {
+      "category": "DePIN",
+      "key": "spacecoin-org",
+      "launchpads": [
+        "Bitget"
+      ],
+      "name": "Spacecoin",
+      "priceUsd": 0.005085275396,
+      "symbol": "SPACE",
+      "till": "2026-02-02T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-01-26T00:00:00.000Z"
+    },
+    {
+      "category": "Infrastructure",
+      "key": "immunefi",
+      "launchpads": [
+        "Bitget",
+        "KuCoin Spotlight"
+      ],
+      "name": "Immunefi",
+      "priceUsd": 0.001976950887,
+      "symbol": "IMU",
+      "till": "2026-01-29T00:00:00.000Z",
+      "totalRaiseUsd": 37005348.0095,
+      "when": "2026-01-22T00:00:00.000Z"
+    },
+    {
+      "category": "AI",
+      "key": "heyelsa",
+      "launchpads": [
+        "Bybit"
+      ],
+      "name": "HeyElsa",
+      "priceUsd": 0.056455660827,
+      "symbol": "ELSA",
+      "till": "2026-01-29T00:00:00.000Z",
+      "totalRaiseUsd": 3000000,
+      "when": "2026-01-20T00:00:00.000Z"
+    },
+    {
+      "category": "DePIN",
+      "key": "seeker",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "Seeker (Solana Mobile)",
+      "priceUsd": 0.018372354198,
+      "symbol": "SKR",
+      "till": "2026-01-28T00:00:00.000Z",
+      "totalRaiseUsd": 17500,
+      "when": "2026-01-23T00:00:00.000Z"
+    },
+    {
+      "category": "Social",
+      "key": "fight-id",
+      "launchpads": [
+        "Bybit"
+      ],
+      "name": "Fight.ID",
+      "priceUsd": 0.003895181053,
+      "symbol": "FIGHT",
+      "till": "2026-01-28T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-01-22T00:00:00.000Z"
+    },
+    {
+      "category": "DePIN",
+      "key": "sanity-united",
+      "launchpads": [
+        "Finceptor"
+      ],
+      "name": "Sanity United",
+      "priceUsd": 0.003788056302,
+      "symbol": "SUT",
+      "till": "2026-01-26T00:00:00.000Z",
+      "totalRaiseUsd": 995000,
+      "when": "2026-01-18T00:00:00.000Z"
+    },
+    {
+      "category": "AI",
+      "key": "deepnodeai",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "DeepNodeAI",
+      "priceUsd": 0.022016062941,
+      "symbol": "DN",
+      "till": "2026-01-23T00:00:00.000Z",
+      "totalRaiseUsd": 5000000,
+      "when": "2026-01-09T00:00:00.000Z"
+    },
+    {
+      "category": "Blockchain",
+      "key": "fogo",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "Fogo",
+      "priceUsd": 0.005515960413,
+      "symbol": "FOGO",
+      "till": "2026-01-22T00:00:00.000Z",
+      "totalRaiseUsd": 20500000,
+      "when": "2026-01-15T00:00:00.000Z"
+    },
+    {
+      "category": "Infrastructure",
+      "key": "codexfield",
+      "launchpads": [
+        "Gate Launchpad"
+      ],
+      "name": "CodexField",
+      "priceUsd": 0.038983830258,
+      "symbol": "CODEX",
+      "till": "2026-01-16T00:00:00.000Z",
+      "totalRaiseUsd": 0,
+      "when": "2026-01-13T00:00:00.000Z"
+    }
+  ],
+  "slice": "past launchpool events — 50 rows shown of 527 upstream (SSR ships page 1 only; upstream ignores ?page=); windows are upstream ISO dates, null = not announced (em-dash)",
+  "upstream": "https://cryptorank.io/past-launchpool",
+  "upstreamTotal": 527
+}

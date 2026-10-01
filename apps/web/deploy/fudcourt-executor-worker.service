@@ -1,0 +1,34 @@
+# FUDCourt CEX executor worker (execution runtime, PRD §68)
+#
+# Deployed to ~/.config/systemd/user/fudcourt-executor-worker.service. Keep this
+# file and the deployed unit identical.
+#
+# The worker is a Bun-run TypeScript entry (same runtime as fudcourt-web, DR-008):
+# absolute binary path because a systemd user unit's PATH has no ~/.bun/bin.
+#
+# It must NOT depend on fudcourt-web: closing the browser or restarting the web
+# unit never stops an active execution (PRD §67). Exchange secrets never touch
+# this file — they are decrypted at use from the executor.* schema with
+# FUDCOURT_EXECUTOR_MASTER_KEY (PRD §44; see docs/operations/SECRETS.md).
+#
+# Kill switch (PRD §108): FUDCOURT_EXECUTOR_LIVE=1 enables live order placement.
+# Unset/anything else = live executions pause at the placement boundary; paper
+# mode and reconciliation keep running.
+[Unit]
+Description=FUDCourt CEX executor worker (execution runtime)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/dwizzy/fudcourt/apps/web
+Environment=NODE_ENV=production
+EnvironmentFile=/home/dwizzy/fudcourt/apps/web/.env.local
+ExecStart=/home/dwizzy/.bun/bin/bun /home/dwizzy/fudcourt/apps/web/scripts/executor/worker.ts
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=15
+
+[Install]
+WantedBy=default.target

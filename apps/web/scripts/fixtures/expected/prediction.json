@@ -1,0 +1,273 @@
+{
+  "cache": "MISS",
+  "count": 20,
+  "fetchedAt": 1790597974,
+  "kind": "prediction",
+  "prediction": {
+    "marketsChangePct": -9.970030283535484,
+    "marketsCount": 57377,
+    "oiChangePct": -8.801491050535152,
+    "openInterestUsd": 1404220074,
+    "platforms": [
+      {
+        "marketsCount": 50306,
+        "openInterestUsd": 1065654722,
+        "platform": "kalshi",
+        "volumeUsd": 57042160
+      },
+      {
+        "marketsCount": 7071,
+        "openInterestUsd": 338565352,
+        "platform": "polymarket",
+        "volumeUsd": 8477861
+      }
+    ],
+    "totalVolumeUsd": 65520021,
+    "volumeChangePct": -66.72756758929131
+  },
+  "predictionRows": [
+    {
+      "ask": 0.66,
+      "bid": 0.65,
+      "category": "sports",
+      "endDate": "2026-10-01",
+      "externalUrl": "https://kalshi.com/markets/KXNFLGAME/KXNFLGAME-26SEP28PHICHI",
+      "id": "af102974-90d7-4c0b-b39b-1e1f8beb34b1",
+      "platform": "kalshi",
+      "spread": 2,
+      "title": "Philadelphia wins",
+      "volume24hUsd": 2177672
+    },
+    {
+      "ask": 0.51,
+      "bid": 0.5,
+      "category": "sports",
+      "endDate": "2026-10-01",
+      "externalUrl": "https://kalshi.com/markets/KXNFLSPREAD/KXNFLSPREAD-26SEP28PHICHI",
+      "id": "cdfcb204-1d8d-4801-ac25-2a44bd996e2f",
+      "platform": "kalshi",
+      "spread": 2,
+      "title": "PHI Eagles wins by over 3.5 points?",
+      "volume24hUsd": 869599
+    },
+    {
+      "ask": 0.37,
+      "bid": 0.36,
+      "category": "sports",
+      "endDate": "2026-10-12",
+      "externalUrl": "https://kalshi.com/markets/KXATPMATCH/KXATPMATCH-26SEP27KECMAN",
+      "id": "d53e7e06-3d65-4236-b239-b697f2aa4cef",
+      "platform": "kalshi",
+      "spread": 3,
+      "title": "Miomir Kecmanovic wins",
+      "volume24hUsd": 865811
+    },
+    {
+      "ask": 1,
+      "bid": 0.99,
+      "category": "sports",
+      "endDate": "2026-10-12",
+      "externalUrl": "https://kalshi.com/markets/KXATPMATCH/KXATPMATCH-26SEP28BASDAV",
+      "id": "995ede62-d78c-426b-9610-b849c88498f0",
+      "platform": "kalshi",
+      "spread": 1,
+      "title": "Alejandro Davidovich Fokina wins",
+      "volume24hUsd": 749402
+    },
+    {
+      "ask": 0.01,
+      "bid": 0,
+      "category": "sports",
+      "endDate": "2026-10-12",
+      "externalUrl": "https://kalshi.com/markets/KXATPMATCH/KXATPMATCH-26SEP28BASDAV",
+      "id": "bf82c9b7-9c8a-4da2-85aa-f372392024d6",
+      "platform": "kalshi",
+      "spread": null,
+      "title": "Nikoloz Basilashvili wins",
+      "volume24hUsd": 552761
+    },
+    {
+      "ask": 0.35,
+      "bid": 0.34,
+      "category": "sports",
+      "endDate": "2026-10-01",
+      "externalUrl": "https://kalshi.com/markets/KXNFLGAME/KXNFLGAME-26SEP28PHICHI",
+      "id": "6f8735b1-2883-4b0f-8051-1943fab3eb23",
+      "platform": "kalshi",
+      "spread": 3,
+      "title": "Chicago wins",
+      "volume24hUsd": 533643
+    },
+    {
+      "ask": 0.1,
+      "bid": 0.09,
+      "category": "sports",
+      "endDate": "2026-09-30",
+      "externalUrl": "https://kalshi.com/markets/KXINTLFRIENDLYGAME/KXINTLFRIENDLYGAME-26SEP28JPNVEN",
+      "id": "6f0736f6-aa7c-4700-b208-522947356c10",
+      "platform": "kalshi",
+      "spread": 11,
+      "title": "Venezuela wins",
+      "volume24hUsd": 492056
+    },
+    {
+      "ask": 0.51,
+      "bid": 0.5,
+      "category": "sports",
+      "endDate": "2026-10-01",
+      "externalUrl": "https://kalshi.com/markets/KXNFLTOTAL/KXNFLTOTAL-26SEP28PHICHI",
+      "id": "1cb179f4-faa9-49e4-92f4-ad5ed1cf2104",
+      "platform": "kalshi",
+      "spread": 2,
+      "title": "Full Game: over 41.5 points scored?",
+      "volume24hUsd": 487326
+    },
+    {
+      "ask": 0.02,
+      "bid": 0.01,
+      "category": "sports",
+      "endDate": "2028-02-12",
+      "externalUrl": "https://kalshi.com/markets/KXNFLMVP/KXNFLMVP-27",
+      "id": "cc152be5-597a-43af-ad3c-5e9a30ccedbc",
+      "platform": "kalshi",
+      "spread": 100,
+      "title": "Will Kyler Murray win the MVP?",
+      "volume24hUsd": 455792
+    },
+    {
+      "ask": 0.02,
+      "bid": 0.01,
+      "category": "sports",
+      "endDate": "2027-02-23",
+      "externalUrl": "https://kalshi.com/markets/KXNCAAF/KXNCAAF-27",
+      "id": "33ecb12d-5ed1-4fff-b320-e30f8b5eb1fe",
+      "platform": "kalshi",
+      "spread": 100,
+      "title": "Will Ole Miss win the College Football Playoff National Championship?",
+      "volume24hUsd": 409843
+    },
+    {
+      "ask": 0.02,
+      "bid": 0.01,
+      "category": "sports",
+      "endDate": "2029-02-13",
+      "externalUrl": "https://kalshi.com/markets/KXSB/KXSB-27",
+      "id": "cf1161e2-8f64-49ae-a60b-75ef12b7d623",
+      "platform": "kalshi",
+      "spread": 100,
+      "title": "Will Las Vegas win the 2027 Pro Football Championship?",
+      "volume24hUsd": 393103
+    },
+    {
+      "ask": 0.63,
+      "bid": 0.62,
+      "category": "sports",
+      "endDate": "2026-10-12",
+      "externalUrl": "https://kalshi.com/markets/KXATPMATCH/KXATPMATCH-26SEP27VANROY",
+      "id": "d388aa0e-103b-4567-bac0-984c85e12e29",
+      "platform": "kalshi",
+      "spread": 2,
+      "title": "Botic Van de Zandschulp wins",
+      "volume24hUsd": 392705
+    },
+    {
+      "ask": 0.01,
+      "bid": 0,
+      "category": "sports",
+      "endDate": "2029-02-13",
+      "externalUrl": "https://kalshi.com/markets/KXSB/KXSB-27",
+      "id": "b73afb39-6da1-4fe4-a565-e3751ee1860f",
+      "platform": "kalshi",
+      "spread": null,
+      "title": "Will Los Angeles C win the 2027 Pro Football Championship?",
+      "volume24hUsd": 376769
+    },
+    {
+      "ask": 0.086,
+      "bid": 0.085,
+      "category": "elections",
+      "endDate": "2027-02-01",
+      "externalUrl": "https://kalshi.com/markets/CONTROLH/CONTROLH-2026",
+      "id": "c488c3fd-0143-4c8b-bfdc-6c32c165f636",
+      "platform": "kalshi",
+      "spread": 1,
+      "title": "Will Republicans win the House in 2026?",
+      "volume24hUsd": 373239
+    },
+    {
+      "ask": 0.52,
+      "bid": 0.51,
+      "category": "sports",
+      "endDate": "2026-09-30",
+      "externalUrl": "https://kalshi.com/markets/KXUEFANLGAME/KXUEFANLGAME-26SEP28BELFRA",
+      "id": "b20232b6-acc8-487e-a461-cc9e38a46bd9",
+      "platform": "kalshi",
+      "spread": 2,
+      "title": "France wins",
+      "volume24hUsd": 367868
+    },
+    {
+      "ask": 0.54,
+      "bid": 0.53,
+      "category": "sports",
+      "endDate": "2026-09-30",
+      "externalUrl": "https://kalshi.com/markets/KXINTLFRIENDLYGAME/KXINTLFRIENDLYGAME-26SEP28JPNVEN",
+      "id": "0e09bfd0-1278-45fc-8f0f-bc8563071379",
+      "platform": "kalshi",
+      "spread": 2,
+      "title": "Japan wins",
+      "volume24hUsd": 361048
+    },
+    {
+      "ask": 0.64,
+      "bid": 0.63,
+      "category": "sports",
+      "endDate": "2026-10-12",
+      "externalUrl": "https://kalshi.com/markets/KXATPMATCH/KXATPMATCH-26SEP27KECMAN",
+      "id": "38bd3267-a350-4431-a093-64d7a2c2ea3d",
+      "platform": "kalshi",
+      "spread": 2,
+      "title": "Adrian Mannarino wins",
+      "volume24hUsd": 335056
+    },
+    {
+      "ask": 0.004,
+      "bid": 0.001,
+      "category": "mls",
+      "endDate": "2027-01-01",
+      "externalUrl": "https://polymarket.com/event/mls-cup-winner-2026?via=cryptorank",
+      "id": "449a48e9-60af-4641-b906-57aeddb72902",
+      "platform": "polymarket",
+      "spread": 300,
+      "title": "Will New York Red Bulls win the 2026 MLS Cup?",
+      "volume24hUsd": 320888
+    },
+    {
+      "ask": 0.01,
+      "bid": 0,
+      "category": "sports",
+      "endDate": "2026-10-12",
+      "externalUrl": "https://kalshi.com/markets/KXATPMATCH/KXATPMATCH-26SEP27JACRUB",
+      "id": "d7362acb-f9ff-4c61-91fc-2a914dbba13c",
+      "platform": "kalshi",
+      "spread": null,
+      "title": "Kyrian Jacquet wins",
+      "volume24hUsd": 304718
+    },
+    {
+      "ask": 0.004,
+      "bid": 0.001,
+      "category": "mls",
+      "endDate": "2027-01-01",
+      "externalUrl": "https://polymarket.com/event/mls-cup-winner-2026?via=cryptorank",
+      "id": "95d988fb-5000-416b-9df7-8b238dc57661",
+      "platform": "polymarket",
+      "spread": 300,
+      "title": "Will Portland Timbers win the 2026 MLS Cup?",
+      "volume24hUsd": 294163
+    }
+  ],
+  "slice": "prediction markets — 20 of 58916 listings (SSR page 1); volume/markets/OI aggregates + platform split are upstream figures (window NOT disclosed upstream); row volume24h is explicitly 24h; external links go to the venue (kalshi/polymarket)",
+  "upstream": "https://cryptorank.io/prediction-markets",
+  "upstreamTotal": 58916
+}

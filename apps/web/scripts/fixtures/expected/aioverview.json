@@ -1,0 +1,97 @@
+{
+  "aiOverview": {
+    "dropHunting": {
+      "activities": [
+        {
+          "coinName": "eCash.com",
+          "key": "ecash-drivechains-activity1307",
+          "type": "Wallet Airdrop Status"
+        },
+        {
+          "coinName": "Ekiden",
+          "key": "ekiden-activity1207",
+          "type": "Mainnet"
+        },
+        {
+          "coinName": "QFEX",
+          "key": "qfex-activity1117",
+          "type": "Trading"
+        }
+      ],
+      "summary": "Recent additions to the Drop Hunting dashboard focus on a mix of trading, mainnet interactions, holding requirements, social tasks, and testnet participation, with trading and mainnet related actions clearly dominating. Supporting task types like getting a role, liquidity provision, bounty style tasks, predictions, and form filling appear as secondary but growing components. Overall, task design is trending toward richer multi step workflows that blend on chain actions with community and status based missions.  \n\nThese task mixes reflect an ecosystem leaning into mainnet adoption while still using testnets and social channels to seed longer term user loyalty. Activity clusters suggest heightened focus on ecosystems behind D three, Q F E X, e Cash dot com, Ekiden, Extended, and Variational, especially where trading and mainnet missions converge. The pattern points to coordinated protocol onboarding flows that couple liquidity and trading incentives with reputation and role building.  \n\nAmong standout campaigns, e Cash dot com is notable for combining wallet airdrop status checks with holding and testnet actions, creating a clear path from early experimentation to asset retention. Ekiden stands out with a structure that links mainnet and trading tasks to social engagement and role acquisition, emphasizing deeper protocol immersion and community identity. Overall, Drop Hunting momentum currently centers on integrated trading centric journeys that reward both on chain activity and persistent ecosystem participation."
+    },
+    "funding": {
+      "rounds": [
+        {
+          "key": "limited",
+          "name": "Limited",
+          "raisedUsd": 11500000,
+          "stage": "Extended Seed"
+        },
+        {
+          "key": "coin-glass",
+          "name": "CoinGlass",
+          "raisedUsd": null,
+          "stage": "M&A"
+        },
+        {
+          "key": "function-space",
+          "name": "functionSPACE",
+          "raisedUsd": 1700000,
+          "stage": "PRE SEED"
+        }
+      ],
+      "summary": "No Data Available"
+    },
+    "market": {
+      "summary": "Crypto markets pulled back today, with total market capitalization at 2,942,799,498,347 and down 1.81% over 24 hours, even as trading activity jumped with total volume at 40,239,527,996, up 40.64%. Bitcoin dominance slipped to 56.645237 (down 0.42%), while Ethereum’s share rose to 11.06 (up 0.2%), signaling a modest relative bid for ETH amid a broader risk-off tone. On-chain conditions remain calm, with low gas costs but relatively fast execution at higher fee tiers.\n\nOne of the key stories is “Ethereum Price Prediction: ETH Nears Best September in Decade,” highlighting ETH’s resilience near 2,665.000838687230 despite today’s 1.6169% drop. Strong U.S. spot Ether ETF inflows and unusually high Bitfinex short positioning are creating a tense setup around the 2,750–2,800 resistance zone, where a breakout could trigger a short squeeze and improve broader altcoin sentiment. Another notable theme is institutional infrastructure adoption in “Why Is Quant (QNT) Up 322%? JPMorgan, Citi and Barclays Have the Answer,” where Quant’s tech has been selected for bank-led tokenized deposit networks in the U.S. and U.K., reinforcing the narrative that traditional finance is steadily integrating blockchain rails.\n\nAmong the top five non‑stablecoins, all majors traded lower, underscoring today’s corrective mood: Bitcoin (BTC) is at 83,000.393601249700 (-2.1972%), Ethereum (ETH) at 2,665.000838687230 (-1.6169%), BNB (BNB) at 762.926014461154 (-2.1727%), XRP (XRP) at 1.491739448384 (-2.8586%), and Solana (SOL) at 118.511396936825 (-4.3202%). SOL’s underperformance, amid delayed expectations around the Alpenglow upgrade, suggests positioning was still sensitive to technical and roadmap headlines, while XRP’s sharper drop comes despite derivatives data showing traders maintain a cautiously bullish bias. Taken together, the moves point to a market consolidating after strong prior gains, with leadership likely to rotate toward assets tied to clear institutional or ETF demand if macro conditions stabilize.",
+      "updatedAt": "2026-09-28T12:00:15.323Z"
+    },
+    "news": [
+      {
+        "date": "2026-09-28T11:30:01.000Z",
+        "id": 85200104,
+        "isBullish": true,
+        "title": "Ethereum’s next scaling leap may come from making everyone stop doing the same work"
+      },
+      {
+        "date": "2026-09-28T11:11:52.000Z",
+        "id": 85200099,
+        "isBullish": true,
+        "title": "Quant (QNT) Surges 260% in a Week, but This Trader Just Sold Everything: Here’s Why"
+      },
+      {
+        "date": "2026-09-28T11:00:00.000Z",
+        "id": 85200080,
+        "isBullish": true,
+        "title": "Ethereum Price Prediction: ETH Nears Best September in Decade"
+      }
+    ],
+    "vesting": {
+      "summary": "Today’s token unlocks span multiple projects, with allocations covering team, investors, community, ecosystem, rewards, liquidity, and advisors segments. Internal categories feature prominently through seed, private, strategic investors, investment, angel, team, core contributors, founders, and advisors tranches, alongside backer-focused buckets like early backers and KOLs. Ecosystem-facing unlocks include community, DAO Treasury, protocol incentives, marketing, play to earn, farming or staking, node operators rewards, airdrop, liquidity, and various treasury and reserve allocations, indicating a broad and mixed release profile.\n\nThe dominance of internal allocations such as team, core contributors, founders, advisors, seed, private, angel, and strategic investors signals continued vesting for insiders and early backers, which can incrementally increase potential sell-side supply. At the same time, sizable ecosystem and community-oriented tranches like community, ecosystem, DAO Treasury, protocol incentives, staking rewards, node operators rewards, airdrop, marketing, play to earn, and liquidity support ongoing network growth and user participation. Overall, today’s unlocks lean toward a balanced distribution between reinforcing internal stakeholder positions and funding broader ecosystem incentives.\n\nUnion and Otherworld stand out for combining ecosystem or community unlocks with sizable internal allocations to strategic or investment holders, team, and DAO or reserve structures, making their composition important for both governance and circulation patterns. Datagram is notable for simultaneously unlocking investors, team, advisors, node operators rewards, and airdrop allocations, creating a diversified mix of insider and operational or community incentives. In the short term, today’s unlock profile suggests a steady, multi-channel increase in circulating supply where insider liquidity options rise in parallel with programs designed to strengthen network usage and engagement.",
+      "unlocks": [
+        {
+          "coinName": "Wodo Gaming",
+          "date": "2026-09-28T00:00:00.000Z",
+          "unlockPercent": 5.551724137931036
+        },
+        {
+          "coinName": "Archway",
+          "date": "2026-09-28T00:00:00.000Z",
+          "unlockPercent": 1.468473591522718
+        },
+        {
+          "coinName": "Bware Labs",
+          "date": "2026-09-28T00:00:00.000Z",
+          "unlockPercent": 1.0015051534080233
+        }
+      ]
+    }
+  },
+  "cache": "MISS",
+  "count": 12,
+  "fetchedAt": 1790597980,
+  "kind": "aioverview",
+  "slice": "upstream AI digest — summaries are cryptorank's own generated text (their words, labelled as theirs); structured slices are plain rows; cross-surface coherence vs mode=home enforced in harness (mcap/volume/dominance <= 0.5%), CoinGecko total-cap sanity band 5%",
+  "upstream": "https://cryptorank.io/ai-market-overview"
+}

@@ -1,0 +1,33 @@
+{
+  "cache": "MISS",
+  "changeSource": "derived-from-histPrices-24H",
+  "count": 1,
+  "detail": {
+    "athDate": "2025-10-06",
+    "athUsd": 126037.7223335276,
+    "atlDate": "2011-01-06",
+    "atlUsd": 0.25675778,
+    "availableSupply": 20090481,
+    "change24h": -2.2459664315353027,
+    "circulatingPct": 95.66895714285714,
+    "fromAthPct": -34.17154299440944,
+    "fromAtlPct": 32313891.754077256,
+    "fullyDilutedMarketCap": 1742342445000.1882,
+    "image": null,
+    "key": "bitcoin",
+    "lifeCycle": "traded",
+    "listingDate": "2010-03-17T00:00:00.000Z",
+    "marketCap": 1666880846989.0393,
+    "maxSupply": 21000000,
+    "name": "Bitcoin",
+    "priceUsd": 82968.68785715182,
+    "rank": 1,
+    "symbol": "BTC",
+    "totalSupply": 21000000,
+    "volume24h": 10913571744.686087
+  },
+  "fetchedAt": 1790597953,
+  "kind": "coin",
+  "slice": "coin detail 'bitcoin' — price from page payload; change24h derived from histPrices['24H'] anchor",
+  "upstream": "https://cryptorank.io/price/bitcoin"
+}

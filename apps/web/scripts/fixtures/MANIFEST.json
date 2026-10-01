@@ -1,6 +1,6 @@
 {
-  "source": "scripts/record-fixtures.ts",
-  "recorder": "apps/web/scripts/record-fixtures.ts",
+  "source": "scripts/tools/record-fixtures.ts",
+  "recorder": "apps/web/scripts/tools/record-fixtures.ts",
   "note": "raw HelperOut stdout per mode, byte-for-byte, stored gzipped; sha256 is over the RAW json bytes (tamper-evidence)",
   "recordedAt": 1790597944,
   "python": "/home/dwizzy/.venvs/crfetch/bin/python",

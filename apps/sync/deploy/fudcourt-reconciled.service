@@ -1,0 +1,27 @@
+[Unit]
+Description=FUD Court reconcile (Rust /api/reconcile service) :3102
+Documentation=file:///home/dwizzy/fudcourt/apps/sync/src/bin/fudcourt-reconciled.rs
+Documentation=file:///home/dwizzy/fudcourt/apps/sync/src/server.rs
+Documentation=file:///home/dwizzy/fudcourt/docs/records/DECISIONS.md
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=simple
+# Loopback only, exactly like the Go acquisition sidecar: the Next route
+# `/api/reconcile` is the sole client and owns the team-tier auth gate
+# (middleware + lib/guard.ts). This service must never be exposed directly --
+# it has no authentication of its own by design.
+WorkingDirectory=/home/dwizzy/fudcourt/apps/sync
+# The token is REQUIRED and the binary refuses to start without it (a service that
+# silently reconciled against nothing would answer `{rows: []}` and look healthy).
+# The binary also walks up to the repo-root `.env` on its own, so this line is the
+# explicit binding rather than the only one.
+EnvironmentFile=/home/dwizzy/fudcourt/.env
+Environment=RECONCILE_ADDR=127.0.0.1:3102
+ExecStart=/home/dwizzy/fudcourt/apps/sync/target/release/fudcourt-reconciled
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=15
+[Install]
+WantedBy=default.target

@@ -1,10 +1,11 @@
 #!/bin/bash
 # fudcourt pre-push hook (PLAN T-2.2.1, R-2) — fast, offline only.
 #   - offline contract check (CR_MODES consistency + mutation-auth guards)
+#   - deploy-unit guard (every ExecStart/Documentation repo path must exist)
 #   - shaper fixture tests (offline, recorded upstream payloads) - SG-4.1
 #   - tsc --noEmit when apps/web TypeScript changed
 #   - python syntax check for changed harness scripts
-# Full harnesses (network) stay manual: scripts/verify-*.py
+# Full harnesses (network) stay manual: apps/web/scripts/verify/verify-*.py
 set -u
 remote="$1" url="$2"
 rc=0
@@ -16,17 +17,36 @@ echo "[pre-push] checking $(echo "$changed" | wc -l) changed files..."
 
 if echo "$changed" | grep -q '^apps/web/'; then
   echo "[pre-push] offline contract check..."
-  if ! (cd apps/web && python3 scripts/check-contract.py); then rc=1; fi
+  if ! (cd apps/web && python3 scripts/checks/check-contract.py); then rc=1; fi
+  echo "[pre-push] deploy-unit guard (every ExecStart path must exist)..."
+  if ! (cd apps/web && python3 scripts/checks/check-deploy.py); then rc=1; fi
+  echo "[pre-push] structure gate (DR-018: routes/features/platform/ui/styles)..."
+  if ! (cd apps/web && python3 scripts/checks/check-structure.py); then rc=1; fi
   echo "[pre-push] tsc --noEmit (apps/web)..."
-  if ! (cd apps/web && unset NODE_ENV && npx tsc --noEmit); then
+  if ! (cd apps/web && unset NODE_ENV && bunx tsc --noEmit); then
     echo "[pre-push] TYPECHECK FAILED"; rc=1
   fi
   echo "[pre-push] shaper fixture tests (offline)..."
-  if ! (cd apps/web && unset NODE_ENV && npm run test:shapers > /tmp/fudcourt-shaper-tests.log 2>&1); then
+  if ! (cd apps/web && unset NODE_ENV && bun run test:shapers > /tmp/fudcourt-shaper-tests.log 2>&1); then
     echo "[pre-push] SHAPER TESTS FAILED"; tail -20 /tmp/fudcourt-shaper-tests.log; rc=1
   fi
 fi
 
+if echo "$changed" | grep -qE '^apps/apicalls/|\.go$'; then
+  echo "[pre-push] go build/vet/test (apps/apicalls)..."
+  # GOTOOLCHAIN=auto resolves go>=1.24.1 (fhttp/tls-client floor) from the
+  # locally cached toolchain — offline-safe here; see docs/DECISIONS.md DR-005.
+  if ! (cd apps/apicalls && go build ./... && go vet ./... && go test ./...); then
+    echo "[pre-push] GO BUILD/VET/TEST FAILED"; rc=1
+  fi
+fi
+
+if echo "$changed" | grep -qE '^apps/sync/|\.rs$'; then
+  echo "[pre-push] cargo build/test (apps/sync)..."
+  if ! (cd apps/sync && cargo build --release && cargo test --release); then
+    echo "[pre-push] RUST BUILD/TEST FAILED"; rc=1
+  fi
+fi
 if echo "$changed" | grep -qE '\.py$'; then
   echo "[pre-push] python syntax..."
   while IFS= read -r f; do

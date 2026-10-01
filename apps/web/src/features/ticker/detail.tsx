@@ -1,0 +1,423 @@
+'use client';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { C } from '@/styles/shared';
+
+/**
+ * Detail view for one coin across all four CEX market types.
+ *
+ * Strike and expiry are chosen by the reader and resolved per venue by
+ * /api/ticker/instrument, which matches on (expiry, strike, kind) against each
+ * venue's own market list. That matters because the same option is spelled
+ * differently per venue — `BTC/USD:BTC-260929-84250-C` on OKX versus
+ * `BTC/USDT:USDT-260929-84250-C` on Bybit — so a symbol built by hand would be
+ * rejected by the venue it was wrong for.
+ */
+
+type TickerType = 'spot' | 'swap' | 'future' | 'option';
+
+type TypeSummary = {
+  venues: string[];
+  expiries: string[];
+  /** Strikes keyed by expiry date; the ladder genuinely differs by date. */
+  strikesByExpiry: Record<string, number[]>;
+  default: { symbol: string; expiry: string | null; strike: number | null; optionKind: string | null } | null;
+};
+type InstrumentsEnvelope = {
+  symbol: string;
+  types: Record<TickerType, TypeSummary>;
+  venuesForType: Record<TickerType, string[]>;
+  typeLabels: Record<TickerType, string>;
+};
+
+type Instrument = {
+  symbol: string;
+  type: string;
+  settle: string | null;
+  expiry: number | null;
+  strike: number | null;
+  optionKind: 'call' | 'put' | null;
+  contractSize: number | null;
+};
+
+type Quote = {
+  exchange: string;
+  symbol: string;
+  /**
+   * What this venue's price is denominated in. Venues list the same contract
+   * in different units — OKX quotes BTC options coin-margined, Bybit quotes
+   * them USDT-settled — so the unit belongs to the quote, not to the coin.
+   */
+  settle: string | null;
+  last: number | null;
+  bid: number | null;
+  ask: number | null;
+  baseVolume: number | null;
+  quoteVolume: number | null;
+  high24h: number | null;
+  low24h: number | null;
+  change24h: number | null;
+  openInterest: number | null;
+  fundingRate: number | null;
+  at: number | null;
+  error: string | null;
+};
+
+type QuoteEnvelope = {
+  base: string;
+  type: TickerType;
+  instruments: Instrument[];
+  settlements: string[];
+  quotes: Quote[];
+  price: number | null;
+  notListed: string[];
+  failed: string[];
+};
+
+const TYPES: TickerType[] = ['spot', 'swap', 'future', 'option'];
+
+export default function TickerDetailPage() {
+  const params = useParams<{ ticker: string }>();
+  // The URL carries the base coin ("BTC"), not the full pair: the quote
+  // currency is a property of a venue's listing, not of the coin.
+  const base = (params?.ticker ?? '').toUpperCase();
+
+  const [meta, setMeta] = useState<InstrumentsEnvelope | null>(null);
+  const [metaError, setMetaError] = useState('');
+  const [type, setType] = useState<TickerType>('spot');
+  const [expiry, setExpiry] = useState('');
+  const [strike, setStrike] = useState('');
+  const [kind, setKind] = useState<'call' | 'put'>('call');
+  const [data, setData] = useState<QuoteEnvelope | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [stale, setStale] = useState(false);
+
+  // Which expiries, strikes and venues exist for this coin.
+  useEffect(() => {
+    if (!base) return;
+    let cancelled = false;
+    setMeta(null);
+    setMetaError('');
+    fetch(`/api/ticker/instruments?symbol=${encodeURIComponent(`${base}/USDT`)}`, { cache: 'no-store' })
+      .then(async (res) => {
+        const body = await res.json();
+        if (!res.ok) throw new Error(`${body.error}: ${body.detail ?? ''}`.trim());
+        return body as InstrumentsEnvelope;
+      })
+      .then((body) => {
+        if (cancelled) return;
+        setMeta(body);
+        // Land on the first type with any instrument, rather than always spot:
+        // some coins are listed only as derivatives.
+        const first = TYPES.find(t => body.types[t]?.venues.length);
+        if (first) setType(first);
+      })
+      .catch((e) => { if (!cancelled) setMetaError(e instanceof Error ? e.message : String(e)); });
+    return () => { cancelled = true; };
+  }, [base]);
+
+  // Seed the selectors from the chosen type's default instrument.
+  useEffect(() => {
+    const d = meta?.types[type]?.default;
+    if (!d) return;
+    setExpiry(d.expiry ?? '');
+    setStrike(d.strike === null ? '' : String(d.strike));
+    setKind((d.optionKind as 'call' | 'put' | null) ?? 'call');
+  }, [meta, type]);
+
+  /**
+   * Prices for the selected instrument, across every venue that lists it.
+   *
+   * Responses are applied only if they are still the newest request. Changing
+   * the strike fires a new fetch while the previous one is usually still in
+   * flight, and without this guard the slower earlier response can land last
+   * and overwrite the newer one — which showed a 78,000 call beside a
+   * 84,250 selection and a median computed across two different contracts.
+   */
+  const requestId = useRef(0);
+  const load = useCallback(async () => {
+    if (!base) return;
+    const id = ++requestId.current;
+    setLoading(true);
+    setError('');
+    try {
+      const qs = new URLSearchParams({ base, type });
+      // Only send a selector the chosen type actually has; sending an expiry
+      // for spot would ask for an instrument that does not exist.
+      const needsDated = type === 'future' || type === 'option';
+      if (needsDated && expiry) qs.set('expiry', expiry);
+      if (type === 'option') {
+        if (strike) qs.set('strike', strike);
+        qs.set('kind', kind);
+      }
+      const res = await fetch(`/api/ticker/instrument?${qs}`, { cache: 'no-store' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ? `${body.error}: ${body.detail ?? ''}`.trim() : `HTTP ${res.status}`);
+      }
+      const body = (await res.json()) as QuoteEnvelope;
+      // A superseded request must not write state, including its error state.
+      if (id !== requestId.current) return;
+      setData(body);
+      setStale(false);
+    } catch (e) {
+      if (id !== requestId.current) return;
+      setError(e instanceof Error ? e.message : String(e));
+      setStale(true);
+    } finally {
+      if (id === requestId.current) setLoading(false);
+    }
+  }, [base, type, expiry, strike, kind]);
+
+  // Strikes are a function of the chosen expiry, so changing the date has to
+  // re-pick a strike that date actually lists. Keeping the old one would leave
+  // the reader on an instrument their chosen month does not have, and the
+  // table would honestly report that nobody prices it — confusing rather than
+  // wrong, which is still a defect worth not shipping.
+  useEffect(() => {
+    if (type !== 'option') return;
+    const forDate = meta?.types.option.strikesByExpiry[expiry];
+    if (!forDate || forDate.length === 0) return;
+    if (forDate.includes(Number(strike))) return;
+    // Prefer the strike closest to the previously selected one, so moving
+    // along the ladder feels continuous.
+    const prev = Number(strike);
+    const nearest = forDate.reduce((best, s) =>
+      Math.abs(s - prev) < Math.abs(best - prev) ? s : best, forDate[0]);
+    setStrike(String(nearest));
+  }, [expiry, meta, strike, type]);
+
+  // Re-fetch whenever the coin, market type, expiry, strike or kind changes.
+  // `load` closes over exactly those, so its identity is the dependency.
+  useEffect(() => { load(); }, [load]);
+
+  const summary = meta?.types[type];
+  // Strikes belong to the chosen expiry, so this is read after that summary.
+  const strikes = summary?.strikesByExpiry[expiry] ?? [];
+  const quotes = data?.quotes ?? [];
+  const priced = quotes.filter(q => q.last !== null);
+  // Cross-venue divergence across the venues that priced it.
+  const spread = priced.length < 2 ? null : (() => {
+    const prices = priced.map(q => q.last as number);
+    const mean = prices.reduce((a, b) => a + b, 0) / prices.length;
+    if (mean <= 0) return null;
+    return (Math.max(...prices.map(p => Math.abs(p - mean) / mean)) * 100);
+  })();
+
+  /**
+   * A price is shown in the currency it is actually denominated in.
+   *
+   * A coin-margined option premium is denominated in the coin: OKX's
+   * BTC-settled 260929-84000 call quotes 0.001, which is 0.001 *BTC* (~$83),
+   * and rendering that as "$0.001" is wrong by five orders of magnitude. So
+   * each quote carries its own settlement and labels itself with it.
+   *
+   * The headline figure only gets a unit when every priced venue agrees on
+   * one. For spot, swaps and futures the same contract is listed by different
+   * venues in different units (OKX coin-margined BTC, Bybit USDT, Coinbase
+   * USDC) — those are the same money, so a single "83,485 BTC" label on the
+   * median would be nonsense. Where they disagree, prices are shown as USD.
+   */
+  const fmtPrice = (p: number | null, unit: string | null) => {
+    if (p === null) return '—';
+    const body = p < 0.01 ? p.toExponential(4) : p < 1000 ? p.toFixed(3) : p.toLocaleString('en-US', { minimumFractionDigits: 2 });
+    return unit === 'USD' ? `$${body}` : unit ? `${body} ${unit}` : `$${body}`;
+  };
+  // The headline median's unit, used only when all priced venues agree on it.
+  const settle = (() => {
+    const units = [...new Set(priced.map(q => q.settle).filter((s): s is string => typeof s === 'string'))];
+    return units.length === 1 ? units[0] : 'USD';
+  })();
+  const fmtVol = (v: number | null) =>
+    v === null ? '—' : v < 1e6 ? `$${(v / 1e3).toFixed(0)}K` : v < 1e9 ? `$${(v / 1e6).toFixed(1)}M` : `$${(v / 1e9).toFixed(2)}B`;
+  const fmtPct = (p: number | null) => (p === null ? '—' : `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`);
+  const fmtSpread = (s: number | null) => (s === null ? '—' : s === 0 ? '0%' : s < 0.0001 ? `${s.toExponential(1)}%` : `${s.toFixed(4)}%`);
+  // Funding is a fraction; shown in basis points, which is how it is quoted.
+  const fmtFunding = (f: number | null) => (f === null ? '—' : `${(f * 10000).toFixed(3)} bps`);
+  const fmtOi = (o: number | null) => (o === null ? '—' : o.toLocaleString('en-US', { maximumFractionDigits: 0 }));
+
+  const tabStyle = (active: boolean): React.CSSProperties => ({
+    padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+    background: active ? C.accent : C.card, color: active ? '#06281c' : C.white,
+    border: `1px solid ${C.border}`, fontWeight: active ? 700 : 400,
+  });
+  const selectStyle: React.CSSProperties = {
+    background: C.card, color: C.white, border: `1px solid ${C.border}`,
+    padding: '5px 8px', borderRadius: 6, fontSize: 11,
+  };
+
+  if (!base) return <p style={{ color: C.red, fontSize: 12 }}>No coin in the URL.</p>;
+  if (metaError) return <p style={{ color: C.red, fontSize: 12 }}>{metaError}</p>;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <h3 style={{ color: C.accent, margin: 0 }}>
+            <Link href="/ticker" style={{ color: C.dim, textDecoration: 'none', fontSize: 13 }}>← </Link>
+            {base} · centralized exchange instruments
+          </h3>
+          <p style={{ color: C.dim, fontSize: 11, margin: '4px 0 0' }}>
+            {summary
+              ? `${summary.venues.length} venue${summary.venues.length === 1 ? '' : 's'} list ${meta?.typeLabels[type].toLowerCase() ?? type} for this coin`
+              : 'Loading venues…'}
+          </p>
+        </div>
+        <button onClick={load} style={{ background: C.card, color: C.white, border: `1px solid ${C.border}`, padding: '6px 14px', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+          ↻ Refresh
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+        {TYPES.map(t => {
+          const count = meta?.types[t]?.venues.length ?? 0;
+          return (
+            <button
+              key={t}
+              onClick={() => setType(t)}
+              style={{ ...tabStyle(type === t), opacity: count ? 1 : 0.4 }}
+              title={count ? '' : 'No venue lists this type for this coin'}
+            >
+              {meta?.typeLabels[t] ?? t} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {summary && (summary.expiries.length > 0 || type === 'option') && (
+        <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          {summary.expiries.length > 0 && (
+            <label style={{ fontSize: 11, color: C.dim, display: 'flex', gap: 6, alignItems: 'center' }}>
+              Expiry
+              <select value={expiry} onChange={e => setExpiry(e.target.value)} style={selectStyle} aria-label="Expiry">
+                {summary.expiries.map(e => <option key={e} value={e}>{e}</option>)}
+              </select>
+            </label>
+          )}
+          {type === 'option' && (
+            <>
+              <label style={{ fontSize: 11, color: C.dim, display: 'flex', gap: 6, alignItems: 'center' }}>
+                Strike
+                <select value={strike} onChange={e => setStrike(e.target.value)} style={selectStyle} aria-label="Strike">
+                  {strikes.length === 0 && <option value="">—</option>}
+                  {strikes.map(s => <option key={s} value={String(s)}>{s.toLocaleString('en-US')}</option>)}
+                </select>
+              </label>
+              <label style={{ fontSize: 11, color: C.dim }}>
+                <select value={kind} onChange={e => setKind(e.target.value as 'call' | 'put')} style={selectStyle} aria-label="Option kind">
+                  <option value="call">Call</option>
+                  <option value="put">Put</option>
+                </select>
+              </label>
+            </>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <p style={{ color: C.red, fontSize: 12 }}>
+          {error}
+          {stale && data && ' — showing the last successful read; these prices are stale.'}
+        </p>
+      )}
+
+      {loading ? (
+        <p style={{ color: C.dim, fontSize: 12 }}>Loading...</p>
+      ) : !data || priced.length === 0 ? (
+        <p style={{ color: C.dim, fontSize: 12 }}>
+          No venue is currently pricing this instrument.
+          {data && data.notListed.length > 0 && ` Not listed by: ${data.notListed.join(', ')}.`}
+        </p>
+      ) : (
+        <div style={{ opacity: stale ? 0.45 : 1, transition: 'opacity 150ms' }}>
+          <div style={{ display: 'flex', gap: 18, marginBottom: 12, flexWrap: 'wrap' }}>
+            <Stat label={`Price (median of ${priced.length})`} value={fmtPrice(data.price, settle)} color={C.accent} />
+            <Stat label="Cross-venue spread" value={fmtSpread(spread)} />
+            <Stat label="24h change" value={fmtPct(medianOf(priced.map(q => q.change24h)))} color={chgColor(medianOf(priced.map(q => q.change24h)))} />
+            <Stat label="24h volume" value={fmtVol(medianOf(priced.map(q => q.quoteVolume)))} />
+            {type === 'swap' && <Stat label="Funding" value={fmtFunding(priced.find(q => q.fundingRate !== null)?.fundingRate ?? null)} />}
+            {(type === 'swap' || type === 'future' || type === 'option') && (
+              <Stat label="Open interest" value={fmtOi(priced.find(q => q.openInterest !== null)?.openInterest ?? null)} />
+            )}
+          </div>
+
+          {/* Settlements differ between venues and the prices therefore are not
+              directly comparable. Saying so is the honest framing; a reader
+              who wants comparable prices can read the settlement column. */}
+          {data.settlements.length > 1 && (
+            <p style={{ color: C.dim, fontSize: 11, margin: '0 0 8px' }}>
+              These venues settle in different currencies ({data.settlements.join(', ')}), so the prices are comparable only up to the basis between them.
+            </p>
+          )}
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.dim }}>
+                <th style={{ textAlign: 'left', padding: 6 }}>Venue</th>
+                <th style={{ textAlign: 'left', padding: 6 }}>Instrument</th>
+                <th style={{ textAlign: 'right', padding: 6 }}>Last</th>
+                <th style={{ textAlign: 'right', padding: 6 }}>Bid</th>
+                <th style={{ textAlign: 'right', padding: 6 }}>Ask</th>
+                <th style={{ textAlign: 'right', padding: 6 }}>24h %</th>
+                <th style={{ textAlign: 'right', padding: 6 }}>Volume</th>
+                {type !== 'spot' && <th style={{ textAlign: 'right', padding: 6 }}>Open interest</th>}
+                {type === 'swap' && <th style={{ textAlign: 'right', padding: 6 }}>Funding</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {quotes.map(q => (
+                <tr key={q.exchange} style={{ borderBottom: `1px solid ${C.border}`, opacity: q.last === null ? 0.55 : 1 }}>
+                  <td style={{ padding: 6, color: C.white, fontWeight: 700 }}>{q.exchange}</td>
+                  <td style={{ padding: 6, color: C.dim, fontSize: 10, fontFamily: 'monospace' }}>{q.symbol}</td>
+                  <td style={{ padding: 6, textAlign: 'right', color: q.last === null ? C.dim : C.accent }}>{fmtPrice(q.last, q.settle)}</td>
+                  <td style={{ padding: 6, textAlign: 'right', color: C.white }}>{fmtPrice(q.bid, q.settle)}</td>
+                  <td style={{ padding: 6, textAlign: 'right', color: C.white }}>{fmtPrice(q.ask, q.settle)}</td>
+                  <td style={{ padding: 6, textAlign: 'right', color: chgColor(q.change24h) }}>{fmtPct(q.change24h)}</td>
+                  <td style={{ padding: 6, textAlign: 'right', color: C.white }}>{fmtVol(q.quoteVolume)}</td>
+                  {type !== 'spot' && <td style={{ padding: 6, textAlign: 'right', color: C.white }}>{fmtOi(q.openInterest)}</td>}
+                  {type === 'swap' && <td style={{ padding: 6, textAlign: 'right', color: C.white }}>{fmtFunding(q.fundingRate)}</td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {data.notListed.length > 0 && (
+            <p style={{ color: C.dim, fontSize: 11, marginTop: 8 }}>
+              Not listed on this instrument: {data.notListed.join(', ')}. That is a fact about the market, not a failed venue.
+            </p>
+          )}
+          {data.failed.length > 0 && (
+            <p style={{ color: C.red, fontSize: 11, marginTop: 6 }}>
+              Listed but did not answer: {data.failed.join(', ')}. Shown as missing rather than filled from another venue.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function chgColor(p: number | null): string | undefined {
+  if (p === null) return C.dim;
+  return p >= 0 ? C.green : C.red;
+}
+
+/** Median of the non-null values, or null when there are none. */
+function medianOf(values: (number | null)[]): number | null {
+  const clean = values.filter((v): v is number => v !== null).sort((a, b) => a - b);
+  if (clean.length === 0) return null;
+  const mid = Math.floor(clean.length / 2);
+  return clean.length % 2 ? clean[mid] : (clean[mid - 1] + clean[mid]) / 2;
+}
+
+function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div>
+      <div style={{ color: C.dim, fontSize: 10 }}>{label}</div>
+      <div style={{ color: color ?? C.white, fontSize: 14, fontWeight: 700 }}>{value}</div>
+    </div>
+  );
+}

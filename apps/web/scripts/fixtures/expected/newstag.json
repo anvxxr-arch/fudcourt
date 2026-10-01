@@ -1,0 +1,273 @@
+{
+  "cache": "MISS",
+  "count": 5,
+  "fetchedAt": 1790597979,
+  "kind": "newstag",
+  "newsRows": [
+    {
+      "date": "2026-09-27T17:00:00.000Z",
+      "id": 85199735,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": -1.12,
+          "priceUsd": 2683.299063970379,
+          "symbol": "ETH"
+        },
+        {
+          "change24h": 0.75,
+          "priceUsd": 14.441001235366,
+          "symbol": "LINK"
+        },
+        {
+          "change24h": -7.43,
+          "priceUsd": 0.024132801571,
+          "symbol": "DAO"
+        },
+        {
+          "change24h": -1.48,
+          "priceUsd": 2673.957624467182,
+          "symbol": "ETH"
+        }
+      ],
+      "source": "BlockchainReporter",
+      "status": "bearish",
+      "title": "Kelp DAO Sues LayerZero and CEO Bryan Pellegrino Over $292M rsETH Exploit",
+      "url": "https://blockchainreporter.net/kelp-dao-sues-layerzero-292m-rseth-exploit/"
+    },
+    {
+      "date": "2026-09-26T20:20:52.000Z",
+      "id": 85199538,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": -1.93,
+          "priceUsd": 83316.0371566839,
+          "symbol": "BTC"
+        },
+        {
+          "change24h": -1.12,
+          "priceUsd": 2683.299063970379,
+          "symbol": "ETH"
+        },
+        {
+          "change24h": -4.76,
+          "priceUsd": 149.258303570174,
+          "symbol": "AAVE"
+        },
+        {
+          "change24h": -9.14,
+          "priceUsd": 9.030248251133,
+          "symbol": "UNI"
+        },
+        {
+          "change24h": -7.43,
+          "priceUsd": 0.024132801571,
+          "symbol": "DAO"
+        },
+        {
+          "change24h": null,
+          "priceUsd": null,
+          "symbol": "SEC"
+        }
+      ],
+      "source": "CryptoSlate",
+      "status": "bullish",
+      "title": "SEC clears regulatory hurdle as crypto token buybacks hit record $638 million",
+      "url": "https://cryptoslate.com/sec-clears-regulatory-hurdle-as-crypto-token-buybacks-hit-record-638-million/"
+    },
+    {
+      "date": "2026-09-26T17:30:00.000Z",
+      "id": 85199510,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": 0.75,
+          "priceUsd": 14.441001235366,
+          "symbol": "LINK"
+        },
+        {
+          "change24h": 0,
+          "priceUsd": 0.99982547837,
+          "symbol": "USDC"
+        },
+        {
+          "change24h": -4.76,
+          "priceUsd": 149.258303570174,
+          "symbol": "AAVE"
+        },
+        {
+          "change24h": -0.06,
+          "priceUsd": 0.999648841131,
+          "symbol": "USDC"
+        },
+        {
+          "change24h": -2.43,
+          "priceUsd": 0.000112380384,
+          "symbol": "USDC"
+        },
+        {
+          "change24h": -9.89,
+          "priceUsd": 0.001621716926,
+          "symbol": "USDC"
+        }
+      ],
+      "source": "NewsBTC",
+      "status": "bullish",
+      "title": "Apple And Nvidia Tokenized Stocks Can Now Back USDC Loans On Aave",
+      "url": "https://www.newsbtc.com/news/defi/apple-and-nvidia-tokenized-stocks-can-now-back-usdc-loans-on-aave/"
+    },
+    {
+      "date": "2026-09-26T13:30:11.000Z",
+      "id": 85199423,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": 0.75,
+          "priceUsd": 14.441001235366,
+          "symbol": "LINK"
+        },
+        {
+          "change24h": -1.98,
+          "priceUsd": 83215.10856183861,
+          "symbol": "WBTC"
+        },
+        {
+          "change24h": -2.73,
+          "priceUsd": 0.671404116053,
+          "symbol": "MNT"
+        },
+        {
+          "change24h": -1.93,
+          "priceUsd": 83256.42870859006,
+          "symbol": "wBTC"
+        },
+        {
+          "change24h": 0.02,
+          "priceUsd": 0.999671127078,
+          "symbol": "USDT0"
+        },
+        {
+          "change24h": null,
+          "priceUsd": 0.998,
+          "symbol": "FRNT"
+        }
+      ],
+      "source": "CryptoSlate",
+      "status": "bearish",
+      "title": "Nearly $15B is moving off LayerZero, now a $292M lawsuit puts its security model on trial",
+      "url": "https://cryptoslate.com/nearly-15-billion-is-moving-off-layerzero-now-a-292-million-lawsuit-puts-its-security-model-on-trial/"
+    },
+    {
+      "date": "2026-09-26T05:10:00.000Z",
+      "id": 85199284,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": -4.76,
+          "priceUsd": 149.258303570174,
+          "symbol": "AAVE"
+        }
+      ],
+      "source": "CryptoSlate",
+      "status": "bearish",
+      "title": "EU faces September 30 clock to decide future of DeFi loans",
+      "url": "https://cryptoslate.com/eu-faces-september-30-clock-to-decide-future-of-defi-loans/"
+    }
+  ],
+  "relatedTags": [
+    {
+      "name": "Fundraising",
+      "slug": "fundraising"
+    },
+    {
+      "name": "Market",
+      "slug": "market"
+    },
+    {
+      "name": "Bitcoin",
+      "slug": "bitcoin"
+    },
+    {
+      "name": "Analysis",
+      "slug": "analysis"
+    },
+    {
+      "name": "featured",
+      "slug": "featured"
+    },
+    {
+      "name": "Regulation",
+      "slug": "regulation"
+    },
+    {
+      "name": "Altcoin",
+      "slug": "altcoin"
+    },
+    {
+      "name": "Editor's Pick",
+      "slug": "editors-pick"
+    },
+    {
+      "name": "\n                        News                    ",
+      "slug": "-news-"
+    },
+    {
+      "name": "More News",
+      "slug": "more-news"
+    },
+    {
+      "name": "Ripple",
+      "slug": "ripple"
+    },
+    {
+      "name": "Social",
+      "slug": "social"
+    },
+    {
+      "name": "Ethereum",
+      "slug": "ethereum"
+    },
+    {
+      "name": "CLARITY Act",
+      "slug": "clarity-act"
+    },
+    {
+      "name": "Top Stories",
+      "slug": "top-stories"
+    },
+    {
+      "name": "Cryptocurrency Market News",
+      "slug": "cryptocurrency-market-news"
+    },
+    {
+      "name": "Technology",
+      "slug": "technology"
+    },
+    {
+      "name": "Blockchain",
+      "slug": "blockchain"
+    },
+    {
+      "name": "Stablecoins",
+      "slug": "stablecoins"
+    },
+    {
+      "name": "Tokenization",
+      "slug": "tokenization"
+    }
+  ],
+  "slice": "articles tagged 'defi' — 5 shown (upstream ships no tag total); unknown slugs are answered locally as 404 from upstream's tag=null soft-404 marker (never an unfiltered feed under a tag label); relatedCoins prices llama-verified",
+  "tag": {
+    "name": "DeFi",
+    "slug": "defi",
+    "subtitle": null
+  },
+  "upstream": "https://cryptorank.io/news/tag/defi",
+  "upstreamTotal": 5
+}

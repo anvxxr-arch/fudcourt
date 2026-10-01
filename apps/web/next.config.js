@@ -1,12 +1,32 @@
+const { withPayload } = require('@payloadcms/next/withPayload');
+
+// One Next app serves the treasury OS and the Payload CMS blog (DR-017). The
+// blog's own config (output: standalone, typescript.ignoreBuildErrors) is
+// deliberately NOT inherited: `ignoreBuildErrors` existed because the blog was
+// built in isolation and its Payload-generated types lagged the schema — in the
+// merged app the same flag would hide real type errors across the whole
+// dashboard, which is the exact regression the typecheck gate exists to catch.
+// The typecheck must therefore pass under React 19 before this is deployed.
 const nextConfig = {
-  // /portfolio entry kept after dropping the Vercel deploy (DR-002): same two
-  // rules apps/web/vercel.json used to carry, now served by Next itself so the
-  // path works identically on the self-hosted production host.
+  // Portfolio moved to /team/portfolio: the legacy /portfolio entry now
+  // redirects there (was: rewrite /portfolio -> /). The /:path* fallthrough
+  // keeps any deeper legacy /portfolio/* link landing on the matching top
+  // route instead of 404ing. Trailing-slash behavior is untouched (Next
+  // default: no forced trailing slash), so /portfolio and /portfolio/ both
+  // redirect identically.
+  async redirects() {
+    return [{ source: '/portfolio', destination: '/team/portfolio', permanent: false }];
+  },
   async rewrites() {
-    return [
-      { source: '/portfolio', destination: '/' },
-      { source: '/portfolio/:path*', destination: '/:path*' },
-    ];
+    return [{ source: '/portfolio/:path*', destination: '/:path*' }];
+  },
+  // Pin the workspace root explicitly: the monorepo has two lockfiles, and
+  // without this Next infers the wrong one and warns on every build.
+  turbopack: {
+    root: __dirname,
   },
 };
-module.exports = nextConfig;
+
+// withPayload injects the Payload webpack/turbopack aliases and the admin route
+// handling; `devBundleServerPackages: false` is the blog's proven setting.
+module.exports = withPayload(nextConfig, { devBundleServerPackages: false });
