@@ -113,7 +113,7 @@ ledger; portfolio is derived; append-only events). Current-state highlights:
 | # | Item | Evidence | Blocked on |
 | --- | --- | --- | --- |
 | 1 | **TS executor still in `apps/web`** — 8,029 LOC, 10 modules (`engine,exchange,lock,plan,risk,runtime,store,types,worker` + `scripts/executor/worker.ts`) | `wc -l apps/web/src/platform/executor/*.ts`; parity matrix rows 1–9 `DONE`, cutover rows `OPEN` | `verify:executor` (`executor-paper-e2e.ts`) needs `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY` — **not in the repo** (`apps/web/.env.local` lacks the master key; host `.env` has only `ALCHEMY_KEY`,`TURSO_AUTH_TOKEN`) |
-| 2 | **16 web route handlers still import `platform/executor`** | `grep -rl platform/executor apps/web/src/app` | #1 |
+| 2 | **15 web route handlers still import `platform/executor`** | `grep -rl platform/executor apps/web/src/app` | #1 |
 | 3 | **EXECUTOR DDL still embedded in `store.ts`** | migration-plan Phase 2 amendment; `executor-store-tests.ts` §59 pins byte-identity to `database/schema/executor-schema.sql` | #1 |
 | 4 | **Phase 8 move of `apps/web/scripts/verify/*` not executed (scoped, deliberate)** — the `verify-*.py` harnesses statically read `apps/web/src/**` (routes, UI components, shell) and write report JSON beside themselves; they are **web-app harnesses**, not cross-service tests. Cross-service scope is satisfied by `tests/integration/api/` + the per-service in-repo suites. | 77 references to `scripts/verify`; `grep` shows each harness opening `(root / "src/...")` with `root = ...parents[2]` = `apps/web` | migration-plan Phase 8 is *ordered after* Phase 7; Phase 7 requires #1. Moving them now is churn against a green, host-operator-expected report path |
 | 5 | **`api` lists "admin" as a hosted context but has no `internal/admin`** | `services/api/internal/` has no `admin/`; admin logic lives in `cmd/api/routes.go` | documentation-only fix (comment corrected this session; package split deferred) |
@@ -261,6 +261,18 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    (`git worktree --detach HEAD` + the harness → `TestPaperMarketLifecycle` and
    `TestPaperRestartNoDuplicateOrder` fail there), fixed (`9688722`) by persisting the engine state
    **before** acting, green after (`5f8a8ba` adds the harness).
+6. **`internal/worker.isRetryable` misclassified every venue error as retryable** — it looked for a
+   `Retryable() bool` *method* by unwrapping the error chain, but adapters and the `paper` simulator
+   put retryability in `exchange.VenueError.Class.Retryable`, a **field**; nothing implements the
+   method, so the lookup always fell through to the fail-safe default `true`. Consequence: a
+   *rejected* order (`invalid_order` / `permission_error` / `insufficient_balance`) never landed
+   `REJECTED` — it stayed `SUBMITTING` forever, never freeing its clamp room (§107) and never
+   pausing the strategy. Found by the composed harness's rejection scenario (no existing worker test
+   covered a non-retryable placement failure). Proven red at the prior HEAD
+   (`TestPaperRejectedOrderThenReplaces`), fixed (`83b62b6`) by routing through
+   `exchange.Classify` (resolves `VenueError.Class`, an explicit `Retryable()` signal, and
+   deadlines) — only an explicit non-retryable class rejects, and an *unclassifiable* error still
+   keeps `SUBMITTING` so reconciliation decides (§66).
 5. **`ValkeyLock.do` AUTH handshake surfaced as a bare `io: read/write on closed pipe`** — the
    `TestValkeyLockAuthHandshake` wire test failed intermittently (5s ctx timeout on the SET write)
    because every dial/transport/protocol error returned through `Acquire`'s `ErrUnavailable` wrapper
@@ -271,7 +283,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    `lock: command write/read`). Verified: `go test -race ./internal/lock/` green 3× consecutively,
    and `TestValkeyLockAuthHandshake`/`TestValkeyLockAuthRejected` both pass. No behavior change —
    the fail-closed contract is untouched; only the error string carries more information.
-6. **Composed Go paper harness gained the TWAP vector** (`994e5aa`) — `TestPaperTwapSlices`
+7. **Composed Go paper harness gained the TWAP vector** (`994e5aa`) — `TestPaperTwapSlices`
    proves a TWAP execution releases its plan as multiple children over the window, each slice
    sized from the remaining plan, and the window closes with the plan fully released even when
    no slice ever filled. Hermetic; green.
