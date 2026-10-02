@@ -248,6 +248,17 @@ func main() {
 		os.Exit(1)
 	}
 	defer store.Close()
+	// Schema bootstrap (parity with the TS runtime's ensureExecutorSchema): the
+	// tracked executor-schema.sql is applied here, statement by statement and
+	// idempotently, BEFORE the worker loop or either HTTP surface can serve. A
+	// database whose executor.* schema is missing would otherwise fail at the
+	// first query; instead the process refuses to start, fail-visible (§34),
+	// exactly as a refused config or an unreachable Postgres does.
+	if err := store.EnsureSchema(ctx); err != nil {
+		slog.Error("executor: schema bootstrap refused", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("executor: schema bootstrap complete", "source", repository.SchemaSQLPath)
 
 	var lease lock.ExecutionLock
 	if cfg.valkeyAddr != "" {

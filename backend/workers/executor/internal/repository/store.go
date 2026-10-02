@@ -58,6 +58,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/core/execution"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/runtime/worker"
@@ -84,13 +85,42 @@ var (
 	ErrInvalidDecimal = errors.New("repository: not a decimal string")
 )
 
-// New opens a connection pool to databaseURL (any pgxpool.ParseConfig URL)
-// and pings it once so a misconfigured store fails at construction, loudly,
-// instead of on first write.
-func New(ctx context.Context, databaseURL string) (*Store, error) {
+// Pool shape parity with the TypeScript runtime: store.ts pins
+//
+//	const PG_OPTS = { max: 8, idleTimeout: 30 };
+//
+// so the Go pool is capped at the same 8 connections and retires a connection
+// after the same 30s idle. Matching this matters because the web tier and this
+// process share one Postgres instance (DR-020): an uncapped pgxpool would let a
+// slow venue pin arbitrarily many backends and starve the shared server.
+const (
+	// MaxConns is the connection cap (TS `max`).
+	MaxConns = 8
+	// MaxConnIdleTime is the idle retirement age (TS `idleTimeout`, seconds).
+	MaxConnIdleTime = 30 * time.Second
+)
+
+// parsePoolConfig parses databaseURL and applies the TS-parity pool shape. It
+// is separated from New so the pool settings are testable without opening a
+// connection — the values, not the I/O, are the parity contract.
+func parsePoolConfig(databaseURL string) (*pgxpool.Config, error) {
 	cfg, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("repository: parse database url: %w", err)
+	}
+	cfg.MaxConns = MaxConns
+	cfg.MaxConnIdleTime = MaxConnIdleTime
+	return cfg, nil
+}
+
+// New opens a connection pool to databaseURL (any pgxpool.ParseConfig URL),
+// applies the TS-parity pool shape (MaxConns/MaxConnIdleTime, see above) and
+// pings it once so a misconfigured store fails at construction, loudly,
+// instead of on first write.
+func New(ctx context.Context, databaseURL string) (*Store, error) {
+	cfg, err := parsePoolConfig(databaseURL)
+	if err != nil {
+		return nil, err
 	}
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
