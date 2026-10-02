@@ -10,10 +10,12 @@ import TrenchPage from '@/features/dex/trench';
 import ForexBoard from '@/features/market/forex/ui';
 import CommodityBoard from '@/features/market/commodity/ui';
 import StockBoard from '@/features/market/stock/ui';
+import LlamaPage from '@/features/llama/ui';
 import type { StockRegion } from '@/features/market/stock/client';
 
 // The Market hub — one surface over the market sections, keyed by asset class:
 //   crypto    → CEX instruments (TickerPage, cross-venue) + top-250 prices (CoinGecko)
+//               + DeFi TVL (DeFiLlama)
 //   trench    → on-chain DEX pairs + the live trench (DexScreener)
 //   forex     → curated major pairs (exchangerate-api free feed, keyless)
 //   commodity → front-month futures (Yahoo Finance, keyless)
@@ -28,7 +30,7 @@ const SECTIONS: { key: MarketSection; label: string; href: string; blurb: string
     label: 'Crypto',
     href: '/market/crypto',
     blurb:
-      'Centralized-exchange instruments (spot, perpetual, dated future, option) cross-checked across venues, plus a top-250 market-cap board.',
+      'Centralized-exchange instruments (spot, perpetual, dated future, option) cross-checked across venues, a top-250 market-cap board, and the DeFi TVL board (DeFiLlama).',
   },
   {
     key: 'forex',
@@ -59,6 +61,7 @@ const SECTIONS: { key: MarketSection; label: string; href: string; blurb: string
 const CRYPTO_TABS = [
   { key: 'instruments', label: 'Instruments' },
   { key: 'prices', label: 'Prices' },
+  { key: 'defi', label: 'DeFi TVL' },
 ] as const;
 
 const TRENCH_TABS = [
@@ -119,7 +122,7 @@ function Overview() {
 }
 
 function CryptoSection() {
-  const [tab, setTab] = useState<'instruments' | 'prices'>('instruments');
+  const [tab, setTab] = useState<'instruments' | 'prices' | 'defi'>('instruments');
   return (
     <>
       <div style={{ display: 'flex', gap: space[10], marginBottom: space[14], flexWrap: 'wrap' }}>
@@ -129,7 +132,7 @@ function CryptoSection() {
           </button>
         ))}
       </div>
-      {tab === 'instruments' ? <TickerPage /> : <TrackerPage />}
+      {tab === 'instruments' ? <TickerPage /> : tab === 'prices' ? <TrackerPage /> : <LlamaPage />}
     </>
   );
 }

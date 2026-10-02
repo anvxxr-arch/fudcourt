@@ -17,27 +17,6 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 1,
   },
   {
-    path: '/tracker',
-    title: 'Tracker — Wallet transaction tracker | FUDCOURT',
-    description:
-      'Track wallet transactions across chains with status, history and reconciliation links.',
-    priority: 0.8,
-  },
-  {
-    path: '/trench',
-    title: 'Trench — Trade blotter & positions | FUDCOURT',
-    description:
-      'Trench blotter: open positions, fills and realized PnL for active trading wallets.',
-    priority: 0.7,
-  },
-  {
-    path: '/dex',
-    title: 'DEX — Decentralized exchange markets | FUDCOURT',
-    description:
-      'DEX market overview: pools, volumes and liquidity across supported decentralized exchanges.',
-    priority: 0.7,
-  },
-  {
     path: '/signals',
     title: 'Signals — Trading signals feed | FUDCOURT',
     description:
@@ -63,13 +42,6 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     title: 'CryptoRank — Market rankings & unlocks | FUDCOURT',
     description:
       'CryptoRank market data: token rankings, unlock schedules and fundraising rounds.',
-    priority: 0.6,
-  },
-  {
-    path: '/llama',
-    title: 'Llama — DeFi yields & TVL | FUDCOURT',
-    description:
-      'DeFi yields, TVL and protocol stats powered by DefiLlama data.',
     priority: 0.6,
   },
   {

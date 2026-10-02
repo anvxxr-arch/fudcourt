@@ -1,9 +1,13 @@
-"""DOM audit for the repurpose-aligned surfaces: /tracker (must hit /api/markets, NOT CoinGecko
-directly from the browser), /markets. Loud failures and missing rows FAIL.
+"""DOM audit for the repurpose-aligned surfaces: the crypto section's Prices tab
+(must hit /api/markets, NOT CoinGecko directly from the browser). Loud failures
+and missing rows FAIL.
+
+The standalone /tracker route folded into /market/crypto as the "Prices" tab, so
+this mounts the hub and switches to that tab -- the assertion is unchanged: the
+top-250 board must be served by our own proxy, never fetched from coingecko.com
+in the browser.
 
 Run: SWEEP_BASE=http://127.0.0.1:3100 ~/.hermes/cache/scratch/crvenv/bin/python <this>
-Drop the /markets check until such a page exists (it was an empty stub dir,
-removed 2026-09-28 -- nothing linked it).
 """
 import sys
 from playwright.sync_api import sync_playwright
@@ -26,19 +30,21 @@ with sync_playwright() as p:
     browser = p.chromium.launch()
     page = browser.new_page()
 
-    # ---- /tracker: proxied only, no browser->coingecko direct ----------
-    print("== /tracker ==")
+    # ---- /market/crypto > Prices: proxied only, no browser->coingecko direct ----
+    print("== /market/crypto (Prices tab) ==")
     xhrs: list[str] = []
     page.on("request", lambda r: xhrs.append(r.url))
-    page.goto(f"{BASE}/tracker", wait_until="networkidle", timeout=60_000)
+    page.goto(f"{BASE}/market/crypto", wait_until="networkidle", timeout=60_000)
+    page.click('button:has-text("Prices")')
+    page.wait_for_selector("tbody tr", timeout=60_000)
     page.wait_for_timeout(3_000)
     body = page.inner_text("body")
-    check("tracker: no loud error", "Failed" not in body and "HTTP " not in body, body[:120].replace("\n", " "))
+    check("prices: no loud error", "Failed" not in body and "HTTP " not in body, body[:120].replace("\n", " "))
     rows = page.locator("tbody tr").count()
-    check("tracker: table rows > 0", rows > 0, f"rows={rows}")
+    check("prices: table rows > 0", rows > 0, f"rows={rows}")
     direct = [u for u in xhrs if "coingecko.com" in u]
-    check("tracker: NO direct CoinGecko call from browser", not direct, str(direct[:2]))
-    check("tracker: fetches proxied /api/markets", any("/api/markets" in u for u in xhrs),
+    check("prices: NO direct CoinGecko call from browser", not direct, str(direct[:2]))
+    check("prices: fetches proxied /api/markets", any("/api/markets" in u for u in xhrs),
           str([u for u in xhrs if "api/" in u][:2]))
 
     browser.close()

@@ -24,6 +24,15 @@ const nextConfig = {
       { source: '/ticker/:ticker', destination: '/market/ticker/:ticker', permanent: false },
       { source: '/markets', destination: '/market', permanent: false },
       { source: '/market/ticker', destination: '/market/crypto', permanent: false },
+      // The standalone boards folded into the market hub as tabs: /tracker and
+      // /llama are the crypto section's Prices and DeFi TVL tabs, /dex and
+      // /trench are the trench section's Pairs and Trench tabs. Their page
+      // routes are gone, so old links redirect into the hub (the tab itself is
+      // client state, so the redirect lands on the section, not a tab).
+      { source: '/tracker', destination: '/market/crypto', permanent: false },
+      { source: '/llama', destination: '/market/crypto', permanent: false },
+      { source: '/dex', destination: '/market/trench', permanent: false },
+      { source: '/trench', destination: '/market/trench', permanent: false },
     ];
   },
   async rewrites() {

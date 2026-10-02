@@ -10,15 +10,11 @@ import PortfolioPage from '@/features/portfolio/ui';
 import WalletPage from '@/features/wallets/ui';
 import TransactionPage from '@/features/transactions/ui';
 import ReconciliationPage from '@/features/treasury/reconciliation';
-import TrenchPage from '@/features/dex/trench';
-import DexPage from '@/features/dex/ui';
 import SignalsPage from '@/features/signals/ui';
 import ScoreboardPage from '@/features/scoreboard/ui';
 import ChainrankPage from '@/features/chainrank/ui';
 import CryptorankPage from '@/features/cryptorank/ui';
-import LlamaPage from '@/features/llama/ui';
-import TrackerPage from '@/features/tracker/ui';
-import MarketHub from '@/features/market/hub';
+import MarketHub from '@/components/layout/market-hub';
 import NewsPage from '@/features/news/ui';
 import KhalaPage from '@/features/khala/ui';
 
@@ -120,9 +116,10 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
   const BOARD_TABS = [
     // Market is the market hub, keyed by asset class (/market/crypto,
     // /market/forex, /market/commodity, /market/stock, /market/trench). It
-    // replaces the standalone /ticker and /markets surfaces; the old
-    // /tracker, /llama, /dex, /trench routes still resolve for direct links,
-    // but the nav no longer advertises them as separate boards.
+    // replaces the standalone /ticker and /markets surfaces, and it absorbed
+    // the /tracker, /llama, /dex and /trench boards as tabs (crypto: Prices,
+    // DeFi TVL; trench: Pairs, Trench). Those four standalone routes are gone —
+    // next.config.js redirects them into the hub so old links still resolve.
     { key: 'market', label: 'Market' },
     { key: 'signals', label: 'Signals' },
     { key: 'scoreboard', label: 'Scoreboard' },
@@ -214,14 +211,10 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'market-commodity' && <MarketHub section="commodity" />}
       {page === 'market-stock' && <MarketHub section="stock" />}
       {page === 'market-trench' && <MarketHub section="trench" />}
-      {page === 'trench' && <TrenchPage />}
-      {page === 'dex' && <DexPage />}
       {page === 'signals' && <SignalsPage />}
       {page === 'scoreboard' && <ScoreboardPage />}
       {page === 'chainrank' && <ChainrankPage />}
       {page === 'cryptorank' && <CryptorankPage />}
-      {page === 'llama' && <LlamaPage />}
-      {page === 'tracker' && <TrackerPage />}
       {page === 'news' && <NewsPage />}
       {page === 'khala' && <KhalaPage />}
 

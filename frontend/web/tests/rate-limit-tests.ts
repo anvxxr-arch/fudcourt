@@ -75,7 +75,7 @@ test('cost: every route-level entry above one unit is a measurement, and the tab
   // and (on POST) persist an execution. A flat request counter would let one
   // window buy hundreds of live orders; 8 units makes a window ≈ a handful, and
   // the comment above the table records that reasoning.
-  assert.deepEqual(Object.keys(ROUTE_COST).sort(), ['executor', 'khala', 'markets', 'ticker']);
+  assert.deepEqual(Object.keys(ROUTE_COST).sort(), ['executor', 'khala', 'market', 'markets', 'ticker']);
 });
 test('cost: the executor family is priced above the default — placing an order is not a cheap read', () => {
   // Every sub-path must inherit the family price, so a nested route can never be
