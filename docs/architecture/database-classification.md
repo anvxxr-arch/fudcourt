@@ -259,7 +259,7 @@ Enumerated, not implied:
 
 | Expected thing | Status | Evidence |
 |---|---|---|
-| `database/migrations/` | **Does not exist** | `ls database/` → `README.md`, `schema/` only. The only migration runners are Payload's (`src/cms/migrations/index.ts`) and the idempotent `ensureExecutorSchema()`. |
+| `database/migrations/` | **Does not exist** | `ls database/` → `README.md`, `schema/` only. The only migration runners are Payload's (`src/cms/migrations/index.ts`) and the executor's two idempotent startup appliers of `database/schema/executor-schema.sql`: the TS `ensureExecutorSchema()` and — added `8d87df1` — the Go `repository.EnsureSchema` at `cmd/executor` startup. |
 | A Turso/Postgres migration framework for the treasury tables | **Does not exist** | Turso DDL is a *dump* (`dump-schema.mjs`), Postgres DDL is applied by hand. |
 | Seed scripts for the treasury tables | **Does not exist** | No `INSERT INTO accounts/journal/ledger/venues/trades` anywhere in the tree; `wallets` is seeded only as Rust constants (`chains.rs` `WALLETS`) which are *read* as the sync's watch list, not inserted by the app. |
 | SQL fixture files for the treasury schema | **Does not exist** | Only `tests/oracle/fixtures/capture.json` (HTTP bodies) and `tests/fixtures/**` (provider payloads). |

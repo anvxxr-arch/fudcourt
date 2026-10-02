@@ -127,7 +127,7 @@ ledger; portfolio is derived; append-only events). Current-state highlights:
 
 | # | Item | Evidence | Blocked on |
 | --- | --- | --- | --- |
-| 1 | **TS executor still in `frontend/web`** — 8,029 LOC, 10 modules (`engine,exchange,lock,plan,risk,runtime,store,types,worker` + `frontend/web/scripts/executor/worker.ts`) | `wc -l frontend/web/src/platform/executor/*.ts`; parity matrix rows 1–9 `DONE`, **offline composed Go harness `DONE`** (`internal/tests/e2e`), live cutover rows `OPEN` | `verify:executor` (`executor-paper-e2e.ts`) + a live `cmd/executor` run need `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY` (and, for `cmd`, a real venue credential — no paper branch). **`verify:executor` is now green** (2026-10-01: `ALL PAPER-MODE CHECKS PASSED (§127)` — a dev master key was generated into the gitignored `frontend/web/.env.local`; Postgres :5433 and Valkey :6379 are live locally). What stays OPEN is the Go-worker cutover — but **no longer because of a missing Go surface**: since commit `7b8dc2d` `backend/workers/executor/internal/api/**` serves all 15 `/api/executor/*` routes (29 hermetic tests) on `cmd/executor`'s own listener `:3105`. The three remaining blockers are: **(a)** the web tier does not yet thin-proxy `/api/executor/*` to `127.0.0.1:3105`, so the TS handlers remain the live path; **(b)** `FUDCOURT_SESSION_SECRET` + `FUDCOURT_EXECUTOR_PG_URL` are not yet defined in `frontend/web/.env.local`, so the executor unit cannot start; **(c)** `FUDCOURT_EXECUTOR_MASTER_KEY` provisioning + the live `verify:executor` run against the **Go** worker |
+| 1 | **TS executor still in `frontend/web`** — 8,029 LOC, 10 modules (`engine,exchange,lock,plan,risk,runtime,store,types,worker` + `frontend/web/scripts/executor/worker.ts`) | `wc -l frontend/web/src/platform/executor/*.ts`; parity matrix rows 1–9 `DONE`, **offline composed Go harness `DONE`** (`internal/tests/e2e`), live cutover rows `OPEN` | `verify:executor` (`executor-paper-e2e.ts`) + a live `cmd/executor` run need `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY` (and, for `cmd`, a real venue credential — no paper branch). **`verify:executor` is now green** (2026-10-01: `ALL PAPER-MODE CHECKS PASSED (§127)` — a dev master key was generated into the gitignored `frontend/web/.env.local`; Postgres :5433 and Valkey :6379 are live locally). What stays OPEN is the Go-worker cutover — but **no longer because of a missing Go surface or a missing schema**: since commit `7b8dc2d` `backend/workers/executor/internal/api/**` serves all 15 `/api/executor/*` routes (29 hermetic tests) on `cmd/executor`'s own listener `:3105`, and since `8d87df1` `cmd/executor` applies the tracked `database/schema/executor-schema.sql` at startup (`repository.EnsureSchema`), so the Go worker no longer needs the schema applied out-of-band. The three remaining blockers are: **(a)** the web tier does not yet thin-proxy `/api/executor/*` to `127.0.0.1:3105`, so the TS handlers remain the live path; **(b)** `FUDCOURT_SESSION_SECRET` + `FUDCOURT_EXECUTOR_PG_URL` are not yet defined in `frontend/web/.env.local`, so the executor unit cannot start; **(c)** `FUDCOURT_EXECUTOR_MASTER_KEY` provisioning + the live `verify:executor` run against the **Go** worker |
 | 2 | **15 web route handlers still import `platform/executor`** | `grep -rl platform/executor frontend/web/src/app` | #1 |
 | 3 | **EXECUTOR DDL still embedded in `store.ts`** | migration-plan Phase 2 amendment; `executor-store-tests.ts` §59 pins byte-identity to `database/schema/executor-schema.sql` | #1 |
 | 4 | **Phase 8 move of `frontend/web/scripts/verify/*` — ~~not executed~~ EXECUTED** | the relocation landed in one commit: repo-wide gates → `scripts/verify/`, executor E2E → `tests/e2e/executor/`, fixtures → `tests/fixtures/`, oracle → `tests/oracle/`, database tooling → `scripts/database/`, web-only suites → `frontend/web/tests/`. Every invoker repointed (verify-all, pre-push, integration.yml, check-contract, root README, package.json); `test:shapers` still **240/240**. The `verify-*.py` harnesses remain repo tools (their UI-wiring checks read `frontend/web/src/**`), not web-app-only. | `git ls-files`; `scripts/verify/{verify-*,monitor}.py`; `tests/{e2e,integration,fixtures,oracle}/`; `bun run test:shapers` | none |
@@ -353,6 +353,11 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    against the Go worker; only then
    delete the TS executor + re-point the 15 route handlers still importing
    `platform/executor` (Phase 5/7). This unblocks debt items 1–4 at once.
+   **(b) precision (`8d87df1`):** provisioning `FUDCOURT_EXECUTOR_PG_URL` no longer implies applying
+   the schema out-of-band — `cmd/executor` now applies the tracked `database/schema/executor-schema.sql`
+   at startup (`repository.EnsureSchema`), so the Go worker self-bootstraps an empty database exactly
+   as the TS path does; the remaining prerequisites are exactly env provisioning + the live
+   `verify:executor` run against the Go worker.
    **Precision (verified this session):** `tests/e2e/executor/executor-paper-e2e.ts`
    imports `@/platform/executor/{store,worker,plan,runtime,lock}` — it exercises the **TS**
    runtime against the real Postgres/Valkey, so it is *not yet* the "against the Go worker" gate
@@ -396,7 +401,9 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    three-item checklist: **(a)** thin-proxy the web `/api/executor/*` handlers to
    `127.0.0.1:3105` (until then the TS handlers are the live path); **(b)**
    `FUDCOURT_SESSION_SECRET` + `FUDCOURT_EXECUTOR_PG_URL` must be provisioned in
-   `frontend/web/.env.local` before the unit can start; **(c)** provision
+   `frontend/web/.env.local` before the unit can start (provisioning the DSN no longer implies
+   applying the schema by hand — since `8d87df1` `cmd/executor` applies the tracked
+   `database/schema/executor-schema.sql` at startup, `repository.EnsureSchema`); **(c)** provision
    `FUDCOURT_EXECUTOR_MASTER_KEY` and run `verify:executor` against the **Go** worker. The TS
    executor stays **production** until all three land — the TS deletion is still OPEN.
 2. ~~**Then** execute the Phase 8 move (`frontend/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),

@@ -6,11 +6,24 @@
 -- writes live data and must never share that blast radius. Everything here lives
 -- in `executor` and nothing in `platform/db/mirror.ts` touches it.
 --
--- Executed by `ensureExecutorSchema()` in src/platform/executor/store.ts from its
--- embedded copy — there is no separate migration runner. The two copies are
--- pinned against drift by executor-store-tests.ts, which compares them after
--- normalizing away blank lines and `--` comment lines (so pure reformatting
--- cannot mask a change, and a real statement change cannot hide behind it).
+-- Applied at STARTUP by two runtimes, both idempotent and both one statement at
+-- a time (the extended query protocol refuses multi-statement strings):
+--   * TypeScript — `ensureExecutorSchema()` in src/platform/executor/store.ts,
+--     from its embedded `EXECUTOR_DDL` copy.
+--   * Go — `repository.EnsureSchema()` at `cmd/executor` startup
+--     (backend/workers/executor/internal/repository/schema.go, commit
+--     `8d87df1`), run BEFORE the worker loop and either HTTP surface can serve;
+--     a failure is fatal (objective §34).
+-- There is still no separate migration runner. This tracked file is the SOLE
+-- OWNER of the DDL; each runtime keeps a copy and each copy has its own drift
+-- guard against this file:
+--   * TS copy — executor-store-tests.ts compares after normalizing away blank
+--     lines and `--` comment lines (so pure reformatting cannot mask a change,
+--     and a real statement change cannot hide behind it).
+--   * Go copy (backend/workers/executor/internal/repository/schema/executor-schema.sql)
+--     — TestEmbeddedSchemaMatchesTracked requires BYTE IDENTITY, strictly
+--     stronger (it also guards a comment-only edit; recopy after editing this
+--     file).
 -- Every statement is idempotent.
 --
 -- Conventions:

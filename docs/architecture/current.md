@@ -239,7 +239,7 @@ Plus `sitemap.ts`, `robots.ts`, `globals.css`, root `layout.tsx`.
 |---|---|---|
 | `schema.sql` | SQLite (Turso) source-of-truth | `accounts`, `assets`, `journal`, `ledger`, `trades`, `transactions`, `venues`, `wallets` (+ `sqlite_sequence`) |
 | `pg-schema.sql` | Postgres read model (projected from Turso by `frontend/web/scripts/tools/pg-load.ts`, DR-019) | same 8 tables + `asset_history` (indexes `asset_history_asset_ts`, unique snapshot), `price_history` (unique `price_history_symbol_ts_source`) |
-| `executor-schema.sql` | Postgres `executor` schema (owned by the executor runtime; DDL mirrored in `src/platform/executor/store.ts` `EXECUTOR_DDL`, applied via `ensureExecutorSchema`) | `executor.exchange_accounts`, `executor.executions`, `executor.execution_plans`, `executor.child_orders`, `executor.fills`, `executor.execution_events`, `executor.balance_snapshots`, `executor.positions_snapshots`, `executor.risk_profiles`, `executor.audit_logs` (each with the indexes named in the file) |
+| `executor-schema.sql` | Postgres `executor` schema (sole owner of the DDL; mirrored in `src/platform/executor/store.ts` `EXECUTOR_DDL` and applied via `ensureExecutorSchema`, and — added `8d87df1` — embedded at `backend/workers/executor/internal/repository/schema/executor-schema.sql`, applied by the Go `repository.EnsureSchema` at `cmd/executor` startup) | `executor.exchange_accounts`, `executor.executions`, `executor.execution_plans`, `executor.child_orders`, `executor.fills`, `executor.execution_events`, `executor.balance_snapshots`, `executor.positions_snapshots`, `executor.risk_profiles`, `executor.audit_logs` (each with the indexes named in the file) |
 
 Ownership today (feature → tables):
 
@@ -252,7 +252,12 @@ Ownership today (feature → tables):
 - **DDL byte-identity (Phase-5 anchor): PASS** — `store.ts` `EXECUTOR_DDL` is asserted
   byte-identical (normalized) to `database/schema/executor-schema.sql` by
   `tests/integration/executor/executor-store-tests.ts` §59 ("no silent drift"); suite 41/41 green 2026-10-01
-  (details in §5a).
+  (details in §5a). **A second applier and guard were added `8d87df1`:** the Go runtime embeds a copy
+  at `backend/workers/executor/internal/repository/schema/executor-schema.sql` and applies it at
+  `cmd/executor` startup (`repository.EnsureSchema`, before the worker/API serve, fatal on failure);
+  `TestEmbeddedSchemaMatchesTracked` pins that copy to the tracked file **byte-exact** (strictly
+  stronger than the TS normalized comparison — it also catches a comment-only edit). The tracked file
+  remains the sole owner.
 
 ## 5. Executor runtime (`frontend/web/src/platform/executor/`) — in-frontend execution engine
 
@@ -265,7 +270,7 @@ Ownership today (feature → tables):
 | `exchange.ts` | Venue adapters: `CcxtLike` interface, `CreateAdapterOptions`, venue symbol mapping (`toVenueSymbol`/`fromVenueSymbol`), error sanitization/`mapError` |
 | `worker.ts` | Execution worker: `createWorker` → `ExecutorWorkerApi`, child clamping (`clampChild`), fill summaries, live-adapter factory (`setLiveAdapterFactory`) |
 | `lock.ts` | Distributed execution lock: `LockClient`, `lockKey(executionId)`, `executionLock` |
-| `store.ts` | Postgres persistence for `executor.*` (`pg()`, `ensureExecutorSchema`, `EXECUTOR_DDL`), key handling (`masterKeyFromEnv` — encrypted exchange credentials) |
+| `store.ts` | Postgres persistence for `executor.*` (`pg()`, `ensureExecutorSchema`, `EXECUTOR_DDL`), key handling (`masterKeyFromEnv` — encrypted exchange credentials). **Second applier added `8d87df1`:** the Go runtime (`backend/workers/executor/internal/repository/schema.go` `EnsureSchema` at `cmd/executor` startup) applies the same tracked DDL; both copies are drift-guarded against `database/schema/executor-schema.sql` |
 | `runtime.ts` | Bootstrap & request auth: `bootstrapExecutor`, `requireExecutorUser`, plan-adapter factory, runtime caches |
 
 Adjacent:
