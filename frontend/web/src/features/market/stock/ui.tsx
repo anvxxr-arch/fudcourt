@@ -6,9 +6,10 @@ import type { StockRegion } from '@/features/market/stock/client';
 const TITLE: Record<StockRegion, string> = {
   us: 'Stock — US indices & mega-caps',
   asia: 'Stock — Asia indices & blue chips',
+  europe: 'Stock — Europe indices & blue chips',
 };
 
-/** Stock section: one Yahoo board per region (US / Asia). */
+/** Stock section: one Yahoo board per region (US / Asia / Europe). */
 export default function StockBoard({ region }: { region: StockRegion }) {
   return (
     <QuoteBoard

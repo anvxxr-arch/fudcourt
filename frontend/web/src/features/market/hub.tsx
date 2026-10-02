@@ -17,7 +17,7 @@ import type { StockRegion } from '@/features/market/stock/client';
 //   trench    → on-chain DEX pairs + the live trench (DexScreener)
 //   forex     → curated major pairs (exchangerate-api free feed, keyless)
 //   commodity → front-month futures (Yahoo Finance, keyless)
-//   stock     → US and Asia indices + blue chips (Yahoo Finance, keyless)
+//   stock     → US, Asia and Europe indices + blue chips (Yahoo Finance, keyless)
 // Each section is its own route (/market/<section>); this component only adds the
 // section chrome, so the providers' envelopes are untouched.
 export type MarketSection = 'crypto' | 'forex' | 'commodity' | 'stock' | 'trench';
@@ -46,7 +46,7 @@ const SECTIONS: { key: MarketSection; label: string; href: string; blurb: string
     key: 'stock',
     label: 'Stock',
     href: '/market/stock',
-    blurb: 'US and Asia indices and blue chips from Yahoo Finance.',
+    blurb: 'US, Asia and Europe indices and blue chips from Yahoo Finance.',
   },
   {
     key: 'trench',
@@ -69,6 +69,7 @@ const TRENCH_TABS = [
 const STOCK_TABS = [
   { key: 'us', label: 'US' },
   { key: 'asia', label: 'Asia' },
+  { key: 'europe', label: 'Europe' },
 ] as const;
 
 const tabStyle = (active: boolean): CSSProperties => ({
