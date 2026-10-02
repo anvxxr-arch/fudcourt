@@ -1361,17 +1361,23 @@ mirror's list, and the failure mode is silent. (4) was rejected: it buys a secon
 connection string, a second backup, and a second restore drill to protect against a
 blast radius that a schema qualifier already bounds.
 
-**2. No migration runner. The DDL is embedded, and a test asserts it matches the
-tracked file.** `EXECUTOR_DDL` in `src/platform/executor/store.ts` is executed by
+**2. No migration runner. The DDL is tracked, and the app reads the tracked file.**
+`EXECUTOR_DDL` in `src/platform/executor/store.ts` is executed by
 `ensureExecutorSchema()` (called once at startup by both the API's
 `bootstrapExecutor()` and the worker), one statement per round trip because the
 extended query protocol refuses multi-statement strings, every statement
 `IF NOT EXISTS`, so the bootstrap is idempotent and safe on every process start.
-`db/executor-schema.sql` is the readable copy, and
-`executor-store-tests.ts` asserts the embedded DDL and the tracked file are equal
-after normalisation — silent drift fails a test rather than a deploy. Rationale:
-the schema has exactly one writer (this app) and no other consumer needs to create
-it; a migration tool would add a second source of truth plus an ordering
+`database/schema/executor-schema.sql` is the readable copy **and the definition**:
+since the 2026-10-02 lift it is the only copy, and `EXECUTOR_DDL` is that file read
+at module load with its comment lines dropped (`readFileSync` from the repo root;
+cwd is the app root under systemd). Until the lift the same SQL existed twice, in
+the file and in a template literal, with `executor-store-tests.ts` asserting the two
+were equal after normalisation. The two-copy hazard only exists on the Go side now
+(an `embed` copy, pinned byte-exact by `TestEmbeddedSchemaMatchesTracked`), and the
+TS side cannot drift because there is nothing left to drift from. Rationale for
+keeping the compositional approach rather than adopting a migration runner is
+unchanged: the schema has exactly one writer (this app) and no other consumer needs
+to create it; a migration tool would add a second source of truth plus an ordering
 discipline, for tables that `CREATE TABLE IF NOT EXISTS` already brings forward
 correctly.
 

@@ -16,6 +16,8 @@
  * never logged, never echoed. Master key absence is FAIL-CLOSED — credential
  * operations throw, plaintext is never stored.
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import {
   EXECUTOR_SCHEMA,
@@ -91,144 +93,36 @@ function db(): ExecutorSql {
 }
 
 // ---------------------------------------------------------------------------
-// DDL — kept byte-equivalent to the tracked database/schema/executor-schema.sql (commentary
-// lines excluded); no separate migration runner exists.
+// DDL — the tracked database/schema/executor-schema.sql is the SOLE owner.
+//
+// The SQL is no longer duplicated as a template literal here: this constant is
+// the SAME file `repository.EnsureSchema()` embeds in the Go worker, read at
+// module load. The old copy existed so the bootstrap could not depend on a path;
+// it is now a path dependency deliberately, because the alternative is a second
+// copy of the schema that nothing can prove equal at review time. It is also the
+// faster option: one `readFileSync` of 200 lines at import, no second literal in
+// the bundle, and no chance the copy a reader inspects is the stale one.
+//
+// cwd is the app root (systemd `WorkingDirectory`, `bun --bun next start`), so
+// the repo root is two levels up — the same convention `executor-store-tests.ts`
+// and `frontend/web/tests/shaper-tests.ts` already use to reach `database/`.
+// `readFileSync` is used rather than `node:fs/promises` because a top-level
+// await would make every importer of this module async.
+//
+// Comment-only lines are dropped and nothing else is: blank lines stay, and the
+// file's trailing newline survives the join, exactly as the Go applier's
+// comment-stripping leaves them. That trailing newline is load-bearing — without
+// it the last statement keeps its `;`, and the extended query protocol refuses a
+// statement that carries one. A missing or unreadable file THROWS at import: a
+// bootstrap that cannot know its schema must not start (objective §34).
 // ---------------------------------------------------------------------------
-export const EXECUTOR_DDL = `CREATE SCHEMA IF NOT EXISTS executor;
-CREATE TABLE IF NOT EXISTS executor.exchange_accounts (
-  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id               text NOT NULL,
-  exchange              text NOT NULL,
-  label                 text NOT NULL,
-  api_key_masked        text NOT NULL,
-  api_key_encrypted     bytea NOT NULL,
-  api_secret_encrypted  bytea NOT NULL,
-  passphrase_encrypted  bytea,
-  iv                    bytea NOT NULL,
-  auth_tag              bytea NOT NULL,
-  permissions           jsonb NOT NULL DEFAULT '{}'::jsonb,
-  health                text NOT NULL DEFAULT 'UNKNOWN',
-  created_at            bigint NOT NULL,
-  updated_at            bigint NOT NULL,
-  last_used_at          bigint,
-  revoked_at            bigint
-);
-CREATE INDEX IF NOT EXISTS exchange_accounts_user_idx ON executor.exchange_accounts (user_id);
-CREATE TABLE IF NOT EXISTS executor.executions (
-  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id               text NOT NULL,
-  account_id            uuid NOT NULL REFERENCES executor.exchange_accounts (id),
-  exchange              text NOT NULL,
-  symbol                text NOT NULL,
-  market_type           text NOT NULL,
-  side                  text NOT NULL,
-  intent                text NOT NULL,
-  status                text NOT NULL,
-  mode                  text NOT NULL,
-  sizing_mode           text NOT NULL,
-  sizing_value          double precision NOT NULL,
-  risk_budget           double precision,
-  risk_basis            text,
-  entry_definition      jsonb NOT NULL,
-  stop_definition       jsonb,
-  take_profit_definition jsonb NOT NULL DEFAULT '[]'::jsonb,
-  execution_strategy    text NOT NULL,
-  execution_config      jsonb NOT NULL,
-  constraints           jsonb NOT NULL DEFAULT '{}'::jsonb,
-  planned_quantity      double precision NOT NULL,
-  planned_notional      double precision NOT NULL,
-  actual_quantity       double precision NOT NULL,
-  actual_notional       double precision NOT NULL,
-  average_fill_price    double precision,
-  estimated_fees        double precision,
-  actual_fees           double precision NOT NULL,
-  planned_risk          double precision,
-  current_risk          double precision,
-  risk_policy           text,
-  strategy_state        jsonb,
-  created_at            bigint NOT NULL,
-  started_at            bigint,
-  completed_at          bigint,
-  cancelled_at          bigint
-);
-CREATE INDEX IF NOT EXISTS executions_user_created_idx ON executor.executions (user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS executions_status_idx ON executor.executions (status);
-CREATE TABLE IF NOT EXISTS executor.execution_plans (
-  execution_id uuid PRIMARY KEY REFERENCES executor.executions (id),
-  plan         jsonb NOT NULL,
-  created_at   bigint NOT NULL
-);
-CREATE TABLE IF NOT EXISTS executor.child_orders (
-  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  execution_id      uuid NOT NULL REFERENCES executor.executions (id),
-  exchange_order_id text,
-  client_order_id   text NOT NULL,
-  symbol            text NOT NULL,
-  side              text NOT NULL,
-  type              text NOT NULL,
-  price             double precision,
-  quantity          double precision NOT NULL,
-  filled_quantity   double precision NOT NULL DEFAULT 0,
-  status            text NOT NULL,
-  is_exit           boolean NOT NULL DEFAULT false,
-  submitted_at      bigint,
-  updated_at        bigint NOT NULL,
-  filled_at         bigint,
-  UNIQUE (execution_id, client_order_id)
-);
-CREATE INDEX IF NOT EXISTS child_orders_execution_idx ON executor.child_orders (execution_id);
-CREATE TABLE IF NOT EXISTS executor.fills (
-  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  execution_id      uuid NOT NULL REFERENCES executor.executions (id),
-  child_order_id    uuid REFERENCES executor.child_orders (id),
-  account_id        uuid NOT NULL REFERENCES executor.exchange_accounts (id),
-  exchange_trade_id text NOT NULL,
-  price             double precision NOT NULL,
-  quantity          double precision NOT NULL,
-  quote_quantity    double precision NOT NULL,
-  fee               double precision NOT NULL,
-  fee_asset         text NOT NULL,
-  timestamp         bigint NOT NULL,
-  UNIQUE (account_id, exchange_trade_id)
-);
-CREATE INDEX IF NOT EXISTS fills_execution_idx ON executor.fills (execution_id);
-CREATE TABLE IF NOT EXISTS executor.execution_events (
-  id           bigserial PRIMARY KEY,
-  execution_id uuid NOT NULL REFERENCES executor.executions (id),
-  name         text NOT NULL,
-  payload      jsonb NOT NULL DEFAULT '{}'::jsonb,
-  created_at   bigint NOT NULL
-);
-CREATE INDEX IF NOT EXISTS execution_events_execution_idx ON executor.execution_events (execution_id, id);
-CREATE TABLE IF NOT EXISTS executor.balance_snapshots (
-  id         bigserial PRIMARY KEY,
-  account_id uuid NOT NULL REFERENCES executor.exchange_accounts (id),
-  payload    jsonb NOT NULL,
-  created_at bigint NOT NULL
-);
-CREATE INDEX IF NOT EXISTS balance_snapshots_account_idx ON executor.balance_snapshots (account_id, created_at DESC);
-CREATE TABLE IF NOT EXISTS executor.positions_snapshots (
-  id         bigserial PRIMARY KEY,
-  account_id uuid NOT NULL REFERENCES executor.exchange_accounts (id),
-  payload    jsonb NOT NULL,
-  created_at bigint NOT NULL
-);
-CREATE INDEX IF NOT EXISTS positions_snapshots_account_idx ON executor.positions_snapshots (account_id, created_at DESC);
-CREATE TABLE IF NOT EXISTS executor.risk_profiles (
-  user_id    text PRIMARY KEY,
-  profile    jsonb NOT NULL,
-  updated_at bigint NOT NULL
-);
-CREATE TABLE IF NOT EXISTS executor.audit_logs (
-  id         bigserial PRIMARY KEY,
-  user_id    text,
-  action     text NOT NULL,
-  target     text,
-  payload    jsonb NOT NULL DEFAULT '{}'::jsonb,
-  created_at bigint NOT NULL
-);
-CREATE INDEX IF NOT EXISTS audit_logs_user_idx ON executor.audit_logs (user_id, id);
-`;
+export const EXECUTOR_DDL = readFileSync(
+  join(process.cwd(), '..', '..', 'database', 'schema', 'executor-schema.sql'),
+  'utf8',
+)
+  .split('\n')
+  .filter((line) => !line.trim().startsWith('--'))
+  .join('\n');
 let schemaReady = false;
 /**
  * Idempotent bootstrap: the worker and the API route call this once at startup.

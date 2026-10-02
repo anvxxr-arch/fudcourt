@@ -70,10 +70,13 @@ the checks do not yet cover.
 - UI/shell layers MUST NOT be imported by platform/feature layers below them — **ENFORCED** by
   `check-structure.py` (the shell may import feature pages; `platform/` must not import a feature).
 - `database/*` is owned by migrations tooling only; services MUST NOT embed DDL strings. —
-  **OPEN.** `store.ts` still carries `EXECUTOR_DDL`, asserted byte-identical to
-  `database/schema/executor-schema.sql` by `tests/integration/executor/executor-store-tests.ts` §59.
-  Lifting it out of `store.ts` is tracked in `migration-plan.md` Phase 2 (not `database/schema/executor.sql` —
-  that file was never created; the tracked name is `executor-schema.sql`).
+  **CLOSED 2026-10-02.** `store.ts` no longer embeds the DDL: `EXECUTOR_DDL` reads
+  `database/schema/executor-schema.sql` at module load (comment lines dropped), so the tracked
+  file is the only copy on the TS side; `tests/integration/executor/executor-store-tests.ts` §59
+  pins the constant to that file verbatim and reads the file directly for its structural
+  assertions, so a re-derivation cannot slip through. The Go side keeps its `embed` copy
+  (`TestEmbeddedSchemaMatchesTracked`, byte-exact) because `go:embed` refuses parent-directory
+  patterns. Not adopted: a migration tool (DR-020's rationale is unchanged).
 ## 4. Contracts (`shared/contracts`) — LANDED (partial)
 - `openapi/` — HTTP surfaces. Present: `shared/contracts/openapi/fudcourt.yaml` (`CONTRACTS_OK`,
   36 paths). The api/executor/data/sync surfaces are being folded into the one document.

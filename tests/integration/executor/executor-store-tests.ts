@@ -422,8 +422,13 @@ test('§62: fillDedupKey never collides across accounts or trades (uuid-shaped s
 // DDL (PRD §59) — the schema the store bootstraps
 // ---------------------------------------------------------------------------
 
-test('§59: EXECUTOR_DDL is non-empty and creates every executor table', () => {
-  assert.ok(EXECUTOR_DDL.length > 0);
+test('§59: the tracked DDL creates every executor table', () => {
+  // Read RAW: `database/schema/executor-schema.sql` is the sole owner of the
+  // executor schema, and since the lift `store.ts` reads this same file (comments
+  // dropped). Asserting against the derived constant alone would prove nothing
+  // about the file — a loader bug agrees with itself.
+  const ddl = readFileSync(join(process.cwd(), '..', '..', 'database', 'schema', 'executor-schema.sql'), 'utf8');
+  assert.ok(ddl.length > 0);
   const tables = [
     'exchange_accounts', 'executions', 'execution_plans', 'child_orders',
     'fills', 'execution_events', 'balance_snapshots', 'positions_snapshots',
@@ -431,11 +436,11 @@ test('§59: EXECUTOR_DDL is non-empty and creates every executor table', () => {
   ];
   for (const table of tables) {
     assert.ok(
-      EXECUTOR_DDL.includes(`CREATE TABLE IF NOT EXISTS ${EXECUTOR_SCHEMA}.${table}`),
+      ddl.includes(`CREATE TABLE IF NOT EXISTS ${EXECUTOR_SCHEMA}.${table}`),
       `missing table ${EXECUTION_SCHEMA_PREFIX()}.${table}`,
     );
   }
-  assert.ok(EXECUTOR_DDL.includes(`CREATE SCHEMA IF NOT EXISTS ${EXECUTOR_SCHEMA};`));
+  assert.ok(ddl.includes(`CREATE SCHEMA IF NOT EXISTS ${EXECUTOR_SCHEMA};`));
 });
 
 function EXECUTION_SCHEMA_PREFIX(): string {
@@ -497,18 +502,26 @@ test('§59: the DDL uniqueness constraints are the ones the SQL statements confl
   assert.match(EXECUTOR_DDL, /UNIQUE \(execution_id, client_order_id\)/);
 });
 
-test('§59: the embedded DDL matches the tracked database/schema/executor-schema.sql (no silent drift)', () => {
-  // process.cwd() is frontend/web (test:shapers runs there), so the repo root is
-  // two levels up — same convention as frontend/web/tests/shaper-tests.ts.
+test('§59: the DDL is the tracked file verbatim, comments dropped (never re-derived)', () => {
+  // Until the lift this compared an embedded literal against the tracked file,
+  // because a literal could drift silently. `store.ts` now READS that file, so the
+  // property worth pinning changed: the constant must be the file filtered and
+  // nothing else. Any re-derivation — an extra statement, a fix applied to only
+  // one of the two, a dropped trailing newline — fails here instead of reaching a
+  // bootstrap.
   const tracked = readFileSync(join(process.cwd(), '..', '..', 'database', 'schema', 'executor-schema.sql'), 'utf8');
-  const normalize = (text: string): string =>
-    text
-      .split('\n')
-      .filter((line) => line.trim().length > 0 && !line.trim().startsWith('--'))
-      .map((line) => line.trimEnd())
-      .join('\n')
-      .trim();
-  assert.equal(normalize(EXECUTOR_DDL), normalize(tracked), 'store.ts EXECUTOR_DDL and database/schema/executor-schema.sql drifted apart');
+  const filtered = tracked
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('--'))
+    .join('\n');
+  assert.equal(EXECUTOR_DDL, filtered, 'store.ts must carry the tracked DDL verbatim (comments dropped)');
+  // Anti-vacuity: equality alone is satisfied by '', and an empty bootstrap would
+  // make every later insert fail at run time on a fresh database.
+  assert.ok(
+    EXECUTOR_DDL.includes(`CREATE SCHEMA IF NOT EXISTS ${EXECUTOR_SCHEMA};`),
+    'the comment filter must not eat statements',
+  );
+  assert.ok(EXECUTOR_DDL.split(/;\s*\n/).length > 10, 'the full bootstrap must survive the filter');
 });
 
 test('§59: ensureExecutorSchema creates the schema first and sends one statement per round trip', async () => {

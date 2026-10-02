@@ -23,7 +23,7 @@
 |---|---|---|---|
 | `schema/schema.sql` | Turso (libsql/SQLite) dump — the treasury source-of-truth family | 9 objects: `accounts`, `assets`, `journal`, `ledger`, `sqlite_sequence`, `trades`, `transactions`, `venues`, `wallets` (no indexes) | **generated**, live Turso is the system of record |
 | `schema/pg-schema.sql` | Postgres 17 + TimescaleDB **read model** (`public` schema) | the same 8 treasury tables + `asset_history`, `price_history` (2 hypertables, 3 indexes) | hand-written (`pg-schema.sql:18` — Postgres DDL cannot be dumped from SQLite) |
-| `schema/executor-schema.sql` | Postgres `executor` schema (live execution ledger) | 20 statements: `CREATE SCHEMA`, 10 tables, 9 indexes | the executor runtime (`EXECUTOR_DDL` in `frontend/web/src/platform/executor/store.ts`) |
+| `schema/executor-schema.sql` | Postgres `executor` schema (live execution ledger) | 20 statements: `CREATE SCHEMA`, 10 tables, 9 indexes | the executor runtime (`EXECUTOR_DDL` in `frontend/web/src/platform/executor/store.ts` READS this file; the Go worker applies a byte-pinned `embed` copy) |
 
 Object lines: `schema.sql` `:3,:10,:21,:33,:42,:44,:56,:71,:77`;
 `pg-schema.sql` tables `:20,:27,:38,:50,:59,:71,:89,:95,:112,:132`, hypertables
@@ -69,21 +69,22 @@ tree, no migration runner, and no CI step references it. It is applied
 out-of-band to the local cluster; the automated path (`pg-load` → `mirror.ts`)
 only issues DML against tables this file must already have created.
 
-### `database/schema/executor-schema.sql` — tracked copy of the applied executor DDL
+### `database/schema/executor-schema.sql` — the executor DDL (sole owner)
 
 | Consumer | Kind |
 |---|---|
-| `tests/integration/executor/executor-store-tests.ts:500-510` | **drift pin** — reads this file (5-up from the compiled `.shaper-tests/scripts/tests`) and asserts normalized equality with `EXECUTOR_DDL` |
-| `frontend/web/src/platform/executor/store.ts:94` (comment), `:97` (`EXECUTOR_DDL`), `:238` (`ensureExecutorSchema`) | the **applied** DDL — this file is the readable copy of it |
-| `frontend/web/src/platform/executor/runtime.ts:117` (`bootstrapExecutor` → `ensureExecutorSchema`) | executes it at boot; entry points `frontend/web/scripts/executor/worker.ts:27` and `runtime.ts:139` |
-| `tests/e2e/executor/executor-paper-e2e.ts:28,:99` | live gate that calls `ensureExecutorSchema()` against the real cluster |
-| `backend/workers/executor/internal/{repository/store.go:4, executor/records.go:5, executor/types.go:9, credentials/credentials.go:8}` | Go comment references (the Go worker writes these tables; it does **not** read this file) |
-| docs: `docs/architecture/executor.md:50,:71`, `docs/architecture/security.md:32`, `docs/architecture/events.md:75`, `docs/architecture/ARCHITECTURE.md:362`, `docs/architecture/current.md:229`, `docs/records/DECISIONS.md` | docs (line numbers re-read post-restructure) |
+| `tests/integration/executor/executor-store-tests.ts` (§59, "the DDL is the tracked file verbatim") | **verbatim pin** — reads this file and asserts `EXECUTOR_DDL` equals it with comment lines dropped; the structural assertions (tables, idempotency, no `timestamptz`) read this file directly |
+| `frontend/web/src/platform/executor/store.ts` (`EXECUTOR_DDL`, `ensureExecutorSchema`) | **the app READS this file** at module load (`readFileSync`, repo root = cwd/../..); there is no embedded copy on the TS side since 2026-10-02 |
+| `frontend/web/src/platform/executor/runtime.ts` (`bootstrapExecutor` → `ensureExecutorSchema`) | executes it at boot; entry points `frontend/web/scripts/executor/worker.ts` and `runtime.ts` |
+| `tests/e2e/executor/executor-paper-e2e.ts` | live gate that calls `ensureExecutorSchema()` against the real cluster |
+| `backend/workers/executor/internal/repository/schema/executor-schema.sql` + `schema.go` | the Go `embed` copy (`EnsureSchema` applies it at startup), BYTE-pinned to this file by `TestEmbeddedSchemaMatchesTracked`; the comment references in `internal/{core/execution/records.go, core/execution/types.go, platform/credentials/credentials.go}` are prose only |
+| docs: `docs/architecture/executor.md`, `docs/architecture/security.md`, `docs/architecture/events.md`, `docs/architecture/ARCHITECTURE.md`, `docs/architecture/current.md`, `docs/records/DECISIONS.md` | docs (line numbers deliberately not quoted here — they move) |
 
-**Verdict:** the authoritative tracked DDL for the `executor` schema. *Applied*
-copy is the embedded `EXECUTOR_DDL`; this file is the human-readable one, and the
-test at `executor-store-tests.ts:500` is what keeps the two equal. Verified
-normalized-identical on 2026-10-01.
+**Verdict:** the authoritative tracked DDL for the `executor` schema, and since the
+2026-10-02 lift the only TS-side copy — `store.ts` reads it instead of embedding it,
+and the §59 test pins the constant to the file verbatim. The one remaining duplicate
+is the Go `embed`, which cannot be removed (`go:embed` refuses parent-directory
+patterns) and is guarded byte-for-byte.
 
 ## Authority and segmentation verdict
 
@@ -104,9 +105,13 @@ normalized-identical on 2026-10-01.
    `public` wholesale, and the live executor data must not sit in that blast
    radius.
 
-Nothing is defined twice inside a segment. The only duplication anywhere is
-`executor-schema.sql` ↔ `store.ts EXECUTOR_DDL`, which is intentional and pinned
-by a test rather than left to drift.
+Nothing is defined twice inside a segment. The only duplication anywhere is the Go
+`embed` copy of `executor-schema.sql`
+(`backend/workers/executor/internal/repository/schema/`), which cannot be avoided
+(`go:embed` refuses parent-directory patterns) and is pinned byte-exactly by
+`TestEmbeddedSchemaMatchesTracked` rather than left to drift. The TS side had the
+same duplication until 2026-10-02, when `store.ts` was changed to read the tracked
+file.
 
 ## How each file is consumed in a deployment (today)
 

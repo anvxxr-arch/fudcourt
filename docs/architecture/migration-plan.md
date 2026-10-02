@@ -59,24 +59,27 @@ runs on push in CI. Nothing remains open in this phase.
   `infrastructure/` folders are host-deployed copies — re-deploy old units if the host already reloaded.
 
 ## Phase 2 — `database/` extraction
-> **Amended 2026-10-01 (partially executed):** `frontend/web/db/{schema.sql,pg-schema.sql,
-> executor-schema.sql}` are now `database/schema/{schema.sql,pg-schema.sql,executor-schema.sql}`
+> **Amended 2026-10-01 (partially executed), 2026-10-02 (DDL lift DONE):**
+> `frontend/web/db/{schema.sql,pg-schema.sql,executor-schema.sql}` are now
+> `database/schema/{schema.sql,pg-schema.sql,executor-schema.sql}`
 > (`database/README.md` records the move). `pg-load.ts`, `mirror.ts`, `store.ts`, `scripts/database/dump-schema.mjs`
-> path comments updated; `dump-schema.mjs --check` remains the Turso drift gate. **Not done:**
-> lifting `EXECUTOR_DDL` content out of `store.ts` (it stays embedded byte-equivalent to
-> `database/schema/executor-schema.sql`, pinned by `executor-store-tests.ts` §59 test
-> "the embedded DDL matches the tracked database/schema/executor-schema.sql (no silent drift)" —
-> PASS). `database/seeds|fixtures/` remain empty; `database/migrations/` deliberately not created
+> path comments updated; `dump-schema.mjs --check` remains the Turso drift gate. **The DDL lift
+> landed 2026-10-02:** `store.ts` no longer embeds the DDL — `EXECUTOR_DDL` reads
+> `database/schema/executor-schema.sql` (comment lines dropped) at module load, and the §59 test
+> asserts the constant is that file verbatim, so the tracked file is the sole copy on the TS side
+> (the Go side keeps a byte-pinned `embed` copy: `go:embed` refuses parent-directory patterns).
+> `database/seeds|fixtures/` remain empty; `database/migrations/` deliberately not created
 > (DR-020).
 
 - Move `frontend/web/db/{schema.sql,pg-schema.sql,executor-schema.sql}` →
   `database/{schema,seeds,fixtures}/`; keep a generated copy or path update in
   `frontend/web/scripts/tools/pg-load.ts` and `src/platform/executor/store.ts`.
-- Lift `EXECUTOR_DDL` out of `store.ts` into `database/schema/executor.sql` (store.ts imports
-  the file or a generated constant). **Status 2026-10-01: NOT done, and the target filename in this
-  bullet is wrong** — there is no `database/schema/executor.sql`; the tracked name is
-  `database/schema/executor-schema.sql`, and `store.ts` still embeds the DDL (asserted
-  byte-identical to that file). This is Phase 5/7 work, not a landed move.
+- Lift `EXECUTOR_DDL` out of `store.ts` into the tracked schema file (store.ts imports
+  the file or a generated constant). **Status 2026-10-02: DONE** — the tracked name is
+  `database/schema/executor-schema.sql` (the `executor.sql` in the original bullet was never
+  created) and `store.ts` now reads it rather than embedding a copy. What survives is the Go
+  `embed` duplicate, which cannot be removed: `go:embed` refuses a pattern that reaches a parent
+  directory.
 - **Risks:** `pg-load.ts` (60s timer, live) and `ensureExecutorSchema` (boot-time DDL) reference
   the files by path — `check-deploy.py` won't catch a missing `.sql`; add a check or keep
   shims one release.
