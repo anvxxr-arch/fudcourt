@@ -11,6 +11,7 @@ export const VIEW_PATHS: Record<string, string> = {
   reconciliation: '/team/reconciliation',
   trench: '/trench',
   dex: '/dex',
+  markets: '/markets',
   signals: '/signals',
   scoreboard: '/scoreboard',
   chainrank: '/chainrank',

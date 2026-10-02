@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { C, Wallet, Asset, buildWalletMap, getAlias, getColor, groupSum } from '@/styles/shared';
+import { Wallet, Asset, buildWalletMap, getAlias, getColor, groupSum } from '@/styles/shared';
+import { color, fontFamily, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
 import { MUT_HEADERS } from '@/platform/http/mut-client';
 import { viewPath } from '@/platform/routing/view-routes';
 import DashboardPage from '@/features/dashboard/ui';
@@ -20,6 +21,7 @@ import TrackerPage from '@/features/tracker/ui';
 import TickerPage from '@/features/ticker/ui';
 import NewsPage from '@/features/news/ui';
 import KhalaPage from '@/features/khala/ui';
+import MarketsPage from '@/features/markets/ui';
 
 type DbData = {
   assets: Asset[];
@@ -98,7 +100,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
   }, [page]);
 
   if (error && !db) return (
-    <div style={{ background: C.bg, color: C.red, padding: 20, fontFamily: 'monospace', minHeight: '100vh' }}>
+    <div style={{ background: color.bg, color: color.negative, padding: space[20], fontFamily: fontFamily.mono, minHeight: '100vh' }}>
       Error: {error}
     </div>
   );
@@ -117,14 +119,15 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     { key: 'reconciliation', label: 'Reconciliation' },
   ];
   const BOARD_TABS = [
-    { key: 'trench', label: 'Trench' },
-    { key: 'dex', label: 'Dex' },
+    // Markets folds the price/chain/pair mirror pages into one surface
+    // (see docs/architecture/provider-consolidation.md). The old /tracker,
+    // /llama, /dex, /trench routes still resolve for direct links, but the
+    // nav no longer advertises them as separate boards.
+    { key: 'markets', label: 'Markets' },
     { key: 'signals', label: 'Signals' },
     { key: 'scoreboard', label: 'Scoreboard' },
     { key: 'chainrank', label: 'Chainrank' },
     { key: 'cryptorank', label: 'CryptoRank' },
-    { key: 'llama', label: 'Llama' },
-    { key: 'tracker', label: 'Tracker' },
     { key: 'ticker', label: 'Ticker' },
     { key: 'news', label: 'News' },
     { key: 'khala', label: 'Khala' },
@@ -135,11 +138,11 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
   const tabs = isTeam ? [...TEAM_TABS, ...BOARD_TABS] : BOARD_TABS;
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', color: C.white, padding: 20, fontFamily: 'ui-monospace, monospace' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+    <div style={{ background: color.bg, minHeight: '100vh', color: color.text, padding: space[20], fontFamily: fontFamily.mono }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h1 style={{ margin: 0, color: C.accent, letterSpacing: 2 }}>FUDCOURT</h1>
-          <p style={{ margin: '4px 0 0', color: C.dim, fontSize: 12 }}>
+          <h1 style={{ margin: 0, color: color.accent, letterSpacing: letterSpacing.wider }}>FUDCOURT</h1>
+          <p style={{ margin: `${space[4]}px 0 0`, color: color.textMuted, fontSize: fontSize[12] }}>
             Community · Terminal · Management
             {/* Treasury fetch state (period / sync / spinner) only exists on a
                 team shell — a public board never requests it, so showing it
@@ -153,31 +156,31 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
           </p>
         </div>
         {isTeam && (
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: space[10], alignItems: 'center' }}>
             {/* Executor is its own multi-route area (PRD §81), not a board tab. */}
             <a
               href={viewPath('executor')}
-              style={{ background: C.card, color: C.accent, border: `1px solid ${C.border}`, padding: '10px 18px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}>
+              style={{ background: color.surface, color: color.accent, border: `1px solid ${color.border}`, padding: `${space[10]}px ${space[18]}px`, borderRadius: radius[8], fontWeight: fontWeight.bold, cursor: 'pointer', textDecoration: 'none' }}>
               EXECUTOR
             </a>
-            <button onClick={load} style={{ background: C.accent, color: '#04140f', border: 'none', padding: '10px 18px', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}>
+            <button onClick={load} style={{ background: color.accent, color: color.textOnAccent, border: 'none', padding: `${space[10]}px ${space[18]}px`, borderRadius: radius[8], fontWeight: fontWeight.bold, cursor: 'pointer' }}>
               SYNC
             </button>
           </div>
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 10, margin: '18px 0', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: space[10], margin: `${space[18]}px 0`, flexWrap: 'wrap' }}>
         {tabs.map(t => (
           <a
             key={t.key}
             href={viewPath(t.key)}
             onClick={(e) => { e.preventDefault(); setPage(t.key); }}
             style={{
-              background: page === t.key ? C.accent : C.card,
-              color: page === t.key ? '#04140f' : C.white,
-              padding: '8px 16px', border: `1px solid ${C.border}`,
-              borderRadius: 8, cursor: 'pointer', fontSize: 12,
+              background: page === t.key ? color.accent : color.surface,
+              color: page === t.key ? color.textOnAccent : color.text,
+              padding: `${space[8]}px ${space[16]}px`, border: `1px solid ${color.border}`,
+              borderRadius: radius[8], cursor: 'pointer', fontSize: fontSize[12],
               textDecoration: 'none',
             }}>
             {t.label}
@@ -206,6 +209,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'reconciliation' && isTeam && db?.reconRows && db?.reconWallets && (
         <ReconciliationPage rows={db.reconRows} wallets={db.reconWallets} />
       )}
+      {page === 'markets' && <MarketsPage />}
       {page === 'trench' && <TrenchPage />}
       {page === 'dex' && <DexPage />}
       {page === 'signals' && <SignalsPage />}
@@ -218,7 +222,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'news' && <NewsPage />}
       {page === 'khala' && <KhalaPage />}
 
-      <div style={{ marginTop: 30, color: C.dim, fontSize: 11, borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
+      <div style={{ marginTop: space[30], color: color.textMuted, fontSize: fontSize[11], borderTop: `1px solid ${color.border}`, paddingTop: space[10] }}>
         Fox · FUDCOURT OS · auto-refresh 30s · data: Turso libsql + live RPC
       </div>
     </div>
