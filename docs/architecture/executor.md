@@ -118,7 +118,12 @@ deleted"). What that means in practice:
 - Production traffic runs on `frontend/web/src/platform/executor/*` +
   `frontend/web/scripts/executor/worker.ts` (unit
   `infrastructure/systemd/fudcourt-executor-worker.service`) — the API routes under
-  `frontend/web/src/app/(frontend)/api/executor/**` (16 handlers) and the worker.
+  `frontend/web/src/app/(frontend)/api/executor/**` — **15 `route.ts` files exporting 19
+  route-method handlers** (recounted 2026-10-02: `find … -name route.ts | wc -l` → 15;
+  `grep -c 'export async function {GET,POST,PUT,DELETE}'` → 19), matching
+  `shared/contracts/openapi/fudcourt.yaml` **15 paths / 19 operations** (paths ≠ operations:
+  `accounts` and `executions` carry GET+POST, `accounts/{id}` GET+DELETE, `settings`
+  GET+PUT) and the Go surface's 15 contract routes (`internal/api`, §2) — and the worker.
 - The oracle suites are `tests/e2e/executor/executor-{engine,plan,risk,runtime,worker}-tests.ts`,
   `tests/integration/executor/executor-{exchange,store}-tests.ts` and
   `frontend/web/tests/executor-ui-tests.ts` — **155 tests, 0 fail** as recorded in
@@ -144,23 +149,31 @@ column is filled from the §2/§3 evidence only):
 
 | Feature | TS (parity oracle) | Go | Status |
 |---|---|---|---|
-| fixed USD risk | `risk.ts` `calculateRiskPosition`, `executor-risk-tests.ts` | `internal/core/risk` + `internal/core/sizing` | parity unproven |
-| percentage risk | `risk.ts` + `resolveBalanceBasis` (PRD §9–10), `executor-risk-tests.ts` | `internal/core/risk` + `internal/core/sizing` | parity unproven |
-| long sizing | `plan.ts` `sizePosition`, `executor-plan-tests.ts` | `internal/core/sizing` | parity unproven |
-| short sizing | `plan.ts` `sizePosition`, `executor-plan-tests.ts` | `internal/core/sizing` | parity unproven |
-| spot | `types.ts` `MarketType: 'spot'`, `exchange.ts` | `executor.MarketSpot`, `internal/exchanges` | parity unproven |
-| futures | `types.ts` `'linear_perp'`, `exchange.ts` | `executor.MarketLinearPerp`, `internal/exchanges` | parity unproven |
-| leverage | `risk.ts` `autoLeverage` (PRD §18–19), `executor-risk-tests.ts` | `internal/core/risk/leverage.go` | parity unproven |
-| pause | `runtime.ts` lifecycle + `worker.ts`, `executor-runtime-tests.ts` | `internal/core/execution` (`CommandPause`) | parity unproven |
-| cancel | `runtime.ts` (cancel cancels orders, never closes positions) | `internal/core/execution` (`CommandCancel`) | parity unproven |
-| resume | `runtime.ts` + `worker.ts` | `internal/core/execution` (`CommandResume`) | parity unproven |
-| TWAP | `engine.ts` (jitter opt-in, DR-021 §2g), `executor-engine-tests.ts` | `internal/strategies` | parity unproven |
-| market | `plan.ts`/`exchange.ts` market orders (entry at the touch, PRD §26) | `internal/exchanges`, `internal/core/orders` | parity unproven |
-| limit | `plan.ts`/`exchange.ts` limit orders | `internal/exchanges`, `internal/core/orders` | parity unproven |
-| partial fill | `worker.ts` ingest + `clampChild` (PRD §107), `executor-worker-tests.ts` | `internal/core/orders` (`ClampChild`) | parity unproven |
-| worker recovery | `worker.ts` `recover()` (PRD §114), `executor-worker-tests.ts` | `internal/runtime/worker` | **in flight** |
-| reconciliation | `worker.ts` `reconcileOrders` (PRD §41/§95) | `internal/runtime/worker` | **in flight** |
-| idempotent start | `runtime.ts` same-status 409 + `execution.Apply`-equivalent | `internal/core/execution.Apply` (idempotent at target) | parity unproven |
+| fixed USD risk | `risk.ts` `calculateRiskPosition`, `executor-risk-tests.ts` | `internal/core/risk` + `internal/core/sizing` | `DONE` — `core/risk` `TestPRD8RiskSizing`; `core/sizing` `TestRiskUSDVector` |
+| percentage risk | `risk.ts` + `resolveBalanceBasis` (PRD §9–10), `executor-risk-tests.ts` | `internal/core/risk` + `internal/core/sizing` | `DONE` — `core/risk` `TestPRD9PercentageBudget`, `TestResolveBalanceBasis`; `core/sizing` `TestRiskPercentVsAllocationPercent`, `TestPercentageBasisRequirements` |
+| long sizing | `plan.ts` `sizePosition`, `executor-plan-tests.ts` | `internal/core/sizing` | `DONE` — `core/planner` `TestPRD8RiskUSD`; `core/sizing` `TestAllNineModesProducePositions` |
+| short sizing | `plan.ts` `sizePosition`, `executor-plan-tests.ts` | `internal/core/sizing` | `DONE` — `core/risk` `TestRiskSizingShortMirrored`, `TestAutoSafeLeverageShortBufferMirrored` |
+| spot | `types.ts` `MarketType: 'spot'`, `exchange.ts` | `executor.MarketSpot`, `internal/exchanges` | `DONE` — `core/sizing` `TestSpotPercentVector`; `core/planner` `TestPRD16SpotFlow`; `exchanges/mexc` spot-market fixtures |
+| futures | `types.ts` `'linear_perp'`, `exchange.ts` | `executor.MarketLinearPerp`, `internal/exchanges` | `DONE` — `exchanges/paper` `TestLinearSettlement`; `core/risk`/`core/sizing` `TestPRD16SpotFlow` linear fixtures; `exchanges/bybit` perp fixtures |
+| leverage | `risk.ts` `autoLeverage` (PRD §18–19), `executor-risk-tests.ts` | `internal/core/risk/leverage.go` | `DONE` — `core/risk` `TestAutoSafeLeverageMinimumFeasible`, `TestAutoSafeLeverageCaps`, `TestAutoSafeLeverageHonestUnsafe`; `core/sizing` `TestResolveLeverageAndMargin`, `TestFixedMarginRequiresManualLeverage` |
+| pause | `runtime.ts` lifecycle + `worker.ts`, `executor-runtime-tests.ts` | `internal/core/execution` (`CommandPause`) | `DONE` — `core/execution` `TestApplyLegalTransitions` (`CommandPause→StatusPaused`); e2e `TestPaperPauseResume` |
+| cancel | `runtime.ts` (cancel cancels orders, never closes positions) | `internal/core/execution` (`CommandCancel`) | `DONE` — `core/execution` `TestApplyLegalTransitions`; e2e `TestPaperCancelRestingOrder` |
+| resume | `runtime.ts` + `worker.ts` | `internal/core/execution` (`CommandResume`) | `DONE` — `core/execution` `TestApplyLegalTransitions` (`CommandResume`); e2e `TestPaperPauseResume` |
+| TWAP | `engine.ts` (jitter opt-in, DR-021 §2g), `executor-engine-tests.ts` | `internal/strategies` | `DONE` — `strategies` `TestTwapNaiveEqualSlices`, `TestTwapSlicesSumToPlanned`, `TestTwapJitterOptInAndDeterministic`; e2e `TestPaperTwapSlices` (§107 sum bound) |
+| market | `plan.ts`/`exchange.ts` market orders (entry at the touch, PRD §26) | `internal/exchanges`, `internal/core/orders` | `PARTIAL` — `strategies` `TestMarketSingleChild`, `TestMarketPhantomFreesRoomOnLaterTick` and e2e `TestPaperMarketLifecycle` pin the strategy + paper composition; the live-venue (binance/mexc/bybit) market path is pinned only against stubbed HTTP, never end-to-end |
+| limit | `plan.ts`/`exchange.ts` limit orders | `internal/exchanges`, `internal/core/orders` | `PARTIAL` — `strategies` `TestLimitPeggedSingleChild`, `TestLimitNeedsPrice` and e2e `TestPaperCancelRestingOrder`/`TestPaperPauseResume` rest real limit children on the paper venue; live-venue limit path is stub-only (same gap as `market`) |
+| partial fill | `worker.ts` ingest + `clampChild` (PRD §107), `executor-worker-tests.ts` | `internal/core/orders` (`ClampChild`) | `DONE` — e2e `TestPaperPartialFillThenComplete` (tracks a half fill, completes on ingestion); `core/orders` `TestClampChildPartialFillShrinksRoom` |
+| worker recovery | `worker.ts` `recover()` (PRD §114), `executor-worker-tests.ts` | `internal/runtime/worker` | `DONE` (was **in flight**, re-derived 2026-10-02) — `runtime/worker` `TestRecoveryPassPlacesNothing`, `TestRestartDoesNotDoubleSubmit`, `TestLostLeaseStopsPlacement`; e2e `TestPaperRestartNoDuplicateOrder`, `TestPaperDisconnectDegradesThenRecovers` |
+| reconciliation | `worker.ts` `reconcileOrders` (PRD §41/§95) | `internal/runtime/worker` | `DONE` (was **in flight**, re-derived 2026-10-02) — e2e `TestPaperReconcileExternalMismatch` (vanished entry child → `UNKNOWN` + `EXTERNAL_STATE_CHANGE`, no silent re-place); `runtime/worker` `TestRecoveryPassPlacesNothing` (reconcile-before-place). Caveat: the extern-mismatch case is the one pinned; fill-truth reconciliation enters through the ingestion seam the same test composes |
+| idempotent start | `runtime.ts` same-status 409 + `execution.Apply`-equivalent | `internal/core/execution.Apply` (idempotent at target) | `DONE` — `core/execution` `TestApplyIdempotentRepeat`; e2e `TestPaperDuplicateStartIsNoOp` |
+
+Re-derived 2026-10-02 from the Go test list (`go test -list '.*'` over `core/{risk,sizing,planner,orders,execution}`,
+`strategies`, `exchanges(+binance,bybit,mexc,paper)`, `runtime/{worker,idempotency}`, `tests/e2e/`) plus
+`parity-matrix.md`: **209 named tests across 14 packages**, all green. `DONE` here means a named Go test pins the
+row's behavior; it is not the cutover itself — the cutover stays OPEN on the web re-point + env provisioning + the
+live `verify:executor` against the Go worker (see `parity-matrix.md`, cutover row). The 17 rows above map onto
+`parity-matrix.md` rows 1–9 (`DONE 2026-10-01`) at feature granularity; `market` and `limit` are the two rows the
+Go tests do not carry all the way to a live venue, so they stay `PARTIAL`.
 
 ## 4. Idempotency keys
 Four identity layers make retries, restarts and replays safe (objective §23;
