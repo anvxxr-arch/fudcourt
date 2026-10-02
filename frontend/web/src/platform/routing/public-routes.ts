@@ -83,6 +83,27 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 0.8,
   },
   {
+    path: '/market/forex',
+    title: 'Forex — Currency pairs | FUDCOURT',
+    description:
+      'Forex section of the FUDCOURT market hub — curated major pairs from the exchangerate-api free feed.',
+    priority: 0.7,
+  },
+  {
+    path: '/market/commodity',
+    title: 'Commodity — Metals, energy & agriculture | FUDCOURT',
+    description:
+      'Commodity section of the FUDCOURT market hub — front-month metals, energy and agriculture futures from Yahoo Finance.',
+    priority: 0.7,
+  },
+  {
+    path: '/market/stock',
+    title: 'Stock — Equities | FUDCOURT',
+    description:
+      'Stock section of the FUDCOURT market hub — US, Asia and Europe indices and blue chips from Yahoo Finance.',
+    priority: 0.7,
+  },
+  {
     path: '/market/trench',
     title: 'Trench — DEX pairs & live trench | FUDCOURT',
     description:
