@@ -20,6 +20,24 @@ rc=0
 step() { echo; echo "== $1"; }
 fail() { echo "!! FAILED: $1"; rc=1; }
 
+# A step whose output is suppressed must still explain itself when it goes red.
+# The 2026-10-02 web failure logged only `error: script "test:shapers" exited
+# with code 1`: the step redirected to /dev/null, so the compiler/test
+# diagnostics naming the real problem were discarded and the red gate could not
+# be diagnosed from the log. Capture instead of discard — silent on success (the
+# step's own OK line is the signal), print the tail on failure.
+quiet_step() {
+  local name="$1"; shift
+  local log; log=$(mktemp)
+  if "$@" >"$log" 2>&1; then
+    rm -f "$log"; return 0
+  fi
+  echo "!! $name output (last 40 lines):"
+  tail -40 "$log"
+  rm -f "$log"
+  return 1
+}
+
 step "structure gate (DR-018 layers)"
 (cd frontend/web && python3 scripts/checks/check-structure.py) || fail structure
 # The design system: one SSOT (src/styles/tokens.ts) + generated artifacts + these two gates
@@ -48,10 +66,10 @@ node shared/contracts/scripts/check-table-shape.mjs || fail table-shape
 step "canonical reference artifact drift (reference.json is generated)"
 go run ./backend/api/internal/markets/reference/cmd/emit -check || fail reference
 step "sdk-ts generated-SDK drift + typecheck"
-(cd shared/sdk/typescript \
+quiet_step sdk-ts bash -c 'cd shared/sdk/typescript \
   && tmp=$(mktemp -d) && cp -r src/generated "$tmp/generated" \
   && bun run generate >/dev/null && diff -r "$tmp/generated" src/generated \
-  && bun run typecheck >/dev/null) || fail sdk-ts
+  && bun run typecheck >/dev/null' || fail sdk-ts
 
 step "go build/vet/test (backend/api)"
 go build ./backend/api/... && go vet ./backend/api/... && go test ./backend/api/... || fail go-api
@@ -74,14 +92,14 @@ step "deploy-unit guard (ExecStart paths, timer pairs)"
 python3 scripts/verify/check-deploy.py || fail deploy
 
 step "sync oracle gate (Python oracle vs Rust replay, byte-identical projection)"
-python3 scripts/verify/verify-sync.py >/dev/null || fail sync-oracle
+quiet_step sync-oracle python3 scripts/verify/verify-sync.py || fail sync-oracle
 step "cross-service API conformance (Go api routes <-> contract <-> web proxies)"
 python3 tests/integration/api/check-api-contract.py || fail api-contract
 step "pre-push hook syntax"
 bash -n scripts/githooks/pre-push || fail hook-syntax
 
 step "frontend/web typecheck + shaper fixture tests"
-(cd frontend/web && unset NODE_ENV && bunx tsc --noEmit && bun run test:shapers >/dev/null) || fail web
+quiet_step web bash -c 'cd frontend/web && unset NODE_ENV && bunx tsc --noEmit && bun run test:shapers' || fail web
 
 echo
 if [ "$rc" -eq 0 ]; then echo "VERIFY_ALL_OK"; else echo "VERIFY_ALL_FAILED (see !! FAILED above)"; fi
