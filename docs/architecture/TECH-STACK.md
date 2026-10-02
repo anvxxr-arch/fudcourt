@@ -37,17 +37,18 @@ oracle.
 
 ## 2. Frameworks & runtimes
 
+Single-app tree: every version below is `frontend/web/package.json` (DR-017 merged the
+blog in); the repo root `package.json` declares **no dependencies** — scripts only.
+
 | Component | Version | Notes |
 |-----------|---------|-------|
-| Next.js (frontend/web) | **16.3.6** | App Router, 20 `route.ts` under `app/api` use `force-dynamic` |
-| React (frontend/web) | 18.3.1 | |
-| Next.js (one app now) | **16.3.6** | The blog merged into `frontend/web` (DR-017), which retired the 16.3.5 divergence: one Next version across the repo |
-| React (blog/root) | 19.2.0 | |
+| Next.js | **16.3.6** | App Router; one Next version across the repo (the blog merged into `frontend/web`, DR-017, retiring the 16.3.5 divergence); all 36 `route.ts` under `frontend/web/src/app/(frontend)/api` use `force-dynamic` |
+| React | 19.2.0 | `react` + `react-dom`, declared in `frontend/web/package.json` |
 | Payload CMS | 3.89.0 | + `@payloadcms/next`, `@payloadcms/db-postgres`, `@payloadcms/richtext-lexical` |
-| Tailwind CSS | 3.4.17 | styling for web |
-| TypeScript | 5.7.2 (web) / 5.9.3 (root + blog) | |
-| Node.js | v22.22.3 runtime; `@types/node` 20 (web) / 22 (root + blog) | **fallback runtime only**: Node is still installed for rollback (DR-008) and for `node --test` inside `test:shapers`, but **no fudcourt unit runs on it** — the blog merged into `frontend/web` (DR-017) and the last unit on Node moved to `bun --bun next start` in [DR-015](../records/DECISIONS.md) |
-| **Bun** | **1.4.2** | installer, task runner and lockfile owner for both apps (`bun install --frozen-lockfile`, `bun run …`, `bunx`) *and*, since [DR-008](../records/DECISIONS.md), the **runtime of `frontend/web`**: `fudcourt-web.service` is `bun --bun …/next start -p 3100` (measured: the :3100 process's `/proc/<pid>/exe` is `~/.bun/bin/bun`), and `package.json`'s `start` is `bun --bun next start`. Equivalence evidence — build RC=0, same `BUILD_ID`, 15/15 pages, 401 gates, `X-RateLimit-*`, byte-identical `/api/khala` body, byte-identical session signature, ccxt cold sweep 71.2 s (Node parity) — is in DR-008; the toolchain half is [DR-007](../records/DECISIONS.md) |
+| Tailwind CSS | 3.4.17 | styling |
+| TypeScript | 5.9.3 | `frontend/web` dev dependency; the root `package.json` declares none |
+| Node.js | v22.22.3 installed; `@types/node` 22.10.2 (`frontend/web`) | **fallback runtime only**: Node is still installed for rollback (DR-008) and for `node --test` inside `test:shapers`, but **no fudcourt unit runs on it** — the blog merged into `frontend/web` (DR-017) and the last unit on Node moved to `bun --bun next start` in [DR-015](../records/DECISIONS.md) |
+| **Bun** | **1.4.2** | installer, task runner and lockfile owner for the app (`bun install --frozen-lockfile`, `bun run …`, `bunx`) *and*, since [DR-008](../records/DECISIONS.md), the **runtime of `frontend/web`**: `fudcourt-web.service` is `bun --bun …/next start -p 3100` (measured: the :3100 process's `/proc/<pid>/exe` is `~/.bun/bin/bun`), and `package.json`'s `start` is `bun --bun next start`. Equivalence evidence — build RC=0, same `BUILD_ID`, 15/15 pages, 401 gates, `X-RateLimit-*`, byte-identical `/api/khala` body, byte-identical session signature, ccxt cold sweep 71.2 s (Node parity) — is in DR-008; the toolchain half is [DR-007](../records/DECISIONS.md) |
 | Python | 3.12 (local `python3 -V` = 3.12.14) | harnesses + verification oracles (`cr_fetch.py`, `sync-live.py`). Still the language of the verify loop; no longer a runtime path (DR-005 moved the cryptorank fetch into Go, PLAN G9 SG-9.4 moved the balance sync into Rust) |
 | **Backend framework** | **none, deliberately** ([DR-016](../records/DECISIONS.md)) | Go: stdlib `net/http` + `http.NewServeMux` (no gin/echo/chi/fiber); Rust: `tokio::net` + hand-rolled bounded HTTP/1.1 framing (zero new crates). The only HTTP client library in the backend is `tls-client`, confined to `backend/data/internal/research/cryptorank` where the Cloudflare ClientHello-fingerprint requirement lives — the other five Go packages use plain `net/http` |
 | **Rust** | **1.98.1** (`cargo`) | `backend/sync` — two binaries: the live multi-chain balance sync -> Turso `assets` (Alchemy EVM RPC, Solana RPC, Hyperliquid, `coins.llama.fi` prices), parity-checked against the Python oracle; and `fudcourt-reconciled`, the `/api/reconcile` HTTP service (**zero new crates**, `tokio::net` framing) whose output is diffed byte-for-byte against the TS shaper. Versioned units at `infrastructure/systemd/fudcourt-{sync-rust,reconciled}.service` |
