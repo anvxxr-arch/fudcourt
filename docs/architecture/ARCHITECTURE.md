@@ -160,20 +160,28 @@ the full judgment record for the grouping is §4 of that file.
 | team | reconciliation | `/team/reconciliation` | `ReconciliationPage` | props |
 | member | overview | `/member` | shell (boards) | session only |
 | admin | control panel | `/admin` | `MemberTable` + audit | `/api/admin/members` + `/api/all` |
-| public | ticker | `/ticker` | `TickerPage` | `/api/ticker?sort&order&type` + `/api/ticker/instruments?symbol` + `/api/ticker/instrument?base&type&expiry&strike&kind` |
-| public | tracker | `/tracker` | `TrackerPage` | `/api/markets` (was: browser-direct CoinGecko — re-aligned) |
-| public | trench | `/trench` | `TrenchPage` | `/api/dex?type=profiles&limit=50` |
-| public | dex | `/dex` | `DexPage` | `/api/dex?type=profiles&limit=10` |
+| public | market (hub) | `/market` | `MarketHub` (section overview) | — (links the sections below) |
+| public | market · crypto | `/market/crypto` | `MarketHub section="crypto"` → `TickerPage` · `TrackerPage` · `LlamaPage` | `/api/ticker?sort&order&type` · `/api/markets` · `/api/llama?mode=chains/protocols/historical` |
+| public | market · coin | `/market/ticker/[ticker]` | `TickerDetailPage` | `/api/ticker/instruments?symbol` + `/api/ticker/instrument?base&type&expiry&strike&kind` |
+| public | market · forex | `/market/forex` | `MarketHub section="forex"` → `ForexBoard` | `/api/market/forex` |
+| public | market · commodity | `/market/commodity` | `MarketHub section="commodity"` → `CommodityBoard` | `/api/market/commodity` |
+| public | market · stock | `/market/stock` | `MarketHub section="stock"` → `StockBoard` (`?region=us\|asia\|europe`) | `/api/market/stock?region=…` |
+| public | market · trench | `/market/trench` | `MarketHub section="trench"` → `DexPage` · `TrenchPage` | `/api/dex?type=profiles&limit=50` |
 | public | signals | `/signals` | `SignalsPage` | `/api/signals?chain&type` |
 | public | scoreboard | `/scoreboard` | `ScoreboardPage` | `/api/signals?type=scoreboard` |
 | public | chainrank | `/chainrank` | `ChainrankPage` | `/api/chainrank?mode=listings/stats` |
 | public | cryptorank | `/cryptorank` | `CryptorankPage` | `/api/cryptorank?mode=…` (28 modes) |
-| public | llama | `/llama` | `LlamaPage` | `/api/llama?mode=chains/protocols/historical` |
 | public | news | `/news` | `NewsPage` | `/api/news?limit=30` |
 | public | khala (served: sidecar mux + `:3100` route; `verify-khala.py` **136/0/0**) | `/khala` | `KhalaPage` | `/api/khala?mode=reports` · `/api/khala?mode=report&key=…` · `/api/khala?mode=latest&limit=N` |
 
 Legacy `/portfolio` now **307s** to `/team/portfolio` (it used to rewrite to
-`/`, which is now a duplicate of the landing page).
+`/`, which is now a duplicate of the landing page). The boards that folded into
+the hub redirect the same way (`next.config.js`): `/ticker`, `/tracker`, `/llama`
+and `/market/ticker` → `/market/crypto`; `/dex` and `/trench` → `/market/trench`;
+`/markets` → `/market`; `/ticker/:ticker` → `/market/ticker/:ticker`. The hub
+itself lives in `components/layout/market-hub.tsx`, not in `features/market/` —
+it composes other families, which the structure gate (DR-018 rule 5) forbids
+inside a feature slice.
 
 ## 4. Data families (the contract spine)
 
