@@ -3,9 +3,13 @@
 Re-aligned 2026-09-29 to the repurpose pass (commit 5e68576 "re-align every
 surface"), read out of the running build, not from memory:
 
-- Pages: GET -> expect 200 HTML. `/coin` and `/balance` were removed and must
-  answer a REAL 404, and an off-allowlist ticker symbol (`/ticker/FOO`) must be
-  a real 404 too, never a soft-404 that renders a 200 shell.
+- Pages: live HTML -> 200. The market hub absorbed the standalone boards, so
+  `/ticker`, `/tracker`, `/llama`, `/markets`, `/market/ticker`, `/dex`,
+  `/trench`, `/ticker/:ticker` are deliberate 307s into the hub (next.config.js,
+  ARCHITECTURE.md §3) and are asserted as such. `/coin` and `/balance` were
+  removed and must answer a REAL 404, and an off-allowlist ticker
+  (`/market/ticker/FOO`) must be a real 404 too, never a soft-404 that renders a
+  200 shell.
 - Treasury reads (/api/all, /coins, /wallets, /reconcile, /transactions) are
   session-gated (lib/guard.ts TEAM_API_ROUTES + middleware.ts): anonymous ->
   JSON 401. Gated pages (/team/**, /member, /admin) -> 307 to /login?next=…
@@ -187,12 +191,23 @@ if SESSION:
 print(f"# session: {SESSION_WHY}", flush=True)
 
 print("=== A. pages ===", flush=True)
-for p in ["/", "/ticker", "/tracker", "/chainrank", "/cryptorank", "/dex", "/llama",
-          "/news", "/scoreboard", "/signals", "/trench", "/ticker/BTC", "/ticker/ETH"]:
+for p in ["/", "/market", "/market/crypto", "/market/trench", "/market/forex",
+          "/market/stock", "/market/commodity", "/market/ticker/BTC",
+          "/chainrank", "/cryptorank", "/news", "/scoreboard", "/signals"]:
     st, b = hit(p, timeout=60)
     rec("page", p, st, 200, b)
+# The market hub absorbed the standalone boards: their old paths are deliberate
+# 307s into the hub (next.config.js, documented in ARCHITECTURE.md §3). Assert
+# the redirect status so a dropped or renamed redirect is caught, not 404'd.
+for src in ["/ticker", "/tracker", "/llama", "/markets", "/market/ticker",
+            "/dex", "/trench", "/ticker/BTC", "/ticker/ETH"]:
+    st, b = hit(src, timeout=60)
+    rec("page", f"{src} -> 307 into the hub", st, 307, b)
+# Real 404s: two removed routes, and an off-allowlist ticker -- the old path
+# 307s into the hub, whose detail route then answers the real 404 (never a
+# soft-404 that renders a 200 shell).
 for p, why in [("/coin", "route removed"), ("/balance", "route removed"),
-               ("/ticker/FOO", "off the ticker allowlist")]:
+               ("/market/ticker/FOO", "off the ticker allowlist")]:
     st, b = hit(p, timeout=60)
     rec("page", f"{p} -> 404 (real 404, {why})", st, 404, b)
 for p in ["/robots.txt", "/sitemap.xml"]:
