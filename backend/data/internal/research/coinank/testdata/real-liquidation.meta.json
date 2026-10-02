@@ -1,0 +1,6 @@
+{
+ "url": "https://api.coinank.com/api/liquidation/allExchange?interval=1h",
+ "capturedAt": "2026-10-02T19:45:11Z",
+ "note": "raw upstream body, captured live; not hand-made",
+ "sha256_16": "ba7de001119188dc"
+}

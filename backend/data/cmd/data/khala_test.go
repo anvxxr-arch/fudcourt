@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinglass"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/llama"
@@ -78,7 +79,7 @@ func (f *khFetcher) Fetch(_ context.Context, url string, ttl int) (string, khala
 func khGet(t *testing.T, f *khFetcher, url string) *httptest.ResponseRecorder {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	srv := newServer(&fakeFetcher{}, 60, khala.Service{F: f, TTL: khala.TTLDefault()}, llama.Service{}, news.Service{}, chainrank.Service{}, coinglass.Service{})
+	srv := newServer(&fakeFetcher{}, 60, khala.Service{F: f, TTL: khala.TTLDefault()}, llama.Service{}, news.Service{}, chainrank.Service{}, coinglass.Service{}, coinank.Service{})
 	srv.retryBase = 0
 	srv.mux().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
 	return rec
@@ -403,7 +404,7 @@ func TestKhalaFreshPassesTTLZeroPerRequest(t *testing.T) {
 
 func TestKhalaMethodNotAllowed(t *testing.T) {
 	rec := httptest.NewRecorder()
-	srv := newServer(&fakeFetcher{}, 60, khala.Service{F: &khFetcher{t: t}}, llama.Service{}, news.Service{}, chainrank.Service{}, coinglass.Service{})
+	srv := newServer(&fakeFetcher{}, 60, khala.Service{F: &khFetcher{t: t}}, llama.Service{}, news.Service{}, chainrank.Service{}, coinglass.Service{}, coinank.Service{})
 	srv.mux().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/khala?mode=reports", nil))
 	if rec.Code != 405 {
 		t.Fatalf("status %d", rec.Code)

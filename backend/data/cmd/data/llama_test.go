@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinglass"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/llama"
@@ -50,7 +51,7 @@ func llamaGet(t *testing.T, d *llamaDoer, url string) *httptest.ResponseRecorder
 		t.Fatalf("llama.New: %v", err)
 	}
 	rec := httptest.NewRecorder()
-	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{F: f}, news.Service{}, chainrank.Service{}, coinglass.Service{})
+	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{F: f}, news.Service{}, chainrank.Service{}, coinglass.Service{}, coinank.Service{})
 	srv.mux().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
 	return rec
 }
@@ -188,7 +189,7 @@ func TestLlamaMethodNotAllowed(t *testing.T) {
 		t.Fatalf("llama.New: %v", err)
 	}
 	rec := httptest.NewRecorder()
-	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{F: f}, news.Service{}, chainrank.Service{}, coinglass.Service{})
+	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{F: f}, news.Service{}, chainrank.Service{}, coinglass.Service{}, coinank.Service{})
 	srv.mux().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/llama?mode=chains", nil))
 	if rec.Code != 405 {
 		t.Fatalf("status %d", rec.Code)
@@ -222,7 +223,7 @@ func llamaStatus(t *testing.T, code int, body, url string) *httptest.ResponseRec
 		t.Fatalf("llama.New: %v", err)
 	}
 	rec := httptest.NewRecorder()
-	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{F: f}, news.Service{}, chainrank.Service{}, coinglass.Service{})
+	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{F: f}, news.Service{}, chainrank.Service{}, coinglass.Service{}, coinank.Service{})
 	srv.mux().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
 	return rec
 }

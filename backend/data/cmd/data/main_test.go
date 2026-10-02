@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinglass"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/cryptorank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
@@ -51,7 +52,7 @@ func (f *fakeFetcher) Fetch(_ context.Context, route, target string, ttl int) (*
 func get(t *testing.T, f *fakeFetcher, url string) *httptest.ResponseRecorder {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	srv := newServer(f, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{}, coinglass.Service{})
+	srv := newServer(f, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{}, coinglass.Service{}, coinank.Service{})
 	srv.retryBase = 0 // prove the retry policy without sleeping
 	srv.mux().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
 	return rec
@@ -347,7 +348,7 @@ func TestTTLIsNotSharedState(t *testing.T) {
 		return &cryptorank.HelperOut{OK: true, FetchedAt: 1790000000, Cache: "MISS",
 			PageProps: map[string]interface{}{"coins": []interface{}{}}}, nil
 	}}
-	srv := newServer(f, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{}, coinglass.Service{})
+	srv := newServer(f, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{}, coinglass.Service{}, coinank.Service{})
 	srv.retryBase = 0
 	h := srv.mux()
 	for i := range 12 {

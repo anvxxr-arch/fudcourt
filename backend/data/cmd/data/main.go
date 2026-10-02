@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinglass"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/cryptorank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
@@ -88,15 +89,26 @@ func main() {
 	if err != nil {
 		log.Fatalf("fudcourt-data: coinglass: %v", err)
 	}
+	// coinank is the SEVENTH family, and the second keyless one -- but for a
+	// different reason. coinglass is keyless because a PAYLOAD is encrypted and
+	// we decrypt it; coinank is keyless because the CREDENTIAL is computed by the
+	// client. Its `coinank-apikey` header looks like a key and is not one: the
+	// browser derives it from a public uuid constant and the clock, so there is
+	// nothing to procure. Plain net/http is again enough (measured), and the
+	// signature is stdlib only (internal/research/coinank package doc).
+	af, err := coinank.New(coinank.Options{})
+	if err != nil {
+		log.Fatalf("fudcourt-data: coinank: %v", err)
+	}
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           newServer(f, ttl, khala.Service{F: kf, TTL: khala.TTLDefault()}, llama.Service{F: lf}, news.Service{F: nf}, chainrank.Service{F: cf}, coinglass.Service{F: gf}).mux(),
+		Handler:           newServer(f, ttl, khala.Service{F: kf, TTL: khala.TTLDefault()}, llama.Service{F: lf}, news.Service{F: nf}, chainrank.Service{F: cf}, coinglass.Service{F: gf}, coinank.Service{F: af}).mux(),
 		ReadHeaderTimeout: 10 * time.Second,
 		WriteTimeout:      90 * time.Second,
 	}
-	log.Printf("fudcourt-data listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes; coinglass: cache %s, ttl %ds, %d modes)",
-		addr, f.CacheDir(), ttl, cryptorank.ModeCount, kf.CacheDir(), khala.TTLDefault(), khala.ModeCount, lf.TTL(), llama.ModeCount, nf.TTL(), news.SourceCount, cf.TTL(), chainrank.ModeCount, gf.CacheDir(), coinglass.TTLDefault(), coinglass.ModeCount)
+	log.Printf("fudcourt-data listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes; coinglass: cache %s, ttl %ds, %d modes; coinank: cache %s, ttl %ds, %d modes)",
+		addr, f.CacheDir(), ttl, cryptorank.ModeCount, kf.CacheDir(), khala.TTLDefault(), khala.ModeCount, lf.TTL(), llama.ModeCount, nf.TTL(), news.SourceCount, cf.TTL(), chainrank.ModeCount, gf.CacheDir(), coinglass.TTLDefault(), coinglass.ModeCount, af.CacheDir(), coinank.TTLDefault(), coinank.ModeCount)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -153,6 +165,10 @@ type server struct {
 	// envelope), a value for the same reason: the Fetcher it wraps owns the
 	// cache, and `fresh` travels per request.
 	cgs coinglass.Service
+	// ans is the coinank family orchestrator (fetch -> signed envelope), a value
+	// for the same reason: the Fetcher owns the cache and `fresh` travels per
+	// request.
+	ans coinank.Service
 	// ttl is the per-route cache TTL in seconds for an ordinary request; a
 	// fresh=1 request passes 0 instead (the Python helper's --ttl 0). Both are
 	// per-request arguments, never shared fetcher state.
@@ -162,8 +178,8 @@ type server struct {
 	retryBase time.Duration
 }
 
-func newServer(f fetcher, ttl int, ks khala.Service, ls llama.Service, ns news.Service, cs chainrank.Service, cgs coinglass.Service) *server {
-	return &server{f: f, ks: ks, ls: ls, ns: ns, cs: cs, cgs: cgs, ttl: ttl, retryBase: 3 * time.Second}
+func newServer(f fetcher, ttl int, ks khala.Service, ls llama.Service, ns news.Service, cs chainrank.Service, cgs coinglass.Service, ans coinank.Service) *server {
+	return &server{f: f, ks: ks, ls: ls, ns: ns, cs: cs, cgs: cgs, ans: ans, ttl: ttl, retryBase: 3 * time.Second}
 }
 
 func (s *server) mux() *http.ServeMux {
@@ -190,6 +206,11 @@ func (s *server) mux() *http.ServeMux {
 			// the family's whole reason to exist: a reader must be able to
 			// tell, from one probe, that this needs no API key.
 			"coinglass": fmt.Sprintf("%d modes (keyless)", coinglass.ModeCount),
+			// coinank is the seventh, and keyless for a DIFFERENT reason than
+			// coinglass: nothing is encrypted here, the request carries a
+			// client-computed signature instead of an issued key. The qualifier
+			// distinguishes the two so a reader does not assume one scheme.
+			"coinank": fmt.Sprintf("%d modes (keyless, client signature)", coinank.ModeCount),
 		})
 	})
 	mux.HandleFunc("/api/cryptorank", func(w http.ResponseWriter, r *http.Request) {
@@ -209,6 +230,9 @@ func (s *server) mux() *http.ServeMux {
 	})
 	mux.HandleFunc("/api/coinglass", func(w http.ResponseWriter, r *http.Request) {
 		s.handleCoinglass(w, r)
+	})
+	mux.HandleFunc("/api/coinank", func(w http.ResponseWriter, r *http.Request) {
+		s.handleCoinank(w, r)
 	})
 	return mux
 }
@@ -491,8 +515,9 @@ func (s *server) handleCoinglass(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-CG-Upstream", env.Upstream)
 	w.Header().Set("X-CG-Cache", env.Cache)
 	// X-CG-Cipher exposes which rotation slot (`v`) upstream used. It is a
-	// header rather than body state because it describes the TRANSPORT, and
-	// scripts/verify-coinglass.py reads it from here.
+	// header rather than body state because it describes the TRANSPORT: the
+	// `v` table is what decides Key0, so a consumer debugging a payload needs
+	// the slot alongside the rows. It is NOT derivable from the envelope.
 	if env.Cipher != "" {
 		w.Header().Set("X-CG-Cipher", env.Cipher)
 	}
@@ -508,6 +533,120 @@ func writeCoinglassError(w http.ResponseWriter, mode string, err error) {
 	if errors.As(err, &he) && he.Kind == "upstream" {
 		writeJSON(w, 502, map[string]interface{}{
 			"error":  coinglass.ErrUpstream,
+			"mode":   mode,
+			"code":   he.Code,
+			"detail": he.Detail,
+		})
+		return
+	}
+	writeJSON(w, 502, map[string]interface{}{
+		"error":  "upstream unreachable",
+		"mode":   mode,
+		"detail": err.Error(),
+	})
+}
+
+// handleCoinank serves the CoinAnk futures family.
+//
+// EVERY mode on this table is KEYLESS, and in a different sense from coinglass:
+// nothing here is encrypted. The upstream demands a `coinank-apikey` header that
+// is not an issued credential at all -- it is computed from a public uuid
+// constant and the clock (internal/research/coinank/sign.go), so there is no key
+// to acquire and no reason for this route to ever read one.
+//
+// The route is strict in the same way the coinglass one is, and one case here is
+// stricter because upstream is QUIETER than CoinGlass's:
+//
+//	mode       required, must be in coinank.Modes
+//	interval   only mode=liquidation; must be in coinank.Intervals
+//	fresh=1    skips the disk cache for this request only
+//
+// The interval allowlist is not decoration. CoinAnk answers an UNSUPPORTED
+// interval with HTTP 200, the same exchange rows, and totalTurnover=0 on every
+// row -- indistinguishable from "no liquidations occurred". Passing a bad value
+// through would render a confident all-zero table, so it is refused with a 400
+// here and never reaches upstream.
+//
+// Params upstream IGNORES get no accept row at all (symbol/baseCoin on
+// fundingRate, pageNum/pageSize on whales -- both measured as no-ops): a route
+// that accepts a param the request does not honour is lying about what it did.
+//
+// Upstream's own refusal (HTTP 200, success:false, "system error!") becomes a 502
+// carrying its code and message. It never becomes a 200 with an empty table.
+func (s *server) handleCoinank(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		writeJSON(w, 405, map[string]interface{}{"error": "method not allowed"})
+		return
+	}
+	q := r.URL.Query()
+	mode := q.Get(coinank.ParamMode)
+	if mode == "" || !coinank.Known(mode) {
+		var got interface{}
+		if mode != "" {
+			got = mode
+		}
+		writeJSON(w, 400, map[string]interface{}{
+			"error": coinank.ErrUnknownMode,
+			"modes": coinank.Modes,
+			"got":   got,
+		})
+		return
+	}
+	// Param scoping: a param the mode does not accept (including a known param
+	// sent to the wrong mode, and any unknown name) is a 400, never ignored.
+	for p := range q {
+		if !coinank.Accepts(mode, p) {
+			writeJSON(w, 400, map[string]interface{}{
+				"error":  coinank.ErrUnexpected,
+				"detail": coinank.UnexpectedParamDetail(p, mode),
+				"param":  p,
+				"mode":   mode,
+			})
+			return
+		}
+	}
+	interval := ""
+	if mode == "liquidation" {
+		interval = q.Get(coinank.ParamInterval)
+		if interval == "" {
+			interval = coinank.DefaultInterval
+		}
+		if !coinank.ValidInterval(interval) {
+			writeJSON(w, 400, map[string]interface{}{
+				"error":    coinank.ErrInvalidParam,
+				"detail":   coinank.DetailIntervalInvalid,
+				"mode":     mode,
+				"interval": interval,
+			})
+			return
+		}
+	}
+	// fresh=1 bypasses the disk cache for this request only. It is an ARGUMENT,
+	// never fetcher state, so two concurrent requests cannot observe each other's
+	// policy. It is also the only path that re-signs the request, since the
+	// signature is derived from the millisecond clock.
+	fresh := q.Get(coinank.ParamFresh) == "1"
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+	env, err := s.ans.Envelope(ctx, mode, interval, fresh)
+	if err != nil {
+		writeCoinankError(w, mode, err)
+		return
+	}
+	w.Header().Set("X-CA-Upstream", env.Upstream)
+	w.Header().Set("X-CA-Cache", env.Cache)
+	w.Header().Set("Cache-Control", "public, max-age=30")
+	writeJSON(w, 200, env)
+}
+
+// writeCoinankError maps a family error to the frozen body. An upstream refusal
+// is 502 carrying CoinAnk's own code and message: the caller learns what upstream
+// said, and no empty table is invented for it.
+func writeCoinankError(w http.ResponseWriter, mode string, err error) {
+	var he *coinank.HardError
+	if errors.As(err, &he) && he.Kind == "upstream" {
+		writeJSON(w, 502, map[string]interface{}{
+			"error":  coinank.ErrUpstream,
 			"mode":   mode,
 			"code":   he.Code,
 			"detail": he.Detail,
