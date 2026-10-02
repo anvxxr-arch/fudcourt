@@ -91,11 +91,12 @@ python3 scripts/verify/verify-chainrank.py   # LIVE: chainrank harness (50 check
 node scripts/database/dump-schema.mjs --check  # schema drift alarm vs database/schema/schema.sql
 ```
 CI is five path-filtered workflows (the single `ci.yml` this line used to name was split in
-Phase 9) — `web.yml` (contract/structure/deploy gates,
+Phase 9) — `web.yml` (contract/structure gates,
 typecheck, shaper fixtures, build), `go.yml` (build/vet/test per Go module),
 `rust.yml` (`backend/sync`), `contracts.yml` (contracts drift + generated SDK) and
-`integration.yml` (the offline aggregate `scripts/verify/verify-all.sh` plus the live
-reconcile contract). Each ends in a required `gate` job.
+`integration.yml` (the offline aggregate `scripts/verify/verify-all.sh` — the
+deploy-unit guard runs there, not in `web.yml`, ordered after `cargo build` —
+plus the live reconcile contract). Each ends in a required `gate` job.
 
 ## House rules
 
