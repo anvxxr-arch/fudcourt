@@ -152,9 +152,9 @@ column is filled from the §2/§3 evidence only):
 | fixed USD risk | `risk.ts` `calculateRiskPosition`, `executor-risk-tests.ts` | `internal/core/risk` + `internal/core/sizing` | `DONE` — `core/risk` `TestPRD8RiskSizing`; `core/sizing` `TestRiskUSDVector` |
 | percentage risk | `risk.ts` + `resolveBalanceBasis` (PRD §9–10), `executor-risk-tests.ts` | `internal/core/risk` + `internal/core/sizing` | `DONE` — `core/risk` `TestPRD9PercentageBudget`, `TestResolveBalanceBasis`; `core/sizing` `TestRiskPercentVsAllocationPercent`, `TestPercentageBasisRequirements` |
 | long sizing | `plan.ts` `sizePosition`, `executor-plan-tests.ts` | `internal/core/sizing` | `DONE` — `core/planner` `TestPRD8RiskUSD`; `core/sizing` `TestAllNineModesProducePositions` |
-| short sizing | `plan.ts` `sizePosition`, `executor-plan-tests.ts` | `internal/core/sizing` | `DONE` — `core/risk` `TestRiskSizingShortMirrored`, `TestAutoSafeLeverageShortBufferMirrored` |
-| spot | `types.ts` `MarketType: 'spot'`, `exchange.ts` | `executor.MarketSpot`, `internal/exchanges` | `DONE` — `core/sizing` `TestSpotPercentVector`; `core/planner` `TestPRD16SpotFlow`; `exchanges/mexc` spot-market fixtures |
-| futures | `types.ts` `'linear_perp'`, `exchange.ts` | `executor.MarketLinearPerp`, `internal/exchanges` | `DONE` — `exchanges/paper` `TestLinearSettlement`; `core/risk`/`core/sizing` `TestPRD16SpotFlow` linear fixtures; `exchanges/bybit` perp fixtures |
+| short sizing | `plan.ts` `sizePosition`, `executor-plan-tests.ts` | `internal/core/sizing` | `PARTIAL` (corrected 2026-10-02) — `core/risk` `TestRiskSizingShortMirrored` (short *risk* quantity + notional), `TestAutoSafeLeverageShortBufferMirrored`, `TestLiquidationPriceApprox` pin the short side of the risk model; the short path through the `sizePosition`/planner stack is not pinned (no `core/sizing`/`core/planner` test drives `SideSell` — planner's only `SideSell` use is `TestResolveEstimatedEntry`, an entry-resolution test) |
+| spot | `types.ts` `MarketType: 'spot'`, `exchange.ts` | `executor.MarketSpot`, `internal/exchanges` | `DONE` — `core/sizing` `TestSpotPercentVector` (spot basis path); `core/planner` `TestPRD16SpotFlow`, `TestValidationFieldNamedRefusals`; `exchanges/mexc` `TestCreateOrderParsing` spot-market fixtures |
+| futures | `types.ts` `'linear_perp'`, `exchange.ts` | `executor.MarketLinearPerp`, `internal/exchanges` | `PARTIAL` (corrected 2026-10-02) — `exchanges/paper` `TestLinearSettlement` pins linear settlement (fee-absorbing quote, `FuturesEquity` set / `SpotEquity` nil, no base-wallet row); `exchanges/bybit` `TestGetPositionFixture` (asserts `pos.MarketType == MarketLinearPerp`), `TestCreateOrderFixture`, `TestSignedRequestHeaders`; `exchanges/mexc` `TestNewAppliesDefaults`, `TestGetPosition`, `TestCreateOrderParsing` perp fixtures. **No linear-specific sizing or risk test exists** (`core/{risk,sizing,planner}`, the e2e harness and `cmd/executor` include `MarketLinearPerp` only via their shared default fixtures, never as the assertion's subject — `TestPRD16SpotFlow`, cited here in the first commit, is a *spot* test and was a mis-citation). The futures path is therefore pinned only by paper/bybit/mexc fixtures + stub-HTTP adapter tests, never by a linear-specific model test or an end-to-end linear run |
 | leverage | `risk.ts` `autoLeverage` (PRD §18–19), `executor-risk-tests.ts` | `internal/core/risk/leverage.go` | `DONE` — `core/risk` `TestAutoSafeLeverageMinimumFeasible`, `TestAutoSafeLeverageCaps`, `TestAutoSafeLeverageHonestUnsafe`; `core/sizing` `TestResolveLeverageAndMargin`, `TestFixedMarginRequiresManualLeverage` |
 | pause | `runtime.ts` lifecycle + `worker.ts`, `executor-runtime-tests.ts` | `internal/core/execution` (`CommandPause`) | `DONE` — `core/execution` `TestApplyLegalTransitions` (`CommandPause→StatusPaused`); e2e `TestPaperPauseResume` |
 | cancel | `runtime.ts` (cancel cancels orders, never closes positions) | `internal/core/execution` (`CommandCancel`) | `DONE` — `core/execution` `TestApplyLegalTransitions`; e2e `TestPaperCancelRestingOrder` |
@@ -172,8 +172,11 @@ Re-derived 2026-10-02 from the Go test list (`go test -list '.*'` over `core/{ri
 `parity-matrix.md`: **209 named tests across 14 packages**, all green. `DONE` here means a named Go test pins the
 row's behavior; it is not the cutover itself — the cutover stays OPEN on the web re-point + env provisioning + the
 live `verify:executor` against the Go worker (see `parity-matrix.md`, cutover row). The 17 rows above map onto
-`parity-matrix.md` rows 1–9 (`DONE 2026-10-01`) at feature granularity; `market` and `limit` are the two rows the
-Go tests do not carry all the way to a live venue, so they stay `PARTIAL`.
+`parity-matrix.md` rows 1–9 (`DONE 2026-10-01`) at feature granularity; `market`, `limit` and `futures` stay
+`PARTIAL` for the same reason — the Go tests do not carry them all the way to a live venue — and `short sizing`
+stays `PARTIAL` because no `core/sizing`/`core/planner` test drives `SideSell`. Audit trail: the first commit
+(`1d31ae5`) cited `TestPRD16SpotFlow` as evidence for the `futures` row; that test is a *spot* test and the row was
+downgraded in `1d31ae5`'s follow-up (2026-10-02).
 
 ## 4. Idempotency keys
 Four identity layers make retries, restarts and replays safe (objective §23;
