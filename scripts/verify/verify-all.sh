@@ -22,6 +22,14 @@ fail() { echo "!! FAILED: $1"; rc=1; }
 
 step "structure gate (DR-018 layers)"
 (cd frontend/web && python3 scripts/checks/check-structure.py) || fail structure
+# The design system: one SSOT (src/styles/tokens.ts) + generated artifacts + these two gates
+# (DR-037). The first step is the MIGRATION gate and is deliberately red until the feature/
+# component workers land — a green run before then would mean the gate was broken, not that the
+# tree was clean. The second is the generated-artifact drift alarm and is green from day one.
+step "design-token gate (raw literals, magic style values, dead tokens)"
+(cd frontend/web && python3 scripts/checks/check-design-tokens.py) || fail design-tokens
+step "design-token artifact drift (globals.css block + tailwind.tokens.json are generated)"
+(cd frontend/web && unset NODE_ENV && bun scripts/design/emit-tokens.ts --check) || fail design-tokens-artifacts
 
 step "web contract gate (CR_MODES + mutation-auth guards)"
 python3 scripts/verify/check-contract.py || fail web-contract
@@ -34,6 +42,8 @@ node shared/contracts/scripts/check-schemas.mjs || fail schemas
 
 step "canonical doc-citation gate (cited repo paths resolve)"
 node shared/contracts/scripts/check-doc-citations.mjs || fail doc-citations
+step "markdown table-shape gate (a row must not exceed its header; GFM drops excess cells)"
+node shared/contracts/scripts/check-table-shape.mjs || fail table-shape
 
 step "canonical reference artifact drift (reference.json is generated)"
 go run ./backend/api/internal/markets/reference/cmd/emit -check || fail reference
