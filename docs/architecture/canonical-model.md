@@ -252,7 +252,7 @@ Provider-specific parsers that **already exist** and the layer they occupy (requ
 | Book touch snapshot | `backend/api/internal/markets/overview/snapshot.go:24` (`SnapshotFromTicker`), `:6` (`Snapshot`) |
 | Executor planning/risk/sizing/strategy/FSM | `backend/workers/executor/internal/{planner,risk,sizing,strategy,orders,execution,worker}` (19 packages) |
 | Executor reconciliation merge | `…/internal/worker/tick.go:325` (`reconcile`), `:52-59` (venue-truth-first), `helpers.go:26` (`matchVenue`), `:123` (`cmpDec`) |
-| Client-side display/statistics | quarterly return `frontend/web/src/features/cryptorank/ui.tsx:1633-1634`; signals stats `features/signals/ui.tsx:157-172`; cohort hit-rates `features/scoreboard/scoreboard.tsx:31-80`; group sums `shell/store-shell.tsx:107-109`; TVL sparkline `features/llama/ui.tsx:105-113` |
+| Client-side display/statistics | signals stats `features/signals/ui.tsx:157-172`; cohort hit-rates `features/scoreboard/scoreboard.tsx:31-80`; group sums `shell/store-shell.tsx:107-109`; TVL sparkline `features/llama/ui.tsx:105-113` |
 
 ### 1.7 PRODUCT VIEW
 

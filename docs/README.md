@@ -34,6 +34,7 @@ docs/
 | architecture | [TECH-STACK.md](architecture/TECH-STACK.md) | Languages, frameworks, data stores, infra, verification tooling |
 | architecture | [DESIGN-SYSTEM.md](architecture/DESIGN-SYSTEM.md) | The design system: `src/styles/tokens.ts` as SSOT, the generated `:root` block + `tailwind.tokens.json`, the drift/design gates, allowlists, the atom shelf, and the zero-visual-change rule |
 | architecture | [design-inventory.md](architecture/design-inventory.md) | Read-only baseline the design system was built from: raw colour inventory, scale histograms, value→token mapping, orphan audit |
+| architecture | [design-debt.md](architecture/design-debt.md) | The design-system debt ledger (measured, re-runnable): soft layout-value counts, atom adoption census with zero-use atoms, routes the pixel harness cannot see, and surfaces still hand-rolling chrome the atoms cover |
 | architecture | [cryptorank-mode-audit.md](architecture/cryptorank-mode-audit.md) | Per-mode audit of the CryptoRank family (28 modes): live shapes, page-1 truncation, uniqueness vs duplication (DUP/UNIQUE/MIXED/REFUSED) and the 28→15 disposition |
 | architecture | [provider-deep-dive.md](architecture/provider-deep-dive.md) | Live-probed shapes + uniqueness verdicts for the seven non-CryptoRank families (llama, markets, dex, signals, news, khala, chainrank) |
 | architecture | [provider-consolidation.md](architecture/provider-consolidation.md) | The decision map: 14 public pages → 5 surfaces, per-page disposition, CryptoRank 28→15 demotion and the step-by-step migration order |

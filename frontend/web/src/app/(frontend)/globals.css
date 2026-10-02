@@ -38,10 +38,8 @@
   --fc-radius-4: 4px;
   --fc-radius-6: 6px;
   --fc-radius-8: 8px;
-  --fc-radius-10: 10px;
   --fc-radius-12: 12px;
   --fc-radius-14: 14px;
-  --fc-radius-full: 9999px;
   --fc-radius-circle: 50%;
   --fc-font-size-9: 9px;
   --fc-font-size-10: 10px;
@@ -62,7 +60,6 @@
   --fc-font-weight-heavy: 800;
   --fc-line-height-tight: 1.3;
   --fc-line-height-snug: 1.4;
-  --fc-line-height-relaxed: 1.5;
   --fc-line-height-normal: 1.6;
   --fc-line-height-loose: 1.7;
   --fc-letter-spacing-none: 0;

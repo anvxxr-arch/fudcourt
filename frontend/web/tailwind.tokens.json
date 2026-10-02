@@ -36,10 +36,8 @@
     "4": "var(--fc-radius-4)",
     "6": "var(--fc-radius-6)",
     "8": "var(--fc-radius-8)",
-    "10": "var(--fc-radius-10)",
     "12": "var(--fc-radius-12)",
     "14": "var(--fc-radius-14)",
-    "full": "var(--fc-radius-full)",
     "circle": "var(--fc-radius-circle)"
   },
   "fontSize": {

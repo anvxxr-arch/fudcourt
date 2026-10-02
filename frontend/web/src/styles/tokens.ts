@@ -22,8 +22,7 @@
  * `fontSize: fontSize[13]`, `padding: '10px 18px'` becomes `padding: \`${space[10]}px ${space[18]}px\``.
  * No rounding, no rem conversion, no re-tint: the rendered pixels are provably unchanged, so
  * a visual regression can only come from a mistake in the migration, never from the token
- * table. `radius.full` (9999) is the one value written for its MEANING (the pill/circle
- * sentinel that `borderRadius: 9999` already used) rather than for its arithmetic.
+ * table.
  *
  * WHAT IS DELIBERATELY NOT HERE: the domain palettes (`CHAIN_COLOR`, `COLOR_PRESETS` in
  * `src/styles/shared.ts`) are DATA, not design chrome — provider/brand colours and the
@@ -55,11 +54,10 @@ export const color = {
 export const space = { 0: 0, 4: 4, 6: 6, 8: 8, 10: 10, 12: 12, 14: 14, 16: 16, 18: 18, 20: 20, 24: 24, 28: 28, 30: 30, 32: 32, 40: 40 } as const;
 
 /**
- * px, key === value, plus two specials: `full` (9999) is the pill sentinel already in use as
- * `borderRadius: 9999`, and `circle` is the `'50%'` keyword used for round avatars and dots — a
- * keyword, not a scale value, which is why it stays a string.
+ * px, key === value, plus one special: `circle` is the `'50%'` keyword used for round avatars
+ * and dots — a keyword, not a scale value, which is why it stays a string.
  */
-export const radius = { 0: 0, 4: 4, 6: 6, 8: 8, 10: 10, 12: 12, 14: 14, full: 9999, circle: '50%' } as const;
+export const radius = { 0: 0, 4: 4, 6: 6, 8: 8, 12: 12, 14: 14, circle: '50%' } as const;
 
 /** px, key === value. */
 export const fontSize = { 9: 9, 10: 10, 11: 11, 12: 12, 13: 13, 14: 14, 16: 16, 18: 18, 20: 20, 24: 24, 32: 32, 40: 40 } as const;
@@ -67,7 +65,7 @@ export const fontSize = { 9: 9, 10: 10, 11: 11, 12: 12, 13: 13, 14: 14, 16: 16, 
 export const fontWeight = { regular: 400, medium: 500, semibold: 600, bold: 700, heavy: 800 } as const;
 
 /** unitless CSS ratios (not px). */
-export const lineHeight = { tight: 1.3, snug: 1.4, relaxed: 1.5, normal: 1.6, loose: 1.7 } as const;
+export const lineHeight = { tight: 1.3, snug: 1.4, normal: 1.6, loose: 1.7 } as const;
 
 /** unitless (px at a 1px advance width). */
 export const letterSpacing = { none: 0, xs: 0.4, sm: 0.5, wide: 1, wider: 2 } as const;

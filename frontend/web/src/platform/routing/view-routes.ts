@@ -18,7 +18,6 @@ export const VIEW_PATHS: Record<string, string> = {
   signals: '/signals',
   scoreboard: '/scoreboard',
   chainrank: '/chainrank',
-  cryptorank: '/cryptorank',
   ticker: '/market/crypto',
   news: '/news',
   khala: '/khala',

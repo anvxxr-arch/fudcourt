@@ -38,13 +38,6 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 0.6,
   },
   {
-    path: '/cryptorank',
-    title: 'CryptoRank — Market rankings & unlocks | FUDCOURT',
-    description:
-      'CryptoRank market data: token rankings, unlock schedules and fundraising rounds.',
-    priority: 0.6,
-  },
-  {
     path: '/news',
     title: 'News — Crypto market news | FUDCOURT',
     description:

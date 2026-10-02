@@ -13,7 +13,6 @@ import ReconciliationPage from '@/features/treasury/reconciliation';
 import SignalsPage from '@/features/signals/ui';
 import ScoreboardPage from '@/features/scoreboard/ui';
 import ChainrankPage from '@/features/chainrank/ui';
-import CryptorankPage from '@/features/cryptorank/ui';
 import MarketHub from '@/components/layout/market-hub';
 import NewsPage from '@/features/news/ui';
 import KhalaPage from '@/features/khala/ui';
@@ -124,7 +123,6 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     { key: 'signals', label: 'Signals' },
     { key: 'scoreboard', label: 'Scoreboard' },
     { key: 'chainrank', label: 'Chainrank' },
-    { key: 'cryptorank', label: 'CryptoRank' },
     { key: 'news', label: 'News' },
     { key: 'khala', label: 'Khala' },
   ];
@@ -214,7 +212,6 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'signals' && <SignalsPage />}
       {page === 'scoreboard' && <ScoreboardPage />}
       {page === 'chainrank' && <ChainrankPage />}
-      {page === 'cryptorank' && <CryptorankPage />}
       {page === 'news' && <NewsPage />}
       {page === 'khala' && <KhalaPage />}
 

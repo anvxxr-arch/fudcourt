@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * and the X-CR-Upstream / X-CR-Cache / Cache-Control headers — so the public
  * surface (GET /api/cryptorank?mode=…[&key=…][&fresh=1] on :3100) keeps the
  * exact wire contract the pre-migration Python path had for every consumer
- * (src/components/CryptorankPage.tsx, scripts/verify/verify-cryptorank.py).
+ * (scripts/verify/verify-cryptorank.py).
  * Measured caveat, so "verbatim" is not read as "byte-identical": the Go
  * service is field-for-field-compatible, not byte-for-byte. Its bodies are
  * framed by `Encoder.Encode` and therefore end in ONE trailing newline, and
