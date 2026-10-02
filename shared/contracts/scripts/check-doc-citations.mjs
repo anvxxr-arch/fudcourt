@@ -123,6 +123,7 @@ const DOCS = [
   'docs/architecture/data-classification.md',
   'docs/architecture/database-classification.md',
   'docs/architecture/canonical-acceptance.md',
+  'docs/architecture/symbol-key-inventory.md',
   'shared/contracts/schemas/README.md',
 ];
 
