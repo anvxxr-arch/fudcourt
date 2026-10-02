@@ -40,9 +40,17 @@ export function fmtChange(c: number | null): string {
   return `${c >= 0 ? '+' : ''}${fmtPrice(c)}`;
 }
 
-/** Compact volume: 12.34M / 4.50B; null -> '—'. */
+/**
+ * Compact volume: 12.34M / 4.50B; null -> '—'.
+ *
+ * A literal 0 is also '—'. This feed sends 0 for volume it does not publish
+ * (measured on Yahoo Finance: ^JKSE, ^N225, ^HSI and ^AXJO all report 0 while
+ * ^GSPC and ^KS11 report real figures), so a 0 here is an absent metric, not a
+ * measurement of zero -- printing it would assert a number the upstream never
+ * made. The route keeps the raw value; only the board declines to show it.
+ */
 export function fmtVolume(v: number | null): string {
-  if (v === null || !Number.isFinite(v)) return dash;
+  if (v === null || !Number.isFinite(v) || v === 0) return dash;
   const abs = Math.abs(v);
   if (abs >= 1e12) return `${(v / 1e12).toFixed(2)}T`;
   if (abs >= 1e9) return `${(v / 1e9).toFixed(2)}B`;

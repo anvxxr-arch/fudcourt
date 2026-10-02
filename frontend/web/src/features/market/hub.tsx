@@ -10,13 +10,14 @@ import TrenchPage from '@/features/dex/trench';
 import ForexBoard from '@/features/market/forex/ui';
 import CommodityBoard from '@/features/market/commodity/ui';
 import StockBoard from '@/features/market/stock/ui';
+import type { StockRegion } from '@/features/market/stock/client';
 
 // The Market hub — one surface over the market sections, keyed by asset class:
 //   crypto    → CEX instruments (TickerPage, cross-venue) + top-250 prices (CoinGecko)
 //   trench    → on-chain DEX pairs + the live trench (DexScreener)
 //   forex     → curated major pairs (exchangerate-api free feed, keyless)
 //   commodity → front-month futures (Yahoo Finance, keyless)
-//   stock     → indices + mega-caps (Yahoo Finance, keyless)
+//   stock     → US and Asia indices + blue chips (Yahoo Finance, keyless)
 // Each section is its own route (/market/<section>); this component only adds the
 // section chrome, so the providers' envelopes are untouched.
 export type MarketSection = 'crypto' | 'forex' | 'commodity' | 'stock' | 'trench';
@@ -45,7 +46,7 @@ const SECTIONS: { key: MarketSection; label: string; href: string; blurb: string
     key: 'stock',
     label: 'Stock',
     href: '/market/stock',
-    blurb: 'Indices and mega-cap equities from Yahoo Finance.',
+    blurb: 'US and Asia indices and blue chips from Yahoo Finance.',
   },
   {
     key: 'trench',
@@ -63,6 +64,11 @@ const CRYPTO_TABS = [
 const TRENCH_TABS = [
   { key: 'pairs', label: 'Pairs' },
   { key: 'trench', label: 'Trench' },
+] as const;
+
+const STOCK_TABS = [
+  { key: 'us', label: 'US' },
+  { key: 'asia', label: 'Asia' },
 ] as const;
 
 const tabStyle = (active: boolean): CSSProperties => ({
@@ -143,6 +149,22 @@ function TrenchSection() {
   );
 }
 
+function StockSection() {
+  const [tab, setTab] = useState<StockRegion>('us');
+  return (
+    <>
+      <div style={{ display: 'flex', gap: space[10], marginBottom: space[14], flexWrap: 'wrap' }}>
+        {STOCK_TABS.map((t) => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={tabStyle(tab === t.key)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <StockBoard region={tab} />
+    </>
+  );
+}
+
 export default function MarketHub({ section }: { section?: MarketSection }) {
   return (
     <div>
@@ -152,7 +174,7 @@ export default function MarketHub({ section }: { section?: MarketSection }) {
       {section === 'trench' && <TrenchSection />}
       {section === 'forex' && <ForexBoard />}
       {section === 'commodity' && <CommodityBoard />}
-      {section === 'stock' && <StockBoard />}
+      {section === 'stock' && <StockSection />}
     </div>
   );
 }

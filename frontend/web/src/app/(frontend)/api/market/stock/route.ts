@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server';
-import { STOCK_LABELS, STOCK_SYMBOLS, STOCK_TTL_MS } from '@/features/market/stock/client';
+import {
+  DEFAULT_STOCK_REGION,
+  STOCK_LABELS,
+  STOCK_REGIONS,
+  STOCK_SYMBOLS,
+  STOCK_TTL_MS,
+  isStockRegion,
+} from '@/features/market/stock/client';
 import {
   YAHOO_CHART,
   YAHOO_UA,
@@ -17,20 +24,33 @@ const TIMEOUT_MS = 20_000;
 
 type Failed = { symbol: string; reason: string };
 
+function fail(message: string, status: number, detail?: string) {
+  return NextResponse.json({ error: message, ...(detail ? { detail } : {}) }, { status });
+}
+
 /**
  * Read-only proxy to the Yahoo Finance chart endpoint (public, keyless) serving
  * the stock board.
  *
  * One upstream call per symbol (the batch quote endpoint answers 401 without a
- * crumb). Honest-by-construction: a symbol that fails is reported in `failed[]`
- * with its reason rather than dropped, a partial board is still a 200, and only
- * a board where EVERY symbol failed is a loud 502 -- never a fake empty 200.
+ * crumb). `region` is OUR parameter -> a value outside STOCK_REGIONS is a strict
+ * 400, never clamped or silently defaulted. Honest-by-construction: a symbol
+ * that fails is reported in `failed[]` with its reason rather than dropped, a
+ * partial board is still a 200, and only a board where EVERY symbol failed is a
+ * loud 502 -- never a fake empty 200.
  */
-export async function GET() {
+export async function GET(req: Request) {
+  const regionParam = new URL(req.url).searchParams.get('region');
+  if (regionParam !== null && !isStockRegion(regionParam)) {
+    return fail('invalid region', 400, `region must be one of: ${STOCK_REGIONS.join(', ')}`);
+  }
+  const region = regionParam ?? DEFAULT_STOCK_REGION;
+  const symbols = STOCK_SYMBOLS[region];
+
   const quotes: MarketQuote[] = [];
   const failed: Failed[] = [];
 
-  for (const symbol of STOCK_SYMBOLS) {
+  for (const symbol of symbols) {
     let res: Response;
     try {
       res = await limitedFetch(
@@ -58,23 +78,26 @@ export async function GET() {
       failed.push({ symbol, reason: 'no quote in payload' });
       continue;
     }
-    if (quote.name === symbol) quote.name = STOCK_LABELS[symbol] ?? symbol;
+    // The curated label reads better than the raw long name (e.g. 'IDX Composite
+    // (IHSG)' over 'IDX COMPOSITE'); the exchange column still carries the venue.
+    quote.name = STOCK_LABELS[quote.symbol] ?? quote.name;
     quotes.push(quote);
   }
 
   if (quotes.length === 0) {
     return NextResponse.json(
-      { error: 'no quotes returned', detail: `all ${STOCK_SYMBOLS.length} symbols failed`, failed },
+      { error: 'no quotes returned', detail: `all ${symbols.length} ${region} symbols failed`, failed },
       { status: 502 }
     );
   }
 
   return NextResponse.json({
+    region,
     quotes,
     count: quotes.length,
     failed,
     upstream: YAHOO_CHART,
     asOf: Math.floor(Date.now() / 1000),
-    derived: `one Yahoo chart call per symbol; ${failed.length} of ${STOCK_SYMBOLS.length} failed`,
+    derived: `region=${region}; one Yahoo chart call per symbol; ${failed.length} of ${symbols.length} failed`,
   });
 }
