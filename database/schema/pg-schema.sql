@@ -179,8 +179,30 @@ CREATE TABLE IF NOT EXISTS canonical_reference (
   -- validateDocument checks it too, but the table must not rely on its writer for its
   -- own integrity). `LIKE kind || ':%'` is valid because the pattern is a plain
   -- concatenation — no LIKE metacharacters appear in a kind.
-  CHECK (canonical_id LIKE kind || ':%')
+  --
+  -- The constraint is NAMED and duplicated in the guarded DO block below. That is
+  -- not belt-and-braces for its own sake: `CREATE TABLE IF NOT EXISTS` is a NO-OP
+  -- when the table already exists, so an inline CHECK only ever lands at FIRST
+  -- creation. This file is designed to be re-appliable (every statement is
+  -- IF NOT EXISTS), and a plain-psql applier whose table predates this DDL would
+  -- otherwise run the whole file to completion WITHOUT the invariant — silently.
+  -- The DO block re-adds the constraint (only when absent, matched by name) so a
+  -- re-applied schema still refuses a bad `kind`. The name is what makes it
+  -- idempotent: without it `ALTER TABLE ... ADD CONSTRAINT` is a second,
+  -- auto-named constraint and every re-apply adds another.
+  CONSTRAINT canonical_reference_kind_prefix CHECK (canonical_id LIKE kind || ':%')
 );
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                  WHERE conrelid = 'canonical_reference'::regclass
+                    AND conname  = 'canonical_reference_kind_prefix') THEN
+    ALTER TABLE canonical_reference
+      ADD CONSTRAINT canonical_reference_kind_prefix
+      CHECK (canonical_id LIKE kind || ':%');
+  END IF;
+END
+$$;
 -- `kind` is the canonical_id's namespace. The values the loader writes today are
 -- exactly the EntityKinds the reference registry mints ('asset' | 'chain' | 'token'
 -- | 'venue') because it derives its accepted set from `EntityKinds`. The DDL

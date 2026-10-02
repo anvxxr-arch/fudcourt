@@ -150,7 +150,7 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 | table | `venues` (`schema.sql:71-75`) |
 | storage | Turso → `public.venues` |
 | classification | **canonical** (venue registry; `id` is a text slug, not a provider id) |
-| owning service | **none found in-repo**. **DEAD (DR-036):** 12 rows, seeded once at the 2026-09-15 import |
+| owning service | **none found in-repo**. **DEAD — the TABLE only (DR-036):** 12 rows, seeded once at the 2026-09-15 import. The venue *entity* is alive despite the unwritten table: `shared/contracts/data/reference.json` mints 12 `venue_id`s, `backend/api/internal/accounts/exchange/account.go:122` `KnownExchange` validates the slug, and the executor's venue boundary (`backend/workers/executor/internal/exchanges/`) resolves it in code — so a cleanup retires the TABLE, never the identity |
 | readers | `mirror.ts:57` (mirrored, but **not** in `DASHBOARD_READS`); `transactions.venue_id` implies a foreign key that does not exist |
 | canonical entity | **Venue** |
 | durability | CANONICAL |
@@ -284,7 +284,12 @@ Enumerated, not implied:
    `fudcourt-sync` tick; `transactions`, reaching `2026-09-28`) confirm the probe. No writer
    exists in source, in `git log -S` history, in cron, in any system/user timer, or in the
    operator tree `~/.hermes/**`. So the owner is not "unidentified" — there is none, and the
-   tables are dead; retirement is Phase 6 (no schema change this round).
+   tables are dead; retirement is Phase 6 (no schema change this round). **"Dead" is a verdict on
+   each TABLE, never on the noun:** `venues`'s table is unwritten while the venue *entity* is live
+   (12 `venue_id`s in `reference.json`; slug validated at `accounts/exchange/account.go:122`;
+   resolved by the executor's venue boundary), and `Account`/`LedgerEntry`/`Fill` are live entities
+   in `backend/api/internal/accounts/**`, `finance/ledger` and `executor.fills`; only `journal` is
+   table-only (no code-side entity beyond the mirror's pass-through).
 2. **`price_history` has a schema, an index, a retention DELETE, and no writer.** **Dead by
    the same evidence (DR-036): the table does not exist in Turso at all and is empty in
    Postgres, and `grep -rniI "INSERT INTO price_history"` over the whole tree → 0 hits** —

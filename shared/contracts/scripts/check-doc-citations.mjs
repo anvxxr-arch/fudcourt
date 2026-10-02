@@ -15,10 +15,13 @@
  * does). Same verdict shape: one `DOC_FAIL <file>: <detail>` line per failure, then
  * `DOCS_FAILED failures=<N>` and exit 1; on success a single `DOCS_OK docs=<N> citations=<M>`.
  *
- * WHAT IT SCANS (exactly these eight documents; nothing else)
+ * WHAT IT SCANS (exactly these nine documents; nothing else)
  *   docs/architecture/{canonical-model,canonical-placement,source-catalog,data-catalog,
- *     data-classification,database-classification,canonical-acceptance}.md
+ *     data-classification,database-classification,canonical-acceptance,symbol-key-inventory}.md
  *   shared/contracts/schemas/README.md
+ *   (`symbol-key-inventory.md` was added here after `fd49b3a`; it had been written and committed
+ *    while this list still held eight, so its cited paths went unchecked. Adding a document to the
+ *    `DOCS` array is the only way to bring one under the gate — the list is explicit, never a walk.)
  *
  * WHAT COUNTS AS A CITATION
  *   A backticked token that resolves to a repo path: it starts with a known top-level directory
@@ -89,6 +92,18 @@
  * deliberate historical references above) resolve. No unallowed miss. The citation count is reported
  * but deliberately NOT pinned as a threshold, so the gate fails on a broken citation and never on a
  * doc edit that adds a valid one. (Before the sweep: 900 occurrences, 45 across 24 allowance tokens.)
+ *
+ * QUOTING A VERDICT (`docs=`/`citations=`). Both numbers move whenever a scanned doc is edited, so a
+ * quoted verdict is a SNAPSHOT and must be read as one, per `docs/operations/CHANGELOG.md`'s own
+ * convention ("each row is a snapshot of the moment it shipped"; "every number here was measured on
+ * this host, never estimated"). The policy, stated once here and applied throughout:
+ *   - a verdict quoted in a DATED row or as the evidence of a past run is point-in-time — label it
+ *     ("at the time of that run", "as observed on <date>") or leave it inside the dated row, and
+ *     never update it to today's number (that would rewrite history);
+ *   - a verdict presented as the CURRENT state is updated to the newest observed line.
+ * Latest observed: `DOCS_OK docs=9 citations=969 allowances=6` (2026-10-02, after
+ * `docs/architecture/symbol-key-inventory.md` was added to `DOCS`; the row that quotes
+ * `docs=8 citations=904` records the state when that document was written and is left as history).
  */
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';

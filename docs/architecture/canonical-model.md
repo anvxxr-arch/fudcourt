@@ -678,10 +678,23 @@ already keeps `ExecutionStatus` and `ChildOrderStatus` separate and pinned to `t
 
 ### D-CANON. The canonical-identity gap (decision that gates everything else)
 
-**Evidence of absence, with the searches:**
-- grep `(?i)(external_id|provider_id|canonical_id|instrument_id|asset_id|coin_id|token_id|aliases|asset_aliases|external_ids|provider_ids|mapping|identifier)` over the whole repo → no SQL/DDL hits; only Go/TS identifiers and docs.
-- grep `(?i)(create\s+table|enum|taxonomy|categor|tags|types|kind)` over `database/` → no mapping/taxonomy table; the only taxonomy in the repo is Payload CMS (`categories`, `posts_tags`, `posts_rels` — `frontend/web/src/cms/migrations/20260917_194354.ts:28-33,111-118`) and `database/README.md:150-152` explicitly excludes it from the trading surface.
+**Evidence (historical, and current — read the labels).** The two blocks below are NOT the same
+output: the first is the **historical motivating evidence** (what was true when the decision was
+taken, before DR-036), the second is the **current state** after DR-036 landed. Both were re-run on
+2026-10-02; the historical results are quoted as recorded then, not re-observed (they cannot be —
+the table now exists).
+
+*Historical — why the decision was made (state as of 2026-10-01, before DR-036):*
+- grep `(?i)(external_id|provider_id|canonical_id|instrument_id|asset_id|coin_id|token_id|aliases|asset_aliases|external_ids|provider_ids|mapping|identifier)` over the whole repo → **no SQL/DDL hits**; only Go/TS identifiers and docs.
+- grep `(?i)(create\s+table|enum|taxonomy|categor|tags|types|kind)` over `database/` → **no mapping/taxonomy table**; the only taxonomy in the repo was Payload CMS (`categories`, `posts_tags`, `posts_rels` — `frontend/web/src/cms/migrations/20260917_194354.ts:28-33,111-118`) and `database/README.md:150-152` excludes it from the trading surface.
 - The closest existing artifacts: `instruments.CanonicalSymbol` (`symbol.go:35`), the event-id catalogue (`shared/contracts/events/catalog.json`), and `VenueKey` (`platform/executor/types.ts:1366`).
+
+*Current — re-run 2026-10-02, after DR-036 (`canonical_reference` + `canonical_reference_miss` are declared in `database/schema/pg-schema.sql:168-232`):*
+- the same first grep now has **13 SQL hits, all 13 in `database/schema/pg-schema.sql`** (the DDL and its comments) — the "no SQL/DDL hits" claim is falsified by the table the decision itself authorized.
+- `grep -rniI "provider_id\|canonical_id" database/` now hits `canonical_reference`/`canonical_reference_miss` (11 lines, `pg-schema.sql:153-232`), where before DR-036 it was **0**.
+- the taxonomy grep still finds no *taxonomy* table, correctly: the two new tables are a `(provider, provider_id) → canonical_id` **resolution table**, not a category/enum taxonomy, and `canonical_reference.kind` deliberately does not pin a closed namespace set in DDL (the registry still owns it).
+
+The correction matters because the first version of this block read as *reproduced* evidence while no longer being reproducible: the decision half was updated by DR-036 and this evidence half was not. The table is **additive and unwired** (no consumer resolves through it yet), so the *practical* absence the decision was about — no DB-side canonical id in use — still stands; what no longer stands is any claim that no such DDL exists.
 
 **DECISION (as taken):** the canonical id is a **stable opaque string** (`asset_id`, `token_id`,
 `chain_id`, `venue_id`, `instrument_id`) that MUST NOT be the symbol, MUST NOT be the provider id,
@@ -693,8 +706,11 @@ in the tree owns a durable store it could host the table in). Four of the five i
 today: `asset_id`, `token_id`, `chain_id`, `venue_id`. **`instrument_id` is now minted too** (`backend/api/internal/markets/instruments/canonical.go` — the sentence here previously said "API exists, no minter"; see O4), and `Price`/`Balance`/`Trade`-class ids are still not covered at all.
 **The SQL half of this decision is no longer open** (O3, DR-036): `database/schema/pg-schema.sql` now
 declares `canonical_reference` (+ `canonical_reference_miss`) and
-`backend/api/internal/markets/reference/loader.go` loads it from the artifact. It is additive and
-**unwired** — no consumer resolves through SQL yet — so the practical situation is unchanged today,
+`backend/api/internal/markets/reference/loader.go` loads it from the artifact. The table's
+kind/id-prefix invariant (`canonical_id LIKE kind || ':%'`) is a NAMED check constraint re-added by a
+guarded `DO` block on every apply, so it survives a re-applied `CREATE TABLE IF NOT EXISTS` rather
+than holding only at first creation; the loader's `validateDocument` is a second enforcement point.
+It is additive and **unwired** — no consumer resolves through SQL yet — so the practical situation is unchanged today,
 but the blocker "there is no table" has become "nothing has been re-pointed at the table". That
 re-pointing, not the absence of an owner or of a table, is what Phase 9 still waits on.
 
@@ -847,7 +863,11 @@ because they are the consumers of this document.
   `/var/spool/cron`), no system or user timer other than `fudcourt-sync` (5 min, `assets` only) and
   `fudcourt-pgload` (60 s, the mirror), and nothing in the operator tree `~/.hermes/**` writes them.
   **So: five dead (two never written), all dead with no out-of-band writer.** Phase 6 retires them
-  (still out of scope); the `mirror.ts` 8-table copy is unchanged and remains harmless. `]`
+  (still out of scope); the `mirror.ts` 8-table copy is unchanged and remains harmless. **Caveat —
+  "dead" describes the TABLE, not the noun:** `venues`'s table is unwritten but the venue *entity* is
+  live (`reference.json` mints 12 `venue_id`s; `accounts/exchange` validates the slug; the executor
+  resolves it in code), and `Account`/`LedgerEntry`/`Fill` are likewise live entities in
+  `finance/ledger`, `accounts/**` and `executor.fills` — Phase 6 retires tables, not identities. `]`
 - **O3 — Where does `(provider, provider_id) → canonical_id` live, and who writes it?**
   **[ANSWERED — deliberately "operator-curated".]** It lives in `…/reference/seed.go` (curated Go
   data) and ships as `shared/contracts/data/reference.json`; `backend/api/internal/markets/reference`
