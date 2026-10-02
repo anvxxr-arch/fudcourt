@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { executorProxyEnabled, proxyExecutorRequest } from '@/platform/executor/executor-proxy';
 import { store } from '@/platform/executor/store';
 import { requireExecutorUser, runEmergencyStop } from '@/platform/executor/runtime';
 
@@ -11,6 +12,7 @@ export const revalidate = 0;
  * that stays a separate explicit action.
  */
 export async function POST(req: Request) {
+  if (executorProxyEnabled()) return proxyExecutorRequest(req);
   const auth = await requireExecutorUser();
   if (auth.denied) return auth.denied;
   let body: Record<string, unknown> = {};

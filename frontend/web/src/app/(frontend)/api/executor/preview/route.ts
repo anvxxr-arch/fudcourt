@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { executorProxyEnabled, proxyExecutorRequest } from '@/platform/executor/executor-proxy';
 import { store } from '@/platform/executor/store';
 import { previewExecution, requireExecutorUser } from '@/platform/executor/runtime';
 import type { ExecutionRequest } from '@/platform/executor/types';
@@ -11,6 +12,7 @@ export const revalidate = 0;
  * no external order is ever placed on this path.
  */
 export async function POST(req: Request) {
+  if (executorProxyEnabled()) return proxyExecutorRequest(req);
   const auth = await requireExecutorUser();
   if (auth.denied) return auth.denied;
   let body: ExecutionRequest;

@@ -54,6 +54,7 @@
     "tests/auth-tests.ts",
     "tests/rate-limit-tests.ts",
     "tests/executor-ui-tests.ts",
+    "tests/executor-proxy-tests.ts",
     "../../tests/e2e/executor/executor-risk-tests.ts",
     "../../tests/e2e/executor/executor-engine-tests.ts",
     "../../tests/e2e/executor/executor-plan-tests.ts",

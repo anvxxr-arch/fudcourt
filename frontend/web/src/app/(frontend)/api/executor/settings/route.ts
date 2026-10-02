@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { executorProxyEnabled, proxyExecutorRequest } from '@/platform/executor/executor-proxy';
 import { store } from '@/platform/executor/store';
 import { getSettings, putSettings, requireExecutorUser } from '@/platform/executor/runtime';
 
@@ -6,7 +7,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 /** GET /api/executor/settings — the user's risk profile (PRD §88, §119). */
-export async function GET() {
+export async function GET(req: Request) {
+  if (executorProxyEnabled()) return proxyExecutorRequest(req);
   const auth = await requireExecutorUser();
   if (auth.denied) return auth.denied;
   return NextResponse.json(await getSettings(store, auth.user));
@@ -14,6 +16,7 @@ export async function GET() {
 
 /** PUT /api/executor/settings — risk profile update (PRD §88). */
 export async function PUT(req: Request) {
+  if (executorProxyEnabled()) return proxyExecutorRequest(req);
   const auth = await requireExecutorUser();
   if (auth.denied) return auth.denied;
   let body: Record<string, unknown>;

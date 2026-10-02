@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { executorProxyEnabled, proxyExecutorRequest } from '@/platform/executor/executor-proxy';
 import { store } from '@/platform/executor/store';
 import { lifecycle, requireExecutorUser } from '@/platform/executor/runtime';
 
@@ -11,7 +12,8 @@ export const revalidate = 0;
  * Cancels the execution and its managed child orders. It never closes the
  * position by itself (§75) — closing is a separate, explicit user action.
  */
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (executorProxyEnabled()) return proxyExecutorRequest(req);
   const auth = await requireExecutorUser();
   if (auth.denied) return auth.denied;
   const { id } = await params;

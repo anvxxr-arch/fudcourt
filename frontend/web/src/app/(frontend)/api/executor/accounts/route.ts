@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { executorProxyEnabled, proxyExecutorRequest } from '@/platform/executor/executor-proxy';
 import { store } from '@/platform/executor/store';
 import { connectAccount, listAccounts, requireExecutorUser } from '@/platform/executor/runtime';
 
@@ -6,7 +7,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 /** GET /api/executor/accounts — the session user's connected exchange accounts (PRD §97). */
-export async function GET() {
+export async function GET(req: Request) {
+  if (executorProxyEnabled()) return proxyExecutorRequest(req);
   const auth = await requireExecutorUser();
   if (auth.denied) return auth.denied;
   return NextResponse.json(await listAccounts(store, auth.user));
@@ -14,6 +16,7 @@ export async function GET() {
 
 /** POST /api/executor/accounts — BYOK connect (PRD §43-46). Secrets are sealed server-side and never returned. */
 export async function POST(req: Request) {
+  if (executorProxyEnabled()) return proxyExecutorRequest(req);
   const auth = await requireExecutorUser();
   if (auth.denied) return auth.denied;
   let body: Record<string, unknown>;

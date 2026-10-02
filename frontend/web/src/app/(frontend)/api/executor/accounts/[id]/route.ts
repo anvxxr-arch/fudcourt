@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { executorProxyEnabled, proxyExecutorRequest } from '@/platform/executor/executor-proxy';
 import { store } from '@/platform/executor/store';
 import { deleteAccount, notFound, requireExecutorUser } from '@/platform/executor/runtime';
 
@@ -8,7 +9,8 @@ export const revalidate = 0;
 type Params = { params: Promise<{ id: string }> };
 
 /** GET /api/executor/accounts/:id — one account, masked key only (PRD §87, §109). */
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(req: Request, { params }: Params) {
+  if (executorProxyEnabled()) return proxyExecutorRequest(req);
   const auth = await requireExecutorUser();
   if (auth.denied) return auth.denied;
   const { id } = await params;
@@ -18,7 +20,8 @@ export async function GET(_req: Request, { params }: Params) {
 }
 
 /** DELETE /api/executor/accounts/:id — revocation, never a plaintext round trip (PRD §87). */
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
+  if (executorProxyEnabled()) return proxyExecutorRequest(req);
   const auth = await requireExecutorUser();
   if (auth.denied) return auth.denied;
   const { id } = await params;

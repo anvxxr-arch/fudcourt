@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { executorProxyEnabled, proxyExecutorRequest } from '@/platform/executor/executor-proxy';
 import { store } from '@/platform/executor/store';
 import { createExecution, requireExecutorUser } from '@/platform/executor/runtime';
 import type { ExecutionRequest, ExecutionStatus } from '@/platform/executor/types';
@@ -9,6 +10,7 @@ export const revalidate = 0;
 
 /** GET /api/executor/executions?status= — the session user's execution history (PRD §97, §128.22). */
 export async function GET(req: Request) {
+  if (executorProxyEnabled()) return proxyExecutorRequest(req);
   const auth = await requireExecutorUser();
   if (auth.denied) return auth.denied;
   const status = new URL(req.url).searchParams.get('status');
@@ -27,6 +29,7 @@ export async function GET(req: Request) {
 
 /** POST /api/executor/executions — create with an immutable input snapshot (PRD §99). */
 export async function POST(req: Request) {
+  if (executorProxyEnabled()) return proxyExecutorRequest(req);
   const auth = await requireExecutorUser();
   if (auth.denied) return auth.denied;
   let body: ExecutionRequest;
