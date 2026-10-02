@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { Loading } from '@/components/ui/feedback';
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
+import { Toolbar } from '@/components/ui/toolbar';
 import { fmtRate, fmtTime } from '@/features/market/format';
 import type { ForexPair } from '@/features/market/forex/client';
 
@@ -49,25 +52,32 @@ export default function ForexBoard() {
     return () => clearInterval(t);
   }, [load]);
 
-  const th = (align: 'left' | 'right'): CSSProperties => ({
-    textAlign: align,
-    padding: space[6],
-    color: color.textMuted,
-    fontWeight: fontWeight.regular,
-  });
-  const td = (align: 'left' | 'right'): CSSProperties => ({ textAlign: align, padding: space[6] });
+  // `TH` already defaults `color` to `color.textMuted` and takes `align` as a prop; this
+  // board's headers carry `fontWeight.regular` on top of that (the shelf's shared style is
+  // capture-only and still defaults `semibold`), which rides the atom's last-wins spread.
+  const thStyle: CSSProperties = { padding: space[6], fontWeight: fontWeight.regular };
+  const tdStyle: CSSProperties = { padding: space[6] };
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'baseline',
-          gap: space[8],
-          flexWrap: 'wrap',
-          marginBottom: space[12],
-        }}
+      <Toolbar
+        style={{ alignItems: 'baseline', gap: space[8], flexWrap: 'wrap', marginBottom: space[12] }}
+        actions={
+          <button
+            onClick={load}
+            style={{
+              background: color.surface,
+              color: color.text,
+              border: `1px solid ${color.border}`,
+              padding: `${space[6]}px ${space[14]}px`,
+              borderRadius: radius[6],
+              fontSize: fontSize[11],
+              cursor: 'pointer',
+            }}
+          >
+            ↻ Refresh
+          </button>
+        }
       >
         <h3 style={{ color: color.accent, margin: 0 }}>
           Forex — major pairs
@@ -77,45 +87,31 @@ export default function ForexBoard() {
             {updated ? ` · updated ${fmtTime(updated)}` : ''}
           </span>
         </h3>
-        <button
-          onClick={load}
-          style={{
-            background: color.surface,
-            color: color.text,
-            border: `1px solid ${color.border}`,
-            padding: `${space[6]}px ${space[14]}px`,
-            borderRadius: radius[6],
-            fontSize: fontSize[11],
-            cursor: 'pointer',
-          }}
-        >
-          ↻ Refresh
-        </button>
-      </div>
+      </Toolbar>
 
       {error && <p style={{ color: color.negative, fontSize: fontSize[12] }}>{error}</p>}
 
       {loading ? (
-        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>Loading…</p>
+        <Loading />
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fontSize[12] }}>
-          <thead>
-            <tr style={{ borderBottom: `1px solid ${color.border}` }}>
-              <th style={th('left')}>Pair</th>
-              <th style={th('right')}>Rate</th>
-              <th style={th('right')}>Inverse</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <THead>
+            <TR>
+              <TH style={thStyle}>Pair</TH>
+              <TH align="right" style={thStyle}>Rate</TH>
+              <TH align="right" style={thStyle}>Inverse</TH>
+            </TR>
+          </THead>
+          <TBody>
             {pairs.map((p) => (
-              <tr key={p.pair} style={{ borderBottom: `1px solid ${color.border}` }}>
-                <td style={{ ...td('left'), fontWeight: fontWeight.bold, color: color.text }}>{p.pair}</td>
-                <td style={{ ...td('right'), color: color.accent }}>{fmtRate(p.rate)}</td>
-                <td style={{ ...td('right'), color: color.textMuted }}>{fmtRate(p.inverse)}</td>
-              </tr>
+              <TR key={p.pair}>
+                <TD style={{ ...tdStyle, fontWeight: fontWeight.bold, color: color.text }}>{p.pair}</TD>
+                <TD align="right" style={{ ...tdStyle, color: color.accent }}>{fmtRate(p.rate)}</TD>
+                <TD align="right" style={{ ...tdStyle, color: color.textMuted }}>{fmtRate(p.inverse)}</TD>
+              </TR>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       )}
 
       {derived && <p style={{ color: color.textMuted, fontSize: fontSize[10], marginTop: space[10] }}>{derived}</p>}

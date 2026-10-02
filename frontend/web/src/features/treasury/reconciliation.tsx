@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { C, Wallet, groupBy, groupSum } from '@/styles/shared';
+import { alpha, color, fontFamily, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
+import { EmptyState } from '@/components/ui/feedback';
+import { Wallet, groupBy, groupSum } from '@/styles/shared';
 import { Card } from '@/components/ui/primitives';
 
 type ReconRow = {
@@ -57,60 +59,60 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
 
   return (
     <div>
-      <h3 style={{ color: C.accent }}>Reconciliation</h3>
-      <p style={{ color: C.dim, fontSize: 12, marginBottom: 16 }}>
-        Cross-check: <b style={{ color: C.white }}>current balance</b> = sum(IN) − sum(OUT) per wallet/asset.
+      <h3 style={{ color: color.accent }}>Reconciliation</h3>
+      <p style={{ color: color.textMuted, fontSize: fontSize[12], marginBottom: space[16] }}>
+        Cross-check: <b style={{ color: color.text }}>current balance</b> = sum(IN) − sum(OUT) per wallet/asset.
         Non-zero diff = investigate.
       </p>
 
-      <div style={{ display: 'flex', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-        <Card style={{ borderLeft: `3px solid ${totalAbsDiff < 0.01 ? C.green : C.red}` }}>
-          <div style={{ color: C.dim, fontSize: 11 }}>NET DIFF</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: totalAbsDiff < 0.01 ? C.green : C.red }}>
+      <div style={{ display: 'flex', gap: space[16], marginBottom: space[20], flexWrap: 'wrap' }}>
+        <Card style={{ borderLeft: `3px solid ${totalAbsDiff < 0.01 ? color.accent : color.negative}` }}>
+          <div style={{ color: color.textMuted, fontSize: fontSize[11] }}>NET DIFF</div>
+          <div style={{ fontSize: fontSize[24], fontWeight: fontWeight.bold, color: totalAbsDiff < 0.01 ? color.accent : color.negative }}>
             ${totalAbsDiff.toFixed(2)}
           </div>
         </Card>
         <Card>
-          <div style={{ color: C.dim, fontSize: 11 }}>TOTAL CURRENT</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: C.accent }}>${totals.current.toFixed(2)}</div>
+          <div style={{ color: color.textMuted, fontSize: fontSize[11] }}>TOTAL CURRENT</div>
+          <div style={{ fontSize: fontSize[24], fontWeight: fontWeight.bold, color: color.accent }}>${totals.current.toFixed(2)}</div>
         </Card>
         <Card>
-          <div style={{ color: C.dim, fontSize: 11 }}>TOTAL EXPECTED</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: C.white }}>${totals.expected.toFixed(2)}</div>
+          <div style={{ color: color.textMuted, fontSize: fontSize[11] }}>TOTAL EXPECTED</div>
+          <div style={{ fontSize: fontSize[24], fontWeight: fontWeight.bold, color: color.text }}>${totals.expected.toFixed(2)}</div>
         </Card>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: space[10], marginBottom: space[16], flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search wallet or asset..."
           style={{
-            background: C.card, color: C.white, border: `1px solid ${C.border}`,
-            borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none', flex: 1, minWidth: 200,
+            background: color.surface, color: color.text, border: `1px solid ${color.border}`,
+            borderRadius: radius[8], padding: `${space[8]}px ${space[12]}px`, fontSize: fontSize[13], outline: 'none', flex: 1, minWidth: 200,
           }}
         />
-        <FilterBtn active={filter === 'diff'} onClick={() => setFilter('diff')} color={C.red}>
+        <FilterBtn active={filter === 'diff'} onClick={() => setFilter('diff')} tone={color.negative}>
           Suspicious ({rows.filter(r => Math.abs(r.diff) >= 0.01).length})
         </FilterBtn>
-        <FilterBtn active={filter === 'ok'} onClick={() => setFilter('ok')} color={C.green}>
+        <FilterBtn active={filter === 'ok'} onClick={() => setFilter('ok')} tone={color.accent}>
           Balanced ({rows.filter(r => Math.abs(r.diff) < 0.01).length})
         </FilterBtn>
-        <FilterBtn active={filter === 'all'} onClick={() => setFilter('all')} color={C.accent}>
+        <FilterBtn active={filter === 'all'} onClick={() => setFilter('all')} tone={color.accent}>
           All ({rows.length})
         </FilterBtn>
       </div>
 
       {filtered.length === 0 ? (
         <Card>
-          <div style={{ color: C.dim, textAlign: 'center', padding: 20 }}>
+          <EmptyState style={{ padding: space[20] }}>
             {filter === 'diff' ? 'No suspicious rows found ✓' : 'No rows found'}
-          </div>
+          </EmptyState>
         </Card>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fontSize[13] }}>
           <thead>
-            <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+            <tr style={{ borderBottom: `1px solid ${color.border}` }}>
               <Th>Wallet</Th>
               <Th>Asset</Th>
               <Th align="right">Current</Th>
@@ -125,36 +127,36 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
               const isBad = Math.abs(r.diff) >= 0.01;
               const w = walletMap[r.wallet];
               return (
-                <tr key={`${r.wallet}-${r.asset}-${i}`} style={{ borderBottom: `1px solid ${C.border}22` }}>
+                <tr key={`${r.wallet}-${r.asset}-${i}`} style={{ borderBottom: `1px solid ${alpha(color.border, 0x22 / 255)}` }}>
                   <Td>
-                    <span style={{ fontSize: 16 }}>{w?.emoji || '💰'}</span>{' '}
-                    <b style={{ color: w?.color || C.accent }}>{w?.alias || r.wallet}</b>
+                    <span style={{ fontSize: fontSize[16] }}>{w?.emoji || '💰'}</span>{' '}
+                    <b style={{ color: w?.color || color.accent }}>{w?.alias || r.wallet}</b>
                     {w?.alias && w.alias !== r.wallet && (
-                      <span style={{ color: C.dim, fontSize: 10, marginLeft: 6 }}>({r.wallet})</span>
+                      <span style={{ color: color.textMuted, fontSize: fontSize[10], marginLeft: space[6] }}>({r.wallet})</span>
                     )}
                   </Td>
                   <Td>
-                    <span style={{ color: C.accent }}>{r.asset}</span>
+                    <span style={{ color: color.accent }}>{r.asset}</span>
                   </Td>
-                  <Td align="right" style={{ color: C.white, fontFamily: 'monospace' }}>
+                  <Td align="right" style={{ color: color.text, fontFamily: fontFamily.mono }}>
                     {r.current.toFixed(6)}
                   </Td>
-                  <Td align="right" style={{ color: C.green, fontFamily: 'monospace' }}>
+                  <Td align="right" style={{ color: color.accent, fontFamily: fontFamily.mono }}>
                     {r.in_sum.toFixed(2)}
                   </Td>
-                  <Td align="right" style={{ color: C.red, fontFamily: 'monospace' }}>
+                  <Td align="right" style={{ color: color.negative, fontFamily: fontFamily.mono }}>
                     {r.out_sum.toFixed(2)}
                   </Td>
-                  <Td align="right" style={{ color: C.dim, fontFamily: 'monospace' }}>
+                  <Td align="right" style={{ color: color.textMuted, fontFamily: fontFamily.mono }}>
                     {r.expected.toFixed(2)}
                   </Td>
                   <Td
                     align="right"
                     style={{
-                      fontFamily: 'monospace',
-                      fontWeight: 700,
-                      color: isBad ? C.red : C.green,
-                      background: isBad ? `${C.red}11` : 'transparent',
+                      fontFamily: fontFamily.mono,
+                      fontWeight: fontWeight.bold,
+                      color: isBad ? color.negative : color.accent,
+                      background: isBad ? alpha(color.negative, 17 / 255) : 'transparent',
                     }}
                   >
                     {isBad ? '⚠️' : ''} {r.diff.toFixed(4)}
@@ -169,19 +171,19 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
   );
 }
 
-function FilterBtn({ active, onClick, children, color }: { active: boolean; onClick: () => void; children: React.ReactNode; color: string }) {
+function FilterBtn({ active, onClick, children, tone }: { active: boolean; onClick: () => void; children: React.ReactNode; tone: string }) {
   return (
     <button
       onClick={onClick}
       style={{
-        background: active ? color : C.card,
-        color: active ? '#04140f' : C.white,
-        border: `1px solid ${C.border}`,
-        borderRadius: 8,
-        padding: '8px 16px',
+        background: active ? tone : color.surface,
+        color: active ? color.textOnAccent : color.text,
+        border: `1px solid ${color.border}`,
+        borderRadius: radius[8],
+        padding: `${space[8]}px ${space[16]}px`,
         cursor: 'pointer',
-        fontSize: 12,
-        fontWeight: 600,
+        fontSize: fontSize[12],
+        fontWeight: fontWeight.semibold,
       }}
     >
       {children}
@@ -191,12 +193,12 @@ function FilterBtn({ active, onClick, children, color }: { active: boolean; onCl
 
 function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
   return (
-    <th style={{ padding: 8, textAlign: align, color: C.dim, fontSize: 11, fontWeight: 600, letterSpacing: 0.5 }}>
+    <th style={{ padding: space[8], textAlign: align, color: color.textMuted, fontSize: fontSize[11], fontWeight: fontWeight.semibold, letterSpacing: letterSpacing.sm }}>
       {children}
     </th>
   );
 }
 
 function Td({ children, align = 'left', style }: { children: React.ReactNode; align?: 'left' | 'right'; style?: React.CSSProperties }) {
-  return <td style={{ padding: 8, textAlign: align, ...style }}>{children}</td>;
+  return <td style={{ padding: space[8], textAlign: align, ...style }}>{children}</td>;
 }

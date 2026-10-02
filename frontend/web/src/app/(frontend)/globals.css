@@ -2,19 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
+/* @generated design-tokens:start — bun scripts/design/emit-tokens.ts */
 :root {
-  --background: 160 38% 5%;
-  --foreground: 150 30% 95%;
-  --card: 160 38% 10%;
-  --border: 156 35% 17%;
-  --primary: 153 74% 61%;
-  --destructive: 351 100% 72%;
-  --yellow: 40 90% 70%;
-  --muted: 158 18% 60%;
+  --fc-color-bg: #07110f;
+  --fc-color-surface: #0d1f1a;
+  --fc-color-border: #1c3a31;
+  --fc-color-text: #e8fff7;
+  --fc-color-textMuted: #6b8f82;
+  --fc-color-textOnAccent: #04140f;
+  --fc-color-textInverse: #ffffff;
+  --fc-color-accent: #3ddc97;
+  --fc-color-positive: #3ddc97;
+  --fc-color-negative: #ff6b6b;
+  --fc-color-warn: #ffd166;
+  --fc-color-attention: #ff9f43;
+  --fc-color-overlay: rgba(0,0,0,0.8);
+  --fc-font-mono: ui-monospace, monospace;
+  --fc-font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --fc-space-0: 0px;
+  --fc-space-4: 4px;
+  --fc-space-6: 6px;
+  --fc-space-8: 8px;
+  --fc-space-10: 10px;
+  --fc-space-12: 12px;
+  --fc-space-14: 14px;
+  --fc-space-16: 16px;
+  --fc-space-18: 18px;
+  --fc-space-20: 20px;
+  --fc-space-24: 24px;
+  --fc-space-28: 28px;
+  --fc-space-30: 30px;
+  --fc-space-32: 32px;
+  --fc-space-40: 40px;
+  --fc-radius-0: 0px;
+  --fc-radius-4: 4px;
+  --fc-radius-6: 6px;
+  --fc-radius-8: 8px;
+  --fc-radius-10: 10px;
+  --fc-radius-12: 12px;
+  --fc-radius-14: 14px;
+  --fc-radius-full: 9999px;
+  --fc-radius-circle: 50%;
+  --fc-font-size-9: 9px;
+  --fc-font-size-10: 10px;
+  --fc-font-size-11: 11px;
+  --fc-font-size-12: 12px;
+  --fc-font-size-13: 13px;
+  --fc-font-size-14: 14px;
+  --fc-font-size-16: 16px;
+  --fc-font-size-18: 18px;
+  --fc-font-size-20: 20px;
+  --fc-font-size-24: 24px;
+  --fc-font-size-32: 32px;
+  --fc-font-size-40: 40px;
+  --fc-font-weight-regular: 400;
+  --fc-font-weight-medium: 500;
+  --fc-font-weight-semibold: 600;
+  --fc-font-weight-bold: 700;
+  --fc-font-weight-heavy: 800;
+  --fc-line-height-tight: 1.3;
+  --fc-line-height-snug: 1.4;
+  --fc-line-height-relaxed: 1.5;
+  --fc-line-height-normal: 1.6;
+  --fc-line-height-loose: 1.7;
+  --fc-letter-spacing-none: 0;
+  --fc-letter-spacing-xs: 0.4;
+  --fc-letter-spacing-sm: 0.5;
+  --fc-letter-spacing-wide: 1;
+  --fc-letter-spacing-wider: 2;
+  --fc-z-index-modal: 100;
 }
+/* @generated design-tokens:end */
 
 body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--fc-color-bg);
+  color: var(--fc-color-text);
+  font-family: var(--fc-font-sans);
 }

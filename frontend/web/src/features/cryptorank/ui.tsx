@@ -1,7 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { C } from '@/styles/shared';
+import {
+  alpha,
+  color,
+  fontSize,
+  fontWeight,
+  letterSpacing,
+  lineHeight,
+  radius,
+  space,
+} from '@/styles/tokens';
+import { TBody, TD, TH, THead, TR, Table } from '@/components/ui/table';
 import {
   CR_BASE,
   CR_CATEGORY_SLUGS,
@@ -67,8 +77,8 @@ function pct(v: number | null | undefined): string {
 }
 
 function chgColor(v: number | null): string {
-  if (v == null) return C.dim;
-  return v > 0 ? C.green : v < 0 ? C.red : C.dim;
+  if (v == null) return color.textMuted;
+  return v > 0 ? color.positive : v < 0 ? color.negative : color.textMuted;
 }
 
 function shortDate(iso: string | null | undefined): string {
@@ -557,12 +567,12 @@ export default function CryptorankPage() {
   return (
     <div>
       {/* ------------------------------ header ------------------------------ */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 4 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: C.white }}>CryptoRank</div>
-        <a href={CR_BASE} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: C.accent }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: space[12], flexWrap: 'wrap', marginBottom: space[4] }}>
+        <div style={{ fontSize: fontSize[20], fontWeight: fontWeight.bold, color: color.text }}>CryptoRank</div>
+        <a href={CR_BASE} target="_blank" rel="noreferrer" style={{ fontSize: fontSize[11], color: color.accent }}>
           cryptorank.io ↗
         </a>
-        <div style={{ fontSize: 11, color: C.dim }}>
+        <div style={{ fontSize: fontSize[11], color: color.textMuted }}>
           SSR payload · refreshes {stamp(homeAt ?? marketAt)}
         </div>
         <button
@@ -577,8 +587,8 @@ export default function CryptorankPage() {
             void fetchChain(chainSlug, true);
           }}
           style={{
-            marginLeft: 'auto', fontSize: 11, color: C.bg, background: C.accent,
-            border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontWeight: 700,
+            marginLeft: 'auto', fontSize: fontSize[11], color: color.bg, background: color.accent,
+            border: 'none', borderRadius: radius[6], padding: `${space[4]}px ${space[12]}px`, cursor: 'pointer', fontWeight: fontWeight.bold,
           }}
         >
           ↻ refresh
@@ -586,7 +596,7 @@ export default function CryptorankPage() {
       </div>
 
       {homeErr && (
-        <div style={{ fontSize: 12, color: C.red, marginBottom: 8 }}>
+        <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[8] }}>
           ⚠ cryptorank home error: {homeErr} — nothing faked
           {homeStale && home ? ' · last good stats below, stamped' : ''}
         </div>
@@ -596,21 +606,21 @@ export default function CryptorankPage() {
       <div
         style={{
           display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-          gap: 8, marginBottom: 14,
+          gap: space[8], marginBottom: space[14],
         }}
       >
         <Stat label="Total market cap" value={money(global?.totalMarketCap)} sub={pct(global?.totalMarketCapChangePercent)} subColor={chgColor(global?.totalMarketCapChangePercent)} />
         <Stat label="24h volume" value={money(global?.totalVolume24h)} sub={pct(global?.totalVolume24hChangePercent)} subColor={chgColor(global?.totalVolume24hChangePercent)} />
         <Stat label="BTC dominance" value={global?.btcDominance != null ? `${global.btcDominance.toFixed(1)}%` : '—'} sub={pct(global?.btcDominanceChangePercent)} subColor={chgColor(global?.btcDominanceChangePercent)} />
         <Stat label="ETH dominance" value={global?.ethDominance != null ? `${global.ethDominance.toFixed(1)}%` : '—'} sub={pct(global?.ethDominanceChangePercent)} subColor={chgColor(global?.ethDominanceChangePercent)} />
-        <Stat label="Tracked assets" value={global?.allCurrencies != null ? global.allCurrencies.toLocaleString('en-US') : '—'} sub="" subColor={C.dim} />
-        <Stat label="Gas (avg)" value={global?.gasGwei != null ? `${global.gasGwei.toFixed(1)} gwei` : '—'} sub="" subColor={C.dim} />
+        <Stat label="Tracked assets" value={global?.allCurrencies != null ? global.allCurrencies.toLocaleString('en-US') : '—'} sub="" subColor={color.textMuted} />
+        <Stat label="Gas (avg)" value={global?.gasGwei != null ? `${global.gasGwei.toFixed(1)} gwei` : '—'} sub="" subColor={color.textMuted} />
       </div>
 
       {/* ------------------------ spotlight coin --------------------------- */}
-      <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12, marginBottom: 14 }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
-          <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Coin spotlight</div>
+      <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12], marginBottom: space[14] }}>
+        <div style={{ display: 'flex', gap: space[8], alignItems: 'center', marginBottom: space[8], flexWrap: 'wrap' }}>
+          <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>Coin spotlight</div>
           <input
             value={coinInput}
             onChange={(e) => setCoinInput(e.target.value.toLowerCase())}
@@ -622,8 +632,8 @@ export default function CryptorankPage() {
             }}
             placeholder="coin key (e.g. bitcoin)"
             style={{
-              fontSize: 12, padding: '4px 8px', borderRadius: 6, width: 180,
-              border: `1px solid ${C.border}`, background: C.bg, color: C.white,
+              fontSize: fontSize[12], padding: `${space[4]}px ${space[8]}px`, borderRadius: radius[6], width: 180,
+              border: `1px solid ${color.border}`, background: color.bg, color: color.text,
             }}
           />
           <button
@@ -632,8 +642,8 @@ export default function CryptorankPage() {
               void fetchDetail(coinInput.trim());
             }}
             style={{
-              fontSize: 11, padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
-              border: `1px solid ${C.accent}`, background: 'transparent', color: C.accent, fontWeight: 700,
+              fontSize: fontSize[11], padding: `${space[4]}px ${space[10]}px`, borderRadius: radius[6], cursor: 'pointer',
+              border: `1px solid ${color.accent}`, background: 'transparent', color: color.accent, fontWeight: fontWeight.bold,
             }}
           >
             load
@@ -643,71 +653,71 @@ export default function CryptorankPage() {
               href={`${CR_BASE}/price/${detail.key}`}
               target="_blank"
               rel="noreferrer"
-              style={{ fontSize: 11, color: C.accent, marginLeft: 'auto' }}
+              style={{ fontSize: fontSize[11], color: color.accent, marginLeft: 'auto' }}
             >
               {detail.name} ({detail.symbol}) ↗
             </a>
           )}
         </div>
         {detailErr && (
-          <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>
+          <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>
             ⚠ coin '{coinKey}' error: {detailErr} — nothing faked
           </div>
         )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
-          <Stat label="Price" value={money(detail?.priceUsd)} sub="" subColor={C.dim} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: space[8] }}>
+          <Stat label="Price" value={money(detail?.priceUsd)} sub="" subColor={color.textMuted} />
           <Stat
             label="Chg 24h (derived)"
             value={detail?.change24h != null ? pct(detail.change24h) : '—'}
             sub=""
             subColor={chgColor(detail?.change24h ?? null)}
           />
-          <Stat label="Market cap" value={money(detail?.marketCap)} sub={detail?.rank != null ? `rank #${detail.rank}` : ''} subColor={C.dim} />
-          <Stat label="Volume 24h" value={money(detail?.volume24h)} sub="" subColor={C.dim} />
+          <Stat label="Market cap" value={money(detail?.marketCap)} sub={detail?.rank != null ? `rank #${detail.rank}` : ''} subColor={color.textMuted} />
+          <Stat label="Volume 24h" value={money(detail?.volume24h)} sub="" subColor={color.textMuted} />
           <Stat
             label="ATH"
             value={money(detail?.athUsd)}
             sub={shortDate(detail?.athDate ?? null)}
-            subColor={C.dim}
+            subColor={color.textMuted}
           />
           <Stat
             label="From ATL"
             value={detail?.fromAtlPct != null ? pct(detail.fromAtlPct) : '—'}
             sub={shortDate(detail?.atlDate ?? null)}
-            subColor={C.dim}
+            subColor={color.textMuted}
           />
           <Stat
             label="Circulating"
             value={supply(detail?.availableSupply, detail?.symbol)}
             sub={detail?.circulatingPct != null ? `${detail.circulatingPct.toFixed(1)}% of total` : ''}
-            subColor={C.dim}
+            subColor={color.textMuted}
           />
-          <Stat label="Max supply" value={detail?.maxSupply != null ? detail.maxSupply.toLocaleString('en-US') : '—'} sub="" subColor={C.dim} />
+          <Stat label="Max supply" value={detail?.maxSupply != null ? detail.maxSupply.toLocaleString('en-US') : '—'} sub="" subColor={color.textMuted} />
         </div>
-        <div style={{ fontSize: 10, color: C.dim, marginTop: 6 }}>
+        <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[6] }}>
           source: /price/{coinKey} SSR payload (3-gate verified) · chg24h derived from histPrices["24H"] anchor ·
           sparse fields render em-dash, never 0
         </div>
       </div>
 
       {/* --------------------------- market table --------------------------- */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: space[6], marginBottom: space[8], alignItems: 'center', flexWrap: 'wrap' }}>
         {MARKET_TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             style={{
-              fontSize: 11, padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
-              border: `1px solid ${tab === t.key ? C.accent : C.border}`,
-              background: tab === t.key ? C.accent : 'transparent',
-              color: tab === t.key ? C.bg : C.dim,
-              fontWeight: tab === t.key ? 700 : 400,
+              fontSize: fontSize[11], padding: `${space[4]}px ${space[10]}px`, borderRadius: radius[6], cursor: 'pointer',
+              border: `1px solid ${tab === t.key ? color.accent : color.border}`,
+              background: tab === t.key ? color.accent : 'transparent',
+              color: tab === t.key ? color.bg : color.textMuted,
+              fontWeight: tab === t.key ? fontWeight.bold : fontWeight.regular,
             }}
           >
             {t.label}
           </button>
         ))}
-        <div style={{ marginLeft: 'auto', fontSize: 11, color: C.dim }}>
+        <div style={{ marginLeft: 'auto', fontSize: fontSize[11], color: color.textMuted }}>
           {market &&
             `${market.count} rows` +
             (market.upstreamTotal && market.upstreamTotal !== market.count
@@ -717,63 +727,63 @@ export default function CryptorankPage() {
       </div>
 
       {marketErr && (
-        <div style={{ fontSize: 12, color: C.red, marginBottom: 8 }}>
+        <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[8] }}>
           ⚠ cryptorank {tab} error: {marketErr} — no data faked
           {marketStale && market ? ' · showing last good rows, stamped' : ''}
         </div>
       )}
 
-      <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, overflow: 'hidden', background: C.card }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-          <thead>
-            <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+      <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], overflow: 'hidden', background: color.surface }}>
+        <Table>
+          <THead>
+            <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
               {colHead.map((h) => (
-                <th key={h} style={{ padding: '8px 10px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>{h}</th>
+                <TH key={h} style={{ padding: `${space[8]}px ${space[10]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>{h}</TH>
               ))}
             </tr>
-          </thead>
-          <tbody>
+          </THead>
+          <TBody>
             {loadingMarket && !market && (
-              <tr><td colSpan={colHead.length} style={{ padding: 16, color: C.dim }}>loading…</td></tr>
+              <tr><TD colSpan={colHead.length} style={{ padding: space[16], color: color.textMuted }}>loading…</TD></tr>
             )}
             {!loadingMarket && !market && !marketErr && (
-              <tr><td colSpan={colHead.length} style={{ padding: 16, color: C.dim }}>no data</td></tr>
+              <tr><TD colSpan={colHead.length} style={{ padding: space[16], color: color.textMuted }}>no data</TD></tr>
             )}
             {rows.map((r) => (
-              <tr key={`${r.key}-${r.rank}`} style={{ borderBottom: `1px solid ${C.border}` }}>
-                <td style={{ padding: '7px 10px', color: C.dim, width: 34 }}>{r.rank ?? '—'}</td>
+              <TR key={`${r.key}-${r.rank}`}>
+                <td style={{ padding: '7px 10px', color: color.textMuted, width: 34 }}>{r.rank ?? '—'}</td>
                 <td style={{ padding: '7px 10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: space[8] }}>
                     {r.image && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.image} alt="" width={18} height={18} style={{ borderRadius: '50%' }} />
+                      <img src={r.image} alt="" width={18} height={18} style={{ borderRadius: radius.circle }} />
                     )}
                     <div>
-                      <span style={{ color: C.white }}>{r.name}</span>
-                      <span style={{ color: C.dim, marginLeft: 6, fontSize: 11 }}>{r.symbol}</span>
+                      <span style={{ color: color.text }}>{r.name}</span>
+                      <span style={{ color: color.textMuted, marginLeft: space[6], fontSize: fontSize[11] }}>{r.symbol}</span>
                     </div>
                   </div>
                 </td>
-                <td style={{ padding: '7px 10px', color: C.white }}>{money(r.priceUsd)}</td>
+                <td style={{ padding: '7px 10px', color: color.text }}>{money(r.priceUsd)}</td>
                 {!isPlain && (
                   <td style={{ padding: '7px 10px', color: chgColor(r.change24h), fontVariantNumeric: 'tabular-nums' }}>
                     {pct(r.change24h)}
                   </td>
                 )}
-                <td style={{ padding: '7px 10px', color: C.white }}>{money(r.marketCap)}</td>
-                <td style={{ padding: '7px 10px', color: C.white }}>{moneyCompact(r.volume24hUsd)}</td>
+                <td style={{ padding: '7px 10px', color: color.text }}>{money(r.marketCap)}</td>
+                <td style={{ padding: '7px 10px', color: color.text }}>{moneyCompact(r.volume24hUsd)}</td>
                 {isPlain && (
-                  <td style={{ padding: '7px 10px', color: C.dim }}>
+                  <td style={{ padding: '7px 10px', color: color.textMuted }}>
                     {money((r as CrCoin).athUsd)}
                   </td>
                 )}
-              </tr>
+              </TR>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
 
-      <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+      <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>
         {tab === 'coins' && 'source: /all-coins-list SSR payload · 24h change ships on trending/gainers pages only → em-dash where upstream gives none'}
         {tab === 'trending' && 'source: /trending SSR payload · chg 24h is an upstream field'}
         {(tab === 'gainers' || tab === 'losers') &&
@@ -782,74 +792,74 @@ export default function CryptorankPage() {
 
       {/* -------------------------- listings ------------------------------ */}
       {listingsErr && (
-        <div style={{ fontSize: 12, color: C.red, marginTop: 14 }}>
+        <div style={{ fontSize: fontSize[12], color: color.negative, marginTop: space[14] }}>
           ⚠ listings error: {listingsErr} — nothing faked
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 10, marginTop: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: space[10], marginTop: space[16] }}>
         {([
           ['Recently added', listings?.listings?.recentlyAdded, true],
           ['Most searched', listings?.listings?.mostSearched, false],
           ['Most visited', listings?.listings?.mostVisited, false],
         ] as const).map(([title, rowsL, showDate]) => (
-          <div key={title} style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-              <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>{title}</div>
-              <div style={{ fontSize: 10, color: C.dim }}>{rowsL?.length ?? '—'} coins</div>
+          <div key={title} style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6] }}>
+              <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>{title}</div>
+              <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{rowsL?.length ?? '—'} coins</div>
             </div>
             <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                <thead>
-                  <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                    <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
-                    <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Coin</th>
-                    <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Price</th>
-                    <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Chg 24h</th>
-                    <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Chg 7d</th>
+              <Table>
+                <THead>
+                  <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
+                    <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>#</TH>
+                    <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Coin</TH>
+                    <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Price</TH>
+                    <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Chg 24h</TH>
+                    <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Chg 7d</TH>
                   </tr>
-                </thead>
-                <tbody>
+                </THead>
+                <TBody>
                   {!listings && !listingsErr && (
-                    <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                    <tr><TD colSpan={5} style={{ padding: space[10], color: color.textMuted }}>loading…</TD></tr>
                   )}
                   {(rowsL ?? []).map((c) => (
-                    <tr key={`${c.key}-${c.rank}`} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '5px 5px', color: C.dim, width: 24 }}>{c.rank ?? '—'}</td>
+                    <TR key={`${c.key}-${c.rank}`}>
+                      <td style={{ padding: '5px 5px', color: color.textMuted, width: space[24] }}>{c.rank ?? '—'}</td>
                       <td style={{ padding: '5px 5px' }}>
-                        <div style={{ color: C.white }}>{c.name}</div>
-                        <div style={{ color: C.dim, fontSize: 10 }}>
+                        <div style={{ color: color.text }}>{c.name}</div>
+                        <div style={{ color: color.textMuted, fontSize: fontSize[10] }}>
                           {c.symbol}{showDate && c.listingDate ? ` · ${shortDate(c.listingDate)}` : ''}
                         </div>
                       </td>
-                      <td style={{ padding: '5px 5px', color: C.white }}>{money(c.priceUsd)}</td>
+                      <td style={{ padding: '5px 5px', color: color.text }}>{money(c.priceUsd)}</td>
                       <td style={{ padding: '5px 5px', color: chgColor(c.change24h) }}>{pct(c.change24h)}</td>
                       <td style={{ padding: '5px 5px', color: chgColor(c.change7d ?? null)}}>{pct(c.change7d ?? null)}</td>
-                    </tr>
+                    </TR>
                   ))}
-                </tbody>
-              </table>
+                </TBody>
+              </Table>
             </div>
           </div>
         ))}
       </div>
-      <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+      <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>
         {listings?.slice ?? 'source: /listings SSR payload'}
       </div>
 
       {/* ------------------- sectors + exchanges --------------------------- */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, marginTop: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: space[10], marginTop: space[16] }}>
         {/* sectors (categories, keyed) */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8 }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8] }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>
               Sectors{cat?.category ? `: ${cat.category.name}` : ''}
             </div>
             <select
               value={catSlug}
               onChange={(e) => setCatSlug(e.target.value)}
               style={{
-                fontSize: 11, padding: '3px 6px', borderRadius: 6,
-                border: `1px solid ${C.border}`, background: C.bg, color: C.white,
+                fontSize: fontSize[11], padding: '3px 6px', borderRadius: radius[6],
+                border: `1px solid ${color.border}`, background: color.bg, color: color.text,
               }}
             >
               {CR_CATEGORY_SLUGS.map((s) => (
@@ -858,159 +868,159 @@ export default function CryptorankPage() {
             </select>
           </div>
           {cat?.category && (
-            <div style={{ fontSize: 10, color: C.dim, marginBottom: 6 }}>
-              breadth: <span style={{ color: C.green }}>{cat.category.gainers ?? '—'} gainers</span>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted, marginBottom: space[6] }}>
+              breadth: <span style={{ color: color.positive }}>{cat.category.gainers ?? '—'} gainers</span>
               {' / '}
-              <span style={{ color: C.red }}>{cat.category.losers ?? '—'} losers</span>
+              <span style={{ color: color.negative }}>{cat.category.losers ?? '—'} losers</span>
             </div>
           )}
           {catErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ sector '{catSlug}' error: {catErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ sector '{catSlug}' error: {catErr} — nothing faked</div>
           )}
           <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Coin</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Price</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Mcap</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Vol 24h</th>
+            <Table>
+              <THead>
+                <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>#</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Coin</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Price</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Mcap</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Vol 24h</TH>
                 </tr>
-              </thead>
-              <tbody>
+              </THead>
+              <TBody>
                 {!cat && !catErr && (
-                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  <tr><TD colSpan={5} style={{ padding: space[10], color: color.textMuted }}>loading…</TD></tr>
                 )}
                 {(cat?.rows ?? []).map((r0) => {
                   const c = r0 as CrCoin;
                   return (
-                    <tr key={`${c.key}-${c.rank}`} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '5px 6px', color: C.dim, width: 28 }}>{c.rank ?? '—'}</td>
+                    <TR key={`${c.key}-${c.rank}`}>
+                      <td style={{ padding: '5px 6px', color: color.textMuted, width: space[28] }}>{c.rank ?? '—'}</td>
                       <td style={{ padding: '5px 6px' }}>
-                        <span style={{ color: C.white }}>{c.name}</span>
-                        <span style={{ color: C.dim, marginLeft: 5, fontSize: 10 }}>{c.symbol}</span>
+                        <span style={{ color: color.text }}>{c.name}</span>
+                        <span style={{ color: color.textMuted, marginLeft: 5, fontSize: fontSize[10] }}>{c.symbol}</span>
                       </td>
-                      <td style={{ padding: '5px 6px', color: C.white }}>{money(c.priceUsd)}</td>
-                      <td style={{ padding: '5px 6px', color: C.white }}>{money(c.marketCap)}</td>
-                      <td style={{ padding: '5px 6px', color: C.white }}>{moneyCompact(c.volume24hUsd)}</td>
-                    </tr>
+                      <td style={{ padding: '5px 6px', color: color.text }}>{money(c.priceUsd)}</td>
+                      <td style={{ padding: '5px 6px', color: color.text }}>{money(c.marketCap)}</td>
+                      <td style={{ padding: '5px 6px', color: color.text }}>{moneyCompact(c.volume24hUsd)}</td>
+                    </TR>
                   );
                 })}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>
             {cat?.slice ?? ''} · chg24h ships nowhere on this surface → column omitted upstream, not faked
           </div>
         </div>
 
         {/* exchanges (spot CEX list) */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8], flexWrap: 'wrap' }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>
               Exchanges{exKey === 'dex/spot' ? ' (DEX spot)' : exKey === 'perpetuals' ? ' (perpetuals)' : exKey === 'cex-transparency' ? ' (reserve transparency)' : ' (CEX spot)'}
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ display: 'flex', gap: space[4] }}>
               {([['cex/spot', 'CEX'], ['dex/spot', 'DEX'], ['perpetuals', 'Perps'], ['cex-transparency', 'Reserves']] as const).map(([k, l]) => (
                 <button
                   key={k}
                   onClick={() => setExKey(k)}
                   style={{
-                    fontSize: 10, padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
-                    border: `1px solid ${exKey === k ? C.accent : C.border}`,
-                    background: exKey === k ? C.accent : 'transparent',
-                    color: exKey === k ? C.bg : C.dim,
-                    fontWeight: exKey === k ? 700 : 400,
+                    fontSize: fontSize[10], padding: '3px 8px', borderRadius: radius[6], cursor: 'pointer',
+                    border: `1px solid ${exKey === k ? color.accent : color.border}`,
+                    background: exKey === k ? color.accent : 'transparent',
+                    color: exKey === k ? color.bg : color.textMuted,
+                    fontWeight: exKey === k ? fontWeight.bold : fontWeight.regular,
                   }}
                 >
                   {l}
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: 10, color: C.dim }}>{ex?.count ?? '—'} venues</div>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{ex?.count ?? '—'} venues</div>
           </div>
           {exErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ exchanges error: {exErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ exchanges error: {exErr} — nothing faked</div>
           )}
           <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Exchange</th>
+            <Table>
+              <THead>
+                <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>#</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Exchange</TH>
                   {exKey === 'cex-transparency' ? (
                     <>
-                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Reserves</th>
-                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Clean</th>
-                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Stable %</th>
-                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Wallets</th>
+                      <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Reserves</TH>
+                      <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Clean</TH>
+                      <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Stable %</TH>
+                      <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Wallets</TH>
                     </>
                   ) : (
                     <>
-                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>24h vol</th>
-                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Share</th>
-                      <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Pairs</th>
+                      <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>24h vol</TH>
+                      <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Share</TH>
+                      <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Pairs</TH>
                     </>
                   )}
                 </tr>
-              </thead>
-              <tbody>
+              </THead>
+              <TBody>
                 {!ex && !exErr && (
-                  <tr><td colSpan={exKey === 'cex-transparency' ? 6 : 5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  <tr><TD colSpan={exKey === 'cex-transparency' ? 6 : 5} style={{ padding: space[10], color: color.textMuted }}>loading…</TD></tr>
                 )}
                 {((ex?.rows ?? []) as CrExchangeRow[]).map((e0) => (
-                  <tr key={e0.key} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: '5px 6px', color: C.dim, width: 28 }}>{e0.rank ?? '—'}</td>
+                  <TR key={e0.key}>
+                    <td style={{ padding: '5px 6px', color: color.textMuted, width: space[28] }}>{e0.rank ?? '—'}</td>
                     <td style={{ padding: '5px 6px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                         {e0.image && (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={e0.image} alt="" width={16} height={16} style={{ borderRadius: '50%' }} />
+                          <img src={e0.image} alt="" width={16} height={16} style={{ borderRadius: radius.circle }} />
                         )}
-                        <span style={{ color: C.white }}>{e0.name}</span>
+                        <span style={{ color: color.text }}>{e0.name}</span>
                       </div>
                     </td>
                     {exKey === 'cex-transparency' ? (
                       <>
-                        <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>{moneyCompact(e0.reservesUsd)}</td>
-                        <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>{moneyCompact(e0.cleanReservesUsd)}</td>
-                        <td style={{ padding: '5px 6px', color: C.accent, whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '5px 6px', color: color.text, whiteSpace: 'nowrap' }}>{moneyCompact(e0.reservesUsd)}</td>
+                        <td style={{ padding: '5px 6px', color: color.text, whiteSpace: 'nowrap' }}>{moneyCompact(e0.cleanReservesUsd)}</td>
+                        <td style={{ padding: '5px 6px', color: color.accent, whiteSpace: 'nowrap' }}>
                           {e0.stablecoinsPercent != null ? `${e0.stablecoinsPercent.toFixed(1)}%` : '—'}
                         </td>
-                        <td style={{ padding: '5px 6px', color: C.dim }}>{e0.walletsCount ?? '—'}</td>
+                        <td style={{ padding: '5px 6px', color: color.textMuted }}>{e0.walletsCount ?? '—'}</td>
                       </>
                     ) : (
                       <>
-                        <td style={{ padding: '5px 6px', color: C.white }}>{moneyCompact(e0.dayVolUsd)}</td>
-                        <td style={{ padding: '5px 6px', color: C.accent, whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '5px 6px', color: color.text }}>{moneyCompact(e0.dayVolUsd)}</td>
+                        <td style={{ padding: '5px 6px', color: color.accent, whiteSpace: 'nowrap' }}>
                           {e0.percentVolume != null ? `${e0.percentVolume.toFixed(1)}%` : '—'}
                         </td>
-                        <td style={{ padding: '5px 6px', color: C.dim }}>{e0.pairsCount ?? '—'}</td>
+                        <td style={{ padding: '5px 6px', color: color.textMuted }}>{e0.pairsCount ?? '—'}</td>
                       </>
                     )}
-                  </tr>
+                  </TR>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>
             {ex?.slice ?? ''}
           </div>
         </div>
 
         {/* chain ecosystem (indexed selector + keyed detail) */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8 }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8] }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>
               Chain{chain?.chain ? `: ${chain.chain.name}` : ''}
             </div>
             <select
               value={chainSlug}
               onChange={(e) => setChainSlug(e.target.value)}
               style={{
-                fontSize: 11, padding: '3px 6px', borderRadius: 6, maxWidth: 170,
-                border: `1px solid ${C.border}`, background: C.bg, color: C.white,
+                fontSize: fontSize[11], padding: '3px 6px', borderRadius: radius[6], maxWidth: 170,
+                border: `1px solid ${color.border}`, background: color.bg, color: color.text,
               }}
             >
               {(chainRows.length
@@ -1022,12 +1032,12 @@ export default function CryptorankPage() {
             </select>
           </div>
           {chain?.chain && (
-            <div style={{ fontSize: 10, color: C.dim, marginBottom: 6 }}>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted, marginBottom: space[6] }}>
               network {chain.chain.network ?? '—'} · mcap {money(chain.chain.marketCap)}
               {chain.chain.explorerUrl && (
                 <>
                   {' · '}
-                  <a href={chain.chain.explorerUrl} target="_blank" rel="noreferrer" style={{ color: C.accent }}>
+                  <a href={chain.chain.explorerUrl} target="_blank" rel="noreferrer" style={{ color: color.accent }}>
                     explorer ↗
                   </a>
                 </>
@@ -1035,40 +1045,40 @@ export default function CryptorankPage() {
             </div>
           )}
           {chainErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ chain '{chainSlug}' error: {chainErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ chain '{chainSlug}' error: {chainErr} — nothing faked</div>
           )}
           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
-                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Token</th>
-                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Price</th>
-                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Mcap</th>
+            <Table>
+              <THead>
+                <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
+                  <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>#</TH>
+                  <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Token</TH>
+                  <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Price</TH>
+                  <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Mcap</TH>
                 </tr>
-              </thead>
-              <tbody>
+              </THead>
+              <TBody>
                 {!chain && !chainErr && (
-                  <tr><td colSpan={4} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  <tr><TD colSpan={4} style={{ padding: space[10], color: color.textMuted }}>loading…</TD></tr>
                 )}
                 {(chain?.rows ?? []).slice(0, 100).map((r0) => {
                   const c = r0 as CrCoin;
                   return (
-                    <tr key={`${c.key}-${c.rank}`} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '5px 5px', color: C.dim, width: 26 }}>{c.rank ?? '—'}</td>
+                    <TR key={`${c.key}-${c.rank}`}>
+                      <td style={{ padding: '5px 5px', color: color.textMuted, width: 26 }}>{c.rank ?? '—'}</td>
                       <td style={{ padding: '5px 5px' }}>
-                        <span style={{ color: C.white }}>{c.name}</span>
-                        <span style={{ color: C.dim, marginLeft: 5, fontSize: 10 }}>{c.symbol}</span>
+                        <span style={{ color: color.text }}>{c.name}</span>
+                        <span style={{ color: color.textMuted, marginLeft: 5, fontSize: fontSize[10] }}>{c.symbol}</span>
                       </td>
-                      <td style={{ padding: '5px 5px', color: C.white }}>{money(c.priceUsd)}</td>
-                      <td style={{ padding: '5px 5px', color: C.white }}>{money(c.marketCap)}</td>
-                    </tr>
+                      <td style={{ padding: '5px 5px', color: color.text }}>{money(c.priceUsd)}</td>
+                      <td style={{ padding: '5px 5px', color: color.text }}>{money(c.marketCap)}</td>
+                    </TR>
                   );
                 })}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>
             {chain
               ? `showing ${Math.min(100, chain.count)} of ${chain.count} ecosystem tokens · ${chain.slice ?? ''}`
               : ''}
@@ -1076,17 +1086,17 @@ export default function CryptorankPage() {
         </div>
 
         {/* tag taxonomy (index-fed selector + keyed coin list) */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8 }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8] }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>
               Tag{tag?.tag ? `: ${tag.tag.name}` : ''}
             </div>
             <select
               value={tagSlug}
               onChange={(e) => setTagSlug(e.target.value)}
               style={{
-                fontSize: 11, padding: '3px 6px', borderRadius: 6, maxWidth: 170,
-                border: `1px solid ${C.border}`, background: C.bg, color: C.white,
+                fontSize: fontSize[11], padding: '3px 6px', borderRadius: radius[6], maxWidth: 170,
+                border: `1px solid ${color.border}`, background: color.bg, color: color.text,
               }}
             >
               {(tagRows.length
@@ -1098,45 +1108,45 @@ export default function CryptorankPage() {
             </select>
           </div>
           {tag?.tag && (
-            <div style={{ fontSize: 10, color: C.dim, marginBottom: 6 }}>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted, marginBottom: space[6] }}>
               {tag.tag.subtitle ?? '—'}
             </div>
           )}
           {tagErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ tag '{tagSlug}' error: {tagErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ tag '{tagSlug}' error: {tagErr} — nothing faked</div>
           )}
           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
-                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Token</th>
-                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Price</th>
-                  <th style={{ padding: '6px 5px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Mcap</th>
+            <Table>
+              <THead>
+                <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
+                  <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>#</TH>
+                  <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Token</TH>
+                  <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Price</TH>
+                  <TH style={{ padding: '6px 5px', borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Mcap</TH>
                 </tr>
-              </thead>
-              <tbody>
+              </THead>
+              <TBody>
                 {!tag && !tagErr && (
-                  <tr><td colSpan={4} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  <tr><TD colSpan={4} style={{ padding: space[10], color: color.textMuted }}>loading…</TD></tr>
                 )}
                 {(tag?.rows ?? []).slice(0, 100).map((r0) => {
                   const c = r0 as CrCoin;
                   return (
-                    <tr key={`${c.key}-${c.rank}`} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '5px 5px', color: C.dim, width: 26 }}>{c.rank ?? '—'}</td>
+                    <TR key={`${c.key}-${c.rank}`}>
+                      <td style={{ padding: '5px 5px', color: color.textMuted, width: 26 }}>{c.rank ?? '—'}</td>
                       <td style={{ padding: '5px 5px' }}>
-                        <span style={{ color: C.white }}>{c.name}</span>
-                        <span style={{ color: C.dim, marginLeft: 5, fontSize: 10 }}>{c.symbol}</span>
+                        <span style={{ color: color.text }}>{c.name}</span>
+                        <span style={{ color: color.textMuted, marginLeft: 5, fontSize: fontSize[10] }}>{c.symbol}</span>
                       </td>
-                      <td style={{ padding: '5px 5px', color: C.white }}>{money(c.priceUsd)}</td>
-                      <td style={{ padding: '5px 5px', color: C.white }}>{money(c.marketCap)}</td>
-                    </tr>
+                      <td style={{ padding: '5px 5px', color: color.text }}>{money(c.priceUsd)}</td>
+                      <td style={{ padding: '5px 5px', color: color.text }}>{money(c.marketCap)}</td>
+                    </TR>
                   );
                 })}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>
             {tag
               ? `showing ${Math.min(100, tag.count)} of ${tag.count} tagged coins · ${tag.slice ?? ''}`
               : ''}
@@ -1145,24 +1155,24 @@ export default function CryptorankPage() {
       </div>
 
       {/* -------------------------- news feed ------------------------------- */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, marginTop: 16 }}>
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Latest news</div>
-            <div style={{ fontSize: 10, color: C.dim }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: space[10], marginTop: space[16] }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8], flexWrap: 'wrap' }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>Latest news</div>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>
               {news ? `${news.count} items` : '—'} · links out to original publishers
             </div>
           </div>
           {newsErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ news error: {newsErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ news error: {newsErr} — nothing faked</div>
           )}
           <div style={{ maxHeight: 320, overflowY: 'auto' }}>
             {(news?.newsRows ?? []).map((n0) => (
-              <div key={n0.id ?? n0.title} style={{ padding: '7px 2px', borderBottom: `1px solid ${C.border}` }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+              <div key={n0.id ?? n0.title} style={{ padding: '7px 2px', borderBottom: `1px solid ${color.border}` }}>
+                <div style={{ display: 'flex', gap: space[8], alignItems: 'baseline' }}>
                   <span style={{
-                    fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5,
-                    color: n0.status === 'bullish' ? '#3fb950' : n0.status === 'bearish' ? C.red : C.dim,
+                    fontSize: fontSize[9], fontWeight: fontWeight.bold, textTransform: 'uppercase', letterSpacing: letterSpacing.sm,
+                    color: n0.status === 'bullish' ? color.positive : n0.status === 'bearish' ? color.negative : color.textMuted,
                     minWidth: 46,
                   }}>
                     {n0.status ?? '—'}
@@ -1171,12 +1181,12 @@ export default function CryptorankPage() {
                     href={n0.url ?? undefined}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ color: C.white, fontSize: 12, textDecoration: 'none', flex: 1 }}
+                    style={{ color: color.text, fontSize: fontSize[12], textDecoration: 'none', flex: 1 }}
                   >
                     {n0.title}{n0.url ? ' ↗' : ''}
                   </a>
                 </div>
-                <div style={{ fontSize: 10, color: C.dim, marginLeft: 54, marginTop: 2 }}>
+                <div style={{ fontSize: fontSize[10], color: color.textMuted, marginLeft: 54, marginTop: 2 }}>
                   {n0.source ?? '—'} · {n0.date ? shortDate(n0.date) : '—'}
                   {n0.readingMinutes != null ? ` · ${n0.readingMinutes.toFixed(1)} min` : ''}
                   {n0.relatedCoins.length
@@ -1186,253 +1196,253 @@ export default function CryptorankPage() {
               </div>
             ))}
             {!news && !newsErr && (
-              <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>loading…</div>
+              <div style={{ padding: space[10], color: color.textMuted, fontSize: fontSize[12] }}>loading…</div>
             )}
             {news && (news.newsRows ?? []).length === 0 && (
-              <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>upstream shipped no rows — nothing faked</div>
+              <div style={{ padding: space[10], color: color.textMuted, fontSize: fontSize[12] }}>upstream shipped no rows — nothing faked</div>
             )}
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{news?.slice ?? ''}</div>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>{news?.slice ?? ''}</div>
         </div>
       </div>
 
       {/* -------------------------- fundraising ----------------------------- */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 10, marginTop: 16 }}>
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Recent funding rounds</div>
-            <div style={{ fontSize: 10, color: C.dim }}>{home?.fundingRounds?.length ?? '—'} · homepage slice</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: space[10], marginTop: space[16] }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6] }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>Recent funding rounds</div>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{home?.fundingRounds?.length ?? '—'} · homepage slice</div>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <tbody>
+          <Table>
+            <TBody>
               {(home?.fundingRounds ?? []).map((f, i) => (
-                <tr key={`${f.coinKey}-${f.date}-${i}`} style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <td style={{ padding: '6px 4px', color: C.dim, whiteSpace: 'nowrap' }}>{shortDate(f.date)}</td>
-                  <td style={{ padding: '6px 4px' }}>
-                    <div style={{ color: C.white }}>{f.coinName ?? '—'}</div>
-                    <div style={{ fontSize: 10, color: C.dim }}>{f.funds.slice(0, 3).join(', ') || '—'}</div>
+                <TR key={`${f.coinKey}-${f.date}-${i}`}>
+                  <td style={{ padding: `${space[6]}px ${space[4]}px`, color: color.textMuted, whiteSpace: 'nowrap' }}>{shortDate(f.date)}</td>
+                  <td style={{ padding: `${space[6]}px ${space[4]}px` }}>
+                    <div style={{ color: color.text }}>{f.coinName ?? '—'}</div>
+                    <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{f.funds.slice(0, 3).join(', ') || '—'}</div>
                   </td>
-                  <td style={{ padding: '6px 4px', color: C.accent, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: `${space[6]}px ${space[4]}px`, color: color.accent, textAlign: 'right', whiteSpace: 'nowrap' }}>
                     {f.type ?? '—'}
                   </td>
-                  <td style={{ padding: '6px 4px', color: C.white, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: `${space[6]}px ${space[4]}px`, color: color.text, textAlign: 'right', whiteSpace: 'nowrap' }}>
                     {moneyCompact(f.raiseUsd)}
                   </td>
-                </tr>
+                </TR>
               ))}
               {!home && !homeErr && (
-                <tr><td style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                <tr><td style={{ padding: space[10], color: color.textMuted }}>loading…</td></tr>
               )}
               {home && (home.fundingRounds ?? []).length === 0 && (
-                <tr><td style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                <tr><td style={{ padding: space[10], color: color.textMuted }}>upstream shipped no rows — nothing faked</td></tr>
               )}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
 
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Upcoming IDO / IEO</div>
-            <div style={{ fontSize: 10, color: C.dim }}>{home?.upcomingIco?.length ?? '—'} · homepage slice</div>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6] }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>Upcoming IDO / IEO</div>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{home?.upcomingIco?.length ?? '—'} · homepage slice</div>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <tbody>
+          <Table>
+            <TBody>
               {(home?.upcomingIco ?? []).map((ic, i) => (
-                <tr key={`${ic.key}-${i}`} style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <td style={{ padding: '6px 4px', color: C.dim, whiteSpace: 'nowrap' }}>{shortDate(ic.date)}</td>
-                  <td style={{ padding: '6px 4px' }}>
-                    <span style={{ color: C.white }}>{ic.name ?? '—'}</span>
-                    <span style={{ color: C.dim, marginLeft: 6, fontSize: 11 }}>{ic.symbol ?? ''}</span>
-                    <div style={{ fontSize: 10, color: C.dim }}>{ic.platform ?? '—'}</div>
+                <TR key={`${ic.key}-${i}`}>
+                  <td style={{ padding: `${space[6]}px ${space[4]}px`, color: color.textMuted, whiteSpace: 'nowrap' }}>{shortDate(ic.date)}</td>
+                  <td style={{ padding: `${space[6]}px ${space[4]}px` }}>
+                    <span style={{ color: color.text }}>{ic.name ?? '—'}</span>
+                    <span style={{ color: color.textMuted, marginLeft: space[6], fontSize: fontSize[11] }}>{ic.symbol ?? ''}</span>
+                    <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{ic.platform ?? '—'}</div>
                   </td>
-                  <td style={{ padding: '6px 4px', color: C.white, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: `${space[6]}px ${space[4]}px`, color: color.text, textAlign: 'right', whiteSpace: 'nowrap' }}>
                     {moneyCompact(ic.raiseUsd)}
                   </td>
-                </tr>
+                </TR>
               ))}
               {!home && !homeErr && (
-                <tr><td style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                <tr><td style={{ padding: space[10], color: color.textMuted }}>loading…</td></tr>
               )}
               {home && (home.upcomingIco ?? []).length === 0 && (
-                <tr><td style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                <tr><td style={{ padding: space[10], color: color.textMuted }}>upstream shipped no rows — nothing faked</td></tr>
               )}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
 
         {/* launchpool events (past / upcoming — 3-gate verified 2026-09-27) */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8], flexWrap: 'wrap' }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>
               Launchpool{lpKey === 'upcoming' ? ' (upcoming)' : lpKey === 'active' ? ' (active now)' : ' (past)'}
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ display: 'flex', gap: space[4] }}>
               {([['past', 'Past'], ['active', 'Active'], ['upcoming', 'Upcoming']] as const).map(([k, l]) => (
                 <button
                   key={k}
                   onClick={() => setLpKey(k)}
                   style={{
-                    fontSize: 10, padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
-                    border: `1px solid ${lpKey === k ? C.accent : C.border}`,
-                    background: lpKey === k ? C.accent : 'transparent',
-                    color: lpKey === k ? C.bg : C.dim,
-                    fontWeight: lpKey === k ? 700 : 400,
+                    fontSize: fontSize[10], padding: '3px 8px', borderRadius: radius[6], cursor: 'pointer',
+                    border: `1px solid ${lpKey === k ? color.accent : color.border}`,
+                    background: lpKey === k ? color.accent : 'transparent',
+                    color: lpKey === k ? color.bg : color.textMuted,
+                    fontWeight: lpKey === k ? fontWeight.bold : fontWeight.regular,
                   }}
                 >
                   {l}
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: 10, color: C.dim }}>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>
               {lp ? (lp.upstreamTotal != null ? `${lp.count} of ${lp.upstreamTotal}` : `${lp.count}`) : '—'} events
             </div>
           </div>
           {lpErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ launchpool error: {lpErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ launchpool error: {lpErr} — nothing faked</div>
           )}
           <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Project</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Launchpad</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Window</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Raise</th>
+            <Table>
+              <THead>
+                <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Project</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Launchpad</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Window</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Raise</TH>
                 </tr>
-              </thead>
-              <tbody>
+              </THead>
+              <TBody>
                 {!lp && !lpErr && (
-                  <tr><td colSpan={4} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  <tr><TD colSpan={4} style={{ padding: space[10], color: color.textMuted }}>loading…</TD></tr>
                 )}
                 {(lp?.launchpoolRows ?? []).map((r0) => (
-                  <tr key={r0.key} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <TR key={r0.key}>
                     <td style={{ padding: '5px 6px' }}>
-                      <span style={{ color: C.white }}>{r0.name}</span>
-                      <span style={{ color: C.dim, marginLeft: 6, fontSize: 10 }}>{r0.symbol}</span>
-                      {r0.category && <div style={{ fontSize: 10, color: C.dim }}>{r0.category}</div>}
+                      <span style={{ color: color.text }}>{r0.name}</span>
+                      <span style={{ color: color.textMuted, marginLeft: space[6], fontSize: fontSize[10] }}>{r0.symbol}</span>
+                      {r0.category && <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{r0.category}</div>}
                     </td>
-                    <td style={{ padding: '5px 6px', color: C.dim }}>{r0.launchpads.join(', ') || '—'}</td>
-                    <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '5px 6px', color: color.textMuted }}>{r0.launchpads.join(', ') || '—'}</td>
+                    <td style={{ padding: '5px 6px', color: color.text, whiteSpace: 'nowrap' }}>
                       {r0.when ? shortDate(r0.when) : '—'}{r0.when || r0.till ? ` → ${r0.till ? shortDate(r0.till) : '—'}` : ''}
                     </td>
-                    <td style={{ padding: '5px 6px', color: C.white, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '5px 6px', color: color.text, textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {moneyCompact(r0.totalRaiseUsd)}
                     </td>
-                  </tr>
+                  </TR>
                 ))}
                 {lp && (lp.launchpoolRows ?? []).length === 0 && (
-                  <tr><td colSpan={4} style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                  <tr><TD colSpan={4} style={{ padding: space[10], color: color.textMuted }}>upstream shipped no rows — nothing faked</TD></tr>
                 )}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>
             {lp?.slice ?? ''}
           </div>
         </div>
 
         {/* node sales (past / active / upcoming — gated 2026-09-27) */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8], flexWrap: 'wrap' }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>
               Nodesale{ndKey === 'upcoming' ? ' (upcoming)' : ndKey === 'active' ? ' (active)' : ' (past)'}
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ display: 'flex', gap: space[4] }}>
               {([['past', 'Past'], ['active', 'Active'], ['upcoming', 'Upcoming']] as const).map(([k, l]) => (
                 <button
                   key={k}
                   onClick={() => setNdKey(k)}
                   style={{
-                    fontSize: 10, padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
-                    border: `1px solid ${ndKey === k ? C.accent : C.border}`,
-                    background: ndKey === k ? C.accent : 'transparent',
-                    color: ndKey === k ? C.bg : C.dim,
-                    fontWeight: ndKey === k ? 700 : 400,
+                    fontSize: fontSize[10], padding: '3px 8px', borderRadius: radius[6], cursor: 'pointer',
+                    border: `1px solid ${ndKey === k ? color.accent : color.border}`,
+                    background: ndKey === k ? color.accent : 'transparent',
+                    color: ndKey === k ? color.bg : color.textMuted,
+                    fontWeight: ndKey === k ? fontWeight.bold : fontWeight.regular,
                   }}
                 >
                   {l}
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: 10, color: C.dim }}>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>
               {nd ? (nd.upstreamTotal != null ? `${nd.count} of ${nd.upstreamTotal}` : `${nd.count}`) : '—'} nodesales
             </div>
           </div>
           {ndErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ nodesale error: {ndErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ nodesale error: {ndErr} — nothing faked</div>
           )}
           <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Project</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Window</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Node price</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Raised</th>
+            <Table>
+              <THead>
+                <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Project</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Window</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Node price</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Raised</TH>
                 </tr>
-              </thead>
-              <tbody>
+              </THead>
+              <TBody>
                 {!nd && !ndErr && (
-                  <tr><td colSpan={4} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  <tr><TD colSpan={4} style={{ padding: space[10], color: color.textMuted }}>loading…</TD></tr>
                 )}
                 {(nd?.nodesaleRows ?? []).map((r0) => (
-                  <tr key={r0.key} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <TR key={r0.key}>
                     <td style={{ padding: '5px 6px' }}>
-                      <span style={{ color: C.white }}>{r0.name}</span>
-                      <span style={{ color: C.dim, marginLeft: 6, fontSize: 10 }}>{r0.symbol}</span>
-                      {r0.category && <div style={{ fontSize: 10, color: C.dim }}>{r0.category}</div>}
+                      <span style={{ color: color.text }}>{r0.name}</span>
+                      <span style={{ color: color.textMuted, marginLeft: space[6], fontSize: fontSize[10] }}>{r0.symbol}</span>
+                      {r0.category && <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{r0.category}</div>}
                     </td>
-                    <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '5px 6px', color: color.text, whiteSpace: 'nowrap' }}>
                       {r0.when ? shortDate(r0.when) : '—'}{r0.when || r0.till ? ` → ${r0.till ? shortDate(r0.till) : '—'}` : ''}
                     </td>
-                    <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '5px 6px', color: color.text, whiteSpace: 'nowrap' }}>
                       {r0.nodePriceFromUsd != null && r0.nodePriceToUsd != null
                         ? `${moneyCompact(r0.nodePriceFromUsd)} → ${moneyCompact(r0.nodePriceToUsd)}`
                         : '—'}
                     </td>
-                    <td style={{ padding: '5px 6px', color: C.white, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '5px 6px', color: color.text, textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {moneyCompact(r0.raiseUsd)}
                       {r0.totalRaiseUsd != null && (
-                        <div style={{ fontSize: 10, color: C.dim }}>cap {moneyCompact(r0.totalRaiseUsd)}</div>
+                        <div style={{ fontSize: fontSize[10], color: color.textMuted }}>cap {moneyCompact(r0.totalRaiseUsd)}</div>
                       )}
                     </td>
-                  </tr>
+                  </TR>
                 ))}
                 {nd && (nd.nodesaleRows ?? []).length === 0 && (
-                  <tr><td colSpan={4} style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                  <tr><TD colSpan={4} style={{ padding: space[10], color: color.textMuted }}>upstream shipped no rows — nothing faked</TD></tr>
                 )}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>
             {nd?.slice ?? ''}
           </div>
         </div>
 
         {/* ecosystems (index selector + keyed detail) */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8], flexWrap: 'wrap' }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>
               Ecosystem{eco?.ecosystem ? `: ${eco.ecosystem.name}` : ''}
             </div>
             <select
               value={ecoSlug}
               onChange={(e) => setEcoSlug(e.target.value)}
-              style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, maxWidth: 190,
-                       background: C.bg, color: C.white, border: `1px solid ${C.border}` }}
+              style={{ fontSize: fontSize[11], padding: '3px 6px', borderRadius: radius[6], maxWidth: 190,
+                       background: color.bg, color: color.text, border: `1px solid ${color.border}` }}
             >
               {(ecoIdx?.ecosystemRows ?? []).map((er) => (
                 <option key={er.key} value={er.key}>{er.name}</option>
               ))}
             </select>
-            <div style={{ fontSize: 10, color: C.dim }}>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>
               {eco ? (eco.upstreamTotal != null ? `${eco.count} of ${eco.upstreamTotal} coins` : `${eco.count} coins`) : '—'}
             </div>
           </div>
           {ecoErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ ecosystem error: {ecoErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ ecosystem error: {ecoErr} — nothing faked</div>
           )}
-          <div style={{ fontSize: 11, color: C.dim, marginBottom: 6 }}>
+          <div style={{ fontSize: fontSize[11], color: color.textMuted, marginBottom: space[6] }}>
             {eco?.ecosystem
               ? [
                   eco.ecosystem.blockchain ? `chain: ${eco.ecosystem.blockchain.name}` : null,
@@ -1457,68 +1467,68 @@ export default function CryptorankPage() {
               : 'loading…'}
           </div>
           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Project</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Symbol</th>
+            <Table>
+              <THead>
+                <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Project</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Symbol</TH>
                 </tr>
-              </thead>
-              <tbody>
+              </THead>
+              <TBody>
                 {!eco && !ecoErr && (
-                  <tr><td colSpan={2} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  <tr><TD colSpan={2} style={{ padding: space[10], color: color.textMuted }}>loading…</TD></tr>
                 )}
                 {((eco?.rows ?? []) as CrCoin[]).map((c0) => (
-                  <tr key={c0.key} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: '5px 6px', color: C.white }}>
+                  <TR key={c0.key}>
+                    <td style={{ padding: '5px 6px', color: color.text }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                         {c0.image && (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={c0.image} alt="" width={16} height={16} style={{ borderRadius: '50%' }} />
+                          <img src={c0.image} alt="" width={16} height={16} style={{ borderRadius: radius.circle }} />
                         )}
                         {c0.name}
                       </div>
                     </td>
-                    <td style={{ padding: '5px 6px', color: C.dim }}>{c0.symbol ?? '—'}</td>
-                  </tr>
+                    <td style={{ padding: '5px 6px', color: color.textMuted }}>{c0.symbol ?? '—'}</td>
+                  </TR>
                 ))}
                 {eco && (eco.rows ?? []).length === 0 && (
-                  <tr><td colSpan={2} style={{ padding: 10, color: C.dim }}>upstream shipped no coins — nothing faked</td></tr>
+                  <tr><TD colSpan={2} style={{ padding: space[10], color: color.textMuted }}>upstream shipped no coins — nothing faked</TD></tr>
                 )}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{eco?.slice ?? ''}</div>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>{eco?.slice ?? ''}</div>
         </div>
 
         {/* RWA assets (index + keyed type/slug detail) */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8], flexWrap: 'wrap' }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>
               RWA{rwaDet?.rwaAsset ? `: ${rwaDet.rwaAsset.name}` : ''}
             </div>
             <select
               value={rwaKey}
               onChange={(e) => setRwaKey(e.target.value)}
-              style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, maxWidth: 210,
-                       background: C.bg, color: C.white, border: `1px solid ${C.border}` }}
+              style={{ fontSize: fontSize[11], padding: '3px 6px', borderRadius: radius[6], maxWidth: 210,
+                       background: color.bg, color: color.text, border: `1px solid ${color.border}` }}
             >
               {(rwa?.rwaRows ?? []).map((rr) => (
                 <option key={rr.detailKey} value={rr.detailKey}>{rr.ticker} — {rr.name}</option>
               ))}
             </select>
-            <div style={{ fontSize: 10, color: C.dim }}>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>
               {rwa ? (rwa.upstreamTotal != null ? `${rwa.count} of ${rwa.upstreamTotal}` : `${rwa.count}`) : '—'} assets
             </div>
           </div>
           {rwaErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ rwa error: {rwaErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ rwa error: {rwaErr} — nothing faked</div>
           )}
           {rwaDet?.rwaAsset && (
-            <div style={{ fontSize: 11, color: C.dim, marginBottom: 6 }}>
+            <div style={{ fontSize: fontSize[11], color: color.textMuted, marginBottom: space[6] }}>
               {moneyCompact(rwaDet.rwaAsset.priceUsd)}
               {rwaDet.rwaAsset.change24h != null && (
-                <span style={{ color: rwaDet.rwaAsset.change24h >= 0 ? C.green ?? '#4ade80' : C.red }}>
+                <span style={{ color: rwaDet.rwaAsset.change24h >= 0 ? color.positive : color.negative }}>
                   {' '}({rwaDet.rwaAsset.change24h >= 0 ? '+' : ''}{(rwaDet.rwaAsset.change24h * 100).toFixed(2)}%)
                 </span>
               )}
@@ -1530,7 +1540,7 @@ export default function CryptorankPage() {
               {rwaDet.rwaAsset.website && (
                 <>
                   {' · '}
-                  <a href={rwaDet.rwaAsset.website} target="_blank" rel="noreferrer" style={{ color: C.accent }}>
+                  <a href={rwaDet.rwaAsset.website} target="_blank" rel="noreferrer" style={{ color: color.accent }}>
                     site ↗
                   </a>
                 </>
@@ -1538,96 +1548,96 @@ export default function CryptorankPage() {
             </div>
           )}
           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>#</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Asset</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Type</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Price</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>24h</th>
+            <Table>
+              <THead>
+                <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>#</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Asset</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Type</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Price</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>24h</TH>
                 </tr>
-              </thead>
-              <tbody>
+              </THead>
+              <TBody>
                 {!rwa && !rwaErr && (
-                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  <tr><TD colSpan={5} style={{ padding: space[10], color: color.textMuted }}>loading…</TD></tr>
                 )}
                 {(rwa?.rwaRows ?? []).map((rr) => (
                   <tr
                     key={rr.detailKey}
                     onClick={() => setRwaKey(rr.detailKey)}
-                    style={{ borderBottom: `1px solid ${C.border}`, cursor: 'pointer',
-                             background: rwaKey === rr.detailKey ? 'rgba(255,255,255,0.05)' : 'transparent' }}
+                    style={{ borderBottom: `1px solid ${color.border}`, cursor: 'pointer',
+                             background: rwaKey === rr.detailKey ? alpha(color.textInverse, 0.05) : 'transparent' }}
                   >
-                    <td style={{ padding: '5px 6px', color: C.dim, width: 26 }}>{rr.rank ?? '—'}</td>
+                    <td style={{ padding: '5px 6px', color: color.textMuted, width: 26 }}>{rr.rank ?? '—'}</td>
                     <td style={{ padding: '5px 6px' }}>
-                      <span style={{ color: C.white }}>{rr.name}</span>
-                      <span style={{ color: C.dim, marginLeft: 6, fontSize: 10 }}>{rr.ticker}</span>
+                      <span style={{ color: color.text }}>{rr.name}</span>
+                      <span style={{ color: color.textMuted, marginLeft: space[6], fontSize: fontSize[10] }}>{rr.ticker}</span>
                     </td>
-                    <td style={{ padding: '5px 6px', color: C.dim, fontSize: 11 }}>{rr.type ?? '—'}</td>
-                    <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>{moneyCompact(rr.priceUsd)}</td>
+                    <td style={{ padding: '5px 6px', color: color.textMuted, fontSize: fontSize[11] }}>{rr.type ?? '—'}</td>
+                    <td style={{ padding: '5px 6px', color: color.text, whiteSpace: 'nowrap' }}>{moneyCompact(rr.priceUsd)}</td>
                     <td style={{ padding: '5px 6px', whiteSpace: 'nowrap',
-                                 color: rr.change24h == null ? C.dim : rr.change24h >= 0 ? '#4ade80' : C.red }}>
+                                 color: rr.change24h == null ? color.textMuted : rr.change24h >= 0 ? color.positive : color.negative }}>
                       {rr.change24h != null ? `${rr.change24h >= 0 ? '+' : ''}${(rr.change24h * 100).toFixed(2)}%` : '—'}
                     </td>
                   </tr>
                 ))}
                 {rwa && (rwa.rwaRows ?? []).length === 0 && (
-                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                  <tr><TD colSpan={5} style={{ padding: space[10], color: color.textMuted }}>upstream shipped no rows — nothing faked</TD></tr>
                 )}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{rwa?.slice ?? ''}</div>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>{rwa?.slice ?? ''}</div>
         </div>
 
         {/* quarterly returns (BTC/ETH toggle; % computed from upstream O/C) */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8], flexWrap: 'wrap' }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>
               Quarterly returns ({qtrSide.toUpperCase()})
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ display: 'flex', gap: space[4] }}>
               {([['btc', 'BTC'], ['eth', 'ETH']] as const).map(([k, l]) => (
                 <button
                   key={k}
                   onClick={() => setQtrSide(k)}
                   style={{
-                    fontSize: 10, padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
-                    border: `1px solid ${qtrSide === k ? C.accent : C.border}`,
-                    background: qtrSide === k ? C.accent : 'transparent',
-                    color: qtrSide === k ? C.bg : C.dim,
-                    fontWeight: qtrSide === k ? 700 : 400,
+                    fontSize: fontSize[10], padding: '3px 8px', borderRadius: radius[6], cursor: 'pointer',
+                    border: `1px solid ${qtrSide === k ? color.accent : color.border}`,
+                    background: qtrSide === k ? color.accent : 'transparent',
+                    color: qtrSide === k ? color.bg : color.textMuted,
+                    fontWeight: qtrSide === k ? fontWeight.bold : fontWeight.regular,
                   }}
                 >
                   {l}
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: 10, color: C.dim }}>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>
               {qtr ? `${(qtrSide === 'btc' ? qtr.quarterlyBtc : qtr.quarterlyEth)?.length ?? 0} years` : '—'}
             </div>
           </div>
           {qtrErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ quarterly error: {qtrErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ quarterly error: {qtrErr} — nothing faked</div>
           )}
           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Year</th>
+            <Table>
+              <THead>
+                <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Year</TH>
                   {['Q1', 'Q2', 'Q3', 'Q4'].map((q) => (
-                    <th key={q} style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600, textAlign: 'right' }}>{q}</th>
+                    <TH key={q} style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold, textAlign: 'right' }}>{q}</TH>
                   ))}
                 </tr>
-              </thead>
-              <tbody>
+              </THead>
+              <TBody>
                 {!qtr && !qtrErr && (
-                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  <tr><TD colSpan={5} style={{ padding: space[10], color: color.textMuted }}>loading…</TD></tr>
                 )}
                 {((qtrSide === 'btc' ? qtr?.quarterlyBtc : qtr?.quarterlyEth) ?? []).map((y) => (
-                  <tr key={y.year ?? Math.random()} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: '5px 6px', color: C.white }}>{y.year ?? '—'}</td>
+                  <TR key={y.year ?? Math.random()}>
+                    <td style={{ padding: '5px 6px', color: color.text }}>{y.year ?? '—'}</td>
                     {(['q1', 'q2', 'q3', 'q4'] as const).map((qk) => {
                       const q = y[qk];
                       const v = q && q.openUsd != null && q.closeUsd != null && q.openUsd !== 0
@@ -1636,56 +1646,56 @@ export default function CryptorankPage() {
                       return (
                         <td key={qk} style={{
                           padding: '5px 6px', textAlign: 'right', whiteSpace: 'nowrap',
-                          color: v == null ? C.dim : v >= 0 ? '#4ade80' : C.red,
+                          color: v == null ? color.textMuted : v >= 0 ? color.positive : color.negative,
                         }}>
                           {v == null ? '—' : `${q && !q.isFull ? '~' : ''}${v >= 0 ? '+' : ''}${v.toFixed(1)}%`}
                         </td>
                       );
                     })}
-                  </tr>
+                  </TR>
                 ))}
                 {qtr && ((qtrSide === 'btc' ? qtr.quarterlyBtc : qtr.quarterlyEth) ?? []).length === 0 && (
-                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                  <tr><TD colSpan={5} style={{ padding: space[10], color: color.textMuted }}>upstream shipped no rows — nothing faked</TD></tr>
                 )}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{qtr?.slice ?? ''}</div>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>{qtr?.slice ?? ''}</div>
         </div>
 
         {/* prediction markets (aggregates + markets table) */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Prediction markets</div>
-            <div style={{ fontSize: 10, color: C.dim }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8], flexWrap: 'wrap' }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>Prediction markets</div>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>
               {pred ? `${pred.count} of ${pred.upstreamTotal ?? '—'} markets` : '—'}
             </div>
           </div>
           {predErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ prediction error: {predErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ prediction error: {predErr} — nothing faked</div>
           )}
           {pred?.prediction && (
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 11, color: C.dim, marginBottom: 8 }}>
+            <div style={{ display: 'flex', gap: space[16], flexWrap: 'wrap', fontSize: fontSize[11], color: color.textMuted, marginBottom: space[8] }}>
               <div>
-                volume <span style={{ color: C.white }}>{moneyCompact(pred.prediction.totalVolumeUsd)}</span>
+                volume <span style={{ color: color.text }}>{moneyCompact(pred.prediction.totalVolumeUsd)}</span>
                 {pred.prediction.volumeChangePct != null && (
-                  <span style={{ color: pred.prediction.volumeChangePct >= 0 ? '#4ade80' : C.red }}>
+                  <span style={{ color: pred.prediction.volumeChangePct >= 0 ? color.positive : color.negative }}>
                     {' '}({pred.prediction.volumeChangePct >= 0 ? '+' : ''}{pred.prediction.volumeChangePct.toFixed(1)}%)
                   </span>
                 )}
               </div>
               <div>
-                markets <span style={{ color: C.white }}>{pred.prediction.marketsCount ?? '—'}</span>
+                markets <span style={{ color: color.text }}>{pred.prediction.marketsCount ?? '—'}</span>
                 {pred.prediction.marketsChangePct != null && (
-                  <span style={{ color: pred.prediction.marketsChangePct >= 0 ? '#4ade80' : C.red }}>
+                  <span style={{ color: pred.prediction.marketsChangePct >= 0 ? color.positive : color.negative }}>
                     {' '}({pred.prediction.marketsChangePct >= 0 ? '+' : ''}{pred.prediction.marketsChangePct.toFixed(1)}%)
                   </span>
                 )}
               </div>
               <div>
-                OI <span style={{ color: C.white }}>{moneyCompact(pred.prediction.openInterestUsd)}</span>
+                OI <span style={{ color: color.text }}>{moneyCompact(pred.prediction.openInterestUsd)}</span>
                 {pred.prediction.oiChangePct != null && (
-                  <span style={{ color: pred.prediction.oiChangePct >= 0 ? '#4ade80' : C.red }}>
+                  <span style={{ color: pred.prediction.oiChangePct >= 0 ? color.positive : color.negative }}>
                     {' '}({pred.prediction.oiChangePct >= 0 ? '+' : ''}{pred.prediction.oiChangePct.toFixed(1)}%)
                   </span>
                 )}
@@ -1698,110 +1708,110 @@ export default function CryptorankPage() {
             </div>
           )}
           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Market</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Platform</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>24h vol</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Bid/Ask</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}></th>
+            <Table>
+              <THead>
+                <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Market</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Platform</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>24h vol</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Bid/Ask</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}></TH>
                 </tr>
-              </thead>
-              <tbody>
+              </THead>
+              <TBody>
                 {!pred && !predErr && (
-                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  <tr><TD colSpan={5} style={{ padding: space[10], color: color.textMuted }}>loading…</TD></tr>
                 )}
                 {(pred?.predictionRows ?? []).map((m) => (
-                  <tr key={m.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <TR key={m.id}>
                     <td style={{ padding: '5px 6px' }}>
-                      <span style={{ color: C.white }}>{m.title}</span>
-                      {m.category && <div style={{ fontSize: 10, color: C.dim }}>{m.category}{m.endDate ? ` · ends ${m.endDate}` : ''}</div>}
+                      <span style={{ color: color.text }}>{m.title}</span>
+                      {m.category && <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{m.category}{m.endDate ? ` · ends ${m.endDate}` : ''}</div>}
                     </td>
-                    <td style={{ padding: '5px 6px', color: C.dim }}>{m.platform ?? '—'}</td>
-                    <td style={{ padding: '5px 6px', color: C.white, whiteSpace: 'nowrap' }}>{moneyCompact(m.volume24hUsd)}</td>
-                    <td style={{ padding: '5px 6px', color: C.dim, whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '5px 6px', color: color.textMuted }}>{m.platform ?? '—'}</td>
+                    <td style={{ padding: '5px 6px', color: color.text, whiteSpace: 'nowrap' }}>{moneyCompact(m.volume24hUsd)}</td>
+                    <td style={{ padding: '5px 6px', color: color.textMuted, whiteSpace: 'nowrap' }}>
                       {m.bid != null ? m.bid.toFixed(2) : '—'} / {m.ask != null ? m.ask.toFixed(2) : '—'}
                     </td>
                     <td style={{ padding: '5px 6px' }}>
                       {m.externalUrl && (
-                        <a href={m.externalUrl} target="_blank" rel="noreferrer" style={{ color: C.accent, fontSize: 11 }}>↗</a>
+                        <a href={m.externalUrl} target="_blank" rel="noreferrer" style={{ color: color.accent, fontSize: fontSize[11] }}>↗</a>
                       )}
                     </td>
-                  </tr>
+                  </TR>
                 ))}
                 {pred && (pred.predictionRows ?? []).length === 0 && (
-                  <tr><td colSpan={5} style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                  <tr><TD colSpan={5} style={{ padding: space[10], color: color.textMuted }}>upstream shipped no rows — nothing faked</TD></tr>
                 )}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{pred?.slice ?? ''}</div>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>{pred?.slice ?? ''}</div>
         </div>
 
         {/* ---------------- full price list (converter payload) ------------- */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Full price list</div>
-            <div style={{ fontSize: 10, color: C.dim }}>{conv ? `${conv.count} coins` : '—'} · price only (no 24h change upstream)</div>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8], flexWrap: 'wrap' }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>Full price list</div>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{conv ? `${conv.count} coins` : '—'} · price only (no 24h change upstream)</div>
           </div>
           {convErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ price list error: {convErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ price list error: {convErr} — nothing faked</div>
           )}
           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ color: C.dim, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Coin</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>Symbol</th>
-                  <th style={{ padding: '6px 6px', borderBottom: `1px solid ${C.border}`, fontWeight: 600, textAlign: 'right' }}>Price</th>
+            <Table>
+              <THead>
+                <tr style={{ color: color.textMuted, textAlign: 'left', fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Coin</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold }}>Symbol</TH>
+                  <TH style={{ padding: `${space[6]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, fontWeight: fontWeight.semibold, textAlign: 'right' }}>Price</TH>
                 </tr>
-              </thead>
-              <tbody>
+              </THead>
+              <TBody>
                 {!conv && !convErr && (
-                  <tr><td colSpan={3} style={{ padding: 10, color: C.dim }}>loading…</td></tr>
+                  <tr><TD colSpan={3} style={{ padding: space[10], color: color.textMuted }}>loading…</TD></tr>
                 )}
                 {(conv?.converterRows ?? []).slice(0, 50).map((r0) => (
-                  <tr key={r0.key} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: '5px 6px', color: C.white }}>{r0.name}</td>
-                    <td style={{ padding: '5px 6px', color: C.dim }}>{r0.symbol}</td>
-                    <td style={{ padding: '5px 6px', color: C.white, textAlign: 'right', whiteSpace: 'nowrap' }}>{money(r0.priceUsd)}</td>
-                  </tr>
+                  <TR key={r0.key}>
+                    <td style={{ padding: '5px 6px', color: color.text }}>{r0.name}</td>
+                    <td style={{ padding: '5px 6px', color: color.textMuted }}>{r0.symbol}</td>
+                    <td style={{ padding: '5px 6px', color: color.text, textAlign: 'right', whiteSpace: 'nowrap' }}>{money(r0.priceUsd)}</td>
+                  </TR>
                 ))}
                 {conv && (conv.converterRows ?? []).length === 0 && (
-                  <tr><td colSpan={3} style={{ padding: 10, color: C.dim }}>upstream shipped no rows — nothing faked</td></tr>
+                  <tr><TD colSpan={3} style={{ padding: space[10], color: color.textMuted }}>upstream shipped no rows — nothing faked</TD></tr>
                 )}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>
             {conv ? `first 50 of ${conv.count} · ${conv.slice ?? ''}` : ''}
           </div>
         </div>
 
         {/* ---------------- media feed (YouTube-backed) --------------------- */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>Media feed</div>
-            <div style={{ fontSize: 10, color: C.dim }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8], flexWrap: 'wrap' }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>Media feed</div>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>
               {media ? `${media.count} of ${media.upstreamTotal ?? '—'} videos` : '—'} · ids ground-truthed via YouTube oembed
             </div>
           </div>
           {mediaErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ media error: {mediaErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ media error: {mediaErr} — nothing faked</div>
           )}
           <div style={{ maxHeight: 280, overflowY: 'auto' }}>
             {(media?.mediaRows ?? []).map((m) => (
-              <div key={m.id} style={{ padding: '7px 2px', borderBottom: `1px solid ${C.border}` }}>
+              <div key={m.id} style={{ padding: '7px 2px', borderBottom: `1px solid ${color.border}` }}>
                 <a
                   href={m.id ? `https://www.youtube.com/watch?v=${m.id}` : undefined}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ color: C.white, fontSize: 12, textDecoration: 'none' }}
+                  style={{ color: color.text, fontSize: fontSize[12], textDecoration: 'none' }}
                 >
                   {m.title}{m.id ? ' ↗' : ''}
                 </a>
-                <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>
+                <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: 2 }}>
                   {m.channelTitle ?? '—'} · {shortDate(m.publishedAt)}
                   {m.durationSeconds != null
                     ? ` · ${Math.floor(m.durationSeconds / 60)}:${String(m.durationSeconds % 60).padStart(2, '0')}`
@@ -1810,33 +1820,33 @@ export default function CryptorankPage() {
               </div>
             ))}
             {!media && !mediaErr && (
-              <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>loading…</div>
+              <div style={{ padding: space[10], color: color.textMuted, fontSize: fontSize[12] }}>loading…</div>
             )}
             {media && (media.mediaRows ?? []).length === 0 && (
-              <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>upstream shipped no rows — nothing faked</div>
+              <div style={{ padding: space[10], color: color.textMuted, fontSize: fontSize[12] }}>upstream shipped no rows — nothing faked</div>
             )}
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{media?.slice ?? ''}</div>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>{media?.slice ?? ''}</div>
         </div>
 
         {/* ---------------- tagged news (news/tag feed) --------------------- */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8], flexWrap: 'wrap' }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>
               Tagged news{ntag?.tag ? `: ${ntag.tag.name}` : ''}
             </div>
-            <div style={{ fontSize: 10, color: C.dim }}>{ntag ? `${ntag.count} items` : '—'} · unknown tag → 404 (never unfiltered)</div>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{ntag ? `${ntag.count} items` : '—'} · unknown tag → 404 (never unfiltered)</div>
           </div>
           {(ntag?.relatedTags ?? []).length > 0 && (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+            <div style={{ display: 'flex', gap: space[6], flexWrap: 'wrap', marginBottom: space[8] }}>
               {(ntag?.relatedTags ?? []).slice(0, 12).map((t) => (
                 <button
                   key={t.slug}
                   onClick={() => setNtagSlug(t.slug)}
                   style={{
-                    border: `1px solid ${ntagSlug === t.slug ? C.accent : C.border}`,
-                    borderRadius: 999, background: C.card, color: ntagSlug === t.slug ? C.white : C.dim,
-                    fontSize: 10, padding: '3px 9px', cursor: 'pointer',
+                    border: `1px solid ${ntagSlug === t.slug ? color.accent : color.border}`,
+                    borderRadius: radius.full, background: color.surface, color: ntagSlug === t.slug ? color.text : color.textMuted,
+                    fontSize: fontSize[10], padding: '3px 9px', cursor: 'pointer',
                   }}
                 >
                   {t.name}
@@ -1845,20 +1855,20 @@ export default function CryptorankPage() {
             </div>
           )}
           {ntagErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ tagged news error: {ntagErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ tagged news error: {ntagErr} — nothing faked</div>
           )}
           <div style={{ maxHeight: 300, overflowY: 'auto' }}>
             {(ntag?.newsRows ?? []).map((n0) => (
-              <div key={n0.id ?? n0.title} style={{ padding: '7px 2px', borderBottom: `1px solid ${C.border}` }}>
+              <div key={n0.id ?? n0.title} style={{ padding: '7px 2px', borderBottom: `1px solid ${color.border}` }}>
                 <a
                   href={n0.url ?? undefined}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ color: C.white, fontSize: 12, textDecoration: 'none' }}
+                  style={{ color: color.text, fontSize: fontSize[12], textDecoration: 'none' }}
                 >
                   {n0.title}{n0.url ? ' ↗' : ''}
                 </a>
-                <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>
+                <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: 2 }}>
                   {n0.source ?? '—'} · {n0.date ? shortDate(n0.date) : '—'}
                   {n0.relatedCoins.length
                     ? ` · ${n0.relatedCoins.slice(0, 3).map((c) => `${c.symbol} ${money(c.priceUsd)}`).join(' · ')}`
@@ -1867,56 +1877,56 @@ export default function CryptorankPage() {
               </div>
             ))}
             {!ntag && !ntagErr && (
-              <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>loading…</div>
+              <div style={{ padding: space[10], color: color.textMuted, fontSize: fontSize[12] }}>loading…</div>
             )}
             {ntag && (ntag.newsRows ?? []).length === 0 && (
-              <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>upstream shipped no rows — nothing faked</div>
+              <div style={{ padding: space[10], color: color.textMuted, fontSize: fontSize[12] }}>upstream shipped no rows — nothing faked</div>
             )}
           </div>
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{ntag?.slice ?? ''}</div>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>{ntag?.slice ?? ''}</div>
         </div>
 
         {/* ---------------- AI market overview (upstream digest) ------------- */}
-        <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ color: C.white, fontWeight: 700, fontSize: 13 }}>AI market overview</div>
-            <div style={{ fontSize: 10, color: C.dim }}>upstream AI-generated text (their words) · coherence vs home gated in harness</div>
+        <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: space[12] }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[6], gap: space[8], flexWrap: 'wrap' }}>
+            <div style={{ color: color.text, fontWeight: fontWeight.bold, fontSize: fontSize[13] }}>AI market overview</div>
+            <div style={{ fontSize: fontSize[10], color: color.textMuted }}>upstream AI-generated text (their words) · coherence vs home gated in harness</div>
           </div>
           {aiOvErr && (
-            <div style={{ fontSize: 12, color: C.red, marginBottom: 6 }}>⚠ ai overview error: {aiOvErr} — nothing faked</div>
+            <div style={{ fontSize: fontSize[12], color: color.negative, marginBottom: space[6] }}>⚠ ai overview error: {aiOvErr} — nothing faked</div>
           )}
           {!aiOv && !aiOvErr && (
-            <div style={{ padding: 10, color: C.dim, fontSize: 12 }}>loading…</div>
+            <div style={{ padding: space[10], color: color.textMuted, fontSize: fontSize[12] }}>loading…</div>
           )}
           {aiOv?.aiOverview && (
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ display: 'grid', gap: space[8] }}>
               {aiOv.aiOverview.market.summary && (
-                <div style={{ fontSize: 12, color: C.white, lineHeight: 1.5 }}>
+                <div style={{ fontSize: fontSize[12], color: color.text, lineHeight: lineHeight.relaxed }}>
                   {aiOv.aiOverview.market.summary}
-                  <div style={{ fontSize: 10, color: C.dim, marginTop: 2 }}>updated {stamp(Date.parse(aiOv.aiOverview.market.updatedAt ?? '') / 1000 || null)}</div>
+                  <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: 2 }}>updated {stamp(Date.parse(aiOv.aiOverview.market.updatedAt ?? '') / 1000 || null)}</div>
                 </div>
               )}
               {aiOv.aiOverview.news.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 10, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Top stories (upstream picks)</div>
+                  <div style={{ fontSize: fontSize[10], color: color.textMuted, textTransform: 'uppercase', letterSpacing: letterSpacing.sm, marginBottom: space[4] }}>Top stories (upstream picks)</div>
                   {aiOv.aiOverview.news.map((n0) => (
-                    <div key={n0.id ?? n0.title} style={{ fontSize: 12, color: C.white, padding: '3px 0', borderBottom: `1px solid ${C.border}` }}>
-                      <span style={{ color: n0.isBullish === true ? '#3fb950' : n0.isBullish === false ? C.red : C.dim, fontSize: 10, marginRight: 6 }}>
+                    <div key={n0.id ?? n0.title} style={{ fontSize: fontSize[12], color: color.text, padding: '3px 0', borderBottom: `1px solid ${color.border}` }}>
+                      <span style={{ color: n0.isBullish === true ? color.positive : n0.isBullish === false ? color.negative : color.textMuted, fontSize: fontSize[10], marginRight: space[6] }}>
                         {n0.isBullish === null ? '—' : n0.isBullish ? 'bullish' : 'bearish'}
                       </span>
                       {n0.title}
-                      <span style={{ color: C.dim, fontSize: 10 }}> · {shortDate(n0.date)}</span>
+                      <span style={{ color: color.textMuted, fontSize: fontSize[10] }}> · {shortDate(n0.date)}</span>
                     </div>
                   ))}
                 </div>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: space[8] }}>
                 {aiOv.aiOverview.funding.summary && (
                   <div>
-                    <div style={{ fontSize: 10, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.5 }}>Funding</div>
-                    <div style={{ fontSize: 11, color: C.white }}>{aiOv.aiOverview.funding.summary}</div>
+                    <div style={{ fontSize: fontSize[10], color: color.textMuted, textTransform: 'uppercase', letterSpacing: letterSpacing.sm }}>Funding</div>
+                    <div style={{ fontSize: fontSize[11], color: color.text }}>{aiOv.aiOverview.funding.summary}</div>
                     {aiOv.aiOverview.funding.rounds.map((r0) => (
-                      <div key={r0.key ?? r0.name} style={{ fontSize: 11, color: C.dim, paddingTop: 2 }}>
+                      <div key={r0.key ?? r0.name} style={{ fontSize: fontSize[11], color: color.textMuted, paddingTop: 2 }}>
                         {r0.name}{r0.stage ? ` · ${r0.stage}` : ''}{r0.raisedUsd != null ? ` · ${moneyCompact(r0.raisedUsd)}` : ''}
                       </div>
                     ))}
@@ -1924,10 +1934,10 @@ export default function CryptorankPage() {
                 )}
                 {aiOv.aiOverview.dropHunting.summary && (
                   <div>
-                    <div style={{ fontSize: 10, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.5 }}>Drop hunting</div>
-                    <div style={{ fontSize: 11, color: C.white }}>{aiOv.aiOverview.dropHunting.summary}</div>
+                    <div style={{ fontSize: fontSize[10], color: color.textMuted, textTransform: 'uppercase', letterSpacing: letterSpacing.sm }}>Drop hunting</div>
+                    <div style={{ fontSize: fontSize[11], color: color.text }}>{aiOv.aiOverview.dropHunting.summary}</div>
                     {aiOv.aiOverview.dropHunting.activities.map((a) => (
-                      <div key={a.key} style={{ fontSize: 11, color: C.dim, paddingTop: 2 }}>
+                      <div key={a.key} style={{ fontSize: fontSize[11], color: color.textMuted, paddingTop: 2 }}>
                         {a.coinName ?? a.key}{a.type ? ` · ${a.type}` : ''}
                       </div>
                     ))}
@@ -1935,10 +1945,10 @@ export default function CryptorankPage() {
                 )}
                 {aiOv.aiOverview.vesting.summary && (
                   <div>
-                    <div style={{ fontSize: 10, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.5 }}>Vesting</div>
-                    <div style={{ fontSize: 11, color: C.white }}>{aiOv.aiOverview.vesting.summary}</div>
+                    <div style={{ fontSize: fontSize[10], color: color.textMuted, textTransform: 'uppercase', letterSpacing: letterSpacing.sm }}>Vesting</div>
+                    <div style={{ fontSize: fontSize[11], color: color.text }}>{aiOv.aiOverview.vesting.summary}</div>
                     {aiOv.aiOverview.vesting.unlocks.map((u, i) => (
-                      <div key={`${u.coinName ?? 'x'}-${i}`} style={{ fontSize: 11, color: C.dim, paddingTop: 2 }}>
+                      <div key={`${u.coinName ?? 'x'}-${i}`} style={{ fontSize: fontSize[11], color: color.textMuted, paddingTop: 2 }}>
                         {u.coinName ?? '—'}{u.date ? ` · ${u.date.slice(0, 10)}` : ''}{u.unlockPercent != null ? ` · ${u.unlockPercent.toFixed(2)}%` : ''}
                       </div>
                     ))}
@@ -1947,11 +1957,11 @@ export default function CryptorankPage() {
               </div>
             </div>
           )}
-          <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>{aiOv?.slice ?? ''}</div>
+          <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[4] }}>{aiOv?.slice ?? ''}</div>
         </div>
       </div>
 
-      <div style={{ fontSize: 10, color: C.dim, marginTop: 8 }}>
+      <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: space[8] }}>
         {home?.slice ?? ''} — funding rounds + IDO rows come from the homepage slice only (6 + 6, partial by
         design and press-verified: CoinGlass/CoinMarketCap 2026-09-25 matches the GlobeNewswire release);
         Launchpool rows are full event lists (past 50 of 527 / all upcoming) with windows verified against
@@ -1970,10 +1980,10 @@ function Stat({
   label: string; value: string; sub: string; subColor: string;
 }) {
   return (
-    <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: C.card, padding: '10px 12px' }}>
-      <div style={{ fontSize: 10, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: C.white, marginTop: 3 }}>{value}</div>
-      <div style={{ fontSize: 11, color: subColor, marginTop: 1 }}>{sub || ' '}</div>
+    <div style={{ border: `1px solid ${color.border}`, borderRadius: radius[10], background: color.surface, padding: `${space[10]}px ${space[12]}px` }}>
+      <div style={{ fontSize: fontSize[10], color: color.textMuted, textTransform: 'uppercase', letterSpacing: letterSpacing.sm }}>{label}</div>
+      <div style={{ fontSize: fontSize[16], fontWeight: fontWeight.bold, color: color.text, marginTop: 3 }}>{value}</div>
+      <div style={{ fontSize: fontSize[11], color: subColor, marginTop: 1 }}>{sub || ' '}</div>
     </div>
   );
 }

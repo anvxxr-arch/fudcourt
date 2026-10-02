@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { C } from '@/styles/shared';
+import { alpha, color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { Banner } from '@/components/ui/banner';
+import { Loading } from '@/components/ui/feedback';
+import { Table, TBody, THead } from '@/components/ui/table';
 import { DEX_CHAINS, isMint, type DexPair, type DexProfile } from './client';
 
 const SEARCH_CHAINS = DEX_CHAINS as readonly string[];
@@ -206,33 +209,33 @@ export default function DexPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-        <h3 style={{ color: C.accent, margin: 0 }}>DexScreener — live market data</h3>
-        <button onClick={load} style={{ background: C.card, color: C.white, border: `1px solid ${C.border}`, padding: '6px 14px', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[8], flexWrap: 'wrap', gap: space[8] }}>
+        <h3 style={{ color: color.accent, margin: 0 }}>DexScreener — live market data</h3>
+        <button onClick={load} style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[14]}px`, borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       </div>
-      <p style={{ color: C.dim, fontSize: 10, margin: '0 0 10px' }}>
+      <p style={{ color: color.textMuted, fontSize: fontSize[10], margin: `0 0 ${space[10]}px` }}>
         read-only market data · public DexScreener API · an em-dash means the field is absent upstream, never zero
       </p>
 
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div style={{ display: 'flex', gap: space[6], flexWrap: 'wrap', marginBottom: space[8] }}>
         {MODES.map((m) => (
           <button key={m.key} onClick={() => setMode(m.key)}
             style={{
-              background: mode === m.key ? C.accent : C.card, color: mode === m.key ? '#06120e' : C.white,
-              border: `1px solid ${C.border}`, padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              background: mode === m.key ? color.accent : color.surface, color: mode === m.key ? color.textOnAccent : color.text,
+              border: `1px solid ${color.border}`, padding: '5px 10px', borderRadius: radius[6], fontSize: fontSize[11], fontWeight: fontWeight.bold, cursor: 'pointer',
             }}>{m.label}</button>
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: space[6], marginBottom: space[8], flexWrap: 'wrap', alignItems: 'center' }}>
         {mode === 'search' && (
           <>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="symbol, name or address…"
-              style={{ background: C.card, border: `1px solid ${C.border}`, color: C.white, padding: '6px 10px', borderRadius: 6, fontSize: 11, width: 260 }} />
+              style={{ background: color.surface, border: `1px solid ${color.border}`, color: color.text, padding: `${space[6]}px ${space[10]}px`, borderRadius: radius[6], fontSize: fontSize[11], width: 260 }} />
             <select value={searchChain} onChange={(e) => setSearchChain(e.target.value)}
-              style={{ background: C.card, border: `1px solid ${C.border}`, color: C.white, padding: '6px 8px', borderRadius: 6, fontSize: 11 }}>
+              style={{ background: color.surface, border: `1px solid ${color.border}`, color: color.text, padding: `${space[6]}px ${space[8]}px`, borderRadius: radius[6], fontSize: fontSize[11] }}>
               <option value="">all chains (upstream default)</option>
               {SEARCH_CHAINS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -241,13 +244,13 @@ export default function DexPage() {
         {(mode === 'mint' || mode === 'orders') && (
           <>
             <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="token address (base58 / 0x / name)…"
-              style={{ background: C.card, border: `1px solid ${C.border}`, color: C.white, padding: '6px 10px', borderRadius: 6, fontSize: 11, width: 340 }} />
+              style={{ background: color.surface, border: `1px solid ${color.border}`, color: color.text, padding: `${space[6]}px ${space[10]}px`, borderRadius: radius[6], fontSize: fontSize[11], width: 340 }} />
             <select value={chain} onChange={(e) => setChain(e.target.value)}
-              style={{ background: C.card, border: `1px solid ${C.border}`, color: C.white, padding: '6px 8px', borderRadius: 6, fontSize: 11 }}>
+              style={{ background: color.surface, border: `1px solid ${color.border}`, color: color.text, padding: `${space[6]}px ${space[8]}px`, borderRadius: radius[6], fontSize: fontSize[11] }}>
               {SEARCH_CHAINS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             {mode === 'mint' && (
-              <label style={{ color: C.dim, fontSize: 10, display: 'inline-flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}>
+              <label style={{ color: color.textMuted, fontSize: fontSize[10], display: 'inline-flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}>
                 <input type="checkbox" checked={deepestOnly} onChange={(e) => setDeepestOnly(e.target.checked)} />
                 deepest pair only (tokens/v1)
               </label>
@@ -256,26 +259,26 @@ export default function DexPage() {
         )}
         {rows.length > 0 && (
           <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="filter rows…"
-            style={{ background: C.card, border: `1px solid ${C.border}`, color: C.white, padding: '6px 10px', borderRadius: 6, fontSize: 11, width: 200 }} />
+            style={{ background: color.surface, border: `1px solid ${color.border}`, color: color.text, padding: `${space[6]}px ${space[10]}px`, borderRadius: radius[6], fontSize: fontSize[11], width: 200 }} />
         )}
       </div>
 
-      <p style={{ color: C.dim, fontSize: 10, margin: '0 0 10px' }}>{active.hint}</p>
+      <p style={{ color: color.textMuted, fontSize: fontSize[10], margin: `0 0 ${space[10]}px` }}>{active.hint}</p>
 
       {error && (
-        <p style={{ color: C.red, fontSize: 12, fontWeight: 700, background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.35)', padding: '8px 10px', borderRadius: 6 }}>
+        <Banner variant="error" style={{ fontWeight: fontWeight.bold }}>
           ⚠ dex error: {error} — no data faked
-        </p>
+        </Banner>
       )}
 
       {loading ? (
-        <p style={{ color: C.dim, fontSize: 12 }}>loading dex data…</p>
+        <Loading label="loading dex data…" />
       ) : error ? (
-        <p style={{ color: C.dim, fontSize: 12 }}>row list withheld — the request above failed.</p>
+        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>row list withheld — the request above failed.</p>
       ) : (
         <>
           {meta.upstream && meta.returned != null && (
-            <p style={{ color: C.dim, fontSize: 10, margin: '0 0 4px' }}>
+            <p style={{ color: color.textMuted, fontSize: fontSize[10], margin: `0 0 ${space[4]}px` }}>
               {meta.returned} shown{meta.total != null && meta.total !== meta.returned ? ` of ${meta.total}` : ''}
               {rows.length > 0 && ` · liq coverage ${cov('liquidity')} · labels ${cov('labels')} · txns ${cov('txns')}`}
             </p>
@@ -284,41 +287,41 @@ export default function DexPage() {
               actually spanned instead of letting a filtered view imply the
               upstream request was scoped. */}
           {meta.chainsSeen && Object.keys(meta.chainsSeen).length > 0 && (
-            <p style={{ color: C.dim, fontSize: 10, margin: '0 0 4px' }}>
+            <p style={{ color: color.textMuted, fontSize: fontSize[10], margin: `0 0 ${space[4]}px` }}>
               upstream matched {meta.upstreamTotal ?? meta.total} pairs across{' '}
-              <span style={{ color: C.accent }}>{Object.keys(meta.chainsSeen).length} chains</span>
+              <span style={{ color: color.accent }}>{Object.keys(meta.chainsSeen).length} chains</span>
               {meta.filteredBy
                 ? ` — narrowed locally to '${meta.filteredBy}' (upstream ignores a chain param)`
                 : `: ${Object.entries(meta.chainsSeen).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join(', ')}`}
             </p>
           )}
           {meta.note && (
-            <p style={{ color: '#fbbf24', fontSize: 10, margin: '0 0 8px', fontWeight: 700 }}>⚠ {meta.note}</p>
+            <p style={{ color: color.warn, fontSize: fontSize[10], margin: `0 0 ${space[8]}px`, fontWeight: fontWeight.bold }}>⚠ {meta.note}</p>
           )}
 
           {/* profiles / boosts */}
           {(mode === 'profiles' || mode === 'boosts' || mode === 'boosts-top') && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 8 }}>
-              {profiles.length === 0 && <p style={{ color: C.dim, fontSize: 12 }}>upstream returned no profiles.</p>}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: space[8] }}>
+              {profiles.length === 0 && <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>upstream returned no profiles.</p>}
               {profiles.map((p, i) => (
-                <div key={p.address + i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden' }}>
+                <div key={p.address + i} style={{ background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius[8], overflow: 'hidden' }}>
                   {p.header && <div style={{ height: 54, backgroundImage: `url(${p.header})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />}
-                  <div style={{ padding: 8 }}>
-                    <div style={{ color: C.white, fontSize: 12, fontWeight: 700 }}>
+                  <div style={{ padding: space[8] }}>
+                    <div style={{ color: color.text, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>
                       {p.symbol || p.address.slice(0, 6) + '…'}
-                      <span style={{ color: C.dim, fontSize: 9, marginLeft: 6 }}>{p.chain}</span>
+                      <span style={{ color: color.textMuted, fontSize: fontSize[9], marginLeft: space[6] }}>{p.chain}</span>
                     </div>
-                    <div style={{ color: C.dim, fontSize: 9, marginTop: 2, wordBreak: 'break-all' }}>{p.address}</div>
+                    <div style={{ color: color.textMuted, fontSize: fontSize[9], marginTop: 2, wordBreak: 'break-all' }}>{p.address}</div>
                     {(p.amount != null || p.totalAmount != null) && (
-                      <div style={{ color: C.accent, fontSize: 10, marginTop: 4 }}>
+                      <div style={{ color: color.accent, fontSize: fontSize[10], marginTop: space[4] }}>
                         boost {money(p.amount)}{p.totalAmount != null && ` · total ${money(p.totalAmount)}`}
                       </div>
                     )}
                     {p.links.length > 0 && (
-                      <div style={{ display: 'flex', gap: 4, marginTop: 5, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: space[4], marginTop: 5, flexWrap: 'wrap' }}>
                         {p.links.slice(0, 3).map((l, j) => (
                           <a key={j} href={l.url} target="_blank" rel="noreferrer"
-                            style={{ color: C.accent, fontSize: 9, textDecoration: 'none' }}>
+                            style={{ color: color.accent, fontSize: fontSize[9], textDecoration: 'none' }}>
                             {l.label || l.type || 'link'}
                           </a>
                         ))}
@@ -337,49 +340,49 @@ export default function DexPage() {
           {mode === 'orders' && orderData && (
             <div>
               {orderData.orders.length === 0 && orderData.boosts.length === 0 && (
-                <p style={{ color: C.dim, fontSize: 12 }}>
+                <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>
                   upstream returned no orders and no boosts for this token — genuinely none, nothing faked.
                 </p>
               )}
               {orderData.orders.length > 0 && (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, marginBottom: 10 }}>
-                  <thead>
-                    <tr style={{ color: C.dim, textAlign: 'left' }}>
-                      <th style={{ padding: '4px 8px' }}>order</th>
-                      <th style={{ padding: '4px 8px' }}>status</th>
-                      <th style={{ padding: '4px 8px' }}>paid</th>
+                <Table style={{ fontSize: fontSize[11], marginBottom: space[10] }}>
+                  <THead>
+                    <tr style={{ color: color.textMuted, textAlign: 'left' }}>
+                      <th style={{ padding: `${space[4]}px ${space[8]}px` }}>order</th>
+                      <th style={{ padding: `${space[4]}px ${space[8]}px` }}>status</th>
+                      <th style={{ padding: `${space[4]}px ${space[8]}px` }}>paid</th>
                     </tr>
-                  </thead>
-                  <tbody>
+                  </THead>
+                  <TBody>
                     {orderData.orders.map((o, i) => (
-                      <tr key={String(o.paymentTimestamp ?? i)} style={{ borderTop: `1px solid ${C.border}` }}>
-                        <td style={{ padding: '5px 8px', color: C.white }}>{String(o.type ?? '—')}</td>
-                        <td style={{ padding: '5px 8px', color: o.status === 'approved' ? C.green : '#fbbf24' }}>{String(o.status ?? '—')}</td>
-                        <td style={{ padding: '5px 8px', color: C.dim }}>{age(typeof o.paymentTimestamp === 'number' ? o.paymentTimestamp : null)}</td>
+                      <tr key={String(o.paymentTimestamp ?? i)} style={{ borderTop: `1px solid ${color.border}` }}>
+                        <td style={{ padding: '5px 8px', color: color.text }}>{String(o.type ?? '—')}</td>
+                        <td style={{ padding: '5px 8px', color: o.status === 'approved' ? color.accent : color.warn }}>{String(o.status ?? '—')}</td>
+                        <td style={{ padding: '5px 8px', color: color.textMuted }}>{age(typeof o.paymentTimestamp === 'number' ? o.paymentTimestamp : null)}</td>
                       </tr>
                     ))}
-                  </tbody>
-                </table>
+                  </TBody>
+                </Table>
               )}
               {orderData.boosts.length > 0 && (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-                  <thead>
-                    <tr style={{ color: C.dim, textAlign: 'left' }}>
-                      <th style={{ padding: '4px 8px' }}>boost payment</th>
-                      <th style={{ padding: '4px 8px' }}>amount</th>
-                      <th style={{ padding: '4px 8px' }}>paid</th>
+                <Table style={{ fontSize: fontSize[11] }}>
+                  <THead>
+                    <tr style={{ color: color.textMuted, textAlign: 'left' }}>
+                      <th style={{ padding: `${space[4]}px ${space[8]}px` }}>boost payment</th>
+                      <th style={{ padding: `${space[4]}px ${space[8]}px` }}>amount</th>
+                      <th style={{ padding: `${space[4]}px ${space[8]}px` }}>paid</th>
                     </tr>
-                  </thead>
-                  <tbody>
+                  </THead>
+                  <TBody>
                     {orderData.boosts.map((b, i) => (
-                      <tr key={String(b.id ?? i)} style={{ borderTop: `1px solid ${C.border}` }}>
-                        <td style={{ padding: '5px 8px', color: C.white }}>{String(b.tokenAddress ?? '—').slice(0, 10)}…</td>
-                        <td style={{ padding: '5px 8px', color: C.white }}>{money(typeof b.amount === 'number' ? b.amount : null)}</td>
-                        <td style={{ padding: '5px 8px', color: C.dim }}>{age(typeof b.paymentTimestamp === 'number' ? b.paymentTimestamp : null)}</td>
+                      <tr key={String(b.id ?? i)} style={{ borderTop: `1px solid ${color.border}` }}>
+                        <td style={{ padding: '5px 8px', color: color.text }}>{String(b.tokenAddress ?? '—').slice(0, 10)}…</td>
+                        <td style={{ padding: '5px 8px', color: color.text }}>{money(typeof b.amount === 'number' ? b.amount : null)}</td>
+                        <td style={{ padding: '5px 8px', color: color.textMuted }}>{age(typeof b.paymentTimestamp === 'number' ? b.paymentTimestamp : null)}</td>
                       </tr>
                     ))}
-                  </tbody>
-                </table>
+                  </TBody>
+                </Table>
               )}
             </div>
           )}
@@ -387,49 +390,49 @@ export default function DexPage() {
           {/* pairs */}
           {(mode === 'pairs' || mode === 'search' || mode === 'mint') && (
             <>
-              {rows.length === 0 && <p style={{ color: C.dim, fontSize: 12 }}>no pairs returned for this query.</p>}
+              {rows.length === 0 && <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>no pairs returned for this query.</p>}
               {rows.length > 0 && (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-                    <thead>
-                      <tr style={{ color: C.dim, fontSize: 9, textAlign: 'left' }}>
+                  <Table style={{ fontSize: fontSize[11] }}>
+                    <THead>
+                      <tr style={{ color: color.textMuted, fontSize: fontSize[9], textAlign: 'left' }}>
                         {['pair', 'dex', 'price', '24h', 'vol 24h', 'liq', 'buys/sells 24h', 'mcap', 'age', 'labels'].map((h) => (
-                          <th key={h} style={{ padding: '4px 6px', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                          <th key={h} style={{ padding: `${space[4]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
-                    </thead>
-                    <tbody>
+                    </THead>
+                    <TBody>
                       {visible.slice(0, 100).map((p, i) => {
                         const t24 = win(p.txns, 'h24');
                         const ch24 = win(p.priceChange, 'h24');
                         return (
-                          <tr key={p.pairAddress + i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <tr key={p.pairAddress + i} style={{ borderBottom: `1px solid ${alpha(color.textInverse, 0.04)}` }}>
                             <td style={{ padding: '5px 6px', whiteSpace: 'nowrap' }}>
-                              <a href={p.url} target="_blank" rel="noreferrer" style={{ color: C.accent, textDecoration: 'none', fontWeight: 700 }}>
+                              <a href={p.url} target="_blank" rel="noreferrer" style={{ color: color.accent, textDecoration: 'none', fontWeight: fontWeight.bold }}>
                                 {p.baseToken?.symbol || '—'}
                               </a>
-                              <span style={{ color: C.dim }}>/{p.quoteToken?.symbol || '—'}</span>
+                              <span style={{ color: color.textMuted }}>/{p.quoteToken?.symbol || '—'}</span>
                             </td>
-                            <td style={{ padding: '5px 6px', color: C.dim }}>{p.dexId || '—'}</td>
-                            <td style={{ padding: '5px 6px', color: C.white }}>{num(p.priceUsd, { prefix: '$' })}</td>
-                            <td style={{ padding: '5px 6px', color: ch24 == null ? C.dim : ch24 >= 0 ? '#4ade80' : '#f87171' }}>{pct(ch24)}</td>
-                            <td style={{ padding: '5px 6px', color: C.white }}>{money(win(p.volume, 'h24') ?? null)}</td>
-                            <td style={{ padding: '5px 6px', color: C.white }}>{money(p.liquidity?.usd ?? null)}</td>
-                            <td style={{ padding: '5px 6px', color: C.dim, whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '5px 6px', color: color.textMuted }}>{p.dexId || '—'}</td>
+                            <td style={{ padding: '5px 6px', color: color.text }}>{num(p.priceUsd, { prefix: '$' })}</td>
+                            <td style={{ padding: '5px 6px', color: ch24 == null ? color.textMuted : ch24 >= 0 ? color.positive : color.negative }}>{pct(ch24)}</td>
+                            <td style={{ padding: '5px 6px', color: color.text }}>{money(win(p.volume, 'h24') ?? null)}</td>
+                            <td style={{ padding: '5px 6px', color: color.text }}>{money(p.liquidity?.usd ?? null)}</td>
+                            <td style={{ padding: '5px 6px', color: color.textMuted, whiteSpace: 'nowrap' }}>
                               {t24?.buys == null || t24?.sells == null ? '—' : `${t24.buys}/${t24.sells}`}
                             </td>
-                            <td style={{ padding: '5px 6px', color: C.white }}>{money(p.marketCap ?? null)}</td>
-                            <td style={{ padding: '5px 6px', color: C.dim }}>{age(p.pairCreatedAt)}</td>
-                            <td style={{ padding: '5px 6px', color: C.dim }}>
+                            <td style={{ padding: '5px 6px', color: color.text }}>{money(p.marketCap ?? null)}</td>
+                            <td style={{ padding: '5px 6px', color: color.textMuted }}>{age(p.pairCreatedAt)}</td>
+                            <td style={{ padding: '5px 6px', color: color.textMuted }}>
                               {p.labels && p.labels.length ? p.labels.join(',') : '—'}
                             </td>
                           </tr>
                         );
                       })}
-                    </tbody>
-                  </table>
+                    </TBody>
+                  </Table>
                   {visible.length > 100 && (
-                    <p style={{ color: C.dim, fontSize: 10, marginTop: 6 }}>showing first 100 of {visible.length} — narrow the filter</p>
+                    <p style={{ color: color.textMuted, fontSize: fontSize[10], marginTop: space[6] }}>showing first 100 of {visible.length} — narrow the filter</p>
                   )}
                 </div>
               )}

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { C } from '@/styles/shared';
+import { color, fontFamily, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { Loading } from '@/components/ui/feedback';
 
 // Mirrors the /api/ticker envelope (app/api/ticker/route.ts). Prices are
 // relayed from each exchange directly, never from an aggregator, and every
@@ -166,10 +167,10 @@ export default function TickerPage() {
   // the venues agree for practical purposes, over 0.1% is a real divergence
   // worth looking at before trusting the displayed median.
   const spreadColor = (r: TickerRow) => {
-    if (r.spread === null) return C.dim;
-    if (r.spread < 0.01) return C.green;
-    if (r.spread < 0.1) return C.white;
-    return C.red;
+    if (r.spread === null) return color.textMuted;
+    if (r.spread < 0.01) return color.accent;
+    if (r.spread < 0.1) return color.text;
+    return color.negative;
   };
 
   const toggleSort = (key: Sort) => {
@@ -179,31 +180,31 @@ export default function TickerPage() {
   const arrow = (key: Sort) => (sort !== key ? '' : order === 'desc' ? ' ↓' : ' ↑');
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
-    padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
-    background: active ? C.accent : C.card,
-    color: active ? '#06281c' : C.white,
-    border: `1px solid ${C.border}`,
-    fontWeight: active ? 700 : 400,
+    padding: '5px 12px', borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer',
+    background: active ? color.accent : color.surface,
+    color: active ? color.textOnAccent : color.text,
+    border: `1px solid ${color.border}`,
+    fontWeight: active ? fontWeight.bold : fontWeight.regular,
   });
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: space[12], flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h3 style={{ color: C.accent, margin: 0 }}>Exchange Ticker</h3>
-          <p style={{ color: C.dim, fontSize: 11, margin: '4px 0 0' }}>
+          <h3 style={{ color: color.accent, margin: 0 }}>Exchange Ticker</h3>
+          <p style={{ color: color.textMuted, fontSize: fontSize[11], margin: `${space[4]}px 0 0` }}>
             Centralized-exchange instruments relayed from {venues.join(', ') || '—'} and cross-checked between venues. Not a market-cap ranking.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: space[8], alignItems: 'center' }}>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Filter symbol"
             aria-label="Filter symbol"
-            style={{ background: C.card, color: C.white, border: `1px solid ${C.border}`, padding: '6px 10px', borderRadius: 6, fontSize: 11, width: 120 }}
+            style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[10]}px`, borderRadius: radius[6], fontSize: fontSize[11], width: 120 }}
           />
-          <button onClick={load} style={{ background: C.card, color: C.white, border: `1px solid ${C.border}`, padding: '6px 14px', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+          <button onClick={load} style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[14]}px`, borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer' }}>
             ↻ Refresh
           </button>
         </div>
@@ -211,7 +212,7 @@ export default function TickerPage() {
 
       {/* Market type is a first-class filter, not a column: a spot price and a
           perpetual price are different instruments, so they are listed apart. */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: space[6], marginBottom: space[10], flexWrap: 'wrap' }}>
         <button onClick={() => setType('all')} style={tabStyle(type === 'all')}>
           All ({Object.values(typeCounts).reduce((a, b) => a + b, 0)})
         </button>
@@ -223,59 +224,59 @@ export default function TickerPage() {
       </div>
 
       {error && (
-        <p style={{ color: C.red, fontSize: 12 }}>
+        <p style={{ color: color.negative, fontSize: fontSize[12] }}>
           {error}
           {stale && rows.length > 0 && ' — showing the last successful read; these prices are stale.'}
         </p>
       )}
 
       {loading ? (
-        <p style={{ color: C.dim, fontSize: 12 }}>Loading...</p>
+        <Loading label="Loading..." />
       ) : (
         <div style={{ opacity: stale ? 0.45 : 1, transition: 'opacity 150ms' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fontSize[12] }}>
             <thead>
-              <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.dim }}>
-                <th style={{ textAlign: 'left', padding: 6, cursor: 'pointer' }} onClick={() => toggleSort('symbol')}>Pair{arrow('symbol')}</th>
-                <th style={{ textAlign: 'left', padding: 6 }}>Instrument</th>
-                <th style={{ textAlign: 'right', padding: 6, cursor: 'pointer' }} onClick={() => toggleSort('price')}>Price{arrow('price')}</th>
-                <th style={{ textAlign: 'right', padding: 6, cursor: 'pointer' }} onClick={() => toggleSort('change')}>24h %{arrow('change')}</th>
-                <th style={{ textAlign: 'right', padding: 6, cursor: 'pointer' }} onClick={() => toggleSort('volume')}>Volume{arrow('volume')}</th>
-                <th style={{ textAlign: 'right', padding: 6, cursor: 'pointer' }} onClick={() => toggleSort('spread')}>Spread{arrow('spread')}</th>
-                <th style={{ textAlign: 'right', padding: 6 }}>Venues</th>
+              <tr style={{ borderBottom: `1px solid ${color.border}`, color: color.textMuted }}>
+                <th style={{ textAlign: 'left', padding: space[6], cursor: 'pointer' }} onClick={() => toggleSort('symbol')}>Pair{arrow('symbol')}</th>
+                <th style={{ textAlign: 'left', padding: space[6] }}>Instrument</th>
+                <th style={{ textAlign: 'right', padding: space[6], cursor: 'pointer' }} onClick={() => toggleSort('price')}>Price{arrow('price')}</th>
+                <th style={{ textAlign: 'right', padding: space[6], cursor: 'pointer' }} onClick={() => toggleSort('change')}>24h %{arrow('change')}</th>
+                <th style={{ textAlign: 'right', padding: space[6], cursor: 'pointer' }} onClick={() => toggleSort('volume')}>Volume{arrow('volume')}</th>
+                <th style={{ textAlign: 'right', padding: space[6], cursor: 'pointer' }} onClick={() => toggleSort('spread')}>Spread{arrow('spread')}</th>
+                <th style={{ textAlign: 'right', padding: space[6] }}>Venues</th>
               </tr>
             </thead>
             <tbody>
               {shown.map((r) => (
-                <tr key={`${r.type}|${r.symbol}`} style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <td style={{ padding: 6 }}>
+                <tr key={`${r.type}|${r.symbol}`} style={{ borderBottom: `1px solid ${color.border}` }}>
+                  <td style={{ padding: space[6] }}>
                     <Link
-                      href={`/ticker/${r.base}`}
-                      style={{ fontWeight: 700, color: C.accent, textDecoration: 'none' }}
+                      href={`/market/ticker/${r.base}`}
+                      style={{ fontWeight: fontWeight.bold, color: color.accent, textDecoration: 'none' }}
                       title={`Open ${r.base} detail`}
                     >
                       {r.base}
                     </Link>
-                    <div style={{ fontSize: 10, color: C.dim }}>{r.quote}</div>
+                    <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{r.quote}</div>
                   </td>
-                  <td style={{ padding: 6 }}>
-                    <div style={{ color: C.white, fontSize: 11 }}>{TYPE_LABELS[r.type]}</div>
+                  <td style={{ padding: space[6] }}>
+                    <div style={{ color: color.text, fontSize: fontSize[11] }}>{TYPE_LABELS[r.type]}</div>
                     {instrumentLabel(r) && (
-                      <div style={{ fontSize: 10, color: C.dim, fontFamily: 'monospace' }}>{instrumentLabel(r)}</div>
+                      <div style={{ fontSize: fontSize[10], color: color.textMuted, fontFamily: fontFamily.mono }}>{instrumentLabel(r)}</div>
                     )}
                   </td>
-                  <td style={{ padding: 6, textAlign: 'right', color: C.accent, fontWeight: 700 }}>{fmtPrice(r.price, r.instrument.settle)}</td>
-                  <td style={{ padding: 6, textAlign: 'right', color: r.change24h === null ? C.dim : r.change24h >= 0 ? C.green : C.red }}>
+                  <td style={{ padding: space[6], textAlign: 'right', color: color.accent, fontWeight: fontWeight.bold }}>{fmtPrice(r.price, r.instrument.settle)}</td>
+                  <td style={{ padding: space[6], textAlign: 'right', color: r.change24h === null ? color.textMuted : r.change24h >= 0 ? color.accent : color.negative }}>
                     {fmtPct(r.change24h)}
                   </td>
-                  <td style={{ padding: 6, textAlign: 'right', color: C.white }}>{fmtVol(r.quoteVolume)}</td>
-                  <td style={{ padding: 6, textAlign: 'right', color: spreadColor(r), fontFamily: 'monospace' }} title="Cross-venue divergence in percent, relative to the median of the venues that answered">
+                  <td style={{ padding: space[6], textAlign: 'right', color: color.text }}>{fmtVol(r.quoteVolume)}</td>
+                  <td style={{ padding: space[6], textAlign: 'right', color: spreadColor(r), fontFamily: fontFamily.mono }} title="Cross-venue divergence in percent, relative to the median of the venues that answered">
                     {fmtSpread(r.spread)}
                   </td>
-                  <td style={{ padding: 6, textAlign: 'right' }}>
-                    <div style={{ color: C.white }}>{r.venues.map(v => v.exchange).join(' · ')}</div>
+                  <td style={{ padding: space[6], textAlign: 'right' }}>
+                    <div style={{ color: color.text }}>{r.venues.map(v => v.exchange).join(' · ')}</div>
                     {r.failed.length > 0 && (
-                      <div style={{ fontSize: 10, color: C.red }}>no quote: {r.failed.join(', ')}</div>
+                      <div style={{ fontSize: fontSize[10], color: color.negative }}>no quote: {r.failed.join(', ')}</div>
                     )}
                   </td>
                 </tr>
@@ -286,7 +287,7 @@ export default function TickerPage() {
       )}
 
       {!loading && shown.length === 0 && !error && (
-        <p style={{ color: C.dim, fontSize: 12 }}>No pair matches “{search}”.</p>
+        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>No pair matches “{search}”.</p>
       )}
     </div>
   );

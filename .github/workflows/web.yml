@@ -70,6 +70,13 @@ jobs:
       # cargo build BEFORE the guard (commit 9e2e1ec).
       - name: "Structure gate (DR-018 layers)"
         run: python3 scripts/checks/check-structure.py
+      # The design system (DR-037). The migration gate is EXPECTED to be red until the
+      # feature/component workers land — that is the point of it. The artifact-drift check
+      # is green from day one and must stay green.
+      - name: "Design-token gate (raw literals, magic style values, dead tokens)"
+        run: python3 scripts/checks/check-design-tokens.py
+      - name: "Design-token artifact drift (generated globals.css block + tailwind.tokens.json)"
+        run: bun scripts/design/emit-tokens.ts --check
       - name: Typecheck
         run: bunx tsc --noEmit
       - name: "Shaper fixture tests (offline, recorded upstream payloads)"

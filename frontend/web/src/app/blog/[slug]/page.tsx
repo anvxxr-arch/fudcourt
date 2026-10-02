@@ -1,6 +1,7 @@
 import config from '@payload-config';
 import { getPayload } from 'payload';
 import { notFound } from 'next/navigation';
+import { color, fontFamily, fontSize, lineHeight, space } from '@/styles/tokens';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,17 +27,17 @@ export default async function PostPage({
       style={{
         maxWidth: 720,
         margin: '0 auto',
-        padding: '48px 24px',
-        fontFamily: 'system-ui, sans-serif',
-        lineHeight: 1.7,
+        padding: `48px ${space[24]}px`,
+        fontFamily: fontFamily.sans,
+        lineHeight: lineHeight.loose,
       }}
     >
-      <a href="/blog" style={{ color: '#4ade80', textDecoration: 'none', fontSize: 14 }}>
+      <a href="/blog" style={{ color: color.positive, textDecoration: 'none', fontSize: fontSize[14] }}>
         ← All posts
       </a>
-      <h1 style={{ fontSize: 34, margin: '24px 0 8px' }}>{post.title}</h1>
+      <h1 style={{ fontSize: fontSize[32], margin: `${space[24]}px 0 ${space[8]}px` }}>{post.title}</h1>
       {post.publishedAt && (
-        <time style={{ color: '#666', fontSize: 13 }}>
+        <time style={{ color: color.textMuted, fontSize: fontSize[13] }}>
           {new Date(post.publishedAt).toLocaleDateString(undefined, {
             year: 'numeric',
             month: 'long',
@@ -45,9 +46,9 @@ export default async function PostPage({
         </time>
       )}
       {post.excerpt && (
-        <p style={{ color: '#999', fontStyle: 'italic', marginTop: 20 }}>{post.excerpt}</p>
+        <p style={{ color: color.textMuted, fontStyle: 'italic', marginTop: space[20] }}>{post.excerpt}</p>
       )}
-      <hr style={{ border: 0, borderTop: '1px solid #222', margin: '32px 0' }} />
+      <hr style={{ border: 0, borderTop: `1px solid ${color.border}`, margin: `${space[32]}px 0` }} />
       <article>{post.content ? <RichText data={post.content} /> : <p>No content.</p>}</article>
     </main>
   );

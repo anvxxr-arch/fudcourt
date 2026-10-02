@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { C } from '@/styles/shared';
+import { alpha, color, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
+import { Loading } from '@/components/ui/feedback';
+import { Banner } from '@/components/ui/banner';
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import type { ChainrankPage, ChainrankStats, ChainrankRow } from './client';
 
 /** cents -> $x.xx. Absent/null is an em-dash, never 0 (house rule). */
@@ -79,31 +82,31 @@ export default function ChainrankPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-        <h3 style={{ color: C.white, fontSize: 15, fontWeight: 800 }}>ChainRank — paid leaderboard</h3>
+      <div style={{ display: 'flex', alignItems: 'center', gap: space[10], flexWrap: 'wrap', marginBottom: space[8] }}>
+        <h3 style={{ color: color.text, fontSize: fontSize[16], fontWeight: fontWeight.heavy }}>ChainRank — paid leaderboard</h3>
         <button onClick={load}
-          style={{ background: C.card, color: C.white, border: `1px solid ${C.border}`, padding: '5px 12px', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+          style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: '5px 12px', borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
         {fetchedAt != null && !stale && (
-          <span style={{ color: C.dim, fontSize: 10 }}>
+          <span style={{ color: color.textMuted, fontSize: fontSize[10] }}>
             {new Date(fetchedAt * 1000).toLocaleTimeString()}
           </span>
         )}
       </div>
-      <p style={{ color: C.dim, fontSize: 10, margin: '0 0 10px' }}>
+      <p style={{ color: color.textMuted, fontSize: fontSize[10], margin: `0 0 ${space[10]}px` }}>
         read-only relay of chainrank.fyi · reverse-engineered public endpoints (stats + listings) · an em-dash means
         the field is absent upstream, never zero · writes (click/presence/claim) are deliberately not proxied
       </p>
 
       {error && (
-        <p style={{ color: C.red, fontSize: 12, fontWeight: 700, background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.35)', padding: '8px 10px', borderRadius: 6, marginBottom: 8 }}>
+        <Banner variant="error" style={{ fontWeight: fontWeight.bold, marginBottom: space[8] }}>
           ⚠ chainrank error: {error} — no data faked{stale && stats ? ' · showing last good board below, stamped' : ''}
-        </p>
+        </Banner>
       )}
 
       {stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: space[8], marginBottom: space[12] }}>
           {[
             { k: 'online now', v: stats.online },
             { k: 'listings', v: stats.listings },
@@ -112,64 +115,64 @@ export default function ChainrankPage() {
             { k: 'top listing', v: usd(stats.topUsdCents) },
             { k: 'claim #1 costs', v: usd(stats.claimTopCents) },
           ].map((s) => (
-            <div key={s.k} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 10px' }}>
-              <div style={{ color: C.dim, fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.4 }}>{s.k}</div>
-              <div style={{ color: C.white, fontSize: 15, fontWeight: 800, marginTop: 2 }}>{s.v}</div>
+            <div key={s.k} style={{ background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius[8], padding: `${space[8]}px ${space[10]}px` }}>
+              <div style={{ color: color.textMuted, fontSize: fontSize[9], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>{s.k}</div>
+              <div style={{ color: color.text, fontSize: fontSize[16], fontWeight: fontWeight.heavy, marginTop: 2 }}>{s.v}</div>
             </div>
           ))}
         </div>
       )}
 
       {loading ? (
-        <p style={{ color: C.dim, fontSize: 12 }}>loading chainrank board…</p>
+        <Loading label="loading chainrank board…" />
       ) : error && !board ? (
-        <p style={{ color: C.dim, fontSize: 12 }}>row list withheld — the request above failed.</p>
+        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>row list withheld — the request above failed.</p>
       ) : (
         <>
           {stale && (
-            <p style={{ color: '#fbbf24', fontSize: 10, margin: '0 0 8px', fontWeight: 700 }}>
+            <p style={{ color: color.warn, fontSize: fontSize[10], margin: `0 0 ${space[8]}px`, fontWeight: fontWeight.bold }}>
               ⚠ last good board from {fetchedAt ? new Date(fetchedAt * 1000).toLocaleTimeString() : 'unknown time'} — refresh failed
             </p>
           )}
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <thead>
-              <tr style={{ color: C.dim, textAlign: 'left' }}>
-                <th style={{ padding: '5px 8px', width: 44 }}>rank</th>
-                <th style={{ padding: '5px 8px' }}>product</th>
-                <th style={{ padding: '5px 8px', textAlign: 'right' }}>raised</th>
-                <th style={{ padding: '5px 8px', textAlign: 'right' }}>clicks</th>
-                <th style={{ padding: '5px 8px' }}>last paid</th>
-                <th style={{ padding: '5px 8px' }}>listed</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table style={{ fontSize: fontSize[12] }}>
+            <THead>
+              <TR style={{ borderBottom: 0 }}>
+                <TH style={{ padding: `5px ${space[8]}px`, width: 44, fontWeight: fontWeight.bold }}>rank</TH>
+                <TH style={{ padding: `5px ${space[8]}px`, fontWeight: fontWeight.bold }}>product</TH>
+                <TH align="right" style={{ padding: `5px ${space[8]}px`, fontWeight: fontWeight.bold }}>raised</TH>
+                <TH align="right" style={{ padding: `5px ${space[8]}px`, fontWeight: fontWeight.bold }}>clicks</TH>
+                <TH style={{ padding: `5px ${space[8]}px`, fontWeight: fontWeight.bold }}>last paid</TH>
+                <TH style={{ padding: `5px ${space[8]}px`, fontWeight: fontWeight.bold }}>listed</TH>
+              </TR>
+            </THead>
+            <TBody>
               {rows.length === 0 && (
-                <tr><td colSpan={6} style={{ color: C.dim, padding: 12 }}>upstream returned no listings — genuinely empty, nothing faked.</td></tr>
+                <TR style={{ borderBottom: 0 }}><TD colSpan={6} style={{ color: color.textMuted, padding: space[12] }}>upstream returned no listings — genuinely empty, nothing faked.</TD></TR>
               )}
               {rows.map((r) => (
-                <tr key={r.id} style={{ borderTop: `1px solid ${C.border}` }}>
-                  <td style={{ padding: '7px 8px', color: r.rank <= 3 ? C.accent : C.white, fontWeight: 700 }}>{r.rank}</td>
-                  <td style={{ padding: '7px 8px' }}>
+                <TR key={r.id} style={{ borderTop: `1px solid ${color.border}`, borderBottom: 0 }}>
+                  <TD style={{ padding: `7px ${space[8]}px`, color: r.rank <= 3 ? color.accent : color.text, fontWeight: fontWeight.bold }}>{r.rank}</TD>
+                  <TD style={{ padding: `7px ${space[8]}px` }}>
                     <a href={r.url} target="_blank" rel="noopener nofollow"
-                      style={{ color: C.white, textDecoration: 'none', fontWeight: 700 }}>{r.title || r.handle || r.key}</a>
-                    <div style={{ color: C.dim, fontSize: 9 }}>{r.handle ? `@${r.handle}` : r.url}</div>
-                  </td>
-                  <td style={{ padding: '7px 8px', textAlign: 'right', color: C.white, fontWeight: 700 }}>{usd(r.totalUsdCents)}</td>
-                  <td style={{ padding: '7px 8px', textAlign: 'right', color: C.white }}>{r.clicks ?? '—'}</td>
-                  <td style={{ padding: '7px 8px', color: C.dim }}>{age(r.lastPaidAt)}</td>
-                  <td style={{ padding: '7px 8px', color: C.dim }}>{age(r.createdAt)}</td>
-                </tr>
+                      style={{ color: color.text, textDecoration: 'none', fontWeight: fontWeight.bold }}>{r.title || r.handle || r.key}</a>
+                    <div style={{ color: color.textMuted, fontSize: fontSize[9] }}>{r.handle ? `@${r.handle}` : r.url}</div>
+                  </TD>
+                  <TD align="right" style={{ padding: `7px ${space[8]}px`, color: color.text, fontWeight: fontWeight.bold }}>{usd(r.totalUsdCents)}</TD>
+                  <TD align="right" style={{ padding: `7px ${space[8]}px`, color: color.text }}>{r.clicks ?? '—'}</TD>
+                  <TD style={{ padding: `7px ${space[8]}px`, color: color.textMuted }}>{age(r.lastPaidAt)}</TD>
+                  <TD style={{ padding: `7px ${space[8]}px`, color: color.textMuted }}>{age(r.createdAt)}</TD>
+                </TR>
               ))}
-            </tbody>
-          </table>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 10 }}>
+            </TBody>
+          </Table>
+          <div style={{ display: 'flex', gap: space[8], alignItems: 'center', marginTop: space[10] }}>
             <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}
-              style={{ background: C.card, color: page <= 1 ? C.dim : C.white, border: `1px solid ${C.border}`, padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: page <= 1 ? 'default' : 'pointer', opacity: page <= 1 ? 0.5 : 1 }}>
+              style={{ background: color.surface, color: page <= 1 ? color.textMuted : color.text, border: `1px solid ${color.border}`, padding: `${space[4]}px ${space[10]}px`, borderRadius: radius[6], fontSize: fontSize[11], cursor: page <= 1 ? 'default' : 'pointer', opacity: page <= 1 ? 0.5 : 1 }}>
               ‹ prev
             </button>
-            <span style={{ color: C.dim, fontSize: 11 }}>page {page} / {totalPages} · {total} listing{total === 1 ? '' : 's'}</span>
+            <span style={{ color: color.textMuted, fontSize: fontSize[11] }}>page {page} / {totalPages} · {total} listing{total === 1 ? '' : 's'}</span>
             <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}
-              style={{ background: C.card, color: page >= totalPages ? C.dim : C.white, border: `1px solid ${C.border}`, padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: page >= totalPages ? 'default' : 'pointer', opacity: page >= totalPages ? 0.5 : 1 }}>
+              style={{ background: color.surface, color: page >= totalPages ? color.textMuted : color.text, border: `1px solid ${color.border}`, padding: `${space[4]}px ${space[10]}px`, borderRadius: radius[6], fontSize: fontSize[11], cursor: page >= totalPages ? 'default' : 'pointer', opacity: page >= totalPages ? 0.5 : 1 }}>
               next ›
             </button>
           </div>

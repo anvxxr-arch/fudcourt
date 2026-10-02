@@ -10,6 +10,8 @@
     "verify:executor": "bun run ../../tests/e2e/executor/executor-paper-e2e.ts",
     "record:fixtures": "tsc -p tsconfig.shaper-tests.json && node --require ./tests/alias-resolver.cjs .shaper-tests/tests/oracle/record-fixtures.js",
     "dump:envelopes": "tsc -p tsconfig.shaper-tests.json && node --require ./tests/alias-resolver.cjs .shaper-tests/tests/oracle/dump-envelopes.js",
+    "tokens": "bun scripts/design/emit-tokens.ts",
+    "check:design": "python3 scripts/checks/check-design-tokens.py && bun scripts/design/emit-tokens.ts --check",
     "generate:types": "payload generate:types",
     "migrate": "payload migrate",
     "payload": "payload"

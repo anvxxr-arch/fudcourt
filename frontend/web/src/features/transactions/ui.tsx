@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { C, EVENT_PRESETS, CHAIN_COLOR } from '@/styles/shared';
+import { alpha, color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { EVENT_PRESETS, CHAIN_COLOR } from '@/styles/shared';
 import { Button, Input, Select, Modal, Label } from '@/components/ui/primitives';
 import { MUT_HEADERS } from '@/platform/http/mut-client';
 
@@ -111,13 +112,13 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
   };
 
   const Cell = ({ children, align = 'left', width, style }: { children: React.ReactNode; align?: 'left' | 'right' | 'center'; width?: number; style?: React.CSSProperties }) => (
-    <td style={{ padding: 6, textAlign: align, width, ...style }}>{children}</td>
+    <td style={{ padding: space[6], textAlign: align, width, ...style }}>{children}</td>
   );
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[12], flexWrap: 'wrap', gap: space[8] }}>
+        <div style={{ display: 'flex', gap: space[6], flexWrap: 'wrap' }}>
           <Button onClick={() => setShowAdd(!showAdd)} size="sm">+ Add TX</Button>
           <Button onClick={csv} variant="ghost" size="sm">📥 CSV</Button>
           {selected.length > 0 && (
@@ -127,10 +128,10 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
             </>
           )}
         </div>
-        <span style={{ color: C.dim, fontSize: 11 }}>{filtered.length} of {transactions.length} shown</span>
+        <span style={{ color: color.textMuted, fontSize: fontSize[11] }}>{filtered.length} of {transactions.length} shown</span>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: space[6], marginBottom: space[12], flexWrap: 'wrap' }}>
         <Input value={search} onChange={setSearch} placeholder="🔍 Search memo/event/hash..." style={{ flex: 1, minWidth: 200 }} />
         <Select value={filterChain} onChange={setFilterChain} options={['All Chains', ...chains]} />
         <Select value={filterDirection} onChange={setFilterDirection} options={['All Directions', 'IN', 'OUT']} />
@@ -138,9 +139,9 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
 
       {showAdd && <TxForm title="Add Transaction" onSave={save} onClose={() => setShowAdd(false)} />}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fontSize[12] }}>
         <thead>
-          <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.dim }}>
+          <tr style={{ borderBottom: `1px solid ${color.border}`, color: color.textMuted }}>
             <Cell width={30}><input type="checkbox" checked={filtered.length > 0 && filtered.every(t => selected.includes(t.id))} onChange={toggleAll} /></Cell>
             <Cell>Date</Cell><Cell>Chain</Cell><Cell>Venue</Cell><Cell>Event</Cell><Cell>Memo</Cell>
             <Cell align="right">Amount</Cell><Cell align="center">Actions</Cell>
@@ -148,14 +149,14 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
         </thead>
         <tbody>
           {filtered.map(t => (
-            <tr key={t.id} style={{ borderBottom: `1px solid ${C.border}`, background: selected.includes(t.id) ? 'rgba(61,220,151,0.08)' : undefined }}>
+            <tr key={t.id} style={{ borderBottom: `1px solid ${color.border}`, background: selected.includes(t.id) ? alpha(color.accent, 0.08) : undefined }}>
               <Cell><input type="checkbox" checked={selected.includes(t.id)} onChange={() => toggle(t.id)} /></Cell>
               <Cell>{t.date}</Cell>
-              <Cell style={{ color: CHAIN_COLOR[t.chain] || C.dim }}>{t.chain || '—'}</Cell>
-              <Cell style={{ color: C.dim }}>{t.venue_id || '—'}</Cell>
+              <Cell style={{ color: CHAIN_COLOR[t.chain] || color.textMuted }}>{t.chain || '—'}</Cell>
+              <Cell style={{ color: color.textMuted }}>{t.venue_id || '—'}</Cell>
               <Cell>{t.event}</Cell>
-              <Cell style={{ color: C.dim, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.memo || '—'}</Cell>
-              <Cell align="right" style={{ color: t.amount_usd > 0 ? C.accent : C.red }}>
+              <Cell style={{ color: color.textMuted, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.memo || '—'}</Cell>
+              <Cell align="right" style={{ color: t.amount_usd > 0 ? color.accent : color.negative }}>
                 {t.amount_usd > 0 ? '+' : ''}{Number(t.amount_usd || 0).toFixed(2)}
               </Cell>
               <Cell align="center">
@@ -167,7 +168,7 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
         </tbody>
       </table>
 
-      {filtered.length === 0 && <p style={{ color: C.dim, textAlign: 'center', padding: 20 }}>No transactions found</p>}
+      {filtered.length === 0 && <p style={{ color: color.textMuted, textAlign: 'center', padding: space[20] }}>No transactions found</p>}
       {edit && <TxForm title={`Edit #${edit.id}`} initial={edit} onSave={(u) => patch(edit.id, u)} onClose={() => setEdit(null)} />}
     </div>
   );
@@ -186,18 +187,18 @@ function TxForm({ title, initial, onSave, onClose }: {
 
   return (
     <Modal title={title} onClose={onClose} width={480}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
-        <div><Label>Date</Label><input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', background: C.bg, color: C.white, border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 8px', fontSize: 12, boxSizing: 'border-box' }} /></div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: space[8], marginBottom: space[8] }}>
+        <div><Label>Date</Label><input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', background: color.bg, color: color.text, border: `1px solid ${color.border}`, borderRadius: radius[6], padding: `${space[6]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box' }} /></div>
         <div><Label>Chain</Label><Select value={chain} onChange={setChain} options={CHAIN_OPTIONS} /></div>
         <div><Label>Venue</Label><Input value={venue} onChange={setVenue} placeholder="e.g. Binance" /></div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: space[8], marginBottom: space[8] }}>
         <div><Label>Event</Label><Select value={event} onChange={setEvent} options={EVENT_PRESETS} /></div>
         <div><Label>Amount (USD)</Label><Input value={amount} onChange={setAmount} placeholder="e.g. -100" type="number" /></div>
         <div><Label>Wallet To</Label><Input value={to} onChange={setTo} placeholder="address" /></div>
       </div>
-      <div style={{ marginBottom: 12 }}><Label>Memo</Label><textarea value={memo} onChange={e => setMemo(e.target.value)} placeholder="..." style={{ width: '100%', background: C.bg, color: C.white, border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 8px', fontSize: 12, minHeight: 40, resize: 'vertical', boxSizing: 'border-box' }} /></div>
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+      <div style={{ marginBottom: space[12] }}><Label>Memo</Label><textarea value={memo} onChange={e => setMemo(e.target.value)} placeholder="..." style={{ width: '100%', background: color.bg, color: color.text, border: `1px solid ${color.border}`, borderRadius: radius[6], padding: `${space[6]}px ${space[8]}px`, fontSize: fontSize[12], minHeight: space[40], resize: 'vertical', boxSizing: 'border-box' }} /></div>
+      <div style={{ display: 'flex', gap: space[8], justifyContent: 'flex-end' }}>
         <Button onClick={onClose} variant="ghost" size="md">Cancel</Button>
         <Button onClick={() => onSave({ date, chain, venue_id: venue, event, amount_usd: amount, memo, wallet_to: to, source: 'manual' })}>💾 Save</Button>
       </div>

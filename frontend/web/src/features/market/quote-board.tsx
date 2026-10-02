@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { Loading } from '@/components/ui/feedback';
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
+import { Toolbar } from '@/components/ui/toolbar';
 import { dash, fmtCurrency, fmtPct, fmtPrice, fmtVolume, tone } from '@/features/market/format';
 import type { MarketQuote } from '@/features/market/quotes';
 
@@ -59,30 +62,35 @@ export default function QuoteBoard({
 
   const toneColor = (v: number | null): string =>
     tone(v) === 'up' ? color.accent : tone(v) === 'down' ? color.negative : color.textMuted;
-  const th = (align: 'left' | 'right'): CSSProperties => ({
-    textAlign: align,
+  // `TH` already defaults `color` to `color.textMuted` and takes `align` as a prop; the
+  // padding / weight / nowrap are this board's own and ride the atom's last-wins spread.
+  const thStyle: CSSProperties = {
     padding: space[6],
-    color: color.textMuted,
     fontWeight: fontWeight.regular,
     whiteSpace: 'nowrap',
-  });
-  const td = (align: 'left' | 'right'): CSSProperties => ({
-    textAlign: align,
-    padding: space[6],
-    whiteSpace: 'nowrap',
-  });
+  };
+  const tdStyle: CSSProperties = { padding: space[6], whiteSpace: 'nowrap' };
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'baseline',
-          gap: space[8],
-          flexWrap: 'wrap',
-          marginBottom: space[12],
-        }}
+      <Toolbar
+        style={{ alignItems: 'baseline', gap: space[8], flexWrap: 'wrap', marginBottom: space[12] }}
+        actions={
+          <button
+            onClick={load}
+            style={{
+              background: color.surface,
+              color: color.text,
+              border: `1px solid ${color.border}`,
+              padding: `${space[6]}px ${space[14]}px`,
+              borderRadius: radius[6],
+              fontSize: fontSize[11],
+              cursor: 'pointer',
+            }}
+          >
+            ↻ Refresh
+          </button>
+        }
       >
         <h3 style={{ color: color.accent, margin: 0 }}>
           {title}
@@ -93,66 +101,52 @@ export default function QuoteBoard({
             </span>
           ) : null}
         </h3>
-        <button
-          onClick={load}
-          style={{
-            background: color.surface,
-            color: color.text,
-            border: `1px solid ${color.border}`,
-            padding: `${space[6]}px ${space[14]}px`,
-            borderRadius: radius[6],
-            fontSize: fontSize[11],
-            cursor: 'pointer',
-          }}
-        >
-          ↻ Refresh
-        </button>
-      </div>
+      </Toolbar>
 
       {error && <p style={{ color: color.negative, fontSize: fontSize[12] }}>{error}</p>}
 
       {loading ? (
-        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>Loading…</p>
+        <Loading />
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fontSize[12] }}>
-          <thead>
-            <tr style={{ borderBottom: `1px solid ${color.border}` }}>
-              <th style={th('left')}>Instrument</th>
-              <th style={th('right')}>Last</th>
-              <th style={th('right')}>Chg</th>
-              <th style={th('right')}>Chg %</th>
-              <th style={th('right')}>Day range</th>
-              <th style={th('right')}>Volume</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <THead>
+            <TR>
+              <TH style={thStyle}>Instrument</TH>
+              <TH align="right" style={thStyle}>Last</TH>
+              <TH align="right" style={thStyle}>Chg</TH>
+              <TH align="right" style={thStyle}>Chg %</TH>
+              <TH align="right" style={thStyle}>Day range</TH>
+              <TH align="right" style={thStyle}>Volume</TH>
+            </TR>
+          </THead>
+          <TBody>
             {quotes.map((q) => (
-              <tr key={q.symbol} style={{ borderBottom: `1px solid ${color.border}` }}>
-                <td style={td('left')}>
+              <TR key={q.symbol}>
+                <TD style={tdStyle}>
                   <div style={{ fontWeight: fontWeight.bold, color: color.text }}>{q.symbol}</div>
                   <div style={{ fontSize: fontSize[10], color: color.textMuted }}>
                     {q.name}
                     {q.exchange ? ` · ${q.exchange}` : ''}
                   </div>
-                </td>
-                <td style={{ ...td('right'), color: color.accent }}>
+                </TD>
+                <TD align="right" style={{ ...tdStyle, color: color.accent }}>
                   {fmtPrice(q.price)}
                   {q.currency ? (
                     <span style={{ color: color.textMuted, fontSize: fontSize[10] }}> {fmtCurrency(q.currency)}</span>
                   ) : null}
-                </td>
-                <td style={{ ...td('right'), color: toneColor(q.change) }}>
+                </TD>
+                <TD align="right" style={{ ...tdStyle, color: toneColor(q.change) }}>
                   {q.change === null ? dash : `${q.change >= 0 ? '+' : ''}${fmtPrice(q.change)}`}
-                </td>
-                <td style={{ ...td('right'), color: toneColor(q.changePercent) }}>{fmtPct(q.changePercent)}</td>
-                <td style={{ ...td('right'), color: color.textMuted }}>
+                </TD>
+                <TD align="right" style={{ ...tdStyle, color: toneColor(q.changePercent) }}>{fmtPct(q.changePercent)}</TD>
+                <TD align="right" style={{ ...tdStyle, color: color.textMuted }}>
                   {q.dayLow === null || q.dayHigh === null ? dash : `${fmtPrice(q.dayLow)} – ${fmtPrice(q.dayHigh)}`}
-                </td>
-                <td style={{ ...td('right'), color: color.text }}>{fmtVolume(q.volume)}</td>
-              </tr>
+                </TD>
+                <TD align="right" style={{ ...tdStyle, color: color.text }}>{fmtVolume(q.volume)}</TD>
+              </TR>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       )}
 
       <div style={{ marginTop: space[10], color: color.textMuted, fontSize: fontSize[10] }}>

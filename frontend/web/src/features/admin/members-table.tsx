@@ -1,16 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { C } from '@/styles/shared';
+import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { TIER_COLOR } from './palette';
 
 type Row = { id: string; username: string; globalName: string | null; avatar: string | null; tier: string };
-
-const TIER_COLOR: Record<string, string> = {
-  admin: '#f87171',
-  team: '#4ade80',
-  member: '#60a5fa',
-  public: C.dim,
-};
 
 export default function MemberTable() {
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -79,31 +73,31 @@ export default function MemberTable() {
 
   return (
     <div>
-      {note && <p style={{ color: C.red, fontSize: 12, margin: '0 0 10px' }}>{note}</p>}
+      {note && <p style={{ color: color.negative, fontSize: fontSize[12], margin: `0 0 ${space[10]}px` }}>{note}</p>}
       {error !== null ? (
-        <p style={{ color: C.red, fontSize: 12 }}>{error}</p>
+        <p style={{ color: color.negative, fontSize: fontSize[12] }}>{error}</p>
       ) : rows === null ? (
-        <p style={{ color: C.dim, fontSize: 12 }}>Loading guild members…</p>
+        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>Loading guild members…</p>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fontSize[12] }}>
           <thead>
-            <tr style={{ color: C.dim, textAlign: 'left' }}>
-              <th style={{ padding: '6px 8px', fontWeight: 400 }}>user</th>
-              <th style={{ padding: '6px 8px', fontWeight: 400 }}>tier</th>
-              <th style={{ padding: '6px 8px', fontWeight: 400 }}>roles</th>
+            <tr style={{ color: color.textMuted, textAlign: 'left' }}>
+              <th style={{ padding: `${space[6]}px ${space[8]}px`, fontWeight: fontWeight.regular }}>user</th>
+              <th style={{ padding: `${space[6]}px ${space[8]}px`, fontWeight: fontWeight.regular }}>tier</th>
+              <th style={{ padding: `${space[6]}px ${space[8]}px`, fontWeight: fontWeight.regular }}>roles</th>
             </tr>
           </thead>
           <tbody>
             {rows.map(row => (
-              <tr key={row.id} style={{ borderTop: `1px solid ${C.border}` }}>
-                <td style={{ padding: '6px 8px' }}>
+              <tr key={row.id} style={{ borderTop: `1px solid ${color.border}` }}>
+                <td style={{ padding: `${space[6]}px ${space[8]}px` }}>
                   {row.globalName ?? row.username}
                   {row.globalName && row.globalName !== row.username && (
-                    <span style={{ color: C.dim }}> ({row.username})</span>
+                    <span style={{ color: color.textMuted }}> ({row.username})</span>
                   )}
                 </td>
-                <td style={{ padding: '6px 8px', color: TIER_COLOR[row.tier] ?? C.white }}>{row.tier}</td>
-                <td style={{ padding: '6px 8px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <td style={{ padding: `${space[6]}px ${space[8]}px`, color: TIER_COLOR[row.tier] ?? color.text }}>{row.tier}</td>
+                <td style={{ padding: `${space[6]}px ${space[8]}px`, display: 'flex', gap: space[6], flexWrap: 'wrap' }}>
                   {actions(row)}
                 </td>
               </tr>
@@ -135,10 +129,10 @@ function btn(
       disabled={busy === key}
       onClick={() => run(row, role, action)}
       style={{
-        background: adding ? C.accent : 'transparent',
-        color: adding ? '#04140f' : C.red,
-        border: `1px solid ${adding ? C.accent : C.red}`,
-        borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer',
+        background: adding ? color.accent : 'transparent',
+        color: adding ? color.textOnAccent : color.negative,
+        border: `1px solid ${adding ? color.accent : color.negative}`,
+        borderRadius: radius[6], padding: `${space[4]}px ${space[10]}px`, fontSize: fontSize[11], cursor: 'pointer',
         fontFamily: 'inherit', opacity: busy === key ? 0.5 : 1,
       }}>
       {label}

@@ -1,4 +1,4 @@
-import { C } from '@/styles/shared';
+import { color, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
 import { isSafeNext } from '@/platform/auth/guard';
 // The login view itself. It lives in features/auth because it is the auth
 // family's UI; the route (`/login`) is the thin wrapper that reads
@@ -23,47 +23,47 @@ export default function LoginPanel({ error, next }: { error?: string; next?: str
     <main
       style={{
         minHeight: '100vh',
-        background: C.bg,
-        color: C.white,
+        background: color.bg,
+        color: color.text,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 20,
-        fontFamily: 'ui-monospace, monospace',
+        padding: space[20],
+        fontFamily: fontFamily.mono,
       }}
     >
       <div
         style={{
           width: '100%',
           maxWidth: 420,
-          background: C.card,
-          border: `1px solid ${C.border}`,
-          borderRadius: 8,
-          padding: 28,
+          background: color.surface,
+          border: `1px solid ${color.border}`,
+          borderRadius: radius[8],
+          padding: space[28],
         }}
       >
-        <h1 style={{ margin: 0, fontSize: 18, letterSpacing: 1 }}>FUDCOURT ACCESS</h1>
-        <p style={{ color: C.dim, fontSize: 13, lineHeight: 1.6 }}>
+        <h1 style={{ margin: 0, fontSize: fontSize[18], letterSpacing: letterSpacing.wide }}>FUDCOURT ACCESS</h1>
+        <p style={{ color: color.textMuted, fontSize: fontSize[13], lineHeight: lineHeight.normal }}>
           Masuk dengan Discord untuk membuka member, terminal, dan management. Level akses mengikuti role
           Discord kamu di guild FUDCOURT.
         </p>
         {message && (
           <p
             style={{
-              color: C.red,
-              fontSize: 12,
-              border: `1px solid ${C.red}`,
-              borderRadius: 6,
-              padding: '8px 10px',
-              margin: '0 0 16px',
+              color: color.negative,
+              fontSize: fontSize[12],
+              border: `1px solid ${color.negative}`,
+              borderRadius: radius[6],
+              padding: `${space[8]}px ${space[10]}px`,
+              margin: `0 0 ${space[16]}px`,
             }}
           >
             {message}
           </p>
         )}
         {target !== '/' && (
-          <p style={{ color: C.dim, fontSize: 12, margin: '0 0 16px' }}>
-            Setelah login kamu kembali ke <span style={{ color: C.accent }}>{target}</span>
+          <p style={{ color: color.textMuted, fontSize: fontSize[12], margin: `0 0 ${space[16]}px` }}>
+            Setelah login kamu kembali ke <span style={{ color: color.accent }}>{target}</span>
           </p>
         )}
         <a
@@ -71,18 +71,18 @@ export default function LoginPanel({ error, next }: { error?: string; next?: str
           style={{
             display: 'block',
             textAlign: 'center',
-            background: C.accent,
-            color: C.bg,
-            fontWeight: 700,
-            fontSize: 13,
-            padding: '12px 16px',
-            borderRadius: 6,
+            background: color.accent,
+            color: color.textOnAccent,
+            fontWeight: fontWeight.bold,
+            fontSize: fontSize[13],
+            padding: `${space[12]}px ${space[16]}px`,
+            borderRadius: radius[6],
             textDecoration: 'none',
           }}
         >
           CONTINUE WITH DISCORD
         </a>
-        <p style={{ color: C.dim, fontSize: 11, margin: '18px 0 0' }}>
+        <p style={{ color: color.textMuted, fontSize: fontSize[11], margin: `${space[18]}px 0 0` }}>
           Scopes: <code>identify guilds</code>. Bot hanya membaca role id kamu di guild FUDCOURT.
         </p>
       </div>

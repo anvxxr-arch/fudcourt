@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { C } from '@/styles/shared';
+import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { Loading } from '@/components/ui/feedback';
 
 // Same family shape as /api/markets (lib/markets.ts) -- the tracker used to
 // call api.coingecko.com directly from the browser (ungated, hammering CG
@@ -49,41 +50,41 @@ export default function TrackerPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h3 style={{ color: C.accent, margin: 0 }}>Price Tracker</h3>
-        <button onClick={load} style={{ background: C.card, color: C.white, border: `1px solid ${C.border}`, padding: '6px 14px', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[12] }}>
+        <h3 style={{ color: color.accent, margin: 0 }}>Price Tracker</h3>
+        <button onClick={load} style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[14]}px`, borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       </div>
 
-      {error && <p style={{ color: C.red, fontSize: 12 }}>{error}</p>}
+      {error && <p style={{ color: color.negative, fontSize: fontSize[12] }}>{error}</p>}
 
       {loading ? (
-        <p style={{ color: C.dim, fontSize: 12 }}>Loading...</p>
+        <Loading label="Loading..." />
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fontSize[12] }}>
           <thead>
-            <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.dim }}>
-              <th style={{ textAlign: 'left', padding: 6 }}>Coin</th>
-              <th style={{ textAlign: 'right', padding: 6 }}>Price</th>
-              <th style={{ textAlign: 'right', padding: 6 }}>24h %</th>
-              <th style={{ textAlign: 'right', padding: 6 }}>Volume</th>
-              <th style={{ textAlign: 'right', padding: 6 }}>Mkt Cap</th>
+            <tr style={{ borderBottom: `1px solid ${color.border}`, color: color.textMuted }}>
+              <th style={{ textAlign: 'left', padding: space[6] }}>Coin</th>
+              <th style={{ textAlign: 'right', padding: space[6] }}>Price</th>
+              <th style={{ textAlign: 'right', padding: space[6] }}>24h %</th>
+              <th style={{ textAlign: 'right', padding: space[6] }}>Volume</th>
+              <th style={{ textAlign: 'right', padding: space[6] }}>Mkt Cap</th>
             </tr>
           </thead>
           <tbody>
             {coins.map((c) => (
-              <tr key={c.baseAsset} style={{ borderBottom: `1px solid ${C.border}` }}>
-                <td style={{ padding: 6 }}>
-                  <div style={{ fontWeight: 700, color: C.white }}>{c.baseAsset?.toUpperCase()}</div>
-                  <div style={{ fontSize: 10, color: C.dim }}>{c.name}</div>
+              <tr key={c.baseAsset} style={{ borderBottom: `1px solid ${color.border}` }}>
+                <td style={{ padding: space[6] }}>
+                  <div style={{ fontWeight: fontWeight.bold, color: color.text }}>{c.baseAsset?.toUpperCase()}</div>
+                  <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{c.name}</div>
                 </td>
-                <td style={{ padding: 6, textAlign: 'right', color: C.accent }}>{fmtPrice(c.lastPrice)}</td>
-                <td style={{ padding: 6, textAlign: 'right', color: c.priceChangePercent === null ? C.dim : c.priceChangePercent >= 0 ? C.green : C.red }}>
+                <td style={{ padding: space[6], textAlign: 'right', color: color.accent }}>{fmtPrice(c.lastPrice)}</td>
+                <td style={{ padding: space[6], textAlign: 'right', color: c.priceChangePercent === null ? color.textMuted : c.priceChangePercent >= 0 ? color.accent : color.negative }}>
                   {fmtPct(c.priceChangePercent)}
                 </td>
-                <td style={{ padding: 6, textAlign: 'right', color: C.white }}>{c.quoteVolume === null ? '—' : fmtVol(c.quoteVolume)}</td>
-                <td style={{ padding: 6, textAlign: 'right', color: C.dim }}>{fmtVol(c.marketCap)}</td>
+                <td style={{ padding: space[6], textAlign: 'right', color: color.text }}>{c.quoteVolume === null ? '—' : fmtVol(c.quoteVolume)}</td>
+                <td style={{ padding: space[6], textAlign: 'right', color: color.textMuted }}>{fmtVol(c.marketCap)}</td>
               </tr>
             ))}
           </tbody>

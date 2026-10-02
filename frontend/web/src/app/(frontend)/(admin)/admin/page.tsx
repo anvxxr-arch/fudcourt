@@ -1,5 +1,5 @@
 import { requireTier } from '@/platform/auth/guard';
-import { C } from '@/styles/shared';
+import { color, fontFamily, fontSize, letterSpacing, space } from '@/styles/tokens';
 import { getAll } from '@/platform/db/client';
 import MemberTable from '@/features/admin/members-table';
 export const dynamic = 'force-dynamic';
@@ -41,48 +41,48 @@ export default async function AdminPage() {
   }
 
   return (
-    <main style={{ background: C.bg, minHeight: '100vh', color: C.white, padding: 20, fontFamily: 'ui-monospace, monospace' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+    <main style={{ background: color.bg, minHeight: '100vh', color: color.text, padding: space[20], fontFamily: fontFamily.mono }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h1 style={{ margin: 0, color: C.accent, letterSpacing: 2, fontSize: 20 }}>ADMIN CONTROL PANEL</h1>
-          <p style={{ margin: '4px 0 0', color: C.dim, fontSize: 12 }}>
+          <h1 style={{ margin: 0, color: color.accent, letterSpacing: letterSpacing.wider, fontSize: fontSize[20] }}>ADMIN CONTROL PANEL</h1>
+          <p style={{ margin: `${space[4]}px 0 0`, color: color.textMuted, fontSize: fontSize[12] }}>
             Signed in as {user.globalName ?? user.username} ({user.tier})
           </p>
         </div>
-        <a href="/api/auth/logout" style={{ color: C.dim, fontSize: 12 }}>log out →</a>
+        <a href="/api/auth/logout" style={{ color: color.textMuted, fontSize: fontSize[12] }}>log out →</a>
       </div>
 
-      <section style={{ marginTop: 24 }}>
-        <h2 style={{ fontSize: 14, color: C.white, margin: '0 0 4px' }}>Members</h2>
-        <p style={{ color: C.dim, fontSize: 12, margin: '0 0 10px' }}>
+      <section style={{ marginTop: space[24] }}>
+        <h2 style={{ fontSize: fontSize[14], color: color.text, margin: `0 0 ${space[4]}px` }}>Members</h2>
+        <p style={{ color: color.textMuted, fontSize: fontSize[12], margin: `0 0 ${space[10]}px` }}>
           Tiers are read live from Discord roles. Grant or revoke here and the next sign-in picks it up.
         </p>
         <MemberTable />
       </section>
 
-      <section style={{ marginTop: 32 }}>
-        <h2 style={{ fontSize: 14, color: C.white, margin: '0 0 10px' }}>Treasury audit (read-only)</h2>
+      <section style={{ marginTop: space[32] }}>
+        <h2 style={{ fontSize: fontSize[14], color: color.text, margin: `0 0 ${space[10]}px` }}>Treasury audit (read-only)</h2>
         {auditError ? (
-          <p style={{ color: C.red, fontSize: 12 }}>treasury read failed: {auditError}</p>
+          <p style={{ color: color.negative, fontSize: fontSize[12] }}>treasury read failed: {auditError}</p>
         ) : snapshot ? (
-          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: space[24], flexWrap: 'wrap' }}>
             <div>
-              <div style={{ color: C.dim, fontSize: 11 }}>net worth</div>
-              <div style={{ color: C.accent, fontSize: 16 }}>${snapshot.netWorth.toLocaleString('en-US', { maximumFractionDigits: 0 })}</div>
+              <div style={{ color: color.textMuted, fontSize: fontSize[11] }}>net worth</div>
+              <div style={{ color: color.accent, fontSize: fontSize[16] }}>${snapshot.netWorth.toLocaleString('en-US', { maximumFractionDigits: 0 })}</div>
             </div>
             {[['wallets', snapshot.wallets], ['transactions', snapshot.transactions], ['asset rows', snapshot.assets]].map(([label, value]) => (
               <div key={label as string}>
-                <div style={{ color: C.dim, fontSize: 11 }}>{label}</div>
-                <div style={{ fontSize: 16 }}>{value}</div>
+                <div style={{ color: color.textMuted, fontSize: fontSize[11] }}>{label}</div>
+                <div style={{ fontSize: fontSize[16] }}>{value}</div>
               </div>
             ))}
             <div style={{ flexBasis: '100%' }}>
-              <div style={{ color: C.dim, fontSize: 11, marginBottom: 4 }}>largest positions by asset</div>
-              <table style={{ fontSize: 12, borderCollapse: 'collapse' }}>
+              <div style={{ color: color.textMuted, fontSize: fontSize[11], marginBottom: space[4] }}>largest positions by asset</div>
+              <table style={{ fontSize: fontSize[12], borderCollapse: 'collapse' }}>
                 <tbody>
                   {snapshot.topMovers.map(t => (
                     <tr key={t.asset}>
-                      <td style={{ padding: '2px 12px 2px 0', color: C.dim }}>{t.asset}</td>
+                      <td style={{ padding: '2px 12px 2px 0', color: color.textMuted }}>{t.asset}</td>
                       <td style={{ padding: '2px 0' }}>${t.usd.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
                     </tr>
                   ))}

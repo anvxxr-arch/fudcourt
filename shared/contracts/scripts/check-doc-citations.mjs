@@ -15,13 +15,17 @@
  * does). Same verdict shape: one `DOC_FAIL <file>: <detail>` line per failure, then
  * `DOCS_FAILED failures=<N>` and exit 1; on success a single `DOCS_OK docs=<N> citations=<M>`.
  *
- * WHAT IT SCANS (exactly these nine documents; nothing else)
+ * WHAT IT SCANS (exactly these ten documents; nothing else)
  *   docs/architecture/{canonical-model,canonical-placement,source-catalog,data-catalog,
  *     data-classification,database-classification,canonical-acceptance,symbol-key-inventory}.md
+ *   docs/architecture/DESIGN-SYSTEM.md
  *   shared/contracts/schemas/README.md
  *   (`symbol-key-inventory.md` was added here after `fd49b3a`; it had been written and committed
- *    while this list still held eight, so its cited paths went unchecked. Adding a document to the
- *    `DOCS` array is the only way to bring one under the gate — the list is explicit, never a walk.)
+ *    while this list still held eight, so its cited paths went unchecked. `DESIGN-SYSTEM.md` was
+ *    added the same day it landed (DR-037) — it cites the token module, the emitter, the two gates
+ *    and the generated artifacts, exactly the kind of prose that goes stale on a rename. Adding a
+ *    document to the `DOCS` array is the only way to bring one under the gate — the list is
+ *    explicit, never a walk.)
  *
  * WHAT COUNTS AS A CITATION
  *   A backticked token that resolves to a repo path: it starts with a known top-level directory
@@ -101,9 +105,10 @@
  *     ("at the time of that run", "as observed on <date>") or leave it inside the dated row, and
  *     never update it to today's number (that would rewrite history);
  *   - a verdict presented as the CURRENT state is updated to the newest observed line.
- * Latest observed: `DOCS_OK docs=9 citations=969 allowances=6` (2026-10-02, after
- * `docs/architecture/symbol-key-inventory.md` was added to `DOCS`; the row that quotes
- * `docs=8 citations=904` records the state when that document was written and is left as history).
+ * Latest observed: `DOCS_OK docs=10 citations=985 allowances=4` (2026-10-02, after
+ * `docs/architecture/DESIGN-SYSTEM.md` was added to `DOCS` the day it landed, DR-037; the earlier
+ * `docs=9 citations=969 allowances=6` and `docs=8 citations=904` readings are the current-state
+ * snapshots taken before that widening and are left as history).
  */
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
@@ -139,6 +144,7 @@ const DOCS = [
   'docs/architecture/database-classification.md',
   'docs/architecture/canonical-acceptance.md',
   'docs/architecture/symbol-key-inventory.md',
+  'docs/architecture/DESIGN-SYSTEM.md',
   'shared/contracts/schemas/README.md',
 ];
 

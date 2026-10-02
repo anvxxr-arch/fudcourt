@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { C } from '@/styles/shared';
+import { color, fontSize, fontWeight, lineHeight, radius, space } from '@/styles/tokens';
+import { EmptyState, Loading } from '@/components/ui/feedback';
+import { Toolbar } from '@/components/ui/toolbar';
 
 type NewsItem = {
   title: string;
@@ -41,26 +43,27 @@ export default function NewsPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h3 style={{ color: C.accent, margin: 0 }}>Crypto News</h3>
-        <button onClick={load} style={{ background: C.card, color: C.white, border: `1px solid ${C.border}`, padding: '6px 14px', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>
+      <Toolbar actions={
+        <button onClick={load} style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[14]}px`, borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
-      </div>
+      }>
+        <h3 style={{ color: color.accent, margin: 0 }}>Crypto News</h3>
+      </Toolbar>
 
-      {error && <p style={{ color: C.red, fontSize: 12 }}>{error}</p>}
+      {error && <p style={{ color: color.negative, fontSize: fontSize[12] }}>{error}</p>}
 
       {loading ? (
-        <p style={{ color: C.dim, fontSize: 12 }}>Loading news...</p>
+        <Loading label="Loading news..." />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: space[10] }}>
           {items.map((item, i) => (
             <div
               key={i}
               style={{
-                background: C.card,
-                border: `1px solid ${C.border}`,
-                borderRadius: 8,
+                background: color.surface,
+                border: `1px solid ${color.border}`,
+                borderRadius: radius[8],
                 overflow: 'hidden',
                 cursor: 'pointer',
               }}
@@ -74,13 +77,13 @@ export default function NewsPage() {
                   backgroundPosition: 'center',
                 }} />
               )}
-              <div style={{ padding: 10 }}>
-                <div style={{ fontSize: 10, color: C.accent, marginBottom: 4 }}>{item.source} · {fmtDate(item.pubDate)}</div>
-                <div style={{ fontWeight: 700, fontSize: 12, color: C.white, marginBottom: 4, lineHeight: 1.3 }}>
+              <div style={{ padding: space[10] }}>
+                <div style={{ fontSize: fontSize[10], color: color.accent, marginBottom: space[4] }}>{item.source} · {fmtDate(item.pubDate)}</div>
+                <div style={{ fontWeight: fontWeight.bold, fontSize: fontSize[12], color: color.text, marginBottom: space[4], lineHeight: lineHeight.tight }}>
                   {item.title}
                 </div>
                 {item.description && (
-                  <p style={{ fontSize: 10, color: C.dim, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  <p style={{ fontSize: fontSize[10], color: color.textMuted, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {item.description}
                   </p>
                 )}
@@ -88,7 +91,7 @@ export default function NewsPage() {
             </div>
           ))}
           {items.length === 0 && !loading && (
-            <p style={{ color: C.dim, fontSize: 12 }}>No news found</p>
+            <EmptyState style={{ textAlign: 'left', padding: 0 }}>No news found</EmptyState>
           )}
         </div>
       )}
