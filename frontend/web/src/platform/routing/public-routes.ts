@@ -97,10 +97,24 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 0.6,
   },
   {
-    path: '/ticker',
-    title: 'Ticker — CEX spot, perpetual, future & option prices | FUDCOURT',
+    path: '/market',
+    title: 'Market — Crypto, forex, commodity, stock & DEX | FUDCOURT',
     description:
-      'Cross-checked centralized-exchange prices for spot, perpetual, dated future and option instruments, relayed directly from the venues instead of an aggregator.',
+      'The FUDCOURT market hub: cross-checked centralized-exchange instruments, on-chain DEX pairs, and per-asset-class sections for crypto, forex, commodity and stock.',
     priority: 0.8,
+  },
+  {
+    path: '/market/crypto',
+    title: 'Crypto — CEX instruments & prices | FUDCOURT',
+    description:
+      'Crypto market section: spot, perpetual, dated future and option instruments cross-checked across centralized exchanges, plus a top-250 market-cap board.',
+    priority: 0.8,
+  },
+  {
+    path: '/market/trench',
+    title: 'Trench — DEX pairs & live trench | FUDCOURT',
+    description:
+      'On-chain DEX section: per-pair liquidity, transactions and FDV, plus the live trench, from DexScreener.',
+    priority: 0.7,
   },
 ];

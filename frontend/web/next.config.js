@@ -15,7 +15,16 @@ const nextConfig = {
   // default: no forced trailing slash), so /portfolio and /portfolio/ both
   // redirect identically.
   async redirects() {
-    return [{ source: '/portfolio', destination: '/team/portfolio', permanent: false }];
+    return [
+      { source: '/portfolio', destination: '/team/portfolio', permanent: false },
+      // The ticker area moved under the market hub (asset-class sections). The
+      // old standalone paths redirect so external links and the sitemap never
+      // 404. /market/crypto is the board; /market/ticker is the detail namespace.
+      { source: '/ticker', destination: '/market/crypto', permanent: false },
+      { source: '/ticker/:ticker', destination: '/market/ticker/:ticker', permanent: false },
+      { source: '/markets', destination: '/market', permanent: false },
+      { source: '/market/ticker', destination: '/market/crypto', permanent: false },
+    ];
   },
   async rewrites() {
     return [{ source: '/portfolio/:path*', destination: '/:path*' }];

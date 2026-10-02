@@ -18,10 +18,9 @@ import ChainrankPage from '@/features/chainrank/ui';
 import CryptorankPage from '@/features/cryptorank/ui';
 import LlamaPage from '@/features/llama/ui';
 import TrackerPage from '@/features/tracker/ui';
-import TickerPage from '@/features/ticker/ui';
+import MarketHub from '@/features/market/hub';
 import NewsPage from '@/features/news/ui';
 import KhalaPage from '@/features/khala/ui';
-import MarketsPage from '@/features/markets/ui';
 
 type DbData = {
   assets: Asset[];
@@ -119,16 +118,16 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     { key: 'reconciliation', label: 'Reconciliation' },
   ];
   const BOARD_TABS = [
-    // Markets folds the price/chain/pair mirror pages into one surface
-    // (see docs/architecture/provider-consolidation.md). The old /tracker,
-    // /llama, /dex, /trench routes still resolve for direct links, but the
-    // nav no longer advertises them as separate boards.
-    { key: 'markets', label: 'Markets' },
+    // Market is the market hub, keyed by asset class (/market/crypto,
+    // /market/forex, /market/commodity, /market/stock, /market/trench). It
+    // replaces the standalone /ticker and /markets surfaces; the old
+    // /tracker, /llama, /dex, /trench routes still resolve for direct links,
+    // but the nav no longer advertises them as separate boards.
+    { key: 'market', label: 'Market' },
     { key: 'signals', label: 'Signals' },
     { key: 'scoreboard', label: 'Scoreboard' },
     { key: 'chainrank', label: 'Chainrank' },
     { key: 'cryptorank', label: 'CryptoRank' },
-    { key: 'ticker', label: 'Ticker' },
     { key: 'news', label: 'News' },
     { key: 'khala', label: 'Khala' },
   ];
@@ -209,7 +208,12 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'reconciliation' && isTeam && db?.reconRows && db?.reconWallets && (
         <ReconciliationPage rows={db.reconRows} wallets={db.reconWallets} />
       )}
-      {page === 'markets' && <MarketsPage />}
+      {page === 'market' && <MarketHub />}
+      {page === 'market-crypto' && <MarketHub section="crypto" />}
+      {page === 'market-forex' && <MarketHub section="forex" />}
+      {page === 'market-commodity' && <MarketHub section="commodity" />}
+      {page === 'market-stock' && <MarketHub section="stock" />}
+      {page === 'market-trench' && <MarketHub section="trench" />}
       {page === 'trench' && <TrenchPage />}
       {page === 'dex' && <DexPage />}
       {page === 'signals' && <SignalsPage />}
@@ -218,7 +222,6 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'cryptorank' && <CryptorankPage />}
       {page === 'llama' && <LlamaPage />}
       {page === 'tracker' && <TrackerPage />}
-      {page === 'ticker' && <TickerPage />}
       {page === 'news' && <NewsPage />}
       {page === 'khala' && <KhalaPage />}
 

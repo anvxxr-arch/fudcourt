@@ -20,7 +20,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...staticRoutes,
     ...tickerCoins.map((coin) => ({
-      url: `https://fc.dwirijal.my.id/ticker/${coin}`,
+      url: `https://fc.dwirijal.my.id/market/ticker/${coin}`,
       lastModified: new Date(),
       changeFrequency: 'hourly' as const,
       priority: 0.6,
