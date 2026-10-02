@@ -172,6 +172,11 @@ func (f *Fetcher) pathFor(rawURL string) string {
 // still runs the full two-layer decryption. That is deliberate: it means a
 // rotated `v` or a broken key derivation fails on a warm read exactly as it
 // would on a cold one, instead of being masked by a stored plaintext.
+//
+// A warm entry is served only when it decrypts AND is not an upstream refusal;
+// otherwise the read is a MISS and falls through to a live fetch (see fetch).
+// That guard is what keeps a cached refusal from pinning upstream's "no" to the
+// disk for the whole TTL.
 func (f *Fetcher) Fetch(ctx context.Context, rawURL string) (Result, CacheInfo, error) {
 	return f.fetch(ctx, rawURL, true)
 }
@@ -188,10 +193,28 @@ func (f *Fetcher) fetch(ctx context.Context, rawURL string, useCache bool) (Resu
 	if useCache {
 		entry, fresh := f.readCache(rawURL)
 		if fresh {
-			info.Cache = "HIT"
-			info.Status = entry.Status
 			res, err := Decrypt([]byte(entry.Body), entry.User, entry.V, rawURL, entry.CacheTS, entry.TimeHdr)
-			return res, info, err
+			// A cached body is a HIT only when it still decrypts AND is not
+			// an upstream refusal. Anything else falls through to a live
+			// re-fetch:
+			//
+			//   - a body that no longer decrypts (a rotated `v` this table
+			//     cannot derive, a truncated write) is a MISS, not a hard
+			//     failure: the live fetch re-derives and, if it is still
+			//     broken, reports the real error instead of a stale one.
+			//   - a cached REFUSAL is a MISS too. Serving it as a HIT would
+			//     pin upstream's "no" to the disk for the whole TTL, so a
+			//     recovered upstream would stay invisible until the entry
+			//     aged out — the refusal would be sticky. CoinAnk's read
+			//     path guards the same way (coinank/fetch.go, where Decode
+			//     returns a HardError for `success:false`); this family
+			//     cached the raw body from the start but served it without
+			//     the guard.
+			if err == nil && !res.Refused() {
+				info.Cache = "HIT"
+				info.Status = entry.Status
+				return res, info, nil
+			}
 		}
 	}
 
