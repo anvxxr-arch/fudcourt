@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinglass"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/llama"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/news"
@@ -66,7 +67,7 @@ func newsGet(t *testing.T, d *newsDoer, url string) *httptest.ResponseRecorder {
 		t.Fatalf("news.New: %v", err)
 	}
 	rec := httptest.NewRecorder()
-	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{F: f}, chainrank.Service{})
+	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{F: f}, chainrank.Service{}, coinglass.Service{})
 	srv.mux().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
 	return rec
 }
@@ -128,7 +129,7 @@ func TestNewsSecondRequestIsACacheHit(t *testing.T) {
 	}
 	// ONE server for both requests: the cache lives on the fetcher, so a second
 	// helper call would build a second cache and prove nothing.
-	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{F: f}, chainrank.Service{}).mux()
+	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{F: f}, chainrank.Service{}, coinglass.Service{}).mux()
 	do := func(url string) *httptest.ResponseRecorder {
 		rec := httptest.NewRecorder()
 		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
@@ -238,7 +239,7 @@ func TestNewsEmptyFeedIs502(t *testing.T) {
 
 func TestNewsRejectsNonGet(t *testing.T) {
 	rec := httptest.NewRecorder()
-	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{})
+	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{}, coinglass.Service{})
 	srv.mux().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/news", nil))
 	if rec.Code != 405 {
 		t.Fatalf("status %d, want 405", rec.Code)

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinglass"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/cryptorank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/llama"
@@ -77,15 +78,25 @@ func main() {
 	if err != nil {
 		log.Fatalf("fudcourt-data: chainrank: %v", err)
 	}
+	// coinglass is the SIXTH family, and the first whose upstream encrypts its
+	// payloads: capi.coinglass.com is the dashboard's own backend and takes NO
+	// API key, so the body is AES-128-ECB x2 + gzip instead of authenticated.
+	// Plain net/http is enough -- the host does not fingerprint the TLS
+	// ClientHello -- and the decryptor is stdlib only
+	// (internal/research/coinglass package doc).
+	gf, err := coinglass.New(coinglass.Options{})
+	if err != nil {
+		log.Fatalf("fudcourt-data: coinglass: %v", err)
+	}
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           newServer(f, ttl, khala.Service{F: kf, TTL: khala.TTLDefault()}, llama.Service{F: lf}, news.Service{F: nf}, chainrank.Service{F: cf}).mux(),
+		Handler:           newServer(f, ttl, khala.Service{F: kf, TTL: khala.TTLDefault()}, llama.Service{F: lf}, news.Service{F: nf}, chainrank.Service{F: cf}, coinglass.Service{F: gf}).mux(),
 		ReadHeaderTimeout: 10 * time.Second,
 		WriteTimeout:      90 * time.Second,
 	}
-	log.Printf("fudcourt-data listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes)",
-		addr, f.CacheDir(), ttl, cryptorank.ModeCount, kf.CacheDir(), khala.TTLDefault(), khala.ModeCount, lf.TTL(), llama.ModeCount, nf.TTL(), news.SourceCount, cf.TTL(), chainrank.ModeCount)
+	log.Printf("fudcourt-data listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes; coinglass: cache %s, ttl %ds, %d modes)",
+		addr, f.CacheDir(), ttl, cryptorank.ModeCount, kf.CacheDir(), khala.TTLDefault(), khala.ModeCount, lf.TTL(), llama.ModeCount, nf.TTL(), news.SourceCount, cf.TTL(), chainrank.ModeCount, gf.CacheDir(), coinglass.TTLDefault(), coinglass.ModeCount)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -138,6 +149,10 @@ type server struct {
 	// cs is the chainrank family orchestrator (fetch -> shape check -> envelope),
 	// again a value.
 	cs chainrank.Service
+	// cgs is the coinglass family orchestrator (fetch -> dual AES decrypt ->
+	// envelope), a value for the same reason: the Fetcher it wraps owns the
+	// cache, and `fresh` travels per request.
+	cgs coinglass.Service
 	// ttl is the per-route cache TTL in seconds for an ordinary request; a
 	// fresh=1 request passes 0 instead (the Python helper's --ttl 0). Both are
 	// per-request arguments, never shared fetcher state.
@@ -147,8 +162,8 @@ type server struct {
 	retryBase time.Duration
 }
 
-func newServer(f fetcher, ttl int, ks khala.Service, ls llama.Service, ns news.Service, cs chainrank.Service) *server {
-	return &server{f: f, ks: ks, ls: ls, ns: ns, cs: cs, ttl: ttl, retryBase: 3 * time.Second}
+func newServer(f fetcher, ttl int, ks khala.Service, ls llama.Service, ns news.Service, cs chainrank.Service, cgs coinglass.Service) *server {
+	return &server{f: f, ks: ks, ls: ls, ns: ns, cs: cs, cgs: cgs, ttl: ttl, retryBase: 3 * time.Second}
 }
 
 func (s *server) mux() *http.ServeMux {
@@ -171,6 +186,10 @@ func (s *server) mux() *http.ServeMux {
 			"news": fmt.Sprintf("%d feeds", news.SourceCount),
 			// chainrank is the fifth.
 			"chainrank": fmt.Sprintf("%d modes", chainrank.ModeCount),
+			// coinglass is the sixth. `keyless` is stated here because it is
+			// the family's whole reason to exist: a reader must be able to
+			// tell, from one probe, that this needs no API key.
+			"coinglass": fmt.Sprintf("%d modes (keyless)", coinglass.ModeCount),
 		})
 	})
 	mux.HandleFunc("/api/cryptorank", func(w http.ResponseWriter, r *http.Request) {
@@ -187,6 +206,9 @@ func (s *server) mux() *http.ServeMux {
 	})
 	mux.HandleFunc("/api/chainrank", func(w http.ResponseWriter, r *http.Request) {
 		s.handleChainrank(w, r)
+	})
+	mux.HandleFunc("/api/coinglass", func(w http.ResponseWriter, r *http.Request) {
+		s.handleCoinglass(w, r)
 	})
 	return mux
 }
@@ -391,6 +413,112 @@ func (s *server) handleKhala(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-KH-Cache", env.Cache)
 	w.Header().Set("Cache-Control", "public, max-age=30")
 	writeJSON(w, 200, env)
+}
+
+// handleCoinglass serves the CoinGlass futures family.
+//
+// EVERY mode on this table is KEYLESS. The bytes come from capi.coinglass.com --
+// the endpoint the www.coinglass.com dashboard itself calls -- and are unwrapped
+// with the two-layer AES scheme in internal/research/coinglass/decrypt.go. There
+// is no CG-API-KEY anywhere in this path, on purpose: the official open-api-v4
+// host is a different product (a human-issued key, different coverage), not an
+// alternative transport for these modes, so wiring it would trade a solved
+// reverse-engineering problem for a procurement one.
+//
+// Posture mirrors handleKhala: local params validated strictly and never
+// clamped, an unscoped param refused with 400, and CoinGlass's OWN refusal
+// envelope surfaced as 502 carrying its message -- never a 200 with an empty
+// table.
+func (s *server) handleCoinglass(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		writeJSON(w, 405, map[string]interface{}{"error": "method not allowed"})
+		return
+	}
+	q := r.URL.Query()
+	mode := q.Get(coinglass.ParamMode)
+	if mode == "" || !coinglass.Known(mode) {
+		var got interface{}
+		if mode != "" {
+			got = mode
+		}
+		writeJSON(w, 400, map[string]interface{}{
+			"error": coinglass.ErrUnknownMode,
+			"modes": coinglass.Modes,
+			"got":   got,
+		})
+		return
+	}
+	// Param scoping: a param the mode does not accept (including a known param
+	// sent to the wrong mode, and any unknown name) is a 400, never ignored.
+	for p := range q {
+		if !coinglass.Accepts(mode, p) {
+			writeJSON(w, 400, map[string]interface{}{
+				"error":  coinglass.ErrUnexpected,
+				"detail": coinglass.UnexpectedParamDetail(p, mode),
+				"param":  p,
+				"mode":   mode,
+			})
+			return
+		}
+	}
+	symbol := ""
+	if mode == "openInterest" {
+		symbol = q.Get(coinglass.ParamSymbol)
+		if symbol == "" {
+			writeJSON(w, 400, map[string]interface{}{
+				"error": coinglass.ErrMissingParam, "detail": coinglass.DetailSymbolRequired, "mode": mode,
+			})
+			return
+		}
+		if !coinglass.ValidSymbol(symbol) {
+			writeJSON(w, 400, map[string]interface{}{
+				"error": coinglass.ErrInvalidParam, "detail": coinglass.DetailSymbolInvalid, "mode": mode, "symbol": symbol,
+			})
+			return
+		}
+	}
+	// fresh=1 bypasses the disk cache for this request only, exactly as the
+	// khala handler does. The value is an ARGUMENT, never fetcher state, so two
+	// concurrent requests cannot observe each other's policy.
+	fresh := q.Get(coinglass.ParamFresh) == "1"
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+	env, err := s.cgs.Envelope(ctx, mode, symbol, fresh)
+	if err != nil {
+		writeCoinglassError(w, mode, err)
+		return
+	}
+	w.Header().Set("X-CG-Upstream", env.Upstream)
+	w.Header().Set("X-CG-Cache", env.Cache)
+	// X-CG-Cipher exposes which rotation slot (`v`) upstream used. It is a
+	// header rather than body state because it describes the TRANSPORT, and
+	// scripts/verify-coinglass.py reads it from here.
+	if env.Cipher != "" {
+		w.Header().Set("X-CG-Cipher", env.Cipher)
+	}
+	w.Header().Set("Cache-Control", "public, max-age=30")
+	writeJSON(w, 200, env)
+}
+
+// writeCoinglassError maps a family error to the frozen body. An upstream
+// refusal is 502 carrying CoinGlass's own code and message: the caller learns
+// what upstream said, and no empty table is invented for it.
+func writeCoinglassError(w http.ResponseWriter, mode string, err error) {
+	var he *coinglass.HardError
+	if errors.As(err, &he) && he.Kind == "upstream" {
+		writeJSON(w, 502, map[string]interface{}{
+			"error":  coinglass.ErrUpstream,
+			"mode":   mode,
+			"code":   he.Code,
+			"detail": he.Detail,
+		})
+		return
+	}
+	writeJSON(w, 502, map[string]interface{}{
+		"error":  "upstream unreachable",
+		"mode":   mode,
+		"detail": err.Error(),
+	})
 }
 
 // handleLlama serves the DeFiLlama read family (api.llama.fi): three modes with

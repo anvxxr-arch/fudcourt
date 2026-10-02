@@ -1,0 +1,13 @@
+{
+ "url": "https://capi.coinglass.com/api/probe0",
+ "v": "0",
+ "user": "cTOksPKy6Zd3MFNjQi5XU7l6y09Z+Zzw4WwDWH8QpD1L9k9GLraEs3ZsLZX3zcq4",
+ "time": "",
+ "cache_ts": "1712345678901234",
+ "synthetic": true,
+ "key0": "MTcxMjM0NTY3ODkw",
+ "actual_key": "0123456789abcdef",
+ "expect": {
+  "probe": "v0"
+ }
+}

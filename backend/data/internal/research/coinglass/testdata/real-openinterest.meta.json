@@ -1,0 +1,9 @@
+{
+ "url": "https://capi.coinglass.com/api/openInterest/info?symbol=BTC",
+ "v": "77",
+ "user": "c3h3GPDAXcG+Yp0dsdRyjNY2E3GxPGXufsIDkPNwOGAvhsfp7ZFtrt97ptZxBIOf",
+ "time": null,
+ "cache_ts": "1790964902433",
+ "encryption": "true",
+ "synthetic": false
+}

@@ -48,6 +48,10 @@ docs/
 | operations | [SECRETS.md](operations/SECRETS.md) | Secret inventory, production (self-hosted) env model, rotation runbook |
 | operations | [CHANGELOG.md](operations/CHANGELOG.md) | What shipped, in change-sized rows |
 | records | [DECISIONS.md](records/DECISIONS.md) | Decision records (DR-xxx): context, options, gate evidence, outcome |
+| architecture | [cryptorank-data-types.md](architecture/cryptorank-data-types.md) | CryptoRank data-type inventory: 81 endpoints / 16 tags with per-endpoint tier + credit cost, the free **Sandbox** tier (21 endpoints at $0), the keyless HTML path the repo runs, and the v2→v3 migration |
+| architecture | [coinglass-source-recon.md](architecture/coinglass-source-recon.md) | CoinGlass recon **and the shipped Go implementation**: official V4 (key-gated) vs the keyless `capi` surface, the AES-128-ECB×2 + gzip decryptor, the full `v` table, the endpoints the live probe dropped, and the `CgEnvelope` provenance contract |
+| architecture | [coinank-data-types.md](architecture/coinank-data-types.md) | CoinAnk data-type inventory: 78 endpoints / 20 categories, VIP1–VIP4 gating on the official host, and the **keyless** `api.coinank.com` client-computed signature — reconstructed and verified live; constants kept in code, not prose |
+
 ## One-line map of the repo
 
 ```
