@@ -146,3 +146,66 @@ CREATE UNIQUE INDEX IF NOT EXISTS price_history_symbol_ts_source
 -- "not supported under the current 'apache' license"). A DELETE of <= a few
 -- thousand rows per day needs no policy engine, and keeping the install
 -- Apache-only keeps the licence story as simple as the rest of the stack.
+--
+-- Durable canonical identity (DR-036). The canonical id space lives code-side in
+-- backend/api/internal/markets/reference (minted, opaque) and ships as the artifact
+-- shared/contracts/data/reference.json. This is its SQL half: the published
+-- (provider, provider_id) -> canonical_id resolution table, so a database consumer
+-- can resolve through a canonical id instead of a symbol. It is ADDITIVE and
+-- UNWIRED: nothing reads it yet (no FK, no column on any money-bearing row, no
+-- runtime caller), and the loader that fills it is
+-- backend/api/internal/markets/reference/loader.go. The table is a derived CACHE of
+-- the artifact, not a second source: the loader UPSERTs the artifact's rows and
+-- prunes any provider key it no longer sees, so the artifact stays the single source
+-- of truth (no id is re-derived here).
+--
+-- Types follow the artifact where a column has a source: text for every id and key
+-- (ids are opaque strings, never parsed), text for `loaded_at` for the same reason as
+-- the datetime columns above (a dump round-trips as the same 'YYYY-MM-DD HH:MM:SS'
+-- string rather than re-rendering through a Date), and boolean for the miss table's
+-- `known_absence`. No money is stored here: every column is an identifier, a
+-- namespace label, a timestamp string, or the miss table's prose.
+CREATE TABLE IF NOT EXISTS canonical_reference (
+  provider     text NOT NULL,
+  provider_id  text NOT NULL,
+  canonical_id text NOT NULL,
+  kind         text NOT NULL,
+  loaded_at    text NOT NULL DEFAULT to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'),
+  PRIMARY KEY (provider, provider_id),
+  -- `kind` must agree with the id's own prefix, so an id stored under the wrong
+  -- namespace is refused at write time instead of producing a wrong join. That makes
+  -- `kind` redundant-but-ENFORCED rather than merely advisory: the prefix is a string,
+  -- and this CHECK is the database-level form of the same invariant (the loader's
+  -- validateDocument checks it too, but the table must not rely on its writer for its
+  -- own integrity). `LIKE kind || ':%'` is valid because the pattern is a plain
+  -- concatenation — no LIKE metacharacters appear in a kind.
+  CHECK (canonical_id LIKE kind || ':%')
+);
+-- `kind` is the canonical_id's namespace. The values the loader writes today are
+-- exactly the EntityKinds the reference registry mints ('asset' | 'chain' | 'token'
+-- | 'venue') because it derives its accepted set from `EntityKinds`. The DDL
+-- deliberately does NOT pin that closed set a second time: the CHECK above enforces
+-- the structural invariant (kind agrees with the id's prefix), while "which
+-- namespaces exist" stays owned by the registry, so adding one does not become a
+-- DDL migration. 'instrument' is therefore not rejected by the table — it simply
+-- cannot arrive, because instruments are minted
+-- (`backend/api/internal/markets/instruments/canonical.go`) but are absent from
+-- `reference.json`, and the loader refuses any namespace outside `EntityKinds`.
+CREATE INDEX IF NOT EXISTS canonical_reference_canonical_id
+  ON canonical_reference (canonical_id);
+CREATE INDEX IF NOT EXISTS canonical_reference_kind
+  ON canonical_reference (kind);
+-- Known-but-unresolved provider identifiers (the artifact's `misses`), stored as
+-- their own rows so a consumer's left join sees a NULL target instead of assuming
+-- the key is absent from upstream. `known_absence` marks one the tree itself
+-- stores lossily (the `SPL:<mint6>` truncation) versus one simply not registered.
+CREATE TABLE IF NOT EXISTS canonical_reference_miss (
+  provider      text NOT NULL,
+  provider_id   text NOT NULL,
+  kind          text NOT NULL,
+  reason        text NOT NULL,
+  reported_as   text NOT NULL DEFAULT '',
+  known_absence boolean NOT NULL DEFAULT false,
+  loaded_at     text NOT NULL DEFAULT to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'),
+  PRIMARY KEY (provider, provider_id)
+);

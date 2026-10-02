@@ -93,7 +93,7 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 | table | `accounts` (`schema.sql:3-8`) |
 | storage | Turso → `public.accounts` |
 | classification | **canonical** (chart of accounts) |
-| owning service | **none found in-repo** — no INSERT/UPDATE against `accounts` anywhere (only reads) |
+| owning service | **none found in-repo** — no INSERT/UPDATE against `accounts` anywhere (only reads). **DEAD (DR-036):** 6 rows, frozen at the 2026-09-15 import; no out-of-band writer in cron, any timer, or `~/.hermes/**` |
 | readers | `mirror.ts:51,75`; `api/all/route.ts` `getAll()` |
 | canonical entity | **Account** metadata (code/name/type/statement) |
 | durability | CANONICAL |
@@ -108,7 +108,7 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 | table | `journal` (`schema.sql:21-31`) |
 | storage | Turso → `public.journal` |
 | classification | **event** (dated accounting entries with a `status`) |
-| owning service | **none found in-repo** (read-only usage) `[INFERENCE]` manual entry |
+| owning service | **none found in-repo** (read-only usage) `[INFERENCE]` manual entry. **DEAD (DR-036):** 8 rows, max `created_at` `2026-09-15 23:48:35` — frozen at the import, never advanced |
 | readers | `mirror.ts:53,77`; `getAll()` |
 | canonical entity | **LedgerEntry** (journal ↔ ledger are the two halves of double entry) |
 | durability | CANONICAL |
@@ -122,7 +122,7 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 | table | `ledger` (`schema.sql:33-40`) |
 | storage | Turso → `public.ledger` |
 | classification | **snapshot** (a `balance` per `(account, side, currency)`) |
-| owning service | **none found in-repo** |
+| owning service | **none found in-repo**. **DEAD (DR-036):** 3 rows, frozen at the 2026-09-15 import |
 | readers | `mirror.ts:54,78`; `getAll()` |
 | canonical entity | **LedgerEntry**/balance roll-up (scope's LedgerEntry fields are account/amount/entry_type — this table stores only a running balance, not movements) |
 | durability | CANONICAL |
@@ -136,7 +136,7 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 | table | `trades` (`schema.sql:44-54`) |
 | storage | Turso → `public.trades` |
 | classification | **event** (executed trade log) |
-| owning service | **none found in-repo** `[INFERENCE]` manual entry |
+| owning service | **none found in-repo** `[INFERENCE]` manual entry. **DEAD (DR-036):** 0 rows, never written |
 | readers | `mirror.ts:55,81` (LIMIT 20 in the dashboard read); `getAll()` |
 | canonical entity | **Fill**/**Order** (symbol-string based, venue as free text) |
 | durability | CANONICAL |
@@ -150,7 +150,7 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 | table | `venues` (`schema.sql:71-75`) |
 | storage | Turso → `public.venues` |
 | classification | **canonical** (venue registry; `id` is a text slug, not a provider id) |
-| owning service | **none found in-repo** |
+| owning service | **none found in-repo**. **DEAD (DR-036):** 12 rows, seeded once at the 2026-09-15 import |
 | readers | `mirror.ts:57` (mirrored, but **not** in `DASHBOARD_READS`); `transactions.venue_id` implies a foreign key that does not exist |
 | canonical entity | **Venue** |
 | durability | CANONICAL |
@@ -185,7 +185,7 @@ JSON is byte-identical), plus two Timescale hypertables that have **no Turso ori
 | `public.venues` (`:85-89`) | Postgres | canonical (mirror) | `mirror.ts` | (none in-app) | Venue | CANONICAL | PUBLIC | Text PK; not in `DASHBOARD_READS`. |
 | `public.wallets` (`:90-101`) | Postgres | canonical (mirror) | `mirror.ts` | `api/wallets`, `getAll()` | Wallet | CANONICAL | USER_PRIVATE | — |
 | `public.asset_history` (`:104-113`) + hypertable (`:114`) + indexes (`:115-121`) | Postgres/Timescale | **snapshot history** (append per sync run) | `mirror.ts:200-207` (`INSERT … SELECT FROM assets ON CONFLICT (ts, chain, asset, coalesce(wallet,''))`) | none in-app yet (boards "chart history") | Balance snapshot (time series) | HISTORICAL (90-day retention via plain DELETE, `mirror.ts:207`) | INTERNAL | **The one place history exists.** Retention is a hand-rolled DELETE because `add_retention_policy()` is Timescale-License (`pg-schema.sql` trailing comment). Duplicates the `assets` latest-state row by construction. |
-| `public.price_history` (`:132-141`) | Postgres/Timescale | **cache/price series** | **no writer found** — only the retention DELETE in `mirror.ts:208` | none in-app | Price (time series) | HISTORICAL (90-day DELETE) | PUBLIC | **Writer gap:** the schema comment says "Written by the price sampler", but no `price sampler` exists anywhere in the tree. `[INFERENCE]` intended writer = a future sampler; today the table stays empty. |
+| `public.price_history` (`:132-141`) | Postgres/Timescale | **cache/price series** | **no writer found** — only the retention DELETE in `mirror.ts:208` | none in-app | Price (time series) | HISTORICAL (90-day DELETE) | PUBLIC | **Writer gap, now confirmed dead (DR-036):** the schema comment says "Written by the price sampler", but no `price sampler` exists anywhere in the tree — `grep -rniI "INSERT INTO price_history"` → **0 hits**, the table **does not exist in Turso at all**, and it is empty in Postgres. The DDL comment describes a producer that was never written. |
 
 ---
 
@@ -276,8 +276,20 @@ Enumerated, not implied:
    (and the legacy Python oracle) only; `transactions`/`wallets` by the Next API only;
    `executor.*` by the Next store + Go worker only. The exception: `accounts`, `journal`,
    `ledger`, `trades`, `venues` have **no in-repo writer at all** — they are read by the
-   dashboard and mirrored, which means their canonical owner is unidentified.
-2. **`price_history` has a schema, an index, a retention DELETE, and no writer.**
+   dashboard and mirrored, which means their canonical owner is unidentified. **O2 answered
+   2026-10-02 (DR-036): they are DEAD, not merely unowned.** Queried read-only in both
+   stores, the four non-empty ones are frozen at the 2026-09-15 import (`journal` max
+   `created_at` `2026-09-15 23:48:35`; `accounts` 6 rows, `ledger` 3, `venues` 12, none with
+   a later write) and `trades` is empty; the live controls (`assets`, advancing on each
+   `fudcourt-sync` tick; `transactions`, reaching `2026-09-28`) confirm the probe. No writer
+   exists in source, in `git log -S` history, in cron, in any system/user timer, or in the
+   operator tree `~/.hermes/**`. So the owner is not "unidentified" — there is none, and the
+   tables are dead; retirement is Phase 6 (no schema change this round).
+2. **`price_history` has a schema, an index, a retention DELETE, and no writer.** **Dead by
+   the same evidence (DR-036): the table does not exist in Turso at all and is empty in
+   Postgres, and `grep -rniI "INSERT INTO price_history"` over the whole tree → 0 hits** —
+   the DDL comment ("Written by the price sampler") describes a producer that was never
+   written, and the 90-day retention DELETE runs against a table nothing ever fills.
 3. **`trades` duplicates the executor domain** (`executor.fills`/`child_orders`) in a
    parallel, unlinked, provider-shaped table.
 4. **Numeric type policy is inconsistent:** Turso `REAL`, Postgres `double precision`

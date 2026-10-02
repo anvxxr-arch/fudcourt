@@ -212,7 +212,7 @@ version control, not through a database.
 | Venue key (TS) | `frontend/web/src/platform/executor/types.ts:54` (`VenueKey`), `:1366` (`venueKey()`) → `` `${exchange}:${marketType}:${symbol}` `` | Mirrors the Go instrument id; declared, used by the executor plane. |
 | Chain identity | **[CANONICAL OWNER]** 9 chains with minted ids (`reference/seed.go`, ids emitted in `shared/contracts/data/reference.json`). Original finding: `backend/sync/src/chains.rs:13` (`EVM` table), `:79` (`WALLETS`), `:98` (`LLAMA_IDS`) | A **static Rust registry** — the closest thing to a chain registry in the repo, and it is per-process, not durable. `[INFERENCE]` It cannot serve as the canonical registry because nothing outside `backend/sync` can read it. |
 | Asset identity | **[CANONICAL OWNER]** `backend/api/internal/markets/reference` (`MintID`/`Seed`/`Resolve`), artifact `shared/contracts/data/reference.json`. Original finding, kept as the evidence: `[INFERENCE]` none. grep `canonicalId|provider_id|external_id|asset_id|symbol_map|asset_map|registry` over `frontend/web/src/platform`, `shared/sdk/typescript/src`, `backend/api/internal`, `backend/data`, `backend/sync/src`, `database/` → only `platform/executor/exchange.ts:705` ("Capability registry (PRD §50) — static") and a generated field name. | **[CANONICAL OWNER]** ids are now minted (`reference/ids.go`) and the provider mapping is published (`reference.json`). The original finding stands for **SQL only**: no aliases/external_ids/provider_ids table, column or index exists in any `.sql` file (`database/README.md` and all three schemas), so the canonical-id guarantee still cannot be delivered by field renames alone — it needs the artifact to be loaded. |
-| Provider→canonical mapping | **[CANONICAL OWNER]** the mapping now exists — `…/reference/registry.go` (`Resolve`) over the table emitted in `shared/contracts/data/reference.json`, populated from `…/reference/seed.go`. The gap this row originally recorded was in **SQL**: `database/schema/executor-schema.sql` still has no mapping table; `pg-schema.sql` has only `price_history(symbol, ts, source)` (`:140-141`), whose unique key is `(symbol, ts, source)` — i.e. **symbol-as-identity persists in the schema**. `price_history` has **no writer in the repo** (its DDL comment `:131` says "Written by the price sampler"; grep finds only the retention DELETE at `frontend/web/src/platform/db/mirror.ts:208`). | **[CANONICAL OWNER]** delivered for Asset/Token/Chain/Venue by `backend/api/internal/markets/reference` (see §1.4 heading); the *SQL* half of the blocker stands — no mapping table exists in `database/`, so a resolver reading the database still has none. |
+| Provider→canonical mapping | **[CANONICAL OWNER]** the mapping now exists — `…/reference/registry.go` (`Resolve`) over the table emitted in `shared/contracts/data/reference.json`, populated from `…/reference/seed.go`. The gap this row originally recorded was in **SQL**: `database/schema/executor-schema.sql` still has none (the mapping is reference data, not executor state); `pg-schema.sql` now declares it — `canonical_reference` + `canonical_reference_miss` with a `CHECK (canonical_id LIKE kind || ':%')` (DR-036), loaded from the artifact by `…/reference/loader.go`. It is **additive and unwired**: nothing loads it and nothing joins through it yet. Separately, `price_history(symbol, ts, source)` (`:140-141`) remains a symbol-as-identity key, but `price_history` is **dead, not merely unwritten** — it is absent from Turso and empty in Postgres (DR-036; its DDL comment `:131` says "Written by the price sampler", and grep finds no `INSERT` into it anywhere, only the retention DELETE at `frontend/web/src/platform/db/mirror.ts:208`). | **[CANONICAL OWNER]** delivered for Asset/Token/Chain/Venue by `backend/api/internal/markets/reference` (see §1.4 heading); the *SQL* half now exists as the table above — what remains is loading it and re-pointing a consumer, not the absence of a table. |
 
 Provider-specific parsers that **already exist** and the layer they occupy (requested explicitly):
 
@@ -590,7 +590,7 @@ thing: `CrCoin` (CryptoRank, `types.go:21`), `MarketsCoin` (CoinGecko, `features
 - **Asset** — the economic thing (what a balance, ledger entry and portfolio holding is denominated in). Canonical id required; symbol is a display attribute.
 - **Token** — one contract instance of an asset on one chain (`chain:address`). An asset has N tokens.
 - **Coin** — **not an entity.** It is provider nomenclature for a row on a *market-data* surface; the repo's own model for that row is market-data + asset, i.e. `MarketsCoin`/`CrCoin` are PRODUCT VIEW rows, not domain entities.
-**Required change:** (a) mint `asset_id` and a `token_id`; (b) add the `provider_id` mapping table that does not exist (D-CANON below); (c) keep every existing `Asset string` field as the *symbol* and add the id alongside — an additive migration, because a rename would break `shared/contracts/openapi/fudcourt.yaml` and 6 packages. **Blocked on:** persistence owner for the mapping table (open question O3).
+**Required change:** (a) mint `asset_id` and a `token_id`; (b) add the `provider_id` mapping table — **now present** (`canonical_reference` in `pg-schema.sql`, DR-036; additive and unwired); (c) keep every existing `Asset string` field as the *symbol* and add the id alongside — an additive migration, because a rename would break `shared/contracts/openapi/fudcourt.yaml` and 6 packages. **Blocked on:** the `*_id` columns and a re-pointed consumer (O3's persistence half is now answered by DR-036); the loader exists, nothing runs it yet.
 
 ### D2. Ticker vs Price vs Quote — **two distinct concepts; today three names for two things**
 Evidence: `markets.Ticker` (`overview/market.go:38`) is a *venue quote snapshot* with `Ts`;
@@ -602,7 +602,7 @@ Evidence: `markets.Ticker` (`overview/market.go:38`) is a *venue quote snapshot*
 - **Quote** (= `Ticker`, = `VenueQuote`) — one venue's observation at one instant: `(instrument, venue, observed_at)`.
 - **Price** — a *point on a series*: `(instrument, source, observed_at) → value`, persisted; `price_history` is the storage of it and `MarkPrice`/`IndexPrice` are named Price series.
 - **Ticker** is **renamed-out conceptually but not in code**: `Ticker` is a legacy synonym of Quote. `TickerRow` is a **PRODUCT VIEW** aggregate, not an entity.
-**Required change:** *no change in code this turn.* Record: when the Price entity is built, `price_history`'s unique key must become `(instrument_id, source, observed_at)` — today it is `(symbol, ts, source)` (`pg-schema.sql:140-141`), i.e. **symbol-as-identity**, which is the one schema-level violation of the identity rule. Node the rename of `markets.Ticker`→`Quote` only in a phase that can also rename the 36 OpenAPI paths that reference it.
+**Required change:** *no change in code this turn.* Record: when the Price entity is built, `price_history`'s unique key must become `(instrument_id, source, observed_at)` — today it is `(symbol, ts, source)` (`pg-schema.sql:140-141`), i.e. **symbol-as-identity**. This is **one of two** schema-level violations of the identity rule: the other is `asset_history_snapshot`, the coalesced `(ts, chain, asset, coalesce(wallet,''))` unique index on `asset_history` (`pg-schema.sql:115-121`), which keys a snapshot on the same symbol-derived triple. Node the rename of `markets.Ticker`→`Quote` only in a phase that can also rename the 36 OpenAPI paths that reference it.
 
 ### D3. ExchangeAccount vs Account — **genuinely distinct, same noun**
 Evidence: `treasury.Account` (`backend/api/internal/finance/treasury/treasury.go:35`) — internal capital, one asset per account,
@@ -674,7 +674,7 @@ already keeps `ExecutionStatus` and `ChildOrderStatus` separate and pinned to `t
 | D-US2 | `MarketType` declared twice, identically (`spot`/`linear_perp`), and `Status` twice with **different** value spaces | `markets/instruments/instrument.go:36` vs `accounts/exchange/account.go:54`; `access/credentials/credential.go:32` vs `accounts/exchange/account.go:65` | Keep two `MarketType` until the venue registry exists (D-US1); the two `Status` types must be named apart (`CredentialStatus` / `AccountStatus`) in contracts. |
 | D-US3 | Decimal arithmetic duplicated 5× plus helpers | `finance/{ledger,portfolio,transactions,treasury}/decimal.go` (byte-identical trios) + `instruments/rounding.go:17` + `markets/overview/decimal.go:14` + `workers/executor/internal/decimal` | **Keep.** `portfolio/decimal.go:11-13` documents the duplication as intentional ("packages must not couple through a shared money type"). Record as DECIDED-INTENTIONAL, not debt — the executor's `internal/decimal` is the one that should be promoted if a shared type is ever needed. |
 | D-US4 | Wire types re-declared per file (TS) | `ticker/ui.tsx:11-45` re-declares `VenueQuote`/`TickerRow`; `signals/ui.tsx:6-48` re-declares the route's payload | **Fix in Phase 5** by consuming generated SDK types; no behavior change. Recorded, not done (this turn must not touch `frontend/web/**`). |
-| D-US5 | `price_history` has DDL and a retention job but **no writer**; `venues`, `accounts`, `journal`, `ledger`, `trades` have DDL and **no writer** | `pg-schema.sql:132`; `schema.sql:3,21,33,44,71` | **Open question O2** — these are either dead read-model tables or artifacts of a deleted writer. Deleting them is out of scope (schema is frozen this turn). |
+| D-US5 | `price_history` has DDL and a retention job but **no writer**; `venues`, `accounts`, `journal`, `ledger`, `trades` have DDL and **no writer** | `pg-schema.sql:132`; `schema.sql:3,21,33,44,71` | **O2 answered (DR-036, 2026-10-02): dead read-model tables, not artifacts of a deleted writer.** Queried read-only in both stores: `price_history` is absent from Turso and empty in Postgres, `trades` is empty, and the other four are frozen at the 2026-09-15 import (`assets`/`transactions` advanced as controls). No writer exists in source, in `git log -S` history, in cron, in any timer, or in the operator tree. Deleting them is Phase 6 (still out of scope); `price_history` remains retained-but-never-written, which is itself the evidence it has no producer. |
 
 ### D-CANON. The canonical-identity gap (decision that gates everything else)
 
@@ -692,9 +692,12 @@ because the services that must consume it cannot import each other's code, and b
 in the tree owns a durable store it could host the table in). Four of the five id kinds are minted
 today: `asset_id`, `token_id`, `chain_id`, `venue_id`. **`instrument_id` is not** — it stays at
 "API exists, no minter" (`C2` above), and `Price`/`Balance`/`Trade`-class ids are not covered at all.
-**The SQL half of this decision is still open** (O3): there is no `provider_id`/`canonical_id` table
-in `database/`, so anything that resolves through SQL still resolves through a symbol. That is what
-now blocks Phase 9, not the absence of an owner.
+**The SQL half of this decision is no longer open** (O3, DR-036): `database/schema/pg-schema.sql` now
+declares `canonical_reference` (+ `canonical_reference_miss`) and
+`backend/api/internal/markets/reference/loader.go` loads it from the artifact. It is additive and
+**unwired** — no consumer resolves through SQL yet — so the practical situation is unchanged today,
+but the blocker "there is no table" has become "nothing has been re-pointed at the table". That
+re-pointing, not the absence of an owner or of a table, is what Phase 9 still waits on.
 
 ---
 
@@ -795,7 +798,9 @@ flowchart TD
 **[CANONICAL OWNER]** `C1` now exists: `backend/api/internal/markets/reference` mints
 `asset_id`/`token_id`/`chain_id`/`venue_id` and publishes the provider mapping as
 `shared/contracts/data/reference.json`. What is still missing around it is *plumbing*, not design —
-no service serves the document over HTTP, and no consumer reads it yet. `C2`'s box still has no
+no service serves the document over HTTP, no consumer reads it yet, and although DR-036 added the
+SQL-side table (`canonical_reference` + loader) it is unwired: nothing loads it and nothing joins
+through it. `C2`'s box still has no
 minter and is **out of scope for that change** (it mints four of the six id kinds the diagram names).
 `C3`/`C4` remain honestly complete.
 
@@ -813,7 +818,7 @@ because they are the consumers of this document.
 | **5 — consumer migration** | The 36 OpenAPI paths + 28 event ids are the frozen surface; a consumer may only switch to `backend/api` once the Go surface exposes **all** of: `/api/{chainrank,cryptorank,khala,llama,news,markets,dex,signals,ticker*}`, `/api/{coins,wallets,transactions,reconcile}`, `/api/executor/**`. Today `backend/api` serves **only** `/healthz`, `/readyz`, `/api/auth/{login,callback,logout}`, `/api/admin/members` (`cmd/api/main.go:73-100`). **Re-observed 2026-10-01 (commit `7b8dc2d`):** the `/api/executor/**` entry in that list is no longer missing — the **executor process** (not `backend/api`) serves the 15 `/api/executor/*` routes on its own loopback listener (`FUDCOURT_EXECUTOR_API_ADDR`, default `127.0.0.1:3105`; `backend/workers/executor/cmd/executor/api.go:16,59`). So Phase 5's remaining gate is the `backend/api` domain routes, not `executor/**`. |
 | **6 — deletions** | Deletion candidates this audit establishes: the TS shaper twin `features/cryptorank/shapers.ts` (runtime-dead: only tests + `dump-envelopes.ts` import it), the Python sync twin `tests/oracle/sync-live.py` (Rust parity already verified), the TS reconcile oracle `features/treasury/reconcile.ts` (runtime = Rust). **Each deletion is blocked until the phase that proves byte-parity for its replacement; none may be deleted for being unused-looking.** |
 | **7–8 — contracts/SDK** | The schema tree added this turn is the machine-readable form of §2/§4/§5. Generators may read it, but **`events/` must remain the event source of truth** and `check-contract.mjs` must be extended (not replaced) if new cross-checks are wanted. |
-| **9 — data cutover** | Needs D1/D2/D5 changed together: minting `asset_id`/`token_id`/`instrument_id` without a mapping table would produce a second symbol-keyed system. **Partially unblocked:** `asset_id`/`token_id`/`chain_id`/`venue_id` now have a minting owner and a published mapping (`reference.json`), and `instrument_id` is now **minted** too (`backend/api/internal/markets/instruments/canonical.go`), so Phase 9 is blocked only on (a) a SQL-side mapping table, if a resolver must read the database, and (b) the fact that no artifact or route yet serves instrument ids to a consumer (no consumer is re-pointed; see §9.2 O4). |
+| **9 — data cutover** | Needs D1/D2/D5 changed together: minting `asset_id`/`token_id`/`instrument_id` without a mapping table would produce a second symbol-keyed system. **Partially unblocked:** `asset_id`/`token_id`/`chain_id`/`venue_id` now have a minting owner and a published mapping (`reference.json`), and `instrument_id` is now **minted** too (`backend/api/internal/markets/instruments/canonical.go`), so Phase 9 is blocked only on (b) the fact that no artifact or route yet serves instrument ids to a consumer (no consumer is re-pointed; see §9.2 O4). The earlier blocker (a) — a SQL-side mapping table — is **DONE**: `database/schema/pg-schema.sql` now declares `canonical_reference` + `canonical_reference_miss` and `backend/api/internal/markets/reference/loader.go` loads them from `reference.json` (DR-036); both are additive and unwired, so nothing resolves through SQL *yet*, but the table now exists. |
 
 ### 9.2 Concrete blockers / open questions
 
@@ -828,10 +833,22 @@ because they are the consumers of this document.
   (`backend/api/internal/markets/instruments/canonical.go`) but is not yet served by any artifact or
   route, so no consumer can obtain one.
 - **O2 — Are `accounts`, `journal`, `ledger`, `trades`, `venues`, `price_history` live tables or
-  dead ones?** All have DDL; none has a writer in the repo (writers: `assets` ← Rust sync +
-  sync-live.py; `transactions` ← Next route; `wallets` ← Next route UPDATE; everything else has no
-  `INSERT`). If they are dead, Phase 6 deletes them; if they are planned, the mirror design
-  (`mirror.ts:50-58` copies all 8) must be revisited. **Cannot be answered from the tree.**
+  dead ones?** **[ANSWERED 2026-10-02 — from the stores, not the tree.** The docs said this "cannot
+  be answered from the tree"; it can be answered by querying the stores, which is what DR-036 did
+  (read-only, both stores, two snapshots ~4 min apart). Live store = Turso (DR-019 system of
+  record); read model = local Postgres. **Verdicts:** `price_history` **does not exist in Turso at
+  all** and has 0 rows in Postgres (the DDL comment "Written by the price sampler" is aspirational —
+  no `INSERT INTO price_history` exists anywhere); `trades` is an **empty** table (0 rows, both
+  stores); `accounts` (6), `journal` (8, max `created_at` `2026-09-15 23:48:35`), `ledger` (3) and
+  `venues` (12) are **seeded-then-frozen at the 2026-09-15 import and never advance** — all **dead**.
+  The controls confirm the probe: `assets` **advanced** inside the window (00:24:37 → 00:29:44, one
+  `fudcourt-sync` tick) and `transactions` reached `2026-09-28 07:09:46` after the import (live,
+  low-rate). The writer search is exhaustively negative: no `INSERT` in source or in
+  `git log -S'INSERT INTO <table>'` history, no cron entry (`crontab -l`, `/etc/cron.d`,
+  `/var/spool/cron`), no system or user timer other than `fudcourt-sync` (5 min, `assets` only) and
+  `fudcourt-pgload` (60 s, the mirror), and nothing in the operator tree `~/.hermes/**` writes them.
+  **So: five dead (two never written), all dead with no out-of-band writer.** Phase 6 retires them
+  (still out of scope); the `mirror.ts` 8-table copy is unchanged and remains harmless. `]`
 - **O3 — Where does `(provider, provider_id) → canonical_id` live, and who writes it?**
   **[ANSWERED — deliberately "operator-curated".]** It lives in `…/reference/seed.go` (curated Go
   data) and ships as `shared/contracts/data/reference.json`; `backend/api/internal/markets/reference`
@@ -839,9 +856,13 @@ because they are the consumers of this document.
   rejected**: the seed is reviewed like source, so two providers that disagree cannot silently
   create two ids for one asset. Consequently there is **no** `aliases[]` free-for-all and no runtime
   write path — adding an asset is a code change with a test (`TestReferenceArtifactIsCurrent`), and
-  the artifact's `unmapped` list is the honest record of what is known but unresolved. **Still
-  open:** `database/` has no such table, so a SQL-side consumer cannot resolve; if one is ever
-  needed, the artifact is the source it must be loaded from.
+  the artifact's `unmapped` list is the honest record of what is known but unresolved. **Resolved
+  2026-10-02 (DR-036):** `database/schema/pg-schema.sql` now declares the table
+  (`canonical_reference` + `canonical_reference_miss`) and
+  `backend/api/internal/markets/reference/loader.go` loads it from `reference.json` without
+  re-deriving an id — so a SQL-side consumer *can* now resolve, once something runs the loader; it
+  is additive and unwired (nothing calls it yet), and the artifact remains the source it is loaded
+  from.
 - **O4 — Is `BASE/QUOTE` (markets) or `exchange:marketType:BASE/QUOTE` (instruments/executor) the
   canonical instrument id?** **[ANSWERED — and the question was mis-framed.** The real choice was
   never between two spellings: a spelling cannot be an identity, and both candidates are
@@ -886,7 +907,11 @@ Every claim in this document not directly read from a file, collected:
 8. §7 D-US4: that the duplicated per-file wire types are *safe* to collapse via the generated SDK
    is an inference about the SDK's coverage (`shared/sdk/typescript/src/generated/schema.d.ts`
    exists; it was existence-checked, not diffed field-by-field).
-9. §9.2 O2: whether the writer-less tables are dead or planned cannot be derived from the tree.
+9. §9.2 O2: **resolved 2026-10-02 (DR-036)** — the writer-less tables were queried in both live
+   stores, not inferred: `price_history` is absent from Turso and empty in Postgres, `trades` is
+   empty, and `accounts`/`journal`/`ledger`/`venues` are frozen at the 2026-09-15 import, so all six
+   are dead (with `assets`/`transactions` as advancing controls). The original statement ("cannot be
+   derived from the tree") stands as a statement about the *tree*; the stores answer it.
 10. §6.3: the field-level sensitivity assignment for `execution_events.payload` follows from it
     carrying order data; no code enumerates payload sensitivity.
 11. §1.4/§2 (reference registry): that a generated, version-controlled file is an acceptable home
