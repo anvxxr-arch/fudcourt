@@ -161,7 +161,7 @@ Turso (libsql, neon primary)   SYSTEM OF RECORD — the Rust reconciler, sync-li
   |  frontend/web/scripts/    idempotent projection, every 60 s + after each
   |  tools/pg-load.ts         write + ExecStartPost of fudcourt-sync.service
   v
-PostgreSQL 17 + TimescaleDB    READ MODEL (local, :5433, db `fudcourt`)
+PostgreSQL 17 + TimescaleDB    READ MODEL (local, :5432, db `fudcourt` — consolidated Docker instance)
   - accounts/assets/journal/ledger/trades/transactions/venues/wallets
   - asset_history, price_history  hypertables (time series; 90-day retention)
   |

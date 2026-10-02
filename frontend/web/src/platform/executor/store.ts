@@ -62,7 +62,7 @@ export interface ExecutorSql {
 }
 const BunGlobal = (globalThis as { Bun?: { SQL?: new (url: string, opts?: { max?: number; idleTimeout?: number }) => ExecutorSql } }).Bun;
 const PG_OPTS = { max: 8, idleTimeout: 30 };
-const PG_URL = process.env.FUDCOURT_PG_URL || 'postgres://fudcourt@127.0.0.1:5433/fudcourt';
+const PG_URL = process.env.FUDCOURT_PG_URL || 'postgres://fudcourt@127.0.0.1:5432/fudcourt';
 let pgClient: ExecutorSql | null = null;
 /**
  * The pooled Bun.sql client (lazy; constructing is I/O-free). Bun.sql's `unsafe`

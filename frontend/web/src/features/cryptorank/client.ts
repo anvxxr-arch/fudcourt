@@ -5,7 +5,7 @@
  * 127.0.0.1:3101) -> cryptorank.io <script id="__NEXT_DATA__"> SSR payload.
  * The Go service owns mode/key validation and the shaping; this file is the
  * TS-side mirror of its tables, and scripts/verify/check-contract.py fails the build
- * if the two ever disagree. scripts/oracle/cr_fetch.py is no longer a runtime path --
+ * if the two ever disagree. tests/oracle/cr_fetch.py is no longer a runtime path --
  * it survives only as verify-cryptorank.py's independent oracle.
  *
  * Why this shape exists (measured 2026-09-27):

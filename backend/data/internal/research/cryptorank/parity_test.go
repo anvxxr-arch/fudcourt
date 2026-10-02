@@ -3,7 +3,7 @@ package cryptorank_test
 // Parity oracle for the Go port.
 //
 // For every recorded upstream fixture (<fixtures>/<mode>.json.gz, the raw
-// HelperOut stdout of scripts/oracle/cr_fetch.py) this runs the Go envelope()
+// HelperOut stdout of tests/oracle/cr_fetch.py) this runs the Go envelope()
 // with the same opts the TS route uses -- default key for keyed/list modes,
 // CR_MODE_UPSTREAM[mode] as the upstream field -- and deep-compares the result
 // with the frozen TypeScript output in <fixtures>/expected/. <fixtures> is the

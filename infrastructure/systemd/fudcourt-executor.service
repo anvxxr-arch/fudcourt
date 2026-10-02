@@ -10,7 +10,8 @@
 #
 # PROVISIONING GATE — the unit is DISABLED until the keys below exist:
 #   FUDCOURT_EXECUTOR_MASTER_KEY  64 hex chars; REQUIRED, fail-closed (§40)
-#   FUDCOURT_EXECUTOR_PG_URL     Postgres DSN (the DR-019 :5433 instance)
+#   FUDCOURT_EXECUTOR_PG_URL     Postgres DSN (the DR-019 fudcourt DB, now on
+#                                the consolidated instance 127.0.0.1:5432)
 #   VALKEY_ADDR                  127.0.0.1:6379 (absent => in-process locks)
 # All three live in frontend/web/.env.local (the documented home per SECRETS.md).
 # Until they are present the Go worker exits non-zero at startup and this
@@ -50,9 +51,9 @@
 #   that ONE file and restart both units together; never hand-set it here.
 [Unit]
 Description=FUD Court CEX execution runtime (Go worker + executor API)
-After=network-online.target postgresql@17-main.service valkey.service
+After=network-online.target valkey.service
 Wants=network-online.target
-Wants=postgresql@17-main.service valkey.service
+Wants=valkey.service
 
 [Service]
 Type=simple

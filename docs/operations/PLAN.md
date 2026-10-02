@@ -592,7 +592,7 @@ program that direction names; the subgoals below are what this session measured.
   hostname, `check-contract.py` OK with a new **llama LLAMA_MODES parity** row, the
   sweep gained 5 strict-param checks, and `bun run build` + `bunx tsc --noEmit` stay 0.
 - SG-9.4 ✅ **Rust service: the live balance sync** — `backend/sync/` reproduces
-  `frontend/web/scripts/tools/sync-live.py` (Turso `assets` + share %, Alchemy EVM RPC, Solana RPC,
+  `tests/oracle/sync-live.py` (Turso `assets` + share %, Alchemy EVM RPC, Solana RPC,
   Hyperliquid, the same "a failed RPC never becomes 0" rule), verified by running both
   binaries back to back and diffing the rows: **17 rows, zero symmetric difference, zero
   quantity mismatches and zero USD mismatches**, `NET WORTH: $170.46` on both (measured).

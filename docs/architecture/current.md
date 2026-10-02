@@ -361,7 +361,7 @@ module has moved into it):
 
 - `src/main.rs` → **`fudcourt-sync`**: live multi-chain balance sync → Turso `assets` table.
   Pipeline `src/streams/sync.rs` (prices → balances → Hyperliquid → print → Turso), ported from
-  `frontend/web/scripts/tools/sync-live.py` with byte-identical output rules (`pyfmt.rs`
+  `tests/oracle/sync-live.py` with byte-identical output rules (`pyfmt.rs`
   Python-identical number formatting — crate root, cross-cutting; `src/persistence/db.rs` Turso
   HTTP pipeline client with the same wire protocol;
   `jsonrpc.rs` retry/honesty rules — a failed RPC call never becomes a zero balance;
@@ -374,7 +374,7 @@ module has moved into it):
   `src/reconciliation/reconcile.rs`.
 - Tests: `backend/sync/tests/reconcile.rs` + inline tests (17 total, all passing).
 
-Note: the Python originals (`frontend/web/scripts/tools/sync-live.py`, web `api/reconcile`) still exist
+Note: the Python original (`tests/oracle/sync-live.py`) and the web `api/reconcile` still exist
 and are still wired to the **web** `fudcourt-sync.service`/`.timer` in `infrastructure/systemd/`; the Rust
 variants in `infrastructure/systemd/` (`fudcourt-sync-rust.*`) are the parallel "Rust" pair. Both are live in the tree.
 
@@ -385,7 +385,7 @@ variants in `infrastructure/systemd/` (`fudcourt-sync-rust.*`) are the parallel 
 | `infrastructure/systemd/fudcourt-web.service` | `/home/dwizzy/fudcourt/frontend/web` | `bun --bun …/next start -p 3100` | Next.js web :3100 |
 | `infrastructure/systemd/fudcourt-executor-worker.service` | `…/frontend/web` | `bun …/frontend/web/scripts/executor/worker.ts` | in-frontend executor worker |
 | `infrastructure/systemd/fudcourt-pgload.service` (+ `.timer`, 60s) | `…/frontend/web` | `bun run …/scripts/tools/pg-load.ts` | Turso → Postgres read model (DR-019) |
-| `infrastructure/systemd/fudcourt-sync.service` (+ `.timer`, 5 min) | `…/frontend/web` | `python3 …/scripts/tools/sync-live.py`, `ExecStopPost: bun run pg-load.ts` | **Python** balance sync → Turso |
+| `infrastructure/systemd/fudcourt-sync.service` (+ `.timer`, 5 min) | `…/frontend/web` | `python3 …/tests/oracle/sync-live.py`, `ExecStartPost: bun run pg-load.ts` | **Python** balance sync → Turso |
 | `infrastructure/systemd/fudcourt-data.service` | `…/backend/data` | `…/backend/data/bin/fudcourt-data` | Go acquisition sidecar :3101 |
 | `infrastructure/systemd/fudcourt-sync-rust.service` (+ `.timer`, 5 min) | `…/backend/sync` | `…/backend/sync/target/release/fudcourt-sync` | **Rust** balance sync → Turso |
 | `infrastructure/systemd/fudcourt-reconciled.service` | `…/backend/sync` | `…/backend/sync/target/release/fudcourt-reconciled` | Rust reconcile service :3102 |

@@ -7,8 +7,8 @@
 # ExecStartPre and lives in backend/api/bin/, which .gitignore excludes.
 [Unit]
 Description=FUD Court primary Go backend API :3103
-After=network-online.target postgresql@17-main.service valkey.service
-Wants=postgresql@17-main.service valkey.service
+After=network-online.target valkey.service
+Wants=valkey.service
 Wants=network-online.target
 
 [Service]

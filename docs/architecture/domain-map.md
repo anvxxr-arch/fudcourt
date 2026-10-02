@@ -27,7 +27,7 @@
 | markets / venues / prices (read) | web | `api/{markets,ticker,ticker/instrument(s)}`, `features/{markets,ticker}/*` | `backend/api` (markets) |
 | data acquisition | Go sidecar | `backend/data/internal/research/{llama,cryptorank,khala,chainrank,news}` (ex-`apps/apicalls`) | `backend/data` (already moved) |
 | data caching | Go + TS | `backend/data/platform/cache`, `frontend/web/src/platform/cache` | `backend/data` |
-| stream sync / balances | Rust | `backend/sync/src/streams/sync.rs` + `{chains,jsonrpc,pyfmt}.rs` + `persistence/db.rs` + Python twin `frontend/web/scripts/tools/sync-live.py` | `backend/sync` (already moved; Phase 6 specializes) |
+| stream sync / balances | Rust | `backend/sync/src/streams/sync.rs` + `{chains,jsonrpc,pyfmt}.rs` + `persistence/db.rs` + Python twin `tests/oracle/sync-live.py` | `backend/sync` (already moved; Phase 6 specializes) |
 | reconciliation maths | Rust + TS twin | `backend/sync/src/reconciliation/reconcile.rs` vs `frontend/web/src/app/(frontend)/api/reconcile/route.ts` | `backend/sync` |
 | event normalization | Rust (partial) | `backend/sync/src/jsonrpc.rs`, `streams/sync.rs` | `backend/sync` |
 | executor orchestration (command/API) | web | `frontend/web/src/app/(frontend)/api/executor/**` (16 routes) | `backend/api` (executor orchestration) |
@@ -122,12 +122,12 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
 ### 3.4 Cross-app source imports (Go/Rust ↔ TS)
 - **None found.** `backend/data` (Go) and `backend/sync` (Rust) contain no references to
   `frontend/web` source; coupling is HTTP (`/api/reconcile` proxy), Turso tables, and shared `.sql`
-  files only. (Docs/comments in Rust reference `frontend/web/scripts/tools/sync-live.py` as the oracle —
+  files only. (Docs/comments in Rust reference `tests/oracle/sync-live.py` as the oracle —
   documentation references, not imports.)
 
 ### 3.5 Dual-implementation debt (same domain in two languages, both live)
 
-- Balance sync: `backend/sync/src/main.rs` + `backend/sync/src/streams/sync.rs` **and** `frontend/web/scripts/tools/sync-live.py`,
+- Balance sync: `backend/sync/src/main.rs` + `backend/sync/src/streams/sync.rs` **and** `tests/oracle/sync-live.py`,
   each with its own systemd unit (`infrastructure/systemd/fudcourt-sync-rust.service` vs
   `infrastructure/systemd/fudcourt-sync.service`). Phase 6 collapses to Rust after oracle parity.
 - Reconcile: `backend/sync/src/reconciliation/reconcile.rs` **and** `frontend/web/…/api/reconcile/route.ts`

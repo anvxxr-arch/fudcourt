@@ -46,7 +46,7 @@ Reconstructed from `frontend/web/src/app/(frontend)/api/wallets/route.ts`:
 | `alias`, `emoji`, `color`, `notes` | optional display fields |
 
 ### 1.3 `assets` — live balances (written by sync every 5 min)
-Written by `frontend/web/scripts/tools/sync-live.py` with the hard rule:
+Written by `tests/oracle/sync-live.py` with the hard rule:
 **failed RPC raises; it never writes `0`**. Keyed by exact wallet address +
 chain; `value_usd` summed for net worth.
 

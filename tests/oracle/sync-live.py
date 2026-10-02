@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """
 fudcourt live multi-chain sync -> Turso `assets` table.
+
+LOCATION: this script is the ORACLE, and an oracle does not live inside the app
+it checks. The Phase-8 tooling move took it out of `frontend/web/scripts/tools/`
+(that directory no longer exists); it is wired by
+`infrastructure/systemd/fudcourt-sync.service` at its current path. Paths named
+below are repo-relative roots (`backend/sync/src/**`), not app-relative ones.
+
 HARD RULES:
   * exact wallet address, exact balance, exact hash
   * a failed RPC NEVER becomes 0 -- it raises, so we never fake a zero balance

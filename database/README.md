@@ -234,8 +234,8 @@ purpose:
   `scripts/checks/check-structure.py` (`:77`) and `scripts/verify/…` (`:81-90`)
   are correct as written, and `node scripts/database/dump-schema.mjs --check`
   (`:91`) resolves from the repo root. The one genuinely dead path the snippet
-  carried, `frontend/web/scripts/tools/sync-live.py` (`:75`), is repointed to
-  `tests/oracle/sync-live.py` (moved in `d4119ca`).
+  carried, `frontend/web/scripts/tools/sync-live.py` (`:75`), resolves to
+  `tests/oracle/sync-live.py` at its current path (moved in `d4119ca`).
 
 **Verified not stale** (checked because the tree is mid-rename):
 `executor-store-tests.ts:502` reaches `database/schema/executor-schema.sql`

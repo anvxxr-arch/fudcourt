@@ -64,7 +64,7 @@ backend/data/    Go sidecar :3101 — one package per family, under `internal/re
                  proxy to it (DR-005/DR-006/DR-009/DR-012/DR-013)
 backend/sync/    Rust crate — TWO binaries: `fudcourt-sync` (the live multi-chain
                  balance sync → Turso + share %, parity-checked against
-                 frontend/web/scripts/tools/sync-live.py; SG-9.4) and
+                 tests/oracle/sync-live.py; SG-9.4) and
                  `fudcourt-reconciled` (:3102, the `/api/reconcile` HTTP service —
                  zero new dependencies, parity-checked byte-for-byte against the
                  TS shaper; DR-014)
@@ -93,8 +93,8 @@ crate behind both of its services (`fudcourt-sync`, `fudcourt-reconciled`).
 the web-side `src/features/treasury/reconcile.ts` kept as the oracle rather than a
 fallback path.
 `frontend/web/scripts/` holds the web-app-only tooling and harnesses
-(`checks/check-structure.py` — the layer gate — plus `executor/worker.ts` and `tools/` codegen/maintenance incl. `sync-live.py`);
-the repo-wide verifiers, fixtures and cross-system suites have moved out of
+(`checks/check-structure.py` — the layer gate — plus `executor/worker.ts` and `tools/` maintenance:
+`pg-load.ts`, `read-path-probe.ts`); the repo-wide verifiers, fixtures and cross-system suites have moved out of
 `frontend/web`:
 ```
   scripts/verify/        repo-wide harnesses + one-command gate: check-contract.py,

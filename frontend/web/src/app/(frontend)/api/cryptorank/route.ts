@@ -29,7 +29,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * here would be a second implementation waiting to drift; scripts/verify/
  * check-contract.py asserts the two mode tables can never diverge.
  *
- * scripts/oracle/cr_fetch.py is NO LONGER a runtime path. It is retained solely as
+ * tests/oracle/cr_fetch.py is NO LONGER a runtime path. It is retained solely as
  * the independent oracle of scripts/verify/verify-cryptorank.py, which cross-checks
  * the Go service's output against a second, unrelated client.
  *

@@ -41,7 +41,7 @@ import { createClient, type Client } from '@libsql/client';
 const BunGlobal = (globalThis as { Bun?: { SQL?: new (url: string, opts?: { max?: number; idleTimeout?: number }) => SQL } }).Bun;
 const PG_OPTS = { max: 8, idleTimeout: 30 };
 
-const PG_URL = process.env.FUDCOURT_PG_URL || 'postgres://fudcourt@127.0.0.1:5433/fudcourt';
+const PG_URL = process.env.FUDCOURT_PG_URL || 'postgres://fudcourt@127.0.0.1:5432/fudcourt';
 
 type Table = { name: string; cols: string[]; pk: string[] };
 

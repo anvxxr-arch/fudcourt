@@ -12,8 +12,8 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 
 | Name | Consumers (first-party) | Home (file) | Production consumer | CI needs it? |
 |------|------------------------|-------------|---------------------|--------------|
-| `TURSO_AUTH_TOKEN` | `frontend/web/src/platform/db/client.ts`, `backend/sync/src/persistence/db.rs`, `frontend/web/scripts/tools/sync-live.py`, `scripts/database/dump-schema.mjs` | `./.env` (root) + `frontend/web/.env.local` | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`; it REFUSES TO START without the token) | no |
-| `ALCHEMY_KEY` | `frontend/web/scripts/tools/sync-live.py` (live ETH RPC) + `frontend/web/scripts/archive/*.mjs` (forensic one-offs **deleted 2026-09-29**, after the rotation was recorded) | `./.env` (root) | `fudcourt-sync.timer` | no |
+| `TURSO_AUTH_TOKEN` | `frontend/web/src/platform/db/client.ts`, `backend/sync/src/persistence/db.rs`, `tests/oracle/sync-live.py`, `scripts/database/dump-schema.mjs` | `./.env` (root) + `frontend/web/.env.local` | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`; it REFUSES TO START without the token) | no |
+| `ALCHEMY_KEY` | `tests/oracle/sync-live.py` (live ETH RPC) + the forensic `frontend/web/scripts/archive/*.mjs` one-offs (**deleted 2026-09-29**, after the rotation was recorded) | `./.env` (root) | `fudcourt-sync.timer` | no |
 | `FUDCOURT_BOT_TOKEN` | `src/app/(frontend)/api/auth/callback` + `src/app/(frontend)/(admin)` (reads guild member roles with the bot) | `frontend/web/.env.local` | `fudcourt-web` | no |
 | `FUDCOURT_CLIENT_SECRET` | `src/app/(frontend)/api/auth/callback` (OAuth code exchange) | `frontend/web/.env.local` | `fudcourt-web` | no |
 | `FUDCOURT_SESSION_SECRET` | `src/platform/auth/session.ts` (HMAC key for the `fud_session` cookie) | `frontend/web/.env.local` | `fudcourt-web` | no |
@@ -35,7 +35,7 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 1. **No `.env` file was ever committed.** `git log --all --diff-filter=A
    --name-only | grep -E '(^|/)\.env'` → empty.
 2. **RESOLVED — an Alchemy key literal lived in the tracked tree.**
-   `frontend/web/scripts/tools/sync-live.py` carried it as a `os.environ.get(…, '<literal>')`
+   `tests/oracle/sync-live.py` carried it as a `os.environ.get(…, '<literal>')`
    default and **14 `frontend/web/scripts/archive/*.mjs` scripts embedded it as (that directory was removed in the 2026-09-29 structure pass; the finding and the rotation step below are unchanged)
    `const KEY = '<literal>'`**, introduced in commit `3678b10` ("initial:
    monorepo") — so it is also in **git history**. Fixed in this change: the
@@ -138,7 +138,7 @@ Production == this homeserver:
    immediately; the copy in commit `3678b10` becomes useless).
 2. Update the value in the repo-root `.env` (`ALCHEMY_KEY=…` — edit in a local
    editor, never `cat`/`grep` it into logs).
-3. Verify: `cd frontend/web && python3 scripts/tools/sync-live.py` → RC 0 and a real net
+3. Verify: `python3 tests/oracle/sync-live.py` → RC 0 and a real net
    worth line (the run stops with `missing ALCHEMY_KEY` if step 2 was skipped).
 4. Nothing else to update: the archived scripts read the same env var now.
 
@@ -147,7 +147,7 @@ Production == this homeserver:
    the fudcourt DB), copy it, then revoke the old token.
 2. Update BOTH homes: repo-root `.env` and `frontend/web/.env.local`.
 3. Verify: `node scripts/database/dump-schema.mjs --check` (RC 0, from the repo root) and
-   `cd frontend/web && python3 scripts/tools/sync-live.py` (RC 0); then `systemctl --user restart
+   `python3 tests/oracle/sync-live.py` (RC 0); then `systemctl --user restart
    fudcourt-web` and `curl -s -o /dev/null -w '%{http_code}'
    http://127.0.0.1:3100/cryptorank` → 200.
 

@@ -2,7 +2,7 @@
 """Cross-implementation sync gate: Python oracle vs Rust `fudcourt-sync` (Phase 6).
 
 Two implementations of the balance sync exist during the parallel run
-(`frontend/web/scripts/tools/sync-live.py` and `backend/sync/src/**`). This gate
+(`tests/oracle/sync-live.py` and `backend/sync/src/**`). This gate
 proves they produce the SAME `assets` rows from the SAME inputs — byte for
 byte — which is what makes promoting the Rust binary over the Python twin safe.
 

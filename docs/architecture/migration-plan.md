@@ -191,7 +191,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 
 ## Phase 6 — Rust `backend/sync` specialization
 
-- Promote `fudcourt-sync` (Rust) over the Python twin `frontend/web/scripts/tools/sync-live.py`:
+- Promote `fudcourt-sync` (Rust) over the Python twin `tests/oracle/sync-live.py`:
   CI already has the byte-parity harness pattern (`verify/verify-reconcile.py`); add the same
   oracle gate for sync (`scripts/verify` + `tests/oracle`) comparing `assets` rows.
 - Switch `infrastructure/systemd/fudcourt-sync.service`/`.timer` to the Rust binary (or retire them in
