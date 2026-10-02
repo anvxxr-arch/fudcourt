@@ -139,11 +139,12 @@ deleted"). What that means in practice:
   with its named Go test (not merely green Go coverage; see the table's status vocabulary), the paper
   E2E green against the Go worker, and an atomic `fudcourt-executor-worker.service`
   switch (`migration-plan.md` Phase 5 — one worker live at a time).
-  **2026-10-01 (`7b8dc2d`):** the Go **code** counterpart is complete — engine/worker/persistence
-  plus the 15-route HTTP surface (`internal/api` on `:3105`). Still open before deletion: the web
-  tier must thin-proxy `/api/executor/*` to `127.0.0.1:3105`, and `FUDCOURT_SESSION_SECRET` +
-  `FUDCOURT_EXECUTOR_PG_URL` (+ `FUDCOURT_EXECUTOR_MASTER_KEY`) must be provisioned so the unit can
-  start; then the live `verify:executor` runs against the **Go** worker.
+  **2026-10-02 (web re-point coded):** all 15 `/api/executor/*` route handlers now thin-proxy to
+  `127.0.0.1:3105` through `frontend/web/src/platform/executor/executor-proxy.ts`, enabled only by
+  `FUDCOURT_EXECUTOR_PROXY=go` (default OFF, so the TS runtime remains the live path). Still open
+  before deletion: `FUDCOURT_SESSION_SECRET` + `FUDCOURT_EXECUTOR_PG_URL` (+ `FUDCOURT_EXECUTOR_MASTER_KEY`)
+  must be provisioned so the unit can start, the gate flipped, and the live `verify:executor` run
+  against the **Go** worker.
 
 Feature × TS × Go parity matrix (objective §22 skeleton). **Status vocabulary — read first:**
 `DONE` means **a TS oracle test (file + test title, from the §3 suites) is paired with a named Go test

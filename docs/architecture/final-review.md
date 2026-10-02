@@ -399,7 +399,9 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    **29 hermetic tests** (`internal/api/{routes,harness}_test.go`; memory store + in-repo paper venue
    + pinned clock, no PG/Valkey/network). What remains is **not** a code-surface task — it is the
    three-item checklist: **(a)** thin-proxy the web `/api/executor/*` handlers to
-   `127.0.0.1:3105` (until then the TS handlers are the live path); **(b)**
+   `127.0.0.1:3105` — **coded 2026-10-02, not switched on:** all 15 handlers delegate to
+   `frontend/web/src/platform/executor/executor-proxy.ts`, and the forward happens only when
+   `FUDCOURT_EXECUTOR_PROXY=go` (default OFF, so the TS handlers are still the live path); **(b)**
    `FUDCOURT_SESSION_SECRET` + `FUDCOURT_EXECUTOR_PG_URL` must be provisioned in
    `frontend/web/.env.local` before the unit can start (provisioning the DSN no longer implies
    applying the schema by hand — since `8d87df1` `cmd/executor` applies the tracked

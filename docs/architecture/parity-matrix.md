@@ -33,6 +33,13 @@ Status values: `DONE` (parity vectors ported + green), `IN FLIGHT` (slice runnin
 | EXECUTOR DDL lifted to `database/schema/executor-schema.sql` as the sole owner (store DDL byte-identity stays PASS) | `database/schema/executor-schema.sql` + store tests | **GO HALF DONE `8d87df1`: the Go runtime now applies the tracked DDL at startup (`repository.EnsureSchema`, statement-by-statement, before the worker/API serve; fatal on failure) and the Go copy is pinned to the tracked file BYTE-EXACT by `TestEmbeddedSchemaMatchesTracked`.** The row's intent is two-part: "the tracked file is the sole owner AND the DDL is no longer embedded in `store.ts`" — the SECOND half is still OPEN because `store.ts` still embeds `EXECUTOR_DDL` (TS §59 normalized drift test still PASSES). So the row stays OPEN until the TS embed is lifted; the sole-owner half is now delivered for BOTH appliers. |
 | TS modules deleted + `test:shapers` still green on what remains | `bun run test:shapers` | OPEN |
 
+*Last updated 2026-10-02 (executor cutover): the **web re-point is coded** — all 15 handlers under
+`frontend/web/src/app/(frontend)/api/executor/**` delegate to
+`frontend/web/src/platform/executor/executor-proxy.ts`, which forwards the request (cookie included)
+to `127.0.0.1:3105` **only** when `FUDCOURT_EXECUTOR_PROXY=go`; unset is the previous behaviour, so
+the TS runtime is still the live path and nothing in the cutover row changes status. The row was
+already OPEN for this step; the remaining pieces are the flip, env provisioning and the live Go
+`verify:executor` proof.*
 *Last updated 2026-10-02: `8d87df1` added the **Go schema bootstrap** — `cmd/executor` now applies
 `database/schema/executor-schema.sql` at startup (`repository.EnsureSchema`, `internal/repository/schema.go`)
 BEFORE the worker/API serve, so the Go worker self-heals an empty database; the Go embed copy is pinned
