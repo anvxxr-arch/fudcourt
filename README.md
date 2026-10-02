@@ -72,7 +72,7 @@ cd backend/data
 go build -o bin/fudcourt-data ./cmd/data  # build the sidecar (go >= 1.24.1)
 go test ./...                            # offline: mode-table + shaping tests
 cd ../sync && cargo test --release  # offline: the Rust sync crate (parity-checked
-                                      # against the repo-root path frontend/web/scripts/tools/sync-live.py)
+                                      # against the repo-root path tests/oracle/sync-live.py)
 cd ../../frontend/web
 python3 scripts/checks/check-structure.py    # offline: DR-018 layer gate (the one gate left inside the app)
 bun run test:shapers                # offline: shaper + auth + inbound rate-limit tests

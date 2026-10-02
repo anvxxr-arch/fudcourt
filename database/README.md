@@ -40,8 +40,8 @@ tables `:32,:58,:100,:106,:129,:147,:157,:165,:173,:179`, indexes
 | Consumer | Kind |
 |---|---|
 | `scripts/database/dump-schema.mjs:38` | **writer** (`--check` mode at `:44` prints `SCHEMA_OK`, `:47` prints `SCHEMA_DRIFT`; usage documented `:3-4`) |
-| `README.md:88` | operator command (`node scripts/database/dump-schema.mjs --check` — path in the snippet is stale, see below) |
-| docs: `docs/architecture/SCHEMA.md:8` (already repointed to `frontend/web/`), `docs/architecture/TECH-STACK.md:63` (still stale) | drift-alarm documentation |
+| `README.md:91` | operator command (`node scripts/database/dump-schema.mjs --check`) |
+| docs: `docs/architecture/SCHEMA.md:8`, `docs/architecture/TECH-STACK.md:63-64` | drift-alarm documentation (both name `scripts/database/dump-schema.mjs`, which resolves from the repo root) |
 | `frontend/web/src/platform/db/mirror.ts:48` | comment: the projection mirrors this file's shape |
 | `database/schema/pg-schema.sql:11,:18` | comment: types map 1:1 from here |
 | `shared/contracts/openapi/fudcourt.yaml:4323` → `shared/sdk/typescript/src/generated/schema.d.ts` | contract comment (SDK is generated from the yaml) |
@@ -58,7 +58,7 @@ authoritative **source** half of the treasury segment.
 |---|---|
 | `frontend/web/src/platform/db/mirror.ts` (`TABLES` `:50-58`, `asset_history` insert `:200`, retention `:207-208`) | the code that actually writes these tables (DML, not DDL) |
 | `frontend/web/scripts/tools/pg-load.ts` | CLI wrapper that calls `loadFromMirror()` |
-| `deploy/systemd`/`infrastructure/systemd/fudcourt-pgload.service:3,:11`, `fudcourt-pgload.timer:3`, `fudcourt-sync.service:41` | runs `pg-load.ts` (oneshot every 60 s; also after every sync) |
+| `infrastructure/systemd/fudcourt-pgload.service:3,:11`, `fudcourt-pgload.timer:3`, `fudcourt-sync.service:41` | runs `pg-load.ts` (oneshot every 60 s; also after every sync) |
 | `infrastructure/systemd/fudcourt-pgload.service:4` | `Documentation=` line only |
 | `shared/contracts/openapi/fudcourt.yaml:4322,:4399` → SDK `schema.d.ts:2227` | contract comment |
 | docs: `docs/architecture/current.md:228`, `docs/architecture/final-review.md:40`, `docs/architecture/domain-map.md:50`, `docs/records/DECISIONS.md:1277` | docs (line numbers re-read post-restructure) |
@@ -110,7 +110,7 @@ by a test rather than left to drift.
 
 ## How each file is consumed in a deployment (today)
 
-- **Turso** is written by `backend/sync` (Rust reconciler), `frontend/web/scripts/tools/sync-live.py`
+- **Turso** is written by `backend/sync` (Rust reconciler), `tests/oracle/sync-live.py`
   and the web write path; `schema.sql` is periodically re-dumped from it and
   `--check`'d.
 - **Postgres read model** is created out-of-band from `pg-schema.sql`, then filled
@@ -213,28 +213,32 @@ The tree is being renamed (`apps/` + `services/` → `frontend/` + `backend/`), 
 some in-repo references still name the old paths. Verified, left alone on
 purpose:
 
-- `database/schema/pg-schema.sql:3,:5,:144` and
-  `database/schema/executor-schema.sql:9` name `scripts/tools/…` /
-  `src/platform/executor/store.ts` without the `frontend/web/` prefix.
-- `database/schema/executor-schema.sql:11` names the drift test without its
+- `database/schema/pg-schema.sql:3,:5,:144` name `scripts/tools/…` without the
+  `frontend/web/` prefix, and `database/schema/executor-schema.sql:11` names
+  `src/platform/executor/store.ts` the same way.
+- `database/schema/executor-schema.sql:20` names the drift test without its
   directory; its real path is `tests/integration/executor/executor-store-tests.ts`.
 - Go fixture discovery: **fixed 2026-10-01 in `44604ce`**.
   `backend/data/internal/research/cryptorank/parity_test.go:53-70` and
   `backend/data/internal/research/paritytest/parity_test.go:47-65` now try
-  `tests/fixtures` → `tests/fixtures` →
+  `tests/fixtures` → `frontend/web/scripts/fixtures` →
   `apps/web/scripts/fixtures` at each ancestor (env
   `FUDCOURT_DATA_FIXTURES_DIR` still wins), and the parity tests execute
   instead of skipping. Recorded here because the fix post-dates this file's
   original path references.
-- The root `README.md` "Verify" snippet (`:70-89`) still assumes the old
-  `apps/`+`services/` layout: `cd ../web` (`:74`, lands in the non-existent
-  `backend/web`) and `cd ../sync` (`:86`) do not resolve, `scripts/checks/…`,
-  `scripts/verify/…` (`:75`, `:78-85`) are relative to `frontend/web/scripts/`,
-  and `scripts/database/dump-schema.mjs` (`:88`) also needs the `frontend/web/`
-  prefix. Only `bunx tsc`, `bun run build` and `cargo test` are layout-agnostic.
+- The root `README.md` "Verify" snippet (`:70-92`) was written against the old
+  `apps/`+`services/` layout; the diagnosis below records that earlier layout,
+  not live breakage. Post-restructure the `cd` chain (`backend/data` →
+  `../sync` → `../../frontend/web` → `../..`) resolves, and every `scripts/…`
+  path is read relative to the cwd its own `cd` leaves:
+  `scripts/checks/check-structure.py` (`:77`) and `scripts/verify/…` (`:81-90`)
+  are correct as written, and `node scripts/database/dump-schema.mjs --check`
+  (`:91`) resolves from the repo root. The one genuinely dead path the snippet
+  carried, `frontend/web/scripts/tools/sync-live.py` (`:75`), is repointed to
+  `tests/oracle/sync-live.py` (moved in `d4119ca`).
 
 **Verified not stale** (checked because the tree is mid-rename):
-`executor-store-tests.ts:501-502` reaches `database/schema/executor-schema.sql`
-from the compiled `.shaper-tests/` layout, and `verify-sync.py:41-43` resolves
+`executor-store-tests.ts:502` reaches `database/schema/executor-schema.sql`
+from the compiled `.shaper-tests/` layout, and `verify-sync.py:42-43` resolves
 both the fixtures (`tests/oracle/fixtures`) and the oracle
-(`frontend/web/scripts/tools/sync-live.py`) correctly.
+(`tests/oracle/sync-live.py`) correctly.
