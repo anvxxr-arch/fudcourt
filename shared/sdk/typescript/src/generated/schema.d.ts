@@ -577,6 +577,89 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/market/forex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Forex major-pairs board (public, keyless)
+         * @description Read-only proxy to `open.er-api.com/v6/latest/USD` (exchangerate-api
+         *     free tier, ECB-fed, republished daily) serving the `/market/forex`
+         *     section of the market hub. One keyless GET returns 160+ USD-base rates;
+         *     the board shows a CURATED set of major + Asia pairs (16), DERIVED
+         *     locally from those rates (`EUR/USD = 1 / rate(EUR)`) and labelled
+         *     `derived` — the provider never shipped these pairs and the body never
+         *     pretends it did. Null stays null. The shared limiter caches the feed for
+         *     `FOREX_TTL_MS` (5 min) with single-flight, so a board reload inside the
+         *     window costs zero upstream calls.
+         */
+        get: operations["getMarketForex"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/market/commodity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Commodity front-month futures board (public, keyless)
+         * @description Read-only proxy to the Yahoo Finance CHART endpoint (public, keyless),
+         *     one call per symbol, serving the `/market/commodity` section. The batch
+         *     quote endpoint answers 401 without a crumb+cookie (measured), so the
+         *     board fans out one chart call per symbol through the shared limiter
+         *     (<=5/s, per-symbol TTL). A symbol that fails is reported in `failed[]`
+         *     with its reason rather than dropped; a partial board is still a 200 and
+         *     only an all-symbols failure is a loud 502. Curated labels override
+         *     Yahoo's contract-calendar names.
+         */
+        get: operations["getMarketCommodity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/market/stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stock & index board by region (public, keyless)
+         * @description Read-only proxy to the Yahoo Finance CHART endpoint (public, keyless),
+         *     one call per symbol, serving the `/market/stock` section. `region` is
+         *     OUR parameter selecting a curated symbol allowlist; a value outside
+         *     `STOCK_REGIONS` is a strict 400 naming the field — never clamped, never
+         *     silently defaulted (absent means the documented default, `us`). Same
+         *     honest-by-construction rules as `/api/market/commodity`: a failed symbol
+         *     is reported in `failed[]`, a partial board is a 200, only an
+         *     all-symbols failure is a 502. Watch the QUOTE UNIT: LSE equities report
+         *     in `GBp` (pence) upstream and are shown as sent — never converted.
+         */
+        get: operations["getMarketStock"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ticker": {
         parameters: {
             query?: never;
@@ -2508,6 +2591,61 @@ export interface components {
             upstream: string;
             derived: string;
         };
+        /** @description One curated forex pair, DERIVED locally from the USD base rates (`rate` is the displayed quote; `inverse` its reciprocal). */
+        ForexPair: {
+            pair: string;
+            base: string;
+            quote: string;
+            rate: number;
+            inverse: number;
+        };
+        /** @description The forex board body: curated pairs plus provenance. `updated` is unix seconds or null (a daily feed). */
+        ForexResponse: {
+            pairs: components["schemas"]["ForexPair"][];
+            count: number;
+            base: string;
+            updated: number | null;
+            upstream: string;
+            derived: string;
+        };
+        /**
+         * @description One Yahoo-chart quote row (stock and commodity share it). Every metric
+         *     the payload omits is null — the UI renders `—`, never 0. Upstream
+         *     `regularMarketVolume: 0` means "not published" and the UI also renders
+         *     `—`; the raw value is kept here exactly as upstream sent it.
+         */
+        MarketQuote: {
+            symbol: string;
+            name: string;
+            kind?: string | null;
+            exchange?: string | null;
+            currency?: string | null;
+            price: number;
+            previousClose?: number | null;
+            change?: number | null;
+            changePercent?: number | null;
+            dayHigh?: number | null;
+            dayLow?: number | null;
+            volume?: number | null;
+            week52High?: number | null;
+            week52Low?: number | null;
+            marketTime?: number | null;
+        };
+        /** @description One symbol that did not resolve, with the reason (never silently dropped). */
+        QuoteFailure: {
+            symbol: string;
+            reason: string;
+        };
+        /** @description The stock/commodity board body: quote rows, the failure ledger, and provenance. `asOf` is unix seconds; the stock board additionally echoes `region`. */
+        MarketQuoteResponse: {
+            region?: string;
+            quotes: components["schemas"]["MarketQuote"][];
+            count: number;
+            failed: components["schemas"]["QuoteFailure"][];
+            upstream: string;
+            asOf: number;
+            derived: string;
+        };
         /**
          * @description The ten venues the board reads; measured reachability, not ccxt's static claim.
          * @enum {string}
@@ -4346,6 +4484,137 @@ export interface operations {
              *     CoinGecko"|"upstream returned a non-list payload"|"upstream
              *     returned non-JSON"|[empty-pool refusal]", "detail": ...}` — a
              *     CoinGecko 429 passes through with its own real status, never as 200.
+             */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+        };
+    };
+    getMarketForex: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description The curated pair set plus its provenance. `pairs[]` are ForexPair
+             *     rows (`rate` is the displayed quote, `inverse` its reciprocal);
+             *     `base` is the upstream base code (always `USD` today); `updated` is
+             *     unix seconds or null.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForexResponse"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            /**
+             * @description `{"error": "upstream request failed"|"upstream returned non-JSON"|
+             *     "upstream returned no rates"|"no curated pair could be derived from
+             *     the upstream rates", "detail": ...}` — an empty/absent rate set is a
+             *     loud 502, never a fake 200 with zero pairs.
+             */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+        };
+    };
+    getMarketCommodity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description The quote rows plus the failure ledger. `quotes[]` are MarketQuote
+             *     rows (upstream `regularMarketVolume: 0` means "not published" and
+             *     the UI renders `—`); `failed[]` names each symbol that did not
+             *     resolve with its reason; `asOf` is unix seconds.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketQuoteResponse"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            /**
+             * @description `{"error": "no quotes returned", "detail": "all <N> symbols
+             *     failed", "failed": [...]}` — every symbol failed; never a fake
+             *     empty 200.
+             */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+        };
+    };
+    getMarketStock: {
+        parameters: {
+            query?: {
+                /** @description Strict — a value outside the enum is a 400 naming the field, never clamped or defaulted. */
+                region?: "us" | "asia" | "europe";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description The quote rows for the region plus the failure ledger and the region
+             *     echo. `quotes[]` are MarketQuote rows; `failed[]` names each symbol
+             *     that did not resolve.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketQuoteResponse"];
+                };
+            };
+            /**
+             * @description `{"error": "invalid region", "detail": "region must be one of: us,
+             *     asia, europe"}`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailError"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            /**
+             * @description `{"error": "no quotes returned", "detail": "all <N> <region>
+             *     symbols failed", "failed": [...]}`.
              */
             502: {
                 headers: {

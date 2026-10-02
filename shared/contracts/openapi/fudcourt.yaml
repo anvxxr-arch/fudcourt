@@ -1164,6 +1164,131 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FailError'
+  /api/market/forex:
+    get:
+      tags: [data]
+      operationId: getMarketForex
+      summary: Forex major-pairs board (public, keyless)
+      description: |
+        Read-only proxy to `open.er-api.com/v6/latest/USD` (exchangerate-api
+        free tier, ECB-fed, republished daily) serving the `/market/forex`
+        section of the market hub. One keyless GET returns 160+ USD-base rates;
+        the board shows a CURATED set of major + Asia pairs (16), DERIVED
+        locally from those rates (`EUR/USD = 1 / rate(EUR)`) and labelled
+        `derived` — the provider never shipped these pairs and the body never
+        pretends it did. Null stays null. The shared limiter caches the feed for
+        `FOREX_TTL_MS` (5 min) with single-flight, so a board reload inside the
+        window costs zero upstream calls.
+      responses:
+        '200':
+          description: |
+            The curated pair set plus its provenance. `pairs[]` are ForexPair
+            rows (`rate` is the displayed quote, `inverse` its reciprocal);
+            `base` is the upstream base code (always `USD` today); `updated` is
+            unix seconds or null.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForexResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          description: |
+            `{"error": "upstream request failed"|"upstream returned non-JSON"|
+            "upstream returned no rates"|"no curated pair could be derived from
+            the upstream rates", "detail": ...}` — an empty/absent rate set is a
+            loud 502, never a fake 200 with zero pairs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailError'
+  /api/market/commodity:
+    get:
+      tags: [data]
+      operationId: getMarketCommodity
+      summary: Commodity front-month futures board (public, keyless)
+      description: |
+        Read-only proxy to the Yahoo Finance CHART endpoint (public, keyless),
+        one call per symbol, serving the `/market/commodity` section. The batch
+        quote endpoint answers 401 without a crumb+cookie (measured), so the
+        board fans out one chart call per symbol through the shared limiter
+        (<=5/s, per-symbol TTL). A symbol that fails is reported in `failed[]`
+        with its reason rather than dropped; a partial board is still a 200 and
+        only an all-symbols failure is a loud 502. Curated labels override
+        Yahoo's contract-calendar names.
+      responses:
+        '200':
+          description: |
+            The quote rows plus the failure ledger. `quotes[]` are MarketQuote
+            rows (upstream `regularMarketVolume: 0` means "not published" and
+            the UI renders `—`); `failed[]` names each symbol that did not
+            resolve with its reason; `asOf` is unix seconds.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketQuoteResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          description: |
+            `{"error": "no quotes returned", "detail": "all <N> symbols
+            failed", "failed": [...]}` — every symbol failed; never a fake
+            empty 200.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailError'
+  /api/market/stock:
+    get:
+      tags: [data]
+      operationId: getMarketStock
+      summary: Stock & index board by region (public, keyless)
+      description: |
+        Read-only proxy to the Yahoo Finance CHART endpoint (public, keyless),
+        one call per symbol, serving the `/market/stock` section. `region` is
+        OUR parameter selecting a curated symbol allowlist; a value outside
+        `STOCK_REGIONS` is a strict 400 naming the field — never clamped, never
+        silently defaulted (absent means the documented default, `us`). Same
+        honest-by-construction rules as `/api/market/commodity`: a failed symbol
+        is reported in `failed[]`, a partial board is a 200, only an
+        all-symbols failure is a 502. Watch the QUOTE UNIT: LSE equities report
+        in `GBp` (pence) upstream and are shown as sent — never converted.
+      parameters:
+        - name: region
+          in: query
+          schema:
+            type: string
+            enum: [us, asia, europe]
+            default: us
+          description: 'Strict — a value outside the enum is a 400 naming the field, never clamped or defaulted.'
+      responses:
+        '200':
+          description: |
+            The quote rows for the region plus the failure ledger and the region
+            echo. `quotes[]` are MarketQuote rows; `failed[]` names each symbol
+            that did not resolve.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketQuoteResponse'
+        '400':
+          description: |
+            `{"error": "invalid region", "detail": "region must be one of: us,
+            asia, europe"}`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          description: |
+            `{"error": "no quotes returned", "detail": "all <N> <region>
+            symbols failed", "failed": [...]}`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailError'
   /api/ticker:
     get:
       tags: [data]
@@ -4763,6 +4888,81 @@ components:
         pool: { type: integer }
         upstreamTotal: { type: integer }
         upstream: { type: string }
+        derived: { type: string }
+    ForexPair:
+      type: object
+      additionalProperties: false
+      required: [pair, base, quote, rate, inverse]
+      description: 'One curated forex pair, DERIVED locally from the USD base rates (`rate` is the displayed quote; `inverse` its reciprocal).'
+      properties:
+        pair: { type: string }
+        base: { type: string }
+        quote: { type: string }
+        rate: { type: number }
+        inverse: { type: number }
+    ForexResponse:
+      type: object
+      additionalProperties: false
+      required: [pairs, count, base, updated, upstream, derived]
+      description: 'The forex board body: curated pairs plus provenance. `updated` is unix seconds or null (a daily feed).'
+      properties:
+        pairs:
+          type: array
+          items: { $ref: '#/components/schemas/ForexPair' }
+        count: { type: integer }
+        base: { type: string }
+        updated: { type: integer, nullable: true }
+        upstream: { type: string }
+        derived: { type: string }
+    MarketQuote:
+      type: object
+      additionalProperties: false
+      required: [symbol, name, price]
+      description: |
+        One Yahoo-chart quote row (stock and commodity share it). Every metric
+        the payload omits is null — the UI renders `—`, never 0. Upstream
+        `regularMarketVolume: 0` means "not published" and the UI also renders
+        `—`; the raw value is kept here exactly as upstream sent it.
+      properties:
+        symbol: { type: string }
+        name: { type: string }
+        kind: { type: string, nullable: true }
+        exchange: { type: string, nullable: true }
+        currency: { type: string, nullable: true }
+        price: { type: number }
+        previousClose: { type: number, nullable: true }
+        change: { type: number, nullable: true }
+        changePercent: { type: number, nullable: true }
+        dayHigh: { type: number, nullable: true }
+        dayLow: { type: number, nullable: true }
+        volume: { type: number, nullable: true }
+        week52High: { type: number, nullable: true }
+        week52Low: { type: number, nullable: true }
+        marketTime: { type: number, nullable: true }
+    QuoteFailure:
+      type: object
+      additionalProperties: false
+      required: [symbol, reason]
+      description: 'One symbol that did not resolve, with the reason (never silently dropped).'
+      properties:
+        symbol: { type: string }
+        reason: { type: string }
+    MarketQuoteResponse:
+      type: object
+      additionalProperties: false
+      required: [quotes, count, failed, upstream, asOf, derived]
+      description: 'The stock/commodity board body: quote rows, the failure ledger, and provenance. `asOf` is unix seconds; the stock board additionally echoes `region`.'
+      properties:
+        region: { type: string }
+        quotes:
+          type: array
+          items: { $ref: '#/components/schemas/MarketQuote' }
+        count: { type: integer }
+        failed:
+          type: array
+          items: { $ref: '#/components/schemas/QuoteFailure' }
+        upstream: { type: string }
+        asOf: { type: integer }
         derived: { type: string }
     TickerExchange:
       type: string
