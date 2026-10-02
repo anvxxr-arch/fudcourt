@@ -261,7 +261,7 @@ Enumerated, not implied:
 |---|---|---|
 | `database/migrations/` | **Does not exist** | `ls database/` → `README.md`, `schema/` only. The only migration runners are Payload's (`src/cms/migrations/index.ts`) and the executor's two idempotent startup appliers of `database/schema/executor-schema.sql`: the TS `ensureExecutorSchema()` and — added `8d87df1` — the Go `repository.EnsureSchema` at `cmd/executor` startup. |
 | A Turso/Postgres migration framework for the treasury tables | **Does not exist** | Turso DDL is a *dump* (`dump-schema.mjs`), Postgres DDL is applied by hand. |
-| Seed scripts for the treasury tables | **Does not exist** | No `INSERT INTO accounts/journal/ledger/venues/trades` anywhere in the tree; `wallets` is seeded only as Rust constants (`chains.rs` `WALLETS`) which are *read* as the sync's watch list, not inserted by the app. |
+| Seed scripts for the treasury tables | **Does not exist** | No `INSERT INTO accounts/journal/ledger/venues/trades` in any **source** file (the phrase occurs in the prose recording it, so a bare whole-tree grep is non-zero); `wallets` is seeded only as Rust constants (`chains.rs` `WALLETS`) which are *read* as the sync's watch list, not inserted by the app. |
 | SQL fixture files for the treasury schema | **Does not exist** | Only `tests/oracle/fixtures/capture.json` (HTTP bodies) and `tests/fixtures/**` (provider payloads). |
 | `database/schema/analytics.sql` | **Does not exist** (referenced by an older doc) | `docs/architecture/domain-map.md:53` names it; the file is not in the tree. The analytics tables actually live in `pg-schema.sql`. `[INFERENCE]` stale doc reference, out of my write scope. |
 | Tables for: bank accounts, macro series/observations, DEX pools/LP positions, signals, wallets-indexer data, Candles/OHLCV, news from any provider other than the CMS | **Do not exist** | No DDL matches; no writer exists. `price_history` is the only price-series table and has no writer — DR-036 confirms it dead (absent from Turso, empty in Postgres). |
@@ -292,7 +292,7 @@ Enumerated, not implied:
    table-only (no code-side entity beyond the mirror's pass-through).
 2. **`price_history` has a schema, an index, a retention DELETE, and no writer.** **Dead by
    the same evidence (DR-036): the table does not exist in Turso at all and is empty in
-   Postgres, and `grep -rniI "INSERT INTO price_history"` over the whole tree → 0 hits** —
+   Postgres, and `grep -rniI "INSERT INTO price_history"` over the **source** tree → 0 hits** (run it with source globs; a bare whole-tree grep is non-zero by construction, because the phrase occurs in the prose that records it, e.g. `canonical-model.md:856`) —
    the DDL comment ("Written by the price sampler") describes a producer that was never
    written, and the 90-day retention DELETE runs against a table nothing ever fills.
 3. **`trades` duplicates the executor domain** (`executor.fills`/`child_orders`) in a

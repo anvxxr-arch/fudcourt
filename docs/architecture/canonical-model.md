@@ -853,7 +853,7 @@ because they are the consumers of this document.
   (read-only, both stores, two snapshots ~4 min apart). Live store = Turso (DR-019 system of
   record); read model = local Postgres. **Verdicts:** `price_history` **does not exist in Turso at
   all** and has 0 rows in Postgres (the DDL comment "Written by the price sampler" is aspirational —
-  no `INSERT INTO price_history` exists anywhere); `trades` is an **empty** table (0 rows, both
+  no `INSERT INTO price_history` exists in any source file — the bare whole-tree grep is non-zero only because the prose quoting it, this line included, matches); `trades` is an **empty** table (0 rows, both
   stores); `accounts` (6), `journal` (8, max `created_at` `2026-09-15 23:48:35`), `ledger` (3) and
   `venues` (12) are **seeded-then-frozen at the 2026-09-15 import and never advance** — all **dead**.
   The controls confirm the probe: `assets` **advanced** inside the window (00:24:37 → 00:29:44, one
