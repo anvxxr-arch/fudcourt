@@ -6,7 +6,7 @@ export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: 'Stock — Equities | FUDCOURT',
-  description: 'Stock section of the FUDCOURT market hub. No equity source is connected yet.',
+  description: 'Stock section of the FUDCOURT market hub — indices and mega-cap equities from Yahoo Finance.',
 };
 
 export default function MarketStockRoute() {

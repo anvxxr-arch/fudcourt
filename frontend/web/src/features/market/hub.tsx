@@ -7,13 +7,16 @@ import TickerPage from '@/features/ticker/ui';
 import TrackerPage from '@/features/tracker/ui';
 import DexPage from '@/features/dex/ui';
 import TrenchPage from '@/features/dex/trench';
+import ForexBoard from '@/features/market/forex/ui';
+import CommodityBoard from '@/features/market/commodity/ui';
+import StockBoard from '@/features/market/stock/ui';
 
 // The Market hub — one surface over the market sections, keyed by asset class:
 //   crypto    → CEX instruments (TickerPage, cross-venue) + top-250 prices (CoinGecko)
 //   trench    → on-chain DEX pairs + the live trench (DexScreener)
-//   forex     → no source connected (placeholder, never a mock)
-//   commodity → no source connected
-//   stock     → no source connected
+//   forex     → curated major pairs (exchangerate-api free feed, keyless)
+//   commodity → front-month futures (Yahoo Finance, keyless)
+//   stock     → indices + mega-caps (Yahoo Finance, keyless)
 // Each section is its own route (/market/<section>); this component only adds the
 // section chrome, so the providers' envelopes are untouched.
 export type MarketSection = 'crypto' | 'forex' | 'commodity' | 'stock' | 'trench';
@@ -30,19 +33,19 @@ const SECTIONS: { key: MarketSection; label: string; href: string; blurb: string
     key: 'forex',
     label: 'Forex',
     href: '/market/forex',
-    blurb: 'Currency pairs — no source connected yet.',
+    blurb: 'Currency pairs — curated majors + Asia from the exchangerate-api free feed (ECB-fed, republished daily).',
   },
   {
     key: 'commodity',
     label: 'Commodity',
     href: '/market/commodity',
-    blurb: 'Metals, energy and agriculture — no source connected yet.',
+    blurb: 'Metals, energy and agriculture — front-month futures from Yahoo Finance.',
   },
   {
     key: 'stock',
     label: 'Stock',
     href: '/market/stock',
-    blurb: 'Equities — no source connected yet.',
+    blurb: 'Indices and mega-cap equities from Yahoo Finance.',
   },
   {
     key: 'trench',
@@ -82,24 +85,6 @@ function SectionNav({ active }: { active?: MarketSection }) {
         </Link>
       ))}
     </nav>
-  );
-}
-
-function NoSource({ label }: { label: string }) {
-  return (
-    <div
-      style={{
-        background: color.surface,
-        border: `1px solid ${color.border}`,
-        borderRadius: radius[8],
-        padding: space[18],
-      }}>
-      <h3 style={{ margin: 0, color: color.text }}>{label} — no source connected</h3>
-      <p style={{ margin: `${space[8]}px 0 0`, color: color.textMuted, fontSize: fontSize[12] }}>
-        This section is part of the market hub, but no {label.toLowerCase()} data source is wired
-        into FUDCOURT yet. Nothing is shown rather than a mock — connect a provider and it fills in.
-      </p>
-    </div>
   );
 }
 
@@ -165,9 +150,9 @@ export default function MarketHub({ section }: { section?: MarketSection }) {
       {!section && <Overview />}
       {section === 'crypto' && <CryptoSection />}
       {section === 'trench' && <TrenchSection />}
-      {section === 'forex' && <NoSource label="Forex" />}
-      {section === 'commodity' && <NoSource label="Commodity" />}
-      {section === 'stock' && <NoSource label="Stock" />}
+      {section === 'forex' && <ForexBoard />}
+      {section === 'commodity' && <CommodityBoard />}
+      {section === 'stock' && <StockBoard />}
     </div>
   );
 }

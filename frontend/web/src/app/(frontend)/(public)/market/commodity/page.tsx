@@ -6,7 +6,7 @@ export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: 'Commodity — Metals, energy & agriculture | FUDCOURT',
-  description: 'Commodity section of the FUDCOURT market hub. No commodity source is connected yet.',
+  description: 'Commodity section of the FUDCOURT market hub — front-month metals, energy and agriculture futures from Yahoo Finance.',
 };
 
 export default function MarketCommodityRoute() {

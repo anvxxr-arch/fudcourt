@@ -6,7 +6,7 @@ export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: 'Forex — Currency pairs | FUDCOURT',
-  description: 'Forex section of the FUDCOURT market hub. No currency-pair source is connected yet.',
+  description: 'Forex section of the FUDCOURT market hub — curated major pairs from the exchangerate-api free feed.',
 };
 
 export default function MarketForexRoute() {

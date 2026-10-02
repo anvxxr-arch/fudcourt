@@ -126,6 +126,12 @@ export const ROUTE_COST: Readonly<Record<string, number>> = {
   ticker: 2,
   markets: 2,
   khala: 2,
+  // The market hub's asset-class boards. `stock` and `commodity` each fan out
+  // one Yahoo chart call PER SYMBOL (16 and 12), so a cold board has the same
+  // shape as `ticker` -- many upstream calls behind one page -- and is priced
+  // the same 2. `forex` is a single call, but the family rule prices the first
+  // path segment, and a sub-path must not be a cheaper way into the family.
+  market: 2,
   // The executor is a money-moving surface (PRD §108 rate limiting, §77 adapter
   // rate limits). `POST /api/executor/executions` plans, sizes and persists an
   // order, and `preview` does the same pricing without persisting — both are far
