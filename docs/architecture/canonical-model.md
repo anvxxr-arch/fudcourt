@@ -495,7 +495,7 @@ exists in the repo outside the CMS migration.**
 | money | `assets.value_usd`, `journal.amount`, `ledger.balance`, `trades.pnl`, `transactions.amount_usd`, `executor.executions.{risk_budget,planned_notional,actual_notional,estimated_fees,actual_fees,planned_risk,current_risk}`, `executor.fills.{quote_quantity,fee}`, `asset_history.value_usd` |
 | price | `trades.price`, `price_history.price`, `executor.executions.average_fill_price`, `executor.fills.price`, `executor.child_orders.price` |
 | quantity | `assets.quantity`, `trades.quantity`, `executor.executions.{planned_quantity,actual_quantity}`, `executor.child_orders.{quantity,filled_quantity}`, `executor.fills.quantity`, `asset_history.quantity` |
-| percentage | `assets.share_pct` (**0–100 scale**, written `usd/total*100` `sync-live.py:347`), `executor.executions.sizing_value` (type-overloaded: USD | quantity | percent by `sizing_mode`) |
+| percentage | `assets.share_pct` (**0–100 scale**, written `usd/total*100` `sync-live.py:347`), `executor.executions.sizing_value` (type-overloaded: USD \| quantity \| percent by `sizing_mode`) |
 | score | **none in `database/`** (provider ranks live only in fixtures) |
 | count | **no numeric count column**; counts are computed at read time (`api/coins/route.ts:14-15`, `api/transactions/route.ts:40`) |
 
