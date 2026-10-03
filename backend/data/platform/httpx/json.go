@@ -1,6 +1,8 @@
-// Package httpx holds the JSON response writer shared by the server and the
-// served-bytes parity test, so the escaping rule is proven on production code
-// rather than on a copy of it.
+// Package httpx holds the HTTP plumbing shared across the sidecar: the JSON
+// response writer (shared by the server and the served-bytes parity test, so
+// the escaping rule is proven on production code rather than on a copy of it)
+// and the tuned outbound transport every acquisition family's client is built
+// on.
 package httpx
 
 import (

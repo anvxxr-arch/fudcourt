@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/anvxxr-arch/fudcourt/backend/data/platform/httpx"
 )
 
 // DefaultCacheDir is the khala cache root, *below* the fudcourt-data cache root the
@@ -192,15 +194,7 @@ func New(o Options) (*Fetcher, error) {
 		// does not redirect, but a redirect turned into a hard failure is
 		// exactly the kind of silent behaviour change internal/research/cryptorank measured
 		// (WithNotFollowRedirects turned a 404 into a 502 there).
-		f.client = &http.Client{
-			Timeout: timeout,
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				if len(via) >= 10 {
-					return errors.New("stopped after 10 redirects")
-				}
-				return nil
-			},
-		}
+		f.client = httpx.NewClient(timeout)
 	}
 	return f, nil
 }

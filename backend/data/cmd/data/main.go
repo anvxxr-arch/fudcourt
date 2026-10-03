@@ -118,7 +118,24 @@ func main() {
 		Addr:              addr,
 		Handler:           newServer(f, ttl, khala.Service{F: kf, TTL: khala.TTLDefault()}, llama.Service{F: lf}, news.Service{F: nf}, chainrank.Service{F: cf}, coinglass.Service{F: gf}, coinank.Service{F: af}, coinmarketcap.Service{F: mf}).mux(),
 		ReadHeaderTimeout: 10 * time.Second,
-		WriteTimeout:      90 * time.Second,
+		// The handler set is GET-only (the families are read surfaces), so the
+		// whole request -- headers plus the empty body -- must arrive well
+		// inside a request budget; ReadHeaderTimeout alone leaves a slow-body
+		// client holding a connection. ReadTimeout closes that gap.
+		ReadTimeout: 15 * time.Second,
+		// A cold CoinGlass fetch decrypts two gzip'd AES layers before it can
+		// answer, so the write budget stays generous; it is the ceiling a stuck
+		// handler hits instead of pinning a connection forever.
+		WriteTimeout: 90 * time.Second,
+		// Keep-alive reuse from the web proxy is the point of the outbound pool
+		// (platform/httpx); the idle ceiling is what stops an abandoned
+		// keep-alive connection from lingering.
+		IdleTimeout: 120 * time.Second,
+		// The proxy forwards a small header set; 64 KiB is far above anything a
+		// legitimate caller sends and well under the 1 MiB stdlib default, so an
+		// oversized-header request is refused at the listener rather than after
+		// the handler has read it.
+		MaxHeaderBytes: 1 << 16,
 	}
 	log.Printf("fudcourt-data listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes; coinglass: cache %s, ttl %ds, %d modes; coinank: cache %s, ttl %ds, %d modes; coinmarketcap: cache %s, ttl %ds, %d modes)",
 		addr, f.CacheDir(), ttl, cryptorank.ModeCount, kf.CacheDir(), khala.TTLDefault(), khala.ModeCount, lf.TTL(), llama.ModeCount, nf.TTL(), news.SourceCount, cf.TTL(), chainrank.ModeCount, gf.CacheDir(), coinglass.TTLDefault(), coinglass.ModeCount, af.CacheDir(), coinank.TTLDefault(), coinank.ModeCount, mf.CacheDir(), coinmarketcap.TTLDefault(), coinmarketcap.ModeCount)

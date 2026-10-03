@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/anvxxr-arch/fudcourt/backend/data/platform/httpx"
 )
 
 // DefaultCacheDir is the coinglass cache root, *below* the fudcourt-data cache
@@ -125,7 +127,7 @@ func New(o Options) (*Fetcher, error) {
 	}
 	c := o.Client
 	if c == nil {
-		c = &http.Client{Timeout: to}
+		c = httpx.NewClient(to)
 	}
 	return &Fetcher{cacheDir: dir, ttl: ttl, timeout: to, client: c, noCache: o.NoCache}, nil
 }

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/anvxxr-arch/fudcourt/backend/data/platform/cache"
+	"github.com/anvxxr-arch/fudcourt/backend/data/platform/httpx"
 )
 
 const (
@@ -191,15 +192,7 @@ func New(o Options) (*Fetcher, error) {
 		// inherited silently: a redirect silently turned into a failure is
 		// exactly the behaviour change internal/research/cryptorank measured on another
 		// family.
-		f.client = &http.Client{
-			Timeout: timeout,
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				if len(via) >= 10 {
-					return errors.New("stopped after 10 redirects")
-				}
-				return nil
-			},
-		}
+		f.client = httpx.NewClient(timeout)
 	}
 	return f, nil
 }
