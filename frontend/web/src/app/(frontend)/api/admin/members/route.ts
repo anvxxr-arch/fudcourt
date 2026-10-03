@@ -18,6 +18,13 @@ export const revalidate = 0;
  */
 const FUDCOURT_API = process.env.FUDCOURT_API_URL ?? 'http://127.0.0.1:3103';
 
+/**
+ * Bound the loopback hop. The Go listener's own WriteTimeout is 30 s, so a hang
+ * past that means the api itself is stuck; aborting at 35 s turns an unbounded
+ * pin of this worker into the same loud 502 the catch below already emits.
+ */
+const TIMEOUT_MS = 35_000;
+
 export const GET = proxy;
 export const POST = proxy;
 
@@ -43,6 +50,7 @@ async function proxy(request: Request): Promise<Response> {
       body,
       redirect: 'manual',
       cache: 'no-store',
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (err) {
     const reason =

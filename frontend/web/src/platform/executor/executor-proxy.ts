@@ -53,6 +53,14 @@ import { NextResponse } from 'next/server';
  */
 const DEFAULT_UPSTREAM_ADDR = '127.0.0.1:3105';
 
+/**
+ * Bound the loopback hop to the Go executor surface. The Go listener's own
+ * WriteTimeout is 30 s, so a hang past that means the executor itself is stuck;
+ * aborting at 35 s turns an unbounded pin of this worker into the loud 502 the
+ * catch below already emits (never a silent TS fallback -- see the module head).
+ */
+const TIMEOUT_MS = 35_000;
+
 /** Hop-by-hop headers (RFC 9110 §7.6.1) plus the loopback Host: not forwarded. */
 const HOP_BY_HOP = [
   'host',
@@ -118,6 +126,7 @@ export async function proxyExecutorRequest(request: Request): Promise<Response> 
       body,
       redirect: 'manual',
       cache: 'no-store',
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     // The response is relayed as text so the body is byte-identical (nothing is
     // parsed or re-encoded); the status, content type and Set-Cookie come with it.

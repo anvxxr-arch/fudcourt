@@ -5,6 +5,13 @@
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
+/**
+ * Every Discord REST call gets a deadline. Discord is a third-party host, so a
+ * hung connection must degrade to the caller's empty/typed result (each call
+ * site already catches) rather than pin a web worker on an unbounded read.
+ */
+const DISCORD_TIMEOUT_MS = 15_000;
+
 export type DiscordMember = {
   id: string;
   username: string;
@@ -37,7 +44,7 @@ export async function fetchGuildRoleIds(userId: string): Promise<string[]> {
   if (!guildId || !botToken) return [];
   const res = await fetch(
     `${DISCORD_API}/guilds/${encodeURIComponent(guildId)}/members/${encodeURIComponent(userId)}`,
-    { headers: { Authorization: `Bot ${botToken}` }, cache: 'no-store' },
+    { headers: { Authorization: `Bot ${botToken}` }, cache: 'no-store', signal: AbortSignal.timeout(DISCORD_TIMEOUT_MS) },
   ).catch(() => null);
   if (!res || !res.ok) return [];
   const body = await readJson(res);
@@ -56,7 +63,7 @@ export async function listGuildMembers(limit = 100): Promise<DiscordMember[] | n
   if (!guildId || !botToken) return null;
   const res = await fetch(
     `${DISCORD_API}/guilds/${encodeURIComponent(guildId)}/members?limit=${limit}`,
-    { headers: { Authorization: `Bot ${botToken}` }, cache: 'no-store' },
+    { headers: { Authorization: `Bot ${botToken}` }, cache: 'no-store', signal: AbortSignal.timeout(DISCORD_TIMEOUT_MS) },
   ).catch(() => null);
   if (!res || !res.ok) return null;
   const body = await readJson(res);
@@ -97,7 +104,7 @@ export async function setMemberRole(
   if (!guildId || !botToken) return { ok: false, error: 'Discord is not configured' };
   const member = await fetch(
     `${DISCORD_API}/guilds/${encodeURIComponent(guildId)}/members/${encodeURIComponent(userId)}`,
-    { headers: { Authorization: `Bot ${botToken}` }, cache: 'no-store' },
+    { headers: { Authorization: `Bot ${botToken}` }, cache: 'no-store', signal: AbortSignal.timeout(DISCORD_TIMEOUT_MS) },
   ).catch(() => null);
   if (!member || !member.ok) return { ok: false, error: 'Could not read that guild member' };
   const body = await readJson(member);
@@ -116,6 +123,7 @@ export async function setMemberRole(
       method: 'PATCH',
       headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ roles: next }),
+      signal: AbortSignal.timeout(DISCORD_TIMEOUT_MS),
     },
   ).catch(() => null);
   if (!res || !res.ok) {
