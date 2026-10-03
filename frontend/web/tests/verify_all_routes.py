@@ -29,8 +29,10 @@ surface"), read out of the running build, not from memory:
   cookie) the D2 checks report an ENVIRONMENTAL fail naming that reason — the
   fail-closed 401/D1 checks stay meaningful regardless.
 - cryptorank: all 28 modes + keyed variants + error contract.
-- khala: 3 modes (reports/report/latest) + strict-param 400s + the real-404
-  decoy; deep contract in scripts/verify/verify-khala.py.
+(chainrank and khala are no longer swept: their web surfaces were removed in
+DR-041 — the boards and their /api/* proxies are gone, so :3100 has nothing to
+probe. Their sidecar families are still exercised directly against :3101 by
+scripts/verify/verify-chainrank.py and verify-khala.py.)
 """
 import base64
 import hashlib
@@ -193,7 +195,7 @@ print(f"# session: {SESSION_WHY}", flush=True)
 print("=== A. pages ===", flush=True)
 for p in ["/", "/market", "/market/crypto", "/market/trench", "/market/forex",
           "/market/stock", "/market/commodity", "/market/ticker/BTC",
-          "/chainrank", "/news", "/scoreboard", "/signals"]:
+          "/news", "/scoreboard", "/signals"]:
     st, b = hit(p, timeout=60)
     rec("page", p, st, 200, b)
 # The market hub absorbed the standalone boards: their old paths are deliberate
@@ -268,21 +270,6 @@ st, b = hit("/api/ticker/instrument?base=BTC&type=spot", timeout=300)
 rec("api", "/api/ticker/instrument?base=BTC&type=spot", st, 200, b)
 st, b = hit("/api/ticker/instrument?base=BTC&type=bogus", timeout=60)
 rec("api", "/api/ticker/instrument bad type -> 400", st, 400, b)
-for m in ("stats", "listings"):
-    st, b = hit(f"/api/chainrank?mode={m}")
-    rec("api", f"/api/chainrank mode={m}", st, 200, b)
-st, b = hit("/api/chainrank?mode=bogus")
-rec("api", "chainrank bogus mode -> 400", st, 400, b)
-# chainrank relay-verbatim matrix (PLAN G13 SG-13.4): upstream clamps page<1 to 1
-# and caps pageSize at 200, and the proxy must forward those values UNTOUCHED --
-# a local Math.min would produce a body indistinguishable from upstream's own
-# answer while actually being our guess. These four pin the relay.
-for q, field, want in (("page=0", "page", 1), ("page=-1", "page", 1),
-                       ("pageSize=0", "pageSize", 50), ("pageSize=1000", "pageSize", 200)):
-    st, b = hit(f"/api/chainrank?mode=listings&{q}", timeout=120)
-    relayed = (b or {}).get(field)
-    rec("api", f"chainrank {q} relayed as upstream's own {field}={want}",
-        st if relayed == want else 0, 200, b)
 # The three KEYLESS sidecar families (coinglass / coinank / coinmarketcap) whose web
 # half is now wired. Each mode must answer THROUGH the proxy on :3100, and the
 # sidecar's own strict-param contract must survive the proxy hop. coinglass and
@@ -426,37 +413,6 @@ CR = [
 for q, want in CR:
     st, b = hit(f"/api/cryptorank?{q}", timeout=120)
     rec("cr", f"/api/cryptorank?{q}", st, want, b)
-print("=== F. khala: 3 modes + strict params + real-404 decoy ===", flush=True)
-# khala is the second sidecar-resident family (backend/data, package
-# internal/khala). `key` belongs to mode=report only; `limit` to latest
-# (1..50 strict) -- never clamped, never silently ignored. The deep contract
-# (dates, ISO parity, body fidelity, sitemap equality) lives in
-# scripts/verify/verify-khala.py; this sweep proves the frozen status matrix,
-# so a khala regression surfaces in the whole-route pass too.
-KH = [
-    ("mode=reports", 200),
-    ("mode=reports&limit=2", (200, 400)),   # limit scoping at reports is the family's call
-    ("mode=latest", 200),
-    ("mode=latest&limit=2", 200),
-    ("mode=latest&limit=50", 200),
-    ("mode=latest&limit=51", 400),
-    ("mode=latest&limit=abc", 400),
-    ("mode=latest&limit=0", 400),
-    ("mode=latest&limit=-1", 400),
-    ("mode=report&key=decentralized-robotics-landscape", 200),
-    # the flagship walrus slug is 94 chars: a length-cap regression here would
-    # silently drop the NEWEST report, so it is asserted explicitly.
-    ("mode=report&key=walrus-solving-the-ai-agent-context-memory-bottleneck-verifiable-onchain-portable-programmable", 200),
-    ("mode=report", 400),
-    ("mode=report&key=UPPERCASE", 400),
-    ("mode=report&key=has_underscore", 400),
-    ("mode=report&key=decentralized-robotics-landscape&limit=2", 400),
-    ("mode=report&key=no-such-report-xyz", 404),
-    ("mode=bogus", 400),
-]
-for q, want in KH:
-    st, b = hit(f"/api/khala?{q}", timeout=120)
-    rec("kh", f"/api/khala?{q}", st, want, b)
 
 # ---- report
 fails = [r for r in results if r[0] == "FAIL"]

@@ -2010,3 +2010,60 @@ longer has an external availability or billing surface. `asset_history`/`price_h
 keep their 90-day retention, now enforced by a plain DELETE in the sync. The Rust sync
 binary is still not deployed (`fudcourt-sync-rust` is not installed); it is kept
 building and in parity with the Python oracle by `verify-sync.py`.
+
+## DR-041 — The `/chainrank` and `/khala` boards are removed; both sidecar families stay API-only (2026-10-03)
+
+**Status:** accepted, implemented.
+
+**Context.** Two of the board surfaces the shell carried were thin reader views over
+sidecar families that had already moved to Go: `ChainrankPage` (`/chainrank`,
+`features/chainrank/`) and `KhalaPage` (`/khala`, `features/khala/`). Each was a
+`features/*/client.ts` + `ui.tsx` pair plus a verbatim Next proxy route
+(`app/(frontend)/api/{chainrank,khala}/route.ts`) whose only validator was the Go
+sidecar on `:3101`. Both were the least-read pages in the set, and their web half
+existed solely to re-serve a payload the sidecar already published.
+
+**Options.** (a) Keep both boards. (b) Remove the whole chainrank + khala stack,
+sidecar included. (c) Remove the **web surface** only — the boards, their nav tabs,
+their feature modules and their Next proxy routes — and leave the Go families served
+on `:3101`.
+
+**Decision.** (c). The owner asked for the pages gone, not the data. The Go packages
+(`backend/data/internal/research/{chainrank,khala}/`), their mux handlers
+(`handleChainrank` / `handleKhala`) and the `/healthz` keys are untouched, so
+`/api/chainrank` and `/api/khala` still answer on `:3101` and their live harnesses
+(`verify-chainrank.py` 50/50, `verify-khala.py`) still prove the wire contract. (b) is
+rejected because the acquisition is orthogonal to the board — nothing about the
+upstreams changed. (a) is rejected because a reader view with no reader is upkeep
+without a customer.
+
+**What changes.**
+- Deleted: `frontend/web/src/app/(frontend)/(public)/{chainrank,khala}/page.tsx`,
+  `frontend/web/src/features/{chainrank,khala}/` (`client.ts`, `ui.tsx`), and
+  `frontend/web/src/app/(frontend)/api/{chainrank,khala}/route.ts`.
+- Routing: the `/chainrank` and `/khala` entries are gone from
+  `platform/routing/public-routes.ts` and `view-routes.ts`, and both nav tabs and both
+  render branches are gone from `components/layout/store-shell.tsx`.
+- Limiter: `ROUTE_COST.khala` is gone (`platform/http/rate-limit-inbound.ts`), so the
+  inbound table is `executor / market / markets / ticker`.
+- Contract spec: the `/api/chainrank` and `/api/khala` paths and the eight schemas only
+  they referenced (`Kh*`, `ChainrankStatsEnvelope`, `ChainrankListingsEnvelope`) are
+  gone from `shared/contracts/openapi/fudcourt.yaml`; the TypeScript SDK is regenerated
+  from it. `check-contract.py`'s two TS↔Go parity blocks become "web surface removed
+  (sidecar-only)" rows — with no TS table there is no second side to compare.
+- Harnesses: `verify_all_routes.py` drops its chainrank probes and its khala group F,
+  `tests/design/fingerprint.py` drops both routes, `monitor.py` drops its khala probe,
+  and the design token `lineHeight.snug` — whose only consumer was the khala board — is
+  removed from `styles/tokens.ts` and its generated artifacts.
+
+**Evidence.** `bash scripts/verify/verify-all.sh` → `VERIFY_ALL_OK`; the live sidecar
+still answers both families on `:3101` (`/healthz` →
+`{"build":"28 modes","chainrank":"2 modes","khala":"3 modes"}`); `python3
+scripts/verify/check-contract.py` → `CONTRACT_OK`; `python3 -m json.tool
+docs/architecture/data-categorization.json` → valid.
+
+**Consequences.** The web shell carries two fewer board views, and the two families are
+reachable only through `:3101` — the trust class DR-006/DR-013 gave them, now without a
+web proxy in front. Re-adding a board means re-adding the route, the `ROUTE_COST` entry,
+the nav tab and the OpenAPI paths together; the contract gate's "web surface removed"
+rows are the reminder that they were deliberately taken out.

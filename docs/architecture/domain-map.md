@@ -110,7 +110,8 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
 
 - `frontend/web/src/components/layout/store-shell.tsx` imports `@/features/{dashboard/ui,
   portfolio/ui, wallets/ui, transactions/ui, treasury/reconciliation, dex/trench, dex/ui,
-  signals/ui, scoreboard/ui, chainrank/ui, …}` (16+ feature modules).
+  signals/ui, scoreboard/ui, …}` (feature modules; the former `chainrank/ui` import left with
+  the board, DR-041).
   Acceptable while `frontend/web` is UI-only; MUST NOT migrate into `shared/*` or services.
 
 ### 3.3 Platform-internal coupling (fine today, becomes backend/workers/executor internals)

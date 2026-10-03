@@ -44,11 +44,13 @@ One private surface where the owner can answer, at any moment:
   blockchains/chain, launchpool (past/active/upcoming), nodesale, news, tags/tag,
   ecosystems/ecosystem, rwa/rwaasset, quarterly returns, prediction markets,
   converter, media, newstag, ai-overview; plus loud-503 refusals for `funding`/`unlocks`.
-- FR-3.2 ChainRank proxy (`stats`, `listings`), DEX Screener proxy (8 types),
+- FR-3.2 DEX Screener proxy (8 types),
   DefiLlama proxy (`chains`, `protocols`, `historical`), News proxy (strict
   `source`/`limit`), Signals proxy, **CoinGecko markets proxy** (`/api/markets`,
   top-250 pool — powers the Price Tracker; the tracker's former
-  browser-direct CoinGecko call was re-aligned into this gated route).
+  browser-direct CoinGecko call was re-aligned into this gated route). The
+  ChainRank and Khala families remain API-only on the `backend/data` sidecar
+  (`:3101`); their web boards and Next proxy routes were removed (DR-041).
 - FR-3.3 Every board must fail loudly: upstream error → HTTP 502 with the real
   upstream status; never an empty-successful table.
 - FR-3.4 Every family ships a verifier (`scripts/verify/verify-<family>.py`) asserting

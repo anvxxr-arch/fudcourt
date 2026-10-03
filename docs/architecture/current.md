@@ -199,10 +199,10 @@ re-run — its exit-0 result in the table above stands).
 
 Route groups: `(frontend)` (store/admin surface) and `blog/(payload)` (Payload CMS admin + GraphQL).
 
-### API routes (`src/app/(frontend)/api/**/route.ts`) — 35 routes
+### API routes (`src/app/(frontend)/api/**/route.ts`) — 33 routes
 
 - **auth/admin**: `auth/{login,logout,callback}`, `admin/members`
-- **data acquisition passthroughs**: `all`, `chainrank`, `coins`, `cryptorank`, `dex`, `khala`,
+- **data acquisition passthroughs**: `all`, `coins`, `cryptorank`, `dex`,
   `llama`, `markets`, `news`, `signals`, `ticker`, `ticker/instrument`, `ticker/instruments`
 - **treasury**: `wallets`, `transactions`, `transactions/[id]`, `reconcile`
 - **executor** (in-frontend execution runtime API): `executor/accounts` (list/create),
@@ -216,7 +216,7 @@ Route groups: `(frontend)` (store/admin surface) and `blog/(payload)` (Payload C
 `/` (home), `login`, `member`, `admin` (+`admin/members-table.tsx` component),
 team: `team/{balance,portfolio,reconciliation,transactions,wallets}`,
 markets: `ticker`, `ticker/[ticker]`, `tracker`, `trench`, `dex`, `scoreboard`, `signals`,
-data: `llama`, `khala`, `news`, `chainrank`, `cryptorank`,
+data: `llama`, `news`, `cryptorank`,
 executor: `executor`, `executor/new`, `executor/[id]`, `executor/accounts`, `executor/history`,
 `executor/settings`.
 Plus `sitemap.ts`, `robots.ts`, `globals.css`, root `layout.tsx`.
@@ -408,8 +408,8 @@ Toolchain pins: Node 22 runtime, Bun 1.4.2, Go 1.24.1, Rust stable.
   `frontend/web/scripts/executor/worker.ts`, `tests/e2e/executor/executor-paper-e2e.ts`, and
   `src/features/executor/{client,ui}`. Of these, all 15 routes + worker + paper-e2e
   import the **sensitive** modules directly (`risk`, `exchange`, `lock`, `store`, `plan`, `engine`).
-- **Shell depends on features** (upward): `src/components/layout/store-shell.tsx` imports 16+
-  feature pages (`@/features/{dashboard,portfolio,wallets,transactions,treasury,dex,signals,scoreboard,chainrank,…}`)
+- **Shell depends on features** (upward): `src/components/layout/store-shell.tsx` imports 15+
+  feature pages (`@/features/{dashboard,portfolio,wallets,transactions,treasury,dex,signals,scoreboard,…}`)
   — the layout component wires the whole store UI.
 - **Web owns execution concerns** that the target architecture assigns to Go services:
   risk sizing, exchange adapters/signing (`exchange.ts` `CcxtLike`, `masterKeyFromEnv` encrypted

@@ -65,7 +65,7 @@ export const fontSize = { 9: 9, 10: 10, 11: 11, 12: 12, 13: 13, 14: 14, 16: 16, 
 export const fontWeight = { regular: 400, medium: 500, semibold: 600, bold: 700, heavy: 800 } as const;
 
 /** unitless CSS ratios (not px). */
-export const lineHeight = { tight: 1.3, snug: 1.4, normal: 1.6, loose: 1.7 } as const;
+export const lineHeight = { tight: 1.3, normal: 1.6, loose: 1.7 } as const;
 
 /** unitless (px at a 1px advance width). */
 export const letterSpacing = { none: 0, xs: 0.4, sm: 0.5, wide: 1, wider: 2 } as const;

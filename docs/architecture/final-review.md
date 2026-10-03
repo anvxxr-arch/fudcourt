@@ -192,7 +192,7 @@ One command: `bash scripts/verify/verify-all.sh` → **`VERIFY_ALL_OK`** (exit 0
 | Gate | Result |
 | --- | --- |
 | structure (DR-018 layers) | PASS |
-| web contract (CR_MODES + khala/llama/news/chainrank parity + mutation guards) | PASS |
+| web contract (CR_MODES + llama/news parity + khala/chainrank sidecar-only rows + mutation guards) | PASS |
 | deploy-unit guard (12 units: ExecStart paths, absolute, timer pairs) | PASS |
 | contracts drift (enums, 36 OpenAPI paths, 39 route handlers, 28 events) | `CONTRACTS_OK` |
 | sdk-ts generated-SDK drift + typecheck | PASS |

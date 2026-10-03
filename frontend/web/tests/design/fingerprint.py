@@ -100,7 +100,7 @@ from playwright.sync_api import sync_playwright
 ROUTES = [
     "/", "/market", "/market/crypto", "/market/trench", "/market/forex",
     "/market/stock", "/market/commodity", "/market/ticker/BTC", "/news",
-    "/khala", "/chainrank", "/cryptorank", "/scoreboard", "/signals", "/login",
+    "/scoreboard", "/signals", "/login",
     "/blog", "/blog/never-fake-rules",
 ]
 # Page routes that EXIST in the app tree but are NOT probed, each with the

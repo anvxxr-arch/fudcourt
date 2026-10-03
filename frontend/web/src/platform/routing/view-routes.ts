@@ -17,10 +17,8 @@ export const VIEW_PATHS: Record<string, string> = {
   'market-trench': '/market/trench',
   signals: '/signals',
   scoreboard: '/scoreboard',
-  chainrank: '/chainrank',
   ticker: '/market/crypto',
   news: '/news',
-  khala: '/khala',
   // CEX Executor (PRD §81): a multi-route area (/executor/new, /:id, …), not a
   // single shell tab — this entry is the canonical deep link for nav callers.
   executor: '/executor',

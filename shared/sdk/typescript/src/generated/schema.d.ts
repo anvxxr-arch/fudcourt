@@ -822,29 +822,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/khala": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * khala.io research read proxy (mode-only input)
-         * @description Modes `reports` (homepage rows), `report` (one article as a STRUCTURED
-         *     block array — never HTML), `latest` (newest-first with per-row dates).
-         *     The sidecar owns mode/key/limit/fresh semantics and every 400. Headers
-         *     `X-KH-Upstream`, `X-KH-Cache`, `Cache-Control` are forwarded.
-         */
-        get: operations["getKhala"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/llama": {
         parameters: {
             query?: never;
@@ -861,30 +838,6 @@ export interface paths {
          *     `X-Cache` (MISS|HIT) comes from the sidecar.
          */
         get: operations["getLlama"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/chainrank": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * chainrank read proxy (claim stats + listings)
-         * @description Both modes spread the upstream body first and add `kind`, `upstream`,
-         *     `fetchedAt` — chainrank adds row fields freely, so the payload is
-         *     checked, not rebuilt (a wrong shape is a loud 502). Response header
-         *     `X-Cache` (MISS|HIT|COALESCED). An upstream non-2xx (other than 429) is
-         *     relayed with its REAL status, never flattened to 502.
-         */
-        get: operations["getChainrank"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2083,59 +2036,6 @@ export interface components {
             slug: string;
             name: string;
         };
-        /** @description The khala envelope. `report` (mode=report) or `rows` (reports/latest) is present per mode; `slice` is the sidecar's own prose note, rendered verbatim. `fetchedAt` is unix seconds. */
-        KhEnvelope: {
-            /** @enum {string} */
-            kind: "reports" | "report" | "latest";
-            upstream: string;
-            /** Format: int64 */
-            fetchedAt: number;
-            /** @enum {string} */
-            cache: "MISS" | "HIT";
-            count: number;
-            upstreamTotal?: number | null;
-            slice?: string | null;
-            missingSlugs?: string[];
-            rows?: components["schemas"]["KhRow"][];
-            report?: components["schemas"]["KhReport"];
-        };
-        KhRow: {
-            position: number;
-            slug: string;
-            url: string;
-            title: string;
-            summary: string;
-            published?: string | null;
-            publishedISO?: string | null;
-        };
-        KhReport: {
-            slug: string;
-            url: string;
-            title: string;
-            metaTitle: string;
-            published?: string | null;
-            publishedISO?: string | null;
-            /** @description Null (not omitted) when the report has no matched author. */
-            authors: components["schemas"]["KhAuthor"][] | null;
-            sections: components["schemas"]["KhSection"][];
-            /** @description The article as structured blocks — `{type, text}` where `type` is the source element's own tag name (`h1`..`h6`, `p`, `li`) and inline emphasis is flattened to text. Never HTML. */
-            body: components["schemas"]["KhBlock"][];
-        };
-        KhAuthor: {
-            name: string;
-            url: string;
-        };
-        KhSection: {
-            id?: string | null;
-            level: number;
-            title: string;
-        };
-        KhBlock: {
-            /** @enum {string} */
-            type: "h2" | "h3" | "h4" | "p" | "li";
-            id?: string | null;
-            text: string;
-        };
         /** @description `{kind, rows, upstream, fetchedAt, upstreamTotal, derived}`; `cache` is header-only (`X-Cache`), never in the body. Row shapes: chains = `{name, tvl, tokenSymbol?, gecko_id?, chainId?}`; protocols = `{name, slug, category, tvl, change_1d, change_7d, mcap, chains, url, logo}` (nullable-any passthrough); historical = `{date, tvl}`. */
         LlamaEnvelope: {
             /** @enum {string} */
@@ -2152,38 +2052,6 @@ export interface components {
             fetchedAt: number;
             upstreamTotal: number;
             derived: string;
-        } & {
-            [key: string]: unknown;
-        };
-        /** @description `stats` mode: upstream's verified numeric fields (shape-checked before serving) spread through, plus `kind`, `upstream`, `fetchedAt`. Upstream may carry additional fields — they pass through untouched. */
-        ChainrankStatsEnvelope: {
-            /** @enum {string} */
-            kind: "stats";
-            upstream: string;
-            /**
-             * Format: int64
-             * @description Unix seconds.
-             */
-            fetchedAt: number;
-            online: number;
-            totalClicks: number;
-            listings: number;
-            totalUsdCents: number;
-            topUsdCents: number;
-            claimTopCents: number;
-        } & {
-            [key: string]: unknown;
-        };
-        /** @description `listings` mode: upstream's `rows` array (upstream-defined row shape — projected nowhere, the board renders what upstream sent) spread through, plus `kind`, `upstream`, `fetchedAt`. */
-        ChainrankListingsEnvelope: {
-            /** @enum {string} */
-            kind: "listings";
-            upstream: string;
-            /** Format: int64 */
-            fetchedAt: number;
-            rows: {
-                [key: string]: unknown;
-            }[];
         } & {
             [key: string]: unknown;
         };
@@ -5015,65 +4883,6 @@ export interface operations {
             };
         };
     };
-    getKhala: {
-        parameters: {
-            query: {
-                mode: "reports" | "report" | "latest";
-                /** @description Report slug — REQUIRED for `mode=report`, refused ("unexpected param") on other modes. Must match `^[a-z0-9][a-z0-9-]{0,127}$` (never clamped). */
-                key?: string;
-                /** @description Row count — only for `mode=latest` (strict integer 1..50, never clamped). Absent ⇒ 5. */
-                limit?: number;
-                /** @description `fresh=1` disables the TTL cache for this request only. */
-                fresh?: "1";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The khala envelope; `report` carries the article as `{type: h1..h6|p|li, text}[]` blocks (the block type is the element's own tag name). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["KhEnvelope"];
-                };
-            };
-            /**
-             * @description `{"error": "unknown mode"|"unexpected param"|"missing param"|
-             *     "invalid key"|"invalid limit", "detail": ..., "mode": ..., "key"|
-             *     "limit": ...}` — the sidecar's frozen refusal texts.
-             */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SidecarError"];
-                };
-            };
-            /** @description `{"error": "upstream 404: no such report", "upstreamStatus": <int>, "upstream": ..., "kind": <mode>}`. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SidecarError"];
-                };
-            };
-            /** @description Layout drift / missing CMS resource / transport failure with the real status and detail, or (proxy-level) `fudcourt-data unreachable: <reason>`. */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SidecarError"];
-                };
-            };
-        };
-    };
     getLlama: {
         parameters: {
             query?: {
@@ -5133,55 +4942,6 @@ export interface operations {
              *     500/503 reaches the client as 500/503), and a 200 body that is not
              *     the expected list is served as HTTP 200 with an error body.
              */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SidecarError"];
-                };
-            };
-        };
-    };
-    getChainrank: {
-        parameters: {
-            query?: {
-                mode?: "stats" | "listings";
-                /** @description Only meaningful for `mode=listings`; relayed VERBATIM into the upstream URL (never clamped locally — upstream's own clamp is the answer the board shows). */
-                page?: number;
-                /** @description Only meaningful for `mode=listings`; relayed verbatim, never clamped. */
-                pageSize?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /**
-             * @description `stats`: upstream fields `online`, `totalClicks`, `listings`,
-             *     `totalUsdCents`, `topUsdCents`, `claimTopCents` (numbers) spread
-             *     through. `listings`: upstream `rows` array spread through. Both add
-             *     `kind`, `upstream`, `fetchedAt`.
-             */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChainrankStatsEnvelope"] | components["schemas"]["ChainrankListingsEnvelope"];
-                };
-            };
-            /** @description `{"error": "unknown mode '<m>'", "detail": "expected one of stats, listings"}`. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SidecarError"];
-                };
-            };
-            /** @description `{"error": <reason>, ...}` — unrecognised upstream shape or transport failure, or (proxy-level) `fudcourt-data unreachable: <reason>`. */
             502: {
                 headers: {
                     [name: string]: unknown;

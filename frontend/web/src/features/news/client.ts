@@ -6,7 +6,7 @@
  * and the RSS parse. app/api/news/route.ts validates nothing and forwards every
  * status/body verbatim, so this file must never grow a guard: a second
  * validator is the one thing that could drift from the sidecar's (DR-012, the
- * same rule lib/khala.ts and lib/llama.ts record).
+ * same rule `features/llama/client.ts` records).
  *
  * What it does own: the shapes the board renders with, so a component reads a
  * typed row instead of `any`.

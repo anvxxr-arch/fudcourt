@@ -12,10 +12,8 @@ import TransactionPage from '@/features/transactions/ui';
 import ReconciliationPage from '@/features/treasury/reconciliation';
 import SignalsPage from '@/features/signals/ui';
 import ScoreboardPage from '@/features/scoreboard/ui';
-import ChainrankPage from '@/features/chainrank/ui';
 import MarketHub from '@/components/layout/market-hub';
 import NewsPage from '@/features/news/ui';
-import KhalaPage from '@/features/khala/ui';
 
 type DbData = {
   assets: Asset[];
@@ -122,9 +120,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     { key: 'market', label: 'Market' },
     { key: 'signals', label: 'Signals' },
     { key: 'scoreboard', label: 'Scoreboard' },
-    { key: 'chainrank', label: 'Chainrank' },
     { key: 'news', label: 'News' },
-    { key: 'khala', label: 'Khala' },
   ];
   // Team shell shows treasury tabs first, then the shared market boards.
   // Public/member shells show boards only — never wallet addresses,
@@ -211,9 +207,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'market-trench' && <MarketHub section="trench" />}
       {page === 'signals' && <SignalsPage />}
       {page === 'scoreboard' && <ScoreboardPage />}
-      {page === 'chainrank' && <ChainrankPage />}
       {page === 'news' && <NewsPage />}
-      {page === 'khala' && <KhalaPage />}
 
       <div style={{ marginTop: space[30], color: color.textMuted, fontSize: fontSize[11], borderTop: `1px solid ${color.border}`, paddingTop: space[10] }}>
         Fox · FUDCOURT OS · auto-refresh 30s · data: Postgres + TimescaleDB · live RPC
