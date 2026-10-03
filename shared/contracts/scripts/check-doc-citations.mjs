@@ -79,6 +79,16 @@
  *  `frontend/web/scripts/tools/{dump-envelopes.ts,sync-live.py}`); they were rewritten in the docs
  *  to their post-`d4119ca` homes, so the allowance list is now history-only.
  *
+ * GITIGNORED CITATIONS — a cited path that `.gitignore` excludes can never exist in a clean
+ *   checkout: build output (`frontend/web/.next`), the secrets file (`frontend/web/.env.local`), CMS
+ *   uploads (`frontend/web/media/`), a module binary (`backend/data/bin/fudcourt-data`). Requiring one
+ *   to resolve is a gate bug of its own kind — the check would pass on the developer's dirty tree and
+ *   fail in CI, which is the very local/CI divergence this file exists to prevent. Those tokens are
+ *   classified with ONE batched `git check-ignore --no-index --stdin` and reported as `ignored=<N>`:
+ *   deterministic, and never silent. When git is unavailable nothing is excused and the gate stays
+ *   strict. This is the same rationale allowance 3 already carried for `backend/api/bin/fudcourt-api`;
+ *   the general rule replaces the need to hand-list each build artifact as docs cite new ones.
+ *
  * WHAT IT CANNOT CATCH (stated here, not implied)
  *   - a path that exists on disk but is the WRONG file (rename with a same-named sibling) — this is
  *     existence, not identity;
@@ -105,16 +115,19 @@
  *     ("at the time of that run", "as observed on <date>") or leave it inside the dated row, and
  *     never update it to today's number (that would rewrite history);
  *   - a verdict presented as the CURRENT state is updated to the newest observed line.
- * Latest observed: `DOCS_OK docs=12 citations=1167 allowances=4` (2026-10-03, after `coinmarketcap`
- * was folded into the catalogs — its new cited paths in source-catalog / data-catalog /
- * data-classification / database-classification raised the count from 1158; the `docs=12
- * citations=1158` reading is when `docs/architecture/data-categorization.md` was added to `DOCS`; the earlier `docs=11
- * citations=1031` reading is when `docs/architecture/design-debt.md` was added the day it landed,
- * DR-037 follow-up, the `docs=10 citations=985` reading is when `docs/architecture/DESIGN-SYSTEM.md`
- * was added, and `docs=9 citations=969 allowances=6` / `docs=8 citations=904` are the current-state
- * snapshots taken before that widening — the older three are left as history).
+ * Latest observed: `DOCS_OK docs=12 citations=1216 allowances=4 ignored=0` on a developer tree and
+ * `DOCS_OK docs=12 citations=1216 allowances=6 ignored=10` on a clean checkout (2026-10-03). The two
+ * readings differ only in how a gitignored citation and the `backend/api/bin/fudcourt-api` allowance
+ * classify: both resolve on a dirty tree and neither can on a clean one — both readings are green,
+ * which is the point. (`citations=1167` was the reading after `coinmarketcap` was folded into the
+ * catalogs; `citations=1158` when `data-categorization.md` was added to `DOCS`; the earlier `docs=11
+ * citations=1031` reading is when `design-debt.md` was added the day it landed, DR-037 follow-up, the
+ * `docs=10 citations=985` reading is when `DESIGN-SYSTEM.md` was added, and `docs=9 citations=969
+ * allowances=6` / `docs=8 citations=904` are the current-state snapshots taken before that widening —
+ * the older three are left as history).
  */
 import { readFileSync, existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -183,6 +196,7 @@ const GLOB_OR_PROSE = /[\s*?{}<>|…,[\]@$]/;
 const failures = [];
 const fail = (file, reason) => failures.push(`DOC_FAIL ${file}: ${reason}`);
 const allowed = new Map(); // token -> occurrences
+const missing = []; // citations that resolve to nothing on disk; classified after the walk
 
 /** Candidate repo-relative paths a citation token may resolve to, most specific first. */
 function candidatesFor(token) {
@@ -231,9 +245,52 @@ for (const doc of DOCS) {
         allowed.set(token, (allowed.get(token) || 0) + 1);
         continue;
       }
-      fail(`${doc}:${n + 1}`, `cited path '${token}' does not exist under ${repoRoot} (tried: ${cands.join(', ')})`);
+      missing.push({ doc, line: n + 1, token, cands });
     }
   }
+}
+
+// A cited path `.gitignore` excludes can never exist in a clean checkout, so requiring it to resolve
+// is a gate bug: the check would pass on a dirty developer tree and fail in CI. Classify those tokens
+// in one batched `git check-ignore`; everything else is a real failure. See the header.
+const ignoredTokens = gitIgnoredSet([...new Set(missing.map((m) => m.token))], repoRoot);
+const ignored = new Map();
+for (const m of missing) {
+  if (ignoredTokens.has(m.token)) {
+    ignored.set(m.token, (ignored.get(m.token) || 0) + 1);
+    continue;
+  }
+  fail(`${m.doc}:${m.line}`, `cited path '${m.token}' does not exist under ${repoRoot} (tried: ${m.cands.join(', ')})`);
+}
+
+/**
+ * The subset of `tokens` that `.gitignore` excludes, in ONE `git check-ignore` call.
+ * Exit 0 means at least one matched, 1 means none; any other outcome (no git, not a repo, a git
+ * error) returns an empty set so the caller treats every token as a real failure — a missing tool
+ * can only make the gate stricter, never looser.
+ */
+function gitIgnoredSet(tokens, root) {
+  const out = new Set();
+  if (tokens.length === 0) return out;
+  // Ask in BOTH forms. A `.gitignore` directory pattern (`media/`, `.next/`) matches only once git
+  // knows the path is a directory, and in a clean checkout that directory is absent — the trailing
+  // slash is what tells git to test it as one (without it the pattern silently does not match, which
+  // is how `frontend/web/media` and `frontend/web/.next` slipped through the first pass). Every hit
+  // is mapped back to its bare token.
+  const probes = [];
+  for (const t of tokens) {
+    probes.push(t, `${t}/`);
+  }
+  const r = spawnSync('git', ['-C', root, 'check-ignore', '--no-index', '-z', '--stdin'], {
+    input: probes.join('\0'),
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (r.error || (r.status !== 0 && r.status !== 1)) return out;
+  for (const t of (r.stdout || '').split('\0')) {
+    if (t) out.add(t.endsWith('/') ? t.slice(0, -1) : t);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -245,4 +302,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 const allowanceCount = [...allowed.values()].reduce((a, b) => a + b, 0);
-console.log(`DOCS_OK docs=${docsScanned} citations=${citations} allowances=${allowanceCount}`);
+const ignoredCount = [...ignored.values()].reduce((a, b) => a + b, 0);
+console.log(`DOCS_OK docs=${docsScanned} citations=${citations} allowances=${allowanceCount} ignored=${ignoredCount}`);
