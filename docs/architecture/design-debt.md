@@ -110,9 +110,9 @@ Result (verbatim, condensed file lists):
 | atom | shelf | call sites (files) | `<Atom` uses | files |
 |---|---|---:|---:|---|
 | `Badge` | `badge.tsx` | **0** | 0 | — ZERO — |
-| `Banner` | `banner.tsx` | 5 | 5 | `src/features/chainrank/ui.tsx`, `src/features/dex/ui.tsx`, `src/features/khala/ui.tsx`, `src/features/llama/ui.tsx`, `src/features/market/stock/ui.tsx` |
+| `Banner` | `banner.tsx` | 3 | 3 | `src/features/dex/ui.tsx`, `src/features/llama/ui.tsx`, `src/features/market/stock/ui.tsx` |
 | `EmptyState` | `feedback.tsx` | 2 | 2 | `src/features/news/ui.tsx`, `src/features/treasury/reconciliation.tsx` |
-| `Loading` | `feedback.tsx` | 11 | 12 | `src/features/chainrank/ui.tsx`, `src/features/dex/ui.tsx`, `src/features/khala/ui.tsx`, `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx`, `src/features/news/ui.tsx`, `src/features/scoreboard/ui.tsx`, `src/features/signals/ui.tsx`, `src/features/ticker/detail.tsx`, `src/features/ticker/ui.tsx`, `src/features/tracker/ui.tsx` |
+| `Loading` | `feedback.tsx` | 9 | 9 | `src/features/dex/ui.tsx`, `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx`, `src/features/news/ui.tsx`, `src/features/scoreboard/ui.tsx`, `src/features/signals/ui.tsx`, `src/features/ticker/detail.tsx`, `src/features/ticker/ui.tsx`, `src/features/tracker/ui.tsx` |
 | `Dash` | `feedback.tsx` | **0** | 0 | — ZERO — |
 | `Button` | `primitives.tsx` | 2 | 11 | `src/features/transactions/ui.tsx`, `src/features/wallets/ui.tsx` |
 | `Input` | `primitives.tsx` | 1 | 4 | `src/features/transactions/ui.tsx` |
@@ -122,13 +122,13 @@ Result (verbatim, condensed file lists):
 | `Label` | `primitives.tsx` | 3 | 13 | `src/features/executor/ui.tsx`, `src/features/transactions/ui.tsx`, `src/features/wallets/ui.tsx` |
 | `Card` | `primitives.tsx` | 5 | 21 | `src/features/dashboard/ui.tsx`, `src/features/executor/ui.tsx`, `src/features/portfolio/ui.tsx`, `src/features/treasury/reconciliation.tsx`, `src/features/wallets/ui.tsx` |
 | `Stat` | `stat.tsx` | **0** | 0 | — ZERO — |
-| `Table` | `table.tsx` | 8 | 11 | `src/features/chainrank/ui.tsx`, `src/features/dex/ui.tsx`, `src/features/khala/ui.tsx`, `src/features/llama/ui.tsx`, `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx`, `src/features/scoreboard/ui.tsx`, `src/features/signals/ui.tsx` |
-| `THead` | `table.tsx` | 8 | 11 | same 8 as `Table` |
-| `TBody` | `table.tsx` | 8 | 11 | same 8 as `Table` |
+| `Table` | `table.tsx` | 6 | 9 | `src/features/dex/ui.tsx`, `src/features/llama/ui.tsx`, `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx`, `src/features/scoreboard/ui.tsx`, `src/features/signals/ui.tsx` |
+| `THead` | `table.tsx` | 6 | 9 | same 6 as `Table` |
+| `TBody` | `table.tsx` | 6 | 9 | same 6 as `Table` |
 | `TFoot` | `table.tsx` | **0** | 0 | — ZERO — |
-| `TR` | `table.tsx` | 5 | 14 | `src/features/chainrank/ui.tsx`, `src/features/khala/ui.tsx`, `src/features/llama/ui.tsx`, `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx` |
-| `TH` | `table.tsx` | 5 | 27 | same 5 as `TR` |
-| `TD` | `table.tsx` | 5 | 29 | same 5 as `TR` |
+| `TR` | `table.tsx` | 3 | 8 | `src/features/llama/ui.tsx`, `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx` |
+| `TH` | `table.tsx` | 3 | 17 | same 3 as `TR` |
+| `TD` | `table.tsx` | 3 | 17 | same 3 as `TR` |
 | `Toolbar` | `toolbar.tsx` | 5 | 5 | `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx`, `src/features/news/ui.tsx`, `src/features/scoreboard/ui.tsx`, `src/features/signals/ui.tsx` |
 
 ### Zero call sites — "delete or adopt"
@@ -251,13 +251,11 @@ element still appears both ways:
 |---|---|---|
 | `frontend/web/src/features/dex/ui.tsx:214` | 2 `<button>`, 4 `<input>`, 2 `<select>` | yes (`Banner`, `Loading`, `Table`) |
 | `frontend/web/src/features/executor/ui.tsx:118` | 1 `<select>`, 1 `<input>`, 5 `<table>` | yes (`Card`, `Label`) |
-| `frontend/web/src/features/khala/ui.tsx:124` | 6 `<button>` | yes (`Banner`, `Loading`, `Table`) |
 | `frontend/web/src/features/ticker/detail.tsx:270` | 1 `<button>`, 3 `<select>`, 1 `<table>` | yes (`Loading`) and a local `Stat` |
 | `frontend/web/src/features/ticker/ui.tsx:207` | 3 `<button>`, 1 `<table>` | yes (`Loading`) |
 | `frontend/web/src/features/tracker/ui.tsx:55` | 1 `<button>`, 1 `<table>` | yes (`Loading`) |
 | `frontend/web/src/features/transactions/ui.tsx:142` | 1 `<table>`, 3 `<input>`, 1 `<textarea>` | yes (`Button` ×8, `Input` ×4, `Select` ×4, `Modal`, `Label` ×7) |
 | `frontend/web/src/features/wallets/ui.tsx:57` | 2 `<input>`, 2 `<button>`, 1 `<textarea>` | yes (`Button` ×3, `Modal`, `Label` ×4, `Card`) |
-| `frontend/web/src/features/chainrank/ui.tsx:87` | 3 `<button>` | yes (`Loading`, `Banner`, `Table`) |
 | `frontend/web/src/features/dashboard/ui.tsx:51` | 1 `<table>` | yes (`Card`) |
 | `frontend/web/src/features/dex/trench.tsx:42` | 1 `<button>` | no (bespoke state) |
 | `frontend/web/src/features/news/ui.tsx:47` | 1 `<button>` | yes (`EmptyState`, `Loading`, `Toolbar`) |

@@ -35,9 +35,11 @@ Provider ≠ account ≠ source, per the scope prompt: **Binance** is a provider
 
 All five families are served by `backend/data/cmd/data/main.go` on
 `127.0.0.1:3101` (`/api/cryptorank`, `/api/khala`, `/api/llama`, `/api/news`,
-`/api/chainrank`) and proxied verbatim by the Next routes in §9. The Go sidecar is
-the acquisition layer; the TS feature clients keep the last-known upstream constants
-for the fixture/shaper tooling.
+`/api/chainrank`). Cryptorank/DefiLlama/News are also proxied verbatim by the Next
+routes in §9; **Khala and ChainRank are sidecar-only** — their Next
+`/api/{khala,chainrank}` proxy routes were removed (DR-041), so `:3101` is their only
+surface. The Go sidecar is the acquisition layer; the remaining TS feature clients
+keep the last-known upstream constants for the fixture/shaper tooling.
 
 ### 1.1 CryptoRank (`https://cryptorank.io`)
 
@@ -378,10 +380,8 @@ running it (e.g. statuses of `served` tables with no in-app writer).
 | Route | Serves | Upstream / backend it hits | Auth | Env |
 |---|---|---|---|---|
 | `GET /api/cryptorank` | CryptoRank envelope | `FUDCOURT_DATA_URL` (Go :3101) `/api/cryptorank` | keyless | `FUDCOURT_DATA_URL` |
-| `GET /api/khala` | Khala reports/latest | Go :3101 `/api/khala` | keyless | `FUDCOURT_DATA_URL` |
 | `GET /api/llama` | DefiLlama chains/protocols/historical | Go :3101 `/api/llama` | keyless | `FUDCOURT_DATA_URL` |
 | `GET /api/news` | Cointelegraph RSS rows | Go :3101 `/api/news` | keyless | `FUDCOURT_DATA_URL` |
-| `GET /api/chainrank` | ChainRank stats/listings | Go :3101 `/api/chainrank` | keyless | `FUDCOURT_DATA_URL` |
 | `GET /api/markets` | CoinGecko markets board | CoinGecko directly | keyless | — |
 | `GET /api/dex` | DexScreener proxy | DexScreener directly | keyless | — |
 | `GET /api/signals` | signal feed | `https://data-public.vercel.app` | keyless | — |
@@ -445,7 +445,7 @@ Counted mechanically from the tables above (`grep -c`/script over this file):
 | §7 Internal persistence/infrastructure rows | **14** |
 | **Total registry rows** | **108** |
 | §8 Absent-in-repo rows | **14** |
-| §9 Frontend route rows | **18** |
+| §9 Frontend route rows | **16** |
 | §10 systemd unit rows | **11** (the 14 files in `infrastructure/systemd/` reduce to 11 table rows: the three `.service`+`.timer` pairs `fudcourt-sync`, `fudcourt-sync-rust` and `fudcourt-pgload` each collapse into one row — 6 single-unit rows plus 3 pair rows covering 6 files — and the two `RETIRED-*.service.txt` tombstones appear as their own rows: 6 + 3 + 2 = 11 rows / 6 + 6 + 2 = 14 files) |
 
 Facts behind the counts: CryptoRank declares **28** modes (`ModeCount = len(Modes)`; 26

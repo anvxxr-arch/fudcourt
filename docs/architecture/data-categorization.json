@@ -1215,27 +1215,6 @@
   "guard_tier": "public"
  },
  {
-  "id": "route-api-chainrank",
-  "name": "GET /api/chainrank — chain rankings & listings (PROXY -> Go data fudcourt-data :3101)",
-  "slice": "routes",
-  "category": "ONCHAIN",
-  "domain": "markets/onchain",
-  "provider": "chainrank.fyi (via fudcourt-data)",
-  "layer": "NORMALIZED",
-  "auth": "keyless",
-  "freshness": "NEAR_REALTIME",
-  "durability": "SNAPSHOT",
-  "sensitivity": "PUBLIC",
-  "status": "active",
-  "code_path": "frontend/web/src/app/(frontend)/api/chainrank/route.ts:39-56",
-  "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. backend/data/cmd/data/main.go:228 `mux.HandleFunc(\"/api/chainrank\")`; modes stats|listings, 15s TTL",
-  "path": "/api/chainrank",
-  "methods": [
-   "GET"
-  ],
-  "guard_tier": "public"
- },
- {
   "id": "route-api-coinglass",
   "name": "GET /api/coinglass — CoinGlass derivatives surfaces (PROXY -> Go data fudcourt-data :3101)",
   "slice": "routes",
@@ -1314,27 +1293,6 @@
   "code_path": "frontend/web/src/app/(frontend)/api/cryptorank/route.ts:43-49",
   "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. backend/data/cmd/data/main.go:216; route.ts:26-28 note modes funding/unlocks refused upstream (disabled)",
   "path": "/api/cryptorank",
-  "methods": [
-   "GET"
-  ],
-  "guard_tier": "public"
- },
- {
-  "id": "route-api-khala",
-  "name": "GET /api/khala — Khala research reports + reader blocks (PROXY -> Go data fudcourt-data :3101)",
-  "slice": "routes",
-  "category": "RESEARCH",
-  "domain": "research",
-  "provider": "khala.io (via fudcourt-data)",
-  "layer": "PARSED",
-  "auth": "keyless",
-  "freshness": "NEAR_REALTIME",
-  "durability": "SNAPSHOT",
-  "sensitivity": "PUBLIC",
-  "status": "active",
-  "code_path": "frontend/web/src/app/(frontend)/api/khala/route.ts:46-56",
-  "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. backend/data/cmd/data/main.go:219; modes reports|report|latest, blocks not HTML (route.ts:31-38)",
-  "path": "/api/khala",
   "methods": [
    "GET"
   ],

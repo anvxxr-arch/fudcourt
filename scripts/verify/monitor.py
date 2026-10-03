@@ -18,11 +18,7 @@ Checks:
   6. /api/cryptorank?mode=newstag&key=defi -> 200 (keyed soft-404 handler)
   7. /api/cryptorank?mode=funding  -> 503 (decoy refusal still armed)
 
-  8. /api/khala?mode=reports       -> 200 + non-empty rows + upstream field
-     (ONE cheap probe for the whole khala family; the shape/dates/400/404
-     contract lives in scripts/verify/verify-khala.py -- this only proves the khala
-     sidecar path is alive and still answering with data)
-  9. fudcourt-reconciled unit active, AND its own /healthz direct on :3102
+  8. fudcourt-reconciled unit active, AND its own /healthz direct on :3102
      (DR-014). The unit check is here because a dead Rust service silently turns
      /api/reconcile into a 502 -- a failure nothing else in this file would see.
      The probe hits the service DIRECTLY rather than through :3100 because
@@ -60,7 +56,6 @@ CHECKS = [
     ("mode=funding (decoy refusal)", "/api/cryptorank?mode=funding", 503, False),
     ("markets (coingecko)", "/api/markets?search=btc&limit=5", 200, True),
     ("news (cointelegraph rss)", "/api/news?limit=5", 200, True),
-    ("khala reports", "/api/khala?mode=reports", 200, True),
 ]
 
 
@@ -101,8 +96,7 @@ def check(args):
             # envelope shapes differ per mode: home has count/global (no rows),
             # list modes carry rows. Empty data MUST still fail loudly.
             # Families name their list field differently (CR: rows,
-            # markets: coins, news: items, khala: rows) -- presence of any is
-            # enough. `upstream` is a scalar string on khala (not an array).
+            # markets: coins, news: items) -- presence of any is enough.
             cnt = body.get("count") if body.get("count") is not None else body.get("total")
             rows = body.get("rows") or body.get("coins") or body.get("items")
             if cnt is None and rows is None:

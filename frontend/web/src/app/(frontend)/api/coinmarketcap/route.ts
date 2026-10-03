@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
  * `fudcourt-data` (backend/data, 127.0.0.1:3101), exactly like
- * app/api/coinglass/route.ts and app/api/chainrank/route.ts. The Go side owns the
+ * app/api/coinglass/route.ts and app/api/coinank/route.ts. The Go side owns the
  * mode table, the upstream URL construction, the LOCAL pagination bounds, the
  * param-scoping matrix, the TTL cache + single-flight and the honest `upstream`
  * provenance. Everything is forwarded VERBATIM -- status, body and the X-CMC-* /
@@ -18,7 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * validates `start`/`limit` against its own frozen bounds BEFORE any fetch (because
  * upstream answers `limit=0` with a SUCCESS envelope carrying an EMPTY list), and a
  * local clamp would produce a response indistinguishable from the sidecar's own
- * answer while actually being OUR guess. Same reasoning as app/api/chainrank/route.ts.
+ * answer while actually being OUR guess. Same reasoning as app/api/cryptorank/route.ts.
  *
  * Single source of truth: the mode table, the bounds and every refusal live in Go
  * ONLY. Re-validating here would be a second implementation waiting to drift. If

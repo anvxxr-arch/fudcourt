@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
  * `fudcourt-data` (backend/data, 127.0.0.1:3101), exactly like
- * app/api/chainrank/route.ts, app/api/khala/route.ts and app/api/cryptorank/route.ts.
+ * app/api/cryptorank/route.ts and app/api/llama/route.ts.
  * The Go side owns the mode table, the upstream URL construction, the AES
  * decryption, the 15s TTL cache + single-flight keyed on that URL, the
  * param-scoping matrix and the honest `upstream` / `cipher` provenance. Everything
@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
  *
  * Single source of truth: the mode table and every refusal live in Go ONLY.
  * Re-validating here would be a second implementation waiting to drift, which is
- * the same reasoning app/api/chainrank/route.ts records. If this route ever grows a
+ * the same reasoning app/api/cryptorank/route.ts records. If this route ever grows a
  * param guard, that guard is the bug.
  *
  * Failure policy (house rule): fail loud -- the sidecar unreachable or timed out is

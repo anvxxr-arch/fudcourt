@@ -10,6 +10,12 @@ from `frontend/web/`.
 > literals between files during the audit). The *distinct* colour set is stable (48 values)
 > but per-value occurrence counts drift as the migration lands; re-run the A.4 commands for
 > current numbers. `src/styles/tokens.ts` was untracked (new) at capture.
+>
+> **Post-audit removals (DR-041, 2026-10-03).** The `/chainrank` and `/khala` boards were removed
+> after this capture: `features/{chainrank,khala}/`, their page routes and their Next proxies are
+> gone, so the `features/chainrank/ui.tsx` and `features/khala/ui.tsx` sites listed below no longer
+> exist (the counts above stay as captured — the caveat applies). The design harness probe set is
+> now **15** routes, not 17.
 
 The pinned token spec is implemented in `src/styles/tokens.ts`. This document is the
 audit of what the tree actually contains against that spec; it is **findings only** —
@@ -36,10 +42,10 @@ concept.
 | 9 | `#3ddc97` | features/scoreboard/ui.tsx:19, features/signals/ui.tsx:52, features/wallets/ui.tsx:48, styles/shared.ts:5, styles/shared.ts:6 |
 | 7 | `#ffd166` | features/scoreboard/ui.tsx:23, features/scoreboard/ui.tsx:175, features/scoreboard/ui.tsx:189, features/signals/ui.tsx:53, features/signals/ui.tsx:70 |
 | 6 | `#ff9f43` | features/scoreboard/ui.tsx:24, features/scoreboard/ui.tsx:105, features/scoreboard/ui.tsx:181, features/signals/ui.tsx:74, features/signals/ui.tsx:327 |
-| 5 | `rgba(255,80,80,0.08)` | features/chainrank/ui.tsx:100, features/dex/ui.tsx:266, features/executor/ui.tsx:214, features/khala/ui.tsx:113, features/llama/ui.tsx:135 |
-| 5 | `rgba(255,80,80,0.35)` | features/chainrank/ui.tsx:100, features/dex/ui.tsx:266, features/executor/ui.tsx:215, features/khala/ui.tsx:113, features/llama/ui.tsx:135 |
+| 5 | `rgba(255,80,80,0.08)` | features/dex/ui.tsx:266, features/executor/ui.tsx:214, features/llama/ui.tsx:135 |
+| 5 | `rgba(255,80,80,0.35)` | features/dex/ui.tsx:266, features/executor/ui.tsx:215, features/llama/ui.tsx:135 |
 | 5 | `#14f195` | features/scoreboard/ui.tsx:18, features/signals/ui.tsx:51, features/signals/ui.tsx:355, styles/shared.ts:24, styles/shared.ts:29 |
-| 4 | `#fbbf24` | features/chainrank/ui.tsx:130, features/dex/ui.tsx:296, features/dex/ui.tsx:357, features/khala/ui.tsx:147 |
+| 4 | `#fbbf24` | features/dex/ui.tsx:296, features/dex/ui.tsx:357 |
 | 3 | `#666` | app/blog/[slug]/page.tsx:39, app/blog/page.tsx:26, app/blog/page.tsx:35 |
 | 3 | `rgba(107,143,130,0.35)` | features/signals/ui.tsx:202, features/signals/ui.tsx:256, features/signals/ui.tsx:270 |
 | 3 | `#ff6b6b` | styles/shared.ts:8, styles/shared.ts:29, styles/tokens.ts:46 |
@@ -176,14 +182,12 @@ migration target example); `marginTop`/`fontSize` inside doc-comment code sample
 | 8 | 38 | 46 | `src/features/dex/ui.tsx` |
 | 6 | 3 | 9 | `src/app/blog/page.tsx` |
 | 4 | 49 | 53 | `src/features/executor/ui.tsx` |
-| 4 | 37 | 41 | `src/features/khala/ui.tsx` |
 | 4 | 6 | 10 | `src/features/admin/members-table.tsx` |
 
 `src/styles/shared.ts` and `src/styles/tokens.ts` are the palette/token definition sites
 (counts there are definitions, not usage drift). The genuine per-page drift leaders are
 `src/features/cryptorank/ui.tsx` (229 magic scale literals), `src/features/executor/ui.tsx`
-(49), `src/features/signals/ui.tsx` (28 magic + 15 raw colours), `src/features/khala/ui.tsx`
-(37), `src/features/dex/ui.tsx` (38).
+(49), `src/features/signals/ui.tsx` (28 magic + 15 raw colours), `src/features/dex/ui.tsx` (38).
 
 ### A.3 Value → token mapping
 
@@ -377,13 +381,13 @@ different surface than the one the migration was proven against. `routes --check
 page routes from `frontend/web/src/app/**/page.tsx` (route groups stripped, dynamic segments kept
 literal) and **fails (exit 1)** naming any page route that is neither probed nor in the file's
 `EXCLUDED_ROUTES` map (each entry carries the reason it cannot be probed). Reconciled 2026-10-02 to
-**17 probes** covering every page route the app serves except the 14 documented exclusions:
+**15 probes** covering every page route the app serves except the 14 documented exclusions:
 session-gated tier pages (`/admin`, `/member`, `/executor{,/[id],/accounts,/history,/new,/settings}`,
 `/team/{balance,portfolio,reconciliation,transactions,wallets}` — they redirect to `/login` for an
 anonymous harness, which has no session mechanism) and the Payload admin SPA
 (`/blog/cms/admin/[[...segments]]`). Probes: `/`, `/market`, `/market/{crypto,trench,forex,stock,commodity}`,
-`/market/ticker/BTC` (the concrete probe for dynamic `/market/ticker/[ticker]`), `/news`, `/khala`,
-`/chainrank`, `/cryptorank`, `/scoreboard`, `/signals`, `/login`, `/blog`, `/blog/never-fake-rules`
+`/market/ticker/BTC` (the concrete probe for dynamic `/market/ticker/[ticker]`), `/news`,
+`/cryptorank`, `/scoreboard`, `/signals`, `/login`, `/blog`, `/blog/never-fake-rules`
 (the concrete probe for dynamic `/blog/[slug]`). Per route: `wait_until="networkidle"`
 + 3000 ms settle, up to 400 probes from `document.querySelectorAll('*')` where the element has
 a non-zero visible box; computed styles only, **no text content**. Deterministic key order:

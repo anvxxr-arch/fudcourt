@@ -25,7 +25,7 @@
 |---|---|---|---|
 | 1 | `go build ./... && go vet ./... && go test ./...` | `backend/data` | **PASS** — 8 packages, all green (cmd + 7 internal), 0 failures |
 | 2 | `cargo build --release --bins && cargo test --release` | `backend/sync` | **PASS** — 2 binaries, **17 tests, 5 suites, 0 fail** |
-| 3 | `python3 scripts/checks/check-contract.py` | `frontend/web` | **PASS** — `CONTRACT_OK` (28 CR modes TS↔Go parity, khala/llama/news/chainrank parity, proxy-shape + mutation guards) |
+| 3 | `python3 scripts/checks/check-contract.py` | `frontend/web` | **PASS** — `CONTRACT_OK` (28 CR modes TS↔Go parity, khala/llama/news/chainrank parity, proxy-shape + mutation guards) — at the time of this snapshot; the khala and chainrank web-parity blocks were later replaced by "web surface removed (sidecar-only)" rows (DR-041) |
 | 4 | `python3 scripts/checks/check-deploy.py` | `frontend/web` | **PASS** — `check-deploy: OK (10 unit files)` |
 | 5 | `python3 scripts/checks/check-structure.py` | `frontend/web` | **PASS** — `STRUCTURE_OK (139 files)` |
 | 6 | `bunx tsc --noEmit` | `frontend/web` | **PASS** — 0 errors |

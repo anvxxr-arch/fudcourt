@@ -31,24 +31,10 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 0.7,
   },
   {
-    path: '/chainrank',
-    title: 'ChainRank — Chain rankings | FUDCOURT',
-    description:
-      'ChainRank compares chains by activity, liquidity and treasury flow.',
-    priority: 0.6,
-  },
-  {
     path: '/news',
     title: 'News — Crypto market news | FUDCOURT',
     description:
       'Latest crypto market news aggregated for treasury and trading decisions.',
-    priority: 0.5,
-  },
-  {
-    path: '/khala',
-    title: 'Khala — Research reports | FUDCOURT',
-    description:
-      'Khala Research reports read inside FUDCOURT: latest publications with resolved dates, the full archive, and the complete report text as a reader view.',
     priority: 0.5,
   },
   {

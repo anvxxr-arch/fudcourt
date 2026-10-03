@@ -100,32 +100,20 @@ export const CR_MODE_COST: Readonly<Record<string, number>> = {
  * `mode=chains` 64,245 (protocols 20,842, historical 7,031 stay default) ·
  * ticker 69,445 for the full board, and its 64.5 s cold upstream makes it the
  * most expensive call per second as well · markets = CoinGecko top-250 pool ·
- * news 18,473 · dex profiles×50 17,766 · signals scoreboard 5,851 · chainrank
- * 692. Families absent from this table (`/api/all`, `/api/wallets`, `/api/coins`,
+ * news 18,473 · dex profiles×50 17,766 · signals scoreboard 5,851. Families
+ * absent from this table (`/api/all`, `/api/wallets`, `/api/coins`,
  * `/api/reconcile`, `/api/transactions`, the auth routes) serve empty envelopes
  * and refusals of tens of bytes.
  *
- * khala is priced from its own measurement, and it is the one family whose
- * price is NOT the size of the page it read. Measured 2026-09-29 against the
- * frozen wire contract (fixture-backed stub on a spare port, since the sidecar
- * on :3101 was still the pre-khala binary):
- *   mode=report  x402 (the longest report, 506 blocks) .. 84,315 B  <- worst case
- *   mode=report  walrus 48,956 · decentralized-robotics 45,990 ·
- *                bittensor-intelligence 44,063 · openclaw 38,405 ·
- *                surf 38,217 · bittensor-investment-history 35,050
- *   mode=latest&limit=10  4,198 B · limit=5  3,079 B
- *   mode=reports          3,596 B
- * ceil(84315/51200) = 2. The 579,989 B report page the sidecar reads to build
- * that payload is the reason the number is not derived from the payload alone
- * (same shape as cryptorank, where a 1.19 MB mode is priced 20), and the two
- * list modes are ~3-4 KB. One entry covers all three modes because
- * `costForRequest` prices the first path segment and a sub-path must not be a
- * cheaper way into the family.
+ * chainrank (692 B) and khala (mode=report worst case 84,315 B, from a 579,989 B
+ * report page the sidecar reads) are NOT priced here any more: their web surfaces
+ * were removed (DR-041) — the /chainrank and /khala boards and their /api/*
+ * proxies are gone, so no inbound route reaches this limiter for them. The
+ * sidecar families stay on :3101 as API-only surfaces.
  */
 export const ROUTE_COST: Readonly<Record<string, number>> = {
   ticker: 2,
   markets: 2,
-  khala: 2,
   // The market hub's asset-class boards. `stock` and `commodity` each fan out
   // one Yahoo chart call PER SYMBOL (16 and 12), so a cold board has the same
   // shape as `ticker` -- many upstream calls behind one page -- and is priced

@@ -117,21 +117,23 @@ Indexes: btree on `order`, `parent_id`, `slug`, FK columns, `updated_at/created_
 
 Row nullability rule: **any absent upstream metric is `null` and renders `—`;
 `0` is never substituted.**
-### 3.1b `khala` envelopes (`/api/khala`, a thin proxy to the Go `fudcourt-data` sidecar)
+### 3.1b `khala` envelopes (Go `fudcourt-data` sidecar, `:3101` only)
 A sibling of §3.1, using the **same flat `CrEnvelope` convention** (`backend/data/internal/research/cryptorank/types.go`):
 common fields + per-mode payload keys alongside each other, and the one-line tag rule
 **optional ⇒ the key is ABSENT; nullable ⇒ a present `null`**. Three modes, frozen in
 [`/home/dwizzy/khala-probe/DESIGN.md`](/home/dwizzy/khala-probe/DESIGN.md) §3 and
-[DR-006](../records/DECISIONS.md). Upstream is **khala.io** (Framer static SSR); the route
-validates nothing (the sidecar owns every param).
+[DR-006](../records/DECISIONS.md). Upstream is **khala.io** (Framer static SSR); the
+sidecar owns and validates every param. **The former Next `/api/khala` proxy route was
+removed (DR-041) — the sidecar on `:3101` is the only surface** (the Go package and its
+mux path are unchanged).
 
-> **State (2026-09-29 ~13:00 UTC):** **served.** The sidecar's mux registers
-> `/api/khala` (SG-8.3) and the `bun run build` on `:3100` carries the route — measured
-> `GET /api/khala?mode=reports` → **200** on `:3101`, `:3100` and the public hostname,
-> `:3101/healthz` → `{"build":"28 modes","khala":"3 modes"}`. The shapes below were
-> **re-read from the landed Go types** (`shape.go`: `KhEnvelope`/`KhRow`/`KhReport`,
-> `parse.go`: `KhBlock`/`KhSection`/`KhAuthor`), so this section describes the code, not
-> an aspiration.
+> **State (2026-10-03):** **served on `:3101` only.** The sidecar's mux registers
+> `/api/khala` (SG-8.3) — measured `GET /api/khala?mode=reports` → **200** on `:3101`,
+> `:3101/healthz` → `{"build":"28 modes","khala":"3 modes"}`. The Next `/api/khala`
+> proxy and the web board were removed (DR-041). The shapes below were **re-read from
+> the landed Go types** (`shape.go`: `KhEnvelope`/`KhRow`/`KhReport`, `parse.go`:
+> `KhBlock`/`KhSection`/`KhAuthor`), so this section describes the code, not an
+> aspiration.
 
 ```jsonc
 // GET /api/khala?mode=reports
@@ -280,11 +282,13 @@ Rules (all asserted by `verify-news.py`):
   `"limit must be between 1 and 100, got <v>"`. An empty value is a 400, not the
   default — the port's whole point, since the original TS route turned an unknown
   source into a silent empty 200 and clamped `limit`.
-### 3.1d `chainrank` envelopes (`/api/chainrank`, a thin proxy to the Go `fudcourt-data` sidecar)
+### 3.1d `chainrank` envelopes (Go `fudcourt-data` sidecar, `:3101` only)
 The Go side (`backend/data/internal/research/chainrank`) owns the two-mode table, the
 upstream URL construction (pagination relayed VERBATIM), the 32-entry cache and
-the shape check; the route validates nothing ([DR-013](../records/DECISIONS.md)). Verified
-live 2026-09-29 by `verify-chainrank.py` (**50/50** on `:3101` and through `:3100`).
+the shape check; the sidecar validates nothing ([DR-013](../records/DECISIONS.md)).
+**The former Next `/api/chainrank` proxy route was removed (DR-041) — the sidecar on
+`:3101` is the only surface.** Verified live 2026-09-29 by `verify-chainrank.py`
+(**50/50** on `:3101`).
 ```jsonc
 // GET /api/chainrank?mode=stats
 { "online": 0, "totalClicks": 19, "listings": 1,
@@ -312,9 +316,10 @@ Rules (all asserted by `verify-chainrank.py`):
   `rows=null` is not an array, an unknown mode has no contract). This is the
   family's spelling of *empty upstream ≠ valid answer*.
 - **Write endpoints are never proxied** — `POST /api/click|presence|claim/quote|
-  claim/confirm|upload` each mutate someone else's production service; they are
-  documented in `frontend/web/src/features/chainrank/client.ts`, absent from the route and from the sidecar's
-  mux, and the verifier probes their VALIDATION gates directly against upstream.
+  claim/confirm|upload` each mutate someone else's production service; they are absent
+  from the sidecar's mux (the former web feature client that documented them was removed
+  with the web surface, DR-041), and the verifier probes their VALIDATION gates directly
+  against upstream.
 - `X-Cache: MISS|HIT|COALESCED` — and the cache is keyed on the FULL upstream URL,
   so `pageSize=7` and `pageSize=8` are distinct entries (unlike `llama`/`news`,
   where one document is trimmed locally and every trim shares one entry).
@@ -328,9 +333,10 @@ Rules (all asserted by `verify-chainrank.py`):
 | **502** | upstream wall / helper failure, with the real `upstreamStatus` | `upstream HTTP 429` (auto-retried ×3 before this) |
 | **503** | **data-integrity refusal**: `mode=funding|unlocks` (synthetic decoy class) | `CR_DISABLED_REASON` + reverify instructions |
 
-`/api/khala` adds rows to this table and **no 503** — no disabled mode was measured (the
-cryptorank synthetic-decoy class does not reproduce on khala.io: a bad key is a real
-upstream 404, and a missing Framer CMS resource is a 403, not a 404):
+The sidecar's `/api/khala` (on `:3101`) adds rows to this table and **no 503** — no
+disabled mode was measured (the cryptorank synthetic-decoy class does not reproduce on
+khala.io: a bad key is a real upstream 404, and a missing Framer CMS resource is a 403,
+not a 404):
 
 | Status | Trigger | Example |
 |--------|---------|---------|
@@ -338,8 +344,8 @@ upstream 404, and a missing Framer CMS resource is a 403, not a 404):
 | **400** | unknown/empty `mode` (the body lists the three modes); malformed `key` (empty/whitespace, or failing `^[a-z0-9][a-z0-9-]{0,127}$`); `key` absent on `mode=report` (no default); a `limit` sent to a mode that does not take one; non-integer or out-of-range `limit` (strict 1..50) — never clamped | `{"error":"unknown mode","modes":["reports","report","latest"],"got":null}` |
 | **404** | honest upstream miss — a key that is not a report is a **real upstream 404** (7,384 B, `<title>Page Not Found \| Framer</title>`) passed through | `{"error":"upstream 404: no such resource","upstreamStatus":404,"upstream":"…","kind":"report"}` |
 | **502** | layout drift (a 200 with no report body), a 403 S3-style `AccessDenied` from a missing Framer CMS resource, or the sidecar being unreachable | `{"error":"fudcourt-data unreachable: <reason>"}` |
-`/api/chainrank` adds the shape refusal and keeps upstream's own meaning for every
-status — and **no 503** (no disabled mode) and **no write path**:
+The sidecar's `/api/chainrank` (on `:3101`) adds the shape refusal and keeps upstream's
+own meaning for every status — and **no 503** (no disabled mode) and **no write path**:
 | Status | Trigger | Example |
 |--------|---------|---------|
 | **405** | anything but `GET`/`HEAD`; upstream's own 405 passed through | `{"error":"upstream stats answered 405 (method gate)","detail":"…"}` |
@@ -362,11 +368,9 @@ status — and **no 503** (no disabled mode) and **no write path**:
 
 | Route | Params | Modes/types |
 |-------|--------|-------------|
-| `/api/chainrank` | `mode`, `page`, `pageSize` | `stats`, `listings` (else 400) — thin proxy to the Go sidecar, route validates nothing; pagination relayed verbatim (DR-013) |
 | `/api/llama` | `mode`, `top`, `days` | `chains`, `protocols`, `historical` — thin proxy to the Go sidecar, route validates nothing |
 | `/api/dex` | `type`, `limit`, chain/pair args | `profiles, boosts, boosts-top, search, tokens, tokens-v1, token-pairs, orders` |
 | `/api/news` | `source`, `limit` (1..100, default 30) | publisher RSS proxy — thin proxy to the Go sidecar, route validates nothing (DR-012) |
 | `/api/signals` | `chain`, `type`, `n` | index/detail signals proxy |
-| `/api/khala` | `mode`, `key`, `limit`, `fresh` | `reports` (khala.io homepage order) · `report` (requires `key=`) · `latest` (takes `limit=`, default 5, 1..50) — thin proxy to the Go sidecar, route validates nothing |
 | `/api/reconcile` | — | thin proxy to the **Rust** service `fudcourt-reconciled` `:3102` (DR-014); route validates nothing, adds `source: "rust"`, answers **502 + the real reason** when the service is down (never a fallback board) |
 | `/api/all` , `/api/coins` | — | aggregates |

@@ -1,32 +1,29 @@
 # Architecture — fudcourt
-> **The clear map** of what this repo actually is: two apps, **16 views**, **10 data
+> **The clear map** of what this repo actually is: two apps, **14 views**, **10 data
 > families**, one self-hosted origin. Written 2026-09-28 during the
 > repurpose/re-alignment pass — every row below was read out of the running
 > system (routes on disk, live probes), not from memory. When this file and
 > the code disagree, the code wins and this file is wrong: fix it same day.
 >
-> Counts are re-derived, never inherited. **Re-derived 2026-09-29 11:45 UTC** by
-> reading the code once the `khala` family landed: **16** views = `TEAM_TABS` (5) +
-> `BOARD_TABS` (**11**) in `src/components/layout/store-shell.tsx`; the §3 registry adds the `member`
-> and `admin` surfaces, so it carries **18** rows. **10** data families = the §4
-> table rows (unchanged at 2026-10-01). **21** `/api` route handlers *(2026-09-29
-> count — 18 data + 3 auth)*; re-derived 2026-10-01 the app carries **36** handlers
-> under `src/app/(frontend)/api/**` (3 auth + 33 data incl. the executor surface),
-> because the executor family and its account/execution sub-routes landed after this
-> line was written — the §3/§4 rows and the §2 diagram were updated, the older
-> aggregate figures below are kept as the dated measurement they were.
-> `find frontend/web/src/app/api -name route.ts | wc -l` = **21** *(2026-09-29; today the
-> equivalent is `find "frontend/web/src/app/(frontend)/api" -name route.ts` = **36**)*, three of them
-> `src/app/(frontend)/api/auth/*`. Sitemap: **13** static routes in `src/platform/routing/public-routes.ts` + **30**
-> `TICKER_SYMBOLS` = **43** `<loc>` (corrected 2026-10-01 in §5; the earlier 42 = 12 + 30 was a
-> miscount of `PUBLIC_ROUTES` and predates `/blog` being enumerated).
+> Counts are re-derived, never inherited. **Re-derived 2026-10-03 UTC** by
+> reading the code: **14** views = `TEAM_TABS` (5) + `BOARD_TABS` (**4**) + the five
+> market-hub section views in `src/components/layout/store-shell.tsx`; the §3 registry
+> enumerates the shell views plus the tier surfaces around them, so it carries **18** rows. **10** data families = the §4
+> table rows. Re-derived 2026-10-03 the app carries **40** `/api` route handlers under
+> `src/app/(frontend)/api/**` (3 auth + 37 data incl. the executor surface and the
+> keyless-proxy families) — the older **21** *(2026-09-29; 18 data + 3 auth)* and **36**
+> *(2026-10-01; 3 auth + 33 data)* counts are kept as the dated measurements they were.
+> `find "frontend/web/src/app/(frontend)/api" -name route.ts` = **40** today, three of them
+> `src/app/(frontend)/api/auth/*`; the **chainrank** and **khala** Next proxy routes are gone
+> with their boards (DR-041). Sitemap: **11** static routes in `src/platform/routing/public-routes.ts` + **30**
+> `TICKER_SYMBOLS` = **41** `<loc>` (the `/chainrank` and `/khala` entries left `PUBLIC_ROUTES` with DR-041).
 >
-> Runtime facts now match the source tree (2026-09-29 ~13:00 UTC): `GET :3100/api/khala`
-> answers **200** because the `bun run build` deployed on `:3100` carries
-> `src/app/(frontend)/api/khala/route.ts`, and the Go sidecar **has** registered khala on its mux
-> (`/healthz` → `{"build":"28 modes","khala":"3 modes"}`). The khala rows in §3/§4 are
-> therefore **served**, and `verify-khala.py` against the served sidecar is
-> **136 passed / 0 failed / 0 skipped**.
+> **The `chainrank` and `khala` web surfaces are removed (DR-041):** their page routes, feature
+> slices and Next proxy routes are gone, so `:3100` serves neither path. Both Go families STAY —
+> the `fudcourt-data` sidecar registers `/api/chainrank` and `/api/khala` on its mux and reports
+> them on `/healthz` → `{"build":"28 modes","chainrank":"2 modes","khala":"3 modes"}` — so the §4
+> rows describe **sidecar-only** families and `verify-chainrank.py` / `verify-khala.py` remain
+> their live harnesses.
 
 ## 1. Product statement
 
@@ -37,7 +34,7 @@ DR-017) on the homeserver:
 | | What it answers | Where |
 |---|---|---|
 | Treasury OS | what do I own / is it accounted for | `frontend/web` views `dashboard, portfolio, wallets, transactions, reconciliation` |
-| Market intelligence | what is the market doing — prices, ranks, chains, DEX, launches, news, signals, research | `frontend/web` views `ticker, tracker, trench, dex, signals, scoreboard, chainrank, cryptorank, llama, news` (plus the `khala` research board) |
+| Market intelligence | what is the market doing — prices, ranks, chains, DEX, launches, news, signals, research | `frontend/web` views `ticker, tracker, trench, dex, signals, scoreboard, cryptorank, llama, news` (the `chainrank` and `khala` families are sidecar-only, DR-041) |
 | Publishing | what's the story | `frontend/web` → `/blog`, Payload CMS merged in (DR-017) |
 
 Public entry: **https://fc.dwirijal.my.id** (Cloudflare Tunnel → loopback
@@ -54,7 +51,7 @@ origin; DR-002 — no third-party deploy target, ever).
    ┌──────────────────── frontend/web (Next 16, fudcourt-web) ────────────────────┐
    │  src/app/(frontend)/page.tsx = SPA shell (initialPage state + tab nav + db)│
    │  src/app/(frontend)/<view>/page.tsx = deep-link wrapper → <StoreShell …> │
-   │  src/app/(frontend)/api/* = 36: 33 data (families §4 + admin §5 + executor)│
+   │  src/app/(frontend)/api/* = 40: 37 data (families §4 + admin §5 + executor)│
    │                            + 3 auth                                     │
    └──────┬────────────────────────────────────────────┬──────────────────────┘
           │ Postgres (treasury, synced every 5 min     │ keyless upstreams:
@@ -73,8 +70,8 @@ origin; DR-002 — no third-party deploy target, ever).
                                           cache + single-flight)
 
           │ cryptorank.io, api.llama.fi and khala.io are NOT fetched here any
-          ▼ more — /api/{cryptorank,llama,khala} are thin proxies (no validation,
-            no shaping; body+status forwarded verbatim; DR-005/006/008)
+          ▼ more — /api/{cryptorank,llama} are thin proxies (no validation,
+            no shaping; body+status forwarded verbatim; DR-005/009)
    ┌───────── backend/data (Go, fudcourt-data :3101) ──────────┐
    │  three families, three clients (DR-005/006/008):               │
    │  · cryptorank: mode/key validation, disabled-mode refusal      │
@@ -92,13 +89,12 @@ a self-confirmation); it is no longer a runtime path — [DR-005](../records/DEC
 
 The **`khala`** family lives in the same sidecar (PLAN G8, [DR-006](../records/DECISIONS.md))
 with a deliberately **different client**: a plain `net/http` fetcher in a single Go
-package `backend/data/internal/research/khala/`, plus a typing-only TS mirror
-(`src/features/khala/client.ts`). Measured upstream (2026-09-29): khala.io answers **200** to a
+package `backend/data/internal/research/khala/`. Measured upstream (2026-09-29): khala.io answers **200** to a
 non-browser UA with no Cloudflare in the path at all, so the `chrome_131`
 ClientHello stack above is **required for cryptorank only and must never be
-generalised** into a shared client (DR-006, DESIGN.md D1/D9). It is registered on
-the sidecar's mux and served (measured: `:3101/healthz` →
-`{"build":"28 modes","khala":"3 modes","llama":"3 modes"}`; `/api/khala` → 200).
+generalised** into a shared client (DR-006, DESIGN.md D1/D9). Its web board is removed
+(DR-041); it is registered on the sidecar's mux and served API-only (measured: `:3101/healthz` →
+`{"build":"28 modes","khala":"3 modes","llama":"3 modes"}`; `:3101/api/khala` → 200).
 
 The **`llama`** family joined the same sidecar the same day (PLAN G9 SG-9.3,
 [DR-009](../records/DECISIONS.md)) as `backend/data/internal/research/llama/`: a JSON pass-through
@@ -169,10 +165,8 @@ the full judgment record for the grouping is §4 of that file.
 | public | market · trench | `/market/trench` | `MarketHub section="trench"` → `DexPage` · `TrenchPage` | `/api/dex?type=profiles&limit=50` |
 | public | signals | `/signals` | `SignalsPage` | `/api/signals?chain&type` |
 | public | scoreboard | `/scoreboard` | `ScoreboardPage` | `/api/signals?type=scoreboard` |
-| public | chainrank | `/chainrank` | `ChainrankPage` | `/api/chainrank?mode=listings/stats` |
 | public | cryptorank | `/cryptorank` | `CryptorankPage` | `/api/cryptorank?mode=…` (28 modes) |
 | public | news | `/news` | `NewsPage` | `/api/news?limit=30` |
-| public | khala (served: sidecar mux + `:3100` route; `verify-khala.py` **136/0/0**) | `/khala` | `KhalaPage` | `/api/khala?mode=reports` · `/api/khala?mode=report&key=…` · `/api/khala?mode=latest&limit=N` |
 
 Legacy `/portfolio` now **307s** to `/team/portfolio` (it used to rewrite to
 `/`, which is now a duplicate of the landing page). The boards that folded into
@@ -186,14 +180,16 @@ inside a feature slice.
 ## 4. Data families (the contract spine)
 
 Every upstream source is **keyless** (owner decision: no API keys — HTML/endpoint
-reverse-engineering or public feeds only). Each family: one route, one `src/features/<family>/` slice
-(client + shaper/types + panel) and one verifier script — see DR-018.
+reverse-engineering or public feeds only). Each family with a web surface: one route, one `src/features/<family>/` slice
+(client + shaper/types + panel) and one verifier script — see DR-018. `chainrank` and `khala` are the
+exceptions after DR-041: their web route and feature slice are removed, so each is a sidecar package
+plus its verifier only.
 
 | Family | Upstream | Route(s) | Contract | Verifier | Trust |
 |---|---|---|---|---|---|
 | **treasury** | Postgres `public` (own data, DR-040) | `/api/all`, `/coins`, `/wallets`, `/reconcile`, `/transactions(+/[id])` | `src/platform/db/client.ts` (env-ref only); `/reconcile` is a proxy to the **Rust** `fudcourt-reconciled` `:3102` (DR-014) | `check-contract.py` (mutation-guard) + `sync-live.py` fail-loud + `verify-reconcile.py` (28 checks incl. live TS↔Rust parity) | INTERNAL |
 | **cryptorank** | cryptorank.io SSR (RE) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/cryptorank` (28 modes, thin proxy to `fudcourt-data`) | runtime: `backend/data/internal/research/cryptorank` · TS mirror `src/features/cryptorank/client.ts` + `src/features/cryptorank/shapers.ts` | `verify-cryptorank.py` 244 checks (oracle `tests/oracle/cr_fetch.py`) · 3-gate · shaper fixtures 56/56 | GATED |
-| **chainrank** | chainrank.fyi — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/chainrank` (2 modes, thin verbatim proxy to `fudcourt-data`) | runtime: **`backend/data/internal/research/chainrank`** (mode table, pagination relayed verbatim into the upstream URL and the cache key, explicit 32-entry cache ceiling, shape check); `src/features/chainrank/client.ts` is the typing/display mirror + the documented write surface | `verify-chainrank.py` 50 checks (incl. the relay matrix vs real upstream) | GATED |
+| **chainrank** | chainrank.fyi — fetched by the Go `fudcourt-data` sidecar :3101, not by the web app (web surface removed, DR-041) | sidecar `/api/chainrank` (2 modes; no web route) | runtime: **`backend/data/internal/research/chainrank`** (mode table, pagination relayed verbatim into the upstream URL and the cache key, explicit 32-entry cache ceiling, shape check) | `verify-chainrank.py` 50 checks (incl. the relay matrix vs real upstream) | GATED |
 | **llama** | api.llama.fi — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/llama` (3 modes, thin proxy to `fudcourt-data`) | runtime: **`backend/data/internal/research/llama`** (mode table, strict `top`/`days`, in-process 15 s TTL cache + single-flight, sort/trim); `src/features/llama/client.ts` is the typing/display mirror | `verify-llama.py` 51 checks (incl. anti-fake parity against a direct `/v2/chains`) | GATED |
 | **dex** | dexscreener | `/api/dex` | `src/features/dex/client.ts` | `verify-dex.py` | GATED |
 | **signals** | data-public.vercel.app (external dataset) | `/api/signals` | route-local | `verify-signals.py` | GATED |
@@ -201,7 +197,7 @@ reverse-engineering or public feeds only). Each family: one route, one `src/feat
 | **market** (hub sections) | open.er-api.com (forex, ECB daily) + Yahoo Finance chart (commodity, stock) — all keyless | `/api/market/forex`, `/api/market/commodity`, `/api/market/stock` (`?region=us\|asia\|europe`) | `src/features/market/forex/client.ts` + `src/features/market/{commodity,stock}/client.ts`, sharing `src/features/market/quotes.ts` | `verify-all.sh` (tsc + shapers); live: 3 boards 200, `?region=amer` → 400; deep verifier pending | **SMOKE** — deep verifier pending |
 | **ticker** | 10 CEX natives via CCXT (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) | `/api/ticker`, `/api/ticker/instruments`, `/api/ticker/instrument` | `src/features/ticker/client.ts` | route sweep (status/shape/400 contract); deep verifier pending | **SMOKE** — deep verifier pending |
 | **news** | cointelegraph.com/rss — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/news` (thin verbatim proxy to `fudcourt-data`) | runtime: **`backend/data/internal/research/news`** (feed table, strict `source`/`limit` 1..100, RSS parse into the six-key projection, in-process 15 s TTL cache + single-flight keyed on the FEED URL); `src/features/news/client.ts` is the typing/display mirror | `verify-news.py` 50 checks (incl. anti-fake parity against a direct feed fetch) | GATED |
-| **khala** (wired: the sidecar mux serves `/api/khala`; `verify-khala.py` **136/0/0**) | khala.io (Framer SSR; `framerusercontent.com` search index unused by design) | `/api/khala` (**3 modes**: `reports`, `report`, `latest`; thin verbatim proxy to `fudcourt-data`; `upstream` scalar, provenance in `slice`, structured `body` — no HTML shipped) | runtime: **`backend/data/internal/research/khala`** — one Go package (no 3-way split: this family has one upstream artifact, not three). Its TS side is a **typing/display mirror only** (`src/features/khala/client.ts`: mode list, key regex, `limit` bounds, envelope types) — the route validates nothing, so the sidecar stays the single validator; that is why `check-contract.py` carries **no** khala table pair (contrast the cryptorank row above, whose two real mode tables are kept equal by that gate) — [DR-006](../records/DECISIONS.md) | `verify-khala.py` — **written, not run by this doc's author**; its recorded artifact `frontend/web/scripts/verify/khala-report.json` (scratch `:4101` adapter) reports **133 pass / 1 fail / 0 skip**; 2 independent ground-truth gates (sitemap slug-set equality · site title/date parity, oracle = direct khala.io fetches) | **SMOKE** — GATED not claimed until it runs green against a served endpoint |
+| **khala** (sidecar-only after DR-041: the Go mux serves `/api/khala`; `verify-khala.py` **136/0/0**) | khala.io (Framer SSR; `framerusercontent.com` search index unused by design) | sidecar `/api/khala` (**3 modes**: `reports`, `report`, `latest`; no web route after DR-041; `upstream` scalar, provenance in `slice`, structured `body` — no HTML shipped) | runtime: **`backend/data/internal/research/khala`** — one Go package (no 3-way split: this family has one upstream artifact, not three). Its TS typing/display mirror was removed with the board (`features/khala/`, DR-041) — the route never validated, so the sidecar stays the single validator; that is why `check-contract.py` carries **no** khala table pair — [DR-006](../records/DECISIONS.md) | `verify-khala.py` — the live sidecar harness, run green against `:3101`: **136 pass / 0 fail / 0 skip**; 2 independent ground-truth gates (sitemap slug-set equality · site title/date parity, oracle = direct khala.io fetches) | **GATED** — `verify-khala.py` green against the served `:3101` sidecar |
 | **coinglass** | capi.coinglass.com (dashboard backend, keyless by DECRYPTION: AES-128-ECB ×2 + gzip) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/coinglass` (4 modes: `statistics`, `openInterest`, `fundingRate`, `markets`; thin verbatim proxy to `fudcourt-data`, forwarding `X-CG-Upstream`/`X-CG-Cache`/`X-CG-Cipher`) | runtime: **`backend/data/internal/research/coinglass`** (mode table, param scoping, the `v` rotation table, decrypt+gunzip, 60 s disk-cache TTL keyed on the upstream URL, shape check); `src/features/coinglass/client.ts` is the typing/display mirror | no dedicated verifier yet (the family's hermetic tests + live probes stand in); `check-contract.py` keeps `CG_MODES` TS↔Go equal + the route a proxy | GATED |
 | **coinank** | api.coinank.com (dashboard backend, keyless by a COMPUTED client signature) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/coinank` (5 modes: `fundingRate`, `liquidation`, `longShort`, `etf`, `whales`; thin verbatim proxy to `fudcourt-data`, forwarding `X-CA-Upstream`/`X-CA-Cache`) | runtime: **`backend/data/internal/research/coinank`** (mode table, the `interval` allowlist, the reconstructed signature, 60 s disk-cache TTL keyed on the upstream URL, shape check); `src/features/coinank/client.ts` is the typing/display mirror | `verify-coinank.py` 114 checks; `check-contract.py` keeps `CN_MODES` TS↔Go equal + the route a proxy | GATED (DARK — every mode is upstream's 502 `403`; DR-038) |
 | **coinmarketcap** | api.coinmarketcap.com/data-api/v3 (dashboard backend, keyless by having NO credential at all) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/coinmarketcap` (4 modes: `listing`, `global`, `marketPairs`, `exchanges`; thin verbatim proxy to `fudcourt-data`, forwarding `X-CMC-Upstream`/`X-CMC-Cache`) | runtime: **`backend/data/internal/research/coinmarketcap`** (mode table, param scoping, LOCAL `start`/`limit` bounds validated before any fetch, 60 s disk-cache TTL keyed on the upstream URL, shape check); `src/features/coinmarketcap/client.ts` is the typing/display mirror | `verify-coinmarketcap.py` 70 checks (incl. a direct oracle); `check-contract.py` keeps `CMC_MODES` TS↔Go equal + the route a proxy | GATED |
@@ -240,7 +236,7 @@ implies team implies member.
 
 | Tier | Reaches | Enforced by |
 |---|---|---|
-| `public` | `/`, the 7 market boards (`BOARD_TABS`), public market APIs | none (deliberate) |
+| `public` | `/`, the market boards (`BOARD_TABS`: `market`, `signals`, `scoreboard`, `news`), public market APIs | none (deliberate) |
 | `member` | `/member` | middleware + page `requireTier('member')` |
 | `team` | `/team/{balance,portfolio,wallets,transactions,reconciliation}` + treasury APIs | middleware + page + server-side write check |
 | `admin` | `/admin` (member list, role grant/revoke, treasury audit) + `/api/admin/members` | middleware + page + API re-check |
@@ -257,15 +253,13 @@ implies team implies member.
   reads the session server-side and mounts `StoreShell` with `isTeam`, which
   gates both the fetch and every treasury render.
 - `public/robots.txt` does not exist as a file — `src/app/robots.ts` serves real
-  `text/plain` and `src/app/(frontend)/sitemap.ts` yields **43** `<loc>` entries
-  (re-derived 2026-10-01 from the source: `PUBLIC_ROUTES` in
+  `text/plain` and `src/app/(frontend)/sitemap.ts` yields **41** `<loc>` entries
+  (re-derived 2026-10-03 from the source: `PUBLIC_ROUTES` in
   `src/platform/routing/public-routes.ts` — the single source of truth for the crawl
-  tier — holds **13** entries, plus **30** per-coin `/ticker/<base>` pages enumerated
-  from `TICKER_SYMBOLS`). The older "**42** = 12 static + 30 ticker" figure was derived
-  from a count of `path:` tokens (one entry's doc comment also contains the word) and
-  is stale: the 13th static route is `/blog`, added by the DR-017 merge
-  (`/blog` is public and crawlable; individual posts are not enumerated — the index
-  links them). `curl -s :3100/sitemap.xml | grep -c '<loc>'` re-confirms the served
+  tier — holds **11** entries, plus **30** per-coin `/ticker/<base>` pages enumerated
+  from `TICKER_SYMBOLS`). The `/chainrank` and `/khala` boards left `PUBLIC_ROUTES`
+  with their pages (DR-041); `/blog` is public and crawlable (individual posts are not
+  enumerated — the index links them). `curl -s :3100/sitemap.xml | grep -c '<loc>'` re-confirms the served
   count on any running build.
 
 ## 6. Trust classes
@@ -274,11 +268,10 @@ implies team implies member.
   body, strict params, honest labels, cache observability, and independent
   ground-truth gates (§4 table). Cryptorank additionally has the full
   3-gate decoy detector + offline fixture suite.
-- **SMOKE** — monitor asserts status/shape only (currently: news). `khala` files here
-  for now: its verifier **exists** (`verify-khala.py`) but its recorded run was against
-  a **scratch :4101 adapter** (133 pass / 1 fail / 0 skip), it is not in `monitor.py`'s
-  `CHECKS`, and the production sidecar does not serve the route — so GATED is **not**
-  claimed (PLAN G8 / [DR-006](../records/DECISIONS.md)).
+- **SMOKE** — monitor asserts status/shape only (currently: news). `khala` is **sidecar-only**
+  after DR-041: its board, Next proxy route and `monitor.py` probe are gone, and
+  `verify-khala.py` (run against `:3101`) is its standing live check
+  (PLAN G8 / [DR-006](../records/DECISIONS.md)).
 - **INTERNAL** — our own database. Gated by the Discord session tier: the
   treasury reads (`/api/all`, `/api/wallets`, `/api/coins`, `/api/reconcile`,
   `/api/transactions`) require `team`, and every write additionally re-checks
@@ -291,8 +284,8 @@ implies team implies member.
 
 | Tier | What | Where it runs |
 |---|---|---|
-| Offline | `check-contract.py` (CR_MODES ↔ sweep consistency + **TS↔Go mode-table parity** + **khala KH_MODES parity** + **news NEWS_SOURCES parity** + **chainrank CR_MODES parity** + mutation-guard + proxy-shape), `test:shapers` (`240 tests` as of 2026-10-01), `tsc`, both builds (Bun), `cargo build/test` (backend/sync), `go build/vet/test` (backend/data: cryptorank + khala + llama + news + chainrank packages — **179** `func Test` as of 2026-10-01, was 111 in the 2026-09-29 figure this row used to carry) | pre-push hook + CI on every push |
-| Live | per-family verifiers (§4) — plus `verify-khala.py` **green against the served sidecar: 136 pass / 0 fail / 0 skip, 6.7 s** (`--base http://127.0.0.1:3101`; GATED met 2026-09-29, PLAN G8 ✅), cryptorank harness (244 checks; since DR-005 run it against the Go sidecar for a full pass — through :3100 the DR-004 inbound budget stops a ~55-call run, PLAN G7 SG-7.6), route sweep **154/165** (18 page checks = 13 HTML + `/robots.txt` + `/sitemap.xml` + 3 real-404 retired/unknown · 7 gate-307 · 47 API incl. the whole ticker, llama, news and chainrank families · 7 mut no-session 401 · 10 session-gated probes · 58 CR · 17 khala; 11 fails = 1 CoinGecko 403 passthrough + 10 session-gated probes unrunnable because no `FUDCOURT_SESSION_SECRET` exists on this host, ANALYSIS K-11) *(sweep figures are the 2026-09-29 recorded run — a point-in-time measurement, not a live claim)*, DOM audit of the /tracker board (asserts /api/markets is proxied and the browser never calls CoinGecko) | on demand + this repo's loop |
+| Offline | `check-contract.py` (CR_MODES ↔ sweep consistency + **TS↔Go mode-table parity** + **news NEWS_SOURCES parity** + mutation-guard + proxy-shape; the **khala** and **chainrank** parity blocks became “web surface removed (sidecar-only)” rows at DR-041), `test:shapers` (`240 tests` as of 2026-10-01), `tsc`, both builds (Bun), `cargo build/test` (backend/sync), `go build/vet/test` (backend/data: cryptorank + khala + llama + news + chainrank packages — **179** `func Test` as of 2026-10-01, was 111 in the 2026-09-29 figure this row used to carry) | pre-push hook + CI on every push |
+| Live | per-family verifiers (§4) — plus `verify-khala.py` **green against the served sidecar: 136 pass / 0 fail / 0 skip, 6.7 s** (`--base http://127.0.0.1:3101`; GATED met 2026-09-29, PLAN G8 ✅), cryptorank harness (244 checks; since DR-005 run it against the Go sidecar for a full pass — through :3100 the DR-004 inbound budget stops a ~55-call run, PLAN G7 SG-7.6), route sweep (the 2026-09-29 recorded run was **154/165**: 18 page checks = 13 HTML + `/robots.txt` + `/sitemap.xml` + 3 real-404 retired/unknown · 7 gate-307 · API incl. the whole ticker, llama and news families · mut no-session 401 · session-gated probes · 58 CR; 11 fails = 1 CoinGecko 403 passthrough + 10 session-gated probes unrunnable because no `FUDCOURT_SESSION_SECRET` exists on this host, ANALYSIS K-11 — a point-in-time measurement, not a live claim; DR-041 has since removed the chainrank probes and the khala group F from the sweep), DOM audit of the /tracker board (asserts /api/markets is proxied and the browser never calls CoinGecko) | on demand + this repo's loop |
 | Continuous | `monitor.py` — unit active + 8 endpoint checks (board page, 5 cryptorank modes incl. decoy-refusal 503, markets, news), deterministic output, parallel | cron `f191fe6df16c` every 15 min, silent when `HEALTHY` |
 
 ## 8. Deploy & hosting (DR-002)
@@ -419,8 +412,8 @@ the requested figure and the computed ceiling.
 | Blog public hostname (e.g. `blog.fc…` ingress) | **closed by DR-017** — the merge removed the reason for a second hostname: the blog is public on the existing origin at `https://fc.dwirijal.my.id/blog` (verified 200), so no second ingress is needed |
 | Signals dataset provenance (`data-public.vercel.app` is third-party) | documented; verifier asserts shape/parity only |
 | DOM audit coverage for non-tracker views (`/tracker` is now audited; every other board is not) | gap tracked as ANALYSIS K-6 |
-| `khala` **runtime wiring** | ✅ **closed 2026-09-29** — the sidecar's mux registers `/api/khala` (SG-8.3) and the `:3100` build carries the route. Measured: `:3101/healthz` → `{"build":"28 modes","khala":"3 modes"}`, `:3101/api/khala?mode=reports` → **200**, `:3100/api/khala?mode=reports` → **200**, public `https://fc.dwirijal.my.id/api/khala?mode=reports` → 200; `verify-khala.py` **136/0/0** — design frozen in `/home/dwizzy/khala-probe/DESIGN.md` ([DR-006](../records/DECISIONS.md)); residual limits in PLAN SG-8.10 |
-| `khala` monitor check + route-sweep entry + `check-contract.py` proxy guard | ✅ **closed 2026-09-29** — all three carry khala; measured sweep group F = 17/17 (3 modes + strict-param 400s + real-404 decoy) |
+| `khala` **runtime wiring** | **superseded by DR-041** — the `:3100` web route and the public path are removed; the sidecar's mux still registers `/api/khala` (SG-8.3). Measured: `:3101/healthz` → `{"build":"28 modes","chainrank":"2 modes","khala":"3 modes"}`, `:3101/api/khala?mode=reports` → **200**; `verify-khala.py` **136/0/0** against the sidecar — design frozen in `/home/dwizzy/khala-probe/DESIGN.md` ([DR-006](../records/DECISIONS.md)) |
+| `khala` monitor check + route-sweep entry + `check-contract.py` proxy guard | **reversed by DR-041** — the web board, its `monitor.py` check, the route-sweep group F and the `check-contract.py` proxy guard are all removed with the web surface; the sidecar family itself is unchanged |
 | `khala` list rows carry **no date keys at all** (absent, not null) — the homepage publishes none, so a list date would need an N+1 fan-out | by design — PLAN SG-8.10, DESIGN.md D4 |
 | `khala` `body` flattens inline markup (links/emphasis) into `text`, so no HTML crosses the API and no sanitizer is needed | accepted tradeoff — DESIGN.md D7 / [DR-006](../records/DECISIONS.md) |
 | Framer markup fragility: `data-framer-name` holds stale placeholder copy, class names/sentinels can change on any republish, and the `searchIndex-<hash>` name rotates | by design (loud 502 drift arm) — DESIGN.md D2/D6/F1/F2 |

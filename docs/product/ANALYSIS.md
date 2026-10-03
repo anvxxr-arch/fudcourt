@@ -27,6 +27,11 @@ Analyzed at remote head `957836d` (2026-09-27), local `main` identical
    sync-live.py ──(exact balance; RPC fail ⇒ raise, never 0)
 ```
 
+> **DR-041 (2026-10-03):** the `/chainrank` and `/khala` *boards* (the Next pages and their
+> `/api/*` proxies) were removed. The acquisition families stay API-only on the `backend/data`
+> sidecar, so `chainrank.fyi` and `khala.io` remain data sources — they simply no longer have a
+> web page in `frontend/web`.
+
 **Layering is clean:** UI (`CryptorankPage.tsx` + 11 pages) → mode-only API
 routes (client can never pass a raw path) → **for cryptorank a Go sidecar
 (`backend/data` :3101) holding the allowlist, the cache and the
