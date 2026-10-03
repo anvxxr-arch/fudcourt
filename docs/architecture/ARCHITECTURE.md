@@ -138,11 +138,17 @@ the full judgment record for the grouping is §4 of that file.
 - `src/app/(frontend)/page.tsx` (`/`) is the **landing page** — it mounts `features/home/ui.tsx`,
   not the shell. It reads the session **server-side** only to choose its second call to action
   (a team visitor gets `/team/balance`, everyone else `/login`), and it renders no treasury data:
-  an anonymous visitor never even requests the treasury bundle. Its market header and top-coins
-  board compose two existing public families read-only — `/api/cryptorank?mode=home` and
-  `/api/markets?limit=10&sort=mcap&order=desc`. The sort is passed **explicitly** because the
-  route's default is `sort=volume`; a bare `?limit=10` would be a volume board under a
-  market-cap heading.
+  an anonymous visitor never even requests the treasury bundle. It adds no route of its own: every
+  section is a read-only read of a public family that already ships, and each degrades
+  independently — one upstream failing withholds that section (loud banner, never a zero-filled
+  grid) without taking its siblings down. The families it composes: `/api/cryptorank?mode=home`
+  (market header + funding/launch slices), `/api/markets?limit=10&sort=mcap&order=desc`,
+  `/api/cryptorank?mode={trending,gainers,losers}`, `/api/llama?mode=protocols`,
+  `/api/market/{forex,commodity}`, `/api/market/stock?region=us`, `/api/news?limit=6` and
+  `/api/signals?type=scoreboard`. The `sort` on the markets call is passed **explicitly** because
+  the route's default is `sort=volume`; a bare `?limit=10` would be a volume board under a
+  market-cap heading. `/api/signals` without `type=scoreboard` is deliberately NOT read: the
+  index payload is ~2.7 MB / 7310 rows.
 - Deep links under `/team/**` and `/admin/**` call `requireTier(...)` before rendering.
 - Public deep links (`/market/crypto`, `/market/trench`, `/signals`, `/scoreboard`, `/news`, …)
   are one-line wrappers: `<StoreShell initialPage="…" />` — no server data of their own.
@@ -161,7 +167,7 @@ the full judgment record for the grouping is §4 of that file.
 | team | reconciliation | `/team/reconciliation` | `ReconciliationPage` | props |
 | member | overview | `/member` | shell (boards) | session only |
 | admin | control panel | `/admin` | `MemberTable` + audit | `/api/admin/members` + `/api/all` |
-| public | home | `/` | `HomePage` | `/api/cryptorank?mode=home` + `/api/markets?limit=10&sort=mcap&order=desc` |
+| public | home | `/` | `HomePage` (10 sections) | `/api/cryptorank?mode={home,trending,gainers,losers}` · `/api/markets` · `/api/llama?mode=protocols` · `/api/market/{forex,commodity,stock}` · `/api/news` · `/api/signals?type=scoreboard` |
 | public | market (hub) | `/market` | `MarketHub` (section overview) | — (links the sections below) |
 | public | market · crypto | `/market/crypto` | `MarketHub section="crypto"` → `TickerPage` · `TrackerPage` · `LlamaPage` | `/api/ticker?sort&order&type` · `/api/markets` · `/api/llama?mode=chains/protocols/historical` |
 | public | market · coin | `/market/ticker/[ticker]` | `TickerDetailPage` | `/api/ticker/instruments?symbol` + `/api/ticker/instrument?base&type&expiry&strike&kind` |

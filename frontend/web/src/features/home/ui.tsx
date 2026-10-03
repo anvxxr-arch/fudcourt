@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { alpha, color, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
 import { Badge } from '@/components/ui/badge';
@@ -9,32 +9,53 @@ import { Loading } from '@/components/ui/feedback';
 import { Stat } from '@/components/ui/stat';
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import {
+  COMMODITY_URL,
   CR_HOME_URL,
   DASH,
+  DEFI_PROTOCOLS_URL,
+  FOREX_URL,
+  GAINERS_URL,
+  LOSERS_URL,
   MARKETS_TOP_URL,
+  NEWS_URL,
+  SCOREBOARD_URL,
+  STOCK_US_URL,
   TOP_LIMIT,
+  TRENDING_URL,
   fmtDate,
   fmtGas,
   fmtNum,
   fmtPct,
   fmtPrice,
+  fmtRate,
   fmtUsdCompact,
+  fmtX,
   toneOf,
   type CrHome,
+  type CrMovers,
+  type CrTrending,
+  type ForexEnvelope,
+  type LlamaProtocols,
   type MarketsEnvelope,
+  type NewsEnvelope,
+  type QuotesEnvelope,
+  type ScoreboardBucket,
+  type ScoreboardCatch,
+  type ScoreboardPayload,
 } from './client';
 
 /**
  * The landing page (`/`).
  *
- * Read-only: it composes the two public families the boards already serve
- * (`mode=home` + `/api/markets`) and links into the routed surfaces. It is NOT
- * a second shell — the nav lives in `components/layout/store-shell.tsx`; this
- * page only answers "what is FUDCOURT, and what is the market doing right now".
+ * Read-only: it composes the public families the boards already serve and links
+ * into the routed surfaces. It is NOT a second shell — the nav lives in
+ * `components/layout/store-shell.tsx`; this page only answers "what is FUDCOURT,
+ * and what is the market doing right now".
  *
- * Honesty rules it inherits from the boards: a failed fetch with nothing cached
- * renders a loud banner and WITHHOLDS the section (never a zero-filled grid),
- * and every absent metric renders `—`.
+ * Every section is an independent fetch. A family that fails renders a loud
+ * banner and WITHHOLDS its body (never a zero-filled grid), and it does not take
+ * its siblings down with it: a CryptoRank outage leaves the DeFi, cross-asset
+ * and news panels intact. Every absent metric renders `—`, never `0`.
  */
 
 const DESTINATIONS: { href: string; label: string; blurb: string }[] = [
@@ -65,60 +86,281 @@ const DESTINATIONS: { href: string; label: string; blurb: string }[] = [
   },
 ];
 
+// ---- shared styles (token-only; the design gate forbids literals here) ------
+
 const cardStyle: React.CSSProperties = {
   background: color.surface,
   border: `1px solid ${color.border}`,
   borderRadius: radius[8],
   padding: space[14],
 };
+const h2Style: React.CSSProperties = {
+  margin: `0 0 ${space[10]}px`,
+  color: color.accent,
+  fontSize: fontSize[14],
+  fontWeight: fontWeight.bold,
+  letterSpacing: letterSpacing.wide,
+};
+const h3Style: React.CSSProperties = {
+  margin: `0 0 ${space[10]}px`,
+  color: color.accent,
+  fontSize: fontSize[12],
+  fontWeight: fontWeight.bold,
+  letterSpacing: letterSpacing.wide,
+};
+const noteStyle: React.CSSProperties = {
+  margin: `${space[8]}px 0 0`,
+  color: color.textMuted,
+  fontSize: fontSize[10],
+};
+const listRowStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'baseline',
+  gap: space[8],
+  fontSize: fontSize[11],
+};
+const theadRowStyle: React.CSSProperties = {
+  color: color.textMuted,
+  textAlign: 'left',
+  borderBottom: `1px solid ${color.border}`,
+};
+const rowStyle: React.CSSProperties = { borderBottom: `1px solid ${alpha(color.border, 0.4)}` };
+
+// ---- primitives -------------------------------------------------------------
+
+/** One fetch, one state machine. `alive` guards a setState after unmount. */
+function useJson<T>(url: string) {
+  const [data, setData] = useState<T | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setError('');
+    fetch(url, { cache: 'no-store' })
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<T>;
+      })
+      .then(j => { if (alive) { setData(j); setLoading(false); } })
+      .catch(e => { if (alive) { setError(e instanceof Error ? e.message : String(e)); setLoading(false); } });
+    return () => { alive = false; };
+  }, [url]);
+  return { data, error, loading };
+}
+
+/** A titled section whose body is withheld on error and never zero-filled. */
+function Panel<T>({
+  title,
+  url,
+  label,
+  render,
+}: {
+  title: string;
+  url: string;
+  label?: string;
+  render: (d: T) => React.ReactNode;
+}) {
+  const { data, error, loading } = useJson<T>(url);
+  return (
+    <section style={{ marginBottom: space[24] }}>
+      <h2 style={h2Style}>{title}</h2>
+      {error && (
+        <Banner variant="error">
+          {title} unavailable — {error}. Section withheld rather than rendered empty.
+        </Banner>
+      )}
+      {loading && !error && <Loading label={label ?? `reading ${title.toLowerCase()}…`} />}
+      {!error && data != null && render(data)}
+    </section>
+  );
+}
+
+/** A signed percent, coloured by sign; absent -> `—` in the muted tone. */
+function Change({ v, digits = 2 }: { v: number | null | undefined; digits?: number }) {
+  const t = toneOf(v);
+  const c = t === 'negative' ? color.negative : t === 'positive' ? color.positive : color.textMuted;
+  return <span style={{ color: c }}>{fmtPct(v, digits)}</span>;
+}
+
+/**
+ * Symbol + optional name, with the coin icon (or a neutral disc when absent).
+ *
+ * A venue sometimes lists a coin with no ticker yet (pre-launch): the symbol is
+ * the empty string and every metric is null. The label falls back to the name so
+ * the row is identifiable, and the absent metrics stay `—` — the row is not
+ * dropped, because "trending, price unpublished" is real information.
+ */
+function CoinCell({ image, symbol, name }: { image: string | null; symbol: string | null; name?: string | null }) {
+  const label = symbol || name || DASH;
+  const sub = symbol && name ? name : null;
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[6] }}>
+      {image
+        ? <img src={image} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
+        : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.border, display: 'inline-block' }} />}
+      <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{label}</span>
+      {sub ? <span style={{ color: color.textMuted }}>{sub}</span> : null}
+    </span>
+  );
+}
+
+// ---- sections that need more than a single fetch ----------------------------
+
+/** One column of the gainers/losers pair. */
+function MoversColumn({ title, url }: { title: string; url: string }) {
+  const { data, error, loading } = useJson<CrMovers>(url);
+  return (
+    <div style={cardStyle}>
+      <h3 style={h3Style}>{title}</h3>
+      {error && <Banner variant="error">{error}</Banner>}
+      {loading && !error && <Loading label={`reading ${title.toLowerCase()}…`} />}
+      {!error && data && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
+          {data.rows.slice(0, 6).map((r, i) => (
+            <div key={`${r.key ?? r.symbol ?? 'row'}-${i}`} style={listRowStyle}>
+              <CoinCell image={r.image} symbol={r.symbol} />
+              <span style={{ color: color.text, whiteSpace: 'nowrap' }}>{fmtPrice(r.priceUsd)}</span>
+              <Change v={r.change24h} />
+            </div>
+          ))}
+        </div>
+      )}
+      {!error && data && <p style={noteStyle}>{data.changeSource} · {data.upstream}</p>}
+    </div>
+  );
+}
+
+/** FX majors. The upstream carries no change, so none is shown — never a fake 0%. */
+function FxColumn() {
+  const { data, error, loading } = useJson<ForexEnvelope>(FOREX_URL);
+  return (
+    <div style={cardStyle}>
+      <h3 style={h3Style}>FX majors</h3>
+      {error && <Banner variant="error">{error}</Banner>}
+      {loading && !error && <Loading label="reading FX majors…" />}
+      {!error && data && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
+          {data.pairs.slice(0, 5).map(p => (
+            <div key={p.pair} style={listRowStyle}>
+              <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{p.pair}</span>
+              <span style={{ color: color.text }}>{fmtRate(p.rate)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {!error && data && <p style={noteStyle}>base {data.base} · {data.derived}</p>}
+    </div>
+  );
+}
+
+/** Commodities or stock indices — the same Yahoo shape, one column each. */
+function QuoteColumn({ title, url }: { title: string; url: string }) {
+  const { data, error, loading } = useJson<QuotesEnvelope>(url);
+  return (
+    <div style={cardStyle}>
+      <h3 style={h3Style}>{title}</h3>
+      {error && <Banner variant="error">{error}</Banner>}
+      {loading && !error && <Loading label={`reading ${title.toLowerCase()}…`} />}
+      {!error && data && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
+          {data.quotes.slice(0, 5).map(q => (
+            <div key={q.symbol} style={listRowStyle}>
+              <span style={{ color: color.text, fontWeight: fontWeight.bold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.name}</span>
+              <span style={{ color: color.text, whiteSpace: 'nowrap' }}>{fmtPrice(q.price)}</span>
+              <Change v={q.changePercent} />
+            </div>
+          ))}
+        </div>
+      )}
+      {!error && data && (
+        <p style={noteStyle}>
+          {data.derived}{data.failed.length > 0 ? ` · failed: ${data.failed.join(', ')}` : ''}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Signal quality — the cohort scoreboard. `run`/`flat`/`dump` are the UPSTREAM's
+ * outcome buckets over the cohort window, not our verdict on a token, so the
+ * panel labels them as such rather than implying the board endorses a call.
+ */
+function SignalQuality() {
+  const { data, error, loading } = useJson<ScoreboardPayload>(SCOREBOARD_URL);
+  const entries = data ? Object.entries(data.chains).filter(([, c]) => c.latest) : [];
+  const catches: ScoreboardCatch[] = data ? Object.values(data.chains).flatMap(c => c.catches) : [];
+  const best = catches.reduce<ScoreboardCatch | null>(
+    (a, b) => ((b.x24h ?? -Infinity) > (a?.x24h ?? -Infinity) ? b : a),
+    null
+  );
+  return (
+    <section style={{ marginBottom: space[24] }}>
+      <h2 style={h2Style}>Signal quality</h2>
+      {error && (
+        <Banner variant="error">
+          signal quality unavailable — {error}. Section withheld rather than rendered empty.
+        </Banner>
+      )}
+      {loading && !error && <Loading label="reading the signal cohort…" />}
+      {!error && data && (
+        <>
+          <div style={{ overflowX: 'auto' }}>
+            <Table style={{ fontSize: fontSize[11] }}>
+              <THead>
+                <TR style={theadRowStyle}>
+                  <TH>Chain</TH>
+                  <TH>Cohort day</TH>
+                  <TH align="right">Tracked</TH>
+                  <TH align="right">Ran</TH>
+                  <TH align="right">Flat</TH>
+                  <TH align="right">Dumped</TH>
+                  <TH align="right">Unknown</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {entries.map(([chain, c]) => {
+                  const b = c.latest as ScoreboardBucket;
+                  return (
+                    <TR key={chain} style={rowStyle}>
+                      <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>{chain}</TD>
+                      <TD style={{ color: color.textMuted }}>{b.day}</TD>
+                      <TD align="right" style={{ color: color.text }}>{fmtNum(b.n)}</TD>
+                      <TD align="right" style={{ color: color.positive }}>{fmtNum(b.run)}</TD>
+                      <TD align="right" style={{ color: color.textMuted }}>{fmtNum(b.flat)}</TD>
+                      <TD align="right" style={{ color: color.negative }}>{fmtNum(b.dump)}</TD>
+                      <TD align="right" style={{ color: color.textMuted }}>{fmtNum(b.unknown)}</TD>
+                    </TR>
+                  );
+                })}
+              </TBody>
+            </Table>
+          </div>
+          {best && (
+            <p style={noteStyle}>
+              best cohort catch:{' '}
+              <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{best.symbol || DASH}</span>{' '}
+              <span style={{ color: color.accent }}>{fmtX(best.x24h)}</span> peak 24h · score{' '}
+              {fmtNum(best.score, 1)} · {best.decision || DASH} · {best.day}
+            </p>
+          )}
+          <p style={noteStyle}>
+            {data.cohortDays}-day cohort · run/flat/dump are the upstream&apos;s outcome buckets, not our verdict · {data.upstream}
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+
+// ---- the page ---------------------------------------------------------------
 
 export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
-  const [cr, setCr] = useState<CrHome | null>(null);
-  const [mk, setMk] = useState<MarketsEnvelope | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [crError, setCrError] = useState('');
-  const [mkError, setMkError] = useState('');
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setCrError('');
-    setMkError('');
-    const [crRes, mkRes] = await Promise.allSettled([
-      fetch(CR_HOME_URL, { cache: 'no-store' }),
-      fetch(MARKETS_TOP_URL, { cache: 'no-store' }),
-    ]);
-
-    // The market header is the page's spine: if it fails the hero is withheld.
-    if (crRes.status === 'fulfilled' && crRes.value.ok) {
-      setCr(await crRes.value.json());
-    } else {
-      setCr(null);
-      setCrError(
-        crRes.status === 'fulfilled'
-          ? `cryptorank HTTP ${crRes.value.status}`
-          : String(crRes.reason)
-      );
-    }
-
-    // The top-coins board is a second, independent family: it degrades on its
-    // own so a CryptoRank outage does not blank the coin list, and vice versa.
-    if (mkRes.status === 'fulfilled' && mkRes.value.ok) {
-      setMk(await mkRes.value.json());
-    } else {
-      setMk(null);
-      setMkError(
-        mkRes.status === 'fulfilled'
-          ? `markets HTTP ${mkRes.value.status}`
-          : String(mkRes.reason)
-      );
-    }
-
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const g = cr?.global;
+  const cr = useJson<CrHome>(CR_HOME_URL);
+  const g = cr.data?.global;
+  const live = !!cr.data;
 
   return (
     <div style={{ background: color.bg, minHeight: '100vh', color: color.text, fontFamily: fontFamily.mono, padding: space[20] }}>
@@ -129,7 +371,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
             <h1 style={{ margin: 0, color: color.accent, fontSize: fontSize[32], fontWeight: fontWeight.heavy, letterSpacing: letterSpacing.wider }}>
               FUDCOURT
             </h1>
-            <Badge variant={cr ? 'accent' : 'muted'}>{cr ? 'live' : loading ? 'connecting' : 'offline'}</Badge>
+            <Badge variant={live ? 'accent' : 'muted'}>{live ? 'live' : cr.loading ? 'connecting' : 'offline'}</Badge>
           </div>
           <p style={{ margin: `${space[8]}px 0 0`, color: color.textMuted, fontSize: fontSize[13], letterSpacing: letterSpacing.wide }}>
             Community · Terminal · Management
@@ -156,81 +398,43 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
           </div>
         </header>
 
-        {/* ---- global market header ------------------------------------------ */}
+        {/* ---- 1. global market header --------------------------------------- */}
         <section style={{ marginBottom: space[24] }}>
-          <h2 style={{ margin: `0 0 ${space[10]}px`, color: color.accent, fontSize: fontSize[14], fontWeight: fontWeight.bold, letterSpacing: letterSpacing.wide }}>
-            Market overview
-          </h2>
-
-          {crError && (
+          <h2 style={h2Style}>Market overview</h2>
+          {cr.error && (
             <Banner variant="error">
-              market overview unavailable — {crError}. The tiles are withheld rather than shown as zeroes.
+              market overview unavailable — {cr.error}. The tiles are withheld rather than shown as zeroes.
             </Banner>
           )}
-
-          {loading && !cr && !crError && <Loading label="reading the market header…" />}
-
+          {cr.loading && !cr.error && <Loading label="reading the market header…" />}
           {g && (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: space[10] }}>
-                <Stat
-                  label="Total market cap"
-                  value={fmtUsdCompact(g.totalMarketCap)}
-                  hint={fmtPct(g.totalMarketCapChangePercent)}
-                  tone={toneOf(g.totalMarketCapChangePercent)}
-                  valueSize={fontSize[20]}
-                />
-                <Stat
-                  label="24h volume"
-                  value={fmtUsdCompact(g.totalVolume24h)}
-                  hint={fmtPct(g.totalVolume24hChangePercent)}
-                  tone={toneOf(g.totalVolume24hChangePercent)}
-                  valueSize={fontSize[20]}
-                />
-                <Stat
-                  label="BTC dominance"
-                  value={g.btcDominance == null ? DASH : `${g.btcDominance.toFixed(2)}%`}
-                  hint={fmtPct(g.btcDominanceChangePercent)}
-                  tone={toneOf(g.btcDominanceChangePercent)}
-                  valueSize={fontSize[20]}
-                />
-                <Stat
-                  label="ETH dominance"
-                  value={g.ethDominance == null ? DASH : `${g.ethDominance.toFixed(2)}%`}
-                  hint={fmtPct(g.ethDominanceChangePercent)}
-                  tone={toneOf(g.ethDominanceChangePercent)}
-                  valueSize={fontSize[20]}
-                />
+                <Stat label="Total market cap" value={fmtUsdCompact(g.totalMarketCap)} hint={fmtPct(g.totalMarketCapChangePercent)} tone={toneOf(g.totalMarketCapChangePercent)} valueSize={fontSize[20]} />
+                <Stat label="24h volume" value={fmtUsdCompact(g.totalVolume24h)} hint={fmtPct(g.totalVolume24hChangePercent)} tone={toneOf(g.totalVolume24hChangePercent)} valueSize={fontSize[20]} />
+                <Stat label="BTC dominance" value={g.btcDominance == null ? DASH : `${g.btcDominance.toFixed(2)}%`} hint={fmtPct(g.btcDominanceChangePercent)} tone={toneOf(g.btcDominanceChangePercent)} valueSize={fontSize[20]} />
+                <Stat label="ETH dominance" value={g.ethDominance == null ? DASH : `${g.ethDominance.toFixed(2)}%`} hint={fmtPct(g.ethDominanceChangePercent)} tone={toneOf(g.ethDominanceChangePercent)} valueSize={fontSize[20]} />
                 <Stat label="Gas" value={fmtGas(g.gasGwei)} valueSize={fontSize[20]} />
                 <Stat label="Currencies tracked" value={fmtNum(g.allCurrencies)} valueSize={fontSize[20]} />
               </div>
-              <p style={{ margin: `${space[8]}px 0 0`, color: color.textMuted, fontSize: fontSize[10] }}>
-                source {cr?.upstream} · read {cr ? new Date(cr.fetchedAt * 1000).toISOString().replace('T', ' ').slice(0, 16) : DASH}Z · cache {cr?.cache}
+              <p style={noteStyle}>
+                source {cr.data?.upstream} · read {cr.data ? new Date(cr.data.fetchedAt * 1000).toISOString().replace('T', ' ').slice(0, 16) : DASH}Z · cache {cr.data?.cache}
               </p>
             </>
           )}
         </section>
 
-        {/* ---- top coins ----------------------------------------------------- */}
-        <section style={{ marginBottom: space[24] }}>
-          <h2 style={{ margin: `0 0 ${space[10]}px`, color: color.accent, fontSize: fontSize[14], fontWeight: fontWeight.bold, letterSpacing: letterSpacing.wide }}>
-            Top {TOP_LIMIT} by market cap
-          </h2>
-
-          {mkError && (
-            <Banner variant="error">
-              top-coins board unavailable — {mkError}. The table is withheld rather than rendered empty.
-            </Banner>
-          )}
-
-          {loading && !mk && !mkError && <Loading label="reading the top-coins pool…" />}
-
-          {mk && (
+        {/* ---- 2. top coins -------------------------------------------------- */}
+        <Panel<MarketsEnvelope>
+          title={`Top ${TOP_LIMIT} by market cap`}
+          url={MARKETS_TOP_URL}
+          label="reading the top-coins pool…"
+          render={d => (
             <>
               <div style={{ overflowX: 'auto' }}>
                 <Table style={{ fontSize: fontSize[11] }}>
                   <THead>
-                    <TR style={{ color: color.textMuted, textAlign: 'left', borderBottom: `1px solid ${color.border}` }}>
+                    <TR style={theadRowStyle}>
                       <TH align="right">#</TH>
                       <TH>Coin</TH>
                       <TH align="right">Price</TH>
@@ -239,81 +443,189 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
                     </TR>
                   </THead>
                   <TBody>
-                    {mk.coins.slice(0, TOP_LIMIT).map(c => (
-                      <TR key={c.symbol} style={{ borderBottom: `1px solid ${alpha(color.border, 0.4)}` }}>
+                    {d.coins.slice(0, TOP_LIMIT).map(c => (
+                      <TR key={c.symbol} style={rowStyle}>
                         <TD align="right" style={{ color: color.textMuted }}>{fmtNum(c.rank)}</TD>
-                        <TD>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[6] }}>
-                            {c.image
-                              ? <img src={c.image} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
-                              : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.border, display: 'inline-block' }} />}
-                            <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{c.symbol || DASH}</span>
-                            <span style={{ color: color.textMuted }}>{c.name || DASH}</span>
-                          </span>
-                        </TD>
+                        <TD><CoinCell image={c.image} symbol={c.symbol} name={c.name} /></TD>
                         <TD align="right" style={{ color: color.text }}>{fmtPrice(c.lastPrice)}</TD>
-                        <TD align="right" style={{ color: toneOf(c.priceChangePercent) === 'negative' ? color.negative : toneOf(c.priceChangePercent) === 'positive' ? color.positive : color.textMuted }}>
-                          {fmtPct(c.priceChangePercent)}
-                        </TD>
+                        <TD align="right"><Change v={c.priceChangePercent} /></TD>
                         <TD align="right" style={{ color: color.text }}>{fmtUsdCompact(c.marketCap)}</TD>
                       </TR>
                     ))}
                   </TBody>
                 </Table>
               </div>
-              <p style={{ margin: `${space[8]}px 0 0`, color: color.textMuted, fontSize: fontSize[10] }}>
-                {mk.derived} · pool {mk.pool} · {mk.upstream}
+              <p style={noteStyle}>{d.derived} · pool {d.pool} · {d.upstream}</p>
+            </>
+          )}
+        />
+
+        {/* ---- 3. trending --------------------------------------------------- */}
+        <Panel<CrTrending>
+          title="Trending now"
+          url={TRENDING_URL}
+          render={d => (
+            <>
+              <div style={{ overflowX: 'auto' }}>
+                <Table style={{ fontSize: fontSize[11] }}>
+                  <THead>
+                    <TR style={theadRowStyle}>
+                      <TH align="right">#</TH>
+                      <TH>Coin</TH>
+                      <TH align="right">Price</TH>
+                      <TH align="right">24h</TH>
+                      <TH align="right">Volume 24h</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {d.rows.slice(0, 8).map(r => (
+                      <TR key={`${r.key ?? r.symbol ?? 'row'}`} style={rowStyle}>
+                        <TD align="right" style={{ color: color.textMuted }}>{fmtNum(r.rank)}</TD>
+                        <TD><CoinCell image={r.image} symbol={r.symbol} name={r.name} /></TD>
+                        <TD align="right" style={{ color: color.text }}>{fmtPrice(r.priceUsd)}</TD>
+                        <TD align="right"><Change v={r.change24h} /></TD>
+                        <TD align="right" style={{ color: color.text }}>{fmtUsdCompact(r.volume24hUsd)}</TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+              </div>
+              <p style={noteStyle}>
+                {d.changeSource} change source · rows the venue publishes without a price render {DASH} · {d.upstream}
               </p>
             </>
           )}
+        />
+
+        {/* ---- 4. gainers / losers ------------------------------------------- */}
+        <section style={{ marginBottom: space[24] }}>
+          <h2 style={h2Style}>24h movers</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: space[14] }}>
+            <MoversColumn title="Top gainers" url={GAINERS_URL} />
+            <MoversColumn title="Top losers" url={LOSERS_URL} />
+          </div>
         </section>
 
-        {/* ---- research slices ----------------------------------------------- */}
-        {cr && (cr.fundingRounds.length > 0 || cr.upcomingIco.length > 0) && (
-          <section style={{ marginBottom: space[24], display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: space[14] }}>
-            <div style={cardStyle}>
-              <h3 style={{ margin: `0 0 ${space[10]}px`, color: color.accent, fontSize: fontSize[12], fontWeight: fontWeight.bold, letterSpacing: letterSpacing.wide }}>
-                Recent funding
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
-                {cr.fundingRounds.slice(0, 6).map((r, i) => (
-                  <div key={`${r.coinKey || 'unnamed'}-${i}`} style={{ display: 'flex', justifyContent: 'space-between', gap: space[8], fontSize: fontSize[11] }}>
-                    <span style={{ color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {r.coinName || DASH}
-                      {r.type ? <span style={{ color: color.textMuted }}> · {r.type}</span> : null}
-                    </span>
-                    <span style={{ color: color.accent, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.raiseUsd)}</span>
-                    <span style={{ color: color.textMuted, whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</span>
-                  </div>
-                ))}
+        {/* ---- 5. DeFi TVL --------------------------------------------------- */}
+        <Panel<LlamaProtocols>
+          title="Top DeFi protocols by TVL"
+          url={DEFI_PROTOCOLS_URL}
+          render={d => (
+            <>
+              <div style={{ overflowX: 'auto' }}>
+                <Table style={{ fontSize: fontSize[11] }}>
+                  <THead>
+                    <TR style={theadRowStyle}>
+                      <TH align="right">#</TH>
+                      <TH>Protocol</TH>
+                      <TH>Category</TH>
+                      <TH align="right">TVL</TH>
+                      <TH align="right">1d</TH>
+                      <TH align="right">7d</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {d.rows.slice(0, 8).map((p, i) => (
+                      <TR key={p.slug} style={rowStyle}>
+                        <TD align="right" style={{ color: color.textMuted }}>{fmtNum(i + 1)}</TD>
+                        <TD>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[6] }}>
+                            {p.logo
+                              ? <img src={p.logo} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
+                              : null}
+                            <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{p.name}</span>
+                          </span>
+                        </TD>
+                        <TD style={{ color: color.textMuted }}>{p.category || DASH}</TD>
+                        <TD align="right" style={{ color: color.text }}>{fmtUsdCompact(p.tvl)}</TD>
+                        <TD align="right"><Change v={p.change_1d} /></TD>
+                        <TD align="right"><Change v={p.change_7d} /></TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
               </div>
-            </div>
+              <p style={noteStyle}>{d.derived} · {d.upstream}</p>
+            </>
+          )}
+        />
 
-            <div style={cardStyle}>
-              <h3 style={{ margin: `0 0 ${space[10]}px`, color: color.accent, fontSize: fontSize[12], fontWeight: fontWeight.bold, letterSpacing: letterSpacing.wide }}>
-                Upcoming launches
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
-                {cr.upcomingIco.slice(0, 6).map((r, i) => (
-                  <div key={`${r.key || 'unnamed'}-${i}`} style={{ display: 'flex', justifyContent: 'space-between', gap: space[8], fontSize: fontSize[11] }}>
-                    <span style={{ color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {r.name || DASH}
-                      {r.symbol ? <span style={{ color: color.textMuted }}> · {r.symbol}</span> : null}
-                    </span>
-                    <span style={{ color: color.accent, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.raiseUsd)}</span>
-                    <span style={{ color: color.textMuted, whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</span>
-                  </div>
-                ))}
+        {/* ---- 6. beyond crypto ---------------------------------------------- */}
+        <section style={{ marginBottom: space[24] }}>
+          <h2 style={h2Style}>Beyond crypto</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: space[14] }}>
+            <FxColumn />
+            <QuoteColumn title="Commodities" url={COMMODITY_URL} />
+            <QuoteColumn title="US indices" url={STOCK_US_URL} />
+          </div>
+        </section>
+
+        {/* ---- 7. research slices -------------------------------------------- */}
+        {cr.data && (cr.data.fundingRounds.length > 0 || cr.data.upcomingIco.length > 0) && (
+          <section style={{ marginBottom: space[24] }}>
+            <h2 style={h2Style}>Primary market</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: space[14] }}>
+              <div style={cardStyle}>
+                <h3 style={h3Style}>Recent funding</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
+                  {cr.data.fundingRounds.slice(0, 6).map((r, i) => (
+                    <div key={`${r.coinKey || 'unnamed'}-${i}`} style={listRowStyle}>
+                      <span style={{ color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.coinName || DASH}
+                        {r.type ? <span style={{ color: color.textMuted }}> · {r.type}</span> : null}
+                      </span>
+                      <span style={{ color: color.accent, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.raiseUsd)}</span>
+                      <span style={{ color: color.textMuted, whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={cardStyle}>
+                <h3 style={h3Style}>Upcoming launches</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
+                  {cr.data.upcomingIco.slice(0, 6).map((r, i) => (
+                    <div key={`${r.key || 'unnamed'}-${i}`} style={listRowStyle}>
+                      <span style={{ color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.name || DASH}
+                        {r.symbol ? <span style={{ color: color.textMuted }}> · {r.symbol}</span> : null}
+                      </span>
+                      <span style={{ color: color.accent, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.raiseUsd)}</span>
+                      <span style={{ color: color.textMuted, whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
         )}
 
-        {/* ---- destinations -------------------------------------------------- */}
+        {/* ---- 8. news ------------------------------------------------------- */}
+        <Panel<NewsEnvelope>
+          title="Latest news"
+          url={NEWS_URL}
+          render={d => (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: space[10] }}>
+                {d.items.slice(0, 6).map(it => (
+                  <a key={it.link} href={it.link} target="_blank" rel="noreferrer" style={{ ...cardStyle, padding: space[12], textDecoration: 'none', display: 'block' }}>
+                    <div style={{ color: color.text, fontSize: fontSize[13], fontWeight: fontWeight.bold, lineHeight: lineHeight.normal }}>{it.title}</div>
+                    <div style={{ color: color.textMuted, fontSize: fontSize[10], marginTop: space[6] }}>
+                      {it.source || DASH} · {fmtDate(it.pubDate)}
+                    </div>
+                  </a>
+                ))}
+              </div>
+              <p style={noteStyle}>{d.total} in the feed · {d.upstream}</p>
+            </>
+          )}
+        />
+
+        {/* ---- 9. signal quality --------------------------------------------- */}
+        <SignalQuality />
+
+        {/* ---- 10. destinations ---------------------------------------------- */}
         <section>
-          <h2 style={{ margin: `0 0 ${space[10]}px`, color: color.accent, fontSize: fontSize[14], fontWeight: fontWeight.bold, letterSpacing: letterSpacing.wide }}>
-            Boards
-          </h2>
+          <h2 style={h2Style}>Boards</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: space[12] }}>
             {DESTINATIONS.map(d => (
               <Link key={d.href} href={d.href} style={{ ...cardStyle, textDecoration: 'none', display: 'block' }}>

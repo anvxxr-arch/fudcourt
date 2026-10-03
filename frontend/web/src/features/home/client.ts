@@ -165,3 +165,187 @@ export function fmtDate(v: string | null | undefined): string {
   if (Number.isNaN(d.getTime())) return DASH;
   return d.toISOString().slice(0, 10);
 }
+
+/** A rate with fixed 4 decimals (`1.1252`). Absent -> `—`. */
+export function fmtRate(v: number | null | undefined): string {
+  if (!isNum(v)) return DASH;
+  return v.toFixed(4);
+}
+
+/** A multiplier (`3.48×`). Absent -> `—`. */
+export function fmtX(v: number | null | undefined): string {
+  if (!isNum(v)) return DASH;
+  return `${v.toFixed(2)}×`;
+}
+
+// ---------------------------------------------------------------------------
+// The rest of the landing page's families. Each is a public route that already
+// ships; the landing page only reads them, it adds no route of its own.
+// ---------------------------------------------------------------------------
+
+/** CryptoRank trending slice — rank/price/24h for the coins the venue flags. */
+export const TRENDING_URL = '/api/cryptorank?mode=trending';
+/** CryptoRank 24h gainers / losers — 150 rows each upstream, the page shows the head. */
+export const GAINERS_URL = '/api/cryptorank?mode=gainers';
+export const LOSERS_URL = '/api/cryptorank?mode=losers';
+/** DefiLlama protocol TVL — upstream body is 8.9 MB; the route trims to the head 50. */
+export const DEFI_PROTOCOLS_URL = '/api/llama?mode=protocols';
+/** Cross-asset families: FX majors, commodities, US indices. */
+export const FOREX_URL = '/api/market/forex';
+export const COMMODITY_URL = '/api/market/commodity';
+export const STOCK_US_URL = '/api/market/stock?region=us';
+/** Cointelegraph RSS, proxied. */
+export const NEWS_URL = '/api/news?limit=6';
+/** The signal cohort scoreboard — run/flat/dump counts per chain, 3-day cohort. */
+export const SCOREBOARD_URL = '/api/signals?type=scoreboard';
+
+export type CrTrendRow = {
+  rank: number | null;
+  key: string | null;
+  name: string | null;
+  symbol: string | null;
+  image: string | null;
+  priceUsd: number | null;
+  change24h: number | null;
+  marketCap: number | null;
+  volume24hUsd: number | null;
+};
+
+export type CrTrending = {
+  kind: string;
+  upstream: string;
+  fetchedAt: number;
+  cache: string;
+  count: number;
+  upstreamTotal: number;
+  changeSource: string;
+  rows: CrTrendRow[];
+};
+
+/** The gainers/losers envelope adds `category` + `athUsd` to the trending row. */
+export type CrMoverRow = CrTrendRow & {
+  category?: string | null;
+  listingDate?: string | null;
+  lifeCycle?: string | null;
+  athUsd?: number | null;
+};
+
+export type CrMovers = Omit<CrTrending, 'rows'> & { rows: CrMoverRow[] };
+
+export type LlamaProtocol = {
+  name: string;
+  slug: string;
+  category: string | null;
+  tvl: number | null;
+  change_1d: number | null;
+  change_7d: number | null;
+  mcap: number | null;
+  chains: string[];
+  url: string | null;
+  logo: string | null;
+};
+
+export type LlamaProtocols = {
+  kind: string;
+  rows: LlamaProtocol[];
+  upstream: string;
+  fetchedAt: number;
+  derived: string;
+};
+
+export type ForexPair = {
+  pair: string;
+  base: string;
+  quote: string;
+  rate: number | null;
+  inverse: number | null;
+};
+
+export type ForexEnvelope = {
+  pairs: ForexPair[];
+  count: number;
+  base: string;
+  updated: number;
+  upstream: string;
+  derived: string;
+};
+
+/** One Yahoo chart row — the shape both the commodity and the stock families emit. */
+export type Quote = {
+  symbol: string;
+  name: string;
+  kind: string | null;
+  exchange: string | null;
+  currency: string | null;
+  price: number | null;
+  previousClose: number | null;
+  change: number | null;
+  changePercent: number | null;
+  dayHigh: number | null;
+  dayLow: number | null;
+  volume: number | null;
+  week52High: number | null;
+  week52Low: number | null;
+};
+
+export type QuotesEnvelope = {
+  quotes: Quote[];
+  count: number;
+  failed: string[];
+  upstream: string;
+  asOf: number;
+  derived: string;
+  region?: string;
+};
+
+export type NewsItem = {
+  title: string;
+  link: string;
+  description: string | null;
+  pubDate: string | null;
+  image: string | null;
+  source: string | null;
+};
+
+export type NewsEnvelope = {
+  items: NewsItem[];
+  total: number;
+  upstream: string;
+  timestamp: number;
+};
+
+export type ScoreboardBucket = {
+  day: string;
+  n: number;
+  run: number;
+  flat: number;
+  dump: number;
+  unknown: number;
+};
+
+export type ScoreboardCatch = {
+  mint: string;
+  symbol: string | null;
+  score: number | null;
+  decision: string | null;
+  peak24: number | null;
+  x24h: number | null;
+  chain: string;
+  day: string;
+};
+
+export type ScoreboardChain = {
+  latest: ScoreboardBucket | null;
+  cohortDays: number;
+  series: ScoreboardBucket[];
+  catches: ScoreboardCatch[];
+};
+
+export type ScoreboardPayload = {
+  v: number;
+  kind: string;
+  generatedAt: number;
+  cohortDays: number;
+  chains: Record<string, ScoreboardChain>;
+  upstream: string;
+};
