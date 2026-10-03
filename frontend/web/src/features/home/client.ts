@@ -178,6 +178,33 @@ export function fmtX(v: number | null | undefined): string {
   return `${v.toFixed(2)}×`;
 }
 
+/**
+ * A Treasury yield level in percent (`5.277%`). A yield is quoted in percent, so
+ * this is a percentage-point level — NOT `fmtPct`, which would print a bare
+ * number with a sign and read as a change. Absent -> `—`.
+ */
+export function fmtYield(v: number | null | undefined): string {
+  if (!isNum(v)) return DASH;
+  return `${v.toFixed(3)}%`;
+}
+
+/**
+ * A move in basis points from a percent-quoted level: `Δpercent × 100`
+ * (`0.077` -> `+7.7 bp`). This is the convention for a yield delta — a
+ * percent-of-percent change on a yield would be meaningless. Absent -> `—`.
+ */
+export function fmtBp(v: number | null | undefined, digits = 1): string {
+  if (!isNum(v)) return DASH;
+  const bp = v * 100;
+  return `${bp >= 0 ? '+' : ''}${bp.toFixed(digits)} bp`;
+}
+
+/** A spread already expressed in basis points (`+128.4 bp`). Absent -> `—`. */
+export function fmtBpRaw(v: number | null | undefined, digits = 1): string {
+  if (!isNum(v)) return DASH;
+  return `${v >= 0 ? '+' : ''}${v.toFixed(digits)} bp`;
+}
+
 // ---------------------------------------------------------------------------
 // The rest of the landing page's families. Each is a public route that already
 // ships; the landing page only reads them, it adds no route of its own.
@@ -194,6 +221,13 @@ export const DEFI_PROTOCOLS_URL = '/api/llama?mode=protocols';
 export const FOREX_URL = '/api/market/forex';
 export const COMMODITY_URL = '/api/market/commodity';
 export const STOCK_US_URL = '/api/market/stock?region=us';
+/**
+ * The macro family: the US Treasury curve (13-week / 5y / 10y / 30y), the dollar
+ * index and the volatility indices, plus curve spreads DERIVED locally. Same
+ * Yahoo chart endpoint as the commodity/stock families, but a yield row's delta
+ * is rendered in basis points — see `fmtBp`.
+ */
+export const MACRO_URL = '/api/market/macro';
 /** Cointelegraph RSS, proxied. */
 export const NEWS_URL = '/api/news?limit=6';
 /** The signal cohort scoreboard — run/flat/dump counts per chain, 3-day cohort. */
@@ -296,6 +330,32 @@ export type QuotesEnvelope = {
   asOf: number;
   derived: string;
   region?: string;
+};
+
+/** One locally-derived curve spread (bp), null unless both legs returned a quote. */
+export type MacroSpread = {
+  label: string;
+  long: string;
+  short: string;
+  bp: number | null;
+  note: string;
+};
+
+/**
+ * One macro row as `/api/market/macro` emits it: the Yahoo chart row plus the
+ * presentation metadata the board needs. `unit` is `'yield'` (level in percent,
+ * delta in basis points) or `'index'` (level in points, delta in percent).
+ */
+export type MacroQuote = Quote & {
+  group: string;
+  unit: 'yield' | 'index';
+  note: string;
+};
+
+/** `/api/market/macro` — the macro board's own envelope (a spread-carrying QuotesEnvelope). */
+export type MacroEnvelope = Omit<QuotesEnvelope, 'quotes'> & {
+  quotes: MacroQuote[];
+  spreads: MacroSpread[];
 };
 
 export type NewsItem = {

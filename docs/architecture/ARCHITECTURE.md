@@ -144,11 +144,14 @@ the full judgment record for the grouping is §4 of that file.
   grid) without taking its siblings down. The families it composes: `/api/cryptorank?mode=home`
   (market header + funding/launch slices), `/api/markets?limit=10&sort=mcap&order=desc`,
   `/api/cryptorank?mode={trending,gainers,losers}`, `/api/llama?mode=protocols`,
-  `/api/market/{forex,commodity}`, `/api/market/stock?region=us`, `/api/news?limit=6` and
-  `/api/signals?type=scoreboard`. The `sort` on the markets call is passed **explicitly** because
-  the route's default is `sort=volume`; a bare `?limit=10` would be a volume board under a
-  market-cap heading. `/api/signals` without `type=scoreboard` is deliberately NOT read: the
-  index payload is ~2.7 MB / 7310 rows.
+  `/api/market/{forex,commodity}`, `/api/market/stock?region=us`, `/api/market/macro`,
+  `/api/news?limit=6` and `/api/signals?type=scoreboard`. The `sort` on the markets call is passed
+  **explicitly** because the route's default is `sort=volume`; a bare `?limit=10` would be a volume
+  board under a market-cap heading. `/api/signals` without `type=scoreboard` is deliberately NOT
+  read: the index payload is ~2.7 MB / 7310 rows. The macro panel renders a yield's delta in
+  **basis points** (`Δ × 100`, the rate convention) rather than a percent-of-percent; the row's
+  `unit`/`group`/`note` ride in the macro payload so the page reads them from the API rather than
+  importing another feature's module (the structure gate forbids a cross-feature import).
 - Deep links under `/team/**` and `/admin/**` call `requireTier(...)` before rendering.
 - Public deep links (`/market/crypto`, `/market/trench`, `/signals`, `/scoreboard`, `/news`, …)
   are one-line wrappers: `<StoreShell initialPage="…" />` — no server data of their own.
@@ -167,13 +170,14 @@ the full judgment record for the grouping is §4 of that file.
 | team | reconciliation | `/team/reconciliation` | `ReconciliationPage` | props |
 | member | overview | `/member` | shell (boards) | session only |
 | admin | control panel | `/admin` | `MemberTable` + audit | `/api/admin/members` + `/api/all` |
-| public | home | `/` | `HomePage` (10 sections) | `/api/cryptorank?mode={home,trending,gainers,losers}` · `/api/markets` · `/api/llama?mode=protocols` · `/api/market/{forex,commodity,stock}` · `/api/news` · `/api/signals?type=scoreboard` |
+| public | home | `/` | `HomePage` (11 sections) | `/api/cryptorank?mode={home,trending,gainers,losers}` · `/api/markets` · `/api/llama?mode=protocols` · `/api/market/{forex,commodity,stock,macro}` · `/api/news` · `/api/signals?type=scoreboard` |
 | public | market (hub) | `/market` | `MarketHub` (section overview) | — (links the sections below) |
 | public | market · crypto | `/market/crypto` | `MarketHub section="crypto"` → `TickerPage` · `TrackerPage` · `LlamaPage` | `/api/ticker?sort&order&type` · `/api/markets` · `/api/llama?mode=chains/protocols/historical` |
 | public | market · coin | `/market/ticker/[ticker]` | `TickerDetailPage` | `/api/ticker/instruments?symbol` + `/api/ticker/instrument?base&type&expiry&strike&kind` |
 | public | market · forex | `/market/forex` | `MarketHub section="forex"` → `ForexBoard` | `/api/market/forex` |
 | public | market · commodity | `/market/commodity` | `MarketHub section="commodity"` → `CommodityBoard` | `/api/market/commodity` |
 | public | market · stock | `/market/stock` | `MarketHub section="stock"` → `StockBoard` (`?region=us\|asia\|europe`) | `/api/market/stock?region=…` |
+| public | market · macro (API-only) | — (read by `/` and any board) | `MacroBoard` in `features/home/ui.tsx` | `/api/market/macro` (US curve 13w/5y/10y/30y · DXY · VIX · VVIX · locally-derived curve spreads) |
 | public | market · trench | `/market/trench` | `MarketHub section="trench"` → `DexPage` · `TrenchPage` | `/api/dex?type=profiles&limit=50` |
 | public | signals | `/signals` | `SignalsPage` | `/api/signals?chain&type` |
 | public | scoreboard | `/scoreboard` | `ScoreboardPage` | `/api/signals?type=scoreboard` |
@@ -205,7 +209,7 @@ plus its verifier only.
 | **dex** | dexscreener | `/api/dex` | `src/features/dex/client.ts` | `verify-dex.py` | GATED |
 | **signals** | data-public.vercel.app (external dataset) | `/api/signals` | route-local | `verify-signals.py` | GATED |
 | **markets** | api.coingecko.com (`/coins/markets`, top-250 pool) | `/api/markets` | `src/features/markets/client.ts` | `verify-markets.py` 49 checks (GATE2 llama · GATE3 cryptorank, 3%) | GATED |
-| **market** (hub sections) | open.er-api.com (forex, ECB daily) + Yahoo Finance chart (commodity, stock) — all keyless | `/api/market/forex`, `/api/market/commodity`, `/api/market/stock` (`?region=us\|asia\|europe`) | `src/features/market/forex/client.ts` + `src/features/market/{commodity,stock}/client.ts`, sharing `src/features/market/quotes.ts` | `verify-all.sh` (tsc + shapers); live: 3 boards 200, `?region=amer` → 400; deep verifier pending | **SMOKE** — deep verifier pending |
+| **market** (hub sections) | open.er-api.com (forex, ECB daily) + Yahoo Finance chart (commodity, stock, macro) — all keyless | `/api/market/forex`, `/api/market/commodity`, `/api/market/stock` (`?region=us\|asia\|europe`), `/api/market/macro` | `src/features/market/forex/client.ts` + `src/features/market/{commodity,stock,macro}/client.ts`, sharing `src/features/market/quotes.ts` | `verify-all.sh` (tsc + shapers); live: 4 boards 200, `?region=amer` → 400; deep verifier pending | **SMOKE** — deep verifier pending |
 | **ticker** | 10 CEX natives via CCXT (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) | `/api/ticker`, `/api/ticker/instruments`, `/api/ticker/instrument` | `src/features/ticker/client.ts` | route sweep (status/shape/400 contract); deep verifier pending | **SMOKE** — deep verifier pending |
 | **news** | cointelegraph.com/rss — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/news` (thin verbatim proxy to `fudcourt-data`) | runtime: **`backend/data/internal/research/news`** (feed table, strict `source`/`limit` 1..100, RSS parse into the six-key projection, in-process 15 s TTL cache + single-flight keyed on the FEED URL); `src/features/news/client.ts` is the typing/display mirror | `verify-news.py` 50 checks (incl. anti-fake parity against a direct feed fetch) | GATED |
 | **khala** (sidecar-only after DR-041: the Go mux serves `/api/khala`; `verify-khala.py` **136/0/0**) | khala.io (Framer SSR; `framerusercontent.com` search index unused by design) | sidecar `/api/khala` (**3 modes**: `reports`, `report`, `latest`; no web route after DR-041; `upstream` scalar, provenance in `slice`, structured `body` — no HTML shipped) | runtime: **`backend/data/internal/research/khala`** — one Go package (no 3-way split: this family has one upstream artifact, not three). Its TS typing/display mirror was removed with the board (`features/khala/`, DR-041) — the route never validated, so the sidecar stays the single validator; that is why `check-contract.py` carries **no** khala table pair — [DR-006](../records/DECISIONS.md) | `verify-khala.py` — the live sidecar harness, run green against `:3101`: **136 pass / 0 fail / 0 skip**; 2 independent ground-truth gates (sitemap slug-set equality · site title/date parity, oracle = direct khala.io fetches) | **GATED** — `verify-khala.py` green against the served `:3101` sidecar |

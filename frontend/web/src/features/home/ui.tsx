@@ -16,12 +16,15 @@ import {
   FOREX_URL,
   GAINERS_URL,
   LOSERS_URL,
+  MACRO_URL,
   MARKETS_TOP_URL,
   NEWS_URL,
   SCOREBOARD_URL,
   STOCK_US_URL,
   TOP_LIMIT,
   TRENDING_URL,
+  fmtBp,
+  fmtBpRaw,
   fmtDate,
   fmtGas,
   fmtNum,
@@ -30,12 +33,14 @@ import {
   fmtRate,
   fmtUsdCompact,
   fmtX,
+  fmtYield,
   toneOf,
   type CrHome,
   type CrMovers,
   type CrTrending,
   type ForexEnvelope,
   type LlamaProtocols,
+  type MacroEnvelope,
   type MarketsEnvelope,
   type NewsEnvelope,
   type QuotesEnvelope,
@@ -278,6 +283,95 @@ function QuoteColumn({ title, url }: { title: string; url: string }) {
         <p style={noteStyle}>
           {data.derived}{data.failed.length > 0 ? ` · failed: ${data.failed.join(', ')}` : ''}
         </p>
+      )}
+    </div>
+  );
+}
+
+/** A yield delta rendered in basis points, coloured by sign; absent -> `—`. */
+function Bp({ v }: { v: number | null | undefined }) {
+  const t = toneOf(v);
+  const c = t === 'negative' ? color.negative : t === 'positive' ? color.positive : color.textMuted;
+  return <span style={{ color: c }}>{fmtBp(v)}</span>;
+}
+
+/**
+ * Macro — the US Treasury curve, the dollar index and the volatility indices.
+ *
+ * A yield is quoted in percent and its move is rendered in BASIS POINTS
+ * (`Δ × 100`), the convention for a rate; the index rows keep the percent delta.
+ * The curve spreads are the route's locally-derived series and are labelled as
+ * such. Everything is a read of the macro family; nothing is recomputed here.
+ */
+function MacroBoard() {
+  const { data, error, loading } = useJson<MacroEnvelope>(MACRO_URL);
+  const rates = data ? data.quotes.filter(q => q.unit === 'yield') : [];
+  const idx = data ? data.quotes.filter(q => q.unit === 'index') : [];
+  return (
+    <div style={cardStyle}>
+      <h3 style={h3Style}>Rates · dollar · volatility</h3>
+      {error && <Banner variant="error">{error}</Banner>}
+      {loading && !error && <Loading label="reading the macro board…" />}
+      {!error && data && (
+        <>
+          <div style={{ overflowX: 'auto' }}>
+            <Table style={{ fontSize: fontSize[11] }}>
+              <THead>
+                <TR style={theadRowStyle}>
+                  <TH>US rates</TH>
+                  <TH align="right">Yield</TH>
+                  <TH align="right">Δ</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {rates.map(q => (
+                  <TR key={q.symbol} style={rowStyle}>
+                    <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>
+                      <span title={q.note}>{q.name}</span>
+                    </TD>
+                    <TD align="right" style={{ color: color.text }}>{fmtYield(q.price)}</TD>
+                    <TD align="right"><Bp v={q.change} /></TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          </div>
+          {data.spreads.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[14], marginTop: space[8] }}>
+              {data.spreads.map(s => (
+                <span key={s.label} style={{ fontSize: fontSize[11], color: color.textMuted }} title={s.note}>
+                  {s.label}{' '}
+                  <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{fmtBpRaw(s.bp)}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          <div style={{ overflowX: 'auto', marginTop: space[12] }}>
+            <Table style={{ fontSize: fontSize[11] }}>
+              <THead>
+                <TR style={theadRowStyle}>
+                  <TH>Dollar &amp; volatility</TH>
+                  <TH align="right">Level</TH>
+                  <TH align="right">Δ</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {idx.map(q => (
+                  <TR key={q.symbol} style={rowStyle}>
+                    <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>
+                      <span title={q.note}>{q.name}</span>
+                    </TD>
+                    <TD align="right" style={{ color: color.text }}>{fmtNum(q.price, 2)}</TD>
+                    <TD align="right"><Change v={q.changePercent} /></TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          </div>
+          <p style={noteStyle}>
+            yields in %, delta in basis points (Δ × 100) · curve spreads derived locally, not published upstream · {data.derived}
+          </p>
+        </>
       )}
     </div>
   );
@@ -558,6 +652,12 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
             <QuoteColumn title="Commodities" url={COMMODITY_URL} />
             <QuoteColumn title="US indices" url={STOCK_US_URL} />
           </div>
+        </section>
+
+        {/* ---- 6b. macro: rates, dollar, volatility --------------------------- */}
+        <section style={{ marginBottom: space[24] }}>
+          <h2 style={h2Style}>Macro</h2>
+          <MacroBoard />
         </section>
 
         {/* ---- 7. research slices -------------------------------------------- */}
