@@ -135,12 +135,17 @@ the full judgment record for the grouping is §4 of that file.
 - `src/components/layout/store-shell.tsx` owns `page` state (`initialPage` prop) and renders one
   view per tab. It takes an `isTeam` prop: **false → market boards only** (no
   treasury fetch, no treasury render); true → the full tab strip.
-- `src/app/(frontend)/page.tsx` (`/`) reads the session **server-side** and mounts the shell
-  with `isTeam = hasTier(user, 'team')`, so an anonymous visitor never even
-  requests the treasury bundle. Deep links under `/team/**` and `/admin/**`
-  call `requireTier(...)` before rendering.
-- Public deep links (`/ticker`, `/cryptorank`, …) are one-line wrappers:
-  `<StoreShell initialPage="ticker" />` — no server data of their own.
+- `src/app/(frontend)/page.tsx` (`/`) is the **landing page** — it mounts `features/home/ui.tsx`,
+  not the shell. It reads the session **server-side** only to choose its second call to action
+  (a team visitor gets `/team/balance`, everyone else `/login`), and it renders no treasury data:
+  an anonymous visitor never even requests the treasury bundle. Its market header and top-coins
+  board compose two existing public families read-only — `/api/cryptorank?mode=home` and
+  `/api/markets?limit=10&sort=mcap&order=desc`. The sort is passed **explicitly** because the
+  route's default is `sort=volume`; a bare `?limit=10` would be a volume board under a
+  market-cap heading.
+- Deep links under `/team/**` and `/admin/**` call `requireTier(...)` before rendering.
+- Public deep links (`/market/crypto`, `/market/trench`, `/signals`, `/scoreboard`, `/news`, …)
+  are one-line wrappers: `<StoreShell initialPage="…" />` — no server data of their own.
 - Route paths are centralised in `src/platform/routing/view-routes.ts` (`viewPath`), used by
   BOTH the nav `href` and the `history.replaceState` effect, so a tab can
   never link to a 404 again (this replaced two hand-written nested ternaries
@@ -156,6 +161,7 @@ the full judgment record for the grouping is §4 of that file.
 | team | reconciliation | `/team/reconciliation` | `ReconciliationPage` | props |
 | member | overview | `/member` | shell (boards) | session only |
 | admin | control panel | `/admin` | `MemberTable` + audit | `/api/admin/members` + `/api/all` |
+| public | home | `/` | `HomePage` | `/api/cryptorank?mode=home` + `/api/markets?limit=10&sort=mcap&order=desc` |
 | public | market (hub) | `/market` | `MarketHub` (section overview) | — (links the sections below) |
 | public | market · crypto | `/market/crypto` | `MarketHub section="crypto"` → `TickerPage` · `TrackerPage` · `LlamaPage` | `/api/ticker?sort&order&type` · `/api/markets` · `/api/llama?mode=chains/protocols/historical` |
 | public | market · coin | `/market/ticker/[ticker]` | `TickerDetailPage` | `/api/ticker/instruments?symbol` + `/api/ticker/instrument?base&type&expiry&strike&kind` |
@@ -165,11 +171,10 @@ the full judgment record for the grouping is §4 of that file.
 | public | market · trench | `/market/trench` | `MarketHub section="trench"` → `DexPage` · `TrenchPage` | `/api/dex?type=profiles&limit=50` |
 | public | signals | `/signals` | `SignalsPage` | `/api/signals?chain&type` |
 | public | scoreboard | `/scoreboard` | `ScoreboardPage` | `/api/signals?type=scoreboard` |
-| public | cryptorank | `/cryptorank` | `CryptorankPage` | `/api/cryptorank?mode=…` (28 modes) |
 | public | news | `/news` | `NewsPage` | `/api/news?limit=30` |
 
-Legacy `/portfolio` now **307s** to `/team/portfolio` (it used to rewrite to
-`/`, which is now a duplicate of the landing page). The boards that folded into
+Legacy `/portfolio` now **307s** to `/team/portfolio` (it used to rewrite to `/`,
+the landing page). The boards that folded into
 the hub redirect the same way (`next.config.js`): `/ticker`, `/tracker`, `/llama`
 and `/market/ticker` → `/market/crypto`; `/dex` and `/trench` → `/market/trench`;
 `/markets` → `/market`; `/ticker/:ticker` → `/market/ticker/:ticker`. The hub
