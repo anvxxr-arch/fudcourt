@@ -22,6 +22,7 @@ import (
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinglass"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinmarketcap"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/cryptorank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/llama"
@@ -100,15 +101,27 @@ func main() {
 	if err != nil {
 		log.Fatalf("fudcourt-data: coinank: %v", err)
 	}
+	// coinmarketcap is the EIGHTH family, and the third keyless one -- but the
+	// simplest: nothing is encrypted (unlike coinglass) and nothing is computed
+	// (unlike coinank). api.coinmarketcap.com/data-api/v3 is the dashboard's own
+	// backend and takes NO credential of any kind, so this is a plain GET. The
+	// documented pro-api host needs an issued X-CMC_PRO_API_KEY and is not used.
+	// Plain net/http is enough -- the host does not fingerprint the TLS
+	// ClientHello -- and the family is stdlib only (internal/research/
+	// coinmarketcap package doc).
+	mf, err := coinmarketcap.New(coinmarketcap.Options{})
+	if err != nil {
+		log.Fatalf("fudcourt-data: coinmarketcap: %v", err)
+	}
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           newServer(f, ttl, khala.Service{F: kf, TTL: khala.TTLDefault()}, llama.Service{F: lf}, news.Service{F: nf}, chainrank.Service{F: cf}, coinglass.Service{F: gf}, coinank.Service{F: af}).mux(),
+		Handler:           newServer(f, ttl, khala.Service{F: kf, TTL: khala.TTLDefault()}, llama.Service{F: lf}, news.Service{F: nf}, chainrank.Service{F: cf}, coinglass.Service{F: gf}, coinank.Service{F: af}, coinmarketcap.Service{F: mf}).mux(),
 		ReadHeaderTimeout: 10 * time.Second,
 		WriteTimeout:      90 * time.Second,
 	}
-	log.Printf("fudcourt-data listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes; coinglass: cache %s, ttl %ds, %d modes; coinank: cache %s, ttl %ds, %d modes)",
-		addr, f.CacheDir(), ttl, cryptorank.ModeCount, kf.CacheDir(), khala.TTLDefault(), khala.ModeCount, lf.TTL(), llama.ModeCount, nf.TTL(), news.SourceCount, cf.TTL(), chainrank.ModeCount, gf.CacheDir(), coinglass.TTLDefault(), coinglass.ModeCount, af.CacheDir(), coinank.TTLDefault(), coinank.ModeCount)
+	log.Printf("fudcourt-data listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes; coinglass: cache %s, ttl %ds, %d modes; coinank: cache %s, ttl %ds, %d modes; coinmarketcap: cache %s, ttl %ds, %d modes)",
+		addr, f.CacheDir(), ttl, cryptorank.ModeCount, kf.CacheDir(), khala.TTLDefault(), khala.ModeCount, lf.TTL(), llama.ModeCount, nf.TTL(), news.SourceCount, cf.TTL(), chainrank.ModeCount, gf.CacheDir(), coinglass.TTLDefault(), coinglass.ModeCount, af.CacheDir(), coinank.TTLDefault(), coinank.ModeCount, mf.CacheDir(), coinmarketcap.TTLDefault(), coinmarketcap.ModeCount)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -169,6 +182,10 @@ type server struct {
 	// for the same reason: the Fetcher owns the cache and `fresh` travels per
 	// request.
 	ans coinank.Service
+	// cms is the coinmarketcap family orchestrator (fetch -> verbatim envelope),
+	// a value for the same reason: the Fetcher owns the cache and `fresh`
+	// travels per request.
+	cms coinmarketcap.Service
 	// ttl is the per-route cache TTL in seconds for an ordinary request; a
 	// fresh=1 request passes 0 instead (the Python helper's --ttl 0). Both are
 	// per-request arguments, never shared fetcher state.
@@ -178,8 +195,8 @@ type server struct {
 	retryBase time.Duration
 }
 
-func newServer(f fetcher, ttl int, ks khala.Service, ls llama.Service, ns news.Service, cs chainrank.Service, cgs coinglass.Service, ans coinank.Service) *server {
-	return &server{f: f, ks: ks, ls: ls, ns: ns, cs: cs, cgs: cgs, ans: ans, ttl: ttl, retryBase: 3 * time.Second}
+func newServer(f fetcher, ttl int, ks khala.Service, ls llama.Service, ns news.Service, cs chainrank.Service, cgs coinglass.Service, ans coinank.Service, cms coinmarketcap.Service) *server {
+	return &server{f: f, ks: ks, ls: ls, ns: ns, cs: cs, cgs: cgs, ans: ans, cms: cms, ttl: ttl, retryBase: 3 * time.Second}
 }
 
 func (s *server) mux() *http.ServeMux {
@@ -211,6 +228,10 @@ func (s *server) mux() *http.ServeMux {
 			// client-computed signature instead of an issued key. The qualifier
 			// distinguishes the two so a reader does not assume one scheme.
 			"coinank": fmt.Sprintf("%d modes (keyless, client signature)", coinank.ModeCount),
+			// coinmarketcap is the eighth, and keyless for a THIRD reason:
+			// neither an encrypted body nor a computed signature — the
+			// dashboard's own backend simply takes no credential at all.
+			"coinmarketcap": fmt.Sprintf("%d modes (keyless, no credential)", coinmarketcap.ModeCount),
 		})
 	})
 	mux.HandleFunc("/api/cryptorank", func(w http.ResponseWriter, r *http.Request) {
@@ -233,6 +254,9 @@ func (s *server) mux() *http.ServeMux {
 	})
 	mux.HandleFunc("/api/coinank", func(w http.ResponseWriter, r *http.Request) {
 		s.handleCoinank(w, r)
+	})
+	mux.HandleFunc("/api/coinmarketcap", func(w http.ResponseWriter, r *http.Request) {
+		s.handleCoinmarketcap(w, r)
 	})
 	return mux
 }
@@ -647,6 +671,124 @@ func writeCoinankError(w http.ResponseWriter, mode string, err error) {
 	if errors.As(err, &he) && he.Kind == "upstream" {
 		writeJSON(w, 502, map[string]interface{}{
 			"error":  coinank.ErrUpstream,
+			"mode":   mode,
+			"code":   he.Code,
+			"detail": he.Detail,
+		})
+		return
+	}
+	writeJSON(w, 502, map[string]interface{}{
+		"error":  "upstream unreachable",
+		"mode":   mode,
+		"detail": err.Error(),
+	})
+}
+
+// handleCoinmarketcap serves the CoinMarketCap market-data family (the eighth).
+// The wire contract mirrors the coinglass/coinank siblings -- validate local
+// params strictly (never clamp), refuse loudly, never invent a payload -- with
+// three family differences:
+//   - the mode table is its own (4 modes), reported separately on /healthz;
+//   - the paginated modes validate `start`/`limit` against LOCAL bounds, because
+//     upstream answers limit=0 with a success envelope carrying an empty list;
+//   - mode=marketPairs requires a `slug` and validates it, because upstream
+//     answers a missing slug with a 200 refusal envelope.
+func (s *server) handleCoinmarketcap(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		writeJSON(w, 405, map[string]interface{}{"error": "method not allowed"})
+		return
+	}
+	q := r.URL.Query()
+	mode := q.Get(coinmarketcap.ParamMode)
+	if mode == "" || !coinmarketcap.Known(mode) {
+		var got interface{}
+		if mode != "" {
+			got = mode
+		}
+		writeJSON(w, 400, map[string]interface{}{
+			"error": coinmarketcap.ErrUnknownMode,
+			"modes": coinmarketcap.Modes,
+			"got":   got,
+		})
+		return
+	}
+	// Param scoping: a param the mode does not accept (including a known param
+	// sent to the wrong mode, and any unknown name) is a 400, never ignored.
+	// This matters because upstream IGNORES an unrecognised param outright.
+	for p := range q {
+		if !coinmarketcap.Accepts(mode, p) {
+			writeJSON(w, 400, map[string]interface{}{
+				"error":  coinmarketcap.ErrUnexpected,
+				"detail": coinmarketcap.UnexpectedParamDetail(p, mode),
+				"param":  p,
+				"mode":   mode,
+			})
+			return
+		}
+	}
+
+	slug := ""
+	if mode == "marketPairs" {
+		slug = q.Get(coinmarketcap.ParamSlug)
+		if !coinmarketcap.ValidSlug(slug) {
+			writeJSON(w, 400, map[string]interface{}{
+				"error":  coinmarketcap.ErrInvalidParam,
+				"detail": coinmarketcap.MissingSlugDetail,
+				"mode":   mode,
+				"slug":   slug,
+			})
+			return
+		}
+	}
+
+	start, limit := coinmarketcap.DefaultStart, coinmarketcap.DefaultLimit
+	if mode == "listing" || mode == "exchanges" || mode == "marketPairs" {
+		var ok bool
+		if start, ok = coinmarketcap.ParseStart(q.Get(coinmarketcap.ParamStart)); !ok {
+			writeJSON(w, 400, map[string]interface{}{
+				"error":  coinmarketcap.ErrInvalidParam,
+				"detail": coinmarketcap.DetailStartInvalid,
+				"mode":   mode,
+				"start":  q.Get(coinmarketcap.ParamStart),
+			})
+			return
+		}
+		if limit, ok = coinmarketcap.ParseLimit(q.Get(coinmarketcap.ParamLimit)); !ok {
+			writeJSON(w, 400, map[string]interface{}{
+				"error":  coinmarketcap.ErrInvalidParam,
+				"detail": coinmarketcap.DetailLimitInvalid,
+				"mode":   mode,
+				"limit":  q.Get(coinmarketcap.ParamLimit),
+			})
+			return
+		}
+	}
+
+	// fresh=1 bypasses the disk cache for this request only. It is an ARGUMENT,
+	// never fetcher state, so two concurrent requests cannot observe each
+	// other's policy.
+	fresh := q.Get(coinmarketcap.ParamFresh) == "1"
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+	env, err := s.cms.Envelope(ctx, mode, slug, start, limit, fresh)
+	if err != nil {
+		writeCoinmarketcapError(w, mode, err)
+		return
+	}
+	w.Header().Set("X-CMC-Upstream", env.Upstream)
+	w.Header().Set("X-CMC-Cache", env.Cache)
+	w.Header().Set("Cache-Control", "public, max-age=30")
+	writeJSON(w, 200, env)
+}
+
+// writeCoinmarketcapError maps a family error to the frozen body. An upstream
+// refusal is 502 carrying CoinMarketCap's own code and message: the caller
+// learns what upstream said, and no empty table is invented for it.
+func writeCoinmarketcapError(w http.ResponseWriter, mode string, err error) {
+	var he *coinmarketcap.HardError
+	if errors.As(err, &he) && he.Kind == "upstream" {
+		writeJSON(w, 502, map[string]interface{}{
+			"error":  coinmarketcap.ErrUpstream,
 			"mode":   mode,
 			"code":   he.Code,
 			"detail": he.Detail,

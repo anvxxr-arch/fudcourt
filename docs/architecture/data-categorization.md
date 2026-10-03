@@ -96,6 +96,11 @@ exist.
 | acq-coinank-etf | coinank mode=etf: CoinAnk daily spot-ETF creations/redemptions — upstream https://api.coinank.com/api/etf/etfInflow | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | dark | `backend/data/internal/research/coinank/modes.go` |
 | acq-coinank-whales | coinank mode=whales: CoinAnk Hyperliquid top positions by size — upstream https://api.coinank.com/api/hyper/topPosition | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | dark | `backend/data/internal/research/coinank/modes.go` |
 | acq-family-coinank | CoinAnk acquisition family (5 keyless modes; client-computed signature, NO issued key; official open-api.coinank.com NOT wired) | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | dark | `backend/data/internal/research/coinank/modes.go` |
+| acq-coinmarketcap-listing | coinmarketcap mode=listing: CoinMarketCap ranked coin list (start/limit paginated; local bounds [1,1000]) — upstream https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `backend/data/internal/research/coinmarketcap/modes.go` |
+| acq-coinmarketcap-global | coinmarketcap mode=global: CoinMarketCap global metrics (dominance/supply, object payload) — upstream https://api.coinmarketcap.com/data-api/v3/global-metrics/quotes/latest | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `backend/data/internal/research/coinmarketcap/modes.go` |
+| acq-coinmarketcap-marketPairs | coinmarketcap mode=marketPairs: CoinMarketCap per-exchange pairs for one coin (slug required) — upstream https://api.coinmarketcap.com/data-api/v3/cryptocurrency/market-pairs/latest?slug=<SLUG> | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `backend/data/internal/research/coinmarketcap/modes.go` |
+| acq-coinmarketcap-exchanges | coinmarketcap mode=exchanges: CoinMarketCap ranked exchange list (start/limit paginated) — upstream https://api.coinmarketcap.com/data-api/v3/exchange/listing | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `backend/data/internal/research/coinmarketcap/modes.go` |
+| acq-family-coinmarketcap | CoinMarketCap acquisition family (4 keyless modes; dashboard backend api.coinmarketcap.com/data-api/v3, NO credential of any kind; documented pro-api.coinmarketcap.com with X-CMC_PRO_API_KEY NOT wired) | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `backend/data/internal/research/coinmarketcap/modes.go` |
 
 ### 3.2 `routes` — HTTP route handlers under `frontend/web/src/app/**` — method, domain, auth tier, proxy target
 
@@ -260,7 +265,7 @@ recorded because the middleware table not covering the path is a real (non-explo
 ## 5. Verification
 
 ```
-python3 -c "import json;print(len(json.load(open('docs/architecture/data-categorization.json'))))"  # 156
+python3 -c "import json;print(len(json.load(open('docs/architecture/data-categorization.json'))))"  # 161
 curl -s http://127.0.0.1:3101/healthz                                  # 7 families, 28 cryptorank modes
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=statistics'  # 200
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinank?mode=fundingRate'    # 502 dark

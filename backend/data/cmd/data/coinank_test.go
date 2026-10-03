@@ -13,6 +13,7 @@ import (
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinglass"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinmarketcap"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/llama"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/news"
@@ -70,7 +71,7 @@ func caServer(t *testing.T, d *caDoer) http.Handler {
 		t.Fatalf("coinank.New: %v", err)
 	}
 	return newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{},
-		chainrank.Service{}, coinglass.Service{}, coinank.Service{F: f}).mux()
+		chainrank.Service{}, coinglass.Service{}, coinank.Service{F: f}, coinmarketcap.Service{}).mux()
 }
 
 func caGet(t *testing.T, h http.Handler, url string) *httptest.ResponseRecorder {

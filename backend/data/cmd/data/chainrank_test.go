@@ -17,6 +17,7 @@ import (
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/chainrank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinank"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinglass"
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/coinmarketcap"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/khala"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/llama"
 	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research/news"
@@ -63,7 +64,7 @@ func crGet(t *testing.T, d *crDoer, url string) *httptest.ResponseRecorder {
 		t.Fatalf("chainrank.New: %v", err)
 	}
 	rec := httptest.NewRecorder()
-	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{F: f}, coinglass.Service{}, coinank.Service{})
+	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{F: f}, coinglass.Service{}, coinank.Service{}, coinmarketcap.Service{})
 	srv.mux().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
 	return rec
 }
@@ -214,7 +215,7 @@ func TestChainrankNonJSONIsLoud(t *testing.T) {
 func TestChainrankRejectsNonGet(t *testing.T) {
 	// Writes are NOT proxied: their paths are not on the mux at all, and the
 	// read handler refuses any verb but GET/HEAD.
-	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{}, coinglass.Service{}, coinank.Service{})
+	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{}, coinglass.Service{}, coinank.Service{}, coinmarketcap.Service{})
 	mux := srv.mux()
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/chainrank?mode=stats", nil))
@@ -235,7 +236,7 @@ func TestChainrankCacheIsPerURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{F: f}, coinglass.Service{}, coinank.Service{}).mux()
+	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{F: f}, coinglass.Service{}, coinank.Service{}, coinmarketcap.Service{}).mux()
 	do := func(u string) *httptest.ResponseRecorder {
 		rec := httptest.NewRecorder()
 		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, u, nil))
@@ -263,7 +264,7 @@ func TestChainrankParamOrderSharesOneCacheEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{F: f}, coinglass.Service{}, coinank.Service{}).mux()
+	srv := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{}, chainrank.Service{F: f}, coinglass.Service{}, coinank.Service{}, coinmarketcap.Service{}).mux()
 	do := func(u string) string {
 		rec := httptest.NewRecorder()
 		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, u, nil))
