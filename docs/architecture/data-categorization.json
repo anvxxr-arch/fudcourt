@@ -1236,6 +1236,69 @@
   "guard_tier": "public"
  },
  {
+  "id": "route-api-coinglass",
+  "name": "GET /api/coinglass \u2014 CoinGlass derivatives surfaces (PROXY -> Go data fudcourt-data :3101)",
+  "slice": "routes",
+  "category": "DERIVATIVES",
+  "domain": "derivatives",
+  "provider": "capi.coinglass.com (via fudcourt-data)",
+  "layer": "NORMALIZED",
+  "auth": "keyless",
+  "freshness": "NEAR_REALTIME",
+  "durability": "SNAPSHOT",
+  "sensitivity": "PUBLIC",
+  "status": "active",
+  "code_path": "frontend/web/src/app/(frontend)/api/coinglass/route.ts:34-72",
+  "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CG-Upstream/X-CG-Cache/X-CG-Cipher. backend/data/cmd/data/main.go `mux.HandleFunc(\"/api/coinglass\")`; modes statistics|openInterest|fundingRate|markets, keyless by decryption",
+  "path": "/api/coinglass",
+  "methods": [
+   "GET"
+  ],
+  "guard_tier": "public"
+ },
+ {
+  "id": "route-api-coinank",
+  "name": "GET /api/coinank \u2014 CoinAnk derivatives surfaces (PROXY -> Go data fudcourt-data :3101; upstream DARK)",
+  "slice": "routes",
+  "category": "DERIVATIVES",
+  "domain": "derivatives",
+  "provider": "api.coinank.com (via fudcourt-data)",
+  "layer": "NORMALIZED",
+  "auth": "keyless",
+  "freshness": "NEAR_REALTIME",
+  "durability": "SNAPSHOT",
+  "sensitivity": "PUBLIC",
+  "status": "dark",
+  "code_path": "frontend/web/src/app/(frontend)/api/coinank/route.ts:34-70",
+  "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CA-Upstream/X-CA-Cache. backend/data/cmd/data/main.go `mux.HandleFunc(\"/api/coinank\")`; modes fundingRate|liquidation|longShort|etf|whales, keyless by client signature. Route is live but every mode is upstream's 502 `403` (DR-038) -- status dark mirrors the family",
+  "path": "/api/coinank",
+  "methods": [
+   "GET"
+  ],
+  "guard_tier": "public"
+ },
+ {
+  "id": "route-api-coinmarketcap",
+  "name": "GET /api/coinmarketcap \u2014 CoinMarketCap market surfaces (PROXY -> Go data fudcourt-data :3101)",
+  "slice": "routes",
+  "category": "MARKET_DATA",
+  "domain": "market-data",
+  "provider": "api.coinmarketcap.com/data-api/v3 (via fudcourt-data)",
+  "layer": "NORMALIZED",
+  "auth": "keyless",
+  "freshness": "NEAR_REALTIME",
+  "durability": "SNAPSHOT",
+  "sensitivity": "PUBLIC",
+  "status": "active",
+  "code_path": "frontend/web/src/app/(frontend)/api/coinmarketcap/route.ts:37-74",
+  "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CMC-Upstream/X-CMC-Cache. backend/data/cmd/data/main.go `mux.HandleFunc(\"/api/coinmarketcap\")`; modes listing|global|marketPairs|exchanges, keyless with no credential; start/limit bounds are the sidecar's, validated before any fetch (DR-039)",
+  "path": "/api/coinmarketcap",
+  "methods": [
+   "GET"
+  ],
+  "guard_tier": "public"
+ },
+ {
   "id": "route-api-cryptorank",
   "name": "GET /api/cryptorank \u2014 crypto research board (market caps, listings, ecosystems, RWA) (PROXY -> Go data fudcourt-data :3101)",
   "slice": "routes",

@@ -193,7 +193,7 @@ print(f"# session: {SESSION_WHY}", flush=True)
 print("=== A. pages ===", flush=True)
 for p in ["/", "/market", "/market/crypto", "/market/trench", "/market/forex",
           "/market/stock", "/market/commodity", "/market/ticker/BTC",
-          "/chainrank", "/cryptorank", "/news", "/scoreboard", "/signals"]:
+          "/chainrank", "/news", "/scoreboard", "/signals"]:
     st, b = hit(p, timeout=60)
     rec("page", p, st, 200, b)
 # The market hub absorbed the standalone boards: their old paths are deliberate
@@ -283,6 +283,38 @@ for q, field, want in (("page=0", "page", 1), ("page=-1", "page", 1),
     relayed = (b or {}).get(field)
     rec("api", f"chainrank {q} relayed as upstream's own {field}={want}",
         st if relayed == want else 0, 200, b)
+# The three KEYLESS sidecar families (coinglass / coinank / coinmarketcap) whose web
+# half is now wired. Each mode must answer THROUGH the proxy on :3100, and the
+# sidecar's own strict-param contract must survive the proxy hop. coinglass and
+# coinmarketcap are live; coinank is DARK -- upstream refuses all five, so the honest
+# assertion is the 502 carrying its own code, never a 200 (DR-038).
+for m, extra in (("statistics", ""), ("openInterest", "&symbol=BTC"),
+                 ("fundingRate", ""), ("markets", "")):
+    st, b = hit(f"/api/coinglass?mode={m}{extra}", timeout=120)
+    rec("api", f"/api/coinglass mode={m}{extra}", st, 200, b)
+for q, label in (("mode=bogus", "coinglass bogus mode -> 400"),
+                 ("mode=openInterest", "coinglass openInterest w/o symbol -> 400"),
+                 ("mode=statistics&symbol=BTC", "coinglass symbol on statistics -> 400")):
+    st, b = hit(f"/api/coinglass?{q}", timeout=120)
+    rec("api", label, st, 400, b)
+for m in ("fundingRate", "liquidation", "longShort", "etf", "whales"):
+    st, b = hit(f"/api/coinank?mode={m}", timeout=120)
+    rec("api", f"/api/coinank mode={m} (dark upstream refusal)", st, 502, b)
+for q, label in (("mode=bogus", "coinank bogus mode -> 400"),
+                 ("mode=etf&interval=1h", "coinank interval on etf -> 400"),
+                 ("mode=liquidation&interval=8h", "coinank bad interval 8h -> 400")):
+    st, b = hit(f"/api/coinank?{q}", timeout=120)
+    rec("api", label, st, 400, b)
+for m in ("listing", "global", "exchanges"):
+    st, b = hit(f"/api/coinmarketcap?mode={m}", timeout=120)
+    rec("api", f"/api/coinmarketcap mode={m}", st, 200, b)
+st, b = hit("/api/coinmarketcap?mode=marketPairs&slug=bitcoin", timeout=120)
+rec("api", "/api/coinmarketcap mode=marketPairs&slug=bitcoin", st, 200, b)
+for q, label in (("mode=bogus", "coinmarketcap bogus mode -> 400"),
+                 ("mode=listing&limit=0", "coinmarketcap limit=0 (empty-list trap) -> 400"),
+                 ("mode=global&limit=5", "coinmarketcap limit on global -> 400")):
+    st, b = hit(f"/api/coinmarketcap?{q}", timeout=120)
+    rec("api", label, st, 400, b)
 for m in ("chains", "protocols", "historical"):
     st, b = hit(f"/api/llama?mode={m}", timeout=120)
     rec("api", f"/api/llama mode={m}", st, 200, b)

@@ -16,23 +16,23 @@ exist.
 
 | slice | rows | enumerates |
 |---|---|---|
-| `acq` | 53 | Go data sidecar acquisition surface — every family and every mode |
-| `routes` | 42 | HTTP route handlers under `frontend/web/src/app/**` — method, domain, auth tier, proxy target |
+| `acq` | 58 | Go data sidecar acquisition surface — every family and every mode |
+| `routes` | 45 | HTTP route handlers under `frontend/web/src/app/**` — method, domain, auth tier, proxy target |
 | `db` | 50 | Persistence objects across the four stores (Turso, Postgres+Timescale, `executor` schema, Payload/Neon) |
 | `feeds` | 11 | Non-sidecar upstream feeds the app reads directly (ccxt venues, chain RPCs, DexScreener, CoinGecko, CMS, signals) |
-| **total** | **156** | |
+| **total** | **164** | |
 
 ## 2. Status and category roll-up
 
 | status | rows |  | category | rows |
 |---|---|---|---|---|
-| `active` | 134 | | `MARKET_DATA` | 31 |
+| `active` | 141 | | `MARKET_DATA` | 37 |
 | `dead` | 13 | | `TRADING` | 28 |
-| `dark` | 6 | | `PORTFOLIO` | 20 |
+| `dark` | 7 | | `PORTFOLIO` | 20 |
 | `scaffolded` | 3 | | `RESEARCH` | 17 |
 |  |  | | `NEWS` | 16 |
 |  |  | | `SYSTEM` | 13 |
-|  |  | | `DERIVATIVES` | 10 |
+|  |  | | `DERIVATIVES` | 12 |
 |  |  | | `ACCESS` | 8 |
 |  |  | | `ONCHAIN` | 7 |
 |  |  | | `DEFI` | 6 |
@@ -120,6 +120,9 @@ exist.
 | route-api-auth-callback | GET /api/auth/callback — OAuth code->session exchange (PROXY -> Go api :3103 handleAuthCallback) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `frontend/web/src/app/(frontend)/api/auth/callback/route.ts` |
 | route-api-auth-logout | GET\|POST /api/auth/logout — session cookie retire (PROXY -> Go api :3103 handleAuthLogout) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `frontend/web/src/app/(frontend)/api/auth/logout/route.ts` |
 | route-api-chainrank | GET /api/chainrank — chain rankings & listings (PROXY -> Go data fudcourt-data :3101) | ONCHAIN | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/chainrank/route.ts` |
+| route-api-coinglass | GET /api/coinglass — CoinGlass derivatives surfaces (PROXY -> Go data fudcourt-data :3101) | DERIVATIVES | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/coinglass/route.ts` |
+| route-api-coinank | GET /api/coinank — CoinAnk derivatives surfaces (PROXY -> Go data fudcourt-data :3101; upstream DARK) | DERIVATIVES | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | dark | `frontend/web/src/app/(frontend)/api/coinank/route.ts` |
+| route-api-coinmarketcap | GET /api/coinmarketcap — CoinMarketCap market surfaces (PROXY -> Go data fudcourt-data :3101) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/coinmarketcap/route.ts` |
 | route-api-cryptorank | GET /api/cryptorank — crypto research board (market caps, listings, ecosystems, RWA) (PROXY -> Go data fudcourt-data :3101) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/cryptorank/route.ts` |
 | route-api-khala | GET /api/khala — Khala research reports + reader blocks (PROXY -> Go data fudcourt-data :3101) | RESEARCH | PARSED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/khala/route.ts` |
 | route-api-llama | GET /api/llama — DeFiLlama chains/protocols TVL (PROXY -> Go data fudcourt-data :3101) | DEFI | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/llama/route.ts` |
@@ -238,6 +241,11 @@ wires it correctly; the upstream refuses. Status `dark`, nothing broken on our s
 **0 of the 42** `route.ts` handlers under `frontend/web/src/app` proxy them. Corroborated by the
 contract gate, whose per-family proxy-parity list covers cryptorank, khala, llama, news and chainrank —
 not coinglass or coinank.
+**Resolved 2026-10-03.** All three keyless families now have a thin web proxy route —
+`api/{coinglass,coinank,coinmarketcap}/route.ts` — so **3 of the 45** `route.ts` handlers under
+`frontend/web/src/app` relay them (`:3101`, verbatim), and the contract gate's per-family
+proxy-parity list now covers all eight research families (CG/CN/CMC mode tables kept TS↔Go equal).
+`coinank` stays `dark` through the new route: the proxy answers upstream's 502 as written.
 
 **F5 — the `markets` surface is unwired.** `backend/api/internal/markets/**` contributes vocabulary
 and types only: `backend/api/cmd/api/main.go` imports no markets package and `curl :3103/api/markets` →
@@ -265,12 +273,15 @@ recorded because the middleware table not covering the path is a real (non-explo
 ## 5. Verification
 
 ```
-python3 -c "import json;print(len(json.load(open('docs/architecture/data-categorization.json'))))"  # 161
-curl -s http://127.0.0.1:3101/healthz                                  # 7 families, 28 cryptorank modes
+python3 -c "import json;print(len(json.load(open('docs/architecture/data-categorization.json'))))"  # 164
+curl -s http://127.0.0.1:3101/healthz                                  # 8 families, 28 cryptorank modes
+curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinglass?mode=statistics'   # 200 (web proxy)
+curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinank?mode=fundingRate'     # 502 dark (web proxy)
+curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinmarketcap?mode=global'    # 200 (web proxy)
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=statistics'  # 200
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinank?mode=fundingRate'    # 502 dark
-find frontend/web/src/app \( -name 'route.ts' -o -name 'route.tsx' \) | wc -l              # 42
-grep -rn coinglass frontend/web/src/app | wc -l                        # 0 (no web proxy)
+find frontend/web/src/app \( -name 'route.ts' -o -name 'route.tsx' \) | wc -l              # 45
+grep -rn coinglass frontend/web/src/app | wc -l                        # 6 (client.ts + route.ts, not "no web proxy")
 curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3103/api/markets                      # 404
 curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3103/api/admin/members                # 401
 ```

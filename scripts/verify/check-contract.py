@@ -326,6 +326,59 @@ elif CH_TS.exists() or CH_GO.exists():
 if check_route_is_proxy("chainrank", ("execFile", "child_process", "limitedFetch",
                                       "CR_MODES.includes", "Math.min", "pageSize")):
     ch_parity += ", route is a proxy"
+# coinglass / coinank / coinmarketcap: the three KEYLESS sidecar families, whose web
+# half (the `/api/<family>` proxy + the typing mirror) is now wired. Same convention
+# as khala/llama/news/chainrank -- src/features/<family>/client.ts carries the TS mode
+# table, backend/data/internal/research/<family>/modes.go the Go one, and the route must be
+# the verbatim proxy. Their modes are camelCase (`openInterest`, `marketPairs`), so
+# the token regex admits uppercase where the older families' all-lowercase one did not.
+# The route must NOT re-implement the family's mechanism: coinglass decrypts an
+# encrypted body, coinank computes a request signature, coinmarketcap clamps nothing
+# (its bounds are the sidecar's, validated before any fetch).
+def _keyless_parity(prefix, family, needles):
+    """TS<->Go mode-table parity + proxy-shape check for one keyless family.
+
+    `prefix` is the TS/Go const prefix (CG/CN/CMC); `family` is the package + route
+    segment (coinglass/coinank/coinmarketcap) -- they differ, so the route path must
+    be built from `family`, never from prefix.lower().
+    """
+    ts = SRC / "features" / family / "client.ts"
+    go = Path(os.environ.get(f"FUDCOURT_DATA_{family.upper()}_GO",
+                             str(REPO / "backend" / "data" / "internal" / "research" / family / "modes.go")))
+    row = f"{family} absent"
+    if ts.exists() and go.exists():
+        ts_modes = set(re.findall(
+            r"'([A-Za-z0-9-]+)'", block_after(ts.read_text(), f"{prefix}_MODES =", "[", "]") or ""))
+        go_modes = set(re.findall(
+            r'"([A-Za-z0-9-]+)"', block_after(go.read_text(), "var Modes = []string", "{", "}") or ""))
+        if not ts_modes:
+            fails.append(f"src/features/{family}/client.ts: {prefix}_MODES not found (parse drift?)")
+        elif not go_modes:
+            fails.append(f"internal/research/{family}/modes.go: Modes not found (parse drift?)")
+        elif ts_modes != go_modes:
+            fails.append(f"{family} {prefix}_MODES drift TS vs Go: "
+                         f"only-ts={sorted(ts_modes - go_modes)} only-go={sorted(go_modes - ts_modes)}")
+        else:
+            row = f"{family} {prefix}_MODES parity ({len(ts_modes)} modes)"
+    elif ts.exists() or go.exists():
+        missing = (f"backend/data/internal/research/{family}/modes.go" if ts.exists() else str(ts))
+        fails.append(f"{family} parity cannot run: {missing} is missing (both sides are tracked)")
+        row = f"{family} parity FAILED (one side absent)"
+    if check_route_is_proxy(family, needles):
+        row += ", route is a proxy"
+    return row
+cg_parity = _keyless_parity(
+    "CG", "coinglass",
+    ("execFile", "child_process", "limitedFetch", "CG_MODES.includes",
+     "createDecipheriv", "gunzip"))
+cn_parity = _keyless_parity(
+    "CN", "coinank",
+    ("execFile", "child_process", "limitedFetch", "CN_MODES.includes",
+     "coinank-apikey", "createHash"))
+cmc_parity = _keyless_parity(
+    "CMC", "coinmarketcap",
+    ("execFile", "child_process", "limitedFetch", "CMC_MODES.includes",
+     "Math.min", "parseInt"))
 # reconcile: a RUST-served route (PLAN G9 SG-9.7 / DR-014), not a sidecar family,
 # so there is no mode table to compare. The drift this row exists to catch is the
 # one a proxy route can still have: spawning a second implementation instead of
@@ -361,4 +414,5 @@ if fails:
     sys.exit(1)
 parity = "TS/Go mode table parity" if go_checked else "Go parity SKIPPED (table absent)"
 print(f"CONTRACT_OK (CR_MODES={len(lib)} modes, {parity}, {kh_parity}, {ll_parity}, "
-      f"{nw_parity}, {ch_parity}, {rc_row}, mutation guards verified)")
+      f"{nw_parity}, {ch_parity}, {cg_parity}, {cn_parity}, {cmc_parity}, {rc_row}, "
+      f"mutation guards verified)")
