@@ -15,6 +15,12 @@
 # FUDCOURT_DATA_LIVE=1 Go tests, real exchange calls) — they are slow and touch upstreams;
 # run them manually against a known-good window.
 set -u
+# Resolve the repo's toolchain regardless of the caller's PATH: a non-login
+# shell (CI steps, a bare `bash scripts/...`, a git-invoked hook) does not have
+# ~/.bun/bin or ~/.cargo/bin, so the web and rust gates report "command not
+# found" — a red gate that is really an environment gap. CI installs both
+# globally, so this is a harmless prepend there.
+export PATH="$HOME/.bun/bin:$HOME/.cargo/bin:$PATH"
 cd "$(dirname "$0")/../.."
 rc=0
 step() { echo; echo "== $1"; }

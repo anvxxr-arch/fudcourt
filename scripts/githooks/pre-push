@@ -8,6 +8,12 @@
 #   - python syntax check for changed harness scripts
 # Full harnesses (network) stay manual: scripts/verify/verify-*.py
 set -u
+# Resolve the repo's toolchain even when git invokes us with a minimal PATH: a
+# plain `git push` from a login-less shell never sources ~/.profile, so `bun`
+# and `bunx` are missing and every web gate below reports "command not found"
+# (looks like a red tree, is really a PATH gap). CI installs bun globally, so
+# this is a no-op there.
+export PATH="$HOME/.bun/bin:$HOME/.cargo/bin:$PATH"
 remote="$1" url="$2"
 rc=0
 
