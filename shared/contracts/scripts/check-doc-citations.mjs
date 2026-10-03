@@ -105,11 +105,12 @@
  *     ("at the time of that run", "as observed on <date>") or leave it inside the dated row, and
  *     never update it to today's number (that would rewrite history);
  *   - a verdict presented as the CURRENT state is updated to the newest observed line.
- * Latest observed: `DOCS_OK docs=11 citations=1031 allowances=4` (2026-10-02, after
- * `docs/architecture/design-debt.md` was added to `DOCS` the day it landed, DR-037 follow-up; the
- * earlier `docs=10 citations=985` reading is when `docs/architecture/DESIGN-SYSTEM.md` was added,
- * and `docs=9 citations=969 allowances=6` / `docs=8 citations=904` are the current-state snapshots
- * taken before that widening — the older three are left as history).
+ * Latest observed: `DOCS_OK docs=12 citations=1158 allowances=4` (2026-10-02, after
+ * `docs/architecture/data-categorization.md` was added to `DOCS`; the earlier `docs=11
+ * citations=1031` reading is when `docs/architecture/design-debt.md` was added the day it landed,
+ * DR-037 follow-up, the `docs=10 citations=985` reading is when `docs/architecture/DESIGN-SYSTEM.md`
+ * was added, and `docs=9 citations=969 allowances=6` / `docs=8 citations=904` are the current-state
+ * snapshots taken before that widening — the older three are left as history).
  */
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
@@ -147,6 +148,8 @@ const DOCS = [
   'docs/architecture/symbol-key-inventory.md',
   'docs/architecture/DESIGN-SYSTEM.md',
   'docs/architecture/design-debt.md',
+  // Added 2026-10-02 with the data-categorization refresh; its cited paths are now gated.
+  'docs/architecture/data-categorization.md',
   'shared/contracts/schemas/README.md',
 ];
 

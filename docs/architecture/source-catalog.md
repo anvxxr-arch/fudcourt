@@ -139,6 +139,35 @@ credentials,authorization,entitlements,identity}` → `backend/api/internal/
 {markets/{instruments,overview}, finance/*, accounts/{exchange,wallets}, access/*}`.
 Paths that refer to a directory rather than an exact file were verified as directories.
 
+### 1.6 CoinGlass (`https://capi.coinglass.com`)
+
+Code: `backend/data/internal/research/coinglass/{modes.go,fetch.go}`. Keyless: this is the dashboard's
+own backend, whose body is two rounds of AES-128-ECB+PKCS#7 (see the `fudcourt-development` skill §9).
+**No `CG-API-KEY`**, and the official `open-api-v4` host is NOT wired.
+
+| source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `cg-futures-statistics` | `GET /api/futures/home/statistics` | CoinGlass | DERIVATIVES | futures home statistics (encrypted dashboard body) | `backend/data/internal/research/coinglass/modes.go:UpstreamURL` | derivatives aggregate (target) | FREQUENT | NONE | keyless | active | `curl 127.0.0.1:3101/api/coinglass?mode=statistics` → 200 |
+| `cg-open-interest` | `GET /api/openInterest/info?symbol=<SYM>` | CoinGlass | DERIVATIVES | open interest for one symbol (keyed) | same | OpenInterest (target) | FREQUENT | NONE | keyless | active | `curl ...mode=openInterest&symbol=BTC` → 200 |
+| `cg-funding-rank` | `GET /api/fundingRate/rank` | CoinGlass | DERIVATIVES | funding-rate rank, 50 most extreme ± | same | FundingRate (target) | FREQUENT | NONE | keyless | active | `curl ...mode=fundingRate` → 200 |
+| `cg-futures-markets` | `GET /api/futures/v2/coins/markets` | CoinGlass | DERIVATIVES | futures coins markets table | same | Instrument + derivatives metrics (target) | FREQUENT | NONE | keyless | active | `curl ...mode=markets` → 200 |
+
+### 1.7 CoinAnk (`https://api.coinank.com`)
+
+Code: `backend/data/internal/research/coinank/{modes.go,fetch.go}`. Keyless via a client-computed
+signature; **no issued key**, and the official `open-api.coinank.com` host is NOT wired. **All five
+modes are `dark`** — every call returns HTTP 502 carrying the upstream body
+`{"code":"403","detail":"CoinAnk refused the request: please sub api to get data"}`. The sidecar wires
+the family correctly; the upstream refuses. The `monitor-coinank` job watches for the wall lifting.
+
+| source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `ca-funding-rate` | `GET /api/fundingRate/current` | CoinAnk | DERIVATIVES | funding rates, 882 symbols × per-exchange maps | `backend/data/internal/research/coinank/modes.go:UpstreamURL` | FundingRate (target) | FREQUENT | NONE | keyless | dark | `curl 127.0.0.1:3101/api/coinank?mode=fundingRate` → 502 `403` |
+| `ca-liquidation` | `GET /api/liquidation/allExchange` (interval allowlist 1h/2h/4h/6h/12h/1d) | CoinAnk | DERIVATIVES | per-exchange liquidation turnover | same | liquidation metric (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=liquidation` → 502 `403` |
+| `ca-long-short` | `GET /api/longshort/all` | CoinAnk | DERIVATIVES | long/short ratios across exchanges | same | long/short ratio (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=longShort` → 502 `403` |
+| `ca-etf-inflow` | `GET /api/etf/etfInflow` | CoinAnk | MARKET_DATA | daily spot-ETF creations/redemptions | same | ETF flow (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=etf` → 502 `403` |
+| `ca-whales` | `GET /api/hyper/topPosition` | CoinAnk | DERIVATIVES | Hyperliquid top positions by size | same | large-position metric (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=whales` → 502 `403` |
+
 ---
 
 ## 2. Market-data feeds read directly by the Next.js web tier (:3100)
@@ -389,14 +418,14 @@ Counted mechanically from the tables above (`grep -c`/script over this file):
 
 | Section | Rows |
 |---|---|
-| §1 Research feed rows (CryptoRank 25, Khala 5, DefiLlama 3, News 1, ChainRank 3) | **37** |
+| §1 Research feed rows (CryptoRank 25, Khala 5, DefiLlama 3, News 1, ChainRank 3, CoinGlass 4, CoinAnk 5) | **46** |
 | §2 Market-data rows read directly by the web tier | **12** |
 | §3 On-chain/RPC rows (6 Alchemy chains, Solana ×2, Hyperliquid, coins price) | **10** |
 | §4 CEX execution rows (Binance 4, Bybit 5, MEXC 5, paper 1) | **15** |
 | §5 Identity rows | **2** |
 | §6 Manual/user-entered rows | **5** |
 | §7 Internal persistence/infrastructure rows | **14** |
-| **Total registry rows** | **95** |
+| **Total registry rows** | **104** |
 | §8 Absent-in-repo rows | **14** |
 | §9 Frontend route rows | **18** |
 | §10 systemd unit rows | **11** (the 14 files in `infrastructure/systemd/` reduce to 11 table rows: the three `.service`+`.timer` pairs `fudcourt-sync`, `fudcourt-sync-rust` and `fudcourt-pgload` each collapse into one row — 6 single-unit rows plus 3 pair rows covering 6 files — and the two `RETIRED-*.service.txt` tombstones appear as their own rows: 6 + 3 + 2 = 11 rows / 6 + 6 + 2 = 14 files) |
@@ -404,7 +433,7 @@ Counted mechanically from the tables above (`grep -c`/script over this file):
 Facts behind the counts: CryptoRank declares **28** modes (`ModeCount = len(Modes)`; 26
 live-recorded in `MANIFEST.json.liveModes`, 2 refused-by-design); 10 ccxt venues × the
 measured `TICKER_VENUES` type table; 6 EVM chains + Solana + Hyperliquid under the
-5-minute sync; 3 live CEX venues + 1 paper venue in the executor.
+5-minute sync; 3 live CEX venues + 1 paper venue in the executor; **CoinGlass** declares 4 keyless modes (all live) and **CoinAnk** 5 keyless modes (all `dark` — the upstream refuses every call with HTTP 502 `403`).
 
 `[INFERENCE]` markers are used only where a claim rests on reading code rather than
 running it (e.g. tables with no in-repo writer). Every other row cites a file, route or

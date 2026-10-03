@@ -44,6 +44,7 @@ docs/
 | architecture | [data-catalog.md](architecture/data-catalog.md) | Per-dataset detail: today's layer, provider carrier, canonical target, identity, time semantics, consumers |
 | architecture | [data-classification.md](architecture/data-classification.md) | The classification matrix + provider-DTO leak audit + duplicate-concept audit |
 | architecture | [database-classification.md](architecture/database-classification.md) | Every table in Turso/Postgres/executor-schema/Neon classified: canonical/event/snapshot/cache/provider-specific/legacy/unknown, owner, durability, sensitivity, writer gaps |
+| architecture | [data-categorization.md](architecture/data-categorization.md) | The 2026-10-02 refresh: 156 data surfaces across four slices (sidecar acquisition modes, web routes, persistence objects, upstream feeds), each row evidence-backed — closes the gap where `coinglass`/`coinank` appeared zero times in the 2026-10-01 catalogs |
 | architecture | [canonical-acceptance.md](architecture/canonical-acceptance.md) | The acceptance-criteria scorecard: every criterion mapped to observed evidence, with unresolved ambiguities and P0/P1/P2 next actions |
 | operations | [PLAN.md](operations/PLAN.md) | Goal → subgoal → task → subtask breakdown with status |
 | operations | [SECRETS.md](operations/SECRETS.md) | Secret inventory, production (self-hosted) env model, rotation runbook |

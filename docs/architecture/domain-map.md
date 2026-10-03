@@ -25,7 +25,7 @@
 | transactions / ledger | web | `api/transactions{,/[id]}` + `features/transactions/ui.tsx` | `backend/api` (transactions, treasury) |
 | treasury reconciliation (query side) | web | `api/reconcile/route.ts` (proxies Rust) | `backend/api` reads via `backend/sync` |
 | markets / venues / prices (read) | web | `api/{markets,ticker,ticker/instrument(s)}`, `features/{markets,ticker}/*` | `backend/api` (markets) |
-| data acquisition | Go sidecar | `backend/data/internal/research/{llama,cryptorank,khala,chainrank,news}` (ex-`apps/apicalls`) | `backend/data` (already moved) |
+| data acquisition | Go sidecar | `backend/data/internal/research/{llama,cryptorank,khala,chainrank,news,coinglass,coinank}` (ex-`apps/apicalls`) | `backend/data` (already moved) |
 | data caching | Go + TS | `backend/data/platform/cache`, `frontend/web/src/platform/cache` | `backend/data` |
 | stream sync / balances | Rust | `backend/sync/src/streams/sync.rs` + `{chains,jsonrpc,pyfmt}.rs` + `persistence/db.rs` + Python twin `tests/oracle/sync-live.py` | `backend/sync` (already moved; Phase 6 specializes) |
 | reconciliation maths | Rust + TS twin | `backend/sync/src/reconciliation/reconcile.rs` vs `frontend/web/src/app/(frontend)/api/reconcile/route.ts` | `backend/sync` |
