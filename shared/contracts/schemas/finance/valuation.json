@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/finance/valuation.json",
+  "title": "Valuation (derived portfolio total)",
+  "description": "A DERIVED snapshot of what the portfolio is worth. Every figure is an exact decimal string and 'never 0 standing in for unknown' (finance/portfolio doc): a holding with no known price is nil/absent, and the total is computed from the priced subset only - it never silently acquires a zero contribution from an unpriceable asset. `as_of` is the SERVER's clock at derivation time (AsOf: time.Now().UnixMilli() inside Derive), which makes the derivation clock-dependent and therefore not reproducible without an injected clock.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "as_of",
+    "total_value_usd"
+  ],
+  "properties": {
+    "total_value_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null when nothing could be priced - never '0'."
+    },
+    "as_of": {
+      "$ref": "../common/time.json#/$defs/observed_at",
+      "description": "Server clock at derivation; a recorded_at in meaning, an observed_at in name. See canonical-model.md T6."
+    },
+    "holdings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/holding"
+      },
+      "description": "The priced rows the total was built from, so a consumer can show its work."
+    }
+  },
+  "$defs": {
+    "holding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "asset",
+        "quantity"
+      ],
+      "properties": {
+        "asset": {
+          "type": "string"
+        },
+        "asset_id": {
+          "anyOf": [
+            {
+              "$ref": "../common/identifier.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quantity": {
+          "$ref": "../common/quantity.json",
+          "not": {
+            "pattern": "^-"
+          },
+          "description": "Exact NON-NEGATIVE decimal string (the Go derivation refuses a negative quantity with a field-named error)."
+        },
+        "value_usd": {
+          "anyOf": [
+            {
+              "$ref": "../common/money.json"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Null = no known price. NEVER '0'."
+        }
+      }
+    }
+  }
+}

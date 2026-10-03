@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/assets/asset.json",
+  "title": "Asset",
+  "description": "A fungible unit of value an account's balance and a ledger movement are denominated in (economic identity). DISTINCT FROM Token (one contract instance of this asset on one chain) and from Coin (which is NOT an entity: it is provider nomenclature for a market-data row - see docs/architecture/canonical-model.md D1). NO OWNER AND NO PRODUCER TODAY: no Asset type exists in any language (grep `^type (Asset|Coin|Token)\\b` over backend/api returns nothing); the noun is a bare string in six packages (ledger.Entry.Asset, transactions.Transaction.Asset, portfolio.Holding.Asset, portfolio.Exposure.Asset, treasury.Account.Asset, instruments.Instrument.BaseAsset/QuoteAsset). Because no id producer exists, `asset_id` here is the shape a mapping table must eventually fill.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "asset_id",
+    "symbol"
+  ],
+  "properties": {
+    "asset_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "symbol": {
+      "type": "string",
+      "description": "Uppercased display symbol ('BTC'). A display attribute ONLY - symbols are NOT identity, and the contract fixes the common failure of keying money rows on this value."
+    },
+    "name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "native",
+        "token",
+        "fiat",
+        "stablecoin",
+        "other"
+      ],
+      "description": "native = a chain's own coin; fiat = an off-chain currency (USD is the unit of every *_usd field); stablecoin is a classification the repo does not currently model, included because the data exists as provider categories."
+    },
+    "chain_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null for off-chain assets (USD) and for an asset that spans chains (its Tokens carry the chain)."
+    },
+    "decimals": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "On-chain base-10 exponent when known; null when the provider does not report it (never guessed)."
+    },
+    "provider_ids": {
+      "type": "array",
+      "description": "Provider mappings. EMPTY TODAY - no mapping table or column exists anywhere in database/ (see canonical-model.md D-CANON). Present so a consumer can express 'this is Bitcoin at CryptoRank' without inventing a field.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider",
+          "provider_id"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "coingecko",
+              "cryptorank",
+              "dexscreener",
+              "defillama",
+              "chainrank",
+              "coinmarketcap",
+              "onchain"
+            ]
+          },
+          "provider_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

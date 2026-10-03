@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/common/ratio.json",
+  "title": "Exact ratio (dimensionless, 0-1)",
+  "description": "A decimal string fraction on the 0-1 scale: a fraction of a position to close (executor TakeProfitDefinition.fraction, ScaleLevel.fraction) or a funding rate expressed per interval (markets FundingRate.Rate, a fraction such as 0.0001). Range is NOT enforced by the type because a ratio MAY legitimately be negative (funding) and MAY exceed 1 in a ratio-of-ratios; each field documents its own range.",
+  "$ref": "./decimal.json"
+}

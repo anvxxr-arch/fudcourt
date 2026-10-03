@@ -1,0 +1,78 @@
+# FUD Court execution runtime (Go worker; backend/workers/executor).
+#
+# This is the production executor. The TypeScript worker
+# (frontend/web/scripts/executor/worker.ts) was the previous owner; the Go worker
+# in backend/workers/executor is the replacement and parity rows 1-9 of
+# docs/architecture/parity-matrix.md are DONE. The TS worker unit
+# (fudcourt-executor-worker.service) is retained as a fallback until the
+# cutover row `verify:executor` (executor-paper-e2e.ts against the Go worker)
+# is proven green.
+#
+# PROVISIONING GATE — the unit is DISABLED until the keys below exist:
+#   FUDCOURT_EXECUTOR_MASTER_KEY  64 hex chars; REQUIRED, fail-closed (§40)
+#   FUDCOURT_EXECUTOR_PG_URL     Postgres DSN (the DR-019 fudcourt DB, now on
+#                                the consolidated instance 127.0.0.1:5432)
+#   VALKEY_ADDR                  127.0.0.1:6379 (absent => in-process locks)
+# All three live in frontend/web/.env.local (the documented home per SECRETS.md).
+# Until they are present the Go worker exits non-zero at startup and this
+# unit would crash-loop — leave it masked, do not enable.
+#
+# TWO KEYS ARE STILL MISSING FROM frontend/web/.env.local AND MUST BE ADDED by
+# the operator before this unit can start (both are absent there today; the
+# template frontend/web/.env.example documents them):
+#   FUDCOURT_SESSION_SECRET      >= 32 chars, byte-identical to the value the web
+#                                tier signs cookies with (see COUPLING below)
+#   FUDCOURT_EXECUTOR_PG_URL     the DSN THIS binary requires — note it is NOT
+#                                the web tier's FUDCOURT_PG_URL; the two names
+#                                are distinct and must both be present.
+#
+# OPERATIONS (§34): the process serves TWO loopback-only HTTP surfaces:
+#   127.0.0.1:3104  /healthz (liveness, no dependencies) and /readyz
+#                   (Postgres + lock-backend readiness, 503 while either is
+#                   unusable). A listener failure takes the worker down with it
+#                   rather than silently losing visibility.
+#   127.0.0.1:3105  /api/executor/* — the 15 executor contract routes, served by
+#                   the executor process itself (objective §52). This replaces
+#                   backend/api as the owner of that path: the web tier thin-
+#                   proxies the browser request (cookie and all) here.
+#                   The port is the FUDCOURT_EXECUTOR_API_ADDR default, so the
+#                   Environment line below restates it explicitly — a pin an
+#                   operator can see, not an invisible default.
+#
+# SESSION SECRET COUPLING — the highest-risk part of this design:
+#   The executor now VERIFIES the same signed session cookie the web tier
+#   ISSUES. That means FUDCOURT_SESSION_SECRET must be present in THIS process
+#   and MUST be byte-identical to the value the web tier signs with. It arrives
+#   through the same EnvironmentFile line below (frontend/web/.env.local — the
+#   documented home per SECRETS.md), so there is exactly ONE definition. If the
+#   two copies ever diverge, every /api/executor/* route answers 401
+#   `{error:'unauthorized',...}` while /healthz still reports ready — a silent
+#   authentication failure with a green readiness light. Rotate the secret in
+#   that ONE file and restart both units together; never hand-set it here.
+[Unit]
+Description=FUD Court CEX execution runtime (Go worker + executor API)
+After=network-online.target valkey.service
+Wants=network-online.target
+Wants=valkey.service
+
+[Service]
+Type=simple
+# The master key is fail-closed: the binary refuses to start without it, so
+# the EnvironmentFile is NOT optional — no `-` prefix. Same file the web tier
+# reads (SECRETS.md: FUDCOURT_EXECUTOR_MASTER_KEY and FUDCOURT_SESSION_SECRET
+# both live in frontend/web/.env.local).
+EnvironmentFile=/home/dwizzy/fudcourt/frontend/web/.env.local
+# Pin the API surface to the documented default explicitly (see the header).
+Environment=FUDCOURT_EXECUTOR_API_ADDR=127.0.0.1:3105
+# NOTE: FUDCOURT_SESSION_SECRET is deliberately NOT set here. It is a secret and
+# must come from the EnvironmentFile above, so the file the web tier reads and
+# the file this unit reads cannot drift apart.
+WorkingDirectory=/home/dwizzy/fudcourt/backend/workers/executor
+ExecStartPre=/usr/bin/go build -C /home/dwizzy/fudcourt/backend/workers/executor -o bin/fudcourt-executor ./cmd/executor
+ExecStart=/home/dwizzy/fudcourt/backend/workers/executor/bin/fudcourt-executor
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65536
+
+[Install]
+WantedBy=default.target

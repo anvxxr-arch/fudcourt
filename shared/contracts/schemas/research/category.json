@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/research/category.json",
+  "title": "Category / tag index entry",
+  "description": "A provider taxonomy entry (coin category, tag, ecosystem). KEPT AS PROVIDER STRINGS ON PURPOSE: there is no canonical taxonomy anywhere in the repo - the only taxonomy tables that exist are Payload CMS's content categories, which database/README.md explicitly excludes from the trading surface. So this schema carries a provider slug plus aggregate counts (gainers/losers, dominance) and does NOT pretend to a canonical category id.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "slug"
+  ],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "description": "Provider slug; on keyed modes this is the REQUEST key echoed back, not a looked-up id."
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "rank": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "market_cap_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "volume_24h_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "dominance_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "gainers": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "losers": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "change_24h_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The provider's own average across the category, not our computation."
+    },
+    "coins": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Top coin keys in the category (a capped list - the envelope's slice says so)."
+    }
+  }
+}

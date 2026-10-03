@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/research/coin.json",
+  "title": "Coin (provider market-data row)",
+  "description": "A provider's row for an asset on a MARKET-DATA surface. THIS IS NOT AN ENTITY: it is the product view the research plane serves, and the repo has three different ones for the same economic thing (CryptoRank CrCoin, CoinGecko MarketsCoin, DexScreener DexToken) - see canonical-model.md D1. It is modeled here because consumers read it, and because it is the clearest example of the repo's honest-absence discipline: 'an absent upstream value is null, never 0' is stated in the Go shaper header and enforced by pointer fields throughout. IDENTITY IS THE PROVIDER'S OWN KEY (a slug like 'bitcoin'), echoed back - the detail shaper literally injects the requested key rather than looking one up, so it cannot be a canonical id. Counts/ranks arrive as floats from the provider and are declared counts here (see common/count.json for why that matters). Honest-absence rule enforced by the shapers: every optional numeric is nullable and a missing upstream key maps to null (TS: 'finite-number-or-null'; Go: 'an absent upstream value is null, never 0').",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "key",
+    "symbol",
+    "name"
+  ],
+  "properties": {
+    "key": {
+      "type": "string",
+      "description": "The provider's own coin key/slug. Echoed, not minted."
+    },
+    "symbol": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "rank": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Provider rank (1-based). Null = unranked; NEVER 0."
+    },
+    "image": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "price_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/price.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null = the provider did not report a price for this row."
+    },
+    "market_cap_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "volume_24h_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ath_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/price.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "change_24h_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "change_7d_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Present only on the listings variant, where it is DERIVED from a 7-day price anchor - the envelope's change_source says so."
+    },
+    "high_24h": {
+      "anyOf": [
+        {
+          "$ref": "../common/price.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "low_24h": {
+      "anyOf": [
+        {
+          "$ref": "../common/price.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "category": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Provider taxonomy, opaque."
+    },
+    "listing_date": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Provider-formatted date STRING, not parsed into an instant."
+    }
+  }
+}

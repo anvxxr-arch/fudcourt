@@ -1,0 +1,23 @@
+[Unit]
+Description=FUD Court live multi-chain balance sync -> Postgres (Rust)
+Documentation=file:///home/dwizzy/fudcourt/backend/sync/src/main.rs
+Documentation=file:///home/dwizzy/fudcourt/tests/oracle/sync-live.py
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# The binary walks up from its own location to the repo-root `.env` (the same
+# walk the Python oracle does from `__file__`), so WorkingDirectory is only the
+# anchor for a relative invocation — keep it identical to the Python unit so a
+# swap changes exactly one line.
+WorkingDirectory=/home/dwizzy/fudcourt/backend/sync
+Environment=NODE_ENV=
+ExecStart=/home/dwizzy/fudcourt/backend/sync/target/release/fudcourt-sync
+# A failed RPC must not silently zero data; retry after a short backoff.
+Restart=on-failure
+RestartSec=60
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

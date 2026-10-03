@@ -1,0 +1,80 @@
+name: contracts
+# Surface: the API/event source of truth — shared/contracts (OpenAPI + event
+# catalog) and shared/sdk/typescript (the generated client). A contracts change is
+# cross-cutting: it can invalidate the Go services and the web client, which is
+# exactly why it also triggers web.yml and go.yml (see the hints in that
+# workflow's filter) rather than being checked in isolation here.
+#
+# This workflow always RUNS; the check job is skipped when nothing under
+# shared/ moved. See web.yml for why the filter is a job, not a `paths:`.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+defaults:
+  run:
+    shell: bash
+jobs:
+  changes:
+    name: "contracts - which surface changed"
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      contracts: ${{ steps.filter.outputs.contracts }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            contracts:
+              - 'shared/**'
+              - '.github/workflows/contracts.yml'
+  check:
+    name: "contracts - drift gate + generated SDK"
+    needs: changes
+    if: needs.changes.outputs.contracts == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - name: "Contracts drift gate (OpenAPI refs/enums vs types.ts, route coverage, event catalog)"
+        run: node shared/contracts/scripts/check-contract.mjs
+      - name: "Generated SDK matches its sources (openapi + event catalog)"
+        working-directory: shared/sdk/typescript
+        run: |
+          set -euo pipefail
+          bun install --frozen-lockfile
+          # Regenerate and compare against the tree copy — catches stale or
+          # hand-edited src/generated regardless of git state (generate is
+          # deterministic: same inputs -> byte-identical output).
+          tmp=$(mktemp -d)
+          cp -r src/generated "$tmp/generated"
+          bun run generate
+          if ! diff -r "$tmp/generated" src/generated; then
+            echo "::error::src/generated is stale vs shared/contracts — run 'cd shared/sdk/typescript && bun run generate' and commit"
+            exit 1
+          fi
+      - name: "SDK typecheck (strict)"
+        working-directory: shared/sdk/typescript
+        run: bun run typecheck
+  gate:
+    name: "contracts - gate (required)"
+    needs: [check]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Verdict"
+        run: |
+          echo "check result: ${{ needs.check.result }}"
+          case "${{ needs.check.result }}" in
+            success|skipped) exit 0 ;;
+            *) echo "::error::contracts surface failed"; exit 1 ;;
+          esac

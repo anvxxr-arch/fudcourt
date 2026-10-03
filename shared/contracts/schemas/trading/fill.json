@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/trading/fill.json",
+  "title": "Fill",
+  "description": "One executed trade reported by a venue for one order. DEDUP IS THE GUARANTEE: UNIQUE (account_id, exchange_trade_id) in executor.fills, computed by idempotency.FillDedupKey; the insert is ON CONFLICT DO NOTHING and the worker treats a conflict as 'already ingested', which is what makes fill ingestion idempotent across restarts and replays. Every money field is the venue's own decimal string, preserved verbatim (no float64 anywhere in the four adapters); fee_asset names the asset the fee was charged in, which is NOT necessarily the quote asset. occurred_at is the venue's time when supplied, never our clock.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "fill_id",
+    "execution_id",
+    "account_id",
+    "exchange_trade_id",
+    "price",
+    "quantity",
+    "quote_quantity",
+    "fee",
+    "fee_asset",
+    "occurred_at"
+  ],
+  "properties": {
+    "fill_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "execution_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "order_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null when the venue reported a trade with no local order row."
+    },
+    "account_id": {
+      "$ref": "../common/identifier.json",
+      "description": "Half of the dedup key; fills are scoped per account, not per execution."
+    },
+    "exchange_trade_id": {
+      "type": "string",
+      "description": "The venue's trade id AS TEXT (Binance `id`, MEXC dealId/id). Half of the dedup key."
+    },
+    "price": {
+      "$ref": "../common/price.json"
+    },
+    "quantity": {
+      "$ref": "../common/quantity.json"
+    },
+    "quote_quantity": {
+      "$ref": "../common/money.json",
+      "description": "Quantity in quote units as the venue reports it - stored, not recomputed, so a venue's own rounding is preserved."
+    },
+    "fee": {
+      "$ref": "../common/money.json"
+    },
+    "fee_asset": {
+      "type": "string"
+    },
+    "liquidity": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "maker",
+            "taker"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null when the venue does not say; never guessed."
+    },
+    "occurred_at": {
+      "$ref": "../common/time.json#/$defs/occurred_at"
+    }
+  }
+}

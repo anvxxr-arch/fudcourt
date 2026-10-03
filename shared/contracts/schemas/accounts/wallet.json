@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/accounts/wallet.json",
+  "title": "Wallet (a monitored chain address)",
+  "description": "A chain address the platform watches. The ADDRESS IS THE IDENTITY in the schema today (database/schema/pg-schema.sql `wallets(address TEXT PRIMARY KEY)`), and the address normalizer (backend/api/internal/accounts/wallets/wallets.go NormalizeAddress) is chain-specific: EIP-55 for EVM-family checksums, and rejection of a CEX name as a chain. `ownership` distinguishes our own wallets from watched third parties, and `portfolio_linked` is the flag that decides whether its balances count toward the portfolio view - the migration plan's phase-5 caution is that this flag must not be inferred from `ownership`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "address",
+    "chain_id",
+    "label"
+  ],
+  "properties": {
+    "address": {
+      "type": "string",
+      "description": "Stored in the chain's canonical form (EIP-55 where applicable). Primary key in the SQL schema."
+    },
+    "chain_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "label": {
+      "type": "string",
+      "description": "Non-empty display label (wallets.New refuses an empty one)."
+    },
+    "alias": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ownership": {
+      "type": "string",
+      "enum": [
+        "self",
+        "external"
+      ],
+      "description": "Mirrors backend/api/internal/accounts/wallets/wallets.go Ownership."
+    },
+    "portfolio_linked": {
+      "type": "boolean",
+      "description": "Whether this wallet's balances count toward the portfolio view."
+    },
+    "monitored": {
+      "type": "boolean",
+      "description": "The SQL column `monitored INTEGER DEFAULT 1`."
+    },
+    "recorded_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/recorded_at"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "SQL `created_at`; LEGACY ENCODING is text 'YYYY-MM-DD HH:MM:SS', not integer ms - see common/time.json."
+    },
+    "emoji": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "color": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

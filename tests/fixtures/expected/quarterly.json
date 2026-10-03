@@ -1,0 +1,640 @@
+{
+  "cache": "MISS",
+  "count": 28,
+  "fetchedAt": 1790597973,
+  "kind": "quarterly",
+  "quarterlyBtc": [
+    {
+      "q1": {
+        "closeUsd": 68216.50816822608,
+        "isFull": true,
+        "openUsd": 87518.20426265846
+      },
+      "q2": {
+        "closeUsd": 58548.78411750438,
+        "isFull": true,
+        "openUsd": 68121.00483651951
+      },
+      "q3": {
+        "closeUsd": 82965.78841876038,
+        "isFull": false,
+        "openUsd": 58573.77026395444
+      },
+      "q4": null,
+      "year": 2026
+    },
+    {
+      "q1": {
+        "closeUsd": 82502.53341231718,
+        "isFull": true,
+        "openUsd": 93409.2552216307
+      },
+      "q2": {
+        "closeUsd": 107153.16932206371,
+        "isFull": true,
+        "openUsd": 82512.7772778374
+      },
+      "q3": {
+        "closeUsd": 114003.35096282187,
+        "isFull": true,
+        "openUsd": 107144.32515433339
+      },
+      "q4": {
+        "closeUsd": 87546.2800850431,
+        "isFull": true,
+        "openUsd": 114062.59663738994
+      },
+      "year": 2025
+    },
+    {
+      "q1": {
+        "closeUsd": 71262.40332687105,
+        "isFull": true,
+        "openUsd": 42242.07738645871
+      },
+      "q2": {
+        "closeUsd": 62742.97076407593,
+        "isFull": true,
+        "openUsd": 71297.4104023955
+      },
+      "q3": {
+        "closeUsd": 63207.79101412626,
+        "isFull": true,
+        "openUsd": 62730.58473485243
+      },
+      "q4": {
+        "closeUsd": 93403.40327679549,
+        "isFull": true,
+        "openUsd": 63262.19281123769
+      },
+      "year": 2024
+    },
+    {
+      "q1": {
+        "closeUsd": 28488.05185078196,
+        "isFull": true,
+        "openUsd": 16536.98342812871
+      },
+      "q2": {
+        "closeUsd": 30484.998142228225,
+        "isFull": true,
+        "openUsd": 28482.04588483159
+      },
+      "q3": {
+        "closeUsd": 26979.08966266927,
+        "isFull": true,
+        "openUsd": 30467.612321867324
+      },
+      "q4": {
+        "closeUsd": 42240.75677209574,
+        "isFull": true,
+        "openUsd": 26975.61746968974
+      },
+      "year": 2023
+    },
+    {
+      "q1": {
+        "closeUsd": 45572.58254682966,
+        "isFull": true,
+        "openUsd": 46307.49943859
+      },
+      "q2": {
+        "closeUsd": 19709.26109841363,
+        "isFull": true,
+        "openUsd": 45560.9478390475
+      },
+      "q3": {
+        "closeUsd": 19423.30826788908,
+        "isFull": true,
+        "openUsd": 19835.627078561305
+      },
+      "q4": {
+        "closeUsd": 16535.56647477436,
+        "isFull": true,
+        "openUsd": 19422.27032084019
+      },
+      "year": 2022
+    },
+    {
+      "q1": {
+        "closeUsd": 58944.86380268,
+        "isFull": true,
+        "openUsd": 29015.30551703
+      },
+      "q2": {
+        "closeUsd": 34922.17837687,
+        "isFull": true,
+        "openUsd": 58961.25322037
+      },
+      "q3": {
+        "closeUsd": 43775.93571865,
+        "isFull": true,
+        "openUsd": 34889.07067884
+      },
+      "q4": {
+        "closeUsd": 46312.95761029,
+        "isFull": true,
+        "openUsd": 43856.86087272
+      },
+      "year": 2021
+    },
+    {
+      "q1": {
+        "closeUsd": 6435.31110985,
+        "isFull": true,
+        "openUsd": 7183.99729219
+      },
+      "q2": {
+        "closeUsd": 9141.78243539,
+        "isFull": true,
+        "openUsd": 6426.93389945
+      },
+      "q3": {
+        "closeUsd": 10754.10695828,
+        "isFull": true,
+        "openUsd": 9131.85617812
+      },
+      "q4": {
+        "closeUsd": 29033.14352581,
+        "isFull": true,
+        "openUsd": 10765.14396599
+      },
+      "year": 2020
+    },
+    {
+      "q1": {
+        "closeUsd": 4081.47047874,
+        "isFull": true,
+        "openUsd": 3768.64424374
+      },
+      "q2": {
+        "closeUsd": 10873.89100639,
+        "isFull": true,
+        "openUsd": 4076.44206331
+      },
+      "q3": {
+        "closeUsd": 8280.33307825,
+        "isFull": true,
+        "openUsd": 10824.12674455
+      },
+      "q4": {
+        "closeUsd": 7192.90318186,
+        "isFull": true,
+        "openUsd": 8283.2346897
+      },
+      "year": 2019
+    },
+    {
+      "q1": {
+        "closeUsd": 6954.42,
+        "isFull": true,
+        "openUsd": 14112.2
+      },
+      "q2": {
+        "closeUsd": 6397.571616,
+        "isFull": true,
+        "openUsd": 6936.26
+      },
+      "q3": {
+        "closeUsd": 6618.62236899,
+        "isFull": true,
+        "openUsd": 6398.687393
+      },
+      "q4": {
+        "closeUsd": 3766.60729677,
+        "isFull": true,
+        "openUsd": 6621.59736887
+      },
+      "year": 2018
+    },
+    {
+      "q1": {
+        "closeUsd": 1071.79,
+        "isFull": true,
+        "openUsd": 963.658
+      },
+      "q2": {
+        "closeUsd": 2480.84,
+        "isFull": true,
+        "openUsd": 1071.71
+      },
+      "q3": {
+        "closeUsd": 4338.71,
+        "isFull": true,
+        "openUsd": 2492.6
+      },
+      "q4": {
+        "closeUsd": 14156.4,
+        "isFull": true,
+        "openUsd": 4341.05
+      },
+      "year": 2017
+    },
+    {
+      "q1": {
+        "closeUsd": 416.729,
+        "isFull": true,
+        "openUsd": 430.721
+      },
+      "q2": {
+        "closeUsd": 673.337,
+        "isFull": true,
+        "openUsd": 416.76
+      },
+      "q3": {
+        "closeUsd": 609.735,
+        "isFull": true,
+        "openUsd": 672.515
+      },
+      "q4": {
+        "closeUsd": 963.743,
+        "isFull": true,
+        "openUsd": 609.929
+      },
+      "year": 2016
+    },
+    {
+      "q1": {
+        "closeUsd": 244.22445679,
+        "isFull": true,
+        "openUsd": 320.43511963
+      },
+      "q2": {
+        "closeUsd": 263.07192993,
+        "isFull": true,
+        "openUsd": 244.22280884
+      },
+      "q3": {
+        "closeUsd": 236.05952454,
+        "isFull": true,
+        "openUsd": 263.34512329
+      },
+      "q4": {
+        "closeUsd": 430.56741333,
+        "isFull": true,
+        "openUsd": 236.00401306
+      },
+      "year": 2015
+    },
+    {
+      "q1": {
+        "closeUsd": 457.0010376,
+        "isFull": true,
+        "openUsd": 754.9699707
+      },
+      "q2": {
+        "closeUsd": 639.79705811,
+        "isFull": true,
+        "openUsd": 457.00015259
+      },
+      "q3": {
+        "closeUsd": 386.94403076,
+        "isFull": true,
+        "openUsd": 641.39080811
+      },
+      "q4": {
+        "closeUsd": 320.19348145,
+        "isFull": true,
+        "openUsd": 387.42694092
+      },
+      "year": 2014
+    },
+    {
+      "q1": {
+        "closeUsd": 92.28580465,
+        "isFull": true,
+        "openUsd": 13.62259177
+      },
+      "q2": {
+        "closeUsd": 96.61401367,
+        "isFull": true,
+        "openUsd": 92.36234819
+      },
+      "q3": {
+        "closeUsd": 133,
+        "isFull": true,
+        "openUsd": 97.51000214
+      },
+      "q4": {
+        "closeUsd": 754.01000977,
+        "isFull": true,
+        "openUsd": 132.67999268
+      },
+      "year": 2013
+    },
+    {
+      "q1": {
+        "closeUsd": 4.95052775,
+        "isFull": true,
+        "openUsd": 4.73754714
+      },
+      "q2": {
+        "closeUsd": 6.70399361,
+        "isFull": true,
+        "openUsd": 4.88638672
+      },
+      "q3": {
+        "closeUsd": 12.16931044,
+        "isFull": true,
+        "openUsd": 6.66617081
+      },
+      "q4": {
+        "closeUsd": 13.42988568,
+        "isFull": true,
+        "openUsd": 12.49009813
+      },
+      "year": 2012
+    },
+    {
+      "q1": {
+        "closeUsd": 0.79218175,
+        "isFull": true,
+        "openUsd": 0.29992893
+      },
+      "q2": {
+        "closeUsd": 16.27489269,
+        "isFull": true,
+        "openUsd": 0.79077113
+      },
+      "q3": {
+        "closeUsd": 5.0335291699999996,
+        "isFull": true,
+        "openUsd": 16.07446641
+      },
+      "q4": {
+        "closeUsd": 4.60322725,
+        "isFull": true,
+        "openUsd": 5.09663182
+      },
+      "year": 2011
+    }
+  ],
+  "quarterlyEth": [
+    {
+      "q1": {
+        "closeUsd": 2103.84331720832,
+        "isFull": true,
+        "openUsd": 2967.280335585133
+      },
+      "q2": {
+        "closeUsd": 1568.816271797536,
+        "isFull": true,
+        "openUsd": 2101.49892456703
+      },
+      "q3": {
+        "closeUsd": 2662.030236742598,
+        "isFull": false,
+        "openUsd": 1570.570625035215
+      },
+      "q4": null,
+      "year": 2026
+    },
+    {
+      "q1": {
+        "closeUsd": 1822.805464726988,
+        "isFull": true,
+        "openUsd": 3334.067558207887
+      },
+      "q2": {
+        "closeUsd": 2487.490435423859,
+        "isFull": true,
+        "openUsd": 1822.687485976411
+      },
+      "q3": {
+        "closeUsd": 4144.596103828484,
+        "isFull": true,
+        "openUsd": 2486.540405211498
+      },
+      "q4": {
+        "closeUsd": 2968.614549751434,
+        "isFull": true,
+        "openUsd": 4145.937851145125
+      },
+      "year": 2025
+    },
+    {
+      "q1": {
+        "closeUsd": 3645.368038148642,
+        "isFull": true,
+        "openUsd": 2281.775113937683
+      },
+      "q2": {
+        "closeUsd": 3435.847457651664,
+        "isFull": true,
+        "openUsd": 3647.219481720479
+      },
+      "q3": {
+        "closeUsd": 2595.435561867734,
+        "isFull": true,
+        "openUsd": 3435.765325768421
+      },
+      "q4": {
+        "closeUsd": 3333.564597535377,
+        "isFull": true,
+        "openUsd": 2599.21914756732
+      },
+      "year": 2024
+    },
+    {
+      "q1": {
+        "closeUsd": 1822.736644746443,
+        "isFull": true,
+        "openUsd": 1195.739809710034
+      },
+      "q2": {
+        "closeUsd": 1934.120988691675,
+        "isFull": true,
+        "openUsd": 1822.59891653177
+      },
+      "q3": {
+        "closeUsd": 1671.287038727647,
+        "isFull": true,
+        "openUsd": 1932.994208044257
+      },
+      "q4": {
+        "closeUsd": 2282.065093699376,
+        "isFull": true,
+        "openUsd": 1671.514837576098
+      },
+      "year": 2023
+    },
+    {
+      "q1": {
+        "closeUsd": 3282.931829350184,
+        "isFull": true,
+        "openUsd": 3681.27182626
+      },
+      "q2": {
+        "closeUsd": 1063.808288015845,
+        "isFull": true,
+        "openUsd": 3283.531781728977
+      },
+      "q3": {
+        "closeUsd": 1327.835701580481,
+        "isFull": true,
+        "openUsd": 1066.950252548448
+      },
+      "q4": {
+        "closeUsd": 1195.87374004696,
+        "isFull": true,
+        "openUsd": 1328.364802075892
+      },
+      "year": 2022
+    },
+    {
+      "q1": {
+        "closeUsd": 1920.42472725,
+        "isFull": true,
+        "openUsd": 738.31704702
+      },
+      "q2": {
+        "closeUsd": 2264.60731881,
+        "isFull": true,
+        "openUsd": 1920.66488974
+      },
+      "q3": {
+        "closeUsd": 3001.63855467,
+        "isFull": true,
+        "openUsd": 2262.38939955
+      },
+      "q4": {
+        "closeUsd": 3681.55192362,
+        "isFull": true,
+        "openUsd": 3005.27467925
+      },
+      "year": 2021
+    },
+    {
+      "q1": {
+        "closeUsd": 133.58922988,
+        "isFull": true,
+        "openUsd": 128.79026784
+      },
+      "q2": {
+        "closeUsd": 225.67889921,
+        "isFull": true,
+        "openUsd": 133.17236856
+      },
+      "q3": {
+        "closeUsd": 358.96297437,
+        "isFull": true,
+        "openUsd": 225.48905466
+      },
+      "q4": {
+        "closeUsd": 738.23612374,
+        "isFull": true,
+        "openUsd": 358.75021116
+      },
+      "year": 2020
+    },
+    {
+      "q1": {
+        "closeUsd": 142.08647463,
+        "isFull": true,
+        "openUsd": 134.40498372
+      },
+      "q2": {
+        "closeUsd": 293.01190212,
+        "isFull": true,
+        "openUsd": 142.04110513
+      },
+      "q3": {
+        "closeUsd": 179.28947515,
+        "isFull": true,
+        "openUsd": 291.76675998
+      },
+      "q4": {
+        "closeUsd": 128.93574083,
+        "isFull": true,
+        "openUsd": 180.02851452
+      },
+      "year": 2019
+    },
+    {
+      "q1": {
+        "closeUsd": 396.457,
+        "isFull": true,
+        "openUsd": 755.757
+      },
+      "q2": {
+        "closeUsd": 453.565741,
+        "isFull": true,
+        "openUsd": 397.254
+      },
+      "q3": {
+        "closeUsd": 232.73496296,
+        "isFull": true,
+        "openUsd": 453.533803
+      },
+      "q4": {
+        "closeUsd": 134.40337567,
+        "isFull": true,
+        "openUsd": 233.17499088
+      },
+      "year": 2018
+    },
+    {
+      "q1": {
+        "closeUsd": 50.0373,
+        "isFull": true,
+        "openUsd": 7.98231
+      },
+      "q2": {
+        "closeUsd": 294.916,
+        "isFull": true,
+        "openUsd": 50.0337
+      },
+      "q3": {
+        "closeUsd": 301.465,
+        "isFull": true,
+        "openUsd": 293.353
+      },
+      "q4": {
+        "closeUsd": 756.733,
+        "isFull": true,
+        "openUsd": 301.547
+      },
+      "year": 2017
+    },
+    {
+      "q1": {
+        "closeUsd": 11.4035,
+        "isFull": true,
+        "openUsd": 0.933712
+      },
+      "q2": {
+        "closeUsd": 12.461500000000001,
+        "isFull": true,
+        "openUsd": 11.4006
+      },
+      "q3": {
+        "closeUsd": 13.2248,
+        "isFull": true,
+        "openUsd": 12.4381
+      },
+      "q4": {
+        "closeUsd": 7.9691,
+        "isFull": true,
+        "openUsd": 13.2032
+      },
+      "year": 2016
+    },
+    {
+      "q1": null,
+      "q2": null,
+      "q3": {
+        "closeUsd": 0.738644,
+        "isFull": true,
+        "openUsd": 1.05875
+      },
+      "q4": {
+        "closeUsd": 0.933542,
+        "isFull": true,
+        "openUsd": 0.734307
+      },
+      "year": 2015
+    }
+  ],
+  "slice": "BTC (16 years) + ETH (12 years) quarterly open/close — upstream values; return% is computed in the UI from these numbers (labelled); isFull=false = quarter in progress; 2026 closes verified vs independent daily history (0.03-0.40% on 2026-09-27)",
+  "upstream": "https://cryptorank.io/charts/quarterly-returns"
+}

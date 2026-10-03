@@ -1,0 +1,92 @@
+name: go
+# Surface: the three Go modules — backend/data (acquisition sidecar),
+# backend/api (primary backend), backend/executor (execution engine). They are
+# separate modules joined by go.work; each is still built/vetted/tested on its
+# own so a failure names the owner.
+#
+# This workflow always RUNS; the module jobs are skipped by the `changes` gate
+# when nothing under backend/ moved, so a CSS-only PR compiles no Go. See
+# web.yml for why the filter is a job and not a workflow-level `paths:`.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+defaults:
+  run:
+    shell: bash
+jobs:
+  changes:
+    name: "go - which module changed"
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      modules: ${{ steps.filter.outputs.modules }}
+      go: ${{ steps.filter.outputs.go }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            modules:
+              - 'backend/api/**'
+              - 'backend/workers/executor/**'
+              - 'backend/data/**'
+              - 'go.work'
+              - 'go.work.sum'
+              - '.github/workflows/go.yml'
+            go:
+              - '**/*.go'
+  build:
+    name: "go - build, vet, test (${{ matrix.module }})"
+    needs: changes
+    if: needs.changes.outputs.modules == 'true' || needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # backend/data keeps its measured floor (fhttp/tls-client): go 1.24.1.
+          - module: backend/data
+            go: '1.24.1'
+          - module: backend/api
+            go: '1.25.0'
+          - module: backend/workers/executor
+            go: '1.25.0'
+    defaults:
+      run:
+        working-directory: ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          # backend/api has zero external requires and therefore NO go.sum (it is
+          # neither present nor tracked), so naming it here made the cache key point
+          # at a file that cannot exist. Every module that really has one lives at
+          # <module>/go.sum; backend/api simply resolves to nothing and the cache
+          # still keys on its go.mod via the glob.
+          cache-dependency-path: |
+            **/go.mod
+            **/go.sum
+      - name: Build
+        run: go build ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+  gate:
+    name: "go - gate (required)"
+    needs: [build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Verdict"
+        run: |
+          echo "build result: ${{ needs.build.result }}"
+          case "${{ needs.build.result }}" in
+            success|skipped) exit 0 ;;
+            *) echo "::error::go modules failed"; exit 1 ;;
+          esac

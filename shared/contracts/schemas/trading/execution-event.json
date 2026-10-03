@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/trading/execution-event.json",
+  "title": "Execution event (append-only log row)",
+  "description": "One row of the append-only execution log. THE APPEND-ONLY RULE IS A SCHEMA RULE, not a convention: 'no UPDATE/DELETE path exists in the store and none may be added - history is the product here' (executor.execution_events doc). The HTTP/event-bus form of the same fact is shared/contracts/schemas/event-envelope.json - THIS schema is the storage row, which is why it carries a numeric sequence id and a recorded_at while the envelope carries event_id/event_version. Consumers that cross a service boundary MUST use the envelope, not this row.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "execution_id",
+    "name",
+    "occurred_at"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Storage sequence: 'evt_<execution_id>_<seq>' or the DB bigserial rendered as text."
+    },
+    "execution_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "name": {
+      "$ref": "#/$defs/event_name"
+    },
+    "payload": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Event-specific keys. Free-form and additive; never credentials or secrets (the catalogue's payload_policy)."
+    },
+    "occurred_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/occurred_at"
+        },
+        {
+          "$ref": "../common/time.json#/$defs/recorded_at"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "market_type": {
+      "type": "string",
+      "enum": [
+        "spot",
+        "linear_perp"
+      ],
+      "description": "USDT-linear perpetual only in the MVP."
+    },
+    "side": {
+      "type": "string",
+      "enum": [
+        "buy",
+        "sell"
+      ],
+      "description": "Order side. A spot sell-open is refused outside explicit margin support."
+    },
+    "intent": {
+      "type": "string",
+      "enum": [
+        "open",
+        "close",
+        "reduce"
+      ],
+      "description": "What the user wants the order to do to the position - not what the venue will do."
+    },
+    "execution_status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "CALCULATED",
+        "VALIDATED",
+        "READY",
+        "RUNNING",
+        "PARTIALLY_FILLED",
+        "FILLED",
+        "PAUSED",
+        "CANCEL_REQUESTED",
+        "CANCELLED",
+        "FAILED",
+        "RISK_STOPPED",
+        "EXPIRED",
+        "RECONCILING",
+        "STOPPED"
+      ],
+      "description": "Execution lifecycle. FROZEN: this list is cross-checked against frontend/web/src/platform/executor/types.ts and shared/contracts/openapi/fudcourt.yaml by shared/contracts/scripts/check-contract.mjs (CHECKED_ENUMS), so it MUST NOT be re-spelled or reordered, and it MUST NOT be merged with ChildOrderStatus."
+    },
+    "child_order_status": {
+      "type": "string",
+      "enum": [
+        "PLANNED",
+        "SUBMITTING",
+        "OPEN",
+        "PARTIAL",
+        "FILLED",
+        "CANCELLING",
+        "CANCELLED",
+        "REJECTED",
+        "EXPIRED",
+        "UNKNOWN"
+      ],
+      "description": "Child-order lifecycle. FROZEN and cross-checked like execution_status. UNKNOWN is a real state, not an error: a non-terminal child with no venue row and no SUBMITTING grace is marked UNKNOWN + EXTERNAL_STATE_CHANGE so fill ingestion decides the truth."
+    },
+    "execution_mode": {
+      "type": "string",
+      "enum": [
+        "preview",
+        "paper",
+        "live"
+      ],
+      "description": "LIVE is fail-closed behind the FUDCOURT_EXECUTOR_LIVE kill switch; a paper execution reuses the account's market/fee/balance context but NEVER sends an order."
+    },
+    "time_in_force": {
+      "type": "string",
+      "enum": [
+        "GTC",
+        "IOC",
+        "FOK"
+      ]
+    },
+    "position_side": {
+      "type": "string",
+      "enum": [
+        "long",
+        "short",
+        "net"
+      ],
+      "description": "Venue position mode's own vocabulary."
+    },
+    "margin_mode": {
+      "type": "string",
+      "enum": [
+        "isolated",
+        "cross"
+      ]
+    },
+    "position_mode": {
+      "type": "string",
+      "enum": [
+        "one_way",
+        "hedge"
+      ]
+    },
+    "leverage_mode": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "auto_safe"
+      ]
+    },
+    "stop_mode": {
+      "type": "string",
+      "enum": [
+        "native",
+        "synthetic",
+        "hybrid"
+      ],
+      "description": "How a protective stop is managed; native preferred."
+    },
+    "risk_breach_policy": {
+      "type": "string",
+      "enum": [
+        "resize_then_stop",
+        "pause",
+        "stop"
+      ]
+    },
+    "existing_position_policy": {
+      "type": "string",
+      "enum": [
+        "add",
+        "reject"
+      ]
+    },
+    "balance_basis": {
+      "type": "string",
+      "enum": [
+        "spot_available",
+        "spot_equity",
+        "futures_available",
+        "futures_equity",
+        "total_exchange_equity",
+        "asset_equity",
+        "custom"
+      ],
+      "description": "A percentage sizing mode MUST name the balance basis explicitly - a percent of an unnamed basis is not a size."
+    },
+    "sizing_mode": {
+      "type": "string",
+      "enum": [
+        "risk_usd",
+        "risk_percent",
+        "allocation_usd",
+        "allocation_percent",
+        "notional_usd",
+        "fixed_quantity",
+        "fixed_margin",
+        "target_profit_usd",
+        "target_profit_percent"
+      ],
+      "description": "The nine sizing modes of SizingDefinition['mode']. Percent-valued modes require balance_basis to be present (the sizing engine refuses a percent mode without a basis)."
+    },
+    "child_order_type": {
+      "type": "string",
+      "enum": [
+        "market",
+        "limit"
+      ],
+      "description": "The two order types the engine emits. The SQL column is unconstrained text; this enum is the value set the code writes."
+    },
+    "credential_health": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "ACTIVE",
+        "INVALID",
+        "EXPIRED",
+        "PERMISSION_ERROR",
+        "RATE_LIMITED",
+        "REVOKED"
+      ]
+    },
+    "error_category": {
+      "type": "string",
+      "enum": [
+        "network_retryable",
+        "rate_limited",
+        "exchange_overload",
+        "invalid_order",
+        "permission_error",
+        "insufficient_balance",
+        "fatal",
+        "unknown"
+      ],
+      "description": "Retry taxonomy: only network_retryable / rate_limited / exchange_overload may retry. Mirrors shared/contracts/schemas/error-envelope.json's coarser 12-value `code` set - the envelope is the wire contract, this is the executor's internal classification."
+    },
+    "event_name": {
+      "type": "string",
+      "description": "A STABLE event id from shared/contracts/events/catalog.json (PascalCase), whose SCREAMING_SNAKE spellings are accepted aliases of the same id. NOT re-enumerated on purpose: events/catalog.json + events/event.schema.json are the single source of truth and are pinned by shared/contracts/scripts/check-contract.mjs; a second list here would be a drift surface. Note the live asymmetry: the executor enum (backend/workers/executor/internal/executor/enums.go) declares 23 of the catalogue's 28 ids - the five account/credential/reconciliation events (CredentialCreated, CredentialRevoked, ExchangeAccountConnected, ReconciliationStarted, ReconciliationCompleted) exist in the catalogue and in the web implementation but have no Go constant yet."
+    },
+    "execution_strategy": {
+      "type": "string",
+      "enum": [
+        "market",
+        "limit",
+        "twap",
+        "adaptive_twap",
+        "iceberg",
+        "chase_limit",
+        "scale_in",
+        "scale_out"
+      ],
+      "description": "The eight strategies that exist in this build (executor/enums.go). The objective's sketch also names VWAP and smart-limit; they have no implementation and no oracle, so they are deliberately absent."
+    }
+  }
+}

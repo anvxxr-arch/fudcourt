@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/finance/ledger-entry.json",
+  "title": "LedgerEntry (immutable signed movement)",
+  "description": "The repo's canonical money fact: one immutable, signed movement of one asset against one account. INVARIANTS (backend/api/internal/finance/ledger/ledger.go NewEntry enforces all of them and refuses, never repairs): Amount is a signed canonical decimal string and is NEVER EXACTLY ZERO - 'a movement that moves nothing is not a record'; Kind is from the closed set; a reference-bound Kind (trade_settlement, fee, funding) requires ReferenceType AND ReferenceID; positive Amount credits AccountID and negative debits it. There is NO UPDATE PATH: the ledger 'never edits an existing Entry and never rewrites history - corrections are new entries of KindAdjustment'. IDENTITY IS A NATURAL KEY, not the row id: (AccountID, Kind, ReferenceType, ReferenceID, OccurredAtMs) encoded into an idempotency key, with Amount and CreatedAt deliberately EXCLUDED so that a re-delivered event with a corrected amount still maps to the same fact rather than forking a second row.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "account_id",
+    "asset",
+    "amount",
+    "kind",
+    "occurred_at",
+    "recorded_at"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "../common/identifier.json"
+    },
+    "account_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "asset": {
+      "type": "string",
+      "description": "Symbol string today (the Go field). asset_id joins it once asset ids exist."
+    },
+    "asset_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "amount": {
+      "$ref": "../common/money.json",
+      "not": {
+        "pattern": "^-?0(\\.0+)?$"
+      },
+      "description": "SIGNED and NEVER EXACTLY ZERO. Positive credits account_id, negative debits it. The Go constructor refuses a zero amount in any spelling ('0', '0.00', '-0') because a movement that moves nothing is not a record."
+    },
+    "kind": {
+      "$ref": "#/$defs/kind"
+    },
+    "reference_type": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Names the record that caused the movement; REQUIRED for the reference-bound kinds, absent otherwise."
+    },
+    "reference_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "occurred_at": {
+      "$ref": "../common/time.json#/$defs/occurred_at",
+      "description": "The world time of the movement (the Go field OccurredAtMs). Part of the idempotency key."
+    },
+    "recorded_at": {
+      "$ref": "../common/time.json#/$defs/recorded_at",
+      "description": "The Go field CreatedAt. Deliberately NOT part of the idempotency key."
+    }
+  },
+  "$defs": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "deposit",
+        "withdrawal",
+        "transfer",
+        "trade_settlement",
+        "realized_pnl",
+        "fee",
+        "funding",
+        "rebate",
+        "reward",
+        "adjustment"
+      ],
+      "description": "Closed set (finance/ledger Kind). 'adjustment' is the ONLY way history is amended - by appending, never by editing. Reference-bound kinds: trade_settlement, fee, funding."
+    }
+  }
+}

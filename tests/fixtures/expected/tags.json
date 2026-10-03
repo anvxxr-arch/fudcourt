@@ -1,0 +1,4443 @@
+{
+  "cache": "MISS",
+  "count": 182,
+  "fetchedAt": 1790597965,
+  "kind": "tags",
+  "slice": "182 tags (topic taxonomy, distinct from categories) — breadth stats + avgPriceChange are upstream tag averages; rankedCoins = index-card top coins",
+  "tagRows": [
+    {
+      "change24h": -1.83,
+      "description": "Layer1-blockchains including those that do not support smart contracts",
+      "dominance": 79.63,
+      "gainers": 60,
+      "id": 227,
+      "losers": 167,
+      "marketCap": 2355264153240.8867,
+      "name": "Layer 1 (L1)",
+      "rankedCoins": [
+        {
+          "key": "bitcoin",
+          "name": "Bitcoin"
+        },
+        {
+          "key": "ethereum",
+          "name": "Ethereum"
+        },
+        {
+          "key": "bnb",
+          "name": "BNB"
+        }
+      ],
+      "slug": "layer-1",
+      "volume24h": 25373023880.5086
+    },
+    {
+      "change24h": -1.56,
+      "description": "Tokens on the World Liberty Fi wallet",
+      "dominance": 78.45,
+      "gainers": 3,
+      "id": 380,
+      "losers": 14,
+      "marketCap": 2320330178531.859,
+      "name": "World Liberty Fi Portfolio",
+      "rankedCoins": [
+        {
+          "key": "bitcoin",
+          "name": "Bitcoin"
+        },
+        {
+          "key": "ethereum",
+          "name": "Ethereum"
+        },
+        {
+          "key": "tether",
+          "name": "Tether"
+        }
+      ],
+      "slug": "wlf-portfolio",
+      "volume24h": 76462193337.79921
+    },
+    {
+      "change24h": -1.87,
+      "description": "The Coinbase 50 Index (COIN50) is a market capitalization-weighted index designed to track the performance of the top 50 digital assets listed on the Coinbase exchange.",
+      "dominance": 77.07,
+      "gainers": 9,
+      "id": 374,
+      "losers": 40,
+      "marketCap": 2279594397326.2563,
+      "name": "Coin50 Index",
+      "rankedCoins": [
+        {
+          "key": "bitcoin",
+          "name": "Bitcoin"
+        },
+        {
+          "key": "ethereum",
+          "name": "Ethereum"
+        },
+        {
+          "key": "ripple",
+          "name": "XRP"
+        }
+      ],
+      "slug": "coin50",
+      "volume24h": 25701267643.070137
+    },
+    {
+      "change24h": -1.91,
+      "description": "Projects from Grayscale's list of top 20 cryptocurrencies with high growth potential in the next quarter.",
+      "dominance": 71.84,
+      "gainers": 2,
+      "id": 378,
+      "losers": 18,
+      "marketCap": 2124776454234.929,
+      "name": "Grayscale Research Top 20",
+      "rankedCoins": [
+        {
+          "key": "bitcoin",
+          "name": "Bitcoin"
+        },
+        {
+          "key": "ethereum",
+          "name": "Ethereum"
+        },
+        {
+          "key": "solana",
+          "name": "Solana"
+        }
+      ],
+      "slug": "grayscale-research",
+      "volume24h": 21177301231.56575
+    },
+    {
+      "change24h": -2.03,
+      "description": " Blockchains using Proof of Work consensus mechanism",
+      "dominance": 59.02,
+      "gainers": 14,
+      "id": 236,
+      "losers": 43,
+      "marketCap": 1745773328099.6238,
+      "name": "Proof of Work (PoW)",
+      "rankedCoins": [
+        {
+          "key": "bitcoin",
+          "name": "Bitcoin"
+        },
+        {
+          "key": "zcash",
+          "name": "Zcash"
+        },
+        {
+          "key": "dogecoin",
+          "name": "Dogecoin"
+        }
+      ],
+      "slug": "proof-of-work",
+      "volume24h": 13615876709.890938
+    },
+    {
+      "change24h": -1.4,
+      "description": "Blockchains that can be used to deploy smart contracts",
+      "dominance": 20.36,
+      "gainers": 35,
+      "id": 105,
+      "losers": 141,
+      "marketCap": 602121682408.2665,
+      "name": "Smart Contract Platform",
+      "rankedCoins": [
+        {
+          "key": "ethereum",
+          "name": "Ethereum"
+        },
+        {
+          "key": "bnb",
+          "name": "BNB"
+        },
+        {
+          "key": "solana",
+          "name": "Solana"
+        }
+      ],
+      "slug": "smart-contract-platform",
+      "volume24h": 11690657356.901941
+    },
+    {
+      "change24h": -1.19,
+      "description": "Blockchain networks that can run Ethereum-based smart contracts and DApps without requiring significant modifications",
+      "dominance": 16.34,
+      "gainers": 25,
+      "id": 307,
+      "losers": 103,
+      "marketCap": 483237849341.66187,
+      "name": "EVM",
+      "rankedCoins": [
+        {
+          "key": "ethereum",
+          "name": "Ethereum"
+        },
+        {
+          "key": "bnb",
+          "name": "BNB"
+        },
+        {
+          "key": "hyperliquid",
+          "name": "Hyperliquid"
+        }
+      ],
+      "slug": "evm",
+      "volume24h": 8098885841.132825
+    },
+    {
+      "change24h": -1.26,
+      "description": " Blockchains using Proof of Stake consensus mechanism",
+      "dominance": 14.82,
+      "gainers": 21,
+      "id": 241,
+      "losers": 58,
+      "marketCap": 438424125733.26294,
+      "name": "Proof of Stake (PoS)",
+      "rankedCoins": [
+        {
+          "key": "ethereum",
+          "name": "Ethereum"
+        },
+        {
+          "key": "solana",
+          "name": "Solana"
+        },
+        {
+          "key": "cardano",
+          "name": "Cardano"
+        }
+      ],
+      "slug": "proof-of-stake",
+      "volume24h": 9960194589.180637
+    },
+    {
+      "change24h": -1.15,
+      "description": "Blockchains where user can run a node",
+      "dominance": 11.31,
+      "gainers": 7,
+      "id": 267,
+      "losers": 32,
+      "marketCap": 334651475436.9658,
+      "name": "Node",
+      "rankedCoins": [
+        {
+          "key": "ethereum",
+          "name": "Ethereum"
+        },
+        {
+          "key": "avalanche",
+          "name": "Avalanche"
+        },
+        {
+          "key": "sei-network",
+          "name": "Sei"
+        }
+      ],
+      "slug": "node",
+      "volume24h": 5850740436.161321
+    },
+    {
+      "change24h": -0.01,
+      "description": "Stablecoins issued by a centralized entity, backed by fiat or other assets (including crypto)",
+      "dominance": 9.55,
+      "gainers": 19,
+      "id": 283,
+      "losers": 51,
+      "marketCap": 282488640758.74866,
+      "name": "Fiat-backed",
+      "rankedCoins": [
+        {
+          "key": "tether",
+          "name": "Tether"
+        },
+        {
+          "key": "usdcoin",
+          "name": "USDC"
+        },
+        {
+          "key": "usd-1",
+          "name": "USD1"
+        }
+      ],
+      "slug": "fiat-backed",
+      "volume24h": 59685007666.922264
+    },
+    {
+      "change24h": -2.33,
+      "description": "Coins developed and operated by American companies",
+      "dominance": 8.97,
+      "gainers": 9,
+      "id": 381,
+      "losers": 45,
+      "marketCap": 265381581480.74582,
+      "name": "US Coins",
+      "rankedCoins": [
+        {
+          "key": "ripple",
+          "name": "XRP"
+        },
+        {
+          "key": "solana",
+          "name": "Solana"
+        },
+        {
+          "key": "zcash",
+          "name": "Zcash"
+        }
+      ],
+      "slug": "us-coins",
+      "volume24h": 10149878001.151308
+    },
+    {
+      "change24h": -2.05,
+      "description": "Coins, recognized as securities by SEC",
+      "dominance": 7.89,
+      "gainers": 6,
+      "id": 277,
+      "losers": 28,
+      "marketCap": 233503410283.7732,
+      "name": "Coins Alleged as Securities by SEC",
+      "rankedCoins": [
+        {
+          "key": "bnb",
+          "name": "BNB"
+        },
+        {
+          "key": "solana",
+          "name": "Solana"
+        },
+        {
+          "key": "tron",
+          "name": "TRON"
+        }
+      ],
+      "slug": "sec-securities",
+      "volume24h": 3764514711.5876937
+    },
+    {
+      "change24h": -1.72,
+      "description": "Tokens of centralized exchanges",
+      "dominance": 4.69,
+      "gainers": 6,
+      "id": 115,
+      "losers": 32,
+      "marketCap": 138795295832.19678,
+      "name": "CEX",
+      "rankedCoins": [
+        {
+          "key": "bnb",
+          "name": "BNB"
+        },
+        {
+          "key": "crypto-com-cro",
+          "name": "Cronos"
+        },
+        {
+          "key": "okb",
+          "name": "OKX Token"
+        }
+      ],
+      "slug": "cex",
+      "volume24h": 521187898.13052964
+    },
+    {
+      "change24h": -1.72,
+      "description": "Native exchange token",
+      "dominance": 4.68,
+      "gainers": 2,
+      "id": 321,
+      "losers": 23,
+      "marketCap": 138340862677.4774,
+      "name": "Exchange Token",
+      "rankedCoins": [
+        {
+          "key": "bnb",
+          "name": "BNB"
+        },
+        {
+          "key": "crypto-com-cro",
+          "name": "Cronos"
+        },
+        {
+          "key": "okb",
+          "name": "OKX Token"
+        }
+      ],
+      "slug": "exchange-token",
+      "volume24h": 519829760.700232
+    },
+    {
+      "change24h": -1.74,
+      "description": "Projects that enable payments or create infrastructure for payments",
+      "dominance": 3.77,
+      "gainers": 28,
+      "id": 17,
+      "losers": 79,
+      "marketCap": 111554927872.77663,
+      "name": "Payments",
+      "rankedCoins": [
+        {
+          "key": "ripple",
+          "name": "XRP"
+        },
+        {
+          "key": "stellar",
+          "name": "Stellar"
+        },
+        {
+          "key": "litecoin",
+          "name": "Litecoin"
+        }
+      ],
+      "slug": "payments",
+      "volume24h": 2199617064.8557973
+    },
+    {
+      "change24h": -1.52,
+      "description": "Tokenized representation of a particular cryptocurrency, with the exact same value, that is operable on another blockchain",
+      "dominance": 3.77,
+      "gainers": 23,
+      "id": 217,
+      "losers": 142,
+      "marketCap": 111488010970.01585,
+      "name": "Wrapped Token",
+      "rankedCoins": [
+        {
+          "key": "usd-coin-bridged-usdc-e",
+          "name": "USD Coin Bridged"
+        },
+        {
+          "key": "wrapped-ncg",
+          "name": "Wrapped NCG"
+        }
+      ],
+      "slug": "wrapped-tokens",
+      "volume24h": 2217187490.4228888
+    },
+    {
+      "change24h": 0,
+      "description": "Stablecoins that comply with the requirements of the European Markets in Crypto-Assets (MiCA) regulation.",
+      "dominance": 2.75,
+      "gainers": 0,
+      "id": 421,
+      "losers": 12,
+      "marketCap": 81208031563.08453,
+      "name": "MiCA‑Compliant Stablecoin",
+      "rankedCoins": [
+        {
+          "key": "usdcoin",
+          "name": "USDC"
+        },
+        {
+          "key": "usd-1",
+          "name": "USD1"
+        },
+        {
+          "key": "euro-coin",
+          "name": "EURC"
+        }
+      ],
+      "slug": "mica-compliant-stablecoin",
+      "volume24h": 11753733793.60901
+    },
+    {
+      "change24h": -1.58,
+      "description": "Tokens issued by liquid staking protocols in exchange for the deposited underlying asset",
+      "dominance": 2.69,
+      "gainers": 9,
+      "id": 272,
+      "losers": 77,
+      "marketCap": 79481398794.86472,
+      "name": "Liquid Staking Token (LST)",
+      "rankedCoins": [],
+      "slug": "liquid-staking-derivatives-lsd",
+      "volume24h": 54856099.853612855
+    },
+    {
+      "change24h": -4.45,
+      "description": "Projects whose business model is based on a privacy application/service",
+      "dominance": 1.6,
+      "gainers": 21,
+      "id": 5,
+      "losers": 76,
+      "marketCap": 47308326338.88573,
+      "name": "Privacy",
+      "rankedCoins": [
+        {
+          "key": "zcash",
+          "name": "Zcash"
+        },
+        {
+          "key": "monero",
+          "name": "Monero"
+        },
+        {
+          "key": "digital-asset",
+          "name": "Canton Network"
+        }
+      ],
+      "slug": "privacy-coins",
+      "volume24h": 1368184611.1119297
+    },
+    {
+      "change24h": -4.65,
+      "description": "Decentralized exchanges",
+      "dominance": 1.24,
+      "gainers": 41,
+      "id": 116,
+      "losers": 171,
+      "marketCap": 36634977216.86649,
+      "name": "DEX",
+      "rankedCoins": [
+        {
+          "key": "hyperliquid",
+          "name": "Hyperliquid"
+        },
+        {
+          "key": "uniswap",
+          "name": "Uniswap"
+        },
+        {
+          "key": "astherus",
+          "name": "Aster (prev. Astherus)"
+        }
+      ],
+      "slug": "dex",
+      "volume24h": 1379153164.3946483
+    },
+    {
+      "change24h": 0.18,
+      "description": "Blockchains using Delegated Proof of Stake consensus mechanism",
+      "dominance": 1.1,
+      "gainers": 3,
+      "id": 250,
+      "losers": 8,
+      "marketCap": 32647772553.707882,
+      "name": "Delegated Proof of Stake (DPoS)",
+      "rankedCoins": [
+        {
+          "key": "tron",
+          "name": "TRON"
+        },
+        {
+          "key": "xdc-network",
+          "name": "XDC Network"
+        },
+        {
+          "key": "proton",
+          "name": "XPR Network"
+        }
+      ],
+      "slug": "delegated-pos",
+      "volume24h": 177647684.2738317
+    },
+    {
+      "change24h": -4.43,
+      "description": "Projects that use zero-knowledge proofs technology at the core of their product",
+      "dominance": 1.08,
+      "gainers": 15,
+      "id": 285,
+      "losers": 49,
+      "marketCap": 31954628302.710808,
+      "name": "zk-Proofs (ZKP)",
+      "rankedCoins": [
+        {
+          "key": "zcash",
+          "name": "Zcash"
+        },
+        {
+          "key": "world-coin",
+          "name": "World"
+        },
+        {
+          "key": "polygon-ecosystem-token",
+          "name": "POL (ex-MATIC)"
+        }
+      ],
+      "slug": "zk-proofs",
+      "volume24h": 1546225272.7662585
+    },
+    {
+      "change24h": -1.04,
+      "description": "Decentralized management tokens.",
+      "dominance": 1,
+      "gainers": 54,
+      "id": 4,
+      "losers": 197,
+      "marketCap": 29454657999.284355,
+      "name": "Governance",
+      "rankedCoins": [
+        {
+          "key": "sui",
+          "name": "Sui"
+        },
+        {
+          "key": "bitway",
+          "name": "Bitway"
+        },
+        {
+          "key": "ethena",
+          "name": "Ethena"
+        }
+      ],
+      "slug": "governance",
+      "volume24h": 2333342304.144966
+    },
+    {
+      "change24h": -1.32,
+      "description": "Tokens whose supply is algorithmically adjusted in order to control its price",
+      "dominance": 0.9,
+      "gainers": 4,
+      "id": 144,
+      "losers": 6,
+      "marketCap": 26522493316.078552,
+      "name": "Rebase Tokens",
+      "rankedCoins": [],
+      "slug": "rebase-tokens",
+      "volume24h": 8298661.124204411
+    },
+    {
+      "change24h": -2.3,
+      "description": "Binance Alpha is a launched feature within the Binance Wallet, designed to spotlight promising early-stage cryptocurrency projects before they potentially list on the Binance Exchange.",
+      "dominance": 0.9,
+      "gainers": 57,
+      "id": 382,
+      "losers": 298,
+      "marketCap": 26509809691.10465,
+      "name": "Binance Alpha",
+      "rankedCoins": [
+        {
+          "key": "bitway",
+          "name": "Bitway"
+        },
+        {
+          "key": "ondo-finance",
+          "name": "Ondo Finance"
+        },
+        {
+          "key": "astherus",
+          "name": "Aster (prev. Astherus)"
+        }
+      ],
+      "slug": "binance-alpha",
+      "volume24h": 2115898567.0056214
+    },
+    {
+      "change24h": -3.84,
+      "description": "Perpetual trading platforms",
+      "dominance": 0.86,
+      "gainers": 14,
+      "id": 215,
+      "losers": 52,
+      "marketCap": 25290292147.984688,
+      "name": "Perpetuals",
+      "rankedCoins": [
+        {
+          "key": "hyperliquid",
+          "name": "Hyperliquid"
+        },
+        {
+          "key": "astherus",
+          "name": "Aster (prev. Astherus)"
+        },
+        {
+          "key": "lighter",
+          "name": "Lighter"
+        }
+      ],
+      "slug": "derivatives",
+      "volume24h": 667061465.1737269
+    },
+    {
+      "change24h": -0.01,
+      "description": "Stablecoins, which rely on crypto-assets for backing and which are governed via decentralized platforms and smart contracts",
+      "dominance": 0.81,
+      "gainers": 19,
+      "id": 284,
+      "losers": 34,
+      "marketCap": 23904375513.153126,
+      "name": "Over-collateralized",
+      "rankedCoins": [
+        {
+          "key": "usds",
+          "name": "USDS"
+        },
+        {
+          "key": "multicollateraldai",
+          "name": "Dai"
+        },
+        {
+          "key": "ethena-usde",
+          "name": "Ethena USDe"
+        }
+      ],
+      "slug": "overcollaterized",
+      "volume24h": 163921870.1120799
+    },
+    {
+      "change24h": -4.2,
+      "description": "Meme coins on BNB mix internet culture with fast, low-fee blockchain transactions",
+      "dominance": 0.77,
+      "gainers": 19,
+      "id": 396,
+      "losers": 78,
+      "marketCap": 22894695235.5273,
+      "name": "BNB Meme",
+      "rankedCoins": [
+        {
+          "key": "dogecoin",
+          "name": "Dogecoin"
+        },
+        {
+          "key": "shiba-inu",
+          "name": "SHIBA INU"
+        },
+        {
+          "key": "pepe",
+          "name": "Pepe"
+        }
+      ],
+      "slug": "bnb-meme",
+      "volume24h": 1182340382.1505132
+    },
+    {
+      "change24h": -4.88,
+      "description": "Projects operating as Decentralized Autonomous Organization",
+      "dominance": 0.69,
+      "gainers": 30,
+      "id": 118,
+      "losers": 105,
+      "marketCap": 20539173771.25136,
+      "name": "DAO",
+      "rankedCoins": [
+        {
+          "key": "uniswap",
+          "name": "Uniswap"
+        },
+        {
+          "key": "aave",
+          "name": "Aave"
+        },
+        {
+          "key": "sky",
+          "name": "Sky"
+        }
+      ],
+      "slug": "dao",
+      "volume24h": 1402891447.1559713
+    },
+    {
+      "change24h": -4.26,
+      "description": "Projects using AI-technology at the core of their product",
+      "dominance": 0.64,
+      "gainers": 51,
+      "id": 224,
+      "losers": 171,
+      "marketCap": 19019895506.894066,
+      "name": "Artificial Intelligence (AI)",
+      "rankedCoins": [
+        {
+          "key": "near-protocol",
+          "name": "Near Protocol"
+        },
+        {
+          "key": "bittensor",
+          "name": "Bittensor"
+        },
+        {
+          "key": "world-coin",
+          "name": "World"
+        }
+      ],
+      "slug": "artificial-intelligence",
+      "volume24h": 2150720209.598164
+    },
+    {
+      "change24h": -0.15,
+      "description": "Projects allowing to operate with real world assets (physical and financial)",
+      "dominance": 0.53,
+      "gainers": 25,
+      "id": 244,
+      "losers": 83,
+      "marketCap": 15758968700.288273,
+      "name": "RWA",
+      "rankedCoins": [
+        {
+          "key": "chainlink",
+          "name": "ChainLink"
+        },
+        {
+          "key": "ondo-finance",
+          "name": "Ondo Finance"
+        },
+        {
+          "key": "adi-chain",
+          "name": "ADI Chain"
+        }
+      ],
+      "slug": "real-world-assets",
+      "volume24h": 839378906.6052529
+    },
+    {
+      "change24h": -3.66,
+      "description": "Protocols incentivising users with token emission",
+      "dominance": 0.48,
+      "gainers": 37,
+      "id": 1,
+      "losers": 135,
+      "marketCap": 14183048919.277697,
+      "name": "Yield Farming",
+      "rankedCoins": [
+        {
+          "key": "ethena",
+          "name": "Ethena"
+        },
+        {
+          "key": "aave",
+          "name": "Aave"
+        },
+        {
+          "key": "astherus",
+          "name": "Aster (prev. Astherus)"
+        }
+      ],
+      "slug": "yield-farming",
+      "volume24h": 1056441670.7185454
+    },
+    {
+      "change24h": -3.41,
+      "description": "Chains or infrastructure which segregate one or more of a blockchain system's tasks, such as consensus, transaction execution, or data availability, to a separate chain",
+      "dominance": 0.47,
+      "gainers": 14,
+      "id": 311,
+      "losers": 47,
+      "marketCap": 14025522108.908195,
+      "name": "Modular",
+      "rankedCoins": [
+        {
+          "key": "mantlexyz",
+          "name": "Mantle"
+        },
+        {
+          "key": "polkadot",
+          "name": "Polkadot"
+        },
+        {
+          "key": "astherus",
+          "name": "Aster (prev. Astherus)"
+        }
+      ],
+      "slug": "modular",
+      "volume24h": 865325968.9980882
+    },
+    {
+      "change24h": -2.11,
+      "description": "Protocols issuing their own stablecoins",
+      "dominance": 0.47,
+      "gainers": 12,
+      "id": 298,
+      "losers": 41,
+      "marketCap": 14007502289.960785,
+      "name": "Stablecoin Protocol",
+      "rankedCoins": [
+        {
+          "key": "ethena",
+          "name": "Ethena"
+        },
+        {
+          "key": "ondo-finance",
+          "name": "Ondo Finance"
+        },
+        {
+          "key": "aave",
+          "name": "Aave"
+        }
+      ],
+      "slug": "cdp",
+      "volume24h": 1365448024.365208
+    },
+    {
+      "change24h": -2.63,
+      "description": "Projects with the possibility of staking.",
+      "dominance": 0.46,
+      "gainers": 63,
+      "id": 14,
+      "losers": 198,
+      "marketCap": 13707737782.213362,
+      "name": "Staking",
+      "rankedCoins": [
+        {
+          "key": "crypto-com-cro",
+          "name": "Cronos"
+        },
+        {
+          "key": "memecore",
+          "name": "MemeCore"
+        },
+        {
+          "key": "bitget-token",
+          "name": "Bitget Token"
+        }
+      ],
+      "slug": "staking",
+      "volume24h": 681795452.1044631
+    },
+    {
+      "change24h": -6.81,
+      "description": "Protocols using Automated Market Maker primitive and its varieties",
+      "dominance": 0.45,
+      "gainers": 23,
+      "id": 23,
+      "losers": 94,
+      "marketCap": 13234986870.233688,
+      "name": "AMM",
+      "rankedCoins": [
+        {
+          "key": "uniswap",
+          "name": "Uniswap"
+        },
+        {
+          "key": "astherus",
+          "name": "Aster (prev. Astherus)"
+        },
+        {
+          "key": "pancakeswap",
+          "name": "PancakeSwap"
+        }
+      ],
+      "slug": "amm",
+      "volume24h": 821751512.0543272
+    },
+    {
+      "change24h": -0.02,
+      "description": "A class of stable tokens where the holder receives passive income in the form of accrued interest, rewards, or an increase in the value of the token over time.",
+      "dominance": 0.41,
+      "gainers": 15,
+      "id": 413,
+      "losers": 12,
+      "marketCap": 12228321636.591644,
+      "name": "Yield-Bearing Token (YBT)",
+      "rankedCoins": [
+        {
+          "key": "ondo-us-dollar",
+          "name": "Ondo US Dollar Yield"
+        },
+        {
+          "key": "bfusd",
+          "name": "BFUSD"
+        },
+        {
+          "key": "prime",
+          "name": "PRIME"
+        }
+      ],
+      "slug": "yield-bearing-token-ybt",
+      "volume24h": 18451705.61526142
+    },
+    {
+      "change24h": 0.13,
+      "description": "Projects providing real world data to the blockchain",
+      "dominance": 0.4,
+      "gainers": 6,
+      "id": 37,
+      "losers": 18,
+      "marketCap": 11918502831.737562,
+      "name": "Oracle",
+      "rankedCoins": [
+        {
+          "key": "chainlink",
+          "name": "ChainLink"
+        },
+        {
+          "key": "pyth-network",
+          "name": "Pyth Network"
+        },
+        {
+          "key": "redstone",
+          "name": "RedStone"
+        }
+      ],
+      "slug": "oracle",
+      "volume24h": 379648415.3376178
+    },
+    {
+      "change24h": -1.65,
+      "description": "Protocols providing onchain collateral lending services",
+      "dominance": 0.4,
+      "gainers": 27,
+      "id": 95,
+      "losers": 87,
+      "marketCap": 11775297831.018225,
+      "name": "Lending",
+      "rankedCoins": [
+        {
+          "key": "aave",
+          "name": "Aave"
+        },
+        {
+          "key": "sky",
+          "name": "Sky"
+        },
+        {
+          "key": "morpho",
+          "name": "Morpho"
+        }
+      ],
+      "slug": "lending-borrowing",
+      "volume24h": 441650029.38272005
+    },
+    {
+      "change24h": -4.46,
+      "description": "Layer2-blockchain scaling solutions (rollups & sidechains)",
+      "dominance": 0.4,
+      "gainers": 14,
+      "id": 216,
+      "losers": 69,
+      "marketCap": 11728611836.50132,
+      "name": "Layer 2 (L2)",
+      "rankedCoins": [
+        {
+          "key": "mantlexyz",
+          "name": "Mantle"
+        },
+        {
+          "key": "world-coin",
+          "name": "World"
+        },
+        {
+          "key": "arbitrum",
+          "name": "Arbitrum"
+        }
+      ],
+      "slug": "layer-2",
+      "volume24h": 1302579926.5561988
+    },
+    {
+      "change24h": -4.1,
+      "description": "Projects launched on the Binance launchpool.",
+      "dominance": 0.36,
+      "gainers": 7,
+      "id": 18,
+      "losers": 45,
+      "marketCap": 10526703084.549774,
+      "name": "Binance Launchpool",
+      "rankedCoins": [
+        {
+          "key": "sui",
+          "name": "Sui"
+        },
+        {
+          "key": "ethena",
+          "name": "Ethena"
+        },
+        {
+          "key": "ether-fi",
+          "name": "ether.fi"
+        }
+      ],
+      "slug": "binance-launchpool",
+      "volume24h": 1693913036.357085
+    },
+    {
+      "change24h": -1.45,
+      "description": "Synthetic assets are blockchain-based financial instruments designed to replicate the value and behavior of real-world or digital financial assets without requiring ownership of the underlying assets.",
+      "dominance": 0.34,
+      "gainers": 6,
+      "id": 113,
+      "losers": 26,
+      "marketCap": 9956478624.438568,
+      "name": "Synthetic Assets",
+      "rankedCoins": [
+        {
+          "key": "ethena-usde",
+          "name": "Ethena USDe"
+        },
+        {
+          "key": "ethena",
+          "name": "Ethena"
+        },
+        {
+          "key": "bfusd",
+          "name": "BFUSD"
+        }
+      ],
+      "slug": "synthetic-assets",
+      "volume24h": 470458588.93375987
+    },
+    {
+      "change24h": -4.55,
+      "description": "Projects allowing to stake a PoS-coin and receive liquid yield-bearing wrapped token or the projects where user can use these tokens to receive additional yield",
+      "dominance": 0.33,
+      "gainers": 9,
+      "id": 251,
+      "losers": 57,
+      "marketCap": 9675970637.49491,
+      "name": "LSDfi",
+      "rankedCoins": [
+        {
+          "key": "ethena",
+          "name": "Ethena"
+        },
+        {
+          "key": "astherus",
+          "name": "Aster (prev. Astherus)"
+        },
+        {
+          "key": "morpho",
+          "name": "Morpho"
+        }
+      ],
+      "slug": "liquid-staking",
+      "volume24h": 787528544.6471281
+    },
+    {
+      "change24h": -1.34,
+      "description": "Blockchain projects whose core product is focused on athletes or sports fans",
+      "dominance": 0.32,
+      "gainers": 13,
+      "id": 109,
+      "losers": 44,
+      "marketCap": 9593333753.080137,
+      "name": "Sports",
+      "rankedCoins": [
+        {
+          "key": "rain-protocol",
+          "name": "Rain"
+        },
+        {
+          "key": "rollbit-coin",
+          "name": "Rollbit Coin"
+        },
+        {
+          "key": "chiliz",
+          "name": "Chiliz"
+        }
+      ],
+      "slug": "sports",
+      "volume24h": 65961143.794514105
+    },
+    {
+      "change24h": -1.55,
+      "description": "Protocols providing options trading services",
+      "dominance": 0.32,
+      "gainers": 0,
+      "id": 230,
+      "losers": 12,
+      "marketCap": 9423577100.69667,
+      "name": "Options",
+      "rankedCoins": [
+        {
+          "key": "rain-protocol",
+          "name": "Rain"
+        },
+        {
+          "key": "derive",
+          "name": "Derive"
+        },
+        {
+          "key": "synapse-new",
+          "name": "Hypercall (prev.Synapse)"
+        }
+      ],
+      "slug": "options",
+      "volume24h": 43304914.29901995
+    },
+    {
+      "change24h": -1.37,
+      "description": "tokenized startups, applications and web2 components represented in tokens ",
+      "dominance": 0.31,
+      "gainers": 6,
+      "id": 390,
+      "losers": 22,
+      "marketCap": 9176662548.843353,
+      "name": "Internet Capital Markets (ICM)",
+      "rankedCoins": [
+        {
+          "key": "rain-protocol",
+          "name": "Rain"
+        },
+        {
+          "key": "meta-dao",
+          "name": "MetaDAO"
+        },
+        {
+          "key": "jelly-my-jelly",
+          "name": "Jelly-My-Jelly"
+        }
+      ],
+      "slug": "internet-capital-markets",
+      "volume24h": 31786939.710073218
+    },
+    {
+      "change24h": -1.31,
+      "description": "Protocols, providing services of prediction markets",
+      "dominance": 0.31,
+      "gainers": 1,
+      "id": 247,
+      "losers": 12,
+      "marketCap": 9068134531.691746,
+      "name": "Prediction Markets",
+      "rankedCoins": [
+        {
+          "key": "rain-protocol",
+          "name": "Rain"
+        },
+        {
+          "key": "arkham",
+          "name": "Arkham"
+        },
+        {
+          "key": "memes-lab",
+          "name": "LAB"
+        }
+      ],
+      "slug": "predictions",
+      "volume24h": 41589794.97224838
+    },
+    {
+      "change24h": 18.75,
+      "description": "Services providing data (both onchain and offchain)",
+      "dominance": 0.29,
+      "gainers": 27,
+      "id": 219,
+      "losers": 83,
+      "marketCap": 8644956865.863825,
+      "name": "Data Service",
+      "rankedCoins": [
+        {
+          "key": "quant",
+          "name": "Quant"
+        },
+        {
+          "key": "internet-computer",
+          "name": "Internet Computer"
+        },
+        {
+          "key": "bittorrent-new",
+          "name": "BitTorrent (new)"
+        }
+      ],
+      "slug": "data-service",
+      "volume24h": 1613281519.4556339
+    },
+    {
+      "change24h": -0.84,
+      "description": "Blockchain solutions that serve as data availability layers for other blockchains",
+      "dominance": 0.26,
+      "gainers": 5,
+      "id": 325,
+      "losers": 11,
+      "marketCap": 7748699256.729369,
+      "name": "Data Availability",
+      "rankedCoins": [
+        {
+          "key": "near-protocol",
+          "name": "Near Protocol"
+        },
+        {
+          "key": "celestia",
+          "name": "Celestia"
+        },
+        {
+          "key": "eigenlayer",
+          "name": "EigenCloud"
+        }
+      ],
+      "slug": "data-availability",
+      "volume24h": 865766441.6086015
+    },
+    {
+      "change24h": -2.14,
+      "description": "are digital representations of physical assets (such as gold, oil, or agricultural products) recorded on a blockchain represents a unit of ownership, enabling investors to trade them without the need for physical transfer or storage. ",
+      "dominance": 0.25,
+      "gainers": 0,
+      "id": 411,
+      "losers": 12,
+      "marketCap": 7532800136.62835,
+      "name": "Tokenized Commodities",
+      "rankedCoins": [
+        {
+          "key": "tether-gold",
+          "name": "Tether Gold"
+        },
+        {
+          "key": "pax-gold",
+          "name": "PAX Gold"
+        },
+        {
+          "key": "tempestas-copper",
+          "name": "Tempestas Copper"
+        }
+      ],
+      "slug": "tokenized-commodities",
+      "volume24h": 372585000.21038854
+    },
+    {
+      "change24h": -4.19,
+      "description": "Meme coins on Ethereum blend vibrant internet culture with the pioneering smart contract trusted blockchain. ",
+      "dominance": 0.24,
+      "gainers": 12,
+      "id": 395,
+      "losers": 86,
+      "marketCap": 7004738049.265754,
+      "name": "Ethereum Meme",
+      "rankedCoins": [
+        {
+          "key": "shiba-inu",
+          "name": "SHIBA INU"
+        },
+        {
+          "key": "pepe",
+          "name": "Pepe"
+        },
+        {
+          "key": "spx6900",
+          "name": "SPX6900"
+        }
+      ],
+      "slug": "ethereum-meme",
+      "volume24h": 319982812.9879796
+    },
+    {
+      "change24h": -5.56,
+      "description": "Blockchain scaling solutions using fraud proofs technology",
+      "dominance": 0.21,
+      "gainers": 2,
+      "id": 240,
+      "losers": 20,
+      "marketCap": 6282178740.565535,
+      "name": "Optimistic Rollup",
+      "rankedCoins": [
+        {
+          "key": "mantlexyz",
+          "name": "Mantle"
+        },
+        {
+          "key": "world-coin",
+          "name": "World"
+        },
+        {
+          "key": "arbitrum",
+          "name": "Arbitrum"
+        }
+      ],
+      "slug": "optimistic-rollup",
+      "volume24h": 956834612.3084561
+    },
+    {
+      "change24h": -3.45,
+      "description": "Projects that improve the interconnectivity between blockchain networks, enabling the transfer of data and assets",
+      "dominance": 0.16,
+      "gainers": 28,
+      "id": 48,
+      "losers": 95,
+      "marketCap": 4847961279.264487,
+      "name": "Cross-Chain",
+      "rankedCoins": [
+        {
+          "key": "memecore",
+          "name": "MemeCore"
+        },
+        {
+          "key": "injective-protocol",
+          "name": "Injective"
+        },
+        {
+          "key": "layerzero",
+          "name": "LayerZero"
+        }
+      ],
+      "slug": "cross-chain",
+      "volume24h": 334539765.47372055
+    },
+    {
+      "change24h": -6.97,
+      "description": "Tokens created or promoted by AI",
+      "dominance": 0.14,
+      "gainers": 23,
+      "id": 366,
+      "losers": 125,
+      "marketCap": 4218745615.4170227,
+      "name": "AI Agents",
+      "rankedCoins": [
+        {
+          "key": "venice-token",
+          "name": "Venice AI"
+        },
+        {
+          "key": "helix-ai",
+          "name": "Helix AI (helix.org)"
+        },
+        {
+          "key": "ribbita-by-virtuals",
+          "name": "Ribbita by Virtuals"
+        }
+      ],
+      "slug": "ai-agents",
+      "volume24h": 272850446.9521649
+    },
+    {
+      "change24h": -3.1,
+      "description": "Projects with NFT elements",
+      "dominance": 0.14,
+      "gainers": 85,
+      "id": 10,
+      "losers": 197,
+      "marketCap": 4052183246.5569377,
+      "name": "NFT Elements",
+      "rankedCoins": [
+        {
+          "key": "pudgy-penguins",
+          "name": "Pudgy Penguins"
+        },
+        {
+          "key": "immutable-x",
+          "name": "Immutable"
+        },
+        {
+          "key": "floki",
+          "name": "FLOKI"
+        }
+      ],
+      "slug": "nft-elements",
+      "volume24h": 424711290.9483296
+    },
+    {
+      "change24h": -5.42,
+      "description": "Projects providing cloud storage services",
+      "dominance": 0.13,
+      "gainers": 12,
+      "id": 233,
+      "losers": 42,
+      "marketCap": 3783388769.2060046,
+      "name": "Cloud Services",
+      "rankedCoins": [
+        {
+          "key": "filecoin",
+          "name": "Filecoin"
+        },
+        {
+          "key": "fetch-ai",
+          "name": "Artificial Superintelligence Alliance"
+        },
+        {
+          "key": "unibase",
+          "name": "Unibase"
+        }
+      ],
+      "slug": "cloud-services",
+      "volume24h": 284062944.17853373
+    },
+    {
+      "change24h": 8.41,
+      "description": "Platforms, for launching meme-tokens through the bonding curve mechanism",
+      "dominance": 0.13,
+      "gainers": 6,
+      "id": 357,
+      "losers": 15,
+      "marketCap": 3759471280.3001347,
+      "name": "Memepad",
+      "rankedCoins": [
+        {
+          "key": "pump-fun",
+          "name": "pump.fun"
+        },
+        {
+          "key": "jupiter-stattion",
+          "name": "Jupiter"
+        },
+        {
+          "key": "binaryx-new",
+          "name": "Four"
+        }
+      ],
+      "slug": "memepad",
+      "volume24h": 477702932.65424275
+    },
+    {
+      "change24h": -1.19,
+      "description": "Projects that provide access to their services via APIs",
+      "dominance": 0.12,
+      "gainers": 7,
+      "id": 287,
+      "losers": 35,
+      "marketCap": 3662010453.616995,
+      "name": "API",
+      "rankedCoins": [
+        {
+          "key": "astherus",
+          "name": "Aster (prev. Astherus)"
+        },
+        {
+          "key": "unibase",
+          "name": "Unibase"
+        },
+        {
+          "key": "the-graph",
+          "name": "The Graph"
+        }
+      ],
+      "slug": "api",
+      "volume24h": 328963842.1220902
+    },
+    {
+      "change24h": -6.19,
+      "description": "Meme coins on Solana mix internet culture with fast, low-fee blockchain transactions",
+      "dominance": 0.12,
+      "gainers": 39,
+      "id": 393,
+      "losers": 210,
+      "marketCap": 3644496686.3394847,
+      "name": "Solana Meme",
+      "rankedCoins": [
+        {
+          "key": "official-trump",
+          "name": "OFFICIAL TRUMP"
+        },
+        {
+          "key": "spx6900",
+          "name": "SPX6900"
+        },
+        {
+          "key": "bonk-new",
+          "name": "Bonk"
+        }
+      ],
+      "slug": "solana-meme",
+      "volume24h": 405383481.6375911
+    },
+    {
+      "change24h": -2.6,
+      "description": "Blockchain scaling solutions using zero-knowledge proofs technology",
+      "dominance": 0.11,
+      "gainers": 5,
+      "id": 239,
+      "losers": 22,
+      "marketCap": 3306868305.724146,
+      "name": "ZK-Rollup",
+      "rankedCoins": [
+        {
+          "key": "lighter",
+          "name": "Lighter"
+        },
+        {
+          "key": "adi-chain",
+          "name": "ADI Chain"
+        },
+        {
+          "key": "immutable-x",
+          "name": "Immutable"
+        }
+      ],
+      "slug": "zk-rollup",
+      "volume24h": 229803396.86599454
+    },
+    {
+      "change24h": -6.81,
+      "description": "Projects that allow users to create NFTs that represent their digital identity on the blockchain",
+      "dominance": 0.11,
+      "gainers": 7,
+      "id": 231,
+      "losers": 36,
+      "marketCap": 3227800147.6822066,
+      "name": "Digital Identity",
+      "rankedCoins": [
+        {
+          "key": "world-coin",
+          "name": "World"
+        },
+        {
+          "key": "fetch-ai",
+          "name": "Artificial Superintelligence Alliance"
+        },
+        {
+          "key": "ethereum-name-service",
+          "name": "Ethereum Name Service"
+        }
+      ],
+      "slug": "digital-identity",
+      "volume24h": 598369022.2549355
+    },
+    {
+      "change24h": -8.25,
+      "description": "Optimism's Superchain is a network of Layer 2 (L2) blockchains, known as OP Chains, which share security, a communication layer, and an open-source technology stack called the OP Stack.",
+      "dominance": 0.09,
+      "gainers": 2,
+      "id": 370,
+      "losers": 17,
+      "marketCap": 2798994763.6137257,
+      "name": "Superchain",
+      "rankedCoins": [
+        {
+          "key": "world-coin",
+          "name": "World"
+        },
+        {
+          "key": "derive",
+          "name": "Derive"
+        },
+        {
+          "key": "optimism",
+          "name": "Optimism"
+        }
+      ],
+      "slug": "superchain",
+      "volume24h": 547687779.8161365
+    },
+    {
+      "change24h": -5.36,
+      "description": "Sites with web3-wallet connectivity",
+      "dominance": 0.09,
+      "gainers": 31,
+      "id": 7,
+      "losers": 95,
+      "marketCap": 2630870402.906944,
+      "name": "Decentralized Application (dApp)",
+      "rankedCoins": [
+        {
+          "key": "meteora",
+          "name": "Meteora"
+        },
+        {
+          "key": "aioz-network",
+          "name": "AIOZ Network"
+        },
+        {
+          "key": "zencash",
+          "name": "Horizen"
+        }
+      ],
+      "slug": "dapp",
+      "volume24h": 202986243.035794
+    },
+    {
+      "change24h": -0.3,
+      "description": "Projects that provide portfolio management services.",
+      "dominance": 0.08,
+      "gainers": 2,
+      "id": 252,
+      "losers": 10,
+      "marketCap": 2476107473.653714,
+      "name": "Portfolio Management",
+      "rankedCoins": [
+        {
+          "key": "ondo-us-dollar",
+          "name": "Ondo US Dollar Yield"
+        },
+        {
+          "key": "dexe-network",
+          "name": "DeXe"
+        },
+        {
+          "key": "velvet-capital",
+          "name": "Velvet Capital"
+        }
+      ],
+      "slug": "portfolio",
+      "volume24h": 13223770.614561886
+    },
+    {
+      "change24h": -5.38,
+      "description": "Projects providing developer tools for crypto applications",
+      "dominance": 0.08,
+      "gainers": 14,
+      "id": 278,
+      "losers": 73,
+      "marketCap": 2449845730.3386836,
+      "name": "Developer Tools",
+      "rankedCoins": [
+        {
+          "key": "unibase",
+          "name": "Unibase"
+        },
+        {
+          "key": "eigenlayer",
+          "name": "EigenCloud"
+        },
+        {
+          "key": "zama",
+          "name": "Zama"
+        }
+      ],
+      "slug": "developer-tools",
+      "volume24h": 250628561.09755322
+    },
+    {
+      "change24h": -6.54,
+      "description": "Platforms where crypto projects are introduced and can obtain funding through token generation event",
+      "dominance": 0.08,
+      "gainers": 11,
+      "id": 26,
+      "losers": 63,
+      "marketCap": 2297849812.7064466,
+      "name": "Launchpad",
+      "rankedCoins": [
+        {
+          "key": "pancakeswap",
+          "name": "PancakeSwap"
+        },
+        {
+          "key": "raydium",
+          "name": "Raydium"
+        },
+        {
+          "key": "meta-dao",
+          "name": "MetaDAO"
+        }
+      ],
+      "slug": "launchpad",
+      "volume24h": 132584109.04560637
+    },
+    {
+      "change24h": -5.27,
+      "description": "Protocols allows users to restake their already staked cryptoassets across multiple protocols simultaneously and potentially earn rewards by making it possible for them to secure more than one blockchain network at once.",
+      "dominance": 0.08,
+      "gainers": 2,
+      "id": 297,
+      "losers": 19,
+      "marketCap": 2292949844.594204,
+      "name": "Restaking",
+      "rankedCoins": [
+        {
+          "key": "ether-fi",
+          "name": "ether.fi"
+        },
+        {
+          "key": "pendle",
+          "name": "Pendle"
+        },
+        {
+          "key": "eigenlayer",
+          "name": "EigenCloud"
+        }
+      ],
+      "slug": "restaking",
+      "volume24h": 190090142.2267077
+    },
+    {
+      "change24h": -1.77,
+      "description": "Projects providing NFT-marketplace services",
+      "dominance": 0.08,
+      "gainers": 28,
+      "id": 11,
+      "losers": 103,
+      "marketCap": 2245947997.2027397,
+      "name": "Marketplace",
+      "rankedCoins": [
+        {
+          "key": "immutable-x",
+          "name": "Immutable"
+        },
+        {
+          "key": "floki",
+          "name": "FLOKI"
+        },
+        {
+          "key": "apenft",
+          "name": "AINFT"
+        }
+      ],
+      "slug": "marketplace",
+      "volume24h": 178759698.02601856
+    },
+    {
+      "change24h": -1.71,
+      "description": "Tokens that provide ownership of traditional stocks on the blockchain.",
+      "dominance": 0.08,
+      "gainers": 72,
+      "id": 391,
+      "losers": 338,
+      "marketCap": 2244542183.729454,
+      "name": "Tokenized Stocks",
+      "rankedCoins": [
+        {
+          "key": "micron-technology-ondo-tokenized",
+          "name": "Micron Technology (Ondo Tokenized)"
+        },
+        {
+          "key": "circle-internet-group-tokenized-stock-ondo",
+          "name": "Circle Internet Group (Ondo Tokenized)"
+        },
+        {
+          "key": "microstrategy-tokenized-stock-xstock",
+          "name": "MicroStrategy tokenized stock (xStock)"
+        }
+      ],
+      "slug": "tokenized-stocks",
+      "volume24h": 529813434.4806395
+    },
+    {
+      "change24h": 0.2,
+      "description": "A decentralized physical infrastructure network is a blockchain-based system for creating and managing real infrastructure in which people invest their physical resources for rewards. ",
+      "dominance": 0.07,
+      "gainers": 27,
+      "id": 294,
+      "losers": 51,
+      "marketCap": 2187319874.1880484,
+      "name": "DePIN",
+      "rankedCoins": [
+        {
+          "key": "bittorrent-new",
+          "name": "BitTorrent (new)"
+        },
+        {
+          "key": "the-graph",
+          "name": "The Graph"
+        },
+        {
+          "key": "theta-token",
+          "name": "Theta Network"
+        }
+      ],
+      "slug": "de-pin",
+      "volume24h": 247398951.06969
+    },
+    {
+      "change24h": -3.08,
+      "description": "Blockchain-based games with player-owned economies enabled via in-game assets represented by tokens and NFTs",
+      "dominance": 0.07,
+      "gainers": 55,
+      "id": 114,
+      "losers": 127,
+      "marketCap": 2155096932.847818,
+      "name": "Play to Earn (P2E)",
+      "rankedCoins": [
+        {
+          "key": "floki",
+          "name": "FLOKI"
+        },
+        {
+          "key": "axie-infinity",
+          "name": "Axie Infinity"
+        },
+        {
+          "key": "decentraland",
+          "name": "Decentraland"
+        }
+      ],
+      "slug": "play-to-earn",
+      "volume24h": 125133223.79995441
+    },
+    {
+      "change24h": -0.85,
+      "description": "Aggregators of decentralized exchanges",
+      "dominance": 0.07,
+      "gainers": 5,
+      "id": 9,
+      "losers": 22,
+      "marketCap": 1936542126.5045316,
+      "name": "Exchange Aggregator",
+      "rankedCoins": [
+        {
+          "key": "jupiter-stattion",
+          "name": "Jupiter"
+        },
+        {
+          "key": "swissborg",
+          "name": "SwissBorg"
+        },
+        {
+          "key": "dexe-network",
+          "name": "DeXe"
+        }
+      ],
+      "slug": "dex-aggregator",
+      "volume24h": 113675836.51710068
+    },
+    {
+      "change24h": -3.63,
+      "description": "Projects whose business model is based on a mobile application (not a web version)",
+      "dominance": 0.06,
+      "gainers": 18,
+      "id": 228,
+      "losers": 28,
+      "marketCap": 1840918049.3198142,
+      "name": "Mobile",
+      "rankedCoins": [
+        {
+          "key": "pi-network-1",
+          "name": "Pi Network"
+        },
+        {
+          "key": "axie-infinity",
+          "name": "Axie Infinity"
+        },
+        {
+          "key": "seeker",
+          "name": "Seeker (Solana Mobile)"
+        }
+      ],
+      "slug": "mobile",
+      "volume24h": 47549218.75100032
+    },
+    {
+      "change24h": -2.96,
+      "description": "Platforms used to run and deploy AI agents",
+      "dominance": 0.06,
+      "gainers": 6,
+      "id": 379,
+      "losers": 35,
+      "marketCap": 1751788307.7026474,
+      "name": "AI Agent Platform",
+      "rankedCoins": [
+        {
+          "key": "virtual-protocol",
+          "name": "Virtuals Protocol"
+        },
+        {
+          "key": "pieverse",
+          "name": "Pieverse"
+        },
+        {
+          "key": "unibase",
+          "name": "Unibase"
+        }
+      ],
+      "slug": "ai-agent-platform",
+      "volume24h": 163054101.4152447
+    },
+    {
+      "change24h": -4.62,
+      "description": "NFT collection projects",
+      "dominance": 0.06,
+      "gainers": 10,
+      "id": 117,
+      "losers": 44,
+      "marketCap": 1675770961.513211,
+      "name": "Collectibles",
+      "rankedCoins": [
+        {
+          "key": "pudgy-penguins",
+          "name": "Pudgy Penguins"
+        },
+        {
+          "key": "non-playable-coin",
+          "name": "Non-Playable Coin"
+        },
+        {
+          "key": "chiliz",
+          "name": "Chiliz"
+        }
+      ],
+      "slug": "collectibles",
+      "volume24h": 244276911.82592672
+    },
+    {
+      "change24h": -0.27,
+      "description": "Projects that provide a service for automation of trading, building trading strategies.",
+      "dominance": 0.06,
+      "gainers": 11,
+      "id": 257,
+      "losers": 29,
+      "marketCap": 1641907970.0169132,
+      "name": "Trading Strategies",
+      "rankedCoins": [
+        {
+          "key": "jupiter-stattion",
+          "name": "Jupiter"
+        },
+        {
+          "key": "dexe-network",
+          "name": "DeXe"
+        },
+        {
+          "key": "zignaly",
+          "name": "ZIG Finance"
+        }
+      ],
+      "slug": "trading-strategies",
+      "volume24h": 105704740.3020846
+    },
+    {
+      "change24h": -1.91,
+      "description": "Tokens which represent a basket (index) of several assets as well as projects issuing such tokens",
+      "dominance": 0.05,
+      "gainers": 3,
+      "id": 12,
+      "losers": 17,
+      "marketCap": 1619318509.9892151,
+      "name": "Index",
+      "rankedCoins": [
+        {
+          "key": "jupiter-perps-lp",
+          "name": "Jupiter Perps LP"
+        },
+        {
+          "key": "peapods-finance",
+          "name": "Peapods Finance"
+        },
+        {
+          "key": "cryptex-finance",
+          "name": "Cryptex Finance"
+        }
+      ],
+      "slug": "index",
+      "volume24h": 11025552.302535603
+    },
+    {
+      "change24h": -4.13,
+      "description": "Protocols using ve(3,3)-tokenomics model",
+      "dominance": 0.05,
+      "gainers": 2,
+      "id": 281,
+      "losers": 13,
+      "marketCap": 1598704591.6004589,
+      "name": "ve(3,3)",
+      "rankedCoins": [
+        {
+          "key": "aerodrome",
+          "name": "Aerodrome"
+        },
+        {
+          "key": "unibase",
+          "name": "Unibase"
+        },
+        {
+          "key": "magma-finance",
+          "name": "Magma Finance"
+        }
+      ],
+      "slug": "ve-33",
+      "volume24h": 94338230.63213451
+    },
+    {
+      "change24h": -3.9,
+      "description": "Game projects based on the metaverse basis",
+      "dominance": 0.05,
+      "gainers": 32,
+      "id": 72,
+      "losers": 71,
+      "marketCap": 1588257279.0878472,
+      "name": "Metaverse",
+      "rankedCoins": [
+        {
+          "key": "floki",
+          "name": "FLOKI"
+        },
+        {
+          "key": "axie-infinity",
+          "name": "Axie Infinity"
+        },
+        {
+          "key": "decentraland",
+          "name": "Decentraland"
+        }
+      ],
+      "slug": "metaverse",
+      "volume24h": 148763336.16202986
+    },
+    {
+      "change24h": -3.49,
+      "description": "x402 is open source protocol by Coinbase for micropayments on the internet creates a seamless, native payment for automated clients and AI agents enabling them to directly compensate for access to APIs, data streams, computational resources. ",
+      "dominance": 0.05,
+      "gainers": 6,
+      "id": 408,
+      "losers": 32,
+      "marketCap": 1474091437.3295534,
+      "name": "x402",
+      "rankedCoins": [
+        {
+          "key": "pieverse",
+          "name": "Pieverse"
+        },
+        {
+          "key": "unibase",
+          "name": "Unibase"
+        },
+        {
+          "key": "eigenlayer",
+          "name": "EigenCloud"
+        }
+      ],
+      "slug": "x402",
+      "volume24h": 159611964.48949653
+    },
+    {
+      "change24h": -5.23,
+      "description": "Projects that expand the use of bitcoin in blockchain, DeFi,EVM L2 networks that use bitcoin for security and liquidity. ",
+      "dominance": 0.05,
+      "gainers": 7,
+      "id": 301,
+      "losers": 25,
+      "marketCap": 1473120087.4493773,
+      "name": "Bitcoin Scaling",
+      "rankedCoins": [
+        {
+          "key": "blockstack",
+          "name": "Stacks"
+        },
+        {
+          "key": "starknet",
+          "name": "StarkNet"
+        },
+        {
+          "key": "babylon-chain",
+          "name": "Babylon"
+        }
+      ],
+      "slug": "bitcoin-scaling",
+      "volume24h": 127636274.2935549
+    },
+    {
+      "change24h": -4.51,
+      "description": "Projects that have a working web3 wallet",
+      "dominance": 0.05,
+      "gainers": 15,
+      "id": 232,
+      "losers": 33,
+      "marketCap": 1432072732.4370663,
+      "name": "Wallet",
+      "rankedCoins": [
+        {
+          "key": "backpack",
+          "name": "Backpack"
+        },
+        {
+          "key": "telcoin",
+          "name": "Telcoin"
+        },
+        {
+          "key": "ultima",
+          "name": "Ultima"
+        }
+      ],
+      "slug": "wallet",
+      "volume24h": 62929379.918488644
+    },
+    {
+      "change24h": -0.24,
+      "description": "The income is based on a delta-neutral strategy — counterpositions on a single asset that allow you to earn funding rates.",
+      "dominance": 0.05,
+      "gainers": 1,
+      "id": 414,
+      "losers": 2,
+      "marketCap": 1383455865.375091,
+      "name": "Delta-neutral strategy",
+      "rankedCoins": [],
+      "slug": "delta-neutral-strategy",
+      "volume24h": 1671439.537090601
+    },
+    {
+      "change24h": -6.95,
+      "description": "is a digital bank that combines classic banking functions (accounts, cards, payments) with blockchain, crypto asset storage, and Defi integration.",
+      "dominance": 0.04,
+      "gainers": 5,
+      "id": 415,
+      "losers": 9,
+      "marketCap": 1254475067.730688,
+      "name": "Neobank",
+      "rankedCoins": [
+        {
+          "key": "ether-fi",
+          "name": "ether.fi"
+        },
+        {
+          "key": "plasma",
+          "name": "Plasma"
+        },
+        {
+          "key": "we-fi",
+          "name": "WeFi"
+        }
+      ],
+      "slug": "neobank",
+      "volume24h": 169527941.25990865
+    },
+    {
+      "change24h": -2.36,
+      "description": "Projects that provide mining capacities for rent",
+      "dominance": 0.04,
+      "gainers": 4,
+      "id": 237,
+      "losers": 8,
+      "marketCap": 1246374447.7764091,
+      "name": "Mining Solutions",
+      "rankedCoins": [
+        {
+          "key": "pi-network-1",
+          "name": "Pi Network"
+        },
+        {
+          "key": "gmt-token",
+          "name": "Gomining Token"
+        },
+        {
+          "key": "electroneum",
+          "name": "Electroneum"
+        }
+      ],
+      "slug": "mining-solutions",
+      "volume24h": 32261939.978851
+    },
+    {
+      "change24h": -4.69,
+      "description": "Tokens launched on the Four.meme platform.",
+      "dominance": 0.04,
+      "gainers": 6,
+      "id": 384,
+      "losers": 28,
+      "marketCap": 1210311670.146775,
+      "name": "Four.meme",
+      "rankedCoins": [
+        {
+          "key": "binancelive",
+          "name": "币安人生 (Binancelive)"
+        },
+        {
+          "key": "bi",
+          "name": "BUILDon"
+        },
+        {
+          "key": "tagger",
+          "name": "Tagger"
+        }
+      ],
+      "slug": "four-meme",
+      "volume24h": 119349817.54942998
+    },
+    {
+      "change24h": -3.91,
+      "description": "Meme coins on Base mix internet culture with fast, low-fee blockchain transactions",
+      "dominance": 0.04,
+      "gainers": 10,
+      "id": 394,
+      "losers": 67,
+      "marketCap": 1160229270.86671,
+      "name": "Base Meme",
+      "rankedCoins": [
+        {
+          "key": "spx6900",
+          "name": "SPX6900"
+        },
+        {
+          "key": "ribbita-by-virtuals",
+          "name": "Ribbita by Virtuals"
+        },
+        {
+          "key": "based-brett",
+          "name": "Based Brett"
+        }
+      ],
+      "slug": "base-meme",
+      "volume24h": 44314753.34964588
+    },
+    {
+      "change24h": -1.95,
+      "description": "a tracker certificate issued by Backed Finance AG backed 1:1 by the underlying security",
+      "dominance": 0.04,
+      "gainers": 22,
+      "id": 404,
+      "losers": 83,
+      "marketCap": 1100531429.6042202,
+      "name": "Backed xStocks",
+      "rankedCoins": [
+        {
+          "key": "microstrategy-tokenized-stock-xstock",
+          "name": "MicroStrategy tokenized stock (xStock)"
+        },
+        {
+          "key": "dell-technologies-xstock",
+          "name": "Dell Technologies Inc. tokenized stock (xStock)"
+        },
+        {
+          "key": "circle-tokenized-stock-xstock",
+          "name": "Circle tokenized stock (xStock)"
+        }
+      ],
+      "slug": "backed-xstocks",
+      "volume24h": 111325754.19818367
+    },
+    {
+      "change24h": -1.73,
+      "description": "Ondo Tokenized are tokenized stocks and ETFs on the blockchain with the liquidity of traditional finance and reinvestment of all dividends from Ondo Finance issuer.",
+      "dominance": 0.04,
+      "gainers": 23,
+      "id": 403,
+      "losers": 140,
+      "marketCap": 1078014243.0269103,
+      "name": "Ondo",
+      "rankedCoins": [
+        {
+          "key": "micron-technology-ondo-tokenized",
+          "name": "Micron Technology (Ondo Tokenized)"
+        },
+        {
+          "key": "circle-internet-group-tokenized-stock-ondo",
+          "name": "Circle Internet Group (Ondo Tokenized)"
+        },
+        {
+          "key": "invesco-qqq-tokenized-etf-ondo",
+          "name": "Invesco QQQ (Ondo Tokenized)"
+        }
+      ],
+      "slug": "ondo",
+      "volume24h": 102828235.32404563
+    },
+    {
+      "change24h": -5.91,
+      "description": "Protocols that generate revenue and share it with token holders",
+      "dominance": 0.04,
+      "gainers": 2,
+      "id": 282,
+      "losers": 21,
+      "marketCap": 1036738772.8951112,
+      "name": "Real Yield",
+      "rankedCoins": [
+        {
+          "key": "pendle",
+          "name": "Pendle"
+        },
+        {
+          "key": "convex-finance",
+          "name": "Convex Finance"
+        },
+        {
+          "key": "dusd",
+          "name": "StandX DUSD"
+        }
+      ],
+      "slug": "real-yield",
+      "volume24h": 68596045.32519186
+    },
+    {
+      "change24h": -0.3,
+      "description": "Projects enabling the transfer of assets from one network to another",
+      "dominance": 0.03,
+      "gainers": 9,
+      "id": 255,
+      "losers": 34,
+      "marketCap": 999134036.1356395,
+      "name": "Bridge",
+      "rankedCoins": [
+        {
+          "key": "bittorrent-new",
+          "name": "BitTorrent (new)"
+        },
+        {
+          "key": "debridge",
+          "name": "deBridge"
+        },
+        {
+          "key": "wormhole",
+          "name": "Wormhole"
+        }
+      ],
+      "slug": "bridge",
+      "volume24h": 102719889.86824027
+    },
+    {
+      "change24h": -2.54,
+      "description": "Projects related to verification in blockchain.",
+      "dominance": 0.03,
+      "gainers": 2,
+      "id": 229,
+      "losers": 13,
+      "marketCap": 972314036.2146152,
+      "name": "Verification",
+      "rankedCoins": [
+        {
+          "key": "starknet",
+          "name": "StarkNet"
+        },
+        {
+          "key": "eigenlayer",
+          "name": "EigenCloud"
+        },
+        {
+          "key": "origintrail",
+          "name": "OriginTrail"
+        }
+      ],
+      "slug": "verification",
+      "volume24h": 89927479.0179747
+    },
+    {
+      "change24h": -5.27,
+      "description": "tokens launched on pump.fun platform",
+      "dominance": 0.03,
+      "gainers": 23,
+      "id": 355,
+      "losers": 99,
+      "marketCap": 936171884.2493414,
+      "name": "Pump.fun",
+      "rankedCoins": [
+        {
+          "key": "fartcoin",
+          "name": "Fartcoin"
+        },
+        {
+          "key": "the-black-bull",
+          "name": "The Black Bull"
+        },
+        {
+          "key": "comedian",
+          "name": "Comedian"
+        }
+      ],
+      "slug": "pump-fun",
+      "volume24h": 84025623.1312976
+    },
+    {
+      "change24h": -1.02,
+      "description": "Projects providing services NFT lending",
+      "dominance": 0.03,
+      "gainers": 1,
+      "id": 261,
+      "losers": 5,
+      "marketCap": 927729407.2184938,
+      "name": "NFT Lending",
+      "rankedCoins": [
+        {
+          "key": "nexo",
+          "name": "Nexo"
+        },
+        {
+          "key": "blur-io",
+          "name": "Blur"
+        }
+      ],
+      "slug": "nft-lending",
+      "volume24h": 8155142.173402836
+    },
+    {
+      "change24h": -3.63,
+      "description": "Apps created and running inside Telegramarn digital currencies",
+      "dominance": 0.03,
+      "gainers": 4,
+      "id": 318,
+      "losers": 14,
+      "marketCap": 919835602.1979905,
+      "name": "Mini App",
+      "rankedCoins": [
+        {
+          "key": "akedo-games",
+          "name": "Akedo Games"
+        },
+        {
+          "key": "catizen-meme",
+          "name": "Catizen"
+        },
+        {
+          "key": "notcoin",
+          "name": "Notcoin"
+        }
+      ],
+      "slug": "mini-app",
+      "volume24h": 29188882.926034186
+    },
+    {
+      "change24h": -2.12,
+      "description": "Projects that combine blockchain with robots and the machine economy: manage, finance, or coordinate robots and physical devices.",
+      "dominance": 0.03,
+      "gainers": 2,
+      "id": 417,
+      "losers": 15,
+      "marketCap": 899122045.6943526,
+      "name": "Robotics",
+      "rankedCoins": [
+        {
+          "key": "virtual-protocol",
+          "name": "Virtuals Protocol"
+        },
+        {
+          "key": "geodnet",
+          "name": "GEODNET"
+        },
+        {
+          "key": "peaq",
+          "name": "peaq"
+        }
+      ],
+      "slug": "robotics",
+      "volume24h": 109437623.78330179
+    },
+    {
+      "change24h": 1.85,
+      "description": "Meme coins on Robinhood mix internet culture with fast, low-fee blockchain transactions",
+      "dominance": 0.03,
+      "gainers": 31,
+      "id": 429,
+      "losers": 50,
+      "marketCap": 887185694.072334,
+      "name": "Robinhood Meme",
+      "rankedCoins": [
+        {
+          "key": "artificial-inu-rh",
+          "name": "Artificial Inu"
+        },
+        {
+          "key": "cash-cat-robinhood",
+          "name": "Cash Cat"
+        },
+        {
+          "key": "boner-coin-robinhood",
+          "name": "Boner Coin"
+        }
+      ],
+      "slug": "robinhood-meme",
+      "volume24h": 195895966.6823261
+    },
+    {
+      "change24h": -6.54,
+      "description": "Protocols that provide aggregator services from other DeFi yield applications",
+      "dominance": 0.03,
+      "gainers": 10,
+      "id": 2,
+      "losers": 20,
+      "marketCap": 813266783.330431,
+      "name": "Yield Aggregator",
+      "rankedCoins": [
+        {
+          "key": "pendle",
+          "name": "Pendle"
+        },
+        {
+          "key": "convex-finance",
+          "name": "Convex Finance"
+        },
+        {
+          "key": "yearn-finance",
+          "name": "Yearn.fi"
+        }
+      ],
+      "slug": "yield-aggregator",
+      "volume24h": 53153031.92861206
+    },
+    {
+      "change24h": 0.69,
+      "description": "Projects with Internet of Things technology at the core of their product",
+      "dominance": 0.03,
+      "gainers": 5,
+      "id": 243,
+      "losers": 16,
+      "marketCap": 782980341.2269965,
+      "name": "Internet of Things (IoT)",
+      "rankedCoins": [
+        {
+          "key": "iota",
+          "name": "IOTA"
+        },
+        {
+          "key": "jasmy",
+          "name": "Jasmy"
+        },
+        {
+          "key": "helium-hnt",
+          "name": "Helium"
+        }
+      ],
+      "slug": "internet-of-things",
+      "volume24h": 73807342.26416166
+    },
+    {
+      "change24h": -5.82,
+      "description": "Blockchains built on top of Layer 2 solutions",
+      "dominance": 0.02,
+      "gainers": 5,
+      "id": 322,
+      "losers": 8,
+      "marketCap": 711433947.2354078,
+      "name": "Layer 3 (L3)",
+      "rankedCoins": [
+        {
+          "key": "derive",
+          "name": "Derive"
+        },
+        {
+          "key": "ape-coin",
+          "name": "ApeCoin"
+        },
+        {
+          "key": "degen-base",
+          "name": "Degen (Base)"
+        }
+      ],
+      "slug": "layer-3",
+      "volume24h": 103217696.66304171
+    },
+    {
+      "change24h": 2.84,
+      "description": "Onchain games development studios",
+      "dominance": 0.02,
+      "gainers": 10,
+      "id": 305,
+      "losers": 17,
+      "marketCap": 699401103.9117535,
+      "name": "Gaming Studio",
+      "rankedCoins": [
+        {
+          "key": "immutable-x",
+          "name": "Immutable"
+        },
+        {
+          "key": "gala",
+          "name": "Gala"
+        },
+        {
+          "key": "onbeam",
+          "name": "Beam"
+        }
+      ],
+      "slug": "gaming-studio",
+      "volume24h": 87544084.69926949
+    },
+    {
+      "change24h": -1.82,
+      "description": "Blockchain-based projects providing messenger services",
+      "dominance": 0.02,
+      "gainers": 3,
+      "id": 222,
+      "losers": 6,
+      "marketCap": 661124123.2870916,
+      "name": "Messenger",
+      "rankedCoins": [
+        {
+          "key": "beldex",
+          "name": "Beldex"
+        },
+        {
+          "key": "status",
+          "name": "Status"
+        },
+        {
+          "key": "ratspeak",
+          "name": "Ratspeak"
+        }
+      ],
+      "slug": "messenger",
+      "volume24h": 5199260.26540965
+    },
+    {
+      "change24h": -5.09,
+      "description": "Picture-for-profile NFTs",
+      "dominance": 0.02,
+      "gainers": 0,
+      "id": 342,
+      "losers": 3,
+      "marketCap": 651509467.8303987,
+      "name": "PFP",
+      "rankedCoins": [
+        {
+          "key": "pudgy-penguins",
+          "name": "Pudgy Penguins"
+        },
+        {
+          "key": "moonbirds-nft",
+          "name": "Moonbirds"
+        },
+        {
+          "key": "doodles",
+          "name": "Doodles"
+        }
+      ],
+      "slug": "pfp",
+      "volume24h": 144286507.22519082
+    },
+    {
+      "change24h": -2.16,
+      "description": "meme running on the Polygon blockchain",
+      "dominance": 0.02,
+      "gainers": 2,
+      "id": 398,
+      "losers": 7,
+      "marketCap": 643495099.3119279,
+      "name": "Polygon Meme",
+      "rankedCoins": [
+        {
+          "key": "bonk-new",
+          "name": "Bonk"
+        },
+        {
+          "key": "ape-and-pepe",
+          "name": "Ape and Pepe"
+        },
+        {
+          "key": "dogelon",
+          "name": "Dogelon Mars"
+        }
+      ],
+      "slug": "polygon-meme",
+      "volume24h": 52266640.27190505
+    },
+    {
+      "change24h": -4.25,
+      "description": "Projects combining DeFi and AI",
+      "dominance": 0.02,
+      "gainers": 10,
+      "id": 377,
+      "losers": 36,
+      "marketCap": 620959176.8104268,
+      "name": "DeFAI",
+      "rankedCoins": [
+        {
+          "key": "dexe-network",
+          "name": "DeXe"
+        },
+        {
+          "key": "unifai-network",
+          "name": "UnifAI Network"
+        },
+        {
+          "key": "proprietary-trading-network",
+          "name": "Vanta (Proprietary Trading Network)"
+        }
+      ],
+      "slug": "defai",
+      "volume24h": 45359097.12385701
+    },
+    {
+      "change24h": -2.59,
+      "description": "Digital representation allows for 24/7 trading ETF&Indexes - baskets of traditional market assets, including stocks or bonds. ",
+      "dominance": 0.02,
+      "gainers": 7,
+      "id": 410,
+      "losers": 48,
+      "marketCap": 605158884.8894197,
+      "name": "ETFs & Indexes",
+      "rankedCoins": [
+        {
+          "key": "spdr-sp-500-tokenized-etf-ondo",
+          "name": "SPDR S&P 500 ETF (Ondo Tokenized)"
+        },
+        {
+          "key": "direxion-semiconductor-bull-3-x-tokenized-etf-xstock",
+          "name": "Direxion Semiconductor Bull 3X tokenized ETF (xStock)"
+        },
+        {
+          "key": "roundhill-memory-etf-tokenized-bstocks",
+          "name": "Roundhill Memory ETF Tokenized bStocks"
+        }
+      ],
+      "slug": "etfs-indexes",
+      "volume24h": 107927569.70934968
+    },
+    {
+      "change24h": 3.06,
+      "description": "Memestocks are meme tokens dedicated to specific stocks.",
+      "dominance": 0.02,
+      "gainers": 7,
+      "id": 432,
+      "losers": 12,
+      "marketCap": 603332805.0646486,
+      "name": "Memestocks",
+      "rankedCoins": [
+        {
+          "key": "artificial-inu-rh",
+          "name": "Artificial Inu"
+        },
+        {
+          "key": "marscoin-bnb-2",
+          "name": "MarsCoin"
+        },
+        {
+          "key": "orbio-so",
+          "name": "Orbio.so"
+        }
+      ],
+      "slug": "memestocks",
+      "volume24h": 146190637.75383282
+    },
+    {
+      "change24h": -1.36,
+      "description": "Masternode is a specialized node in a blockchain network that performs additional functions beyond those of regular nodes.",
+      "dominance": 0.02,
+      "gainers": 1,
+      "id": 238,
+      "losers": 1,
+      "marketCap": 595158287.4229118,
+      "name": "Masternode",
+      "rankedCoins": [
+        {
+          "key": "beldex",
+          "name": "Beldex"
+        }
+      ],
+      "slug": "masternode",
+      "volume24h": 2485825.653607887
+    },
+    {
+      "change24h": -3.73,
+      "description": "Projects manage value from transaction ordering: some extract it, others protect users.",
+      "dominance": 0.02,
+      "gainers": 1,
+      "id": 385,
+      "losers": 4,
+      "marketCap": 587540696.221515,
+      "name": "MEV",
+      "rankedCoins": [
+        {
+          "key": "gnosis-gno",
+          "name": "Gnosis"
+        },
+        {
+          "key": "railgun",
+          "name": "Railgun"
+        },
+        {
+          "key": "cow-protocol",
+          "name": "CoW Protocol"
+        }
+      ],
+      "slug": "mev",
+      "volume24h": 12033540.529463932
+    },
+    {
+      "change24h": -3.33,
+      "description": "wide range of online platforms and tools that allow users to create and share content",
+      "dominance": 0.02,
+      "gainers": 11,
+      "id": 163,
+      "losers": 30,
+      "marketCap": 544961937.2323188,
+      "name": "Social Media",
+      "rankedCoins": [
+        {
+          "key": "theta-token",
+          "name": "Theta Network"
+        },
+        {
+          "key": "livepeer",
+          "name": "Livepeer"
+        },
+        {
+          "key": "mask-network",
+          "name": "Mask Network"
+        }
+      ],
+      "slug": "social-media",
+      "volume24h": 32261639.095904082
+    },
+    {
+      "change24h": -6.09,
+      "description": "Murad's list is a collection of meme coins and cryptocurrencies curated by Murad Mahmudov.",
+      "dominance": 0.02,
+      "gainers": 0,
+      "id": 372,
+      "losers": 7,
+      "marketCap": 541014105.6732095,
+      "name": "Murad's list",
+      "rankedCoins": [
+        {
+          "key": "spx6900",
+          "name": "SPX6900"
+        },
+        {
+          "key": "popcat-solana",
+          "name": "Popcat"
+        },
+        {
+          "key": "mog-coin",
+          "name": "MOG Coin"
+        }
+      ],
+      "slug": "murad-list",
+      "volume24h": 26845490.14545901
+    },
+    {
+      "change24h": -7.54,
+      "description": "Protocols that allow for leveraged profitability",
+      "dominance": 0.02,
+      "gainers": 3,
+      "id": 353,
+      "losers": 8,
+      "marketCap": 521595166.17666453,
+      "name": "Leverage Farming",
+      "rankedCoins": [
+        {
+          "key": "pendle",
+          "name": "Pendle"
+        },
+        {
+          "key": "kamino",
+          "name": "Kamino"
+        },
+        {
+          "key": "yield-basis",
+          "name": "yieldbasis"
+        }
+      ],
+      "slug": "leverage-farming",
+      "volume24h": 45618818.42000289
+    },
+    {
+      "change24h": -5.25,
+      "description": "Projects that improve security in blockchain.",
+      "dominance": 0.02,
+      "gainers": 8,
+      "id": 226,
+      "losers": 27,
+      "marketCap": 456802602.71855265,
+      "name": "Security",
+      "rankedCoins": [
+        {
+          "key": "targon",
+          "name": "Targon"
+        },
+        {
+          "key": "tagger",
+          "name": "Tagger"
+        },
+        {
+          "key": "go-plus",
+          "name": "GoPlus Security"
+        }
+      ],
+      "slug": "security",
+      "volume24h": 75170118.50640522
+    },
+    {
+      "change24h": -8.14,
+      "description": "Protocols to allow trading of margin positions ",
+      "dominance": 0.01,
+      "gainers": 3,
+      "id": 354,
+      "losers": 2,
+      "marketCap": 440259009.5299426,
+      "name": "Margin Trading",
+      "rankedCoins": [
+        {
+          "key": "pendle",
+          "name": "Pendle"
+        }
+      ],
+      "slug": "margin-trading",
+      "volume24h": 27641626.43781717
+    },
+    {
+      "change24h": -5.5,
+      "description": "A standard for trustless identification and reputation for AI agents, enabling them to find, trust, and transact with each other.",
+      "dominance": 0.01,
+      "gainers": 0,
+      "id": 420,
+      "losers": 1,
+      "marketCap": 420659690.8401197,
+      "name": "ERC8004",
+      "rankedCoins": [
+        {
+          "key": "pieverse",
+          "name": "Pieverse"
+        }
+      ],
+      "slug": "erc8004",
+      "volume24h": 19208911.653515596
+    },
+    {
+      "change24h": -2.22,
+      "description": "Tokenized securities issued by Binance, backed 1:1 by underlying assets and traded on BNB Smart Chain",
+      "dominance": 0.01,
+      "gainers": 6,
+      "id": 430,
+      "losers": 70,
+      "marketCap": 408922550.3082691,
+      "name": "bStocks",
+      "rankedCoins": [
+        {
+          "key": "strategy-tokenized-bstocks",
+          "name": "Strategy Tokenized bStocks"
+        },
+        {
+          "key": "spacex-tokenized-bstocks",
+          "name": "SpaceX Tokenized bStocks"
+        },
+        {
+          "key": "roundhill-memory-etf-tokenized-bstocks",
+          "name": "Roundhill Memory ETF Tokenized bStocks"
+        }
+      ],
+      "slug": "bstocks",
+      "volume24h": 234994456.8963604
+    },
+    {
+      "change24h": -4.81,
+      "description": "Watch to Earn is a model where users earn cryptocurrency rewards by watching videos or streaming content. ",
+      "dominance": 0.01,
+      "gainers": 3,
+      "id": 258,
+      "losers": 4,
+      "marketCap": 384955370.420082,
+      "name": "Watch to Earn",
+      "rankedCoins": [
+        {
+          "key": "theta-token",
+          "name": "Theta Network"
+        },
+        {
+          "key": "basic-attention-token",
+          "name": "Basic Attention Token"
+        }
+      ],
+      "slug": "watch-to-earn",
+      "volume24h": 7544921.976787362
+    },
+    {
+      "change24h": -3.85,
+      "description": "Decentralized Science uses blockchain to decentralize and open access to scientific research and funding.",
+      "dominance": 0.01,
+      "gainers": 3,
+      "id": 369,
+      "losers": 7,
+      "marketCap": 380498763.5158038,
+      "name": "DeSci",
+      "rankedCoins": [
+        {
+          "key": "origintrail",
+          "name": "OriginTrail"
+        },
+        {
+          "key": "bio-protocol",
+          "name": "BIO Protocol"
+        },
+        {
+          "key": "researchhub",
+          "name": "ResearchHub"
+        }
+      ],
+      "slug": "desci",
+      "volume24h": 14753338.604204759
+    },
+    {
+      "change24h": -1.3,
+      "description": "Projects launched using the Virtuals protocol.",
+      "dominance": 0.01,
+      "gainers": 4,
+      "id": 373,
+      "losers": 13,
+      "marketCap": 339891103.89998794,
+      "name": "Virtuals Protocol",
+      "rankedCoins": [
+        {
+          "key": "ribbita-by-virtuals",
+          "name": "Ribbita by Virtuals"
+        },
+        {
+          "key": "aixbt-by-virtuals",
+          "name": "aixbt by Virtuals"
+        },
+        {
+          "key": "mamo",
+          "name": "Mamo"
+        }
+      ],
+      "slug": "virtuals-protocol",
+      "volume24h": 7982040.775113747
+    },
+    {
+      "change24h": -4.62,
+      "description": "Social network is a decentralized social networks, offering enhanced privacy, censorship resistance, and monetization opportunities.",
+      "dominance": 0.01,
+      "gainers": 8,
+      "id": 220,
+      "losers": 25,
+      "marketCap": 303680156.0389436,
+      "name": "Social Network",
+      "rankedCoins": [
+        {
+          "key": "jelly-my-jelly",
+          "name": "Jelly-My-Jelly"
+        },
+        {
+          "key": "nillion",
+          "name": "Nillion"
+        },
+        {
+          "key": "cyber",
+          "name": "Cyber"
+        }
+      ],
+      "slug": "social-network",
+      "volume24h": 35961622.450437814
+    },
+    {
+      "change24h": 7.16,
+      "description": "Tokens launched on the Flap mempad.",
+      "dominance": 0.01,
+      "gainers": 4,
+      "id": 418,
+      "losers": 2,
+      "marketCap": 287466962.67715704,
+      "name": "Flap",
+      "rankedCoins": [
+        {
+          "key": "marscoin-bnb-2",
+          "name": "MarsCoin"
+        },
+        {
+          "key": "niu-lai-bnb",
+          "name": "牛来 (Niu Lai)"
+        },
+        {
+          "key": "hudierensheng",
+          "name": "蝴蝶人生 (Butterfly Life)"
+        }
+      ],
+      "slug": "flap",
+      "volume24h": 152062696.93548074
+    },
+    {
+      "change24h": 0.53,
+      "description": "Projects using virtual or augmented reality at the core of their product",
+      "dominance": 0.01,
+      "gainers": 3,
+      "id": 254,
+      "losers": 13,
+      "marketCap": 287337577.82324076,
+      "name": "VR/AR",
+      "rankedCoins": [
+        {
+          "key": "decentraland",
+          "name": "Decentraland"
+        },
+        {
+          "key": "ai-companions",
+          "name": "AI Companions"
+        },
+        {
+          "key": "hyperfy",
+          "name": "Hyperfy"
+        }
+      ],
+      "slug": "vr-ar",
+      "volume24h": 10205632.096607853
+    },
+    {
+      "change24h": -1.62,
+      "description": "are tokenized assets that track the price of government bonds (Bills, Notes, Bonds) or ETFs/funds that include government debt instruments.",
+      "dominance": 0.01,
+      "gainers": 0,
+      "id": 412,
+      "losers": 5,
+      "marketCap": 266816128.74481487,
+      "name": "Tokenized Bonds",
+      "rankedCoins": [
+        {
+          "key": "lcx",
+          "name": "LCX"
+        },
+        {
+          "key": "ishares-20-year-treasury-bond-etf-ondo-tokenized",
+          "name": "iShares 20+ Year Treasury Bond ETF (Ondo Tokenized)"
+        }
+      ],
+      "slug": "tokenized-bonds",
+      "volume24h": 1288766.2350546145
+    },
+    {
+      "change24h": -3.98,
+      "description": "Projects using ERC-4347 standard at the core of their product",
+      "dominance": 0.01,
+      "gainers": 2,
+      "id": 280,
+      "losers": 6,
+      "marketCap": 264720928.27210265,
+      "name": "Account Abstraction",
+      "rankedCoins": [
+        {
+          "key": "instadapp",
+          "name": "Fluid"
+        },
+        {
+          "key": "safe-new",
+          "name": "Safe"
+        },
+        {
+          "key": "biconomy",
+          "name": "Biconomy"
+        }
+      ],
+      "slug": "account-abstraction",
+      "volume24h": 29008835.857388854
+    },
+    {
+      "change24h": -14.51,
+      "description": "is a tokens launched on the letsbonk memepad",
+      "dominance": 0.01,
+      "gainers": 0,
+      "id": 392,
+      "losers": 3,
+      "marketCap": 254264211.9968964,
+      "name": "letsbonk.fun",
+      "rankedCoins": [
+        {
+          "key": "useless-coin",
+          "name": "Useless Coin"
+        },
+        {
+          "key": "1-coin-can-change-your-life",
+          "name": "1 coin can change your life"
+        }
+      ],
+      "slug": "letsbonk-fun",
+      "volume24h": 30953885.02588969
+    },
+    {
+      "change24h": -14.53,
+      "description": "Projects added to the Raydium LaunchLab.",
+      "dominance": 0.01,
+      "gainers": 0,
+      "id": 386,
+      "losers": 2,
+      "marketCap": 253830693.36446512,
+      "name": "Raydium LaunchLab",
+      "rankedCoins": [
+        {
+          "key": "useless-coin",
+          "name": "Useless Coin"
+        }
+      ],
+      "slug": "raydium-launchlab",
+      "volume24h": 30614513.753194306
+    },
+    {
+      "change24h": -4.29,
+      "description": "Games with card mechanics",
+      "dominance": 0.01,
+      "gainers": 2,
+      "id": 310,
+      "losers": 8,
+      "marketCap": 240868741.90368295,
+      "name": "Card Games",
+      "rankedCoins": [
+        {
+          "key": "axie-infinity",
+          "name": "Axie Infinity"
+        },
+        {
+          "key": "echelon-prime",
+          "name": "Echelon Prime"
+        },
+        {
+          "key": "gods-unchained",
+          "name": "Gods Unchained"
+        }
+      ],
+      "slug": "card-games",
+      "volume24h": 16605875.000266008
+    },
+    {
+      "change24h": -4.68,
+      "description": "Projects that allow content creators and influencers to earn revenue from their creations",
+      "dominance": 0.01,
+      "gainers": 4,
+      "id": 314,
+      "losers": 25,
+      "marketCap": 240010078.31571895,
+      "name": "Creator Economy",
+      "rankedCoins": [
+        {
+          "key": "basic-attention-token",
+          "name": "Basic Attention Token"
+        },
+        {
+          "key": "bitcast",
+          "name": "Bitcast"
+        },
+        {
+          "key": "meet-48",
+          "name": "MEET48"
+        }
+      ],
+      "slug": "creator-economy",
+      "volume24h": 56921223.7310667
+    },
+    {
+      "change24h": -2.61,
+      "description": "Arbitrum Orbit is a framework that allows developers to create customizable Layer 2 (L2) and Layer 3 (L3) blockchain chains using Arbitrum's technology. ",
+      "dominance": 0.01,
+      "gainers": 2,
+      "id": 376,
+      "losers": 3,
+      "marketCap": 232699677.56518334,
+      "name": "Arbitrum Orbit",
+      "rankedCoins": [
+        {
+          "key": "ape-coin",
+          "name": "ApeCoin"
+        },
+        {
+          "key": "degen-base",
+          "name": "Degen (Base)"
+        },
+        {
+          "key": "xai-games",
+          "name": "XAI"
+        }
+      ],
+      "slug": "arbitrum-orbit",
+      "volume24h": 66195239.652777284
+    },
+    {
+      "change24h": -5.62,
+      "description": "Projects that create advertising campaigns, help with advertising, or are themselves an advertising platform.",
+      "dominance": 0.01,
+      "gainers": 3,
+      "id": 234,
+      "losers": 12,
+      "marketCap": 213477729.75234318,
+      "name": "Advertising",
+      "rankedCoins": [
+        {
+          "key": "basic-attention-token",
+          "name": "Basic Attention Token"
+        },
+        {
+          "key": "bitcast",
+          "name": "Bitcast"
+        },
+        {
+          "key": "adshares-new",
+          "name": "Adshares"
+        }
+      ],
+      "slug": "advertising",
+      "volume24h": 5337468.524808718
+    },
+    {
+      "change24h": 0.05,
+      "description": "Sphere of activity connected with the sale of goods and provision of services via the Internet. ",
+      "dominance": 0.01,
+      "gainers": 4,
+      "id": 383,
+      "losers": 13,
+      "marketCap": 205735109.08501697,
+      "name": "E-commerce",
+      "rankedCoins": [
+        {
+          "key": "zano",
+          "name": "Zano"
+        },
+        {
+          "key": "ecomi",
+          "name": "Ecomi"
+        },
+        {
+          "key": "shopinx",
+          "name": "ShopinX (shopinx.io)"
+        }
+      ],
+      "slug": "e-commerce",
+      "volume24h": 1789631.9662192059
+    },
+    {
+      "change24h": 2.95,
+      "description": "Platforms that use interactive quests and rewards to attract users, guide them through crypto activities, build loyalty, and align incentives.",
+      "dominance": 0.01,
+      "gainers": 3,
+      "id": 313,
+      "losers": 3,
+      "marketCap": 186188533.36095768,
+      "name": "Quest Platform",
+      "rankedCoins": [
+        {
+          "key": "the-9-bit",
+          "name": "the9bit"
+        },
+        {
+          "key": "layer-3",
+          "name": "Layer3"
+        }
+      ],
+      "slug": "quest-platform",
+      "volume24h": 11482788.621672384
+    },
+    {
+      "change24h": -3.67,
+      "description": "Blockchains built on Polkadot's layer-0 solutions",
+      "dominance": 0.01,
+      "gainers": 2,
+      "id": 260,
+      "losers": 7,
+      "marketCap": 183303157.0724543,
+      "name": "Parachain",
+      "rankedCoins": [
+        {
+          "key": "kusama",
+          "name": "Kusama"
+        },
+        {
+          "key": "astar-network",
+          "name": "Astar"
+        },
+        {
+          "key": "glimmer",
+          "name": "Moonbeam"
+        }
+      ],
+      "slug": "parachain",
+      "volume24h": 14350168.238826029
+    },
+    {
+      "change24h": -9.24,
+      "description": "ERC-404 is an experimental Ethereum-based token standard that combines the characteristics of both fungible (ERC-20) and non-fungible tokens (ERC-721).",
+      "dominance": 0.01,
+      "gainers": 0,
+      "id": 299,
+      "losers": 3,
+      "marketCap": 168751022.71946192,
+      "name": "ERC404",
+      "rankedCoins": [
+        {
+          "key": "non-playable-coin",
+          "name": "Non-Playable Coin"
+        }
+      ],
+      "slug": "erc404",
+      "volume24h": 2255180.5452784454
+    },
+    {
+      "change24h": 0.45,
+      "description": "MPC is a method of storing and signing crypto that involves splitting the private key into several parts.",
+      "dominance": 0.01,
+      "gainers": 2,
+      "id": 426,
+      "losers": 2,
+      "marketCap": 165851625.21737698,
+      "name": "MPC",
+      "rankedCoins": [
+        {
+          "key": "coca-wallet",
+          "name": "COCA"
+        },
+        {
+          "key": "dwalletlabs",
+          "name": "Ika (ex. dWallet network)"
+        },
+        {
+          "key": "particle-network",
+          "name": "Particle Network"
+        }
+      ],
+      "slug": "mpc",
+      "volume24h": 12412889.305392532
+    },
+    {
+      "change24h": 2.52,
+      "description": "Blockchain scaling solutions utilizing Solana Virtual Machine.",
+      "dominance": 0.01,
+      "gainers": 1,
+      "id": 339,
+      "losers": 7,
+      "marketCap": 165216022.18353897,
+      "name": "SVM",
+      "rankedCoins": [
+        {
+          "key": "solana-optimistic-network",
+          "name": "SOON"
+        },
+        {
+          "key": "fogo",
+          "name": "Fogo"
+        },
+        {
+          "key": "solayer",
+          "name": "Solayer"
+        }
+      ],
+      "slug": "svm",
+      "volume24h": 162606156.75450376
+    },
+    {
+      "change24h": -5.26,
+      "description": "Token standard that enables the minting and transferring of fungible tokens via the Ordinals protocol on the Bitcoin blockchain",
+      "dominance": 0.01,
+      "gainers": 2,
+      "id": 269,
+      "losers": 8,
+      "marketCap": 164371579.3561804,
+      "name": "BRC-20",
+      "rankedCoins": [
+        {
+          "key": "ordinals",
+          "name": "ORDI"
+        },
+        {
+          "key": "rats",
+          "name": "Rats"
+        },
+        {
+          "key": "sats-ordinals",
+          "name": "SATS (Ordinals)"
+        }
+      ],
+      "slug": "brc",
+      "volume24h": 19069352.9335786
+    },
+    {
+      "change24h": -1.24,
+      "description": "Robinhood Stocks is a tokenized version of Robinhood Markets (HOOD) shares available for spot trading.",
+      "dominance": 0.01,
+      "gainers": 15,
+      "id": 428,
+      "losers": 48,
+      "marketCap": 162118605.52229545,
+      "name": "Robinhood Stocks",
+      "rankedCoins": [
+        {
+          "key": "spdr-sp-500-trust-tokenized-etf-robinhood",
+          "name": "SPDR S&P 500 Trust Tokenized ETF (Robinhood)"
+        },
+        {
+          "key": "nvidia-tokenized-stock-robinhood",
+          "name": "NVIDIA Tokenized Stock (Robinhood)"
+        },
+        {
+          "key": "spacex-tokenized-stock-robinhood",
+          "name": "SpaceX Tokenized Stock (Robinhood)"
+        }
+      ],
+      "slug": "robinhood-stocks",
+      "volume24h": 149593745.28393793
+    },
+    {
+      "change24h": -3.16,
+      "description": "Projects providing medical services or aiming to work with medical organizations",
+      "dominance": 0.01,
+      "gainers": 5,
+      "id": 253,
+      "losers": 11,
+      "marketCap": 155479457.83058873,
+      "name": "Healthcare",
+      "rankedCoins": [
+        {
+          "key": "vitalum",
+          "name": "Vitalum"
+        },
+        {
+          "key": "nova-sn-68",
+          "name": "NOVA"
+        },
+        {
+          "key": "medibloc",
+          "name": "MediBloc"
+        }
+      ],
+      "slug": "healthcare",
+      "volume24h": 8964613.66945454
+    },
+    {
+      "change24h": -4.44,
+      "description": "Tokens associated with artificial intelligence agents operating without human intervention or projects creating infrastructure.",
+      "dominance": 0.01,
+      "gainers": 0,
+      "id": 419,
+      "losers": 23,
+      "marketCap": 154923915.8066151,
+      "name": "OpenClaw Agents",
+      "rankedCoins": [
+        {
+          "key": "ai-rig-complex",
+          "name": "AI Rig Complex"
+        },
+        {
+          "key": "bankr",
+          "name": "Bankr"
+        },
+        {
+          "key": "pippin",
+          "name": "Pippin"
+        }
+      ],
+      "slug": "openclaw-agents",
+      "volume24h": 17000168.448473323
+    },
+    {
+      "change24h": -1.66,
+      "description": "Projects providing educational services (academies, libraries, encyclopedias)",
+      "dominance": 0.01,
+      "gainers": 3,
+      "id": 225,
+      "losers": 11,
+      "marketCap": 152659179.11428303,
+      "name": "Education",
+      "rankedCoins": [
+        {
+          "key": "researchhub",
+          "name": "ResearchHub"
+        },
+        {
+          "key": "open-campus",
+          "name": "Open Campus"
+        },
+        {
+          "key": "iqwiki",
+          "name": "IQ"
+        }
+      ],
+      "slug": "education",
+      "volume24h": 2881711.3994795415
+    },
+    {
+      "change24h": -1.23,
+      "description": "Intent-based systems allow users to delegate tasks to solvers",
+      "dominance": 0.01,
+      "gainers": 2,
+      "id": 319,
+      "losers": 5,
+      "marketCap": 149527104.7563385,
+      "name": "Intent-based",
+      "rankedCoins": [
+        {
+          "key": "cow-protocol",
+          "name": "CoW Protocol"
+        },
+        {
+          "key": "across-protocol",
+          "name": "Across Protocol"
+        },
+        {
+          "key": "seda",
+          "name": "SEDA Protocol"
+        }
+      ],
+      "slug": "intent",
+      "volume24h": 8717501.762035636
+    },
+    {
+      "change24h": -3.77,
+      "description": "Projects working with art objects in one way or another",
+      "dominance": 0,
+      "gainers": 2,
+      "id": 165,
+      "losers": 13,
+      "marketCap": 137516440.85961726,
+      "name": "Art",
+      "rankedCoins": [
+        {
+          "key": "capybobo",
+          "name": "Capybobo"
+        },
+        {
+          "key": "superrare",
+          "name": "SuperRare"
+        },
+        {
+          "key": "doodles",
+          "name": "Doodles"
+        }
+      ],
+      "slug": "art",
+      "volume24h": 33185205.715908688
+    },
+    {
+      "change24h": -2.53,
+      "description": "Sports team tokens",
+      "dominance": 0,
+      "gainers": 8,
+      "id": 246,
+      "losers": 27,
+      "marketCap": 135107125.20820773,
+      "name": "Fan Token",
+      "rankedCoins": [
+        {
+          "key": "og-fan-token",
+          "name": "OG Fan Token"
+        },
+        {
+          "key": "atletico-de-madrid-fan-token",
+          "name": "Atletico De Madrid Fan Token"
+        },
+        {
+          "key": "santos-fc-fan-token",
+          "name": "Santos FC Fan Token"
+        }
+      ],
+      "slug": "fan-token",
+      "volume24h": 28647394.20229259
+    },
+    {
+      "change24h": -5.73,
+      "description": "Blockchain-based projects that provide music services or a musician-focused product ",
+      "dominance": 0,
+      "gainers": 2,
+      "id": 164,
+      "losers": 12,
+      "marketCap": 129361537.68343177,
+      "name": "Music",
+      "rankedCoins": [
+        {
+          "key": "ravedao",
+          "name": "RaveDAO"
+        },
+        {
+          "key": "audiera",
+          "name": "Audiera"
+        },
+        {
+          "key": "audius",
+          "name": "Audius"
+        }
+      ],
+      "slug": "music",
+      "volume24h": 56665224.076610334
+    },
+    {
+      "change24h": 0.38,
+      "description": "Projects that provide real estate tokenization services. ",
+      "dominance": 0,
+      "gainers": 5,
+      "id": 259,
+      "losers": 10,
+      "marketCap": 127958353.07751293,
+      "name": "Real Estate",
+      "rankedCoins": [
+        {
+          "key": "propy",
+          "name": "Propy"
+        },
+        {
+          "key": "mey-network",
+          "name": "Mey Network"
+        },
+        {
+          "key": "elysia",
+          "name": "ELYSIA"
+        }
+      ],
+      "slug": "real-estate",
+      "volume24h": 6058864.507951884
+    },
+    {
+      "change24h": -4.77,
+      "description": "Protocols providing insurance services through smart contracts",
+      "dominance": 0,
+      "gainers": 0,
+      "id": 47,
+      "losers": 8,
+      "marketCap": 117606898.94848159,
+      "name": "Insurance",
+      "rankedCoins": [
+        {
+          "key": "re",
+          "name": "Re Protocol"
+        },
+        {
+          "key": "real-finance",
+          "name": "Real Finance"
+        },
+        {
+          "key": "defi",
+          "name": "De.Fi"
+        }
+      ],
+      "slug": "insurance",
+      "volume24h": 8628676.610747432
+    },
+    {
+      "change24h": -6.35,
+      "description": "A protocol that allows the issuance and transfer of interchangeable tokens on the Bitcoin blockchain",
+      "dominance": 0,
+      "gainers": 2,
+      "id": 304,
+      "losers": 3,
+      "marketCap": 109182470.92892292,
+      "name": "Bitcoin Runes",
+      "rankedCoins": [
+        {
+          "key": "dog-go-to-the-moon-rune",
+          "name": "Dog"
+        },
+        {
+          "key": "lobo-the-wolf-pup",
+          "name": "LOBO•THE•WOLF•PUP"
+        }
+      ],
+      "slug": "bitcoin-runes",
+      "volume24h": 1166801.6390507114
+    },
+    {
+      "change24h": -5.5,
+      "description": "Projects related to intellectual property.",
+      "dominance": 0,
+      "gainers": 2,
+      "id": 375,
+      "losers": 6,
+      "marketCap": 103125811.23373643,
+      "name": "Intellectual Property",
+      "rankedCoins": [
+        {
+          "key": "capybobo",
+          "name": "Capybobo"
+        },
+        {
+          "key": "audiera",
+          "name": "Audiera"
+        },
+        {
+          "key": "beatswap",
+          "name": "BeatSwap"
+        }
+      ],
+      "slug": "intellectual-property",
+      "volume24h": 5347234.760111385
+    },
+    {
+      "change24h": -4.98,
+      "description": "Infrastructure for launching ready-made blockchain rollups",
+      "dominance": 0,
+      "gainers": 1,
+      "id": 326,
+      "losers": 3,
+      "marketCap": 91768121.4259381,
+      "name": "Rollups-as-a-Service (RaaS)",
+      "rankedCoins": [
+        {
+          "key": "altlayer",
+          "name": "AltLayer"
+        },
+        {
+          "key": "dymension",
+          "name": "Dymension"
+        },
+        {
+          "key": "caldera",
+          "name": "Caldera"
+        }
+      ],
+      "slug": "raas",
+      "volume24h": 51056165.611611284
+    },
+    {
+      "change24h": -4.26,
+      "description": "Projects providing automated programs allowing to interact with blockchain (including Telegram-bots)",
+      "dominance": 0,
+      "gainers": 5,
+      "id": 276,
+      "losers": 17,
+      "marketCap": 85814785.26939198,
+      "name": "Bots",
+      "rankedCoins": [
+        {
+          "key": "banana-gun",
+          "name": "Banana Gun"
+        },
+        {
+          "key": "paal-ai",
+          "name": "PAAL AI"
+        },
+        {
+          "key": "arctools",
+          "name": "ArcTools"
+        }
+      ],
+      "slug": "bots",
+      "volume24h": 3474584.7844845783
+    },
+    {
+      "change24h": -3.12,
+      "description": "Blockain-based projects that brings together players, enthusiasts and game developers within a single community that bands together to play and share resources",
+      "dominance": 0,
+      "gainers": 1,
+      "id": 235,
+      "losers": 4,
+      "marketCap": 80203202.9100962,
+      "name": "Gaming Guild",
+      "rankedCoins": [
+        {
+          "key": "kgen",
+          "name": "KGeN"
+        },
+        {
+          "key": "yield-guild-games",
+          "name": "Yield Guild Games"
+        },
+        {
+          "key": "zentry",
+          "name": "Zentry"
+        }
+      ],
+      "slug": "gaming-guild",
+      "volume24h": 5956291.874662246
+    },
+    {
+      "change24h": -3.07,
+      "description": "Role-playing games",
+      "dominance": 0,
+      "gainers": 7,
+      "id": 312,
+      "losers": 11,
+      "marketCap": 79519284.99443817,
+      "name": "RPG",
+      "rankedCoins": [
+        {
+          "key": "illuvium",
+          "name": "Illuvium"
+        },
+        {
+          "key": "big-time",
+          "name": "Big Time"
+        },
+        {
+          "key": "aria",
+          "name": "AriaAI"
+        }
+      ],
+      "slug": "rpg",
+      "volume24h": 12061667.489750339
+    },
+    {
+      "change24h": -0.22,
+      "description": "Meme сoins on TON connect internet culture with a rapidly growing ecosystem",
+      "dominance": 0,
+      "gainers": 15,
+      "id": 399,
+      "losers": 4,
+      "marketCap": 72872023.6202444,
+      "name": "TON Meme",
+      "rankedCoins": [
+        {
+          "key": "utya",
+          "name": "Utya"
+        },
+        {
+          "key": "dogs",
+          "name": "DOGS"
+        },
+        {
+          "key": "resistance-dog",
+          "name": "Resistance Dog"
+        }
+      ],
+      "slug": "ton-meme",
+      "volume24h": 4698372.919112443
+    },
+    {
+      "change24h": -4.23,
+      "description": "A token created using inscription - the process of embedding arbitrary data or content into the blockchain space. ",
+      "dominance": 0,
+      "gainers": 3,
+      "id": 289,
+      "losers": 4,
+      "marketCap": 68277752.47201554,
+      "name": "Inscription",
+      "rankedCoins": [
+        {
+          "key": "rats",
+          "name": "Rats"
+        },
+        {
+          "key": "sats-ordinals",
+          "name": "SATS (Ordinals)"
+        },
+        {
+          "key": "ordinalsbot",
+          "name": "OrdinalsBot"
+        }
+      ],
+      "slug": "inscriptions",
+      "volume24h": 4432950.397741423
+    },
+    {
+      "change24h": -5.41,
+      "description": "The token was launched on Clanker platform directly through a decentralized social network Farcaster. ",
+      "dominance": 0,
+      "gainers": 1,
+      "id": 409,
+      "losers": 31,
+      "marketCap": 62348812.427241035,
+      "name": "clanker",
+      "rankedCoins": [
+        {
+          "key": "bankr",
+          "name": "Bankr"
+        },
+        {
+          "key": "tokenbotbase",
+          "name": "Clanker"
+        },
+        {
+          "key": "clawd-atg-eth",
+          "name": "clawd.atg.eth"
+        }
+      ],
+      "slug": "clanker",
+      "volume24h": 7123270.98115999
+    },
+    {
+      "change24h": -6.54,
+      "description": "Projects related to the energy sector.",
+      "dominance": 0,
+      "gainers": 0,
+      "id": 242,
+      "losers": 5,
+      "marketCap": 60925847.58219234,
+      "name": "Energy Solutions",
+      "rankedCoins": [
+        {
+          "key": "power-ledger",
+          "name": "Powerledger"
+        },
+        {
+          "key": "sharex-energy",
+          "name": "ShareX"
+        },
+        {
+          "key": "starpower",
+          "name": "Starpower"
+        }
+      ],
+      "slug": "energy",
+      "volume24h": 4204463.809339496
+    },
+    {
+      "change24h": -7.09,
+      "description": "booking services using cryptocurrencies",
+      "dominance": 0,
+      "gainers": 1,
+      "id": 363,
+      "losers": 3,
+      "marketCap": 60286857.32034592,
+      "name": "Booking Services",
+      "rankedCoins": [
+        {
+          "key": "milk",
+          "name": "MiL.k"
+        },
+        {
+          "key": "travala",
+          "name": "AVA (Travala)"
+        }
+      ],
+      "slug": "booking-services",
+      "volume24h": 4536258.74693884
+    },
+    {
+      "change24h": -10.31,
+      "description": "Blockchain-based projects focused on charity",
+      "dominance": 0,
+      "gainers": 1,
+      "id": 137,
+      "losers": 4,
+      "marketCap": 50617501.574692555,
+      "name": "Charity",
+      "rankedCoins": [
+        {
+          "key": "ravedao",
+          "name": "RaveDAO"
+        }
+      ],
+      "slug": "charity",
+      "volume24h": 1230284.0924732154
+    },
+    {
+      "change24h": -5.63,
+      "description": "Blockchain based games with economic model that rewards users for participating in fitness and sports-related activities",
+      "dominance": 0,
+      "gainers": 2,
+      "id": 214,
+      "losers": 8,
+      "marketCap": 48164729.18565369,
+      "name": "Move to Earn (M2E)",
+      "rankedCoins": [
+        {
+          "key": "stepn",
+          "name": "STEPN"
+        },
+        {
+          "key": "superwalk",
+          "name": "SuperWalk"
+        },
+        {
+          "key": "sweat-economy",
+          "name": "SWEAT"
+        }
+      ],
+      "slug": "move-to-earn",
+      "volume24h": 2320811.827677715
+    },
+    {
+      "change24h": -5.8,
+      "description": "Qualified custodians specializing in the storage and management of digital assets with cold storage, multi-signature, insurance, and regulatory compliance.",
+      "dominance": 0,
+      "gainers": 0,
+      "id": 405,
+      "losers": 2,
+      "marketCap": 39886370.31109165,
+      "name": "Custody",
+      "rankedCoins": [
+        {
+          "key": "riv-coin",
+          "name": "RIV Coin"
+        }
+      ],
+      "slug": "custody",
+      "volume24h": 395289.090884048
+    },
+    {
+      "change24h": -4.98,
+      "description": "Projects initiating the use of blockchain technology to create and manage tokens or credits representing reductions in greenhouse gas emissions",
+      "dominance": 0,
+      "gainers": 3,
+      "id": 245,
+      "losers": 5,
+      "marketCap": 31738520.373543166,
+      "name": "Carbon Credit",
+      "rankedCoins": [
+        {
+          "key": "starpower",
+          "name": "Starpower"
+        },
+        {
+          "key": "vebetterdao",
+          "name": "VeBetterDAO"
+        }
+      ],
+      "slug": "carbon-credit",
+      "volume24h": 2405745.486929371
+    },
+    {
+      "change24h": 11.74,
+      "description": "Token is launched on the Believe launchpad. ",
+      "dominance": 0,
+      "gainers": 2,
+      "id": 389,
+      "losers": 8,
+      "marketCap": 23364851.03282534,
+      "name": "Believe",
+      "rankedCoins": [
+        {
+          "key": "kledai",
+          "name": "Kled AI"
+        },
+        {
+          "key": "ben-pasternak",
+          "name": "Believe"
+        }
+      ],
+      "slug": "believe",
+      "volume24h": 1287845.0101509658
+    },
+    {
+      "change24h": -2.66,
+      "description": "Projects developing logistics solutions",
+      "dominance": 0,
+      "gainers": 0,
+      "id": 256,
+      "losers": 2,
+      "marketCap": 20955983.885,
+      "name": "Logistics",
+      "rankedCoins": [
+        {
+          "key": "dkargo",
+          "name": "dKargo"
+        }
+      ],
+      "slug": "logistics",
+      "volume24h": 2295812.514764705
+    },
+    {
+      "change24h": -1.48,
+      "description": "Projects that allow donations or crowdfunding",
+      "dominance": 0,
+      "gainers": 0,
+      "id": 221,
+      "losers": 5,
+      "marketCap": 18100905.227595195,
+      "name": "Donations",
+      "rankedCoins": [
+        {
+          "key": "dimitra",
+          "name": "Dimitra"
+        },
+        {
+          "key": "grantix",
+          "name": "GrantiX"
+        }
+      ],
+      "slug": "crowdfunding",
+      "volume24h": 545233.3034589624
+    },
+    {
+      "change24h": -1.48,
+      "description": "Tokenized stocks and ETF products issued via Backpack Securities and distributed on Solana",
+      "dominance": 0,
+      "gainers": 2,
+      "id": 431,
+      "losers": 9,
+      "marketCap": 17858034.35080432,
+      "name": "Backpack Securities",
+      "rankedCoins": [
+        {
+          "key": "spacex-backpack-securities",
+          "name": "SpaceX (Backpack Securities)"
+        },
+        {
+          "key": "micron-technology-backpack-securities",
+          "name": "Micron Technology (Backpack Securities)"
+        },
+        {
+          "key": "sk-hynix-tokenized-stock-backpack",
+          "name": "SK Hynix (Backpack Securities)"
+        }
+      ],
+      "slug": "backpack-securities",
+      "volume24h": 8259112.727870999
+    },
+    {
+      "change24h": -8.12,
+      "description": "Tokens linked to the price of an asset with some leverage (mostly issued by centralized exchanges)",
+      "dominance": 0,
+      "gainers": 0,
+      "id": 270,
+      "losers": 3,
+      "marketCap": 14714448.283686299,
+      "name": "Leveraged Token",
+      "rankedCoins": [],
+      "slug": "leveraged-token",
+      "volume24h": 393880.0727549606
+    },
+    {
+      "change24h": 1.25,
+      "description": "Meme сoins on Sui connect internet culture with a rapidly growing ecosystem",
+      "dominance": 0,
+      "gainers": 4,
+      "id": 397,
+      "losers": 10,
+      "marketCap": 14512318.919408005,
+      "name": "Sui Meme",
+      "rankedCoins": [
+        {
+          "key": "lofisui",
+          "name": "LOFI"
+        },
+        {
+          "key": "sudeng",
+          "name": "sudeng"
+        }
+      ],
+      "slug": "sui-meme",
+      "volume24h": 2290774.5641353778
+    },
+    {
+      "change24h": -1.39,
+      "description": "Projects providing services of freelance marketplaces",
+      "dominance": 0,
+      "gainers": 2,
+      "id": 249,
+      "losers": 4,
+      "marketCap": 12506464.84214802,
+      "name": "Freelance",
+      "rankedCoins": [
+        {
+          "key": "braintrust",
+          "name": "Braintrust"
+        }
+      ],
+      "slug": "freelance",
+      "volume24h": 77503.49320879376
+    },
+    {
+      "change24h": -0.64,
+      "description": "blockchain games in the shooter genre",
+      "dominance": 0,
+      "gainers": 5,
+      "id": 316,
+      "losers": 7,
+      "marketCap": 11847361.706681978,
+      "name": "Shooter",
+      "rankedCoins": [
+        {
+          "key": "qorpoworld",
+          "name": "QORPO WORLD"
+        },
+        {
+          "key": "artyfact",
+          "name": "Artyfact"
+        }
+      ],
+      "slug": "shooter",
+      "volume24h": 228082.1692112982
+    },
+    {
+      "change24h": -0.35,
+      "description": "TRON meme coins are being actively launched in Justin Sun's ecosystem",
+      "dominance": 0,
+      "gainers": 9,
+      "id": 400,
+      "losers": 5,
+      "marketCap": 9786371.751636684,
+      "name": "TRON Meme",
+      "rankedCoins": [
+        {
+          "key": "puss",
+          "name": "PUSS"
+        },
+        {
+          "key": "sundog",
+          "name": "SunDog"
+        }
+      ],
+      "slug": "tron-meme",
+      "volume24h": 1033994.2962464803
+    },
+    {
+      "change24h": -0.36,
+      "description": "Tokens launched on Sunpump mempad",
+      "dominance": 0,
+      "gainers": 7,
+      "id": 356,
+      "losers": 5,
+      "marketCap": 9628301.58289542,
+      "name": "SunPump",
+      "rankedCoins": [
+        {
+          "key": "puss",
+          "name": "PUSS"
+        },
+        {
+          "key": "sundog",
+          "name": "SunDog"
+        }
+      ],
+      "slug": "sunpump",
+      "volume24h": 1033859.0304018236
+    },
+    {
+      "change24h": -1.62,
+      "description": null,
+      "dominance": 0,
+      "gainers": 1,
+      "id": 364,
+      "losers": 4,
+      "marketCap": 4222258.7261963,
+      "name": "Bsquared Ecosystem",
+      "rankedCoins": [
+        {
+          "key": "orbiter-finance",
+          "name": "Orbiter Finance"
+        },
+        {
+          "key": "owlto-finance",
+          "name": "Owlto Finance"
+        }
+      ],
+      "slug": "bsquared-ecosystem",
+      "volume24h": 787556.7737079435
+    },
+    {
+      "change24h": -5.81,
+      "description": "companies offering tax accounting solutions",
+      "dominance": 0,
+      "gainers": 0,
+      "id": 286,
+      "losers": 1,
+      "marketCap": 3142882.626675,
+      "name": "Tax & Accounting",
+      "rankedCoins": [],
+      "slug": "tax-accounting",
+      "volume24h": 5121.033432070307
+    },
+    {
+      "change24h": 31.89,
+      "description": "Projects that strategically manage cryptocurrencies and digital assets for organizations to achieve their financial goals.",
+      "dominance": 0,
+      "gainers": 2,
+      "id": 331,
+      "losers": 2,
+      "marketCap": 3137231.4626764436,
+      "name": "Treasury Management",
+      "rankedCoins": [
+        {
+          "key": "daobase",
+          "name": "DAOBase"
+        }
+      ],
+      "slug": "treasury-management",
+      "volume24h": 1006080.745097839
+    },
+    {
+      "change24h": -4.04,
+      "description": "is a tokens launched on the Jupiter Studio memepad",
+      "dominance": 0,
+      "gainers": 3,
+      "id": 401,
+      "losers": 3,
+      "marketCap": 2923074.5174595322,
+      "name": "Jup Studio",
+      "rankedCoins": [],
+      "slug": "jup-studio",
+      "volume24h": 29088.285092851627
+    },
+    {
+      "change24h": -3.08,
+      "description": "Projects related to racing and cars.",
+      "dominance": 0,
+      "gainers": 2,
+      "id": 315,
+      "losers": 1,
+      "marketCap": 940309.1159354758,
+      "name": "Racing",
+      "rankedCoins": [],
+      "slug": "racing",
+      "volume24h": 6245.330391452991
+    },
+    {
+      "change24h": -3.46,
+      "description": "program launched with Four.Meme, enables verified Binance Wallet users to trade meme early via bonding curve. ",
+      "dominance": 0,
+      "gainers": 0,
+      "id": 407,
+      "losers": 1,
+      "marketCap": 713504.052,
+      "name": "Meme Rush",
+      "rankedCoins": [],
+      "slug": "meme-rush",
+      "volume24h": 451.8935879391289
+    },
+    {
+      "change24h": -7.92,
+      "description": "is a meme token launched on the BAGS memepad",
+      "dominance": 0,
+      "gainers": 1,
+      "id": 402,
+      "losers": 10,
+      "marketCap": 567908.6161023197,
+      "name": "BAGS",
+      "rankedCoins": [],
+      "slug": "bags",
+      "volume24h": 5754.811443244785
+    },
+    {
+      "change24h": 7.75,
+      "description": "Flywheel tokens, trading commissions are used to purchase NFTs at floor price, resell at a markup to redeem/burn the flywheel tokens themselves.",
+      "dominance": 0,
+      "gainers": 1,
+      "id": 406,
+      "losers": 0,
+      "marketCap": 55370.85101247822,
+      "name": "NFT Strategy",
+      "rankedCoins": [],
+      "slug": "nft-strategy",
+      "volume24h": 122.90059683742835
+    },
+    {
+      "change24h": null,
+      "description": "Web3 browsers work with crypto based on a decentralized mechanism.",
+      "dominance": null,
+      "gainers": null,
+      "id": 416,
+      "losers": null,
+      "marketCap": null,
+      "name": "Web3Browser",
+      "rankedCoins": [],
+      "slug": "web3browser",
+      "volume24h": null
+    },
+    {
+      "change24h": -1.42,
+      "description": "replicate the price of a traditional stock market derivative, are traded on cryptocurrency exchanges and have no issuer.",
+      "dominance": 0,
+      "gainers": 45,
+      "id": 424,
+      "losers": 199,
+      "marketCap": 43008.74435245142,
+      "name": "TradFi derivatives",
+      "rankedCoins": [],
+      "slug": "tradfi-derivatives",
+      "volume24h": 14092542.734635122
+    }
+  ],
+  "upstream": "https://cryptorank.io/tags",
+  "upstreamTotal": 182
+}

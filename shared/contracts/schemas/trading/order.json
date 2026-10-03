@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/trading/order.json",
+  "title": "Order (child order)",
+  "description": "One child order of an execution: one instruction actually sent (or to be sent) to a venue. IDENTITY IS MINTED AND ENFORCED: client_order_id = 'fud_<execution_id>_<sequence>' (backend/workers/executor/internal/idempotency/idempotency.go ClientOrderID, with a refusing parser ParseClientOrderID), and the durable store upserts on UNIQUE (execution_id, client_order_id), so 'a replayed reconcile updates the one row; it can never fork a second one' (repository/store.go SaveChildOrder doc). exchange_order_id is the venue's own id and is nullable until the venue answers. Reconciliation matches by exchange_order_id FIRST, then client_order_id (worker/helpers.go matchVenue), which is why both are required here - the client id is the crash-window-stable key.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "order_id",
+    "execution_id",
+    "client_order_id",
+    "symbol",
+    "side",
+    "type",
+    "status",
+    "quantity",
+    "filled_quantity",
+    "updated_at"
+  ],
+  "properties": {
+    "order_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "execution_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "client_order_id": {
+      "type": "string",
+      "pattern": "^fud_[A-Za-z0-9._:-]+_[0-9]+$",
+      "description": "Our id space. A venue order whose client id is not in this space and whose execution does not match is never adopted (worker/tick.go reconcile)."
+    },
+    "exchange_order_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The venue's numeric order id AS TEXT (never parsed as a number); null until the venue answers."
+    },
+    "symbol": {
+      "type": "string"
+    },
+    "instrument_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "side": {
+      "$ref": "#/$defs/side"
+    },
+    "type": {
+      "$ref": "#/$defs/child_order_type"
+    },
+    "price": {
+      "anyOf": [
+        {
+          "$ref": "../common/price.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null for a market order (the domain's empty price means market, not zero)."
+    },
+    "quantity": {
+      "$ref": "../common/quantity.json"
+    },
+    "filled_quantity": {
+      "$ref": "../common/quantity.json",
+      "description": "Monotonic: reconciliation only ever raises it (cmpDec > 0), never lowers it."
+    },
+    "status": {
+      "$ref": "#/$defs/child_order_status"
+    },
+    "is_exit": {
+      "type": "boolean",
+      "description": "INTERNAL-ONLY: whether this child closes rather than opens exposure. It is a strategy detail, not part of the cross-service semantics."
+    },
+    "submitted_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/updated_at"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "updated_at": {
+      "$ref": "../common/time.json#/$defs/updated_at"
+    },
+    "filled_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/observed_at"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "When the venue reported the fill; null until then."
+    }
+  },
+  "$defs": {
+    "market_type": {
+      "type": "string",
+      "enum": [
+        "spot",
+        "linear_perp"
+      ],
+      "description": "USDT-linear perpetual only in the MVP."
+    },
+    "side": {
+      "type": "string",
+      "enum": [
+        "buy",
+        "sell"
+      ],
+      "description": "Order side. A spot sell-open is refused outside explicit margin support."
+    },
+    "intent": {
+      "type": "string",
+      "enum": [
+        "open",
+        "close",
+        "reduce"
+      ],
+      "description": "What the user wants the order to do to the position - not what the venue will do."
+    },
+    "execution_status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "CALCULATED",
+        "VALIDATED",
+        "READY",
+        "RUNNING",
+        "PARTIALLY_FILLED",
+        "FILLED",
+        "PAUSED",
+        "CANCEL_REQUESTED",
+        "CANCELLED",
+        "FAILED",
+        "RISK_STOPPED",
+        "EXPIRED",
+        "RECONCILING",
+        "STOPPED"
+      ],
+      "description": "Execution lifecycle. FROZEN: this list is cross-checked against frontend/web/src/platform/executor/types.ts and shared/contracts/openapi/fudcourt.yaml by shared/contracts/scripts/check-contract.mjs (CHECKED_ENUMS), so it MUST NOT be re-spelled or reordered, and it MUST NOT be merged with ChildOrderStatus."
+    },
+    "child_order_status": {
+      "type": "string",
+      "enum": [
+        "PLANNED",
+        "SUBMITTING",
+        "OPEN",
+        "PARTIAL",
+        "FILLED",
+        "CANCELLING",
+        "CANCELLED",
+        "REJECTED",
+        "EXPIRED",
+        "UNKNOWN"
+      ],
+      "description": "Child-order lifecycle. FROZEN and cross-checked like execution_status. UNKNOWN is a real state, not an error: a non-terminal child with no venue row and no SUBMITTING grace is marked UNKNOWN + EXTERNAL_STATE_CHANGE so fill ingestion decides the truth."
+    },
+    "execution_mode": {
+      "type": "string",
+      "enum": [
+        "preview",
+        "paper",
+        "live"
+      ],
+      "description": "LIVE is fail-closed behind the FUDCOURT_EXECUTOR_LIVE kill switch; a paper execution reuses the account's market/fee/balance context but NEVER sends an order."
+    },
+    "time_in_force": {
+      "type": "string",
+      "enum": [
+        "GTC",
+        "IOC",
+        "FOK"
+      ]
+    },
+    "position_side": {
+      "type": "string",
+      "enum": [
+        "long",
+        "short",
+        "net"
+      ],
+      "description": "Venue position mode's own vocabulary."
+    },
+    "margin_mode": {
+      "type": "string",
+      "enum": [
+        "isolated",
+        "cross"
+      ]
+    },
+    "position_mode": {
+      "type": "string",
+      "enum": [
+        "one_way",
+        "hedge"
+      ]
+    },
+    "leverage_mode": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "auto_safe"
+      ]
+    },
+    "stop_mode": {
+      "type": "string",
+      "enum": [
+        "native",
+        "synthetic",
+        "hybrid"
+      ],
+      "description": "How a protective stop is managed; native preferred."
+    },
+    "risk_breach_policy": {
+      "type": "string",
+      "enum": [
+        "resize_then_stop",
+        "pause",
+        "stop"
+      ]
+    },
+    "existing_position_policy": {
+      "type": "string",
+      "enum": [
+        "add",
+        "reject"
+      ]
+    },
+    "balance_basis": {
+      "type": "string",
+      "enum": [
+        "spot_available",
+        "spot_equity",
+        "futures_available",
+        "futures_equity",
+        "total_exchange_equity",
+        "asset_equity",
+        "custom"
+      ],
+      "description": "A percentage sizing mode MUST name the balance basis explicitly - a percent of an unnamed basis is not a size."
+    },
+    "sizing_mode": {
+      "type": "string",
+      "enum": [
+        "risk_usd",
+        "risk_percent",
+        "allocation_usd",
+        "allocation_percent",
+        "notional_usd",
+        "fixed_quantity",
+        "fixed_margin",
+        "target_profit_usd",
+        "target_profit_percent"
+      ],
+      "description": "The nine sizing modes of SizingDefinition['mode']. Percent-valued modes require balance_basis to be present (the sizing engine refuses a percent mode without a basis)."
+    },
+    "child_order_type": {
+      "type": "string",
+      "enum": [
+        "market",
+        "limit"
+      ],
+      "description": "The two order types the engine emits. The SQL column is unconstrained text; this enum is the value set the code writes."
+    },
+    "credential_health": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "ACTIVE",
+        "INVALID",
+        "EXPIRED",
+        "PERMISSION_ERROR",
+        "RATE_LIMITED",
+        "REVOKED"
+      ]
+    },
+    "error_category": {
+      "type": "string",
+      "enum": [
+        "network_retryable",
+        "rate_limited",
+        "exchange_overload",
+        "invalid_order",
+        "permission_error",
+        "insufficient_balance",
+        "fatal",
+        "unknown"
+      ],
+      "description": "Retry taxonomy: only network_retryable / rate_limited / exchange_overload may retry. Mirrors shared/contracts/schemas/error-envelope.json's coarser 12-value `code` set - the envelope is the wire contract, this is the executor's internal classification."
+    },
+    "event_name": {
+      "type": "string",
+      "description": "A STABLE event id from shared/contracts/events/catalog.json (PascalCase), whose SCREAMING_SNAKE spellings are accepted aliases. Not re-enumerated here on purpose: events/catalog.json plus events/event.schema.json are the single source of truth, pinned by check-contract.mjs, and duplicating the list in a second schema would create a drift surface."
+    }
+  }
+}

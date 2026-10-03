@@ -1,0 +1,55 @@
+# FUD Court live multi-chain balance sync -> Postgres
+#
+# DEPLOYED variant: this is what `~/.config/systemd/user/fudcourt-sync.service` runs
+# today — the **Python oracle** `tests/oracle/sync-live.py`. It is the
+# independent cross-check for the Rust service, per DR-005's oracle rule.
+#
+# RUNTIME DEPENDENCY (DR-040): the write half now talks to Postgres with
+# `psycopg2`, which is NOT in the stdlib. The host package is
+# `python3-psycopg2` (apt, 2.9.x) — `tests/oracle/requirements.txt` records the
+# pip equivalent. Without it the run fetches every balance, then dies at the
+# write with `ModuleNotFoundError: No module named 'psycopg2'` and writes
+# nothing; install it before the first run on a new host.
+#
+# ============================ READ THIS BEFORE SWAPPING ============================
+# Both sync variants live in infrastructure/systemd/ with distinct file names (systemd
+# resolves by the unit NAME inside the file, so only one pair can ever be installed):
+#
+#   infrastructure/systemd/fudcourt-sync.service + .timer        <-- installed now (Python oracle)
+#   infrastructure/systemd/fudcourt-sync-rust.service + .timer   <-- the Rust replacement (not installed)
+#
+# Swapping is therefore an uninstall + install + reload, never "both":
+#     cp infrastructure/systemd/fudcourt-sync-rust.{service,timer} ~/.config/systemd/user/
+#     rm ~/.config/systemd/user/fudcourt-sync.{service,timer}
+#     systemctl --user daemon-reload && systemctl --user restart fudcourt-sync-rust.timer
+# Column the diff changes: ExecStart, WorkingDirectory, Documentation, and the
+# Description suffix `(Rust)`.
+# ==================================================================================
+#
+# This unit exists, rather than only living on the host, because its ExecStart is a
+# path into this repo: on 2026-09-29 a scripts/ reorg moved sync-live.py and the
+# timer kept firing against a path that no longer existed (status 2) until the unit
+# was repointed. Path changes here must land together with the move.
+[Unit]
+Description=FUD Court live multi-chain balance sync -> Postgres
+Documentation=file:///home/dwizzy/fudcourt/tests/oracle/sync-live.py
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# The script walks up from its own location to the repo-root `.env`, where it
+# reads ALCHEMY_KEY and FUDCOURT_PG_URL. DR-040 made the local Postgres the
+# system of record and the script writes it directly, so the DR-019
+# `ExecStartPost` projection — and the bun/cwd trap it needed — are gone;
+# WorkingDirectory is now only an anchor for a relative invocation.
+WorkingDirectory=/home/dwizzy/fudcourt/frontend/web
+Environment=NODE_ENV=
+ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/tests/oracle/sync-live.py
+# A failed RPC must not silently zero data; retry after a short backoff.
+Restart=on-failure
+RestartSec=60
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

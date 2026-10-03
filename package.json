@@ -1,25 +1,15 @@
 {
   "name": "fudcourt",
-  "version": "1.0.0",
   "private": true,
+  "description": "Monorepo root. Scripts delegate to per-app/per-service tooling; deliberately NO dependencies and NO root lockfile — each app owns its install (frontend/web: bun.lock; backend: go.sum / Cargo.lock).",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "dev:web": "npm run dev --workspace=apps/web",
-    "dev:blog": "npm run dev --workspace=apps/blog",
-    "build:web": "npm run build --workspace=apps/web",
-    "build:blog": "npm run build --workspace=apps/blog"
-  },
-  "dependencies": {
-    "next": "16.3.5",
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
-  },
-  "devDependencies": {
-    "@types/node": "22.10.2",
-    "@types/react": "19.2.0",
-    "@types/react-dom": "19.2.0",
-    "typescript": "5.9.3"
+    "verify": "bash scripts/verify/verify-all.sh",
+    "check:contracts": "node shared/contracts/scripts/check-contract.mjs",
+    "check:deploy": "python3 scripts/verify/check-deploy.py",
+    "check:structure": "cd frontend/web && python3 scripts/checks/check-structure.py",
+    "check:web-contract": "python3 scripts/verify/check-contract.py",
+    "test:web": "cd frontend/web && bun run test:shapers",
+    "test:go": "go test ./backend/api/... ./backend/workers/executor/... ./backend/data/...",
+    "test:sync": "cd backend/sync && cargo test --release"
   }
 }

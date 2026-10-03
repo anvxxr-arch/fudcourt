@@ -1,11 +1,19 @@
 #!/bin/bash
 # fudcourt pre-push hook (PLAN T-2.2.1, R-2) — fast, offline only.
 #   - offline contract check (CR_MODES consistency + mutation-auth guards)
+#   - contracts drift gate + generated sdk-ts check (shared/, frontend/web changes)
+#   - deploy-unit guard (every ExecStart/Documentation repo path must exist)
 #   - shaper fixture tests (offline, recorded upstream payloads) - SG-4.1
-#   - tsc --noEmit when apps/web TypeScript changed
+#   - tsc --noEmit when frontend/web TypeScript changed
 #   - python syntax check for changed harness scripts
-# Full harnesses (network) stay manual: scripts/verify-*.py
+# Full harnesses (network) stay manual: scripts/verify/verify-*.py
 set -u
+# Resolve the repo's toolchain even when git invokes us with a minimal PATH: a
+# plain `git push` from a login-less shell never sources ~/.profile, so `bun`
+# and `bunx` are missing and every web gate below reports "command not found"
+# (looks like a red tree, is really a PATH gap). CI installs bun globally, so
+# this is a no-op there.
+export PATH="$HOME/.bun/bin:$HOME/.cargo/bin:$PATH"
 remote="$1" url="$2"
 rc=0
 
@@ -14,19 +22,69 @@ changed=$(git diff --name-only "$remote"...HEAD 2>/dev/null || git diff --name-o
 
 echo "[pre-push] checking $(echo "$changed" | wc -l) changed files..."
 
-if echo "$changed" | grep -q '^apps/web/'; then
+if echo "$changed" | grep -q '^frontend/web/'; then
   echo "[pre-push] offline contract check..."
-  if ! (cd apps/web && python3 scripts/check-contract.py); then rc=1; fi
-  echo "[pre-push] tsc --noEmit (apps/web)..."
-  if ! (cd apps/web && unset NODE_ENV && npx tsc --noEmit); then
+  if ! python3 scripts/verify/check-contract.py; then rc=1; fi
+  echo "[pre-push] deploy-unit guard (every ExecStart path must exist)..."
+  if ! python3 scripts/verify/check-deploy.py; then rc=1; fi
+  echo "[pre-push] structure gate (DR-018: routes/features/platform/ui/styles)..."
+  if ! (cd frontend/web && python3 scripts/checks/check-structure.py); then rc=1; fi
+  # The design system (DR-037): the migration gate (raw literals, magic style values, dead tokens)
+  # and the generated-artifact drift alarm. Both are cheap and offline — a hand-written `#ffd166`
+  # should never reach CI only to be caught there.
+  echo "[pre-push] design-token gate (raw literals, magic style values, dead tokens)..."
+  if ! (cd frontend/web && python3 scripts/checks/check-design-tokens.py); then
+    echo "[pre-push] DESIGN TOKENS FAILED (use src/styles/tokens.ts; see docs/architecture/DESIGN-SYSTEM.md)"; rc=1
+  fi
+  echo "[pre-push] design-token artifact drift (globals.css block + tailwind.tokens.json are generated)..."
+  if ! (cd frontend/web && unset NODE_ENV && bun scripts/design/emit-tokens.ts --check); then
+    echo "[pre-push] TOKEN ARTIFACTS DRIFTED (fix: cd frontend/web && bun run tokens, then commit both)"; rc=1
+  fi
+  echo "[pre-push] tsc --noEmit (frontend/web)..."
+  if ! (cd frontend/web && unset NODE_ENV && bunx tsc --noEmit); then
     echo "[pre-push] TYPECHECK FAILED"; rc=1
   fi
   echo "[pre-push] shaper fixture tests (offline)..."
-  if ! (cd apps/web && unset NODE_ENV && npm run test:shapers > /tmp/fudcourt-shaper-tests.log 2>&1); then
+  if ! (cd frontend/web && unset NODE_ENV && bun run test:shapers > /tmp/fudcourt-shaper-tests.log 2>&1); then
     echo "[pre-push] SHAPER TESTS FAILED"; tail -20 /tmp/fudcourt-shaper-tests.log; rc=1
   fi
 fi
 
+if echo "$changed" | grep -qE '^shared/|^frontend/web/'; then
+  echo "[pre-push] contracts drift gate (shared/contracts)..."
+  if ! node shared/contracts/scripts/check-contract.mjs; then rc=1; fi
+fi
+if echo "$changed" | grep -q '^shared/'; then
+  echo "[pre-push] sdk-ts generate-drift + typecheck..."
+  # Compare regenerated output against the tree copy (works before the generated
+  # files are committed too, unlike a git-diff-based check).
+  if ! (cd shared/sdk/typescript && tmp=$(mktemp -d) && cp -r src/generated "$tmp/generated" \
+        && bun run generate && diff -r "$tmp/generated" src/generated && bun run typecheck); then
+    echo "[pre-push] SDK DRIFT/TYPECHECK FAILED (fix: cd shared/sdk/typescript && bun install && bun run generate, then commit)"; rc=1
+  fi
+fi
+if echo "$changed" | grep -qE '^backend/|\.go$'; then
+  echo "[pre-push] go build/vet/test (backend/data, backend/api, backend/workers/executor)..."
+  # GOTOOLCHAIN=auto resolves go>=1.25.0 (backend/api|workers/executor) / >=1.24.1
+  # (backend/data: fhttp/tls-client floor) from the locally cached toolchain —
+  # offline-safe here; see docs/DECISIONS.md DR-005.
+  for mod in backend/data backend/api backend/workers/executor; do
+    if ! (cd "$mod" && go build ./... && go vet ./... && go test ./...); then
+      echo "[pre-push] GO BUILD/VET/TEST FAILED ($mod)"; rc=1
+    fi
+  done
+fi
+
+if echo "$changed" | grep -qE '^backend/sync/|\.rs$'; then
+  echo "[pre-push] cargo build/test (backend/sync)..."
+  if ! (cd backend/sync && cargo build --release && cargo test --release); then
+    echo "[pre-push] RUST BUILD/TEST FAILED"; rc=1
+  fi
+  echo "[pre-push] sync oracle gate (Python oracle vs Rust replay)..."
+  if ! python3 scripts/verify/verify-sync.py >/dev/null; then
+    echo "[pre-push] SYNC ORACLE GATE FAILED (projections diverge)"; rc=1
+  fi
+fi
 if echo "$changed" | grep -qE '\.py$'; then
   echo "[pre-push] python syntax..."
   while IFS= read -r f; do

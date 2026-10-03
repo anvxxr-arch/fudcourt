@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/research/global-stats.json",
+  "title": "Global market stats",
+  "description": "Whole-market aggregates as one provider publishes them. Dominance percentages and gas price are provider figures, not derived by us. Nullability is honest: a stale or missing upstream key yields null rather than a plausible number, and the envelope stamps fetched_at/cache so a consumer can see the value is old.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "total_market_cap_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "total_market_cap_change_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "total_volume_24h_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "total_volume_24h_change_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "btc_dominance_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "0-100 scale, per common/percentage.json."
+    },
+    "btc_dominance_change_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "eth_dominance_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "eth_dominance_change_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "all_currencies": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "gas_gwei": {
+      "anyOf": [
+        {
+          "$ref": "../common/decimal.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Gas price in gwei - a non-money decimal quantity, so it uses the bare decimal type."
+    }
+  }
+}

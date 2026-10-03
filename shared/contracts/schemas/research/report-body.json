@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/research/report-body.json",
+  "title": "Report body (structured long-form document)",
+  "description": "One long-form research report already flattened into render-ready blocks. THE FLATTENING IS THE CONTRACT: inline emphasis and links are resolved to text upstream of this shape, so `text` carries no markup and a consumer must not re-parse it as HTML. The parse is guarded by a MEASURED floor rather than a guess: a body shorter than the layout-drift floor is not treated as a short report but as a changed page and becomes a loud error, because an empty or partial upstream is never a valid answer. `published_at` follows the same rule as news: absent on the list variant (the homepage source publishes no dates) and present only when the report page itself was fetched.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "slug",
+    "url",
+    "title",
+    "body"
+  ],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "description": "The report's own slug - the only key this provider model has (it is echoed from the request on keyed modes)."
+    },
+    "url": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "meta_title": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "published_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/occurred_at"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null on the list variant BY DESIGN (no date is published there) - render an em-dash, never a date and never 0."
+    },
+    "published_raw": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The provider's byline text, unparsed."
+    },
+    "authors": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/author"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null when the byline is ambiguous: the parser refuses to guess an author rather than attributing the piece to the wrong person."
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/section"
+      },
+      "description": "Document-order headings, used as the reader view's table of contents."
+    },
+    "body": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/block"
+      }
+    }
+  },
+  "$defs": {
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "level",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string"
+        }
+      }
+    },
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "text"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "h2",
+            "h3",
+            "h4",
+            "p",
+            "li"
+          ],
+          "description": "The block's own semantic level, taken from the document."
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "description": "Render-ready plain text; inline markup has ALREADY been flattened, so this must never be injected as HTML."
+        }
+      }
+    }
+  }
+}

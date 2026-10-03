@@ -1,0 +1,28 @@
+{
+  "cache": "MISS",
+  "count": 1,
+  "fetchedAt": 1790597972,
+  "kind": "rwaasset",
+  "rwaAsset": {
+    "change24h": 0.006917755572636519,
+    "change24hAbs": 0.04500000000000082,
+    "country": "United States",
+    "currency": "USD",
+    "detailKey": "stocks/wendy-s",
+    "exchange": "NasdaqGS",
+    "image": "https://images.cryptorank.io/coins/60x60.wendys_x_stock1763561673265.png",
+    "industry": "Restaurants",
+    "isLeveraged": false,
+    "marketState": "PRE",
+    "name": "The Wendy's Company",
+    "priceUsd": 6.55,
+    "quoteUpdatedAt": "2026-09-28T12:15:02.539Z",
+    "sector": "Consumer Cyclical",
+    "slug": "wendy-s",
+    "ticker": "WEN",
+    "type": "stock",
+    "website": "https://www.wendys.com"
+  },
+  "slice": "asset detail 'WEN' — upstream quote at 2026-09-28T12:15:02.539Z (marketState PRE); exchange/sector = upstream metadata",
+  "upstream": "https://cryptorank.io/rwa/stocks/wendy-s"
+}

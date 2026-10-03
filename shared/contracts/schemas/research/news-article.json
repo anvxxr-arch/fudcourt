@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/research/news-article.json",
+  "title": "NewsArticle",
+  "description": "A published article or report from a named outlet. THREE DIFFERENT PROVIDERS FEED IT with three different key models and no shared id: the RSS feed ships six always-present string keys with NO id at all (an absent feed element is the empty string, never null - a deliberate contract so a consumer never has to branch on key presence); khala's reports are identified by a report SLUG and only the 'latest' variant carries dates, resolved by fetching each report page; CryptoRank's news rows carry a provider numeric id. published_at is therefore nullable and PROVIDER-FORMATTED in two of the three cases - it is never our clock. There is NO canonical article identity in the repo (canonical-model.md section 2).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "url",
+    "source_id"
+  ],
+  "properties": {
+    "article_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null today: no provider mints a usable id and there is no canonical one. Present so a dedup key can be added without a shape change."
+    },
+    "source_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "title": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string",
+      "description": "The article link. In khala's case the report URL is stable and the slug is derived from it - for the news family this is the de-facto identity."
+    },
+    "summary": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null when the feed element is absent (khala) or clipped to 200 runes (news strips HTML)."
+    },
+    "published_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/occurred_at"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Provider time when reported. Null means NOT REPORTED - the UI must render an em-dash and never a date, and never 0. This is a real case, not an edge case: khala's homepage list source publishes no dates at all."
+    },
+    "published_raw": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The provider's own date text, unparsed (an RSS pubDate string or khala's 'Mon D, YYYY' byline). Kept because two of three providers give no instant, and guessing one from a locale-formatted string is exactly the fabrication the repo forbids."
+    },
+    "image": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reading_minutes": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "related_coins": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/related_coin"
+      },
+      "description": "Provider-matched coin snapshots attached to the article. Matching happened UPSTREAM - there is no coin-to-article matcher in this repo, and a consumer must not read this list as our own association."
+    }
+  },
+  "$defs": {
+    "related_coin": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "symbol": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "price_usd": {
+          "anyOf": [
+            {
+              "$ref": "../common/price.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "change_24h_pct": {
+          "anyOf": [
+            {
+              "$ref": "../common/percentage.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "description": "A related-coin snapshot with its own nullable price - absence stays absent."
+    }
+  }
+}

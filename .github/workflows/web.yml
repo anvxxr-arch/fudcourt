@@ -1,0 +1,100 @@
+name: web
+# Surface: frontend/web (Next.js + Bun + Payload blog).
+#
+# Why this workflow always RUNS even when no web file changed: a workflow with a
+# workflow-level `paths:` filter that does not match produces NO check run, and a
+# branch-protection rule that requires that check then blocks the PR forever
+# ("Expected — waiting for status"). So the trigger is unfiltered and the
+# EXPENSIVE job is skipped by the `changes` gate below — same cost saving, no
+# stuck PRs. The `gate` job always reports, and is the required check.
+#
+# Install strategy: `bun install --frozen-lockfile` using frontend/web's own bun.lock
+# (the toolchain is Bun 1.4.2 everywhere: local, systemd and CI). The root
+# package.json has no workspaces field — frontend/web (which also serves the Payload
+# blog, DR-017) is independently installable and its lockfile is authoritative.
+# Node 22 stays the RUNTIME (`bun run build` shells out to `node` for the
+# scripts); Bun is the installer, task runner and the server runtime.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+defaults:
+  run:
+    shell: bash
+jobs:
+  changes:
+    name: "web - which surfaces changed"
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'frontend/web/**'
+              - 'shared/**'
+              - 'infrastructure/**'
+              - '.github/workflows/web.yml'
+  web:
+    name: "web - contract, typecheck, build"
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: "Offline contract gate (CR_MODES consistency + mutation-auth guards)"
+        run: python3 ../../scripts/verify/check-contract.py
+      # NO deploy-unit guard here, on purpose. Its subject is the whole repo's
+      # infrastructure/systemd/ units and the cross-service binaries their ExecStart
+      # lines name (backend/sync/target/release/* exists only after `cargo build` and
+      # is gitignored), so on a web-only runner with no Rust toolchain it fails for
+      # reasons that have nothing to do with this surface. integration.yml's `offline`
+      # job runs it via scripts/verify/verify-all.sh, which deliberately orders the
+      # cargo build BEFORE the guard (commit 9e2e1ec).
+      - name: "Structure gate (DR-018 layers)"
+        run: python3 scripts/checks/check-structure.py
+      # The design system (DR-037). The migration gate is EXPECTED to be red until the
+      # feature/component workers land — that is the point of it. The artifact-drift check
+      # is green from day one and must stay green.
+      - name: "Design-token gate (raw literals, magic style values, dead tokens)"
+        run: python3 scripts/checks/check-design-tokens.py
+      - name: "Design-token artifact drift (generated globals.css block + tailwind.tokens.json)"
+        run: bun scripts/design/emit-tokens.ts --check
+      - name: Typecheck
+        run: bunx tsc --noEmit
+      - name: "Shaper fixture tests (offline, recorded upstream payloads)"
+        run: bun run test:shapers
+      - name: Build
+        run: bun run build
+  gate:
+    name: "web - gate (required)"
+    needs: [web]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      # A skipped dependency (no web files changed) is not a failure; a failed
+      # or cancelled one is.
+      - name: "Verdict"
+        run: |
+          echo "web job result: ${{ needs.web.result }}"
+          case "${{ needs.web.result }}" in
+            success|skipped) exit 0 ;;
+            *) echo "::error::web surface failed"; exit 1 ;;
+          esac

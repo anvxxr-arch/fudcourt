@@ -1,0 +1,317 @@
+{
+  "cache": "MISS",
+  "count": 20,
+  "ecosystemRows": [
+    {
+      "key": "ethereum",
+      "logo": "https://images.cryptorank.io/coins/ethereum1524754015525.png",
+      "marketCapChange24hPct": -2.0469205392100793,
+      "marketCapUsd": 492947100537.5051,
+      "name": "Ethereum Ecosystem",
+      "projects": 1032,
+      "projectsChange3m": 76,
+      "tags": [
+        "RWA",
+        "Layer 1",
+        "EVM"
+      ],
+      "tvlChange24hPct": -0.9060902339730582,
+      "tvlUsd": 53221537742
+    },
+    {
+      "key": "solana",
+      "logo": "https://images.cryptorank.io/coins/solana1606979093056.png",
+      "marketCapChange24hPct": -4.4683892911558685,
+      "marketCapUsd": 88319440067.44667,
+      "name": "Solana Ecosystem",
+      "projects": 986,
+      "projectsChange3m": 158,
+      "tags": [
+        "General Purpose",
+        "Layer 1",
+        "RWA"
+      ],
+      "tvlChange24hPct": -0.030266880638513047,
+      "tvlUsd": 6622602290
+    },
+    {
+      "key": "bnb-chain",
+      "logo": "https://images.cryptorank.io/coins/bnb1702897354788.png",
+      "marketCapChange24hPct": -1.9826315797018386,
+      "marketCapUsd": 112187785517.85619,
+      "name": "BNB Chain Ecosystem",
+      "projects": 561,
+      "projectsChange3m": 141,
+      "tags": [
+        "RWA",
+        "Layer 1",
+        "EVM"
+      ],
+      "tvlChange24hPct": -0.015533820731529572,
+      "tvlUsd": 5847839277
+    },
+    {
+      "key": "base",
+      "logo": "https://images.cryptorank.io/coins/base1682407673437.png",
+      "marketCapChange24hPct": -6.367475774259916,
+      "marketCapUsd": 5135006315.710425,
+      "name": "Base Ecosystem",
+      "projects": 444,
+      "projectsChange3m": 33,
+      "tags": [
+        "Layer 2",
+        "EVM",
+        "RWA"
+      ],
+      "tvlChange24hPct": -1.0249621548740058,
+      "tvlUsd": 6221293347
+    },
+    {
+      "key": "robinhood-ecosystem",
+      "logo": "https://images.cryptorank.io/coins/robinhood_chain1771327492835.png",
+      "marketCapChange24hPct": -6.14093591979946,
+      "marketCapUsd": 1423714639.5978017,
+      "name": "Robinhood ecosystem",
+      "projects": 211,
+      "projectsChange3m": 211,
+      "tags": [],
+      "tvlChange24hPct": -0.16042951410751102,
+      "tvlUsd": 1028027703
+    },
+    {
+      "key": "polygon",
+      "logo": "https://images.cryptorank.io/coins/polygon1698243029264.png",
+      "marketCapChange24hPct": -5.175474660060358,
+      "marketCapUsd": 3402239052.045904,
+      "name": "Polygon Ecosystem",
+      "projects": 133,
+      "projectsChange3m": 6,
+      "tags": [
+        "Layer 2",
+        "General Purpose",
+        "EVM"
+      ],
+      "tvlChange24hPct": -1.438905932756974,
+      "tvlUsd": 775352182
+    },
+    {
+      "key": "sui",
+      "logo": "https://images.cryptorank.io/coins/sui1683272105699.png",
+      "marketCapChange24hPct": -6.090993754523479,
+      "marketCapUsd": 5441056313.788403,
+      "name": "Sui Ecosystem",
+      "projects": 102,
+      "projectsChange3m": 2,
+      "tags": [
+        "General Purpose",
+        "Layer 1"
+      ],
+      "tvlChange24hPct": 3.658670018173413,
+      "tvlUsd": 559453206
+    },
+    {
+      "key": "hyperliquid",
+      "logo": "https://images.cryptorank.io/coins/hyperliquid1699003432264.png",
+      "marketCapChange24hPct": -5.078976585359529,
+      "marketCapUsd": 22633586742.893288,
+      "name": "Hyperliquid Ecosystem",
+      "projects": 101,
+      "projectsChange3m": 12,
+      "tags": [
+        "DeFi",
+        "Layer 1",
+        "EVM"
+      ],
+      "tvlChange24hPct": null,
+      "tvlUsd": 808887384
+    },
+    {
+      "key": "ton-ecosystem",
+      "logo": "https://images.cryptorank.io/coins/toncoin1668677877960.png",
+      "marketCapChange24hPct": -8.802788337551018,
+      "marketCapUsd": 1010325268.4088786,
+      "name": "TON Ecosystem",
+      "projects": 100,
+      "projectsChange3m": 1,
+      "tags": [
+        "General Purpose",
+        "Layer 1"
+      ],
+      "tvlChange24hPct": 3.2059347362778823,
+      "tvlUsd": 58159885
+    },
+    {
+      "key": "bittensor",
+      "logo": "https://images.cryptorank.io/coins/bittensor1670850707129.png",
+      "marketCapChange24hPct": -9.01437349301105,
+      "marketCapUsd": 6335574353.5881195,
+      "name": "Bittensor Ecosystem",
+      "projects": 82,
+      "projectsChange3m": 2,
+      "tags": [
+        "Infrastructure",
+        "AI"
+      ],
+      "tvlChange24hPct": null,
+      "tvlUsd": null
+    },
+    {
+      "key": "bitcoin",
+      "logo": "https://images.cryptorank.io/coins/bitcoin1524754012028.png",
+      "marketCapChange24hPct": -2.1324141371163137,
+      "marketCapUsd": 1668232822153.555,
+      "name": "Bitcoin Ecosystem",
+      "projects": 74,
+      "projectsChange3m": 7,
+      "tags": [
+        "Layer 1"
+      ],
+      "tvlChange24hPct": -1.0663067083453146,
+      "tvlUsd": 4457911370
+    },
+    {
+      "key": "arbitrum",
+      "logo": "https://images.cryptorank.io/coins/arbitrum1696871846920.png",
+      "marketCapChange24hPct": -2.61017372649991,
+      "marketCapUsd": 11130766101.82676,
+      "name": "Arbitrum Ecosystem",
+      "projects": 73,
+      "projectsChange3m": 11,
+      "tags": [
+        "General Purpose",
+        "RWA",
+        "EVM"
+      ],
+      "tvlChange24hPct": -1.0827395607835049,
+      "tvlUsd": 1439401941
+    },
+    {
+      "key": "avalanche",
+      "logo": "https://images.cryptorank.io/coins/avalanche1629705441155.png",
+      "marketCapChange24hPct": -1.457728090900961,
+      "marketCapUsd": 5870392528.864018,
+      "name": "Avalanche Ecosystem",
+      "projects": 70,
+      "projectsChange3m": 1,
+      "tags": [
+        "EVM",
+        "Layer 1",
+        "RWA"
+      ],
+      "tvlChange24hPct": 0.0804653594667685,
+      "tvlUsd": 628116697
+    },
+    {
+      "key": "canton",
+      "logo": "https://images.cryptorank.io/coins/canton_network1761929209838.png",
+      "marketCapChange24hPct": 1.7383799313491117,
+      "marketCapUsd": 5481729653.940791,
+      "name": "Canton Ecosystem",
+      "projects": 65,
+      "projectsChange3m": 65,
+      "tags": [
+        "Layer 1",
+        "Infrastructure",
+        "RWA"
+      ],
+      "tvlChange24hPct": null,
+      "tvlUsd": null
+    },
+    {
+      "key": "cosmos",
+      "logo": "https://images.cryptorank.io/coins/cosmos1552581000995.png",
+      "marketCapChange24hPct": -6.329274990987752,
+      "marketCapUsd": 2462361846.1147513,
+      "name": "Cosmos Ecosystem",
+      "projects": 63,
+      "projectsChange3m": 0,
+      "tags": [
+        "General Purpose",
+        "Layer 0"
+      ],
+      "tvlChange24hPct": null,
+      "tvlUsd": null
+    },
+    {
+      "key": "monad",
+      "logo": "https://images.cryptorank.io/coins/monad1710498467135.png",
+      "marketCapChange24hPct": 5.591227448868626,
+      "marketCapUsd": 411617463.6333693,
+      "name": "Monad Ecosystem",
+      "projects": 54,
+      "projectsChange3m": 1,
+      "tags": [
+        "Layer 1",
+        "EVM",
+        "General Purpose"
+      ],
+      "tvlChange24hPct": -0.40745263818484945,
+      "tvlUsd": 1011635456
+    },
+    {
+      "key": "blast",
+      "logo": "https://images.cryptorank.io/coins/blast1700550396020.png",
+      "marketCapChange24hPct": -3.222830898502722,
+      "marketCapUsd": 75591186.49315797,
+      "name": "Blast Ecosystem",
+      "projects": 52,
+      "projectsChange3m": 0,
+      "tags": [
+        "EVM",
+        "General Purpose",
+        "Layer 2"
+      ],
+      "tvlChange24hPct": -0.9126136901195366,
+      "tvlUsd": 31974692
+    },
+    {
+      "key": "berachain",
+      "logo": "https://images.cryptorank.io/coins/berachain1681996075164.png",
+      "marketCapChange24hPct": -3.3329553774316487,
+      "marketCapUsd": 227786837.429039,
+      "name": "Berachain Ecosystem",
+      "projects": 51,
+      "projectsChange3m": 1,
+      "tags": [
+        "Layer 1",
+        "DeFi"
+      ],
+      "tvlChange24hPct": -4.488276122653398,
+      "tvlUsd": 36693334
+    },
+    {
+      "key": "arc",
+      "logo": "https://images.cryptorank.io/coins/arc1755596336233.png",
+      "marketCapChange24hPct": -18.335601556638437,
+      "marketCapUsd": 19789141.13012986,
+      "name": "Arc Ecosystem",
+      "projects": 41,
+      "projectsChange3m": 41,
+      "tags": [
+        "Layer 1"
+      ],
+      "tvlChange24hPct": null,
+      "tvlUsd": null
+    },
+    {
+      "key": "plume-ecosystem",
+      "logo": "https://images.cryptorank.io/coins/plume_network1716480863760.png",
+      "marketCapChange24hPct": -7.4677777066877455,
+      "marketCapUsd": 224734111.8682284,
+      "name": "Plume Ecosystem",
+      "projects": 39,
+      "projectsChange3m": 0,
+      "tags": [
+        "Layer 1",
+        "RWA"
+      ],
+      "tvlChange24hPct": 0.23985240372963293,
+      "tvlUsd": 3552764
+    }
+  ],
+  "fetchedAt": 1790597968,
+  "kind": "ecosystems",
+  "slice": "ecosystem index — 20 of 106 ecosystems (SSR ships page 1 only); mcap/tvl/change figures are cryptorank's OWN ecosystem aggregates (their methodology)",
+  "upstream": "https://cryptorank.io/ecosystems",
+  "upstreamTotal": 106
+}

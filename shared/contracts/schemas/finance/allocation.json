@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/finance/allocation.json",
+  "title": "Allocation (reserved vs available)",
+  "description": "One treasury account's total split into reserved and available. INVARIANT, and the reason both figures are exact decimal strings: Reserved + Available equals the account's total EXACTLY - nothing is lost to rounding. Computing this in binary64 would produce totals that do not add up, which is a different (and much worse) failure than a display error, because the split gates spending.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "account_id",
+    "reserved",
+    "available"
+  ],
+  "properties": {
+    "account_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "reserved": {
+      "$ref": "../common/money.json"
+    },
+    "available": {
+      "$ref": "../common/money.json"
+    }
+  }
+}

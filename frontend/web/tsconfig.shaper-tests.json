@@ -1,0 +1,71 @@
+{
+  // Offline tooling project (DR-018): the shaper/auth/rate-limit suites and the
+  // fixture tools compile with CommonJS + node resolution so `node --test` can
+  // run them. It extends the app tsconfig for the `@/` alias (the alternative —
+  // passing --module/--moduleResolution/--target as CLI flags — cannot express
+  // `paths`, which is exactly why the suites broke when the tree moved).
+  //
+  // Phase 7 relocation: this one project spans two roots — the web-only suites
+  // live in frontend/web/tests, the cross-system executor suites in the repo-root
+  // tests/{e2e,integration}/executor. They are listed in `files`, NOT `include`:
+  // tsc silently drops `../` entries from an include glob. No explicit rootDir is
+  // set, so tsc infers the repo root as the common source directory and the
+  // compiled tree mirrors the repo — test:shapers therefore runs
+  // .shaper-tests/frontend/web/tests/*.js and .shaper-tests/tests/**/*.js, and
+  // alias-resolver.cjs maps `@/x` to .shaper-tests/frontend/web/src/x.
+  //
+  // `scripts/verify/parity-reconcile.ts` (repo-wide, moved out of frontend/web) is not
+  // bun-run ESM script (top-level await) and never goes through this compiler.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "incremental": false,
+    "outDir": ".shaper-tests",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es2020",
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "plugins": []
+  },
+  // `include` is emptied so the inherited `**/*.ts` glob from the app tsconfig
+  // (via extends) does not drag the whole src/ tree into this project — `files`
+  // does not override an inherited `include`, it is merged with it.
+  "include": [],
+  "files": [
+    "src/features/cryptorank/client.ts",
+    "src/features/cryptorank/shapers.ts",
+    "src/platform/auth/session.ts",
+    "src/platform/auth/guard.ts",
+    "src/platform/http/rate-limit-inbound.ts",
+    "src/platform/db/pg.ts",
+    "src/platform/executor/types.ts",
+    "src/platform/executor/risk.ts",
+    "src/platform/executor/engine.ts",
+    "src/platform/executor/exchange.ts",
+    "src/platform/executor/store.ts",
+    "src/platform/executor/lock.ts",
+    "src/platform/executor/runtime.ts",
+    "src/platform/routing/public-routes.ts",
+    "src/app/robots.ts",
+    "src/features/executor/ui.tsx",
+    "tests/db-tests.ts",
+    "tests/shaper-tests.ts",
+    "tests/auth-tests.ts",
+    "tests/rate-limit-tests.ts",
+    "tests/routing-tests.ts",
+    "tests/executor-ui-tests.ts",
+    "tests/executor-proxy-tests.ts",
+    "../../tests/e2e/executor/executor-risk-tests.ts",
+    "../../tests/e2e/executor/executor-engine-tests.ts",
+    "../../tests/e2e/executor/executor-plan-tests.ts",
+    "../../tests/e2e/executor/executor-worker-tests.ts",
+    "../../tests/e2e/executor/executor-runtime-tests.ts",
+    "../../tests/integration/executor/executor-exchange-tests.ts",
+    "../../tests/integration/executor/executor-store-tests.ts",
+    "../../tests/oracle/record-fixtures.ts",
+    "../../tests/oracle/dump-envelopes.ts"
+  ]
+}

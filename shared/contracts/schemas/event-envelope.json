@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/event-envelope.json",
+  "title": "FUDCourt event envelope",
+  "description": "The canonical envelope for every domain event FUDCourt emits. event_type is the STABLE id from events/catalog.json (PascalCase); legacy SCREAMING_SNAKE names appear only as aliases. event_version is a positive integer; consumers must tolerate additive evolution within the same version (unknown payload keys are allowed and must be ignored). Events never carry credentials or secrets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "event_type", "event_version", "occurred_at", "payload"],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique id of this event instance."
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Stable PascalCase event id from events/catalog.json (e.g. `ExecutionCreated`). Legacy SCREAMING_SNAKE names (e.g. `EXECUTION_CREATED`) are accepted aliases of the same id."
+    },
+    "event_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Semver-ish integer version of the event shape. Starts at 1; additive changes keep the version, breaking changes bump it."
+    },
+    "occurred_at": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unix milliseconds when the event occurred."
+    },
+    "request_id": {
+      "type": ["string", "null"],
+      "description": "Correlation id of the originating request, when known."
+    },
+    "actor_id": {
+      "type": ["string", "null"],
+      "description": "Id of the acting user or service, when known."
+    },
+    "resource_id": {
+      "type": ["string", "null"],
+      "description": "Primary resource this event is about (execution id, account id, ...)."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific data. Free-form: additive keys may appear in any version. Never contains credentials or secrets.",
+      "additionalProperties": true
+    }
+  }
+}

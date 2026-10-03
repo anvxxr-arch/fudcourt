@@ -1,0 +1,2234 @@
+{
+  "cache": "MISS",
+  "chainRows": [
+    {
+      "explorerUrl": "https://etherscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.ethereum1524754015525.png",
+      "marketCap": 683785133887,
+      "name": "Ethereum",
+      "network": "Ethereum",
+      "slug": "ethereum"
+    },
+    {
+      "explorerUrl": "https://bscscan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.binance coin1645029040254.png",
+      "marketCap": 580597066835,
+      "name": "BNB",
+      "network": "BNB",
+      "slug": "bnb"
+    },
+    {
+      "explorerUrl": "https://solscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.solana1606979093056.png",
+      "marketCap": 536897235413,
+      "name": "Solana",
+      "network": "Solana",
+      "slug": "solana"
+    },
+    {
+      "explorerUrl": "https://arbiscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.arbitrum1649168196637.png",
+      "marketCap": 387827768744,
+      "name": "Arbitrum",
+      "network": "Arbitrum",
+      "slug": "arbitrum"
+    },
+    {
+      "explorerUrl": "https://basescan.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.base1690795409151.png",
+      "marketCap": 357576360838,
+      "name": "Base",
+      "network": "Base",
+      "slug": "base"
+    },
+    {
+      "explorerUrl": "https://optimistic.etherscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.optimism1751039391432.png",
+      "marketCap": 335021296432,
+      "name": "Optimism",
+      "network": "Optimism",
+      "slug": "optimism"
+    },
+    {
+      "explorerUrl": "https://explorer.mantle.xyz/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.mantle1692959976148.png",
+      "marketCap": 321573111211,
+      "name": "Mantle",
+      "network": "Mantle",
+      "slug": "mantle"
+    },
+    {
+      "explorerUrl": "https://nearblocks.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.near protocol1645006343968.png",
+      "marketCap": 316814017231,
+      "name": "Near Protocol",
+      "network": "Near Protocol",
+      "slug": "near-protocol"
+    },
+    {
+      "explorerUrl": "https://avascan.info/blockchain/c/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.avalanche1629705441155.png",
+      "marketCap": 315106160546,
+      "name": "Avalanche C-Chain",
+      "network": "Avalanche C-Chain",
+      "slug": "avalanche"
+    },
+    {
+      "explorerUrl": "https://blockscout.scroll.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.scroll1698848795537.png",
+      "marketCap": 313200304460,
+      "name": "Scroll",
+      "network": "Scroll",
+      "slug": "scroll"
+    },
+    {
+      "explorerUrl": "https://gnosisscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.gnosis_chain1695900553174.png",
+      "marketCap": 310934972562,
+      "name": "Gnosis Chain",
+      "network": "Gnosis Chain",
+      "slug": "xdaistable"
+    },
+    {
+      "explorerUrl": "https://explorer.zksync.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.zk_sync1680874013179.png",
+      "marketCap": 305335400117,
+      "name": "zkSync Era",
+      "network": "zkSync Era",
+      "slug": "zksync-era"
+    },
+    {
+      "explorerUrl": "https://explorer.harmony.one/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.harmony1644408299550.png",
+      "marketCap": 304410485929,
+      "name": "Harmony",
+      "network": "Harmony",
+      "slug": "harmony"
+    },
+    {
+      "explorerUrl": "https://tronscan.org/#/token20/",
+      "image": "https://images.cryptorank.io/coins/60x60.tron1608810047161.png",
+      "marketCap": 298771122383,
+      "name": "TRON",
+      "network": "TRON",
+      "slug": "tron"
+    },
+    {
+      "explorerUrl": "https://moonscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.moonbeam1717662286381.png",
+      "marketCap": 296619417551,
+      "name": "Moonbeam",
+      "network": "Moonbeam",
+      "slug": "glimmer"
+    },
+    {
+      "explorerUrl": "https://starkscan.co/contract/",
+      "image": "https://images.cryptorank.io/coins/60x60.starknet1697194093068.png",
+      "marketCap": 292563875459,
+      "name": "Starknet",
+      "network": "Starknet",
+      "slug": "starknet"
+    },
+    {
+      "explorerUrl": "https://explorer.cronos.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.crypto-com-chain1544821574392.png",
+      "marketCap": 291443294124,
+      "name": "Cronos",
+      "network": "Cronos",
+      "slug": "crypto-com-cro"
+    },
+    {
+      "explorerUrl": "https://seiscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.sei1706198504894.png",
+      "marketCap": 289942176803,
+      "name": "Sei",
+      "network": "Sei",
+      "slug": "sei"
+    },
+    {
+      "explorerUrl": "https://explorer.mode.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.mode1704906407064.png",
+      "marketCap": 287492980522,
+      "name": "Mode",
+      "network": "Mode",
+      "slug": "mode"
+    },
+    {
+      "explorerUrl": "https://aptoscan.com/fungible-asset/",
+      "image": "https://images.cryptorank.io/coins/60x60.aptos1666858687617.png",
+      "marketCap": 287464936802,
+      "name": "Aptos",
+      "network": "Aptos",
+      "slug": "aptos"
+    },
+    {
+      "explorerUrl": "https://andromeda-explorer.metis.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.metisdao1620818079938.png",
+      "marketCap": 285202185990,
+      "name": "Metis Andromeda",
+      "network": "Metis Andromeda",
+      "slug": "metisdao"
+    },
+    {
+      "explorerUrl": "https://explorer.velas.com/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.velas1637323115525.png",
+      "marketCap": 284008163856,
+      "name": "Velas",
+      "network": "Velas",
+      "slug": "velas"
+    },
+    {
+      "explorerUrl": "https://suiscan.xyz/mainnet/coin/",
+      "image": "https://images.cryptorank.io/coins/60x60.sui1691743132388.png",
+      "marketCap": 281619550848,
+      "name": "Sui",
+      "network": "Sui",
+      "slug": "sui"
+    },
+    {
+      "explorerUrl": "https://aurorascan.dev/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.aurora1636629298801.png",
+      "marketCap": 281326488330,
+      "name": "Aurora",
+      "network": "Aurora",
+      "slug": "aurora-evm"
+    },
+    {
+      "explorerUrl": "https://sonicscan.org/token",
+      "image": "https://images.cryptorank.io/coins/60x60.sonic1734443301365.png",
+      "marketCap": 278193292951,
+      "name": "Sonic",
+      "network": "Sonic",
+      "slug": "sonic"
+    },
+    {
+      "explorerUrl": "https://iotexscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.iotex1596011462871.png",
+      "marketCap": 276417599340,
+      "name": "IoTeX",
+      "network": "IoTeX",
+      "slug": "iotex"
+    },
+    {
+      "explorerUrl": "https://evm.confluxscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.conflux network1637054814606.png",
+      "marketCap": 276206188929,
+      "name": "Conflux Network",
+      "network": "Conflux Network",
+      "slug": "conflux-network"
+    },
+    {
+      "explorerUrl": "https://tomoscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.viction_tomo_chain1698832912221.png",
+      "marketCap": 274856732084,
+      "name": "Viction (TomoChain)",
+      "network": "Viction (TomoChain)",
+      "slug": "tomochain"
+    },
+    {
+      "explorerUrl": "https://ipfs.scan.pulsechain.com/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.pulse_chain1690275845890.png",
+      "marketCap": 274853402810,
+      "name": "PulseChain",
+      "network": "PulseChain",
+      "slug": "pulsechain"
+    },
+    {
+      "explorerUrl": "https://explorer.kcc.io/en/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.kcc1658912898897.png",
+      "marketCap": 274831783593,
+      "name": "KCC",
+      "network": "KCC",
+      "slug": "kucoin-shares"
+    },
+    {
+      "explorerUrl": "https://pacific-explorer.manta.network/tokens",
+      "image": "https://images.cryptorank.io/coins/60x60.manta1703613058736.png",
+      "marketCap": 272296074246,
+      "name": "Manta",
+      "network": "Manta",
+      "slug": "manta"
+    },
+    {
+      "explorerUrl": "https://explorer.celo.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.celo1678006417150.png",
+      "marketCap": 265576372645,
+      "name": "Celo",
+      "network": "Celo",
+      "slug": "celo"
+    },
+    {
+      "explorerUrl": "https://explorer.fuse.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.fuse network token1617981379298.png",
+      "marketCap": 265237202703,
+      "name": "Fuse Network",
+      "network": "Fuse Network",
+      "slug": "fuse-network"
+    },
+    {
+      "explorerUrl": "https://explorer.emerald.oasis.dev/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.oasis network1650874788066.png",
+      "marketCap": 265201777675,
+      "name": "Oasis Network",
+      "network": "Oasis Network",
+      "slug": "oasis-network"
+    },
+    {
+      "explorerUrl": "https://astar.subscan.io/account/",
+      "image": "https://images.cryptorank.io/coins/60x60.astar_network1665663195360.png",
+      "marketCap": 264297248548,
+      "name": "Astar",
+      "network": "Astar",
+      "slug": "astar"
+    },
+    {
+      "explorerUrl": "https://www.oklink.com/oktc/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.okc1659541414752.png",
+      "marketCap": 262242226477,
+      "name": "OKTChain",
+      "network": "OKTChain",
+      "slug": "oktchain"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.secret1754560854364.png",
+      "marketCap": 261106766244,
+      "name": "Secret",
+      "network": "Secret",
+      "slug": "secret"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.osmosis1702921980844.png",
+      "marketCap": 260604420881,
+      "name": "Osmosis",
+      "network": "Osmosis",
+      "slug": "osmosis"
+    },
+    {
+      "explorerUrl": "https://allo.info/asset/",
+      "image": "https://images.cryptorank.io/coins/60x60.algorand1539001835369.png",
+      "marketCap": 259989476419,
+      "name": "Algorand",
+      "network": "Algorand",
+      "slug": "algorand"
+    },
+    {
+      "explorerUrl": "https://lineascan.build/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.linea1692716155253.png",
+      "marketCap": 238512931611,
+      "name": "Linea",
+      "network": "Linea",
+      "slug": "linea"
+    },
+    {
+      "explorerUrl": "https://moonriver.moonscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.moonriver1630066969300.png",
+      "marketCap": 226114956834,
+      "name": "Moonriver",
+      "network": "Moonriver",
+      "slug": "moonriver"
+    },
+    {
+      "explorerUrl": "https://tonviewer.com/",
+      "image": "https://images.cryptorank.io/coins/60x60.ton1680276386645.png",
+      "marketCap": 219361899598,
+      "name": "TON",
+      "network": "TON",
+      "slug": "ton"
+    },
+    {
+      "explorerUrl": "https://explorer.zircuit.com/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.zircuit1731426993650.png",
+      "marketCap": 208046923965,
+      "name": "Zircuit",
+      "network": "Zircuit",
+      "slug": "zircuit"
+    },
+    {
+      "explorerUrl": "https://cardanoscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.cardano1697638810586.png",
+      "marketCap": 205205710117,
+      "name": "Cardano",
+      "network": "Cardano",
+      "slug": "cardano"
+    },
+    {
+      "explorerUrl": "https://zkevm.polygonscan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.polygon_zk_evm1692889887184.png",
+      "marketCap": 199742121348,
+      "name": "Polygon zkEVM",
+      "network": "Polygon zkEVM",
+      "slug": "polygon-zkevm"
+    },
+    {
+      "explorerUrl": "https://viewblock.io/zilliqa/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.zilliqa1524754930008.png",
+      "marketCap": 198817848235,
+      "name": "Zilliqa",
+      "network": "Zilliqa",
+      "slug": "zilliqa"
+    },
+    {
+      "explorerUrl": "https://everscan.io/accounts/",
+      "image": "https://images.cryptorank.io/coins/60x60.everscale1676906135263.png",
+      "marketCap": 198804942069,
+      "name": "Everscale",
+      "network": "Everscale",
+      "slug": "everscale"
+    },
+    {
+      "explorerUrl": "https://finder.terra.money/classic/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.terra classic1654166101471.png",
+      "marketCap": 195033050979,
+      "name": "Terra Classic",
+      "network": "Terra Classic",
+      "slug": "luna"
+    },
+    {
+      "explorerUrl": "https://explorer.kardiachain.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.kardiachain1609154662651.png",
+      "marketCap": 190585472854,
+      "name": "KardiaChain",
+      "network": "KardiaChain",
+      "slug": "kardiachain"
+    },
+    {
+      "explorerUrl": "https://opbnbscan.com/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.op_bnb1699454599366.png",
+      "marketCap": 190246240578,
+      "name": "opBNB",
+      "network": "opBNB",
+      "slug": "opbnb"
+    },
+    {
+      "explorerUrl": "https://abscan.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.abstract1738062584752.png",
+      "marketCap": 189880677537,
+      "name": "Abstract",
+      "network": "Abstract",
+      "slug": "abstract"
+    },
+    {
+      "explorerUrl": "https://soneium.blockscout.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.soneium1737020935800.png",
+      "marketCap": 189276300887,
+      "name": "Soneium",
+      "network": "Soneium",
+      "slug": "soneium"
+    },
+    {
+      "explorerUrl": "https://explorer-mainnet-cardano-evm.c1.milkomeda.com/tokens",
+      "image": "https://images.cryptorank.io/coins/60x60.milkomeda_c_11702052812561.png",
+      "marketCap": 189175316182,
+      "name": "Milkomeda C1",
+      "network": "Milkomeda C1",
+      "slug": "molkomeda-c1"
+    },
+    {
+      "explorerUrl": "https://neonscan.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.neon_evm1701342080064.png",
+      "marketCap": 185940692398,
+      "name": " Neon EVM",
+      "network": " Neon EVM",
+      "slug": "neon-evm"
+    },
+    {
+      "explorerUrl": "https://injscan.com/asset/",
+      "image": "https://images.cryptorank.io/coins/60x60.injective1754667802889.png",
+      "marketCap": 185930804289,
+      "name": "Injective",
+      "network": "Injective",
+      "slug": "injective"
+    },
+    {
+      "explorerUrl": "https://kavascan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.kava1645007488335.png",
+      "marketCap": 184737763038,
+      "name": "Kava",
+      "network": "Kava",
+      "slug": "kava"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.fusion1524754929195.png",
+      "marketCap": 183897550095,
+      "name": "Fusion Network",
+      "network": "Fusion Network",
+      "slug": "fusion"
+    },
+    {
+      "explorerUrl": "https://kaiascan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.kaia1732709922803.png",
+      "marketCap": 183809527755,
+      "name": "Kaia",
+      "network": "Kaia",
+      "slug": "kaia"
+    },
+    {
+      "explorerUrl": "https://explorer.etherlink.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.etherlink1744384943905.png",
+      "marketCap": 183750653923,
+      "name": "Etherlink",
+      "network": "Etherlink",
+      "slug": "etherlink"
+    },
+    {
+      "explorerUrl": "https://www.btrscan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.bitlayer1725985865313.png",
+      "marketCap": 183748658001,
+      "name": "Bitlayer",
+      "network": "Bitlayer",
+      "slug": "bitlayer"
+    },
+    {
+      "explorerUrl": "https://explorer.dogechain.dog/token",
+      "image": "https://images.cryptorank.io/coins/60x60.dogechain1692093634142.png",
+      "marketCap": 183745252506,
+      "name": "Dogechain",
+      "network": "Dogechain",
+      "slug": "dogechain"
+    },
+    {
+      "explorerUrl": "https://bobascan.com/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.boba_network1699456312923.png",
+      "marketCap": 183736413114,
+      "name": "Boba Network",
+      "network": "Boba Network",
+      "slug": "boba-network"
+    },
+    {
+      "explorerUrl": "https://tzkt.io/",
+      "image": "https://images.cryptorank.io/coins/60x60.tezos1524753775455.png",
+      "marketCap": 183733698669,
+      "name": "Tezos",
+      "network": "Tezos",
+      "slug": "tezos"
+    },
+    {
+      "explorerUrl": "https://scan.coredao.org/token",
+      "image": "https://images.cryptorank.io/coins/60x60.core1707927709378.png",
+      "marketCap": 183730107116,
+      "name": "CORE",
+      "network": "CORE",
+      "slug": "core"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.omni1524753598001.png",
+      "marketCap": 183726158806,
+      "name": "Omni",
+      "network": "Omni",
+      "slug": "omni"
+    },
+    {
+      "explorerUrl": "https://explorer.rsk.co/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.rsk1660210930311.png",
+      "marketCap": 183726158806,
+      "name": "RSK",
+      "network": "RSK",
+      "slug": "rsk"
+    },
+    {
+      "explorerUrl": "https://www.oklink.com/ethereumfair/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.ethereum_fair1700749490900.png",
+      "marketCap": 183726158806,
+      "name": "EthereumFair",
+      "network": "EthereumFair",
+      "slug": "ethereumfair"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.kroma1700844680130.png",
+      "marketCap": 183726158806,
+      "name": "Kroma",
+      "network": "Kroma",
+      "slug": "kroma"
+    },
+    {
+      "explorerUrl": "https://lunagens.info/tokens",
+      "image": "https://images.cryptorank.io/coins/60x60.lung1701963836368.png",
+      "marketCap": 183726158806,
+      "name": "Lung",
+      "network": "Lung",
+      "slug": "lung"
+    },
+    {
+      "explorerUrl": "https://hscan.org/tokens",
+      "image": "https://images.cryptorank.io/coins/60x60.hpb1701969048844.png",
+      "marketCap": 183726158806,
+      "name": "HPB",
+      "network": "HPB",
+      "slug": "hpb"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.zyx1702318243492.png",
+      "marketCap": 183726158806,
+      "name": "ZYX",
+      "network": "ZYX",
+      "slug": "zyx"
+    },
+    {
+      "explorerUrl": "https://tenetscan.io/tokens",
+      "image": "https://images.cryptorank.io/coins/60x60.tenet1702318608403.png",
+      "marketCap": 183726158806,
+      "name": "Tenet",
+      "network": "Tenet",
+      "slug": "tenet"
+    },
+    {
+      "explorerUrl": "https://www.coinex.net/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.csc1702407949432.png",
+      "marketCap": 183726158806,
+      "name": "CSC",
+      "network": "CSC",
+      "slug": "csc"
+    },
+    {
+      "explorerUrl": "https://explorer.renec.foundation/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.renec1702488320893.png",
+      "marketCap": 183726158806,
+      "name": "RENEC",
+      "network": "RENEC",
+      "slug": "renec"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.mvc1702488624527.png",
+      "marketCap": 183726158806,
+      "name": "MVC",
+      "network": "MVC",
+      "slug": "mvc"
+    },
+    {
+      "explorerUrl": "https://scan.rei.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.rei1704992356439.png",
+      "marketCap": 183726158806,
+      "name": "REI",
+      "network": "REI",
+      "slug": "rei"
+    },
+    {
+      "explorerUrl": "https://e.mtv.ac/token",
+      "image": "https://images.cryptorank.io/coins/60x60.multi_vac1704994118007.png",
+      "marketCap": 183726158806,
+      "name": "MultiVAC",
+      "network": "MultiVAC",
+      "slug": "multivac"
+    },
+    {
+      "explorerUrl": "https://explorer.mainnetloop.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.loop1705057588131.png",
+      "marketCap": 183726158806,
+      "name": "Loop",
+      "network": "Loop",
+      "slug": "loop"
+    },
+    {
+      "explorerUrl": "https://scan.pego.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.pego1706281086119.png",
+      "marketCap": 183726158806,
+      "name": "Pego",
+      "network": "Pego",
+      "slug": "pego"
+    },
+    {
+      "explorerUrl": "https://explorer.rollux.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.rollux1708090559803.png",
+      "marketCap": 183726158806,
+      "name": "Rollux",
+      "network": "Rollux",
+      "slug": "rollux"
+    },
+    {
+      "explorerUrl": "https://stcscan.io/main/tokens/detail/",
+      "image": "https://images.cryptorank.io/coins/60x60.starcoin1708536022812.png",
+      "marketCap": 183726158806,
+      "name": "Starcoin",
+      "network": "Starcoin",
+      "slug": "starcoin"
+    },
+    {
+      "explorerUrl": "https://stepscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.step1708613620175.png",
+      "marketCap": 183726158806,
+      "name": "Step",
+      "network": "Step",
+      "slug": "step"
+    },
+    {
+      "explorerUrl": "https://crab-scan.darwinia.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.crab1708614099164.png",
+      "marketCap": 183726158806,
+      "name": "Crab",
+      "network": "Crab",
+      "slug": "crab"
+    },
+    {
+      "explorerUrl": "https://sys.lode.one/asset/",
+      "image": "https://images.cryptorank.io/coins/60x60.syscoin1709568675717.png",
+      "marketCap": 183726158806,
+      "name": "Syscoin",
+      "network": "Syscoin",
+      "slug": "syscoin"
+    },
+    {
+      "explorerUrl": "https://goerli.etherscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.goerli1709568784507.png",
+      "marketCap": 183726158806,
+      "name": "Goerli",
+      "network": "Goerli",
+      "slug": "goerli"
+    },
+    {
+      "explorerUrl": "https://aurascan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.aura_network1754664838294.png",
+      "marketCap": 183726158806,
+      "name": "Aura Network",
+      "network": "Aura Network",
+      "slug": "aura-network"
+    },
+    {
+      "explorerUrl": "https://scan.zchains.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.z_chains1721391196225.png",
+      "marketCap": 183726158806,
+      "name": "ZChains",
+      "network": "ZChains",
+      "slug": "zchains"
+    },
+    {
+      "explorerUrl": "https://scan.over.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.over1734609064899.png",
+      "marketCap": 183726158806,
+      "name": "Over",
+      "network": "Over",
+      "slug": "over"
+    },
+    {
+      "explorerUrl": "https://polygonscan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.polygon1624610763534.png",
+      "marketCap": 149413524215,
+      "name": "Polygon",
+      "network": "Polygon",
+      "slug": "matic-network"
+    },
+    {
+      "explorerUrl": "https://uniscan.xyz/token",
+      "image": "https://images.cryptorank.io/coins/60x60.unichain1739360878939.png",
+      "marketCap": 126754625466,
+      "name": "Unichain",
+      "network": "Unichain",
+      "slug": "unichain"
+    },
+    {
+      "explorerUrl": "https://monadscan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.monad1763994860990.png",
+      "marketCap": 110232593955,
+      "name": "Monad",
+      "network": "Monad",
+      "slug": "monad"
+    },
+    {
+      "explorerUrl": "https://app.hyperliquid.xyz/explorer/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.hyperliquid1714671082553.png",
+      "marketCap": 108193603482,
+      "name": "Hyperliquid",
+      "network": "Hyperliquid",
+      "slug": "hyperliquid"
+    },
+    {
+      "explorerUrl": "https://bttcscan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.bittorrent1705334860526.png",
+      "marketCap": 102928508872,
+      "name": "BitTorrent",
+      "network": "BitTorrent",
+      "slug": "bittorrent"
+    },
+    {
+      "explorerUrl": "https://reiscan.com/tokens",
+      "image": "https://images.cryptorank.io/coins/60x60.re_ichain1700845378415.png",
+      "marketCap": 101372633571,
+      "name": "REIchain",
+      "network": "REIchain",
+      "slug": "reichain"
+    },
+    {
+      "explorerUrl": "https://evmscan.nuls.io/tokens",
+      "image": "https://images.cryptorank.io/coins/60x60.enuls1702408227579.png",
+      "marketCap": 101372633571,
+      "name": "ENULS",
+      "network": "ENULS",
+      "slug": "enuls"
+    },
+    {
+      "explorerUrl": "https://zetachain.blockscout.com/token",
+      "image": "https://images.cryptorank.io/coins/60x60.zeta_chain1707928458553.png",
+      "marketCap": 101372633571,
+      "name": "ZetaChain",
+      "network": "ZetaChain",
+      "slug": "zetachain"
+    },
+    {
+      "explorerUrl": "https://bnb.bobascan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.boba_bnb1709296356649.png",
+      "marketCap": 101372633571,
+      "name": "Boba BNB",
+      "network": "Boba BNB",
+      "slug": "boba-bnb"
+    },
+    {
+      "explorerUrl": "https://explorer.inkonchain.com/token",
+      "image": "https://images.cryptorank.io/coins/60x60.ink1736946931463.png",
+      "marketCap": 101228922558,
+      "name": "Ink",
+      "network": "Ink",
+      "slug": "ink"
+    },
+    {
+      "explorerUrl": "https://hyperevmscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.hyper_evm1744791070855.png",
+      "marketCap": 101078830937,
+      "name": "HyperEVM",
+      "network": "HyperEVM",
+      "slug": "hyperevm"
+    },
+    {
+      "explorerUrl": "https://explorer.energi.network/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.energi1698403578678.png",
+      "marketCap": 97554093733,
+      "name": "Energi",
+      "network": "Energi",
+      "slug": "energi"
+    },
+    {
+      "explorerUrl": "https://explorer.fantom.network/assets/",
+      "image": "https://images.cryptorank.io/coins/60x60.fantom1611564619788.png",
+      "marketCap": 95439185297,
+      "name": "Fantom",
+      "network": "Fantom",
+      "slug": "fantom"
+    },
+    {
+      "explorerUrl": "https://explorer.plume.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.plume1742996323529.png",
+      "marketCap": 93148341946,
+      "name": "Plume Mainnet",
+      "network": "Plume Mainnet",
+      "slug": "plume-mainnet"
+    },
+    {
+      "explorerUrl": "https://explorer.arc.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.arc1788779796264.png",
+      "marketCap": 92674099563,
+      "name": "Arc",
+      "network": "Arc",
+      "slug": "arc"
+    },
+    {
+      "explorerUrl": "https://www.teloscan.io/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.telos1622137152497.png",
+      "marketCap": 92667625521,
+      "name": "Telos",
+      "network": "Telos",
+      "slug": "telos"
+    },
+    {
+      "explorerUrl": "https://evm.flowscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.flow1600856785709.png",
+      "marketCap": 88395344329,
+      "name": "Flow",
+      "network": "Flow",
+      "slug": "flow"
+    },
+    {
+      "explorerUrl": "https://xdcscan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.xdc1705335794371.png",
+      "marketCap": 82988967338,
+      "name": "XDC",
+      "network": "XDC",
+      "slug": "xdc"
+    },
+    {
+      "explorerUrl": "https://stellar.expert/explorer/public/asset/",
+      "image": "https://images.cryptorank.io/coins/60x60.stellar1645006520371.png",
+      "marketCap": 81931310483,
+      "name": "Stellar",
+      "network": "Stellar",
+      "slug": "stellar"
+    },
+    {
+      "explorerUrl": "https://explorer.roninchain.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.ronin1643374012049.png",
+      "marketCap": 81765335042,
+      "name": "Ronin",
+      "network": "Ronin",
+      "slug": "ronin"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.cube1701193936035.png",
+      "marketCap": 81475618869,
+      "name": "Cube",
+      "network": "Cube",
+      "slug": "cube"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.polkadot1639725340958.png",
+      "marketCap": 76113121495,
+      "name": "Polkadot",
+      "network": "Polkadot",
+      "slug": "polkadot"
+    },
+    {
+      "explorerUrl": "https://hashscan.io/mainnet/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.hedera1680101380084.png",
+      "marketCap": 76086401769,
+      "name": "Hedera",
+      "network": "Hedera",
+      "slug": "hedera"
+    },
+    {
+      "explorerUrl": "https://explorer.wemix.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.wemix_3_01706281707178.png",
+      "marketCap": 76058839547,
+      "name": "WEMIX3.0",
+      "network": "WEMIX3.0",
+      "slug": "wemix-3-0"
+    },
+    {
+      "explorerUrl": "https://explorer.multiversx.com/tokens/",
+      "image": "https://images.cryptorank.io/coins/60x60.multivers_x1668674786258.png",
+      "marketCap": 76050584653,
+      "name": "MultiversX",
+      "network": "MultiversX",
+      "slug": "elrond-gold"
+    },
+    {
+      "explorerUrl": "https://wanscan.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.wanchain1524753560719.png",
+      "marketCap": 76026461493,
+      "name": "Wanchain",
+      "network": "Wanchain",
+      "slug": "wanchain"
+    },
+    {
+      "explorerUrl": "https://www.omaxray.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.omax1700755474365.png",
+      "marketCap": 76026461493,
+      "name": "Omax",
+      "network": "Omax",
+      "slug": "omax"
+    },
+    {
+      "explorerUrl": "https://tuber.build/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.canto1704820134508.png",
+      "marketCap": 76026461493,
+      "name": "Canto",
+      "network": "Canto",
+      "slug": "canto"
+    },
+    {
+      "explorerUrl": "https://explorer.mainnet.bifrostnetwork.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.bifrost_network1706722893842.png",
+      "marketCap": 76026461493,
+      "name": "Bifrost Network",
+      "network": "Bifrost Network",
+      "slug": "bifrost-network"
+    },
+    {
+      "explorerUrl": "https://explorer.oasys.games/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.oasys1707240804688.png",
+      "marketCap": 76026461493,
+      "name": "Oasys",
+      "network": "Oasys",
+      "slug": "oasys"
+    },
+    {
+      "explorerUrl": "https://explorer.sx.technology/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.s_xnetwork1707927888775.png",
+      "marketCap": 76026461493,
+      "name": "SXnetwork",
+      "network": "SXnetwork",
+      "slug": "sxnetwork"
+    },
+    {
+      "explorerUrl": "https://explorer.hydrachain.org/contract/",
+      "image": "https://images.cryptorank.io/coins/60x60.hydra1708090188279.png",
+      "marketCap": 76026461493,
+      "name": "Hydra",
+      "network": "Hydra",
+      "slug": "hydra"
+    },
+    {
+      "explorerUrl": "https://www.mintscan.io/stargaze/assets/",
+      "image": "https://images.cryptorank.io/coins/60x60.stargaze1709219627838.png",
+      "marketCap": 76026461493,
+      "name": "Stargaze",
+      "network": "Stargaze",
+      "slug": "stargaze"
+    },
+    {
+      "explorerUrl": "https://shiden.subscan.io/erc20_token/",
+      "image": "https://images.cryptorank.io/coins/60x60.shiden1709568480876.png",
+      "marketCap": 76026461493,
+      "name": "Shiden",
+      "network": "Shiden",
+      "slug": "shiden"
+    },
+    {
+      "explorerUrl": "https://www.mintscan.io/dydx/assets/",
+      "image": "https://images.cryptorank.io/coins/60x60.d_yd_x1712682456299.png",
+      "marketCap": 76026461493,
+      "name": "dYdX",
+      "network": "dYdX",
+      "slug": "dydx"
+    },
+    {
+      "explorerUrl": "https://scan.canxium.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.canxium1720632518670.png",
+      "marketCap": 76026461493,
+      "name": "Canxium",
+      "network": "Canxium",
+      "slug": "canxium"
+    },
+    {
+      "explorerUrl": "https://fogoscan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.fogo1772538947398.png",
+      "marketCap": 76026461493,
+      "name": "Fogo",
+      "network": "Fogo",
+      "slug": "fogo"
+    },
+    {
+      "explorerUrl": "https://megaeth.blockscout.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.mega_eth1769501021745.png",
+      "marketCap": 36829628695,
+      "name": "MegaETH",
+      "network": "MegaETH",
+      "slug": "megaeth"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.sora1593619817876.png",
+      "marketCap": 35799346089,
+      "name": "SORA",
+      "network": "SORA",
+      "slug": "sora"
+    },
+    {
+      "explorerUrl": "https://robinhoodchain.blockscout.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.robinhood1782980420788.png",
+      "marketCap": 27329458385,
+      "name": "Robinhood",
+      "network": "Robinhood",
+      "slug": "robinhood"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.heco_chain1658763401630.png",
+      "marketCap": 26951074630,
+      "name": "HECO",
+      "network": "HECO",
+      "slug": "heco"
+    },
+    {
+      "explorerUrl": "https://berascan.com/token",
+      "image": "https://images.cryptorank.io/coins/60x60.berachain1738853075308.png",
+      "marketCap": 23469278469,
+      "name": "Berachain",
+      "network": "Berachain",
+      "slug": "berachain"
+    },
+    {
+      "explorerUrl": "https://blastscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.blast1709218659709.png",
+      "marketCap": 19574324794,
+      "name": "Blast",
+      "network": "Blast",
+      "slug": "blast"
+    },
+    {
+      "explorerUrl": "https://explorer.morphl2.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.morph1743683246642.png",
+      "marketCap": 19244384848,
+      "name": "Morph",
+      "network": "Morph",
+      "slug": "morph"
+    },
+    {
+      "explorerUrl": "https://explorer.katanarpc.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.katana1753361282889.png",
+      "marketCap": 15399495830,
+      "name": "Katana",
+      "network": "Katana",
+      "slug": "katana"
+    },
+    {
+      "explorerUrl": "https://plasmascan.to/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.plasma1758637967874.png",
+      "marketCap": 15240177687,
+      "name": "Plasma",
+      "network": "Plasma",
+      "slug": "plasma"
+    },
+    {
+      "explorerUrl": "https://explore.tempo.xyz/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.tempo1773925888790.png",
+      "marketCap": 14994380123,
+      "name": "Tempo",
+      "network": "Tempo",
+      "slug": "tempo"
+    },
+    {
+      "explorerUrl": "https://nova.arbiscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.arbitrum_nova1663578999512.png",
+      "marketCap": 11312718232,
+      "name": "Arbitrum Nova",
+      "network": "Arbitrum Nova",
+      "slug": "arbitrum-nova"
+    },
+    {
+      "explorerUrl": "https://scan.merlinchain.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.merlin1708614591264.png",
+      "marketCap": 11154277955,
+      "name": "Merlin",
+      "network": "Merlin",
+      "slug": "merlin"
+    },
+    {
+      "explorerUrl": "https://stablescan.xyz/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.stable1766159305317.png",
+      "marketCap": 10251976599,
+      "name": "Stable",
+      "network": "Stable",
+      "slug": "stable"
+    },
+    {
+      "explorerUrl": "https://explorer.mainnet.citrea.xyz/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.citrea1770649286499.png",
+      "marketCap": 9679626560,
+      "name": "Citrea",
+      "network": "Citrea",
+      "slug": "citrea"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.skale1740657185545.png",
+      "marketCap": 9656900271,
+      "name": "Skale",
+      "network": "Skale",
+      "slug": "skale"
+    },
+    {
+      "explorerUrl": "https://wavesexplorer.com/assets/",
+      "image": "https://images.cryptorank.io/coins/60x60.waves1524753546305.png",
+      "marketCap": 9629625887,
+      "name": "Waves",
+      "network": "Waves",
+      "slug": "waves"
+    },
+    {
+      "explorerUrl": "https://flare-explorer.flare.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.flare1707152668861.png",
+      "marketCap": 9516774184,
+      "name": "Flare",
+      "network": "Flare",
+      "slug": "flare"
+    },
+    {
+      "explorerUrl": "https://explorer.swellnetwork.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.swellchain1743764946249.png",
+      "marketCap": 6215112191,
+      "name": "Swellchain",
+      "network": "Swellchain",
+      "slug": "swell-chain"
+    },
+    {
+      "explorerUrl": "https://smartscout.cash/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.smart_bch1707756503662.png",
+      "marketCap": 6168308131,
+      "name": "smartBCH",
+      "network": "smartBCH",
+      "slug": "smartbch"
+    },
+    {
+      "explorerUrl": "https://cornscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.corn1736266400585.png",
+      "marketCap": 5941136054,
+      "name": "Corn",
+      "network": "Corn",
+      "slug": "corn"
+    },
+    {
+      "explorerUrl": "https://shapescan.xyz/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.shape1743766760706.png",
+      "marketCap": 5481535430,
+      "name": "Shape",
+      "network": "Shape",
+      "slug": "shape"
+    },
+    {
+      "explorerUrl": "https://phoenix.lightlink.io/tokens",
+      "image": "https://images.cryptorank.io/coins/60x60.light_link1702053374410.png",
+      "marketCap": 5450040814,
+      "name": "LightLink",
+      "network": "LightLink",
+      "slug": "lightlink"
+    },
+    {
+      "explorerUrl": "https://www.shibariumscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.shibarium1702659433412.png",
+      "marketCap": 5449432627,
+      "name": "Shibarium",
+      "network": "Shibarium",
+      "slug": "shibarium"
+    },
+    {
+      "explorerUrl": "https://scan.meter.io/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.meter1706807279394.png",
+      "marketCap": 5449167644,
+      "name": "Meter",
+      "network": "Meter",
+      "slug": "meter"
+    },
+    {
+      "explorerUrl": "https://eth.elastos.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.elastos1705335343582.png",
+      "marketCap": 5449157376,
+      "name": "Elastos",
+      "network": "Elastos",
+      "slug": "elastos"
+    },
+    {
+      "explorerUrl": "https://starscan.io/evm/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.function_x1708004844282.png",
+      "marketCap": 5449157376,
+      "name": "FunctionX",
+      "network": "FunctionX",
+      "slug": "functionx"
+    },
+    {
+      "explorerUrl": "https://scan.defi-verse.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.de_fi_verse1712163439159.png",
+      "marketCap": 5449157376,
+      "name": "DeFiVerse",
+      "network": "DeFiVerse",
+      "slug": "defiverse"
+    },
+    {
+      "explorerUrl": "https://fraxscan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.fraxtal1710755776309.png",
+      "marketCap": 4657842055,
+      "name": "Fraxtal",
+      "network": "Fraxtal",
+      "slug": "fraxtal"
+    },
+    {
+      "explorerUrl": "https://palm.chainlens.com/tokens",
+      "image": "https://images.cryptorank.io/coins/60x60.palm1704905519697.png",
+      "marketCap": 4449663081,
+      "name": "Palm",
+      "network": "Palm",
+      "slug": "palm"
+    },
+    {
+      "explorerUrl": "https://scan.rangersprotocol.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.rangers1708448731221.png",
+      "marketCap": 4449663081,
+      "name": "Rangers",
+      "network": "Rangers",
+      "slug": "rangers"
+    },
+    {
+      "explorerUrl": "https://explorer.rsk.co/tokens/",
+      "image": "https://images.cryptorank.io/coins/60x60.rootstock1705492927498.png",
+      "marketCap": 4067616808,
+      "name": "Rootstock",
+      "network": "Rootstock",
+      "slug": "rootstock"
+    },
+    {
+      "explorerUrl": "https://web3.okx.com/ru/explorer/x-layer/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.x_layer1753367907392.png",
+      "marketCap": 3374164007,
+      "name": "X layer",
+      "network": "X layer",
+      "slug": "x-layer"
+    },
+    {
+      "explorerUrl": "https://explorer-mainnet.thundercore.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.thunder_core1707927357987.png",
+      "marketCap": 3318145358,
+      "name": "ThunderCore",
+      "network": "ThunderCore",
+      "slug": "thundercore"
+    },
+    {
+      "explorerUrl": "https://taostats.io/subnets/",
+      "image": "https://images.cryptorank.io/coins/60x60.bittensor1774359550477.png",
+      "marketCap": 3049446236,
+      "name": "Bittensor",
+      "network": "Bittensor",
+      "slug": "bittensor"
+    },
+    {
+      "explorerUrl": "https://livenet.xrpl.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.xrpl1733222966259.png",
+      "marketCap": 2721283586,
+      "name": "XRPL",
+      "network": "XRPL",
+      "slug": "xrpl"
+    },
+    {
+      "explorerUrl": "https://www.mintscan.io/noble/assets/",
+      "image": "https://images.cryptorank.io/coins/60x60.noble1713545005109.png",
+      "marketCap": 2276955832,
+      "name": "Noble",
+      "network": "Noble",
+      "slug": "noble"
+    },
+    {
+      "explorerUrl": "https://worldchain-mainnet.explorer.alchemy.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.world_chain1729179338104.png",
+      "marketCap": 1772801558,
+      "name": "World Chain",
+      "network": "World Chain",
+      "slug": "world-chain"
+    },
+    {
+      "explorerUrl": "https://ulxscan.com/contracts",
+      "image": "https://images.cryptorank.io/coins/60x60.ultron1700751231994.png",
+      "marketCap": 1740297771,
+      "name": "Ultron",
+      "network": "Ultron",
+      "slug": "ultron"
+    },
+    {
+      "explorerUrl": "https://www.maposcan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.map_protocol1707856693675.png",
+      "marketCap": 1398568762,
+      "name": "MAP Protocol",
+      "network": "MAP Protocol",
+      "slug": "map-protocol"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.archway1707496080353.png",
+      "marketCap": 951064978,
+      "name": "Archway",
+      "network": "Archway",
+      "slug": "archway"
+    },
+    {
+      "explorerUrl": "https://blockchair.com/bob",
+      "image": "https://images.cryptorank.io/coins/60x60.bob1714670553029.png",
+      "marketCap": 527868441,
+      "name": "BOB",
+      "network": "BOB",
+      "slug": "bob"
+    },
+    {
+      "explorerUrl": "https://scan.carbon.network/tokens?net=main",
+      "image": "https://images.cryptorank.io/coins/60x60.carbon1704995083379.png",
+      "marketCap": 512864472,
+      "name": "Carbon",
+      "network": "Carbon",
+      "slug": "carbon"
+    },
+    {
+      "explorerUrl": "https://www.ord.io/",
+      "image": "https://images.cryptorank.io/coins/60x60.ordinals_brc_201699450766837.png",
+      "marketCap": 263803321,
+      "name": "Ordinals-BRC20",
+      "network": "Ordinals-BRC20",
+      "slug": "ordinalsbrc"
+    },
+    {
+      "explorerUrl": "https://avascan.info/blockchain/dfk/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.dfk1707240998232.png",
+      "marketCap": 215314223,
+      "name": "DFK",
+      "network": "DFK",
+      "slug": "dfk"
+    },
+    {
+      "explorerUrl": "https://apescan.io/token",
+      "image": "https://images.cryptorank.io/coins/60x60.ape_chain1729491511748.png",
+      "marketCap": 162253165,
+      "name": "ApeChain",
+      "network": "ApeChain",
+      "slug": "apechain"
+    },
+    {
+      "explorerUrl": "https://blockscout.acala.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.acala1705943067365.png",
+      "marketCap": 159860566,
+      "name": "Acala",
+      "network": "Acala",
+      "slug": "acala"
+    },
+    {
+      "explorerUrl": "https://taikoscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.taiko1716993703855.png",
+      "marketCap": 110923040,
+      "name": "Taiko",
+      "network": "Taiko",
+      "slug": "taiko"
+    },
+    {
+      "explorerUrl": "https://neo3.neotube.io/tokens/",
+      "image": "https://images.cryptorank.io/coins/60x60.neo1645006837175.png",
+      "marketCap": 91857368,
+      "name": "NEO",
+      "network": "NEO",
+      "slug": "neo"
+    },
+    {
+      "explorerUrl": "https://explorer.chiliz.com/tokens/",
+      "image": "https://images.cryptorank.io/coins/60x60.chiliz1595954176352.png",
+      "marketCap": 82591782,
+      "name": "Chiliz",
+      "network": "Chiliz",
+      "slug": "chiliz"
+    },
+    {
+      "explorerUrl": "https://vechainstats.com/account/",
+      "image": "https://images.cryptorank.io/coins/60x60.vechainthor1532533151809.png",
+      "marketCap": 81733466,
+      "name": "VeChain",
+      "network": "VeChain",
+      "slug": "vechainthor"
+    },
+    {
+      "explorerUrl": "https://blockscout.lisk.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.lisk1747740014031.png",
+      "marketCap": 76846835,
+      "name": "Lisk",
+      "network": "Lisk",
+      "slug": "lisk"
+    },
+    {
+      "explorerUrl": "https://peaq.subscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.peaq1731406822412.png",
+      "marketCap": 59728222,
+      "name": "peaq",
+      "network": "peaq",
+      "slug": "peaq"
+    },
+    {
+      "explorerUrl": "https://explorer.mainnet.casperlabs.io/",
+      "image": "https://images.cryptorank.io/coins/60x60.casper1715872306796.png",
+      "marketCap": 46799125,
+      "name": "Casper",
+      "network": "Casper",
+      "slug": "casper"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.theta token1590061272947.png",
+      "marketCap": 39779005,
+      "name": "Theta Network",
+      "network": "Theta Network",
+      "slug": "theta-token"
+    },
+    {
+      "explorerUrl": "https://wax.bloks.io/account/",
+      "image": "https://images.cryptorank.io/coins/60x60.wax1645524558076.png",
+      "marketCap": 39108192,
+      "name": "WAX",
+      "network": "WAX",
+      "slug": "wax"
+    },
+    {
+      "explorerUrl": "https://explorer.tac.build/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.tac1753860277448.png",
+      "marketCap": 38862793,
+      "name": "TAC",
+      "network": "TAC",
+      "slug": "tac"
+    },
+    {
+      "explorerUrl": "https://explorer.iota.org/mainnet/",
+      "image": "https://images.cryptorank.io/coins/60x60.iota1773935240249.png",
+      "marketCap": 37793164,
+      "name": "IOTA",
+      "network": "IOTA",
+      "slug": "iota"
+    },
+    {
+      "explorerUrl": "https://viewblock.io/mixin/asset/",
+      "image": "https://images.cryptorank.io/coins/60x60.mixin1706882341938.png",
+      "marketCap": 36422528,
+      "name": "Mixin",
+      "network": "Mixin",
+      "slug": "mixin"
+    },
+    {
+      "explorerUrl": "https://cyberscan.co/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.cyber1743675906521.png",
+      "marketCap": 33792457,
+      "name": "Cyber",
+      "network": "Cyber",
+      "slug": "cyber"
+    },
+    {
+      "explorerUrl": "https://explorer.mezo.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.mezo1775042635248.png",
+      "marketCap": 32163453,
+      "name": "Mezo",
+      "network": "Mezo",
+      "slug": "mezo"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.test1700061723143.png",
+      "marketCap": 30227879,
+      "name": "Metal Blockchain",
+      "network": "Metal Blockchain",
+      "slug": "metal-blockchain"
+    },
+    {
+      "explorerUrl": "https://explorer.hiro.so/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.stacks1703613317553.png",
+      "marketCap": 30077240,
+      "name": "Stacks",
+      "network": "Stacks",
+      "slug": "stacks"
+    },
+    {
+      "explorerUrl": "https://explorer.ergoplatform.com/en/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.ergo1707241230571.png",
+      "marketCap": 28772171,
+      "name": "Ergo",
+      "network": "Ergo",
+      "slug": "ergo"
+    },
+    {
+      "explorerUrl": "https://www.mintscan.io/akash/assets/",
+      "image": "https://images.cryptorank.io/coins/60x60.akash1712682628764.png",
+      "marketCap": 28565606,
+      "name": "Akash",
+      "network": "Akash",
+      "slug": "akash"
+    },
+    {
+      "explorerUrl": "https://bbscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.bounce_bit1716549536263.png",
+      "marketCap": 27252387,
+      "name": "BounceBit",
+      "network": "BounceBit",
+      "slug": "bouncebit"
+    },
+    {
+      "explorerUrl": "https://gensyn-mainnet.explorer.alchemy.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.gensyn1780501194509.png",
+      "marketCap": 26289647,
+      "name": "Gensyn",
+      "network": "Gensyn",
+      "slug": "gensyn"
+    },
+    {
+      "explorerUrl": "https://explorer.hemi.xyz/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.hemi1743519080625.png",
+      "marketCap": 23934004,
+      "name": "Hemi",
+      "network": "Hemi",
+      "slug": "hemi"
+    },
+    {
+      "explorerUrl": "https://qtum.info/qrc20/",
+      "image": "https://images.cryptorank.io/coins/60x60.qtum1524754153104.png",
+      "marketCap": 20420679,
+      "name": "Qtum",
+      "network": "Qtum",
+      "slug": "qtum"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.bitcoin1726482825579.png",
+      "marketCap": 16610773,
+      "name": "Bitcoin",
+      "network": "Bitcoin",
+      "slug": "bitcoin"
+    },
+    {
+      "explorerUrl": "https://www.icpexplorer.org/#/",
+      "image": "https://images.cryptorank.io/coins/60x60.icp1703181626313.png",
+      "marketCap": 16557919,
+      "name": "ICP ",
+      "network": "ICP ",
+      "slug": "icp"
+    },
+    {
+      "explorerUrl": "https://explorer.immutable.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.immutable_zk_evm1736955671105.png",
+      "marketCap": 13710322,
+      "name": "Immutable zkEVM",
+      "network": "Immutable zkEVM",
+      "slug": "immutable-zkevm"
+    },
+    {
+      "explorerUrl": "https://sophscan.xyz/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.sophon1743682170845.png",
+      "marketCap": 7211680,
+      "name": "Sophon",
+      "network": "Sophon",
+      "slug": "sophon"
+    },
+    {
+      "explorerUrl": "https://explorer.mindnetwork.xyz/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.mind_network1744297882015.png",
+      "marketCap": 5464588,
+      "name": "Mind Network",
+      "network": "Mind Network",
+      "slug": "mind-network"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.kaspa1779714159292.png",
+      "marketCap": 4143261,
+      "name": "Kaspa",
+      "network": "Kaspa",
+      "slug": "kaspa"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.neutron1706882923299.png",
+      "marketCap": 3285936,
+      "name": "Neutron",
+      "network": "Neutron",
+      "slug": "neutron"
+    },
+    {
+      "explorerUrl": "https://redbelly.routescan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.redbelly_network1734607779234.png",
+      "marketCap": 2406572,
+      "name": "Redbelly Network",
+      "network": "Redbelly Network",
+      "slug": "redbelly-network"
+    },
+    {
+      "explorerUrl": "https://explorer.bitquery.io/ethpow/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.ethereum_po_w1666000293992.png",
+      "marketCap": 1756384,
+      "name": "EthereumPoW",
+      "network": "EthereumPoW",
+      "slug": "ethereum-pow"
+    },
+    {
+      "explorerUrl": "https://escan.live/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.evmos1707856516748.png",
+      "marketCap": 1756384,
+      "name": "Evmos",
+      "network": "Evmos",
+      "slug": "evmos"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.persistence1707757072029.png",
+      "marketCap": 1335392,
+      "name": "Persistence",
+      "network": "Persistence",
+      "slug": "persistence"
+    },
+    {
+      "explorerUrl": "https://vitescan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.vite1662723917806.png",
+      "marketCap": 880901,
+      "name": "Vite",
+      "network": "Vite",
+      "slug": "vite"
+    },
+    {
+      "explorerUrl": "https://explorer.elysiumchain.tech/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.elysium1708017182467.png",
+      "marketCap": 611927,
+      "name": "Elysium",
+      "network": "Elysium",
+      "slug": "elysium"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.vaulta1747750465847.png",
+      "marketCap": 228187,
+      "name": "Vaulta",
+      "network": "Vaulta",
+      "slug": "vaulta"
+    },
+    {
+      "explorerUrl": "https://eclipsescan.xyz/token",
+      "image": "https://images.cryptorank.io/coins/60x60.eclipse1729261206449.png",
+      "marketCap": 172368,
+      "name": "Eclipse",
+      "network": "Eclipse",
+      "slug": "eclipse"
+    },
+    {
+      "explorerUrl": "https://explorer.zklink.io/address/",
+      "image": "https://images.cryptorank.io/coins/60x60.zk_link1721309058469.png",
+      "marketCap": 170732,
+      "name": "zkLink",
+      "network": "zkLink",
+      "slug": "zklink"
+    },
+    {
+      "explorerUrl": "https://darwinia.subscan.io/",
+      "image": "https://images.cryptorank.io/coins/60x60.darwinia1701276603963.png",
+      "marketCap": 43402,
+      "name": "Darwinia",
+      "network": "Darwinia",
+      "slug": "darwinia"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.fractal_bitcoin1725986850327.png",
+      "marketCap": 41097,
+      "name": "Fractal Bitcoin",
+      "network": "Fractal Bitcoin",
+      "slug": "fractal-bitcoin"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.ontology1603185874557.png",
+      "marketCap": 0,
+      "name": "Ontology",
+      "network": "Ontology",
+      "slug": "ontology"
+    },
+    {
+      "explorerUrl": "https://explorer.gochain.io/addr/",
+      "image": "https://images.cryptorank.io/coins/60x60.gochain1528901226141.png",
+      "marketCap": 0,
+      "name": "GoChain",
+      "network": "GoChain",
+      "slug": "gochain"
+    },
+    {
+      "explorerUrl": "https://tracker.icon.foundation/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.icon1645092468011.png",
+      "marketCap": 0,
+      "name": "ICON",
+      "network": "ICON",
+      "slug": "icon"
+    },
+    {
+      "explorerUrl": "https://songbird-explorer.flare.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.songbird1639985164988.png",
+      "marketCap": 0,
+      "name": "Songbird",
+      "network": "Songbird",
+      "slug": "songbird"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.milkomeda_a_11701969349500.png",
+      "marketCap": 0,
+      "name": "Milkomeda A1",
+      "network": "Milkomeda A1",
+      "slug": "milkomeda-a1"
+    },
+    {
+      "explorerUrl": "https://scan.zkfair.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.zk_fair1705070480879.png",
+      "marketCap": 0,
+      "name": "ZKFair",
+      "network": "ZKFair",
+      "slug": "zkfair"
+    },
+    {
+      "explorerUrl": "https://atomscan.com/juno/",
+      "image": "https://images.cryptorank.io/coins/60x60.juno1705425647768.png",
+      "marketCap": 0,
+      "name": "Juno",
+      "network": "Juno",
+      "slug": "juno"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.de_fi_chain1705493152946.png",
+      "marketCap": 0,
+      "name": "DeFiChain",
+      "network": "DeFiChain",
+      "slug": "defichain"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.radix1706281487453.png",
+      "marketCap": 0,
+      "name": "Radix",
+      "network": "Radix",
+      "slug": "radix"
+    },
+    {
+      "explorerUrl": "https://scan.orai.io/smart-contract/",
+      "image": "https://images.cryptorank.io/coins/60x60.oraichain1706634665536.png",
+      "marketCap": 0,
+      "name": "Oraichain",
+      "network": "Oraichain",
+      "slug": "oraichain"
+    },
+    {
+      "explorerUrl": "https://explorer.evm.shimmer.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.shimmer_evm1706807132110.png",
+      "marketCap": 0,
+      "name": "ShimmerEVM",
+      "network": "ShimmerEVM",
+      "slug": "shimmerevm"
+    },
+    {
+      "explorerUrl": "https://hydration.subscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.hydration1736859465601.png",
+      "marketCap": 0,
+      "name": "Hydration",
+      "network": "Hydration",
+      "slug": "hydration"
+    },
+    {
+      "explorerUrl": "https://explorer.xprnetwork.org/tokens",
+      "image": "https://images.cryptorank.io/coins/60x60.proton1707152478173.png",
+      "marketCap": 0,
+      "name": "Proton",
+      "network": "Proton",
+      "slug": "proton"
+    },
+    {
+      "explorerUrl": "https://karura.subscan.io/",
+      "image": "https://images.cryptorank.io/coins/60x60.karura1707496462945.png",
+      "marketCap": 0,
+      "name": "Karura",
+      "network": "Karura",
+      "slug": "karura"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.alephium1707756838790.png",
+      "marketCap": 0,
+      "name": "Alephium",
+      "network": "Alephium",
+      "slug": "alephium"
+    },
+    {
+      "explorerUrl": "https://chainz.cryptoid.info/ltc/",
+      "image": "https://images.cryptorank.io/coins/60x60.litecoin1707757521930.png",
+      "marketCap": 0,
+      "name": "Litecoin",
+      "network": "Litecoin",
+      "slug": "litecoin"
+    },
+    {
+      "explorerUrl": "https://explorer.xpla.io/mainnet/token",
+      "image": "https://images.cryptorank.io/coins/60x60.xpla1707930500360.png",
+      "marketCap": 0,
+      "name": "XPLA",
+      "network": "XPLA",
+      "slug": "xpla"
+    },
+    {
+      "explorerUrl": "https://www.mintscan.io/chihuahua",
+      "image": "https://images.cryptorank.io/coins/60x60.chihuahua1708017297404.png",
+      "marketCap": 0,
+      "name": "Chihuahua",
+      "network": "Chihuahua",
+      "slug": "chihuahua"
+    },
+    {
+      "explorerUrl": "https://explorer.obyte.org/asset/",
+      "image": "https://images.cryptorank.io/coins/60x60.obyte1708089837913.png",
+      "marketCap": 0,
+      "name": "Obyte",
+      "network": "Obyte",
+      "slug": "obyte"
+    },
+    {
+      "explorerUrl": "https://nolus.explorers.guru/",
+      "image": "https://images.cryptorank.io/coins/60x60.nolus1708448582762.png",
+      "marketCap": 0,
+      "name": "Nolus",
+      "network": "Nolus",
+      "slug": "nolus"
+    },
+    {
+      "explorerUrl": "https://ccdscan.io/",
+      "image": "https://images.cryptorank.io/coins/60x60.concordium1708448989220.png",
+      "marketCap": 0,
+      "name": "Concordium",
+      "network": "Concordium",
+      "slug": "concordium"
+    },
+    {
+      "explorerUrl": "https://www.mintscan.io/comdex",
+      "image": "https://images.cryptorank.io/coins/60x60.comdex1708535793728.png",
+      "marketCap": 0,
+      "name": "Comdex",
+      "network": "Comdex",
+      "slug": "comdex"
+    },
+    {
+      "explorerUrl": "https://explorer.dash.org/insight/",
+      "image": "https://images.cryptorank.io/coins/60x60.dash1709219365079.png",
+      "marketCap": 0,
+      "name": "Dash",
+      "network": "Dash",
+      "slug": "dash"
+    },
+    {
+      "explorerUrl": "https://lb.libre.org/tokens",
+      "image": "https://images.cryptorank.io/coins/60x60.libre1709219903428.png",
+      "marketCap": 0,
+      "name": "Libre",
+      "network": "Libre",
+      "slug": "libre"
+    },
+    {
+      "explorerUrl": "https://brisescan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.bitgert1709220037047.png",
+      "marketCap": 0,
+      "name": "Bitgert",
+      "network": "Bitgert",
+      "slug": "bitgert"
+    },
+    {
+      "explorerUrl": "https://zora.superscan.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.zora1709283304749.png",
+      "marketCap": 0,
+      "name": "Zora",
+      "network": "Zora",
+      "slug": "zora"
+    },
+    {
+      "explorerUrl": "https://explorer.energyweb.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.energy_web1709296540287.png",
+      "marketCap": 0,
+      "name": "EnergyWeb",
+      "network": "EnergyWeb",
+      "slug": "energyweb"
+    },
+    {
+      "explorerUrl": "https://www.mintscan.io/crescent/assets",
+      "image": "https://images.cryptorank.io/coins/60x60.crescent1709296849828.png",
+      "marketCap": 0,
+      "name": "Crescent",
+      "network": "Crescent",
+      "slug": "crescent"
+    },
+    {
+      "explorerUrl": "https://areonscan.com/contracts/",
+      "image": "https://images.cryptorank.io/coins/60x60.areon_network1711126768327.png",
+      "marketCap": 0,
+      "name": "Areon Network",
+      "network": "Areon Network",
+      "slug": "areon-network"
+    },
+    {
+      "explorerUrl": "https://venomscan.com/accounts/",
+      "image": "https://images.cryptorank.io/coins/60x60.venom1711386347416.png",
+      "marketCap": 0,
+      "name": "Venom",
+      "network": "Venom",
+      "slug": "venom"
+    },
+    {
+      "explorerUrl": "https://atomscan.com/bostrom",
+      "image": "https://images.cryptorank.io/coins/60x60.bostrom1712163669125.png",
+      "marketCap": 0,
+      "name": "Bostrom",
+      "network": "Bostrom",
+      "slug": "bostrom"
+    },
+    {
+      "explorerUrl": "https://nibiscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.nibiru_chain1744727670828.png",
+      "marketCap": 0,
+      "name": "Nibiru Chain",
+      "network": "Nibiru Chain",
+      "slug": "nibiru"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.tho_rchain1714403467328.png",
+      "marketCap": 0,
+      "name": "THORchain",
+      "network": "THORchain",
+      "slug": "thorchain"
+    },
+    {
+      "explorerUrl": "https://www.kubscan.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.kub1747739690862.png",
+      "marketCap": 0,
+      "name": "KUB",
+      "network": "KUB",
+      "slug": "kub"
+    },
+    {
+      "explorerUrl": "https://explorer.karak.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.karak_network1714670733698.png",
+      "marketCap": 0,
+      "name": "Karak Network",
+      "network": "Karak Network",
+      "slug": "karak-network"
+    },
+    {
+      "explorerUrl": "https://explorer.coti.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.coti1715099346980.png",
+      "marketCap": 0,
+      "name": "Coti",
+      "network": "Coti",
+      "slug": "coti"
+    },
+    {
+      "explorerUrl": "https://testnet.promscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.prom1721147344784.png",
+      "marketCap": 0,
+      "name": "Prom",
+      "network": "Prom",
+      "slug": "prom"
+    },
+    {
+      "explorerUrl": "https://explorer.q.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.q_blockchain1722333780882.png",
+      "marketCap": 0,
+      "name": "Q Blockchain",
+      "network": "Q Blockchain",
+      "slug": "q-blockchain"
+    },
+    {
+      "explorerUrl": "https://app.fuel.network/account/",
+      "image": "https://images.cryptorank.io/coins/60x60.fuel_network1729094884790.png",
+      "marketCap": 0,
+      "name": "Fuel Network",
+      "network": "Fuel Network",
+      "slug": "fuel-network"
+    },
+    {
+      "explorerUrl": "https://explorer.unit0.dev/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.units_network1733897414535.png",
+      "marketCap": 0,
+      "name": "Unit Zero",
+      "network": "Unit Zero",
+      "slug": "unit-zero"
+    },
+    {
+      "explorerUrl": "https://explorer.bsquared.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.b_squared1736847105808.png",
+      "marketCap": 0,
+      "name": "BSquared",
+      "network": "BSquared",
+      "slug": "bsquared"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.ai_layer1736849458118.png",
+      "marketCap": 0,
+      "name": "AILayer",
+      "network": "AILayer",
+      "slug": "ailayer"
+    },
+    {
+      "explorerUrl": "https://filfox.info/en/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.filecoin1736856611396.png",
+      "marketCap": 0,
+      "name": "Filecoin",
+      "network": "Filecoin",
+      "slug": "filecoin"
+    },
+    {
+      "explorerUrl": "https://explorer.reya.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.reya_network1736862601837.png",
+      "marketCap": 0,
+      "name": "Reya Network",
+      "network": "Reya Network",
+      "slug": "reya-network"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.chainflip1736869422531.png",
+      "marketCap": 0,
+      "name": "Chainflip",
+      "network": "Chainflip",
+      "slug": "chainflip"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.bitcoincash1736956055331.png",
+      "marketCap": 0,
+      "name": "Bitcoincash",
+      "network": "Bitcoincash",
+      "slug": "bitcoincash"
+    },
+    {
+      "explorerUrl": "https://explorer.gravity.xyz/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.gravity1738162805298.png",
+      "marketCap": 0,
+      "name": "Gravity",
+      "network": "Gravity",
+      "slug": "gravity"
+    },
+    {
+      "explorerUrl": "https://explorer.ab.org/tokens/",
+      "image": "https://images.cryptorank.io/coins/60x60.ab1742898328832.png",
+      "marketCap": 0,
+      "name": "AB",
+      "network": "AB",
+      "slug": "ab"
+    },
+    {
+      "explorerUrl": "https://explorer.movementlabs.xyz/fungible_asset/",
+      "image": "https://images.cryptorank.io/coins/60x60.movement1743172395756.png",
+      "marketCap": 0,
+      "name": "Movement",
+      "network": "Movement",
+      "slug": "movement"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.mantra1743505766987.png",
+      "marketCap": 0,
+      "name": "Mantra",
+      "network": "Mantra",
+      "slug": "mantra"
+    },
+    {
+      "explorerUrl": "https://lenscan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.lens_chain1744297358565.png",
+      "marketCap": 0,
+      "name": "Lens Chain",
+      "network": "Lens Chain",
+      "slug": "lens-chain"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.taraxa1744728179703.png",
+      "marketCap": 0,
+      "name": "Taraxa",
+      "network": "Taraxa",
+      "slug": "taraxa"
+    },
+    {
+      "explorerUrl": "https://educhain.blockscout.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.edu_chain1746107676875.png",
+      "marketCap": 0,
+      "name": "EDU Chain",
+      "network": "EDU Chain",
+      "slug": "edu-chain"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.supra1746108188653.png",
+      "marketCap": 0,
+      "name": "Supra",
+      "network": "Supra",
+      "slug": "supra"
+    },
+    {
+      "explorerUrl": "https://explorer.goat.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.goat1755012228852.png",
+      "marketCap": 0,
+      "name": "Goat",
+      "network": "Goat",
+      "slug": "goat"
+    },
+    {
+      "explorerUrl": "https://blockexplorer.electroneum.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.electroneum1755625859811.png",
+      "marketCap": 0,
+      "name": "Electroneum",
+      "network": "Electroneum",
+      "slug": "electroneum"
+    },
+    {
+      "explorerUrl": null,
+      "image": "https://images.cryptorank.io/coins/60x60.dexalot1755626504942.png",
+      "marketCap": 0,
+      "name": "Dexalot",
+      "network": "Dexalot",
+      "slug": "dexalot"
+    },
+    {
+      "explorerUrl": "https://explorer.somnia.network/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.somnia1758024435999.png",
+      "marketCap": 0,
+      "name": "Somnia",
+      "network": "Somnia",
+      "slug": "somnia"
+    },
+    {
+      "explorerUrl": "https://galascan.gala.com/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.gala1758637650840.png",
+      "marketCap": 0,
+      "name": "Gala",
+      "network": "Gala",
+      "slug": "gala"
+    },
+    {
+      "explorerUrl": "https://helascan.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.he_la1760365780852.png",
+      "marketCap": 0,
+      "name": "HeLa",
+      "network": "HeLa",
+      "slug": "hela"
+    },
+    {
+      "explorerUrl": "https://chainscan.0g.ai/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.0_g1766158928084.png",
+      "marketCap": 0,
+      "name": "0G",
+      "network": "0G",
+      "slug": "0g"
+    },
+    {
+      "explorerUrl": "https://explorer.evm.iota.org/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.iota_evm1773935411344.png",
+      "marketCap": 0,
+      "name": "IOTA EVM",
+      "network": "IOTA EVM",
+      "slug": "iota-evm"
+    },
+    {
+      "explorerUrl": "https://evm.taostats.io/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.bittensor_evm1774358925635.png",
+      "marketCap": 0,
+      "name": "Bittensor EVM",
+      "network": "Bittensor EVM",
+      "slug": "bittensor-evm"
+    },
+    {
+      "explorerUrl": "https://shidoscan.com/contract/",
+      "image": "https://images.cryptorank.io/coins/60x60.shido1776261892044.png",
+      "marketCap": 0,
+      "name": "Shido",
+      "network": "Shido",
+      "slug": "shido"
+    },
+    {
+      "explorerUrl": "https://www.pharosscan.xyz/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.pharos1779467722706.png",
+      "marketCap": 0,
+      "name": "Pharos",
+      "network": "Pharos",
+      "slug": "pharos"
+    },
+    {
+      "explorerUrl": "https://fluentscan.xyz/token/",
+      "image": "https://images.cryptorank.io/coins/60x60.fluent1779468418748.png",
+      "marketCap": 0,
+      "name": "Fluent",
+      "network": "Fluent",
+      "slug": "fluent"
+    },
+    {
+      "explorerUrl": "https://www.cantonscan.com/tokens/",
+      "image": "https://images.cryptorank.io/coins/60x60.canton_network1783951761907.png",
+      "marketCap": 0,
+      "name": "Canton Network",
+      "network": "Canton Network",
+      "slug": "canton-network"
+    }
+  ],
+  "count": 278,
+  "fetchedAt": 1790597956,
+  "kind": "blockchains",
+  "slice": "chain directory from /blockchains — 278 chains (slug feed for ?key= chain detail); explorer links are upstream's own",
+  "upstream": "https://cryptorank.io/blockchains"
+}

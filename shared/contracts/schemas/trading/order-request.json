@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/trading/order-request.json",
+  "title": "Order request (what we ask a venue to do)",
+  "description": "The instruction handed to a venue adapter. client_order_id is MINTED BEFORE the request leaves, which is what makes a lost response recoverable: on restart the reconciler adopts the venue's order by matching this id inside our own id space (executor/worker/tick.go). An adapter MUST NOT invent its own id. Prices/quantities are decimal strings and are already rounded to the instrument grid (a venue rejects a quantity off its step).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "client_order_id",
+    "symbol",
+    "side",
+    "type",
+    "quantity",
+    "execution_id"
+  ],
+  "properties": {
+    "client_order_id": {
+      "type": "string",
+      "description": "Minted: 'fud_<execution_id>_<sequence>'."
+    },
+    "symbol": {
+      "type": "string"
+    },
+    "instrument_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "side": {
+      "$ref": "#/$defs/side"
+    },
+    "type": {
+      "$ref": "#/$defs/child_order_type"
+    },
+    "quantity": {
+      "$ref": "../common/quantity.json"
+    },
+    "price": {
+      "anyOf": [
+        {
+          "$ref": "../common/price.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null for market orders; a present null is not 0."
+    },
+    "time_in_force": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/time_in_force"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reduce_only": {
+      "type": "boolean"
+    },
+    "execution_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "intent": {
+      "$ref": "#/$defs/intent"
+    }
+  },
+  "$defs": {
+    "market_type": {
+      "type": "string",
+      "enum": [
+        "spot",
+        "linear_perp"
+      ],
+      "description": "USDT-linear perpetual only in the MVP."
+    },
+    "side": {
+      "type": "string",
+      "enum": [
+        "buy",
+        "sell"
+      ],
+      "description": "Order side. A spot sell-open is refused outside explicit margin support."
+    },
+    "intent": {
+      "type": "string",
+      "enum": [
+        "open",
+        "close",
+        "reduce"
+      ],
+      "description": "What the user wants the order to do to the position - not what the venue will do."
+    },
+    "execution_status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "CALCULATED",
+        "VALIDATED",
+        "READY",
+        "RUNNING",
+        "PARTIALLY_FILLED",
+        "FILLED",
+        "PAUSED",
+        "CANCEL_REQUESTED",
+        "CANCELLED",
+        "FAILED",
+        "RISK_STOPPED",
+        "EXPIRED",
+        "RECONCILING",
+        "STOPPED"
+      ],
+      "description": "Execution lifecycle. FROZEN: this list is cross-checked against frontend/web/src/platform/executor/types.ts and shared/contracts/openapi/fudcourt.yaml by shared/contracts/scripts/check-contract.mjs (CHECKED_ENUMS), so it MUST NOT be re-spelled or reordered, and it MUST NOT be merged with ChildOrderStatus."
+    },
+    "child_order_status": {
+      "type": "string",
+      "enum": [
+        "PLANNED",
+        "SUBMITTING",
+        "OPEN",
+        "PARTIAL",
+        "FILLED",
+        "CANCELLING",
+        "CANCELLED",
+        "REJECTED",
+        "EXPIRED",
+        "UNKNOWN"
+      ],
+      "description": "Child-order lifecycle. FROZEN and cross-checked like execution_status. UNKNOWN is a real state, not an error: a non-terminal child with no venue row and no SUBMITTING grace is marked UNKNOWN + EXTERNAL_STATE_CHANGE so fill ingestion decides the truth."
+    },
+    "execution_mode": {
+      "type": "string",
+      "enum": [
+        "preview",
+        "paper",
+        "live"
+      ],
+      "description": "LIVE is fail-closed behind the FUDCOURT_EXECUTOR_LIVE kill switch; a paper execution reuses the account's market/fee/balance context but NEVER sends an order."
+    },
+    "time_in_force": {
+      "type": "string",
+      "enum": [
+        "GTC",
+        "IOC",
+        "FOK"
+      ]
+    },
+    "position_side": {
+      "type": "string",
+      "enum": [
+        "long",
+        "short",
+        "net"
+      ],
+      "description": "Venue position mode's own vocabulary."
+    },
+    "margin_mode": {
+      "type": "string",
+      "enum": [
+        "isolated",
+        "cross"
+      ]
+    },
+    "position_mode": {
+      "type": "string",
+      "enum": [
+        "one_way",
+        "hedge"
+      ]
+    },
+    "leverage_mode": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "auto_safe"
+      ]
+    },
+    "stop_mode": {
+      "type": "string",
+      "enum": [
+        "native",
+        "synthetic",
+        "hybrid"
+      ],
+      "description": "How a protective stop is managed; native preferred."
+    },
+    "risk_breach_policy": {
+      "type": "string",
+      "enum": [
+        "resize_then_stop",
+        "pause",
+        "stop"
+      ]
+    },
+    "existing_position_policy": {
+      "type": "string",
+      "enum": [
+        "add",
+        "reject"
+      ]
+    },
+    "balance_basis": {
+      "type": "string",
+      "enum": [
+        "spot_available",
+        "spot_equity",
+        "futures_available",
+        "futures_equity",
+        "total_exchange_equity",
+        "asset_equity",
+        "custom"
+      ],
+      "description": "A percentage sizing mode MUST name the balance basis explicitly - a percent of an unnamed basis is not a size."
+    },
+    "sizing_mode": {
+      "type": "string",
+      "enum": [
+        "risk_usd",
+        "risk_percent",
+        "allocation_usd",
+        "allocation_percent",
+        "notional_usd",
+        "fixed_quantity",
+        "fixed_margin",
+        "target_profit_usd",
+        "target_profit_percent"
+      ],
+      "description": "The nine sizing modes of SizingDefinition['mode']. Percent-valued modes require balance_basis to be present (the sizing engine refuses a percent mode without a basis)."
+    },
+    "child_order_type": {
+      "type": "string",
+      "enum": [
+        "market",
+        "limit"
+      ],
+      "description": "The two order types the engine emits. The SQL column is unconstrained text; this enum is the value set the code writes."
+    },
+    "credential_health": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "ACTIVE",
+        "INVALID",
+        "EXPIRED",
+        "PERMISSION_ERROR",
+        "RATE_LIMITED",
+        "REVOKED"
+      ]
+    },
+    "error_category": {
+      "type": "string",
+      "enum": [
+        "network_retryable",
+        "rate_limited",
+        "exchange_overload",
+        "invalid_order",
+        "permission_error",
+        "insufficient_balance",
+        "fatal",
+        "unknown"
+      ],
+      "description": "Retry taxonomy: only network_retryable / rate_limited / exchange_overload may retry. Mirrors shared/contracts/schemas/error-envelope.json's coarser 12-value `code` set - the envelope is the wire contract, this is the executor's internal classification."
+    },
+    "event_name": {
+      "type": "string",
+      "description": "A STABLE event id from shared/contracts/events/catalog.json (PascalCase), whose SCREAMING_SNAKE spellings are accepted aliases of the same id. NOT re-enumerated on purpose: events/catalog.json + events/event.schema.json are the single source of truth and are pinned by shared/contracts/scripts/check-contract.mjs; a second list here would be a drift surface. Note the live asymmetry: the executor enum (backend/workers/executor/internal/executor/enums.go) declares 23 of the catalogue's 28 ids - the five account/credential/reconciliation events (CredentialCreated, CredentialRevoked, ExchangeAccountConnected, ReconciliationStarted, ReconciliationCompleted) exist in the catalogue and in the web implementation but have no Go constant yet."
+    },
+    "execution_strategy": {
+      "type": "string",
+      "enum": [
+        "market",
+        "limit",
+        "twap",
+        "adaptive_twap",
+        "iceberg",
+        "chase_limit",
+        "scale_in",
+        "scale_out"
+      ],
+      "description": "The eight strategies that exist in this build (executor/enums.go). The objective's sketch also names VWAP and smart-limit; they have no implementation and no oracle, so they are deliberately absent."
+    }
+  }
+}

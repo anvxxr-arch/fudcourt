@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/common/money.json",
+  "title": "Exact money amount (USD)",
+  "description": "A decimal string denominated in the unit the field name states. Signedness is the field's contract, not a type: ledger.Entry.Amount is signed (positive = credit, negative = debit) and refuses exactly zero; treasury.Movement.Amount is a strictly POSITIVE magnitude; portfolio.Holding.ValueUSD is non-negative and uses null for unknown, never '0'. There are NO integer minor-unit (cents) money fields in the repo except the provider's own ChainRank cents (research/chainrank-listing.json), which this contract keeps as integers because that is what the upstream ships.",
+  "$ref": "./decimal.json"
+}

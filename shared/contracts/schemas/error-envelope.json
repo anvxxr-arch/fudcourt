@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/error-envelope.json",
+  "title": "FUDCourt normalized error envelope",
+  "description": "The normalized error model every FUDCourt service and route maps its failures into. `code` is the machine-readable category, `message` is the server's own text (display it verbatim — a substituted message hides which layer refused), `request_id` correlates the failure when a correlation id is in scope. Additional keys may appear per category (e.g. `detail`, `errors`, `conflicts`, `preview`, `category`) and must be tolerated additively.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["code", "message"],
+  "properties": {
+    "code": {
+      "description": "Normalized error category.",
+      "enum": [
+        "validation",
+        "authorization",
+        "credential",
+        "exchange",
+        "insufficient_balance",
+        "risk_limit",
+        "rate_limit",
+        "timeout",
+        "network",
+        "conflict",
+        "not_found",
+        "internal"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "description": "The server's own error text. Consumers show this verbatim."
+    },
+    "request_id": {
+      "type": ["string", "null"],
+      "description": "Correlation id of the failing request, when in scope."
+    }
+  }
+}

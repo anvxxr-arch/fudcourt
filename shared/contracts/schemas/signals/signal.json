@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/signals/signal.json",
+  "title": "Signal",
+  "description": "A scored, sourced detection of an opportunity on one chain. PROVIDER-SHAPED AND PROVIDER-OWNED: every row comes from an external signal service, is identified by a provider id plus a token mint (a composite, provider-owned key), and carries the provider's own score and decision. NO DOMAIN OWNER EXISTS: there is no Signal type in any Go or Rust package - the shape lives only in the Next route that proxies it. HONEST SPARSITY IS THE CONTRACT: the route's own comment says 'Sighting counts / holder counts are sparse across the upstream rows, so every field is optional. A missing metric must never render as 0' - hence the nullable metrics and the score, which is null rather than 0 when absent. `ts` is provider SECONDS; do not compare it to millisecond fields without converting.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "ts",
+    "chain",
+    "mint",
+    "symbol"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "../common/count.json",
+      "description": "Provider row id (numeric)."
+    },
+    "ts": {
+      "$ref": "../common/time.json#/$defs/occurred_at",
+      "description": "Provider time in SECONDS (not milliseconds) - see common/time.json T4 for the mixed-unit payload this lives in."
+    },
+    "chain": {
+      "type": "string",
+      "description": "Provider chain label ('solana', 'robinhood' today; 'all' is a REQUEST value, never a row value)."
+    },
+    "mint": {
+      "type": "string",
+      "description": "The token mint address. Together with id this is the row's identity."
+    },
+    "symbol": {
+      "type": "string"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "kind": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Provider classification; opaque string."
+    },
+    "score": {
+      "anyOf": [
+        {
+          "$ref": "../common/decimal.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The provider's score. NOT money and NOT a count - a decimal string with provider-chosen scale; null when the provider did not score the row, never 0."
+    },
+    "decision": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Provider verdict (e.g. a run/flat/dump label); the value set is the provider's, so it is a string here rather than an invented enum."
+    },
+    "mcap": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null = not reported (sparse by design). NEVER 0."
+    },
+    "liq": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "price": {
+      "anyOf": [
+        {
+          "$ref": "../common/price.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "age_min": {
+      "anyOf": [
+        {
+          "$ref": "../common/decimal.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Age in minutes - a duration, not an instant, so it is a plain decimal and NOT a time-semantics field."
+    },
+    "source": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "image": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "holders_count": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "top_holder_pct": {
+      "anyOf": [
+        {
+          "$ref": "../common/percentage.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "vol_trend": {
+      "anyOf": [
+        {
+          "$ref": "../common/decimal.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "name_reuse": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "persist_count": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "registry_reuse": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "vetoes": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Reasons the provider's own pipeline vetoed the signal."
+    },
+    "sightings": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/sightings"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "socials": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/social"
+      }
+    }
+  },
+  "$defs": {
+    "sightings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "n": {
+          "$ref": "../common/count.json"
+        },
+        "span_h": {
+          "$ref": "../common/decimal.json"
+        },
+        "sources": {
+          "$ref": "../common/count.json"
+        },
+        "surfaced": {
+          "$ref": "../common/count.json"
+        }
+      }
+    },
+    "social": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

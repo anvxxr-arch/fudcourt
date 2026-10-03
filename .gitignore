@@ -15,9 +15,8 @@ tsconfig.tsbuildinfo
 # vercel
 .vercel
 
-# payload
-apps/blog/media/
-apps/blog/.payload/
+# payload (the CMS merged into frontend/web in DR-017; uploads land in frontend/web/media/)
+frontend/web/media/
 
 # test build output
 .shaper-tests/
@@ -26,4 +25,24 @@ apps/blog/.payload/
 *.log
 
 # os
-.DS_Store*.node
+.DS_Store
+# compiled addons
+*.node
+# go (backend/* — each module builds its own binary into bin/ at
+# runtime via ExecStartPre; the artifacts are never committed)
+backend/data/bin/
+backend/api/bin/
+backend/workers/executor/bin/
+backend/data/.cache/
+# rust (backend/sync; target/ is also covered by backend/sync/.gitignore)
+backend/sync/target/
+# live verifier reports (regenerated on every run; the tracked artifacts live in
+# tests/fixtures/, which is the reviewed record). scripts/verify/ is where the
+# harnesses write them since the Phase-8 relocation; the frontend/web path is the
+# pre-move location, kept so a stale tree cannot re-add one.
+scripts/verify/*-report.json
+frontend/web/scripts/**/*-report.json
+
+# python caches (harnesses + verification oracles)
+__pycache__/
+*.pyc

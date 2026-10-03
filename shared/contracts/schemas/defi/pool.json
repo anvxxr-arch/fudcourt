@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/defi/pool.json",
+  "title": "Pool (DEX pair / liquidity pool)",
+  "description": "A DEX pair: two tokens with reserves on one DEX. IDENTITY IS PROVIDER-OWNED TODAY: the only key is the pair address (DexScreener `pairAddress`), which is unique per (chain, dex) but is not a canonical pool id. price comes from the provider as a STRING and is preserved as a string here (features/dex/client.ts types priceUsd/priceNative as string) - a decision worth keeping, because a DEX price is a ratio computed by the venue and re-parsing it into binary64 would lose the digits the provider published. MANDATORY HONESTY FIELD: the repo measures FIELD PRESENCE per endpoint ('field presence is NOT uniform across DexScreener endpoints -- measure it', pairMetricPresence) because marketCap/fdv/volume are genuinely absent on some pairs; a consumer must render an em-dash rather than a zero.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "chain_id",
+    "dex_id",
+    "pair_address",
+    "base_token",
+    "quote_token"
+  ],
+  "properties": {
+    "pool_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null today - no canonical pool id exists; pair_address is the de-facto key."
+    },
+    "chain_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The provider's chainId string ('solana', 'base', ...). Null when the provider omits it."
+    },
+    "dex_id": {
+      "type": "string",
+      "description": "The DEX's own identifier ('raydium', 'uniswap'), provider-controlled."
+    },
+    "pair_address": {
+      "type": "string"
+    },
+    "base_token": {
+      "$ref": "../assets/token.json"
+    },
+    "quote_token": {
+      "$ref": "../assets/token.json"
+    },
+    "price_native": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Price of base in quote units, AS THE PROVIDER WROTE IT (string, not re-parsed)."
+    },
+    "price_usd": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Price in USD as a string, for the same reason."
+    },
+    "market_cap_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null = not reported for this pair. NEVER 0."
+    },
+    "fdv_usd": {
+      "anyOf": [
+        {
+          "$ref": "../common/money.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "liquidity": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/liquidity"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "volume_usd": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/windowed_usd"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Keyed by window ('h24', 'h6', 'h1', 'm5') exactly as the provider keys it; the set is open, so this is a map and not fixed fields."
+    },
+    "price_change_pct": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/windowed"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "txns": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/windowed_txns"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "labels": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "created_at": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/occurred_at"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "pairCreatedAt, the pool's own creation time from the provider."
+    },
+    "url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "liquidity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "usd": {
+          "anyOf": [
+            {
+              "$ref": "../common/money.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "base": {
+          "anyOf": [
+            {
+              "$ref": "../common/quantity.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "$ref": "../common/quantity.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "description": "Reserve figures. Any leg may be absent; absent is null, never 0."
+    },
+    "windowed": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "../common/percentage.json"
+      },
+      "description": "Map of window label -> percentage."
+    },
+    "windowed_usd": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "../common/money.json"
+      },
+      "description": "Map of window label -> USD amount."
+    },
+    "windowed_txns": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "buys": {
+            "$ref": "../common/count.json"
+          },
+          "sells": {
+            "$ref": "../common/count.json"
+          }
+        }
+      }
+    }
+  }
+}

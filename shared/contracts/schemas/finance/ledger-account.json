@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/finance/ledger-account.json",
+  "title": "LedgerAccount (chart of accounts)",
+  "description": "One line of the chart of accounts: `accounts(code TEXT PRIMARY KEY, name, type, statement)` in database/schema/pg-schema.sql. NOT the same thing as a treasury Account (internal capital) or an ExchangeAccount (a venue link) - three nouns, one word, which is why the contract names this one LedgerAccount. Rows are the debit_account / credit_account / account_code targets of journal and ledger. The table has NO WRITER in the repo today (grep for INSERT into accounts finds none), so this is the read-model shape, not a live entity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "code",
+    "name",
+    "type",
+    "statement"
+  ],
+  "properties": {
+    "code": {
+      "type": "string",
+      "description": "Primary key; the code referenced by journal.debit_account / journal.credit_account / ledger.account_code."
+    },
+    "name": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "description": "Free-text account class in the schema (unconstrained TEXT); the value set lives in code, so it is typed as a string here rather than invented as a closed enum."
+    },
+    "statement": {
+      "type": "string",
+      "description": "Which statement the account appears on (schema column `statement`)."
+    }
+  }
+}

@@ -1,0 +1,720 @@
+{
+  "document_version": 1,
+  "id_rule": "id = kind \":\" hex(sha256(salt + 0x00 + kind + 0x00 + natural_key))[0:10]; natural_key per kind: chain \"chain/<name>\", asset \"asset/<kind>/<SYMBOL>\", token \"token/<chain-name>/<full-address>\", venue \"venue/<venue-id>\"",
+  "salt": "fudcourt/canonical-reference/v1",
+  "generated_by": "backend/api/internal/markets/reference",
+  "unmapped": [
+    "solana SPL tokens (full mint not derivable: backend/sync/src/streams/sync.rs truncates the mint to 6 chars)",
+    "HYPE provider ids (Hyperliquid balances are read but never priced: no slug in the tree)",
+    "chain_numeric_id for all chains (no EVM chain id exists anywhere in the tree)",
+    "venue URLs and non-conventional display names (no venue metadata table exists)",
+    "market_types for the eight data-only ccxt venues (TICKER_VENUES is ccxt product support, not this build's instrument model)",
+    "hyperliquid/offchain chain provider ids (absent from LLAMA_IDS; no CryptoRank chain row)",
+    "CryptoRank coin keys beyond the eight seeded assets (provider rows, not canonical entities)"
+  ],
+  "note": "Cross-service reference artifact. Consumers MUST NOT import the producing Go package: read this file (or the JSON Schemas under shared/contracts/schemas/) instead. An id is opaque; resolve through `mappings`, never by parsing an id or matching a symbol.",
+  "chains": [
+    {
+      "natural_key": "chain/arbitrum",
+      "chain_id": "chain:ed300c94e8",
+      "name": "arbitrum",
+      "display_name": "Arbitrum",
+      "kind": "evm",
+      "native_asset_id": "asset:d40acc5bec"
+    },
+    {
+      "natural_key": "chain/base",
+      "chain_id": "chain:2134e1468a",
+      "name": "base",
+      "display_name": "Base",
+      "kind": "evm",
+      "native_asset_id": "asset:d40acc5bec"
+    },
+    {
+      "natural_key": "chain/bsc",
+      "chain_id": "chain:eb00d01a3f",
+      "name": "bsc",
+      "display_name": "BNB",
+      "kind": "evm",
+      "native_asset_id": "asset:ac90e8ba70"
+    },
+    {
+      "natural_key": "chain/ethereum",
+      "chain_id": "chain:7904aa7bd5",
+      "name": "ethereum",
+      "display_name": "Ethereum",
+      "kind": "evm",
+      "native_asset_id": "asset:d40acc5bec"
+    },
+    {
+      "natural_key": "chain/hyperliquid",
+      "chain_id": "chain:4b722e1587",
+      "name": "hyperliquid",
+      "display_name": "Hyperliquid",
+      "kind": "hyperliquid",
+      "native_asset_id": "asset:8970196c37"
+    },
+    {
+      "natural_key": "chain/offchain",
+      "chain_id": "chain:1f6d776400",
+      "name": "offchain",
+      "display_name": "Offchain",
+      "kind": "offchain"
+    },
+    {
+      "natural_key": "chain/optimism",
+      "chain_id": "chain:aedf3dfecc",
+      "name": "optimism",
+      "display_name": "Optimism",
+      "kind": "evm",
+      "native_asset_id": "asset:d40acc5bec"
+    },
+    {
+      "natural_key": "chain/polygon",
+      "chain_id": "chain:e8cd8ec319",
+      "name": "polygon",
+      "display_name": "Polygon",
+      "kind": "evm",
+      "native_asset_id": "asset:315d864f27"
+    },
+    {
+      "natural_key": "chain/solana",
+      "chain_id": "chain:0f20652e45",
+      "name": "solana",
+      "display_name": "Solana",
+      "kind": "solana",
+      "native_asset_id": "asset:86543eb2b9"
+    }
+  ],
+  "assets": [
+    {
+      "natural_key": "asset/native/BNB",
+      "asset_id": "asset:ac90e8ba70",
+      "symbol": "BNB",
+      "name": "BNB",
+      "kind": "native",
+      "chain_id": "chain:eb00d01a3f",
+      "provider_ids": [
+        {
+          "provider": "coingecko",
+          "provider_id": "binancecoin"
+        },
+        {
+          "provider": "cryptorank",
+          "provider_id": "bnb"
+        },
+        {
+          "provider": "defillama",
+          "provider_id": "coingecko:binancecoin"
+        }
+      ]
+    },
+    {
+      "natural_key": "asset/native/ETH",
+      "asset_id": "asset:d40acc5bec",
+      "symbol": "ETH",
+      "name": "Ethereum",
+      "kind": "native",
+      "provider_ids": [
+        {
+          "provider": "coingecko",
+          "provider_id": "ethereum"
+        },
+        {
+          "provider": "cryptorank",
+          "provider_id": "ethereum"
+        },
+        {
+          "provider": "defillama",
+          "provider_id": "coingecko:ethereum"
+        }
+      ]
+    },
+    {
+      "natural_key": "asset/native/HYPE",
+      "asset_id": "asset:8970196c37",
+      "symbol": "HYPE",
+      "name": "Hyperliquid",
+      "kind": "native",
+      "chain_id": "chain:4b722e1587"
+    },
+    {
+      "natural_key": "asset/native/POL",
+      "asset_id": "asset:315d864f27",
+      "symbol": "POL",
+      "name": "Polygon Ecosystem Token",
+      "kind": "native",
+      "chain_id": "chain:e8cd8ec319",
+      "provider_ids": [
+        {
+          "provider": "coingecko",
+          "provider_id": "polygon-ecosystem-token"
+        },
+        {
+          "provider": "cryptorank",
+          "provider_id": "polygon-ecosystem-token"
+        },
+        {
+          "provider": "defillama",
+          "provider_id": "coingecko:polygon-ecosystem-token"
+        }
+      ]
+    },
+    {
+      "natural_key": "asset/native/SOL",
+      "asset_id": "asset:86543eb2b9",
+      "symbol": "SOL",
+      "name": "Solana",
+      "kind": "native",
+      "chain_id": "chain:0f20652e45",
+      "provider_ids": [
+        {
+          "provider": "coingecko",
+          "provider_id": "solana"
+        },
+        {
+          "provider": "cryptorank",
+          "provider_id": "solana"
+        },
+        {
+          "provider": "defillama",
+          "provider_id": "coingecko:solana"
+        }
+      ]
+    },
+    {
+      "natural_key": "asset/fiat/USD",
+      "asset_id": "asset:203460b647",
+      "symbol": "USD",
+      "name": "United States Dollar",
+      "kind": "fiat"
+    },
+    {
+      "natural_key": "asset/stablecoin/USDC",
+      "asset_id": "asset:db5d8a6884",
+      "symbol": "USDC",
+      "name": "USD Coin",
+      "kind": "stablecoin",
+      "chain_id": "chain:7904aa7bd5",
+      "provider_ids": [
+        {
+          "provider": "coingecko",
+          "provider_id": "usd-coin"
+        },
+        {
+          "provider": "cryptorank",
+          "provider_id": "usdcoin"
+        },
+        {
+          "provider": "defillama",
+          "provider_id": "coingecko:usd-coin"
+        }
+      ]
+    },
+    {
+      "natural_key": "asset/stablecoin/USDT",
+      "asset_id": "asset:36fac0c5f6",
+      "symbol": "USDT",
+      "name": "Tether",
+      "kind": "stablecoin",
+      "chain_id": "chain:7904aa7bd5",
+      "provider_ids": [
+        {
+          "provider": "coingecko",
+          "provider_id": "tether"
+        },
+        {
+          "provider": "cryptorank",
+          "provider_id": "tether"
+        },
+        {
+          "provider": "defillama",
+          "provider_id": "coingecko:tether"
+        }
+      ]
+    }
+  ],
+  "tokens": [
+    {
+      "natural_key": "token/base/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "token_id": "token:b6a8ce7016",
+      "chain_id": "chain:2134e1468a",
+      "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "address_kind": "hex",
+      "asset_id": "asset:db5d8a6884",
+      "symbol": "USDC",
+      "decimals": 6
+    },
+    {
+      "natural_key": "token/ethereum/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "token_id": "token:9c49f5cc06",
+      "chain_id": "chain:7904aa7bd5",
+      "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "address_kind": "hex",
+      "asset_id": "asset:db5d8a6884",
+      "symbol": "USDC",
+      "decimals": 6
+    },
+    {
+      "natural_key": "token/ethereum/0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "token_id": "token:0abccfbce5",
+      "chain_id": "chain:7904aa7bd5",
+      "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "address_kind": "hex",
+      "asset_id": "asset:36fac0c5f6",
+      "symbol": "USDT",
+      "decimals": 6
+    },
+    {
+      "natural_key": "token/optimism/0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
+      "token_id": "token:3a60b22e37",
+      "chain_id": "chain:aedf3dfecc",
+      "address": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
+      "address_kind": "hex",
+      "asset_id": "asset:db5d8a6884",
+      "symbol": "USDC",
+      "decimals": 6
+    },
+    {
+      "natural_key": "token/optimism/0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+      "token_id": "token:940fb67013",
+      "chain_id": "chain:aedf3dfecc",
+      "address": "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+      "address_kind": "hex",
+      "asset_id": "asset:36fac0c5f6",
+      "symbol": "USDT",
+      "decimals": 6
+    },
+    {
+      "natural_key": "token/polygon/0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+      "token_id": "token:a1519cb239",
+      "chain_id": "chain:e8cd8ec319",
+      "address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+      "address_kind": "hex",
+      "asset_id": "asset:db5d8a6884",
+      "symbol": "USDC",
+      "decimals": 6
+    },
+    {
+      "natural_key": "token/polygon/0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+      "token_id": "token:5a833fdba2",
+      "chain_id": "chain:e8cd8ec319",
+      "address": "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+      "address_kind": "hex",
+      "asset_id": "asset:36fac0c5f6",
+      "symbol": "USDT",
+      "decimals": 6
+    },
+    {
+      "natural_key": "token/bsc/0x55d398326f99059ff775485246999027b3197955",
+      "token_id": "token:9903c27ae3",
+      "chain_id": "chain:eb00d01a3f",
+      "address": "0x55d398326f99059ff775485246999027b3197955",
+      "address_kind": "hex",
+      "asset_id": "asset:36fac0c5f6",
+      "symbol": "USDT",
+      "decimals": 18
+    },
+    {
+      "natural_key": "token/bsc/0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      "token_id": "token:222d15ae54",
+      "chain_id": "chain:eb00d01a3f",
+      "address": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      "address_kind": "hex",
+      "asset_id": "asset:db5d8a6884",
+      "symbol": "USDC",
+      "decimals": 18
+    },
+    {
+      "natural_key": "token/arbitrum/0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+      "token_id": "token:b787aaa340",
+      "chain_id": "chain:ed300c94e8",
+      "address": "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+      "address_kind": "hex",
+      "asset_id": "asset:db5d8a6884",
+      "symbol": "USDC",
+      "decimals": 6
+    },
+    {
+      "natural_key": "token/arbitrum/0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+      "token_id": "token:5d19129c11",
+      "chain_id": "chain:ed300c94e8",
+      "address": "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+      "address_kind": "hex",
+      "asset_id": "asset:36fac0c5f6",
+      "symbol": "USDT",
+      "decimals": 6
+    }
+  ],
+  "venues": [
+    {
+      "natural_key": "venue/bitfinex",
+      "venue_id": "venue:0e37eadf88",
+      "name": "Bitfinex",
+      "kind": "cex",
+      "known": false
+    },
+    {
+      "natural_key": "venue/mexc",
+      "venue_id": "venue:2ce0dae260",
+      "name": "MEXC",
+      "kind": "cex",
+      "known": true,
+      "market_types": [
+        "spot",
+        "linear_perp"
+      ]
+    },
+    {
+      "natural_key": "venue/bybit",
+      "venue_id": "venue:31c421de01",
+      "name": "Bybit",
+      "kind": "cex",
+      "known": true,
+      "market_types": [
+        "spot",
+        "linear_perp"
+      ]
+    },
+    {
+      "natural_key": "venue/bingx",
+      "venue_id": "venue:39b88c452c",
+      "name": "BingX",
+      "kind": "cex",
+      "known": false
+    },
+    {
+      "natural_key": "venue/bitget",
+      "venue_id": "venue:3f376f6c01",
+      "name": "Bitget",
+      "kind": "cex",
+      "known": false
+    },
+    {
+      "natural_key": "venue/coinbase",
+      "venue_id": "venue:4baaeae026",
+      "name": "Coinbase",
+      "kind": "cex",
+      "known": false
+    },
+    {
+      "natural_key": "venue/okx",
+      "venue_id": "venue:5d802f3da9",
+      "name": "OKX",
+      "kind": "cex",
+      "known": false
+    },
+    {
+      "natural_key": "venue/kraken",
+      "venue_id": "venue:76e00b2757",
+      "name": "Kraken",
+      "kind": "cex",
+      "known": false
+    },
+    {
+      "natural_key": "venue/htx",
+      "venue_id": "venue:a02f6e023d",
+      "name": "HTX",
+      "kind": "cex",
+      "known": false
+    },
+    {
+      "natural_key": "venue/binance",
+      "venue_id": "venue:a8792f9e11",
+      "name": "Binance",
+      "kind": "cex",
+      "known": true,
+      "market_types": [
+        "spot",
+        "linear_perp"
+      ]
+    },
+    {
+      "natural_key": "venue/paper",
+      "venue_id": "venue:c3099dfa02",
+      "name": "Paper (simulated venue)",
+      "kind": "cex",
+      "known": false
+    },
+    {
+      "natural_key": "venue/phemex",
+      "venue_id": "venue:eff356b2f1",
+      "name": "Phemex",
+      "kind": "cex",
+      "known": false
+    }
+  ],
+  "mappings": [
+    {
+      "provider": "ccxt",
+      "provider_id": "binance",
+      "canonical_id": "venue:a8792f9e11"
+    },
+    {
+      "provider": "ccxt",
+      "provider_id": "bingx",
+      "canonical_id": "venue:39b88c452c"
+    },
+    {
+      "provider": "ccxt",
+      "provider_id": "bitfinex",
+      "canonical_id": "venue:0e37eadf88"
+    },
+    {
+      "provider": "ccxt",
+      "provider_id": "bitget",
+      "canonical_id": "venue:3f376f6c01"
+    },
+    {
+      "provider": "ccxt",
+      "provider_id": "bybit",
+      "canonical_id": "venue:31c421de01"
+    },
+    {
+      "provider": "ccxt",
+      "provider_id": "coinbase",
+      "canonical_id": "venue:4baaeae026"
+    },
+    {
+      "provider": "ccxt",
+      "provider_id": "htx",
+      "canonical_id": "venue:a02f6e023d"
+    },
+    {
+      "provider": "ccxt",
+      "provider_id": "kraken",
+      "canonical_id": "venue:76e00b2757"
+    },
+    {
+      "provider": "ccxt",
+      "provider_id": "mexc",
+      "canonical_id": "venue:2ce0dae260"
+    },
+    {
+      "provider": "ccxt",
+      "provider_id": "okx",
+      "canonical_id": "venue:5d802f3da9"
+    },
+    {
+      "provider": "ccxt",
+      "provider_id": "phemex",
+      "canonical_id": "venue:eff356b2f1"
+    },
+    {
+      "provider": "coingecko",
+      "provider_id": "binancecoin",
+      "canonical_id": "asset:ac90e8ba70"
+    },
+    {
+      "provider": "coingecko",
+      "provider_id": "ethereum",
+      "canonical_id": "asset:d40acc5bec"
+    },
+    {
+      "provider": "coingecko",
+      "provider_id": "polygon-ecosystem-token",
+      "canonical_id": "asset:315d864f27"
+    },
+    {
+      "provider": "coingecko",
+      "provider_id": "solana",
+      "canonical_id": "asset:86543eb2b9"
+    },
+    {
+      "provider": "coingecko",
+      "provider_id": "tether",
+      "canonical_id": "asset:36fac0c5f6"
+    },
+    {
+      "provider": "coingecko",
+      "provider_id": "usd-coin",
+      "canonical_id": "asset:db5d8a6884"
+    },
+    {
+      "provider": "cryptorank",
+      "provider_id": "bnb",
+      "canonical_id": "asset:ac90e8ba70"
+    },
+    {
+      "provider": "cryptorank",
+      "provider_id": "ethereum",
+      "canonical_id": "asset:d40acc5bec"
+    },
+    {
+      "provider": "cryptorank",
+      "provider_id": "polygon-ecosystem-token",
+      "canonical_id": "asset:315d864f27"
+    },
+    {
+      "provider": "cryptorank",
+      "provider_id": "solana",
+      "canonical_id": "asset:86543eb2b9"
+    },
+    {
+      "provider": "cryptorank",
+      "provider_id": "tether",
+      "canonical_id": "asset:36fac0c5f6"
+    },
+    {
+      "provider": "cryptorank",
+      "provider_id": "usdcoin",
+      "canonical_id": "asset:db5d8a6884"
+    },
+    {
+      "provider": "cryptorank-chain",
+      "provider_id": "arbitrum",
+      "canonical_id": "chain:ed300c94e8"
+    },
+    {
+      "provider": "cryptorank-chain",
+      "provider_id": "base",
+      "canonical_id": "chain:2134e1468a"
+    },
+    {
+      "provider": "cryptorank-chain",
+      "provider_id": "bnb",
+      "canonical_id": "chain:eb00d01a3f"
+    },
+    {
+      "provider": "cryptorank-chain",
+      "provider_id": "ethereum",
+      "canonical_id": "chain:7904aa7bd5"
+    },
+    {
+      "provider": "cryptorank-chain",
+      "provider_id": "matic-network",
+      "canonical_id": "chain:e8cd8ec319"
+    },
+    {
+      "provider": "cryptorank-chain",
+      "provider_id": "optimism",
+      "canonical_id": "chain:aedf3dfecc"
+    },
+    {
+      "provider": "cryptorank-chain",
+      "provider_id": "solana",
+      "canonical_id": "chain:0f20652e45"
+    },
+    {
+      "provider": "defillama",
+      "provider_id": "coingecko:binancecoin",
+      "canonical_id": "asset:ac90e8ba70"
+    },
+    {
+      "provider": "defillama",
+      "provider_id": "coingecko:ethereum",
+      "canonical_id": "asset:d40acc5bec"
+    },
+    {
+      "provider": "defillama",
+      "provider_id": "coingecko:polygon-ecosystem-token",
+      "canonical_id": "asset:315d864f27"
+    },
+    {
+      "provider": "defillama",
+      "provider_id": "coingecko:solana",
+      "canonical_id": "asset:86543eb2b9"
+    },
+    {
+      "provider": "defillama",
+      "provider_id": "coingecko:tether",
+      "canonical_id": "asset:36fac0c5f6"
+    },
+    {
+      "provider": "defillama",
+      "provider_id": "coingecko:usd-coin",
+      "canonical_id": "asset:db5d8a6884"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "MATIC",
+      "canonical_id": "asset:315d864f27"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "binance",
+      "canonical_id": "venue:a8792f9e11"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "bingx",
+      "canonical_id": "venue:39b88c452c"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "bitfinex",
+      "canonical_id": "venue:0e37eadf88"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "bitget",
+      "canonical_id": "venue:3f376f6c01"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "bybit",
+      "canonical_id": "venue:31c421de01"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "coinbase",
+      "canonical_id": "venue:4baaeae026"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "htx",
+      "canonical_id": "venue:a02f6e023d"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "kraken",
+      "canonical_id": "venue:76e00b2757"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "mexc",
+      "canonical_id": "venue:2ce0dae260"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "okx",
+      "canonical_id": "venue:5d802f3da9"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "paper",
+      "canonical_id": "venue:c3099dfa02"
+    },
+    {
+      "provider": "internal",
+      "provider_id": "phemex",
+      "canonical_id": "venue:eff356b2f1"
+    }
+  ],
+  "misses": [
+    {
+      "kind": "asset",
+      "provider": "cryptorank",
+      "provider_id": "hyperliquid",
+      "reason": "the CryptoRank fixture carries the coin row, but HYPE is never priced by the sync, so the asset is seeded without a provider id",
+      "reported_as": "HYPE",
+      "known_absence": false
+    },
+    {
+      "kind": "asset",
+      "provider": "onchain",
+      "provider_id": "ethereum/0x0000000000000000000000000000000000000000",
+      "reason": "untracked swap input: a swap into the zero-address path is not a token this build has a deployment for, and the address is deliberately not seeded as one",
+      "reported_as": "transfer-log scan result",
+      "known_absence": false
+    },
+    {
+      "kind": "token",
+      "provider": "onchain",
+      "provider_id": "solana/token-accounts-by-owner",
+      "reason": "the Solana token set cannot be enumerated from the tree: the sync resolves mints at runtime and then discards them",
+      "reported_as": "SPL:<first 6 chars of the mint>",
+      "known_absence": true
+    }
+  ]
+}

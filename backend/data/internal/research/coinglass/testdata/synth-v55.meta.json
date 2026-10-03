@@ -1,0 +1,14 @@
+{
+ "url": "https://capi.coinglass.com/api/probe55",
+ "v": "55",
+ "user": "gffLbTUPwVIfC/BVtIsyvt0B6zg19qR4CTpMJujp8ZrLaXy5fA1sXtd+043vWmlR",
+ "time": "",
+ "cache_ts": "",
+ "synthetic": true,
+ "key0": "MTcwYjA3MGRhOTY1",
+ "actual_key": "0123456789abcdef",
+ "expect": {
+  "probe": "v55",
+  "openInterest": 42
+ }
+}

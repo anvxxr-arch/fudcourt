@@ -1,0 +1,33 @@
+# FUD Court web (Next.js board + BFF) :3100
+#
+# Deployed to ~/.config/systemd/user/fudcourt-web.service. Keep this file and the
+# deployed unit identical — it is the only record of why the process is `bun`.
+#
+# Bun is the RUNTIME, not just the toolchain: `--bun` makes Bun execute the
+# `next` CLI instead of shelling out to Node, so the process holding :3100 has
+# /proc/<pid>/exe -> /home/dwizzy/.bun/bin/bun (measured). The parity evidence
+# for that choice is docs/DECISIONS.md DR-008; the rule it replaces (Bun installs,
+# Node serves) was DR-007.
+#
+# The binary path is absolute because a systemd *user* unit's PATH does not
+# include ~/.bun/bin, and `next` is addressed by its real entry point rather than
+# the node_modules/.bin shim (whose shebang is `#!/usr/bin/env node` and would
+# re-introduce Node when executed directly).
+[Unit]
+Description=FUD Court web (Next.js portfolio OS) :3100
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/dwizzy/fudcourt/frontend/web
+Environment=NODE_ENV=production
+EnvironmentFile=/home/dwizzy/fudcourt/frontend/web/.env.local
+ExecStart=/home/dwizzy/.bun/bin/bun --bun /home/dwizzy/fudcourt/frontend/web/node_modules/next/dist/bin/next start -p 3100
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=15
+
+[Install]
+WantedBy=default.target

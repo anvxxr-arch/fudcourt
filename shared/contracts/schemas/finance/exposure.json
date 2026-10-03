@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/finance/exposure.json",
+  "title": "Exposure (derived gross notional by key)",
+  "description": "A DERIVED gross-exposure rollup. notional_usd is an exact NON-NEGATIVE decimal string - it is a gross magnitude, so two opposing positions in the same key ADD rather than cancel, which is the point of a risk view. NOTE the key naming defect this contract fixes: the Go derivation groups on InstrumentID but the derived struct's field is named `Asset` (finance/portfolio Exposure) - three names (InstrumentID / Asset / symbol) for one key. Here the key is named instrument_id, and `asset_id` exists separately for genuine asset-level rollups.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "instrument_id",
+    "notional_usd"
+  ],
+  "properties": {
+    "instrument_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "asset_id": {
+      "anyOf": [
+        {
+          "$ref": "../common/identifier.json"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "notional_usd": {
+      "$ref": "../common/money.json",
+      "not": {
+        "pattern": "^-"
+      },
+      "description": "Exact NON-NEGATIVE gross magnitude - two opposing positions in one key ADD rather than cancel."
+    }
+  }
+}

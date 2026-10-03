@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/signals/scoreboard.json",
+  "title": "Signal scoreboard (provider cohort statistics)",
+  "description": "The provider's own retrospective statistics over a cohort of signals: per-day buckets of outcome labels and the catch list. EVERY NUMBER HERE IS DERIVED BY THE PROVIDER OR BY THE BROWSER, never by a service in this repo: the payload arrives with `generated_at` from the provider and the cohort hit-rates are computed in frontend/web/src/features/scoreboard/scoreboard.tsx. No owner exists for a canonical version of this. `x24h` is a MULTIPLE (a 3x) not a percentage, which is exactly the kind of unit the type system must not hide.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "v",
+    "generated_at",
+    "chains"
+  ],
+  "properties": {
+    "v": {
+      "$ref": "../common/count.json",
+      "description": "Payload version marker (the provider ships v alongside kind)."
+    },
+    "kind": {
+      "type": "string",
+      "description": "Payload discriminator; 'scoreboard' for this shape."
+    },
+    "generated_at": {
+      "$ref": "../common/time.json#/$defs/observed_at",
+      "description": "Provider generation time in SECONDS; the route substitutes Date.now()/1000 when the provider omits it."
+    },
+    "cohort_days": {
+      "$ref": "../common/count.json"
+    },
+    "chains": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/chain_block"
+      },
+      "description": "Keyed by provider chain label."
+    }
+  },
+  "$defs": {
+    "chain_block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "latest",
+        "series",
+        "catches"
+      ],
+      "properties": {
+        "latest": {
+          "$ref": "#/$defs/bucket"
+        },
+        "cohort_days": {
+          "$ref": "../common/count.json"
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/bucket"
+          }
+        },
+        "catches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/catch"
+          }
+        }
+      },
+      "description": "One chain's cohort history."
+    },
+    "bucket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "day",
+        "n",
+        "run",
+        "flat",
+        "dump",
+        "unknown"
+      ],
+      "properties": {
+        "day": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "n": {
+          "$ref": "../common/count.json"
+        },
+        "run": {
+          "$ref": "../common/count.json"
+        },
+        "flat": {
+          "$ref": "../common/count.json"
+        },
+        "dump": {
+          "$ref": "../common/count.json"
+        },
+        "unknown": {
+          "$ref": "../common/count.json"
+        }
+      },
+      "description": "One day's outcome counts. `unknown` is a REAL bucket, not a null: an outcome the provider could not classify is counted, not hidden."
+    },
+    "catch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mint",
+        "score",
+        "day"
+      ],
+      "properties": {
+        "mint": {
+          "type": "string"
+        },
+        "symbol": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "score": {
+          "$ref": "../common/decimal.json"
+        },
+        "decision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "peak_24h": {
+          "anyOf": [
+            {
+              "$ref": "../common/decimal.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "chain": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "day": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "x24h": {
+          "anyOf": [
+            {
+              "$ref": "../common/decimal.json"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A MULTIPLE (3 = 3x), NOT a percentage - deliberately not typed as percentage.json."
+        }
+      }
+    }
+  }
+}

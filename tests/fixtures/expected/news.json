@@ -1,0 +1,269 @@
+{
+  "cache": "MISS",
+  "count": 10,
+  "fetchedAt": 1790597962,
+  "kind": "news",
+  "newsRows": [
+    {
+      "date": null,
+      "id": 85193827,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": -4.55,
+          "priceUsd": 1.195183631623,
+          "symbol": "SUI"
+        },
+        {
+          "change24h": -3.37,
+          "priceUsd": 90.183373035588,
+          "symbol": "HYPE"
+        },
+        {
+          "change24h": -48.05,
+          "priceUsd": 0.000246963146,
+          "symbol": "CME"
+        }
+      ],
+      "source": "CryptoRank",
+      "status": null,
+      "title": "TOKEN2049 Singapore Returns as the Largest Industry Gathering of the Year",
+      "url": "https://tickets.token2049.com/token2049-singapore-2026/?promo=CRYPTORANK"
+    },
+    {
+      "date": "2026-09-28T12:13:09.000Z",
+      "id": 85200140,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": -1.87,
+          "priceUsd": 83341.88918979994,
+          "symbol": "BTC"
+        },
+        {
+          "change24h": -1.01,
+          "priceUsd": 2684.404156180223,
+          "symbol": "ETH"
+        },
+        {
+          "change24h": -1.29,
+          "priceUsd": 2673.683878704111,
+          "symbol": "ETH"
+        },
+        {
+          "change24h": -21.95,
+          "priceUsd": 0.002140012567,
+          "symbol": "BTC"
+        }
+      ],
+      "source": "CoinDesk",
+      "status": null,
+      "title": "THORChain rejects Bitget request to block hacker as $6 million moves to bitcoin",
+      "url": "https://www.coindesk.com/tech/2026/09/28/thorchain-rejects-bitget-request-to-block-hacker-as-usd6-million-moves-to-bitcoin"
+    },
+    {
+      "date": "2026-09-28T12:06:14.000Z",
+      "id": 85200133,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": -1.87,
+          "priceUsd": 83341.88918979994,
+          "symbol": "BTC"
+        },
+        {
+          "change24h": -21.95,
+          "priceUsd": 0.002140012567,
+          "symbol": "BTC"
+        }
+      ],
+      "source": "CryptoPotato",
+      "status": "bullish",
+      "title": "Saylor’s Strategy Buys Another 1,665 BTC in Second Consecutive Weekly Purchase",
+      "url": "https://cryptopotato.com/saylors-strategy-buys-another-1665-btc-in-second-consecutive-weekly-purchase/"
+    },
+    {
+      "date": "2026-09-28T12:00:00.000Z",
+      "id": 85200126,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": -0.01,
+          "priceUsd": 0.999582225485,
+          "symbol": "USDT"
+        },
+        {
+          "change24h": 0,
+          "priceUsd": 0.999833214223,
+          "symbol": "USDC"
+        },
+        {
+          "change24h": 0.5,
+          "priceUsd": 0.001566345347,
+          "symbol": "RWA"
+        },
+        {
+          "change24h": -0.06,
+          "priceUsd": 0.999656575617,
+          "symbol": "USDC"
+        },
+        {
+          "change24h": -2.82,
+          "priceUsd": 0.670837379019,
+          "symbol": "MNT"
+        },
+        {
+          "change24h": null,
+          "priceUsd": null,
+          "symbol": "RWA"
+        }
+      ],
+      "source": "BlockchainReporter",
+      "status": "bullish",
+      "title": "Bybit Adds Franklin Templeton Tokenized Money Market Fund Shares as Off-Exchange Collateral",
+      "url": "https://blockchainreporter.net/bybit-adds-franklin-templeton-tokenized-money-market-fund-shares-as-off-exchange-collateral/"
+    },
+    {
+      "date": "2026-09-28T11:34:20.000Z",
+      "id": 85200106,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": -2.19,
+          "priceUsd": 1.506140600053,
+          "symbol": "XRP"
+        }
+      ],
+      "source": "Crypto Daily",
+      "status": null,
+      "title": "XRP Price Prediction Today: Can XRP Break $1.55 Ahead of the Evernorth Vote?",
+      "url": "https://cryptodaily.co.uk/2026/09/xrp-price-prediction-break-1-55-evernorth-vote"
+    },
+    {
+      "date": "2026-09-28T11:32:33.000Z",
+      "id": 85200101,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [],
+      "source": "CoinDesk",
+      "status": null,
+      "title": "Traders aren't panicking yet despite cooling crypto sentiment",
+      "url": "https://www.coindesk.com/daybook-us/2026/09/28/bitcoin-traders-aren-t-panicking-yet-despite-cooling-sentiment"
+    },
+    {
+      "date": "2026-09-28T11:30:01.000Z",
+      "id": 85200104,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": -1.87,
+          "priceUsd": 83341.88918979994,
+          "symbol": "BTC"
+        },
+        {
+          "change24h": -1.01,
+          "priceUsd": 2684.404156180223,
+          "symbol": "ETH"
+        }
+      ],
+      "source": "CryptoSlate",
+      "status": "bullish",
+      "title": "Ethereum’s next scaling leap may come from making everyone stop doing the same work",
+      "url": "https://cryptoslate.com/ethereums-next-scaling-leap-may-come-from-making-everyone-stop-doing-the-same-work/"
+    },
+    {
+      "date": "2026-09-28T11:11:52.000Z",
+      "id": 85200099,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": 47.41,
+          "priceUsd": 239.727158424496,
+          "symbol": "QNT"
+        },
+        {
+          "change24h": 3.61,
+          "priceUsd": 0.129589030828,
+          "symbol": "JST"
+        }
+      ],
+      "source": "CryptoPotato",
+      "status": "bearish",
+      "title": "Quant (QNT) Surges 260% in a Week, but This Trader Just Sold Everything: Here’s Why",
+      "url": "https://cryptopotato.com/quant-qnt-surges-260-in-a-week-but-this-trader-just-sold-everything-heres-why/"
+    },
+    {
+      "date": "2026-09-28T11:00:00.000Z",
+      "id": 85200102,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": -0.01,
+          "priceUsd": 0.999582225485,
+          "symbol": "USDT"
+        },
+        {
+          "change24h": 0,
+          "priceUsd": 0.999833214223,
+          "symbol": "USDC"
+        },
+        {
+          "change24h": -0.06,
+          "priceUsd": 0.999656575617,
+          "symbol": "USDC"
+        },
+        {
+          "change24h": -2.35,
+          "priceUsd": 0.000112381253,
+          "symbol": "USDC"
+        },
+        {
+          "change24h": -9.69,
+          "priceUsd": 0.001621729473,
+          "symbol": "USDC"
+        }
+      ],
+      "source": "CoinDesk",
+      "status": null,
+      "title": "Crypto-friendly institution Franklin Templeton brings its tokenized collateral service to Bybit",
+      "url": "https://www.coindesk.com/business/2026/09/28/crypto-friendly-institution-franklin-templeton-brings-its-tokenized-collateral-service-to-bybit"
+    },
+    {
+      "date": "2026-09-28T10:58:20.000Z",
+      "id": 85200128,
+      "isAdvertisement": false,
+      "readingMinutes": null,
+      "relatedCoins": [
+        {
+          "change24h": -1.87,
+          "priceUsd": 83341.88918979994,
+          "symbol": "BTC"
+        },
+        {
+          "change24h": -1.01,
+          "priceUsd": 2684.404156180223,
+          "symbol": "ETH"
+        },
+        {
+          "change24h": -0.46,
+          "priceUsd": 2.39908e-7,
+          "symbol": "NFT"
+        }
+      ],
+      "source": "BeInCrypto",
+      "status": "bearish",
+      "title": "Justin Bieber's $1.3 Million Bored Ape NFT Has ‘Negative' Value, Says Adam Back",
+      "url": "https://beincrypto.com/justin-bieber-bored-ape-nft-adam-back/"
+    }
+  ],
+  "slice": "10 latest items — links out to the original publishers; upstream ships the first page only (?page= is a no-op upstream); date null = pinned promo slot (em-dash); status = upstream sentiment tag",
+  "upstream": "https://cryptorank.io/news"
+}

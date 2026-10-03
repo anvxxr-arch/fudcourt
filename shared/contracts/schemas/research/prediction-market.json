@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/research/prediction-market.json",
+  "title": "Prediction market aggregate and rows",
+  "description": "Prediction-market aggregates plus their individual markets, as one provider publishes them. THIS IS AN IN-PAYLOAD JOIN DONE BY US: three upstream responses are merged BY PLATFORM NAME (not by any id) into one aggregate, so the aggregate depends on the provider spelling the platform name identically in all three bodies - which is why the merge key is a NAME and why this shape must not present the aggregate as an independent entity. Volumes and open interest are provider figures; the window is NOT disclosed upstream, which the envelope's prose field states rather than implying a period.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "aggregate",
+    "rows"
+  ],
+  "properties": {
+    "aggregate": {
+      "$ref": "#/$defs/aggregate"
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/row"
+      }
+    },
+    "platforms": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/platform"
+      },
+      "description": "The per-platform slice of the same data, kept because the merge is by name and a consumer may want the unmerged inputs."
+    }
+  },
+  "$defs": {
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "total_volume_usd": {
+          "anyOf": [
+            {
+              "$ref": "../common/money.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "volume_change_pct": {
+          "anyOf": [
+            {
+              "$ref": "../common/percentage.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "markets_count": {
+          "anyOf": [
+            {
+              "$ref": "../common/count.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "markets_change_pct": {
+          "anyOf": [
+            {
+              "$ref": "../common/percentage.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "open_interest_usd": {
+          "anyOf": [
+            {
+              "$ref": "../common/money.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "oi_change_pct": {
+          "anyOf": [
+            {
+              "$ref": "../common/percentage.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The MERGE KEY. The join is by this string, not by an id."
+        },
+        "volume_usd": {
+          "anyOf": [
+            {
+              "$ref": "../common/money.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "markets_count": {
+          "anyOf": [
+            {
+              "$ref": "../common/count.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "open_interest_usd": {
+          "anyOf": [
+            {
+              "$ref": "../common/money.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "../common/count.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "question": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "volume_24h_usd": {
+          "anyOf": [
+            {
+              "$ref": "../common/money.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bid": {
+          "anyOf": [
+            {
+              "$ref": "../common/decimal.json"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A probability price in the provider's own 0-1-ish scale, carried as a bare decimal because the provider does not state the scale for this surface."
+        },
+        "ask": {
+          "anyOf": [
+            {
+              "$ref": "../common/decimal.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "spread": {
+          "anyOf": [
+            {
+              "$ref": "../common/decimal.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Provider-formatted resolution date string."
+        },
+        "platform": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
