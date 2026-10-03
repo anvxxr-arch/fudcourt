@@ -380,14 +380,14 @@ exactly what happened: the rival IA rework replaced `/ticker`, `/llama`, `/dex`,
 different surface than the one the migration was proven against. `routes --check` derives the app's
 page routes from `frontend/web/src/app/**/page.tsx` (route groups stripped, dynamic segments kept
 literal) and **fails (exit 1)** naming any page route that is neither probed nor in the file's
-`EXCLUDED_ROUTES` map (each entry carries the reason it cannot be probed). Reconciled 2026-10-02 to
-**15 probes** covering every page route the app serves except the 14 documented exclusions:
+`EXCLUDED_ROUTES` map (each entry carries the reason it cannot be probed). Reconciled 2026-10-03 to
+**14 probes** covering every page route the app serves except the 14 documented exclusions:
 session-gated tier pages (`/admin`, `/member`, `/executor{,/[id],/accounts,/history,/new,/settings}`,
 `/team/{balance,portfolio,reconciliation,transactions,wallets}` — they redirect to `/login` for an
 anonymous harness, which has no session mechanism) and the Payload admin SPA
 (`/blog/cms/admin/[[...segments]]`). Probes: `/`, `/market`, `/market/{crypto,trench,forex,stock,commodity}`,
 `/market/ticker/BTC` (the concrete probe for dynamic `/market/ticker/[ticker]`), `/news`,
-`/cryptorank`, `/scoreboard`, `/signals`, `/login`, `/blog`, `/blog/never-fake-rules`
+`/scoreboard`, `/signals`, `/login`, `/blog`, `/blog/never-fake-rules`
 (the concrete probe for dynamic `/blog/[slug]`). Per route: `wait_until="networkidle"`
 + 3000 ms settle, up to 400 probes from `document.querySelectorAll('*')` where the element has
 a non-zero visible box; computed styles only, **no text content**. Deterministic key order:

@@ -195,8 +195,8 @@ which styles itself through its own stylesheets and is already colour-exempt in 
 (`COLOR_EXEMPT_DIRS` `src/app/blog/(payload)` in `frontend/web/scripts/checks/check-design-tokens.py`).
 It is not product chrome, so it is neither probed nor a gap.
 
-The 17 routes the harness **does** see are listed in `docs/architecture/design-inventory.md` §C.
-`routes --check` prints `ROUTES: covered=17 probed=17 excluded=14 missing=0 app=31` on the reconciled
+The 14 routes the harness **does** see are listed in `docs/architecture/design-inventory.md` §C.
+`routes --check` prints `ROUTES: covered=14 probed=14 excluded=14 missing=0 app=28` on the reconciled
 tree.
 
 ---
