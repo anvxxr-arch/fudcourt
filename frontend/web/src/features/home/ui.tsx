@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { alpha, color, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ import {
   DEFI_PROTOCOLS_URL,
   FOREX_URL,
   GAINERS_URL,
+  INDONESIA_URL,
   LOSERS_URL,
   MACRO_URL,
   MARKETS_TOP_URL,
@@ -26,23 +27,32 @@ import {
   fmtBp,
   fmtBpRaw,
   fmtDate,
+  fmtEconomy,
   fmtGas,
+  fmtIndicator,
   fmtNum,
   fmtPct,
+  fmtPolicyRate,
   fmtPrice,
   fmtRate,
   fmtUsdCompact,
   fmtX,
+  fmtYear,
   fmtYield,
   toneOf,
   type CrHome,
   type CrMovers,
   type CrTrending,
+  type EconomyRow,
   type ForexEnvelope,
+  type IndicatorRow,
+  type IndonesiaEnvelope,
+  type IndonesiaQuote,
   type LlamaProtocols,
   type MacroEnvelope,
   type MarketsEnvelope,
   type NewsEnvelope,
+  type PolicyRateRow,
   type QuotesEnvelope,
   type ScoreboardBucket,
   type ScoreboardCatch,
@@ -295,6 +305,139 @@ function Bp({ v }: { v: number | null | undefined }) {
   return <span style={{ color: c }}>{fmtBp(v)}</span>;
 }
 
+/** Region order the policy-rate table renders in — curated, not alphabetical. */
+const POLICY_REGIONS = ['Americas', 'Europe', 'Asia-Pacific', 'Africa & Middle East'];
+
+/** Shared style for a table's group-divider row. */
+const groupRowStyle: React.CSSProperties = {
+  color: color.accent,
+  fontWeight: fontWeight.bold,
+  fontSize: fontSize[10],
+  letterSpacing: letterSpacing.wider,
+  paddingTop: space[10],
+};
+
+/**
+ * Central-bank policy rates (BIS).
+ *
+ * Grouped by region so a 33-row table stays scannable, and every row carries the
+ * observation date — a policy rate is a step function, so "3.875%" is meaningless
+ * without knowing when it was last set. An area BIS did not return stays `—`.
+ */
+function PolicyRateTable({ rows }: { rows: PolicyRateRow[] }) {
+  const regions = POLICY_REGIONS.filter(r => rows.some(x => x.region === r));
+  return (
+    <div style={{ overflowX: 'auto', marginTop: space[12] }}>
+      <Table style={{ fontSize: fontSize[11] }}>
+        <THead>
+          <TR style={theadRowStyle}>
+            <TH>Central bank</TH>
+            <TH align="right">Policy rate</TH>
+            <TH align="right">As of</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {regions.map(region => (
+            <Fragment key={region}>
+              <TR>
+                <TD colSpan={3} style={groupRowStyle}>{region.toUpperCase()}</TD>
+              </TR>
+              {rows.filter(r => r.region === region).map(r => (
+                <TR key={r.area} style={rowStyle}>
+                  <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>
+                    <span title={r.note}>{r.bank}</span>
+                  </TD>
+                  <TD align="right" style={{ color: color.text }}>{fmtPolicyRate(r.rate)}</TD>
+                  <TD align="right" style={{ color: color.textMuted }}>{r.date || DASH}</TD>
+                </TR>
+              ))}
+            </Fragment>
+          ))}
+        </TBody>
+      </Table>
+    </div>
+  );
+}
+
+/**
+ * US macro indicators (FRED).
+ *
+ * `value` arrives already transformed — a level, a year-over-year percent, or a
+ * period change — together with the `unit` that names which, so this prints it
+ * verbatim beside its observation date. Grouped by theme; nothing is recomputed.
+ */
+function IndicatorTable({ rows }: { rows: IndicatorRow[] }) {
+  const groups = Array.from(new Set(rows.map(r => r.group)));
+  return (
+    <div style={{ overflowX: 'auto', marginTop: space[12] }}>
+      <Table style={{ fontSize: fontSize[11] }}>
+        <THead>
+          <TR style={theadRowStyle}>
+            <TH>US indicator</TH>
+            <TH align="right">Value</TH>
+            <TH align="right">Observed</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {groups.map(group => (
+            <Fragment key={group}>
+              <TR>
+                <TD colSpan={3} style={groupRowStyle}>{group.toUpperCase()}</TD>
+              </TR>
+              {rows.filter(r => r.group === group).map(r => (
+                <TR key={r.id} style={rowStyle}>
+                  <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>
+                    <span title={r.note}>{r.name}</span>
+                  </TD>
+                  <TD align="right" style={{ color: color.text }}>{fmtIndicator(r.value, r.unit, r.decimals)}</TD>
+                  <TD align="right" style={{ color: color.textMuted }}>{fmtDate(r.date)}</TD>
+                </TR>
+              ))}
+            </Fragment>
+          ))}
+        </TBody>
+      </Table>
+    </div>
+  );
+}
+
+/**
+ * Global economy comparison (World Bank, annual).
+ *
+ * Each cell prints its OWN year: growth and inflation are published on different
+ * lags, so a single shared year column would be wrong for at least one of them.
+ */
+function EconomyTable({ rows }: { rows: EconomyRow[] }) {
+  return (
+    <div style={{ overflowX: 'auto', marginTop: space[12] }}>
+      <Table style={{ fontSize: fontSize[11] }}>
+        <THead>
+          <TR style={theadRowStyle}>
+            <TH>Economy</TH>
+            <TH align="right">GDP growth</TH>
+            <TH align="right">Inflation</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.map(r => (
+            <TR key={r.code} style={rowStyle}>
+              <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>{r.name}</TD>
+              <TD align="right" style={{ color: color.text }}>
+                {r.gdpGrowth === null ? DASH : `${r.gdpGrowth.toFixed(2)}%`}{' '}
+                <span style={{ color: color.textMuted }}>{fmtYear(r.gdpYear)}</span>
+              </TD>
+              <TD align="right" style={{ color: color.text }}>
+                {r.inflation === null ? DASH : `${r.inflation.toFixed(2)}%`}{' '}
+                <span style={{ color: color.textMuted }}>{fmtYear(r.inflationYear)}</span>
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+    </div>
+  );
+}
+
 /**
  * Macro — the US Treasury curve, the dollar index and the volatility indices.
  *
@@ -368,9 +511,121 @@ function MacroBoard() {
               </TBody>
             </Table>
           </div>
+          {data.policyRates.length > 0 && <PolicyRateTable rows={data.policyRates} />}
+          {data.indicators.length > 0 && <IndicatorTable rows={data.indicators} />}
+          {data.economies.length > 0 && <EconomyTable rows={data.economies} />}
           <p style={noteStyle}>
             yields in %, delta in basis points (Δ × 100) · curve spreads derived locally, not published upstream · {data.derived}
           </p>
+          {data.failed.length > 0 && (
+            <p style={noteStyle}>
+              withheld, not zero-filled: {data.failed.map(f => f.symbol).join(', ')}
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** The live half of the Indonesia board: rupiah crosses and IDX indices. */
+function IndonesiaLive({ quotes }: { quotes: IndonesiaQuote[] }) {
+  const groups = Array.from(new Set(quotes.map(q => q.group)));
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <Table style={{ fontSize: fontSize[11] }}>
+        <THead>
+          <TR style={theadRowStyle}>
+            <TH>Rupiah &amp; IDX</TH>
+            <TH align="right">Level</TH>
+            <TH align="right">Δ</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {groups.map(g => (
+            <Fragment key={g}>
+              <TR>
+                <TD colSpan={3} style={groupRowStyle}>{g.toUpperCase()}</TD>
+              </TR>
+              {quotes.filter(q => q.group === g).map(q => (
+                <TR key={q.symbol} style={rowStyle}>
+                  <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>
+                    <span title={q.note}>{q.name}</span>
+                  </TD>
+                  <TD align="right" style={{ color: color.text }}>{fmtNum(q.price, 2)}</TD>
+                  <TD align="right"><Change v={q.changePercent} /></TD>
+                </TR>
+              ))}
+            </Fragment>
+          ))}
+        </TBody>
+      </Table>
+    </div>
+  );
+}
+
+/**
+ * Indonesia — the rupiah and IDX (live), the BI-Rate, and the annual structure.
+ *
+ * Three horizons in one panel, each row labelled with the one it belongs to:
+ * quotes are live, the BI-Rate carries its BIS observation date, and every World
+ * Bank row prints the year it was published FOR. The annual block is deliberately
+ * not folded into the live table — a 2025 GDP figure sitting next to a live FX
+ * quote reads as if both were current, which is exactly the lie to avoid.
+ */
+function IndonesiaBoard() {
+  const { data, error, loading } = useJson<IndonesiaEnvelope>(INDONESIA_URL);
+  const economyGroups = data ? Array.from(new Set(data.economy.map(e => e.group))) : [];
+  return (
+    <div style={cardStyle}>
+      <h3 style={h3Style}>Rupiah · BI-Rate · economy</h3>
+      {error && <Banner variant="error">{error}</Banner>}
+      {loading && !error && <Loading label="reading the Indonesia board…" />}
+      {!error && data && (
+        <>
+          {data.quotes.length > 0 && <IndonesiaLive quotes={data.quotes} />}
+          <p style={{ ...noteStyle, marginTop: space[12] }} title={data.policy.note}>
+            {data.policy.label}{' '}
+            <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{fmtPolicyRate(data.policy.rate)}</span>
+            {data.policy.date ? <span> · as of {data.policy.date}</span> : null}
+          </p>
+          {economyGroups.length > 0 && (
+            <div style={{ overflowX: 'auto', marginTop: space[12] }}>
+              <Table style={{ fontSize: fontSize[11] }}>
+                <THead>
+                  <TR style={theadRowStyle}>
+                    <TH>Indonesia — annual</TH>
+                    <TH align="right">Value</TH>
+                    <TH align="right">Year</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {economyGroups.map(g => (
+                    <Fragment key={g}>
+                      <TR>
+                        <TD colSpan={3} style={groupRowStyle}>{g.toUpperCase()}</TD>
+                      </TR>
+                      {data.economy.filter(e => e.group === g).map(e => (
+                        <TR key={e.id} style={rowStyle}>
+                          <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>
+                            <span title={e.note}>{e.name}</span>
+                          </TD>
+                          <TD align="right" style={{ color: color.text }}>{fmtEconomy(e.value, e.kind, e.decimals)}</TD>
+                          <TD align="right" style={{ color: color.textMuted }}>{fmtYear(e.year)}</TD>
+                        </TR>
+                      ))}
+                    </Fragment>
+                  ))}
+                </TBody>
+              </Table>
+            </div>
+          )}
+          <p style={noteStyle}>
+            quotes live · BI-Rate from BIS (daily) · annual rows from the World Bank, each with its own year · {data.derived}
+          </p>
+          {data.failed.length > 0 && (
+            <p style={noteStyle}>withheld, not zero-filled: {data.failed.map(f => f.symbol).join(', ')}</p>
+          )}
         </>
       )}
     </div>
@@ -654,10 +909,16 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
           </div>
         </section>
 
-        {/* ---- 6b. macro: rates, dollar, volatility --------------------------- */}
+        {/* ---- 6b. global macro: rates, dollar, volatility, policy, indicators -- */}
         <section style={{ marginBottom: space[24] }}>
-          <h2 style={h2Style}>Macro</h2>
+          <h2 style={h2Style}>Global macro</h2>
           <MacroBoard />
+        </section>
+
+        {/* ---- 6c. Indonesia macro: rupiah, IDX, BI-Rate, structure ----------- */}
+        <section style={{ marginBottom: space[24] }}>
+          <h2 style={h2Style}>Indonesia macro</h2>
+          <IndonesiaBoard />
         </section>
 
         {/* ---- 7. research slices -------------------------------------------- */}

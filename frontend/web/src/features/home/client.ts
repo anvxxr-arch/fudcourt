@@ -205,6 +205,51 @@ export function fmtBpRaw(v: number | null | undefined, digits = 1): string {
   return `${v >= 0 ? '+' : ''}${v.toFixed(digits)} bp`;
 }
 
+/**
+ * A FRED indicator value with its own unit appended, e.g. `3.71% YoY`, `4.2%`,
+ * `+29K`, `197,000`, `0.45 pp`, `51.7 index`. The `unit` string comes from the
+ * route's spec, so the same formatter covers every indicator without a per-series
+ * branch here. Absent -> `—`.
+ */
+export function fmtIndicator(v: number | null | undefined, unit: string, decimals: number): string {
+  if (!isNum(v)) return DASH;
+  if (unit.startsWith('%')) return `${v.toFixed(decimals)}${unit}`;
+  if (unit === 'claims') return fmtNum(v, 0);
+  if (unit === 'K MoM') return `${v >= 0 ? '+' : ''}${v.toFixed(decimals)}K`;
+  return `${v.toFixed(decimals)} ${unit}`;
+}
+
+/**
+ * A World Bank value rendered by its `kind`: `usd`/`count` are compacted, the
+ * rest are plain. Absent -> `—`.
+ */
+export function fmtEconomy(v: number | null | undefined, kind: string, decimals: number): string {
+  if (!isNum(v)) return DASH;
+  switch (kind) {
+    case 'usd':
+      return fmtUsdCompact(v);
+    case 'count':
+      return fmtNum(v, 0);
+    case 'years':
+      return `${v.toFixed(decimals)} yr`;
+    case 'pct':
+      return `${v.toFixed(decimals)}%`;
+    default:
+      return v.toFixed(decimals);
+  }
+}
+
+/** A policy rate level (`3.875%`). Absent -> `—`. */
+export function fmtPolicyRate(v: number | null | undefined): string {
+  if (!isNum(v)) return DASH;
+  return `${v.toFixed(3).replace(/\.?0+$/, '')}%`;
+}
+
+/** An observation year, or `—`. Kept separate so a year is never confused for a value. */
+export function fmtYear(v: string | null | undefined): string {
+  return v && v.length > 0 ? v : DASH;
+}
+
 // ---------------------------------------------------------------------------
 // The rest of the landing page's families. Each is a public route that already
 // ships; the landing page only reads them, it adds no route of its own.
@@ -352,10 +397,121 @@ export type MacroQuote = Quote & {
   note: string;
 };
 
-/** `/api/market/macro` — the macro board's own envelope (a spread-carrying QuotesEnvelope). */
-export type MacroEnvelope = Omit<QuotesEnvelope, 'quotes'> & {
+/** One central bank's policy rate row (the macro family's BIS block). */
+export type PolicyRateRow = {
+  area: string;
+  bank: string;
+  region: string;
+  rate: number | null;
+  date: string | null;
+  note: string;
+};
+
+/**
+ * One US macro indicator row (FRED). `value` is already TRANSFORMED server-side —
+ * a level, a year-over-year percent, or a period change — so the panel prints it
+ * with `unit` rather than recomputing anything. `date` is the observation the
+ * value came from, which is why it is always shown next to it.
+ */
+export type IndicatorRow = {
+  id: string;
+  name: string;
+  group: string;
+  unit: string;
+  decimals: number;
+  value: number | null;
+  date: string | null;
+  note: string;
+};
+
+/** One country's annual growth/inflation pair (World Bank); year travels with value. */
+export type EconomyRow = {
+  code: string;
+  name: string;
+  gdpGrowth: number | null;
+  gdpYear: string | null;
+  inflation: number | null;
+  inflationYear: string | null;
+};
+
+/**
+ * A failed upstream item. The macro/indonesia families report `{symbol, reason}`
+ * objects rather than the bare symbol names the Yahoo-only families report, so a
+ * panel can say WHY a row is missing instead of just that it is.
+ */
+export type UpstreamFailure = { symbol: string; reason: string };
+
+/**
+ * `/api/market/macro` — the GLOBAL macro board.
+ *
+ * Four independent blocks: live Yahoo quotes, locally-derived curve spreads, BIS
+ * policy rates, FRED indicators, and a World Bank economy comparison. Any block
+ * can be empty (with its cause named in `failed[]`) without the others being
+ * withheld — which is why this is declared explicitly rather than as a
+ * spread-carrying `QuotesEnvelope`, whose `failed` is a `string[]`.
+ */
+export type MacroEnvelope = {
   quotes: MacroQuote[];
   spreads: MacroSpread[];
+  policyRates: PolicyRateRow[];
+  indicators: IndicatorRow[];
+  economies: EconomyRow[];
+  count: number;
+  failed: UpstreamFailure[];
+  upstream: string[];
+  userAgent: string;
+  asOf: number;
+  derived: string;
+};
+
+// ---------------------------------------------------------------------------
+// The Indonesia family — `/api/market/indonesia`.
+// ---------------------------------------------------------------------------
+
+/**
+ * The Indonesia board: LIVE rupiah crosses + IDX indices (Yahoo), the BI-Rate
+ * (BIS), and annual structural indicators (World Bank).
+ */
+export const INDONESIA_URL = '/api/market/indonesia';
+
+/** A rupiah/index row: a Yahoo quote plus the group it belongs to and a note. */
+export type IndonesiaQuote = Quote & { group: string; note: string };
+
+/** The BI-Rate row. `rate` is percent per annum; `date` is the BIS observation. */
+export type IndonesiaPolicy = {
+  area: string;
+  label: string;
+  rate: number | null;
+  date: string | null;
+  note: string;
+};
+
+/**
+ * One annual Indonesian indicator. `kind` drives formatting (`usd`/`count` are
+ * compacted), and `year` is MANDATORY next to the value — an annual figure shown
+ * without its year reads as current when it is not.
+ */
+export type IndonesiaEconomyRow = {
+  id: string;
+  name: string;
+  group: string;
+  kind: string;
+  decimals: number;
+  value: number | null;
+  year: string | null;
+  note: string;
+};
+
+export type IndonesiaEnvelope = {
+  quotes: IndonesiaQuote[];
+  policy: IndonesiaPolicy;
+  economy: IndonesiaEconomyRow[];
+  count: number;
+  failed: UpstreamFailure[];
+  upstream: string[];
+  userAgent: string;
+  asOf: number;
+  derived: string;
 };
 
 export type NewsItem = {
