@@ -216,7 +216,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'khala' && <KhalaPage />}
 
       <div style={{ marginTop: space[30], color: color.textMuted, fontSize: fontSize[11], borderTop: `1px solid ${color.border}`, paddingTop: space[10] }}>
-        Fox · FUDCOURT OS · auto-refresh 30s · data: Turso libsql + live RPC
+        Fox · FUDCOURT OS · auto-refresh 30s · data: Postgres + TimescaleDB · live RPC
       </div>
     </div>
   );

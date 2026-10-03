@@ -2,7 +2,7 @@
 name = "fudcourt-sync"
 version = "0.1.0"
 edition = "2021"
-description = "fudcourt Rust services: the live multi-chain balance sync (Turso `assets` table) and the /api/reconcile HTTP service (DR-014)"
+description = "fudcourt Rust services: the live multi-chain balance sync (the Postgres `assets` table) and the /api/reconcile HTTP service (DR-014)"
 
 # Single crate, no workspace. The Python original in tests/oracle/sync-live.py
 # is kept in place as the independent oracle (DR-005 pattern).
@@ -23,6 +23,9 @@ path = "src/bin/fudcourt-reconciled.rs"
 # binary itself only needs the runtime and timers.
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "net", "io-util"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+# The system of record is local Postgres (DR-040): loopback, so `NoTls`. The
+# sync's writes and the reconciler's reads both go through `persistence::db`.
+tokio-postgres = "0.7"
 # `preserve_order` keeps JSON member order as written. The TS route emits
 # `{wallet, asset, current, ...}` in object-literal order, and a diff of the two
 # bodies must not fire on member order -- RFC 8259 leaves order insignificant,

@@ -52,7 +52,7 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 - SG-1.2 ✅ Documentation set created in `docs/`:
   - T-1.2.1 ✅ `README.md` (index + repo map)
   - T-1.2.2 ✅ `PRD.md` (vision, personas, FR/NFR, out-of-scope)
-  - T-1.2.3 ✅ `SCHEMA.md` (Turso, Neon/Payload, API envelopes)
+  - T-1.2.3 ✅ `SCHEMA.md` (Postgres, Neon/Payload, API envelopes)
   - T-1.2.4 ✅ `TECH-STACK.md` (languages, frameworks, infra, RE stack)
   - T-1.2.5 ✅ `ANALYSIS.md` (architecture, reasoning log, evidence, risks K-1…K-9)
   - T-1.2.6 ✅ `RECOMMENDATIONS.md` (R-1…R-11 + anti-goals)
@@ -67,10 +67,13 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 > CI green (`.github/workflows/ci.yml`, run `36393193712`), mutation auth fail-closed
 > on all 7 write handlers. Remaining risks tracked in ANALYSIS §5.
 
-### SG-2.1 ✅ Schema versioning (R-1, K-1)
+### SG-2.1 ✅ Schema versioning (R-1, K-1) — **superseded by DR-040**
 - T-2.1.1 ✅ Dump live Turso schema → `frontend/web/db/schema.sql` (`scripts/tools/dump-schema.mjs`, 9 objects)
 - T-2.1.2 ✅ Committed + `SCHEMA.md` annotated (generated file vs code-derived tables)
 - T-2.1.3 ✅ Drift alarm: `dump-schema.mjs --check` (live == committed, exit 1 on diff)
+- **DR-040 (2026-10-03): the Turso dump, its generator and the whole `scripts/database/`
+  directory are deleted.** The schema is now `database/schema/pg-schema.sql`, hand-written
+  and applied by hand — there is no dump and no drift alarm.
 
 ### SG-2.2 ✅ CI / pre-push verification (R-2, K-2)
 - T-2.2.1 ✅ `scripts/githooks/pre-push` (`core.hooksPath` configured): tsc for touched app + py syntax
@@ -184,7 +187,8 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
   `sync-live.py` (now `require_env`, loud stop) **and scrubbed from 14 tracked
   `scripts/archive/*.mjs`** (node --check green; that directory was deleted in the 2026-09-29 structure pass, after this scrub) — the literal predates commit
   `3678b10`, i.e. **it is in git history → R1 rotation is mandatory** (human
-  step: Alchemy dashboard, procedure in SECRETS §5); dead Turso fallback that
+  step: Alchemy dashboard, procedure in SECRETS §5); the dead credential fallback (which
+  recovered a Turso token from source) that
   sliced quote-bytes out of `lib/db.ts` removed (could only produce garbage
   credentials). Verified: no `.env` ever committed (history scan), CI needs
   zero secrets, sync timer RC 0 after the fix. Parity verdict is honest:
@@ -471,7 +475,7 @@ DR-007's runtime clause only.
   `markets` 403 passthrough as documented); `/api/all` 401 JSON; `X-RateLimit-*`
   emitted; ccxt ticker 200 with a **71.2 s** cold sweep (Node parity, under the 90 s
   ceiling). Runtime identity proven by `/proc/<pid>/exe` → `~/.bun/bin/bun`.
-- SG-10.2 ✅ **Runtime risk checks**: `@libsql/client` (Turso) returns rows under Bun;
+- SG-10.2 ✅ **Runtime risk checks**: the DB client returns rows under Bun;
   the signed-session payload+signature is **byte-identical** to Node's, so the switch
   cannot invalidate live cookies.
 - SG-10.3 ✅ **Cutover**: `frontend/web/package.json` `start` → `bun --bun next start`;
@@ -592,7 +596,7 @@ program that direction names; the subgoals below are what this session measured.
   hostname, `check-contract.py` OK with a new **llama LLAMA_MODES parity** row, the
   sweep gained 5 strict-param checks, and `bun run build` + `bunx tsc --noEmit` stay 0.
 - SG-9.4 ✅ **Rust service: the live balance sync** — `backend/sync/` reproduces
-  `tests/oracle/sync-live.py` (Turso `assets` + share %, Alchemy EVM RPC, Solana RPC,
+  `tests/oracle/sync-live.py` (Postgres `assets` + share %, Alchemy EVM RPC, Solana RPC,
   Hyperliquid, the same "a failed RPC never becomes 0" rule), verified by running both
   binaries back to back and diffing the rows: **17 rows, zero symmetric difference, zero
   quantity mismatches and zero USD mismatches**, `NET WORTH: $170.46` on both (measured).
@@ -702,18 +706,19 @@ program that direction names; the subgoals below are what this session measured.
   way — by the reader's question: `product/`, `architecture/`, `operations/`, `records/`
   — with all markdown links rewritten and validated (**0 broken**).
 
-- SG-9.14 [OK] **Performance: local Postgres+TimescaleDB read model and a shared Valkey L2 ([DR-019](../records/DECISIONS.md), 2026-09-30)** -
-  measured both bottlenecks, then moved the data closer without changing a number.
-  - T-9.14.1 [OK] Baseline measured: Turso round trip 394 ms / 94 ms per SELECT;
+- SG-9.14 [OK] **Performance: local Postgres+TimescaleDB and a shared Valkey L2 ([DR-019](../records/DECISIONS.md), 2026-09-30) — the projection half is superseded by DR-040** -
+  measured both bottlenecks, then moved the data closer without changing a number. DR-040
+  later made that local Postgres the *only* store, so the mirror and its parity gate are gone.
+  - T-9.14.1 [OK] Baseline measured: remote round trip 394 ms / 94 ms per SELECT;
     ticker sweep 71-80 s cold, 0.048 s warm.
-  - T-9.14.2 [OK] `db/pg-schema.sql` mirrors `db/schema.sql` 1:1 on the existing
-    PostgreSQL 17 cluster (:5433) + TimescaleDB 2.30.1; `asset_history` and
+  - T-9.14.2 [OK] `db/pg-schema.sql` mirrored `db/schema.sql` 1:1 on the existing
+    PostgreSQL 17 cluster + TimescaleDB 2.30.1; `asset_history` and
     `price_history` hypertables.
-  - T-9.14.3 [OK] `platform/db/mirror.ts` projects Turso -> Postgres idempotently,
-    prunes replaced batches, translates `?`/`rowid`. Caught by parity: upserting
-    alone doubled net worth after a `DELETE FROM assets` sync.
-  - T-9.14.4 [OK] `scripts/verify/parity-pg.ts` (was `scripts/tools/parity-pg.ts`) gates the read model against Turso
-    -> **PARITY_OK 8/8**.
+  - T-9.14.3 [OK] `platform/db/mirror.ts` (now `platform/db/pg.ts`, DR-040) projected the
+    store -> Postgres idempotently, pruned replaced batches, translated `?`/`rowid`.
+    Caught by parity: upserting alone doubled net worth after a `DELETE FROM assets` sync.
+  - T-9.14.4 [OK] `scripts/verify/parity-pg.ts` (was `scripts/tools/parity-pg.ts`) gated the
+    read model -> **PARITY_OK 8/8**. (Both the projection and this gate were deleted by DR-040.)
   - T-9.14.5 [OK] `internal/cache` (valkey-go) L2 in llama/chainrank/news;
     `platform/cache/valkey.ts` (Bun native) for the ticker sweep. Both fail open.
   - T-9.14.6 [OK] Ticker staged serve-stale-while-revalidate (fresh 60 s, stale

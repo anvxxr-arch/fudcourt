@@ -28,7 +28,7 @@ const (
 	DirectionOut Direction = "out" // amount < 0
 )
 
-// Table defaults mirrored from database/schema/schema.sql + SCHEMA.md §1.1:
+// Table defaults mirrored from database/schema/pg-schema.sql + SCHEMA.md §1.1:
 // the real insert path fills these when the caller omits them, and a derived
 // view must agree with the source it mirrors.
 const (
@@ -38,7 +38,7 @@ const (
 )
 
 // Transaction is one user-visible history row, mirroring the real
-// `transactions` table (database/schema/schema.sql).
+// `transactions` table (database/schema/pg-schema.sql).
 //
 // Invariants (enforced by New): Date is a valid YYYY-MM-DD calendar date and
 // Event is non-empty (the table requires both on insert); AmountUSD is a

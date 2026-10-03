@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-fudcourt live multi-chain sync -> Turso `assets` table.
+fudcourt live multi-chain sync -> the local Postgres `assets` table (DR-040).
 
 LOCATION: this script is the ORACLE, and an oracle does not live inside the app
 it checks. The Phase-8 tooling move took it out of `frontend/web/scripts/tools/`
@@ -14,17 +14,17 @@ HARD RULES:
 
 ORACLE MODE (added for the Phase-6 cross-implementation gate; the default,
 flagless run is byte-for-byte the behaviour this script always had):
-  * `--oracle-record FILE`  run the live pipeline but write NO rows to Turso;
+  * `--oracle-record FILE`  run the live pipeline but write NO rows;
       instead record every upstream HTTP response body keyed by its request and
       dump that key->body map to FILE. This is how a replayable input capture is
       produced. `assets` is never touched.
   * `--oracle-inputs FILE`  replay a previously recorded capture: every upstream
       HTTP response is served from FILE, no network, and -- again -- no rows are
       written. The *projection* (the exact `assets` rows the run would have
-      written, byte-for-byte as they cross the Turso wire) is printed between
-      `#ASSETS-PROJECTION-BEGIN/END` markers for the gate to diff.
+      written) is printed between `#ASSETS-PROJECTION-BEGIN/END` markers for the
+      gate to diff.
 
-In both oracle modes the Turso write path is disabled, so a divergent or failed
+In both oracle modes the write path is disabled, so a divergent or failed
 comparison can never corrupt the live `assets` table (fail-safe by construction:
 the gate has no write code path at all).
 """
@@ -59,9 +59,9 @@ def require_env(name: str) -> str:
         )
     return v
 
-TURL = 'https://fud-balance-anvxxr.aws-ap-northeast-1.turso.io/v2/pipeline'
 HL_URL = 'https://api.hyperliquid.xyz/info'
 LLAMA_URL = 'https://coins.llama.fi/prices/current/'
+PG_DSN = ''  # set in main() from FUDCOURT_PG_URL
 
 # ---------- oracle seam (inert unless an --oracle-* flag is passed) ----------
 class OracleError(RuntimeError):
@@ -77,7 +77,7 @@ def canon(x) -> str:
 class Oracle:
     """record: live responses are captured to `data`; replay: they are served
     from it. `trace` accumulates every upstream request body so a test can prove
-    the gate issued no Turso writes."""
+    the gate issued no store writes."""
     def __init__(self, mode, path, trace_path):
         self.mode = mode            # 'record' | 'replay'
         self.path = path
@@ -132,25 +132,20 @@ def _http_get(url, timeout=25):
         return r.read().decode()
 
 def db(sql, args=None):
-    H = {'Authorization': f'Bearer {TURSO}', 'Content-Type': 'application/json'}
-    stmt = {'sql': sql}
-    if args is not None:
-        stmt['args'] = [{'type': 'text', 'value': str(a)} for a in args]
-    req = urllib.request.Request(TURL, headers=H, method='POST')
-    req.data = json.dumps({'requests': [{'type': 'execute', 'stmt': stmt}, {'type': 'close'}]}).encode()
-    with urllib.request.urlopen(req, timeout=30) as r:
-        j = json.loads(r.read())
-    res = j['results'][0]
-    if 'error' in res:
-        raise RuntimeError(f'DB: {res["error"]}')
-    rr = res['response']['result']
-    cols = [c['name'] for c in rr['cols']]
-    return [{c: (row[i]['value'] if row[i] else None) for i, c in enumerate(cols)} for row in rr['rows']]
+    """Run SQL against the local Postgres system of record (DR-040) and return
+    rows as dicts. One connection is reused for the process; every call commits,
+    so a DELETE-then-INSERT replace is durable statement by statement."""
+    conn = _pg_conn()
+    with conn.cursor() as cur:
+        cur.execute(sql, args) if args is not None else cur.execute(sql)
+        rows = [dict(zip([d[0] for d in cur.description], r)) for r in cur.fetchall()] if cur.description else []
+    conn.commit()
+    return rows
 
 # ---------- rpc: loud on failure ----------
 class RPCError(RuntimeError): pass
 def _redact(url):
-    return url.replace(TURSO_SECRET['alchemy'], '{ALCHEMY}') if TURSO_SECRET.get('alchemy') else url
+    return url.replace(SECRETS['alchemy'], '{ALCHEMY}') if SECRETS.get('alchemy') else url
 
 def rpc(url, method, params, tries=3):
     key = f'rpc|{_redact(url)}|{method}|{canon(params)}'
@@ -221,7 +216,19 @@ LLAMA_IDS = {
     'USDC': 'coingecko:usd-coin',
 }
 
-TURSO_SECRET = {}  # populated in main(); used only for redaction in fixture keys
+SECRETS = {}  # populated in main(); used only for redaction in fixture keys
+
+# ---------- Postgres (the system of record, DR-040) ----------
+_PG = None
+
+def _pg_conn():
+    """The one connection this process uses. psycopg2 is imported here, not at
+    module scope, so the oracle gate can import this file without the driver."""
+    global _PG
+    if _PG is None:
+        import psycopg2
+        _PG = psycopg2.connect(PG_DSN)
+    return _PG
 
 def prices():
     url = LLAMA_URL + ','.join(LLAMA_IDS.values())
@@ -237,11 +244,11 @@ def prices():
     out['MATIC'] = out['POL']
     return out
 
-# ---------- projection (the exact bytes that would cross the Turso wire) ----------
+# ---------- projection (the exact `assets` rows the run would write) ----------
 def projection(rows, tot):
-    """Return the list of `assets` rows exactly as they would be sent to Turso
-    (the six text args of the INSERT, rendered with `str(a)`), in write order,
-    plus the net worth the readback journal would print."""
+    """Return the list of `assets` rows exactly as they would be written (the
+    six args of the INSERT, rendered with `str(a)`), in write order, plus the net
+    worth the readback journal would print."""
     out = []
     stored = []
     for chain, owner, asset, qty, usd in rows:
@@ -267,7 +274,7 @@ def print_projection(rows, tot):
 # ---------- sync ----------
 def run_sync():
     alchemy = require_env('ALCHEMY_KEY')
-    TURSO_SECRET['alchemy'] = alchemy
+    SECRETS['alchemy'] = alchemy
     EVM = evm_registry(alchemy)
     P = prices()
     print('prices:', {k: round(v, 4) for k, v in P.items()})
@@ -344,15 +351,24 @@ def run_sync():
     return rows, tot
 
 def write_and_report(rows, tot):
-    """Flagless path only: write the rows to Turso and read them back. This is
-    the behaviour the systemd unit depends on and it is NOT touched in oracle
-    mode."""
-    db('DELETE FROM assets')
-    for chain, owner, asset, qty, usd in rows:
-        db('INSERT INTO assets (chain,asset,quantity,value_usd,share_pct,wallet,updated_at) '
-           "VALUES (?,?,?,?,?,?,datetime('now'))",
-           [chain, asset, round(qty, 10), round(usd, 4), round(usd / tot * 100, 2) if tot else 0, owner])
-    print('\n=== TURSO assets (LIVE) ===')
+    """Flagless path only: replace `assets` in the local Postgres system of
+    record and read it back. The replace is ONE transaction, so the board never
+    sees a half-written table; the `assets_snapshot` trigger (see
+    database/schema/pg-schema.sql) appends each row to `asset_history` as it
+    lands. Not touched in oracle mode."""
+    conn = _pg_conn()
+    with conn.cursor() as cur:
+        cur.execute('DELETE FROM assets')
+        for chain, owner, asset, qty, usd in rows:
+            cur.execute(
+                'INSERT INTO assets (chain,asset,quantity,value_usd,share_pct,wallet,updated_at) '
+                "VALUES (%s,%s,%s,%s,%s,%s,to_char(now() AT TIME ZONE 'UTC','YYYY-MM-DD HH24:MI:SS'))",
+                (chain, asset, round(qty, 10), round(usd, 4), round(usd / tot * 100, 2) if tot else 0, owner))
+        # 90-day retention, the same window the schema documents.
+        cur.execute("DELETE FROM asset_history WHERE ts < now() - interval '90 days'")
+        cur.execute("DELETE FROM price_history WHERE ts < now() - interval '90 days'")
+    conn.commit()
+    print('\n=== POSTGRES assets (LIVE) ===')
     s = 0
     for a in db('SELECT wallet,chain,asset,quantity,value_usd,share_pct FROM assets ORDER BY value_usd DESC'):
         s += float(a['value_usd'])
@@ -360,7 +376,7 @@ def write_and_report(rows, tot):
     print(f'\nNET WORTH: ${round(s, 2)}')
 
 def main(argv=None):
-    global ORACLE, TURSO
+    global ORACLE, PG_DSN
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument('--oracle-record', metavar='FILE')
     ap.add_argument('--oracle-inputs', metavar='FILE')
@@ -375,11 +391,11 @@ def main(argv=None):
 
     if ORACLE is None:
         # ---- flagless: exactly the original behaviour ----
-        TURSO = require_env('TURSO_AUTH_TOKEN')
+        PG_DSN = require_env('FUDCOURT_PG_URL')
         rows, tot = run_sync()
         write_and_report(rows, tot)
     else:
-        # ---- oracle: projection only, Turso is never written ----
+        # ---- oracle: projection only, the store is never written ----
         rows, tot = run_sync()
         print_projection(rows, tot)
         ORACLE.save()

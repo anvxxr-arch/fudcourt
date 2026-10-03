@@ -20,7 +20,7 @@
 > Sources cross-checked read-only (2026-10-01) against: `ARCHITECTURE.md` §2 (System picture),
 > §4 (Data families), §8b (CEX Executor runtime); `TECH-STACK.md` §2 (Frameworks & runtimes),
 > §4 (Infrastructure), §5 (Market-data acquisition stack), §6 (External data sources),
-> “frontend/web layout (DR-018)”, “Data layer (DR-019)”; `SCHEMA.md` §1 (Turso), §2 (Neon/Payload),
+> “frontend/web layout (DR-018)”, “Data layer (DR-040)”; `SCHEMA.md` §1 (Postgres), §2 (Neon/Payload),
 > §3 (API envelope contract). Cited inline where used; no factual divergence found.
 
 ## 0. Working-tree state (reported, never discarded)
@@ -126,8 +126,9 @@ Environmental limitations (recorded as environmental, NOT failures — each bloc
   skip themselves; offline they consume recorded fixtures via `FUDCOURT_DATA_FIXTURES_DIR`).
   Parity tests (`internal/research/paritytest`, `internal/research/cryptorank/{parity,slice_semantics}_test.go`)
   run offline against golden envelopes and are included in the `go test ./...` PASS above.
-- CI's "Reconcile contract vs the Rust service" job step: exact gate `TURSO_AUTH_TOKEN` set
-  (unset ⇒ the step warns and skips; the live gate was not exercised locally).
+- CI's "Reconcile contract vs the Rust service" job step: it now starts its own TimescaleDB
+  service container, applies `database/schema/pg-schema.sql`, seeds rows and needs **no secret**
+  (the old `TURSO_AUTH_TOKEN` gate is gone — DR-040).
 - ~~`bun run verify:executor`: exact gate `FUDCOURT_EXECUTOR_MASTER_KEY` = 64 hex chars~~
   **RESOLVED 2026-10-01** — a dev key was generated into the gitignored
   `frontend/web/.env.local` and the gate now runs: **`ALL PAPER-MODE CHECKS PASSED (§127)`**
@@ -167,19 +168,17 @@ $ curl -sS -m 5 http://127.0.0.1:3102/healthz          # exit 0
 
 $ systemctl --user list-unit-files 'fudcourt-*' --no-pager --no-legend   # exit 0
 fudcourt-data.service   enabled  enabled
-fudcourt-pgload.service     static   -
 fudcourt-reconciled.service enabled  enabled
 fudcourt-sync.service       disabled enabled
 fudcourt-web.service        enabled  enabled
-fudcourt-pgload.timer       enabled  enabled
+# (the retired `fudcourt-pgload.{service,timer}` units were removed by DR-040)
 fudcourt-sync.timer         enabled  enabled
 
 $ systemctl --user list-units 'fudcourt-*' --no-pager --no-legend        # exit 0
   fudcourt-data.service   loaded active running FUD Court fudcourt-data (Go acquisition sidecar: CryptoRank) :3101
   fudcourt-reconciled.service loaded active running FUD Court reconcile (Rust /api/reconcile service) :3102
   fudcourt-web.service        loaded active running FUD Court web (Next.js portfolio OS) :3100
-  fudcourt-pgload.timer       loaded active waiting Project Turso into the local Postgres read model every 60s (DR-019)
-  fudcourt-sync.timer         loaded active waiting Run FUD Court live balance sync every 5 minutes
+  fudcourt-sync.timer         loaded active waiting Run Fud Court live balance sync every 5 minutes
 
 $ systemctl list-unit-files 'fudcourt-*' --no-pager --no-legend          # system scope: no output, exit 1
 ```
@@ -231,14 +230,13 @@ Plus `sitemap.ts`, `robots.ts`, `globals.css`, root `layout.tsx`.
 
 ## 4. Database schemas (`database/schema/*.sql` — moved here from `frontend/web/db/`, Phase 2 of the domain restructure, 2026-10-01)
 > Amended 2026-10-01: `frontend/web/db/` no longer exists; the schemas live at `database/schema/`
-> per `database/README.md`. File semantics unchanged (table/DDL ownership is documented at
-> top level in `docs/architecture/SCHEMA.md` §1–§2; `schema.sql` remains the Turso
-> source-of-truth dump, DR-019).
+> per `database/README.md`. **Amended 2026-10-03 (DR-040):** the SQLite dump `schema.sql`,
+> its generator and the whole `scripts/database/` directory are deleted; `pg-schema.sql` is
+> the hand-written DDL for the single Postgres system of record (`docs/architecture/SCHEMA.md` §1).
 
 | File | Dialect / role | Objects |
 |---|---|---|
-| `schema.sql` | SQLite (Turso) source-of-truth | `accounts`, `assets`, `journal`, `ledger`, `trades`, `transactions`, `venues`, `wallets` (+ `sqlite_sequence`) |
-| `pg-schema.sql` | Postgres read model (projected from Turso by `frontend/web/scripts/tools/pg-load.ts`, DR-019) | same 8 tables + `asset_history` (indexes `asset_history_asset_ts`, unique snapshot), `price_history` (unique `price_history_symbol_ts_source`) |
+| `pg-schema.sql` | Postgres system of record (hand-written, DR-040) | `accounts`, `assets`, `journal`, `ledger`, `trades`, `transactions`, `venues`, `wallets` + `asset_history` (indexes `asset_history_asset_ts`, unique snapshot, the `assets_snapshot` trigger), `price_history` (unique `price_history_symbol_ts_source`), `canonical_reference` + `canonical_reference_miss` |
 | `executor-schema.sql` | Postgres `executor` schema (sole owner of the DDL; mirrored in `src/platform/executor/store.ts` `EXECUTOR_DDL` and applied via `ensureExecutorSchema`, and — added `8d87df1` — embedded at `backend/workers/executor/internal/repository/schema/executor-schema.sql`, applied by the Go `repository.EnsureSchema` at `cmd/executor` startup) | `executor.exchange_accounts`, `executor.executions`, `executor.execution_plans`, `executor.child_orders`, `executor.fills`, `executor.execution_events`, `executor.balance_snapshots`, `executor.positions_snapshots`, `executor.risk_profiles`, `executor.audit_logs` (each with the indexes named in the file) |
 
 Ownership today (feature → tables):
@@ -247,8 +245,9 @@ Ownership today (feature → tables):
   `trades`, `journal`, `ledger`
 - **markets/ticker** (web `src/features/ticker|markets/*`): `assets`, `venues`, `asset_history`, `price_history`
 - **executor** (web `src/platform/executor/*`): all `executor.*`
-- **analytics/sync pipeline**: `assets` rows are written by `backend/sync` (Turso), then
-  projected to Postgres by `pg-load.ts` (web scripts) — ownership is split across two apps today.
+- **analytics/sync pipeline**: `assets` rows are written straight to Postgres by
+  `tests/oracle/sync-live.py` (the deployed sync) or `backend/sync` (Rust, not deployed);
+  `asset_history` is appended by the `assets_snapshot` trigger, not by app code (DR-040).
 - **DDL byte-identity (Phase-5 anchor): PASS** — `store.ts` `EXECUTOR_DDL` is asserted
   byte-identical (normalized) to `database/schema/executor-schema.sql` by
   `tests/integration/executor/executor-store-tests.ts` §59 ("no silent drift"); suite 41/41 green 2026-10-01
@@ -359,11 +358,11 @@ live tests behind `FUDCOURT_DATA_LIVE=1`. `bin/fudcourt-data` is the built binar
 Two binaries sharing `src/lib.rs`, grouped by event-pipeline stage (a directory exists only where a
 module has moved into it):
 
-- `src/main.rs` → **`fudcourt-sync`**: live multi-chain balance sync → Turso `assets` table.
-  Pipeline `src/streams/sync.rs` (prices → balances → Hyperliquid → print → Turso), ported from
+- `src/main.rs` → **`fudcourt-sync`**: live multi-chain balance sync → Postgres `assets` table.
+  Pipeline `src/streams/sync.rs` (prices → balances → Hyperliquid → print → Postgres), ported from
   `tests/oracle/sync-live.py` with byte-identical output rules (`pyfmt.rs`
-  Python-identical number formatting — crate root, cross-cutting; `src/persistence/db.rs` Turso
-  HTTP pipeline client with the same wire protocol;
+  Python-identical number formatting — crate root, cross-cutting; `src/persistence/db.rs`
+  `tokio-postgres` client reading `FUDCOURT_PG_URL`;
   `jsonrpc.rs` retry/honesty rules — a failed RPC call never becomes a zero balance;
   `chains.rs` chain/wallet/price-oracle registry transcribed from the Python original). The
   Python-parity oracle replay seam (`oracle.rs`) also stays at the crate root.
@@ -384,10 +383,9 @@ variants in `infrastructure/systemd/` (`fudcourt-sync-rust.*`) are the parallel 
 |---|---|---|---|
 | `infrastructure/systemd/fudcourt-web.service` | `/home/dwizzy/fudcourt/frontend/web` | `bun --bun …/next start -p 3100` | Next.js web :3100 |
 | `infrastructure/systemd/fudcourt-executor-worker.service` | `…/frontend/web` | `bun …/frontend/web/scripts/executor/worker.ts` | in-frontend executor worker |
-| `infrastructure/systemd/fudcourt-pgload.service` (+ `.timer`, 60s) | `…/frontend/web` | `bun run …/scripts/tools/pg-load.ts` | Turso → Postgres read model (DR-019) |
-| `infrastructure/systemd/fudcourt-sync.service` (+ `.timer`, 5 min) | `…/frontend/web` | `python3 …/tests/oracle/sync-live.py`, `ExecStartPost: bun run pg-load.ts` | **Python** balance sync → Turso |
+| `infrastructure/systemd/fudcourt-sync.service` (+ `.timer`, 5 min) | `…/frontend/web` | `python3 …/tests/oracle/sync-live.py` | **Python** balance sync → Postgres (the deployed sync) |
 | `infrastructure/systemd/fudcourt-data.service` | `…/backend/data` | `…/backend/data/bin/fudcourt-data` | Go acquisition sidecar :3101 |
-| `infrastructure/systemd/fudcourt-sync-rust.service` (+ `.timer`, 5 min) | `…/backend/sync` | `…/backend/sync/target/release/fudcourt-sync` | **Rust** balance sync → Turso |
+| `infrastructure/systemd/fudcourt-sync-rust.service` (+ `.timer`, 5 min) | `…/backend/sync` | `…/backend/sync/target/release/fudcourt-sync` | **Rust** balance sync → Postgres (**uninstalled replacement** for the Python sync) |
 | `infrastructure/systemd/fudcourt-reconciled.service` | `…/backend/sync` | `…/backend/sync/target/release/fudcourt-reconciled` | Rust reconcile service :3102 |
 
 Ingress: `fc.dwirijal.my.id` via Cloudflare Tunnel to the loopback origin (DR-002, fail-closed).
@@ -396,7 +394,7 @@ Ingress: `fc.dwirijal.my.id` via Cloudflare Tunnel to the loopback origin (DR-00
 
 | Job | Working dir | Steps |
 |---|---|---|
-| `web` | `frontend/web` | bun install --frozen-lockfile → check-contract → check-deploy → check-structure → `tsc --noEmit` → `test:shapers` → live reconcile harness vs Rust `fudcourt-reconciled` (needs `TURSO_AUTH_TOKEN`, warns+skips otherwise; builds `backend/sync` from the same commit) → `bun run build` |
+| `web` | `frontend/web` | bun install --frozen-lockfile → check-contract → check-deploy → check-structure → `tsc --noEmit` → `test:shapers` → live reconcile harness vs Rust `fudcourt-reconciled` (the `reconcile-live` job starts its own TimescaleDB container, applies `database/schema/pg-schema.sql` and needs no secret — DR-040) → `bun run build` |
 | `fudcourt-data` | `backend/data` | `go build ./...` → `go vet ./...` → `go test ./...` (Go 1.24.1) |
 | `sync` | `backend/sync` | `cargo build --release --bins` → `cargo test --release` (stable) |
 | `hooks` | repo root | `bash -n scripts/githooks/pre-push` |
@@ -416,5 +414,5 @@ Toolchain pins: Node 22 runtime, Bun 1.4.2, Go 1.24.1, Rust stable.
 - **Web owns execution concerns** that the target architecture assigns to Go services:
   risk sizing, exchange adapters/signing (`exchange.ts` `CcxtLike`, `masterKeyFromEnv` encrypted
   keys in `store.ts`), the worker loop, distributed lock, and `executor.*` persistence.
-- No cross-service source imports exist (Go ↔ Rust ↔ TS are coupled only through HTTP, Turso,
-  and the shared `.sql` files).
+- No cross-service source imports exist (Go ↔ Rust ↔ TS are coupled only through HTTP, the
+  shared Postgres `public` tables, and the shared `.sql` files).

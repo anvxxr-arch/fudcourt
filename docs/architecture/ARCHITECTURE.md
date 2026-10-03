@@ -57,7 +57,7 @@ origin; DR-002 — no third-party deploy target, ever).
    │  src/app/(frontend)/api/* = 36: 33 data (families §4 + admin §5 + executor)│
    │                            + 3 auth                                     │
    └──────┬────────────────────────────────────────────┬──────────────────────┘
-          │ Turso (treasury, synced every 5 min        │ keyless upstreams:
+          │ Postgres (treasury, synced every 5 min     │ keyless upstreams:
           │ by fudcourt-sync.timer → backend/sync,     │ chainrank.fyi RE,
           │ the Rust port; sync-live.py = oracle)      │ api.llama.fi (served by
           ▼                                            │ fudcourt-data §4 llama),
@@ -108,7 +108,7 @@ verbatim proxy. Three families, three clients, three caches: cryptorank needs th
 browser fingerprint, khala and llama need nothing but `net/http`.
 
 The 5-minute treasury sync is now also a Rust service, `backend/sync` ([DR-010](../records/DECISIONS.md)):
-same Turso pipeline, same Alchemy/Solana/Hyperliquid reads, verified row-for-row
+same Postgres pipeline, same Alchemy/Solana/Hyperliquid reads, verified row-for-row
 against the Python oracle `sync-live.py`, which stays installed as the rollback.
 
 ### 2a. `backend/api` package layout (as-built, 2026-10-01)
@@ -191,7 +191,7 @@ reverse-engineering or public feeds only). Each family: one route, one `src/feat
 
 | Family | Upstream | Route(s) | Contract | Verifier | Trust |
 |---|---|---|---|---|---|
-| **treasury** | Turso DB (own data) | `/api/all`, `/coins`, `/wallets`, `/reconcile`, `/transactions(+/[id])` | `src/platform/db/client.ts` (env-ref only); `/reconcile` is a proxy to the **Rust** `fudcourt-reconciled` `:3102` (DR-014) | `check-contract.py` (mutation-guard) + `sync-live.py` fail-loud + `verify-reconcile.py` (28 checks incl. live TS↔Rust parity) | INTERNAL |
+| **treasury** | Postgres `public` (own data, DR-040) | `/api/all`, `/coins`, `/wallets`, `/reconcile`, `/transactions(+/[id])` | `src/platform/db/client.ts` (env-ref only); `/reconcile` is a proxy to the **Rust** `fudcourt-reconciled` `:3102` (DR-014) | `check-contract.py` (mutation-guard) + `sync-live.py` fail-loud + `verify-reconcile.py` (28 checks incl. live TS↔Rust parity) | INTERNAL |
 | **cryptorank** | cryptorank.io SSR (RE) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/cryptorank` (28 modes, thin proxy to `fudcourt-data`) | runtime: `backend/data/internal/research/cryptorank` · TS mirror `src/features/cryptorank/client.ts` + `src/features/cryptorank/shapers.ts` | `verify-cryptorank.py` 244 checks (oracle `tests/oracle/cr_fetch.py`) · 3-gate · shaper fixtures 56/56 | GATED |
 | **chainrank** | chainrank.fyi — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/chainrank` (2 modes, thin verbatim proxy to `fudcourt-data`) | runtime: **`backend/data/internal/research/chainrank`** (mode table, pagination relayed verbatim into the upstream URL and the cache key, explicit 32-entry cache ceiling, shape check); `src/features/chainrank/client.ts` is the typing/display mirror + the documented write surface | `verify-chainrank.py` 50 checks (incl. the relay matrix vs real upstream) | GATED |
 | **llama** | api.llama.fi — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/llama` (3 modes, thin proxy to `fudcourt-data`) | runtime: **`backend/data/internal/research/llama`** (mode table, strict `top`/`days`, in-process 15 s TTL cache + single-flight, sort/trim); `src/features/llama/client.ts` is the typing/display mirror | `verify-llama.py` 51 checks (incl. anti-fake parity against a direct `/v2/chains`) | GATED |
@@ -382,7 +382,7 @@ USDT linear perps) and the funds never leave the exchange. Records:
 | Web app + API | `frontend/web`, `:3100`, `src/app/(frontend)/api/executor/**` | one origin, one session, one tier gate (`/executor` and `/api/executor` are `team` — the same tier as the treasury surface it sits beside) |
 | Worker service | `frontend/web/scripts/executor/worker.ts`, unit `infrastructure/systemd/fudcourt-executor-worker.service` (Bun, versioned in-repo) | **independent of `fudcourt-web`**: closing the browser or restarting the web unit never stops an execution |
 | Valkey lease | `src/platform/executor/lock.ts` | one worker owns one execution; **FAIL-CLOSED** — a lock that fails open means duplicate orders, so any Valkey error makes `acquire` false and the worker does not trade (the inverse of the JSON cache in `platform/cache/valkey.ts`, which fails open) |
-| Postgres store | `src/platform/executor/store.ts` → `executor` schema | its own schema, never `public`: the treasury read model is pruned wholesale by the Turso→Postgres mirror, and the executor writes live data. No migration runner — the embedded DDL is asserted byte-identical to `database/schema/executor-schema.sql`. **Both runtimes apply it at startup** (added `8d87df1`): TS `ensureExecutorSchema()` and Go `repository.EnsureSchema` (`backend/workers/executor/internal/repository/schema.go`, before the worker/API serve, fatal on failure), each with its own drift guard (TS §59 normalized; Go `TestEmbeddedSchemaMatchesTracked` byte-exact) |
+| Postgres store | `src/platform/executor/store.ts` → `executor` schema | its own schema, never `public`: the executor owns its writes and the treasury tables belong to the sync, so neither prunes the other's rows. No migration runner — the embedded DDL is asserted byte-identical to `database/schema/executor-schema.sql`. **Both runtimes apply it at startup** (added `8d87df1`): TS `ensureExecutorSchema()` and Go `repository.EnsureSchema` (`backend/workers/executor/internal/repository/schema.go`, before the worker/API serve, fatal on failure), each with its own drift guard (TS §59 normalized; Go `TestEmbeddedSchemaMatchesTracked` byte-exact) |
 | Adapters | `src/platform/executor/exchange.ts` | one translation layer per venue; paper and live implement the SAME interface, so the worker has a single code path |
 
 **Determinism, ownership and the switch.** Time comes from the tick clock and

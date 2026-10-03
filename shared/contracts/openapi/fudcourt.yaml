@@ -4425,7 +4425,7 @@ components:
       type: object
       additionalProperties: true
       required: [address, chain]
-      description: 'A wallets-table row passed through raw from Turso. Every SELECTED column key is always present (the Rust reader inserts each column with `Value::Null` when a cell is absent), but every VALUE is nullable — including `address`/`chain` — so presence is guaranteed and non-null is not.'
+      description: 'A wallets-table row passed through raw from Postgres. Every SELECTED column key is always present (the Rust reader inserts each column with `Value::Null` when a cell is absent), but every VALUE is nullable — including `address`/`chain` — so presence is guaranteed and non-null is not.'
       properties:
         address: { type: string, nullable: true }
         label: { type: string, nullable: true }
@@ -4444,8 +4444,8 @@ components:
     # ==================================================================
     # Treasury read model (Postgres read-side, DR-019) — the row shapes the
     # `/api/{all,coins,wallets,transactions}` handlers return verbatim.
-    # Columns mirror `database/schema/pg-schema.sql` exactly (migrated 1:1
-    # from `database/schema/schema.sql`); rows are UNVALIDATED at the
+    # Columns mirror `database/schema/pg-schema.sql` exactly; rows are
+    # UNVALIDATED at the
     # boundary, so a nullable column is `nullable: true` here, never omitted
     # and never coerced to 0.
     # ==================================================================

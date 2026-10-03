@@ -1,4 +1,4 @@
-//! fudcourt live multi-chain balance sync -> Turso `assets` table.
+//! fudcourt live multi-chain balance sync -> the Postgres `assets` table (DR-040).
 //!
 //! HARD RULES (inherited from tests/oracle/sync-live.py, which
 //! stays in place as the oracle this binary is measured against):
@@ -12,7 +12,7 @@ use fudcourt_sync::oracle;
 use fudcourt_sync::streams::sync;
 
 // The pipeline stages and shared primitives come from the library
-// (`fudcourt_sync`): the Turso client from `persistence`, the sync pipeline
+// (`fudcourt_sync`): the Postgres client from `persistence`, the sync pipeline
 // from `streams`, and the Python-parity oracle replay seam at the crate root.
 
 use std::path::{Path, PathBuf};
@@ -132,16 +132,16 @@ async fn main() {
     }
     load_env();
     // Oracle mode needs no credential: every upstream call is served from the
-    // capture and the Turso write path is never reached. The live (flagless)
+    // capture and the store's write path is never reached. The live (flagless)
     // path still requires both tokens (a missing credential STOPs the run).
     let env = if oracle::active() {
         sync::Env {
-            turso_token: std::env::var("TURSO_AUTH_TOKEN").unwrap_or_default(),
+            pg_dsn: std::env::var("FUDCOURT_PG_URL").unwrap_or_default(),
             alchemy_key: std::env::var("ALCHEMY_KEY").unwrap_or_default(),
         }
     } else {
         sync::Env {
-            turso_token: require_env("TURSO_AUTH_TOKEN"),
+            pg_dsn: require_env("FUDCOURT_PG_URL"),
             alchemy_key: require_env("ALCHEMY_KEY"),
         }
     };

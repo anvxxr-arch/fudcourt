@@ -4,7 +4,7 @@
 //! *request key* to the raw upstream HTTP response body. In replay mode every
 //! upstream call this binary makes (price oracle, JSON-RPC, Hyperliquid) is
 //! served from that map instead of the network, so the Rust producer and the
-//! Python oracle are driven by byte-identical inputs. The Turso write path is
+//! Python oracle are driven by byte-identical inputs. The store's write path is
 //! never reached in oracle mode (see `sync.rs`), so a divergent or failed run
 //! cannot touch the live `assets` table.
 //!
@@ -78,14 +78,14 @@ pub fn replay(key: &str) -> Option<Result<String, String>> {
 }
 
 /// Append a key to the request trace in oracle mode (used by the "no writes"
-/// assertion: a real Turso write would appear here and must not).
+/// assertion: a real write would appear here and must not).
 pub fn note(key: &str) {
     if let Some(o) = ORACLE.lock().unwrap().as_mut() {
         o.trace.push(key.to_string());
     }
 }
 
-/// Flush the request trace so a test can assert no Turso write was issued.
+/// Flush the request trace so a test can assert no write was issued.
 pub fn save_trace() {
     if let Some(o) = ORACLE.lock().unwrap().as_ref() {
         if let Some(p) = &o.trace_path {

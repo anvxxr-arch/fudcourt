@@ -1,5 +1,5 @@
 [Unit]
-Description=FUD Court live multi-chain balance sync -> Turso (Rust)
+Description=FUD Court live multi-chain balance sync -> Postgres (Rust)
 Documentation=file:///home/dwizzy/fudcourt/backend/sync/src/main.rs
 Documentation=file:///home/dwizzy/fudcourt/tests/oracle/sync-live.py
 After=network-online.target

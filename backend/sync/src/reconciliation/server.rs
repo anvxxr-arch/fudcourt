@@ -140,7 +140,7 @@ pub async fn route(db: &Db, method: &str, path: &str) -> (u16, Value) {
     match path {
         "/healthz" => {
             // The row count is a real liveness signal: it proves the service can
-            // reach Turso, not merely that the process is up.
+            // reach Postgres, not merely that the process is up.
             match reconcile::load(db).await {
                 Ok((rows, _summary, _wallets)) => (
                     200,

@@ -21,12 +21,10 @@
 //!   anything else          -> 404
 //!   any non-GET/HEAD verb  -> 405
 //!   a database failure     -> 500 {"error":"<real reason>"}  (never a partial board)
-//!   no TURSO_AUTH_TOKEN    -> refuses to START (a missing credential must be
+//!   no FUDCOURT_PG_URL     -> refuses to START (a missing credential must be
 //!                             loud, the same rule the sync binary obeys)
 
 use std::path::{Path, PathBuf};
-
-use reqwest::Client;
 
 // The modules live in the crate's library, shared with `fudcourt-sync`.
 use fudcourt_sync::persistence::db;
@@ -67,8 +65,8 @@ fn load_env() {
     }
 }
 
-fn token() -> Option<String> {
-    std::env::var("TURSO_AUTH_TOKEN")
+fn pg_dsn() -> Option<String> {
+    std::env::var("FUDCOURT_PG_URL")
         .ok()
         .filter(|t| !t.is_empty())
 }
@@ -77,17 +75,19 @@ fn token() -> Option<String> {
 async fn main() {
     load_env();
     let addr = std::env::var("RECONCILE_ADDR").unwrap_or_else(|_| "127.0.0.1:3102".to_string());
-    let Some(token) = token() else {
+    let Some(dsn) = pg_dsn() else {
         // Loud, at startup: a service that silently reconciles against nothing
         // would answer `{rows: []}` and look healthy.
-        eprintln!("fudcourt-reconciled: refusing to start: TURSO_AUTH_TOKEN is not set");
+        eprintln!("fudcourt-reconciled: refusing to start: FUDCOURT_PG_URL is not set");
         std::process::exit(2);
     };
-    let http = Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .expect("reqwest client");
-    let db = db::Db::new(token, http);
+    let db = match db::Db::connect(&dsn).await {
+        Ok(db) => db,
+        Err(e) => {
+            eprintln!("fudcourt-reconciled: refusing to start: {e}");
+            std::process::exit(2);
+        }
+    };
     if let Err(e) = server::serve(&addr, db).await {
         eprintln!("fudcourt-reconciled: {e}");
         std::process::exit(1);

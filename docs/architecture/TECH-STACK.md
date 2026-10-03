@@ -51,18 +51,19 @@ blog in); the repo root `package.json` declares **no dependencies** — scripts 
 | **Bun** | **1.4.2** | installer, task runner and lockfile owner for the app (`bun install --frozen-lockfile`, `bun run …`, `bunx`) *and*, since [DR-008](../records/DECISIONS.md), the **runtime of `frontend/web`**: `fudcourt-web.service` is `bun --bun …/next start -p 3100` (measured: the :3100 process's `/proc/<pid>/exe` is `~/.bun/bin/bun`), and `package.json`'s `start` is `bun --bun next start`. Equivalence evidence — build RC=0, same `BUILD_ID`, 15/15 pages, 401 gates, `X-RateLimit-*`, byte-identical `/api/khala` body, byte-identical session signature, ccxt cold sweep 71.2 s (Node parity) — is in DR-008; the toolchain half is [DR-007](../records/DECISIONS.md) |
 | Python | 3.12 (local `python3 -V` = 3.12.14) | harnesses + verification oracles (`cr_fetch.py`, `sync-live.py`). Still the language of the verify loop; no longer a runtime path (DR-005 moved the cryptorank fetch into Go, PLAN G9 SG-9.4 moved the balance sync into Rust) |
 | **Backend framework** | **none, deliberately** ([DR-016](../records/DECISIONS.md)) | Go: stdlib `net/http` + `http.NewServeMux` (no gin/echo/chi/fiber); Rust: `tokio::net` + hand-rolled bounded HTTP/1.1 framing (zero new crates). The only HTTP client library in the backend is `tls-client`, confined to `backend/data/internal/research/cryptorank` where the Cloudflare ClientHello-fingerprint requirement lives — the other Go packages use plain `net/http`, all of them now through one shared, tuned outbound `http.Transport` in `backend/data/platform/httpx` (raised per-host idle-connection cap, bounded dial, explicit TLS 1.2 floor, HTTP/2 kept on) rather than the stdlib default |
-| **Rust** | **1.98.1** (`cargo`) | `backend/sync` — two binaries: the live multi-chain balance sync -> Turso `assets` (Alchemy EVM RPC, Solana RPC, Hyperliquid, `coins.llama.fi` prices), parity-checked against the Python oracle; and `fudcourt-reconciled`, the `/api/reconcile` HTTP service (**zero new crates**, `tokio::net` framing) whose output is diffed byte-for-byte against the TS shaper. Versioned units at `infrastructure/systemd/fudcourt-{sync-rust,reconciled}.service` |
+| **Rust** | **1.98.1** (`cargo`) | `backend/sync` — two binaries: the live multi-chain balance sync -> Postgres `assets` (built, **not deployed**: the Python oracle is the deployed sync) (Alchemy EVM RPC, Solana RPC, Hyperliquid, `coins.llama.fi` prices), parity-checked against the Python oracle; and `fudcourt-reconciled`, the `/api/reconcile` HTTP service (**zero new crates**, `tokio::net` framing) whose output is diffed byte-for-byte against the TS shaper. Versioned units at `infrastructure/systemd/fudcourt-{sync-rust,reconciled}.service` |
 
 ## 3. Data stores
 
 | Store | Used by | Connection | Contents |
 |-------|---------|------------|----------|
-| **Turso** (libSQL) | frontend/web | `@libsql/client` → `libsql://fud-balance-anvxxr.aws-ap-northeast-1.turso.io`, token `TURSO_AUTH_TOKEN` | accounts, transactions, journal, ledger, assets, wallets, trades |
+| **Postgres 17 + TimescaleDB** | frontend/web + `backend/sync` + `tests/oracle/sync-live.py` | Bun.sql pooled client (`platform/db/pg.ts`) → `FUDCOURT_PG_URL` (`postgres://…@127.0.0.1:5432/fudcourt`, Docker `postgres-hardened`) | **single system of record (DR-040)**: accounts, transactions, journal, ledger, assets, wallets, trades, venues + the `asset_history`/`price_history` hypertables |
 | **Neon Postgres** | the merged app's CMS half (`src/cms`, was apps/blog) | `@payloadcms/db-postgres` via `DATABASE_URL` (pooler, ap-southeast-1) | payload schema: users, posts, media, categories, versions, KV, preferences |
 
-No local database: both stores are managed cloud. The Turso schema **is**
-versioned: `database/schema/schema.sql` (9 `CREATE TABLE`s incl. `sqlite_sequence`,
-tracked) with a drift alarm at `node scripts/database/dump-schema.mjs --check` (R-1).
+The treasury store is **local and self-hosted** (DR-040); only the Neon CMS half is
+managed cloud. The treasury schema is versioned at `database/schema/pg-schema.sql`
+(hand-written DDL, `IF NOT EXISTS` throughout) — the generated SQLite dump and its
+`dump-schema.mjs --check` drift alarm were deleted with Turso.
 
 ## 4. Infrastructure
 
@@ -72,7 +73,7 @@ tracked) with a drift alarm at `node scripts/database/dump-schema.mjs --check` (
 | Local CryptoRank sidecar | `fudcourt-data.service` (systemd --user) → `backend/data/bin/fudcourt-data`, `:3101`; cache `~/.cache/fudcourt-data`, `Restart=always`. Unit versioned at `infrastructure/systemd/fudcourt-data.service` (identical to the installed unit) |
 | Local Rust reconcile service | `fudcourt-reconciled.service` (systemd --user) → `backend/sync/target/release/fudcourt-reconciled`, `127.0.0.1:3102`, `Restart=always`, `EnvironmentFile` the repo `.env`; enabled at boot. **Zero new crates** (tokio `net`+`io-util`; serde_json `preserve_order` is a feature, not a package). Unit versioned at `infrastructure/systemd/fudcourt-reconciled.service` (identical to the installed unit). `/api/reconcile` on `:3100` proxies to it (DR-014) |
 | Local blog | **Retired as a unit (DR-017)** — the blog is served by `fudcourt-web` on `:3100` at `/blog` (public), `/blog/cms/admin` (Payload admin) and `/blog/cms/api/*` (Payload REST/GraphQL). `fudcourt-blog.service` and `:3001` no longer exist; the retirement tombstone is `infrastructure/systemd/RETIRED-fudcourt-blog.service.txt` |
-| Live sync | `fudcourt-sync.timer` → `OnUnitActiveSec=5min` → `fudcourt-sync.service` (`ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/tests/oracle/sync-live.py`, `WorkingDirectory=/home/dwizzy/fudcourt/frontend/web` — the cwd-stable `bun` `ExecStartPost` for `frontend/web/.env.local`) → Turso `assets` |
+| Live sync | `fudcourt-sync.timer` → `OnUnitActiveSec=5min` → `fudcourt-sync.service` (`ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/tests/oracle/sync-live.py`, `WorkingDirectory=/home/dwizzy/fudcourt/frontend/web` — the cwd-stable `bun` `ExecStartPost` for `frontend/web/.env.local`) → Postgres `assets` (`FUDCOURT_PG_URL`) |
 | Deploy | Self-hosted only (DR-002: no third-party deploy target; the Vercel projects are unused/deletable — `frontend/web/vercel.json` does not exist, the orphan `.vercel/` link dir is gitignored). The legacy `/portfolio` redirect lives in `frontend/web/next.config.js`: `redirects` `/portfolio` → `/team/portfolio` (307) + `rewrites` `/portfolio/:path*` → `/:path*` |
 | Monorepo layout | frontend/web + backend/data (+ backend/sync, backend/api, backend/workers/executor) on disk; **apps/blog is gone (DR-017)**; **no npm `workspaces` field** anywhere (root `package.json` has none — per-app install, each app owns its lockfile, and `npm run <script> --workspace=…` fails with "No workspaces found"). Each app's lockfile is `bun.lock` (Bun 1.4.2) and installs are `bun install --frozen-lockfile`; `npm ci` is not a supported path. **No `package-lock.json` exists anywhere in the tree today** (the root one that once listed the long-gone `apps/balance` / `apps/gateway` has been removed) |
 | Git remote | `github.com/anvxxr-arch/fudcourt`, branch `main` |
@@ -154,24 +155,23 @@ docs/operations/        how it runs / what changed     (PLAN, SECRETS, CHANGELOG
 docs/records/           why each decision was made     (DECISIONS, append-only)
 ```
 
-## Data layer (DR-019)
+## Data layer (DR-040)
 ```
-Turso (libsql, neon primary)   SYSTEM OF RECORD — the Rust reconciler, sync-live.py
-                               and the app's POSTs all write here
-  |  frontend/web/scripts/    idempotent projection, every 60 s + after each
-  |  tools/pg-load.ts         write + ExecStartPost of fudcourt-sync.service
-  v
-PostgreSQL 17 + TimescaleDB    READ MODEL (local, :5432, db `fudcourt` — consolidated Docker instance)
-  - accounts/assets/journal/ledger/trades/transactions/venues/wallets
+PostgreSQL 17 + TimescaleDB    SINGLE SYSTEM OF RECORD (local, :5432, db `fudcourt` —
+  - accounts/assets/journal/ledger/trades/transactions/venues/wallets   Docker `postgres-hardened`)
   - asset_history, price_history  hypertables (time series; 90-day retention)
+  |    writers: sync-live.py (psycopg2) · backend/sync (tokio-postgres, uninstalled)
+  |             · the web (platform/db/client.ts) · the Rust reconciler
+  |    asset_history is appended by the `assets_snapshot` TRIGGER on `assets` INSERT
   |
-Bun.sql                        query() reads local; execute() writes Turso then projects
+Bun.sql                        query()/execute() — every read and write is local Postgres
 
 Valkey :6379                   shared L2, survives restarts
   - sidecar (backend/data/platform/cache, valkey-go)  llama / chainrank / news
   - web (platform/cache/valkey.ts, Bun)     the ticker venue sweep
   Both FAIL OPEN: disabled/unreachable/unreadable all mean "do the work as before".
 ```
-The read-model split is gated by `scripts/verify/parity-pg.ts` (the app's own
-`DASHBOARD_READS` run against both engines). SQLite dialect is translated in one
-place, `toPostgres` in `platform/db/mirror.ts`.
+There is no read-model split to gate (DR-040 retired the projection, the
+`parity-pg.ts` harness and the `fudcourt-pgload` timer together). The SQLite
+dialect is still translated in one place, `toPostgres` in `platform/db/pg.ts`,
+for the hand-written route statements.

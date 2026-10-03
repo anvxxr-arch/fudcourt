@@ -40,7 +40,7 @@
     "src/platform/auth/session.ts",
     "src/platform/auth/guard.ts",
     "src/platform/http/rate-limit-inbound.ts",
-    "src/platform/db/mirror.ts",
+    "src/platform/db/pg.ts",
     "src/platform/executor/types.ts",
     "src/platform/executor/risk.ts",
     "src/platform/executor/engine.ts",

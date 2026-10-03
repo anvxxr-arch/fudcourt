@@ -12,10 +12,10 @@ Type=simple
 # (middleware + lib/guard.ts). This service must never be exposed directly --
 # it has no authentication of its own by design.
 WorkingDirectory=/home/dwizzy/fudcourt/backend/sync
-# The token is REQUIRED and the binary refuses to start without it (a service that
-# silently reconciled against nothing would answer `{rows: []}` and look healthy).
-# The binary also walks up to the repo-root `.env` on its own, so this line is the
-# explicit binding rather than the only one.
+# FUDCOURT_PG_URL is REQUIRED and the binary refuses to start without it (a
+# service that silently reconciled against nothing would answer `{rows: []}` and
+# look healthy). The binary also walks up to the repo-root `.env` on its own, so
+# this line is the explicit binding rather than the only one.
 EnvironmentFile=/home/dwizzy/fudcourt/.env
 Environment=RECONCILE_ADDR=127.0.0.1:3102
 ExecStart=/home/dwizzy/fudcourt/backend/sync/target/release/fudcourt-reconciled

@@ -1,0 +1,31 @@
+[Unit]
+Description=FUD Court Turso -> Postgres read-model projection (DR-019)
+Documentation=file:///home/dwizzy/fudcourt/frontend/web/scripts/tools/pg-load.ts
+Documentation=file:///home/dwizzy/fudcourt/database/schema/pg-schema.sql
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+WorkingDirectory=/home/dwizzy/fudcourt/frontend/web
+EnvironmentFile=/home/dwizzy/fudcourt/frontend/web/.env.local
+ExecStart=/home/dwizzy/.bun/bin/bun run /home/dwizzy/fudcourt/frontend/web/scripts/tools/pg-load.ts
+TimeoutStartSec=120
+
+[Timer]
+Description=Project Turso into the local Postgres read model every 60s (DR-019)
+OnBootSec=30
+OnUnitActiveSec=60
+AccuracySec=10
+
+
+==================== RETIRED 2026-10-03 ====================
+DR-040 collapsed the two-store split: Postgres+TimescaleDB is now the SINGLE
+system of record, so there is no Turso to project FROM and nothing for this
+timer to do. Deleted together with its code (`frontend/web/scripts/tools/
+pg-load.ts`) and the `ExecStartPost` that ran the same projection after every
+sync.
+
+Kept as .txt so check-deploy.py (which globs *.service) ignores it while the
+history stays readable. The unit was also stopped, disabled and removed from
+`~/.config/systemd/user/` on the host.
+===========================================================

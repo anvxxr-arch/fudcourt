@@ -3,34 +3,35 @@
 Two databases + one API envelope contract. Verified 2026-09-27 against remote
 head `957836d`.
 
-> ✅ **Versioned since 2026-09-28 (R-1):** `database/schema/schema.sql` is a
-> generated dump of the live Turso schema — regenerate with
-> `node scripts/database/dump-schema.mjs`, drift-check with `--check`
-> (exits 1 on mismatch; wired into the offline contract gate). The column
-> tables below are the code-derived annotation layer; the Neon schema is
-> versioned via Payload migrations (`frontend/web/src/cms/migrations/`).
+> **Updated 2026-10-03 (DR-040):** `database/schema/pg-schema.sql` is the
+> hand-written Postgres+TimescaleDB schema and the **only** treasury schema —
+> Postgres is the single system of record, and the Turso/libSQL store (with its
+> generated SQLite dump and the `dump-schema.mjs --check` drift alarm) is
+> retired. The column tables below are the code-derived annotation layer; the
+> Neon schema is versioned via Payload migrations
+> (`frontend/web/src/cms/migrations/`).
 
-## 1. Turso (frontend/web) — `fud-balance-anvxxr…turso.io`
+## 1. Postgres `public` (treasury system of record) — the `fudcourt` database
 
 ### 1.1 `transactions` — canonical ledger of money movements
 Reconstructed from `frontend/web/src/app/(frontend)/api/transactions/route.ts` + `[id]/route.ts`:
 
-| Column | Type (inferred) | Notes |
+| Column | Type (`pg-schema.sql`) | Notes |
 |--------|-----------------|-------|
-| `id` | INTEGER PK | auto; `[id]` routes parse with `parseInt` (non-numeric → 400) |
-| `date` | TEXT/DATE | required on insert (with `event`) |
-| `chain` | TEXT | default `'Offchain'` |
-| `asset` | TEXT | default `'USDT'` |
-| `event` | TEXT | required on insert |
-| `amount_usd` | REAL | signed: `>= 0 → IN`, `< 0 → OUT` |
-| `direction` | TEXT | `IN` \| `OUT` (derived if absent) |
-| `memo` | TEXT NULL | |
-| `wallet_to` | TEXT NULL | |
-| `venue_id` | INTEGER/TEXT NULL | |
-| `trade_id` | TEXT NULL | |
-| `hash` | TEXT NULL | on-chain tx hash — required for exact reconciliation |
-| `url` | TEXT NULL | |
-| `source` | TEXT | default `'manual'` |
+| `id` | integer PK (identity) | auto; `[id]` routes parse with `parseInt` (non-numeric → 400) |
+| `date` | text | required on insert (with `event`) |
+| `chain` | text | default `'Offchain'` |
+| `asset` | text | default `'USDT'` |
+| `event` | text | required on insert |
+| `amount_usd` | double precision | signed: `>= 0 → IN`, `< 0 → OUT` |
+| `direction` | text | `IN` \| `OUT` (derived if absent) |
+| `memo` | text NULL | |
+| `wallet_to` | text NULL | |
+| `venue_id` | integer/text NULL | |
+| `trade_id` | text NULL | |
+| `hash` | text NULL | on-chain tx hash — required for exact reconciliation |
+| `url` | text NULL | |
+| `source` | text | default `'manual'` |
 
 API: `GET` (filters: `limit, offset, search, chain, venue, direction, from, to`),
 `POST` (single or `{bulk: true, transactions: []}`), `PUT` (bulk ids+updates),
@@ -48,7 +49,9 @@ Reconstructed from `frontend/web/src/app/(frontend)/api/wallets/route.ts`:
 ### 1.3 `assets` — live balances (written by sync every 5 min)
 Written by `tests/oracle/sync-live.py` with the hard rule:
 **failed RPC raises; it never writes `0`**. Keyed by exact wallet address +
-chain; `value_usd` summed for net worth.
+chain; `value_usd` summed for net worth. Every `INSERT` is snapshotted into the
+`asset_history` TimescaleDB hypertable by the `assets_snapshot` trigger
+(`database/schema/pg-schema.sql`), not by application code.
 
 ### 1.4 Accounting tables (read by `getAll()`)
 | Table | Read shape |

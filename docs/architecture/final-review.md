@@ -44,7 +44,7 @@ fudcourt/
 ├── shared/
 │   ├── contracts/              OpenAPI + event catalog + schemas (source of truth)
 │   └── sdk/typescript/         generated TS client
-├── database/schema/            schema.sql (Turso) · pg-schema.sql (read model) ·
+├── database/schema/            pg-schema.sql (treasury system of record) ·
 │                               executor-schema.sql (execution ledger)
 ├── tests/{e2e,integration,fixtures,oracle}/
 ├── infrastructure/systemd/     14 files: 12 live units (web, api, data, executor,
@@ -414,6 +414,9 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    executor integration → `tests/integration/executor/`, fixtures → `tests/fixtures/`,
    oracle → `tests/oracle/`, database tooling → `scripts/database/`, web-only suites →
    `frontend/web/tests/`), with the invokers repointed and `test:shapers` still 240/240.
+   **Update (DR-040, 2026-10-03):** `scripts/database/` (the schema dumper) and the
+   `scripts/verify/parity-*` Postgres projection harness were deleted with the Turso store,
+   so the `scripts/database/` half of this move no longer exists on disk.
    **Correction (docs-reality pass, 2026-10-01):** the *repo-wide* harnesses and the executor E2E
    probe moved; the **web-only probes went to the app's own tests dir**, not to `tests/`.
    As settled on disk: `scripts/verify/{check-contract.py,check-deploy.py,verify-<family>.py,monitor.py,verify-all.sh,parity-*}`,
@@ -425,7 +428,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    (fixture replay, no `--fixtures` flag needed) is wired into `verify-all.sh` and passes:
    `SYNC_ORACLE_OK (34 rows, 40 request keys)` — Python oracle and Rust `fudcourt-sync` produce
    **byte-identical** `assets` projections from `tests/oracle/fixtures/capture.json` (40 recorded
-   responses across rpc/hl/prices), and no Turso write is issued. The gate and its `oracle.rs`
+   responses across rpc/hl/prices), and no database write is issued. The gate and its `oracle.rs`
    seam are the writer's Phase 6 work and are **committed and clean** (re-verified this session:
    `git ls-files` lists both `verify-sync.py` and `backend/sync/src/oracle.rs`; the gate emits
    `SYNC_ORACLE_OK`).

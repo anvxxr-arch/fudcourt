@@ -26,7 +26,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 /** Rust reconcile service base URL. Runtime read: a restart picks up changes. */
 const RECONCILE = process.env.RECONCILE_URL ?? 'http://127.0.0.1:3102';
-/** The service does three Turso round-trips; 30s is its own client timeout. */
+/** The service does three Postgres round-trips; 30s is its own client timeout. */
 const TIMEOUT_MS = 45_000;
 export async function GET() {
   const upstream = `${RECONCILE}/api/reconcile`;

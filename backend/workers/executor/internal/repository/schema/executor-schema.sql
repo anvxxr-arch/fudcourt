@@ -2,14 +2,17 @@
 -- executor.* Postgres schema.
 --
 -- WHY A SEPARATE SCHEMA: the treasury read model (database/schema/pg-schema.sql, `public`) is
--- pruned and overwritten wholesale by the Turso->Postgres mirror; the executor
--- writes live data and must never share that blast radius. Everything here lives
--- in `executor` and nothing in `platform/db/mirror.ts` touches it.
+-- pruned and overwritten wholesale by every sync run (DR-040: the sync writes
+-- `public` directly and the Turso->Postgres mirror that used to do it is
+-- retired); the executor writes live data and must never share that blast
+-- radius. Everything here lives in `executor` and nothing in
+-- `platform/db/pg.ts` or `platform/db/client.ts` touches it.
 --
 -- Applied at STARTUP by two runtimes, both idempotent and both one statement at
 -- a time (the extended query protocol refuses multi-statement strings):
 --   * TypeScript — `ensureExecutorSchema()` in src/platform/executor/store.ts,
---     from its embedded `EXECUTOR_DDL` copy.
+--     from `EXECUTOR_DDL`, which READS THIS FILE (comment lines dropped) at
+--     module load. There is no longer an embedded copy to keep in step.
 --   * Go — `repository.EnsureSchema()` at `cmd/executor` startup
 --     (backend/workers/executor/internal/repository/schema.go, commit
 --     `8d87df1`), run BEFORE the worker loop and either HTTP surface can serve;

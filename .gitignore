@@ -42,3 +42,7 @@ backend/sync/target/
 # pre-move location, kept so a stale tree cannot re-add one.
 scripts/verify/*-report.json
 frontend/web/scripts/**/*-report.json
+
+# python caches (harnesses + verification oracles)
+__pycache__/
+*.pyc

@@ -38,12 +38,12 @@ docs/
 | architecture | [cryptorank-mode-audit.md](architecture/cryptorank-mode-audit.md) | Per-mode audit of the CryptoRank family (28 modes): live shapes, page-1 truncation, uniqueness vs duplication (DUP/UNIQUE/MIXED/REFUSED) and the 28→15 disposition |
 | architecture | [provider-deep-dive.md](architecture/provider-deep-dive.md) | Live-probed shapes + uniqueness verdicts for the seven non-CryptoRank families (llama, markets, dex, signals, news, khala, chainrank) |
 | architecture | [provider-consolidation.md](architecture/provider-consolidation.md) | The decision map: 14 public pages → 5 surfaces, per-page disposition, CryptoRank 28→15 demotion and the step-by-step migration order |
-| architecture | [SCHEMA.md](architecture/SCHEMA.md) | Data schemas: Turso tables, Payload/Neon tables, API envelopes |
+| architecture | [SCHEMA.md](architecture/SCHEMA.md) | Data schemas: Postgres treasury tables, Payload/Neon tables, API envelopes |
 | architecture | [canonical-model.md](architecture/canonical-model.md) | The canonical data model: 7-layer pipeline, entity list with identity/owner, domain taxonomy, time semantics, precision rules, duplicate-concept decisions |
 | architecture | [source-catalog.md](architecture/source-catalog.md) | Every data source actually in the repo: provider/feed/account kept distinct, freshness/durability/auth/status + the sources that are absent |
 | architecture | [data-catalog.md](architecture/data-catalog.md) | Per-dataset detail: today's layer, provider carrier, canonical target, identity, time semantics, consumers |
 | architecture | [data-classification.md](architecture/data-classification.md) | The classification matrix + provider-DTO leak audit + duplicate-concept audit |
-| architecture | [database-classification.md](architecture/database-classification.md) | Every table in Turso/Postgres/executor-schema/Neon classified: canonical/event/snapshot/cache/provider-specific/legacy/unknown, owner, durability, sensitivity, writer gaps |
+| architecture | [database-classification.md](architecture/database-classification.md) | Every table in Postgres `public`/executor-schema/Neon classified: canonical/event/snapshot/cache/provider-specific/legacy/unknown, owner, durability, sensitivity, writer gaps |
 | architecture | [data-categorization.md](architecture/data-categorization.md) | The 2026-10-02 refresh: 156 data surfaces across four slices (sidecar acquisition modes, web routes, persistence objects, upstream feeds), each row evidence-backed — closes the gap where `coinglass`/`coinank` appeared zero times in the 2026-10-01 catalogs; 161 after `coinmarketcap` folded in |
 | architecture | [canonical-acceptance.md](architecture/canonical-acceptance.md) | The acceptance-criteria scorecard: every criterion mapped to observed evidence, with unresolved ambiguities and P0/P1/P2 next actions |
 | operations | [PLAN.md](operations/PLAN.md) | Goal → subgoal → task → subtask breakdown with status |
@@ -75,17 +75,17 @@ backend/data/    Go sidecar :3101 — one package per family, under `internal/re
                  `platform/cache`; /api/{cryptorank,khala,llama,news,chainrank}
                  proxy to it (DR-005/DR-006/DR-009/DR-012/DR-013)
 backend/sync/    Rust crate — TWO binaries: `fudcourt-sync` (the live multi-chain
-                 balance sync → Turso + share %, parity-checked against
+                 balance sync → Postgres + share %, parity-checked against
                  tests/oracle/sync-live.py; SG-9.4) and
                  `fudcourt-reconciled` (:3102, the `/api/reconcile` HTTP service —
                  zero new dependencies, parity-checked byte-for-byte against the
                  TS shaper; DR-014)
 shared/contracts/      OpenAPI + event catalog + JSON schemas — the one shared artifact
 shared/sdk/typescript/ generated TS client over the contract
-database/schema/       schema.sql (Turso) · pg-schema.sql (read model) ·
+database/schema/       pg-schema.sql (treasury system of record) ·
                        executor-schema.sql (execution ledger)
-infrastructure/systemd/ 12 unit files + 2 retired tombstones (web, api, data, executor,
-                       executor-worker, sync, sync-rust, reconciled, pgload)
+infrastructure/systemd/ 10 unit files + 3 retired tombstones (web, api, data, executor,
+                       executor-worker, sync, sync-rust, reconciled)
 tests/           integration/ · e2e/ · fixtures/ · oracle/ — cross-system suites
 scripts/         verify/ · database/ · githooks/ — repo-wide gates, tooling, hook
 (blog)           Payload CMS 3.89 merged INTO frontend/web (DR-017): collections +
@@ -105,14 +105,13 @@ crate behind both of its services (`fudcourt-sync`, `fudcourt-reconciled`).
 the web-side `src/features/treasury/reconcile.ts` kept as the oracle rather than a
 fallback path.
 `frontend/web/scripts/` holds the web-app-only tooling and harnesses
-(`checks/check-structure.py` — the layer gate — plus `executor/worker.ts` and `tools/` maintenance:
-`pg-load.ts`, `read-path-probe.ts`); the repo-wide verifiers, fixtures and cross-system suites have moved out of
+(`checks/check-structure.py` — the layer gate — plus `executor/worker.ts` and `tools/`
+maintenance such as `read-path-probe.ts`); the repo-wide verifiers, fixtures and cross-system suites have moved out of
 `frontend/web`:
 ```
   scripts/verify/        repo-wide harnesses + one-command gate: check-contract.py,
                          check-deploy.py, verify-<family>.py, verify-sync.py,
                          verify-reconcile.py, monitor.py, verify-all.sh
-  scripts/database/      dump-schema.mjs (Turso schema drift alarm)
   scripts/githooks/      pre-push hook
   frontend/web/tests/      web-only suites + probes: shaper/auth/rate-limit/db/executor-ui
                            tests, verify-limiter.mts, dom_audit.py, verify_all_routes.py,

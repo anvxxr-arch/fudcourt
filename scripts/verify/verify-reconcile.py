@@ -4,7 +4,7 @@ Contract check for the Rust `/api/reconcile` service (DR-014).
 
 Two things are being proved here and they are different:
 
-1. THE SERVICE'S OWN CONTRACT, against the live Turso database: the three routes
+1. THE SERVICE'S OWN CONTRACT, against the live Postgres database: the three routes
    (healthz / api/reconcile / 404), the method refusal, the payload shape, and the
    arithmetic INVARIANTS that hold for any dataset -- `expected = in_sum - out_sum`,
    `diff = current - expected`, rows sorted by |diff| descending, `walletSummary`

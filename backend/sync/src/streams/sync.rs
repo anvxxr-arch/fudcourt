@@ -1,4 +1,4 @@
-//! The ported sync: prices -> balances -> Hyperliquid -> print -> Turso.
+//! The ported sync: prices -> balances -> Hyperliquid -> print -> Postgres.
 //!
 //! Every honesty rule of the Python original is preserved:
 //!   * a missing price RAISES, it never values an asset at 0
@@ -14,7 +14,7 @@ use serde_json::{json, Value};
 use std::time::Duration;
 
 pub struct Env {
-    pub turso_token: String,
+    pub pg_dsn: String,
     pub alchemy_key: String,
 }
 
@@ -28,8 +28,8 @@ struct Position {
 
 type Prices = Vec<(&'static str, f64)>;
 /// `print_projection(rows, tot)` — oracle mode only. Prints the exact `assets`
-/// rows the run would have written, byte-for-byte as they cross the Turso
-/// wire, between the same markers `sync-live.py` uses (the gate diffs the two).
+/// rows the run would have written, byte-for-byte, between the same markers
+/// `sync-live.py` uses (the gate diffs the two).
 ///
 /// Rounding mirrors the Python `projection()` exactly: quantity round(..,10),
 /// value round(..,4), share round(usd/tot*100, 2) or "0" when tot == 0, and
@@ -444,7 +444,7 @@ pub async fn run(env: &Env) -> Result<(), String> {
         return Ok(());
     }
     // ---- write ----
-    let db = Db::new(env.turso_token.clone(), http.clone());
+    let db = Db::connect(&env.pg_dsn).await?;
     db.delete_assets().await?;
     for r in &rows {
         let share = if tot != 0.0 {
@@ -463,7 +463,7 @@ pub async fn run(env: &Env) -> Result<(), String> {
         .await?;
     }
 
-    println!("\n=== TURSO assets (LIVE) ===");
+    println!("\n=== POSTGRES assets (LIVE) ===");
     let mut s = 0.0f64;
     for a in db
         .query(

@@ -711,6 +711,8 @@ row-for-row — which is what makes this a port rather than a second opinion.
   so the timer must be pointed at a built binary (the unit documents this).
 - The oracle is not deleted: `sync-live.py` remains the independent check, the
   same relationship DR-005 established between the Go sidecar and `cr_fetch.py`.
+
+**Superseded by DR-040** (Postgres+TimescaleDB is the single system of record; Turso/libSQL dropped).
 ---
 ## DR-011 — Directory naming: one job per directory, no cryptic prefixes (2026-09-29)
 **Status:** accepted, landed in source and on the running services (web :3100,
@@ -1008,6 +1010,8 @@ the Next route is its only client, exactly like the Go sidecar.
   `FAIL reconcile health: URLError … Connection refused`; restarted, both lines
   disappear (leaving only the pre-existing CoinGecko 403). Deterministic order,
   +0.4 s.
+
+**Superseded by DR-040** (Postgres+TimescaleDB is the single system of record; Turso/libSQL dropped).
 
 ## DR-015 — `apps/blog` runtime: npm/Node → Bun (the frontend-runtime rule now holds with no exception) (2026-09-29)
 **Status:** accepted, deployed (`fudcourt-blog.service` runs `bun --bun next start -p 3001`).
@@ -1324,6 +1328,8 @@ disabled, unreachable, or unreadable caches all resolve to "do the work as befor
 - Honest limits: llama's L2 gain is modest (0.86 s → 0.47 s; a fast CDN), and the
   ticker is slower cold than before (134 s vs 80 s) — one most-recent sweep is now
   retained for the stale window, which costs some parallelism and buys the 600×.
+
+**Superseded by DR-040** (Postgres+TimescaleDB is the single system of record; Turso/libSQL dropped).
 
 ## DR-020 — Executor data isolation: one `executor` Postgres schema, no migration runner (2026-09-30)
 **Status:** accepted, landed in `apps/web` (the `executor` schema is created on first
@@ -1939,3 +1945,68 @@ The six table verdicts stand unchanged; the clause exists so the *retirement* ta
 ### DR-039 amendment — the CoinMarketCap family now has a web proxy route (2026-10-03, later)
 **What changed.** The “sidecar-only for now” deferral recorded above is closed: `/api/coinmarketcap` now exists in the web app as a thin verbatim proxy to `fudcourt-data` (`:3101`), forwarding `X-CMC-Upstream`/`X-CMC-Cache`. The LOCAL `start`/`limit` bounds stay in the handler (the `limit=0` trap is refused before any fetch), and an upstream refusal still surfaces as a 502 carrying upstream's own `error_code`.
 **Consequence for the gate.** `check-contract.py` now carries a `CMC_MODES` TS↔Go pair (the mirror in `src/features/coinmarketcap/client.ts` must equal `backend/data/internal/research/coinmarketcap/modes.go`) plus a proxy-shape assertion on `frontend/web/src/app/(frontend)/api/coinmarketcap/route.ts` — superseding the “No `check-contract.py` change is needed” clause above.
+
+## DR-040 — Postgres+TimescaleDB is the single system of record; Turso/libSQL is dropped (2026-10-03)
+
+**Status:** accepted, implemented.
+
+**Context.** DR-019 split the treasury store in two: Turso (libSQL/SQLite) held the
+system of record (`accounts`, `assets`, `journal`, `ledger`, `trades`,
+`transactions`, `venues`, `wallets`) and a local Postgres+TimescaleDB database was
+the read model, kept in parity by `frontend/web/scripts/tools/pg-load.ts` on a 60 s
+timer (`fudcourt-pgload.timer`). The split bought a measured read win (a Turso round
+trip from the homeserver is ~394 ms against ~2.8 ms for local Postgres), but it left
+the system of record on a remote managed service — and, measured 2026-10-03, the two
+halves had drifted into a shape that LOSES WRITES:
+
+  * every app write route (`api/transactions`, `api/wallets`) already calls `query()`,
+    which is a DIRECT Postgres statement (`platform/db/client.ts`);
+  * the documented Turso write path, `execute()`, has ZERO callers;
+  * the projection PRUNES (`DELETE FROM <t> WHERE <pk>::text NOT IN (<turso keys>)`),
+    so a row the UI wrote into Postgres that Turso never saw is deleted by the next
+    timer tick.
+
+The app therefore already writes Postgres, Turso is written only by
+`tests/oracle/sync-live.py` (the `assets` table), and the projection can silently
+revert a UI write. The two-store split had become a correctness hazard with no
+remaining benefit.
+
+**Options.** (a) Repair the split — repoint `execute()` at Turso and route every app
+write through it, keeping the mirror. (b) Collapse to ONE store. (c) Keep both stores
+and stop projecting.
+
+**Decision.** (b). Postgres+TimescaleDB — the `fudcourt` database in the
+`postgres-hardened` container on 127.0.0.1:5432 — is the single system of record.
+Turso/libSQL is dropped entirely: the `@libsql/client` dependency, `TURSO_URL` /
+`TURSO_AUTH_TOKEN`, the generated SQLite schema dump, the projection and its timer,
+and every code path that names it. TimescaleDB — the one capability Turso never had
+— is already installed in the `fudcourt` database (`timescaledb 2.30.1`), so the
+collapse adds no infrastructure. (c) is rejected because a store nothing writes is
+just a stale copy waiting to be read by mistake.
+
+**What changes.**
+- Schema: `database/schema/pg-schema.sql` is THE schema. `database/schema/schema.sql`
+  (the generated SQLite dump) and `scripts/database/dump-schema.mjs` are deleted.
+- Writers write Postgres: `tests/oracle/sync-live.py` (psycopg2), the Rust crate
+  (`tokio-postgres`), and the web (`platform/db/client.ts`, already Postgres).
+- Readers read Postgres: the Rust `/api/reconcile` service now does; the web already did.
+- `assets` observations reach the `asset_history` hypertable through a database
+  TRIGGER (`assets_snapshot`), not through application code, so every writer snapshots
+  identically.
+- Removed: `frontend/web/scripts/tools/pg-load.ts`, `scripts/verify/parity-pg.ts`,
+  `fudcourt-pgload.{service,timer}`, and the Turso projection in
+  `platform/db/mirror.ts` (renamed `platform/db/pg.ts`, keeping the pooled client, the
+  SQLite→Postgres dialect translator and the dashboard read set).
+
+**Evidence.** Baseline parity measured 2026-10-03 before the cutover: a read-only
+table-by-table comparison of Turso against local Postgres reported `BASELINE_PARITY_OK`
+— `accounts` 6/6, `assets` 16/16, `journal` 8/8, `ledger` 3/3, `trades` 0/0,
+`transactions` 48/48, `venues` 12/12, `wallets` 3/3, every table byte-identical.
+
+**Consequences.** One store, one writer, no projection lag and no prune hazard. Reads
+stay on local Postgres (the ~2.8 ms path); writes lose the ~394 ms Turso round trip.
+The remote managed dependency and its credential are gone, so the treasury store no
+longer has an external availability or billing surface. `asset_history`/`price_history`
+keep their 90-day retention, now enforced by a plain DELETE in the sync. The Rust sync
+binary is still not deployed (`fudcourt-sync-rust` is not installed); it is kept
+building and in parity with the Python oracle by `verify-sync.py`.

@@ -1,4 +1,4 @@
-//! The Turso read for `/api/reconcile`, plus the pure reconciliation maths.
+//! The Postgres read for `/api/reconcile`, plus the pure reconciliation maths.
 //!
 //! This is the Rust port of
 //! `frontend/web/src/app/(frontend)/api/reconcile/route.ts` (DR-014): the
@@ -85,7 +85,7 @@ pub fn num(v: Option<&Value>) -> f64 {
         Some(Value::Number(n)) => n.as_f64().unwrap_or(0.0),
         Some(Value::String(s)) => s.trim().parse::<f64>().unwrap_or(0.0),
         // `Number(true) === 1`; kept exact because it costs nothing. Exotic JS
-        // numeric literals (`Number('0x10')`) are not reproduced -- a Turso cell
+        // numeric literals (`Number('0x10')`) are not reproduced -- a text cell
         // in these columns cannot hold one.
         Some(Value::Bool(b)) => {
             if *b {

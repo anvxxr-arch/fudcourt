@@ -1,34 +1,18 @@
 /**
- * client.ts — the treasury data layer (DR-019).
+ * client.ts — the treasury data layer (DR-040).
  *
- * READ PATH: local Postgres (TimescaleDB), ~2 ms per query.
- * WRITE PATH: Turso stays the system of record; every write is forwarded there,
- *             then projected back into Postgres so the writer reads its own row.
- *
- * Why split: a Turso round trip from the homeserver measures ~394 ms (the libsql
- * client tunnels a WebSocket back to the primary over the WireGuard path) against
- * 2.8 ms for local Postgres. Reads are 95% of the traffic and every dashboard
- * load issues eight of them; writes are rare and must stay authoritative-remote.
- *
- * The window this accepts: between a write and its projection (sub-second; the
- * write awaits the projection) local reads can briefly lag Turso. Turso remains
- * the single writer, so there is no split brain — only bounded staleness.
+ * Postgres+TimescaleDB is the SINGLE system of record. Reads and writes both go
+ * to local Postgres (`FUDCOURT_PG_URL`), ~2 ms per query; there is no remote
+ * mirror and no second store. The DR-019 split (Turso system of record + local
+ * Postgres read model) was collapsed by DR-040 because the app already wrote
+ * Postgres and the projection could prune a UI write.
  *
  * `query`/`execute` keep their exact signatures so no route changes: only the
- * engine underneath moves.
+ * engine underneath moved.
  */
-import { SQL } from 'bun';
-import { createClient, type Client } from '@libsql/client';
-import { pg, toPostgres, loadFromMirror, DASHBOARD_READS } from '@/platform/db/mirror';
+import { pg, toPostgres, DASHBOARD_READS } from '@/platform/db/pg';
 
-function turso(): Client {
-  return createClient({
-    url: process.env.TURSO_URL || 'libsql://fud-balance-anvxxr.aws-ap-northeast-1.turso.io',
-    authToken: process.env.TURSO_AUTH_TOKEN || '',
-  });
-}
-
-/** A row from either engine: unvalidated at the boundary, typed at use. */
+/** A row: unvalidated at the boundary, typed at use. */
 export type Row = Record<string, unknown>;
 
 /** Run SQL against local Postgres and return plain row objects. */
@@ -39,23 +23,11 @@ export async function query(sql: string, args: unknown[] = []): Promise<Row[]> {
 }
 
 /**
- * Run a write against Turso (authoritative), then project it into Postgres so
- * the caller can read it back immediately.
- *
- * Without the projection a POST that follows with a SELECT — /api/transactions
- * and /api/wallets both do — would read the pre-write local copy and return a
- * stale row to the very client that just wrote it.
+ * Run a write against local Postgres. Same engine and dialect as `query`; the
+ * separate name is kept so a caller reads as a write, not a read.
  */
 export async function execute(sql: string, args: unknown[] = []) {
-  const res = await turso().execute({ sql, args: args as never[] });
-  try {
-    await loadFromMirror();
-  } catch (e) {
-    // A failed projection must not fail a write that already committed to Turso.
-    // The next timer run repairs it; reads stay bounded-stale, never wrong.
-    console.error(`db/execute: write committed to Turso but the local projection failed: ${(e as Error).message}`);
-  }
-  return res;
+  return pg().unsafe(toPostgres(sql), args as never[]);
 }
 
 export async function getAll() {
@@ -73,4 +45,4 @@ export async function getAll() {
   };
 }
 
-export { loadFromMirror, DASHBOARD_READS };
+export { DASHBOARD_READS };

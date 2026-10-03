@@ -6,13 +6,15 @@ name: integration
 #      in one pass: structure, web contract, deploy units, contracts drift +
 #      SDK drift, the three Go modules, the Rust crate, hook syntax, web
 #      typecheck + shaper fixtures.
-#   2. the LIVE reconcile contract: builds the Rust service from this same
-#      commit, starts it, and diffs `/api/reconcile` byte-for-byte against the
-#      TS shaper (harness: repo-root scripts/verify/verify-reconcile.py) — the
-#      web path really is served by Rust. Secret-gated on
-#      TURSO_AUTH_TOKEN (skipped with a warning, never silently passed).
+#   2. the LIVE reconcile contract: starts a Postgres+TimescaleDB service,
+#      applies the schema, seeds a row set, builds the Rust service from this
+#      same commit, and diffs `/api/reconcile` byte-for-byte against the TS
+#      shaper (harness: repo-root scripts/verify/verify-reconcile.py) — the web
+#      path really is served by Rust.
 #
-# This workflow always RUNS; the live job is skipped without the secret.
+# DR-040 made Postgres the system of record, so the live job brings its OWN
+# database up as a service container and needs NO secret: it used to be gated on
+# a remote Turso token, and a local database cannot be reached from a runner.
 on:
   push:
     branches: [main]
@@ -52,6 +54,21 @@ jobs:
   reconcile-live:
     name: "integration - live reconcile contract (Rust service + byte parity)"
     runs-on: ubuntu-latest
+    # TimescaleDB is required: pg-schema.sql calls create_hypertable() for
+    # asset_history/price_history, which stock Postgres cannot run.
+    services:
+      postgres:
+        image: timescale/timescaledb:latest-pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fudcourt
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -60,17 +77,35 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.2
-      - name: "Reconcile contract vs the Rust service (live Turso + byte-parity diff)"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: "Apply the schema and seed a row set (one wallet with a non-stablecoin leg)"
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d fudcourt -v ON_ERROR_STOP=1 \
+            -f database/schema/pg-schema.sql
+          psql -h 127.0.0.1 -U postgres -d fudcourt -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO wallets (address, label, chain) VALUES
+            ('0xseed000000000000000000000000000000000001', 'Main', 'Ethereum'),
+            ('0xseed000000000000000000000000000000000002', 'Hanif', 'Solana');
+          -- Main holds BOTH a non-stablecoin leg (ETH) and a stablecoin leg
+          -- (USDC), so the stablecoin-only current_total quirk is observable.
+          INSERT INTO assets (chain, asset, quantity, value_usd, share_pct, wallet) VALUES
+            ('Ethereum', 'ETH', 1.5, 3000.0, 60.0, 'Main'),
+            ('Ethereum', 'USDC', 1000.0, 1000.0, 40.0, 'Main'),
+            ('Solana', 'SOL', 10.0, 1500.0, 100.0, 'Hanif');
+          INSERT INTO transactions (date, chain, asset, event, amount_usd, direction, wallet_to) VALUES
+            ('2026-01-01', 'Ethereum', 'USDC', 'Transfer', 500.0, 'IN', 'Main'),
+            ('2026-01-02', 'Ethereum', 'USDC', 'Transfer', 100.0, 'OUT', 'Main');
+          SQL
+      - name: "Reconcile contract vs the Rust service (live Postgres + byte-parity diff)"
         working-directory: frontend/web
         env:
-          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          FUDCOURT_PG_URL: postgres://postgres:postgres@127.0.0.1:5432/fudcourt
         run: |
           set -euo pipefail
           bun install --frozen-lockfile
-          if [ -z "${TURSO_AUTH_TOKEN:-}" ]; then
-            echo "::warning title=reconcile harness skipped::TURSO_AUTH_TOKEN secret is not set; the live gate for /api/reconcile (Rust service + byte-parity diff) did NOT run"
-            exit 0
-          fi
           # Build the Rust service this route proxies to, from this same commit.
           cargo build --release --manifest-path ../../backend/sync/Cargo.toml
           ../../backend/sync/target/release/fudcourt-reconciled &

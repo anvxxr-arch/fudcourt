@@ -34,7 +34,7 @@ One private surface where the owner can answer, at any moment:
   amount/date-only matches are rejected as fake; every balance shows closing arithmetic.
 
 ### FR-2 — Live multi-chain sync
-- FR-2.1 `sync-live.py` runs every 5 minutes (`fudcourt-sync.timer`) writing to Turso `assets`.
+- FR-2.1 `sync-live.py` runs every 5 minutes (`fudcourt-sync.timer`) writing to Postgres `assets` (`FUDCOURT_PG_URL`, DR-040).
 - FR-2.2 **Hard rule:** a failed RPC **raises** — it never becomes `0`. Absent data renders as absent, not zero.
 
 ### FR-3 — Market intelligence boards (frontend/web)

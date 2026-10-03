@@ -51,7 +51,7 @@ Plaintext key material (API secret, full API key, signed payload, auth headers
 |---|---|---|
 | logs | PRD §109 allowed list only (exchange, account id, execution id, symbol, order id, status, latency, error code) | PRD §109 |
 | events | events never carry credentials/secrets | `docs/architecture/events.md` §4 |
-| analytics | analytics tables (`assets`, `asset_history`, `price_history`) hold market data only — no credential columns exist | `database/schema/schema.sql` |
+| analytics | analytics tables (`assets`, `asset_history`, `price_history`) hold market data only — no credential columns exist | `database/schema/pg-schema.sql` |
 | audit | `Redact` replaces values under sensitive keys with `[REDACTED]`, recursively, before storage | `backend/api/internal/audit/audit.go` |
 | frontend state | secrets leave the browser exactly once (connect form) and are cleared immediately; the API only ever answers with the masked key | `ui.tsx` comment + PRD §109 |
 | URLs | secrets never travel in URLs; request URLs carry ids and filters only | `frontend/web/src/features/executor/client.ts` |

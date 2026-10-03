@@ -11,15 +11,14 @@ transcript is `history://source-inventory`.
 
 | Storage | DDL file | Generator / provenance | Extra DBs |
 |---|---|---|---|
-| Turso (libSQL) | `database/schema/schema.sql` | **generated** by `scripts/database/dump-schema.mjs` ("do not hand-edit"; `--check` is a drift alarm) | system of record |
-| Postgres 17 + TimescaleDB, `public` | `database/schema/pg-schema.sql` | hand-written (Postgres DDL cannot be dumped from SQLite), `IF NOT EXISTS` throughout | read model, DR-019 |
+| Postgres 17 + TimescaleDB 2.30.1, `public` (database `fudcourt`) | `database/schema/pg-schema.sql` | hand-written, `IF NOT EXISTS` throughout; **the single system of record since DR-040** (the generated SQLite dump and its `dump-schema.mjs` generator are deleted) | system of record |
 | Postgres, `executor` schema | `database/schema/executor-schema.sql` | tracked copy; executed from an **embedded duplicate** `EXECUTOR_DDL` in `frontend/web/src/platform/executor/store.ts` via `ensureExecutorSchema()`; pinned by `tests/integration/executor/executor-store-tests.ts` | execution system of record |
 | Neon Postgres | `frontend/web/src/cms/migrations/20260917_194354.ts` (+ `.json` snapshot, `index.ts` manifest) | Payload PostgreSQL adapter migration, generated | CMS content store |
 
 Connection facts (names only, no values):
-`backend/sync/src/persistence/db.rs:9` `TURL = https://fud-balance-anvxxr.aws-ap-northeast-1.turso.io/v2/pipeline`;
-`frontend/web/src/platform/db/client.ts:20-25` libsql client from `TURSO_URL` / `TURSO_AUTH_TOKEN`;
-`mirror.ts` Postgres from `FUDCOURT_PG_URL`;
+`backend/sync/src/persistence/db.rs` reads the DSN from `FUDCOURT_PG_URL` (`tokio-postgres`);
+`frontend/web/src/platform/db/client.ts` Postgres client from `FUDCOURT_PG_URL` (`platform/db/pg.ts`);
+`tests/oracle/sync-live.py` (psycopg2) reads `FUDCOURT_PG_URL` from the repo-root `.env`;
 executor Go worker from `FUDCOURT_EXECUTOR_PG_URL` (`backend/workers/executor/cmd/executor/main.go:95`);
 Payload from `DATABASE_URL` (`frontend/web/src/cms/payload.config.ts:44-46`).
 
@@ -34,22 +33,24 @@ Payload from `DATABASE_URL` (`frontend/web/src/cms/payload.config.ts:44-46`).
 
 ---
 
-## 1. Turso (`database/schema/schema.sql`) — 8 tables + 1 SQLite internal
+## 1. Postgres `public` — treasury system of record (`database/schema/pg-schema.sql`) — 8 tables
 
-Writers: `backend/sync` (Rust) for `assets`; the Next `(frontend)` API routes for
-`transactions`/`wallets`; `tests/oracle/sync-live.py` (legacy oracle) also
-`assets`. Readers: `frontend/web/src/platform/db/mirror.ts` (projects all 8 into
-Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
+Writers: the Python oracle `tests/oracle/sync-live.py` (psycopg2, the deployed sync)
+and `backend/sync` (Rust `tokio-postgres`, built but **not deployed** —
+`fudcourt-sync-rust.service` is the uninstalled replacement) for `assets`; the Next
+`(frontend)` API routes for `transactions`/`wallets`. Readers:
+`frontend/web/src/platform/db/pg.ts`, `platform/db/client.ts` `getAll()`, and the
+routes below. Every writer writes Postgres directly (DR-040).
 
 ### `assets` — synced balances (latest state)
 
 | Field | Value |
 |---|---|
-| table | `assets` (`database/schema/schema.sql:10-19`) |
-| storage | Turso (authoritative) → mirrored to Postgres `public.assets` |
+| table | `assets` (`database/schema/pg-schema.sql:20-29`) |
+| storage | Postgres `public.assets` (system of record, DR-040) |
 | classification | **snapshot** (rewritten wholesale each sync: `DELETE FROM assets` then INSERTs — `db.rs:117,133`) |
 | owning service | `backend/sync` Rust `fudcourt-sync` (`streams/sync.rs`), legacy `sync-live.py` |
-| readers | `frontend/web/src/platform/db/mirror.ts:52,79,82`; `api/coins/route.ts` (`SELECT asset, SUM(value_usd) … FROM assets GROUP BY asset`); `api/all/route.ts` via `getAll()`; `backend/sync/src/reconciliation/reconcile.rs:207` |
+| readers | `frontend/web/src/platform/db/pg.ts:52,79,82`; `api/coins/route.ts` (`SELECT asset, SUM(value_usd) … FROM assets GROUP BY asset`); `api/all/route.ts` via `getAll()`; `backend/sync/src/reconciliation/reconcile.rs:207` |
 | canonical entity | **Balance** (account ≈ wallet address × chain, asset by symbol) + derived valuation |
 | durability | SNAPSHOT (live table keeps only the newest run; history lands in Postgres `asset_history`) |
 | sensitivity | INTERNAL (wallet-level holdings; no secrets) |
@@ -60,11 +61,11 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 
 | Field | Value |
 |---|---|
-| table | `transactions` (`schema.sql:56-70`) |
-| storage | Turso → mirrored to `public.transactions` |
+| table | `transactions` (`database/schema/pg-schema.sql:64-80`) |
+| storage | Postgres `public.transactions` (system of record, DR-040) |
 | classification | **canonical** (user-entered ledger of movements; append + edit + delete) |
 | owning service | Next `(frontend)` API: `api/transactions/route.ts` (POST, DELETE, bulk PUT), `api/transactions/[id]/route.ts` (PUT/DELETE) |
-| readers | same routes; `mirror.ts:56,76`; `api/all/route.ts`; `backend/sync/src/reconciliation/reconcile.rs:213` |
+| readers | same routes; `pg.ts:56,76`; `api/all/route.ts`; `backend/sync/src/reconciliation/reconcile.rs:213` |
 | canonical entity | **Transaction** (and its money movement; the scope's LedgerEntry is separate — see `ledger`) |
 | durability | CANONICAL |
 | sensitivity | INTERNAL (memo/wallet addresses are not secrets) |
@@ -75,11 +76,11 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 
 | Field | Value |
 |---|---|
-| table | `wallets` (`schema.sql:77-83`) |
-| storage | Turso → mirrored to `public.wallets` |
+| table | `wallets` (`database/schema/pg-schema.sql:88-102`) |
+| storage | Postgres `public.wallets` (system of record, DR-040) |
 | classification | **canonical** (wallet registry; UI-editable metadata) |
 | owning service | Next API `api/wallets/route.ts` (**UPDATE only** — no INSERT exists anywhere in the tree; rows are created out-of-band); the addresses the sync *reads* are code constants `backend/sync/src/chains.rs` `WALLETS` (Main, Hanif, Akang) |
-| readers | `api/wallets/route.ts` (`SELECT * FROM wallets ORDER BY rowid` → `ORDER BY id` via `mirror.toPostgres`); `mirror.ts:58,80`; `reconcile.rs:219` |
+| readers | `api/wallets/route.ts` (`SELECT * FROM wallets ORDER BY rowid` → `ORDER BY id` via `toPostgres`); `pg.ts:58,80`; `reconcile.rs:219` |
 | canonical entity | **Wallet** (an account of type WALLET) |
 | durability | CANONICAL |
 | sensitivity | **USER_PRIVATE** (exact on-chain addresses + owner labels; addresses are pseudonymous but linked to named people) |
@@ -90,11 +91,11 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 
 | Field | Value |
 |---|---|
-| table | `accounts` (`schema.sql:3-8`) |
-| storage | Turso → `public.accounts` |
+| table | `accounts` (`database/schema/pg-schema.sql:13-18`) |
+| storage | Postgres `public.accounts` (system of record, DR-040) |
 | classification | **canonical** (chart of accounts) |
 | owning service | **none found in-repo** — no INSERT/UPDATE against `accounts` anywhere (only reads). **DEAD (DR-036):** 6 rows, frozen at the 2026-09-15 import; no out-of-band writer in cron, any timer, or `~/.hermes/**` |
-| readers | `mirror.ts:51,75`; `api/all/route.ts` `getAll()` |
+| readers | `pg.ts:51,75`; `api/all/route.ts` `getAll()` |
 | canonical entity | **Account** metadata (code/name/type/statement) |
 | durability | CANONICAL |
 | sensitivity | INTERNAL |
@@ -105,11 +106,11 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 
 | Field | Value |
 |---|---|
-| table | `journal` (`schema.sql:21-31`) |
-| storage | Turso → `public.journal` |
+| table | `journal` (`database/schema/pg-schema.sql:31-41`) |
+| storage | Postgres `public.journal` (system of record, DR-040) |
 | classification | **event** (dated accounting entries with a `status`) |
 | owning service | **none found in-repo** (read-only usage) `[INFERENCE]` manual entry. **DEAD (DR-036):** 8 rows, max `created_at` `2026-09-15 23:48:35` — frozen at the import, never advanced |
-| readers | `mirror.ts:53,77`; `getAll()` |
+| readers | `pg.ts:53,77`; `getAll()` |
 | canonical entity | **LedgerEntry** (journal ↔ ledger are the two halves of double entry) |
 | durability | CANONICAL |
 | sensitivity | INTERNAL |
@@ -119,11 +120,11 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 
 | Field | Value |
 |---|---|
-| table | `ledger` (`schema.sql:33-40`) |
-| storage | Turso → `public.ledger` |
+| table | `ledger` (`database/schema/pg-schema.sql:43-50`) |
+| storage | Postgres `public.ledger` (system of record, DR-040) |
 | classification | **snapshot** (a `balance` per `(account, side, currency)`) |
 | owning service | **none found in-repo**. **DEAD (DR-036):** 3 rows, frozen at the 2026-09-15 import |
-| readers | `mirror.ts:54,78`; `getAll()` |
+| readers | `pg.ts:54,78`; `getAll()` |
 | canonical entity | **LedgerEntry**/balance roll-up (scope's LedgerEntry fields are account/amount/entry_type — this table stores only a running balance, not movements) |
 | durability | CANONICAL |
 | sensitivity | INTERNAL |
@@ -133,11 +134,11 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 
 | Field | Value |
 |---|---|
-| table | `trades` (`schema.sql:44-54`) |
-| storage | Turso → `public.trades` |
+| table | `trades` (`database/schema/pg-schema.sql:52-62`) |
+| storage | Postgres `public.trades` (system of record, DR-040) |
 | classification | **event** (executed trade log) |
 | owning service | **none found in-repo** `[INFERENCE]` manual entry. **DEAD (DR-036):** 0 rows, never written |
-| readers | `mirror.ts:55,81` (LIMIT 20 in the dashboard read); `getAll()` |
+| readers | `pg.ts:55,81` (LIMIT 20 in the dashboard read); `getAll()` |
 | canonical entity | **Fill**/**Order** (symbol-string based, venue as free text) |
 | durability | CANONICAL |
 | sensitivity | INTERNAL |
@@ -147,45 +148,41 @@ Postgres), `platform/db/client.ts` `getAll()`, and the routes below.
 
 | Field | Value |
 |---|---|
-| table | `venues` (`schema.sql:71-75`) |
-| storage | Turso → `public.venues` |
+| table | `venues` (`database/schema/pg-schema.sql:82-86`) |
+| storage | Postgres `public.venues` (system of record, DR-040) |
 | classification | **canonical** (venue registry; `id` is a text slug, not a provider id) |
 | owning service | **none found in-repo**. **DEAD — the TABLE only (DR-036):** 12 rows, seeded once at the 2026-09-15 import. The venue *entity* is alive despite the unwritten table: `shared/contracts/data/reference.json` mints 12 `venue_id`s, `backend/api/internal/accounts/exchange/account.go:122` `KnownExchange` validates the slug, and the executor's venue boundary (`backend/workers/executor/internal/exchanges/`) resolves it in code — so a cleanup retires the TABLE, never the identity |
-| readers | `mirror.ts:57` (mirrored, but **not** in `DASHBOARD_READS`); `transactions.venue_id` implies a foreign key that does not exist |
+| readers | `pg.ts:57` (read, but **not** in `DASHBOARD_READS`); `transactions.venue_id` implies a foreign key that does not exist |
 | canonical entity | **Venue** |
 | durability | CANONICAL |
 | sensitivity | PUBLIC |
-| notes/violations | Mirrored with a text PK; the mirror's sequence-advance branch correctly skips it (`pg_get_serial_sequence` returns NULL). No FK from `transactions.venue_id` or `trades.venue`. |
+| notes/violations | Text PK; no sequence to advance (`pg_get_serial_sequence` returns NULL). No FK from `transactions.venue_id` or `trades.venue`. |
 
-### `sqlite_sequence`
+### `sqlite_sequence` — retired (DR-040)
 
-| Field | Value |
-|---|---|
-| table | `sqlite_sequence` (`schema.sql:42`) |
-| storage | Turso internal (SQLite AUTOINCREMENT bookkeeping) |
-| classification | **internal/unknown** — not a domain table |
-| notes | Appears only because the dump is a raw `sqlite_master`-style dump. It is **not** mirrored (not in `TABLES` in `mirror.ts`) and has no Postgres counterpart. |
+The SQLite internal AUTOINCREMENT table existed only in the deleted SQLite dump. Postgres uses `GENERATED BY DEFAULT AS IDENTITY`, so there is no counterpart and nothing to classify.
 
 ---
 
-## 2. Postgres `public` (`database/schema/pg-schema.sql`) — 10 tables
+## 2. Postgres `public` — the same schema's Timescale hypertables and read surface
 
-Read model (DR-019): "Turso stays the system of record… This database is the READ side."
-The 8 Turso tables are re-declared here (types map 1:1, datetimes kept as text so the
-JSON is byte-identical), plus two Timescale hypertables that have **no Turso origin**.
+All ten `public` objects live in ONE Postgres database (`fudcourt`, the single system
+of record since DR-040) — there is no second store and no projection. The eight tables
+above are the treasury tables; the two rows here are the Timescale hypertables, whose
+history `asset_history` is appended by the `assets_snapshot` trigger, not by a loader.
 
 | table | storage | classification | owning service | readers | canonical entity | durability | sensitivity | notes/violations |
 |---|---|---|---|---|---|---|---|---|
-| `public.accounts` (`pg-schema.sql:20-25`) | Postgres | canonical (mirror) | `platform/db/mirror.ts` (`loadFromMirror`) | `getAll()`, `api/all/route.ts` | Account | CANONICAL | INTERNAL | Pure mirror; `IF NOT EXISTS` + upsert + prune. |
-| `public.assets` (`:26-36`) | Postgres | snapshot (mirror) | `mirror.ts` (projection) + pruned | `mirror.ts:52,79,82`, `api/coins`, `api/all` | Balance | SNAPSHOT | INTERNAL | Mirror of the live table; **latest state only** — history lives in `asset_history`. |
-| `public.journal` (`:37-48`) | Postgres | event (mirror) | `mirror.ts` | `getAll()` | LedgerEntry | CANONICAL | INTERNAL | `to_char(now() AT TIME ZONE 'UTC', …)` default must never fire: the loader always supplies the Turso value. |
-| `public.ledger` (`:49-56`) | Postgres | snapshot (mirror) | `mirror.ts` | `getAll()` | LedgerEntry balance | CANONICAL | INTERNAL | — |
-| `public.trades` (`:57-66`) | Postgres | event (mirror) | `mirror.ts` | `mirror.ts:55,81` | Fill/Order | CANONICAL | INTERNAL | Same duplication note as Turso `trades`. |
-| `public.transactions` (`:67-84`) | Postgres | canonical (mirror) | `mirror.ts` | API routes + `getAll()` | Transaction | CANONICAL | INTERNAL | The **write target for the app's `query()` calls** (all route writes actually reach Turso; see *writer-ownership* note below). |
-| `public.venues` (`:85-89`) | Postgres | canonical (mirror) | `mirror.ts` | (none in-app) | Venue | CANONICAL | PUBLIC | Text PK; not in `DASHBOARD_READS`. |
-| `public.wallets` (`:90-101`) | Postgres | canonical (mirror) | `mirror.ts` | `api/wallets`, `getAll()` | Wallet | CANONICAL | USER_PRIVATE | — |
-| `public.asset_history` (`:104-113`) + hypertable (`:114`) + indexes (`:115-121`) | Postgres/Timescale | **snapshot history** (append per sync run) | `mirror.ts:200-207` (`INSERT … SELECT FROM assets ON CONFLICT (ts, chain, asset, coalesce(wallet,''))`) | none in-app yet (boards "chart history") | Balance snapshot (time series) | HISTORICAL (90-day retention via plain DELETE, `mirror.ts:207`) | INTERNAL | **The one place history exists.** Retention is a hand-rolled DELETE because `add_retention_policy()` is Timescale-License (`pg-schema.sql` trailing comment). Duplicates the `assets` latest-state row by construction. |
-| `public.price_history` (`:132-141`) | Postgres/Timescale | **cache/price series** | **no writer found** — only the retention DELETE in `mirror.ts:208` | none in-app | Price (time series) | HISTORICAL (90-day DELETE) | PUBLIC | **Writer gap, now confirmed dead (DR-036):** the schema comment says "Written by the price sampler", but no `price sampler` exists anywhere in the tree — `grep -rniI "INSERT INTO price_history"` → **0 hits**, the table **does not exist in Turso at all**, and it is empty in Postgres. The DDL comment describes a producer that was never written. |
+| `public.accounts` (`pg-schema.sql:13-18`) | Postgres | canonical | API routes (`getAll()`) | `getAll()`, `api/all/route.ts` | Account | CANONICAL | INTERNAL | Read-only in-app; dead table (DR-036). |
+| `public.assets` (`:20-29`) | Postgres | snapshot | the sync (`tests/oracle/sync-live.py` / `backend/sync`) | `pg.ts:52,79,82`, `api/coins`, `api/all` | Balance | SNAPSHOT | INTERNAL | Rewritten wholesale each sync; **latest state only** — history lives in `asset_history`. |
+| `public.journal` (`:31-41`) | Postgres | event | (none in-repo) | `getAll()` | LedgerEntry | CANONICAL | INTERNAL | Dead table (DR-036). `to_char(now() AT TIME ZONE 'UTC', …)` default must never fire: a writer always supplies the date. |
+| `public.ledger` (`:43-50`) | Postgres | snapshot | (none in-repo) | `getAll()` | LedgerEntry balance | CANONICAL | INTERNAL | Dead table (DR-036). |
+| `public.trades` (`:52-62`) | Postgres | event | (none in-repo) | `pg.ts:55,81` | Fill/Order | CANONICAL | INTERNAL | Same duplication note as §1 `trades`. |
+| `public.transactions` (`:64-80`) | Postgres | canonical | Next API routes | API routes + `getAll()` | Transaction | CANONICAL | INTERNAL | The **write target for the app's `query()` calls** — every route write lands here directly. |
+| `public.venues` (`:82-86`) | Postgres | canonical | (none in-repo) | (none in-app) | Venue | CANONICAL | PUBLIC | Text PK; not in `DASHBOARD_READS`; dead table (DR-036). |
+| `public.wallets` (`:88-102`) | Postgres | canonical | Next API `api/wallets/route.ts` (UPDATE only) | `api/wallets`, `getAll()` | Wallet | CANONICAL | USER_PRIVATE | — |
+| `public.asset_history` (`:105-128`) + hypertable (`:115`) + trigger `assets_snapshot_trg` (`:145-148`) | Postgres/Timescale | **snapshot history** (append per `assets` INSERT) | the DB **trigger** `assets_snapshot` (DR-040 — not application code) | none in-app yet (boards "chart history") | Balance snapshot (time series) | HISTORICAL (90-day retention via plain DELETE in `tests/oracle/sync-live.py`) | INTERNAL | **The one place history exists.** Retention is a hand-rolled DELETE because `add_retention_policy()` is Timescale-License. The trigger means every writer — sync, route, operator — lands in the series identically. |
+| `public.price_history` (`:150-160`) | Postgres/Timescale | **cache/price series** | **no writer found** — only the retention DELETE in `tests/oracle/sync-live.py` | none in-app | Price (time series) | HISTORICAL (90-day DELETE) | PUBLIC | **Writer gap, now confirmed dead (DR-036):** the schema comment says "Written by the price sampler", but no `price sampler` exists anywhere in the tree — `grep -rniI "INSERT INTO price_history"` → **0 hits**, the table is **empty in Postgres** and has no writer. The DDL comment describes a producer that was never written. |
 
 ---
 
@@ -260,11 +257,11 @@ Enumerated, not implied:
 | Expected thing | Status | Evidence |
 |---|---|---|
 | `database/migrations/` | **Does not exist** | `ls database/` → `README.md`, `schema/` only. The only migration runners are Payload's (`src/cms/migrations/index.ts`) and the executor's two idempotent startup appliers of `database/schema/executor-schema.sql`: the TS `ensureExecutorSchema()` and — added `8d87df1` — the Go `repository.EnsureSchema` at `cmd/executor` startup. |
-| A Turso/Postgres migration framework for the treasury tables | **Does not exist** | Turso DDL is a *dump* (`dump-schema.mjs`), Postgres DDL is applied by hand. |
+| A Postgres migration framework for the treasury tables | **Does not exist** | `database/schema/pg-schema.sql` is hand-written and applied by hand; there is no migration runner (DR-020). |
 | Seed scripts for the treasury tables | **Does not exist** | No `INSERT INTO accounts/journal/ledger/venues/trades` in any **source** file (the phrase occurs in the prose recording it, so a bare whole-tree grep is non-zero); `wallets` is seeded only as Rust constants (`chains.rs` `WALLETS`) which are *read* as the sync's watch list, not inserted by the app. |
 | SQL fixture files for the treasury schema | **Does not exist** | Only `tests/oracle/fixtures/capture.json` (HTTP bodies) and `tests/fixtures/**` (provider payloads). |
 | `database/schema/analytics.sql` | **Does not exist** (referenced by an older doc) | `docs/architecture/domain-map.md:53` names it; the file is not in the tree. The analytics tables actually live in `pg-schema.sql`. `[INFERENCE]` stale doc reference, out of my write scope. |
-| Tables for: bank accounts, macro series/observations, DEX pools/LP positions, signals, wallets-indexer data, Candles/OHLCV, news from any provider other than the CMS | **Do not exist** | No DDL matches; no writer exists. `price_history` is the only price-series table and has no writer — DR-036 confirms it dead (absent from Turso, empty in Postgres). |
+| Tables for: bank accounts, macro series/observations, DEX pools/LP positions, signals, wallets-indexer data, Candles/OHLCV, news from any provider other than the CMS | **Do not exist** | No DDL matches; no writer exists. `price_history` is the only price-series table and has no writer — DR-036 confirms it dead (empty in Postgres, no producer). |
 | Any table holding plaintext API keys/secrets | **Does not exist** | `executor.exchange_accounts` stores only `bytea` ciphertext + `iv`/`auth_tag` + `api_key_masked`; `users.hash`/`salt` are digests. |
 | A `raw_*` provider table namespace | **Does not exist** | The scope's suggested `raw_cryptorank_*`/`raw_exchange_*` naming has no implementation; raw payloads live in the disk cache (`~/.cache/crfetch`) and gzipped fixtures only. |
 | Tables for CoinGlass / CoinAnk derivatives metrics (funding, open interest, liquidations, long/short, ETF flows) | **Do not exist** | Neither family persists: `backend/data/internal/research/{coinglass,coinank}` serve the upstream body through the disk cache only (no DDL, no writer). CoinAnk is additionally `dark` — every mode returns HTTP 502 `403`. |
@@ -278,7 +275,7 @@ Enumerated, not implied:
    (and the legacy Python oracle) only; `transactions`/`wallets` by the Next API only;
    `executor.*` by the Next store + Go worker only. The exception: `accounts`, `journal`,
    `ledger`, `trades`, `venues` have **no in-repo writer at all** — they are read by the
-   dashboard and mirrored, which means their canonical owner is unidentified. **O2 answered
+   dashboard, which means their canonical owner is unidentified. **O2 answered
    2026-10-02 (DR-036): they are DEAD, not merely unowned.** Queried read-only in both
    stores, the four non-empty ones are frozen at the 2026-09-15 import (`journal` max
    `created_at` `2026-09-15 23:48:35`; `accounts` 6 rows, `ledger` 3, `venues` 12, none with
@@ -291,23 +288,22 @@ Enumerated, not implied:
    (12 `venue_id`s in `reference.json`; slug validated at `accounts/exchange/account.go:122`;
    resolved by the executor's venue boundary), and `Account`/`LedgerEntry`/`Fill` are live entities
    in `backend/api/internal/accounts/**`, `finance/ledger` and `executor.fills`; only `journal` is
-   table-only (no code-side entity beyond the mirror's pass-through).
+   table-only (no code-side entity beyond the dashboard read).
 2. **`price_history` has a schema, an index, a retention DELETE, and no writer.** **Dead by
-   the same evidence (DR-036): the table does not exist in Turso at all and is empty in
-   Postgres, and `grep -rniI "INSERT INTO price_history"` over the **source** tree → 0 hits** (run it with source globs; a bare whole-tree grep is non-zero by construction, because the phrase occurs in the prose that records it, e.g. `canonical-model.md:856`) —
+   the same evidence (DR-036): the table is empty and has never been written, and `grep -rniI "INSERT INTO price_history"` over the **source** tree → 0 hits** (run it with source globs; a bare whole-tree grep is non-zero by construction, because the phrase occurs in the prose that records it, e.g. `canonical-model.md:856`) —
    the DDL comment ("Written by the price sampler") describes a producer that was never
    written, and the 90-day retention DELETE runs against a table nothing ever fills.
 3. **`trades` duplicates the executor domain** (`executor.fills`/`child_orders`) in a
    parallel, unlinked, provider-shaped table.
-4. **Numeric type policy is inconsistent:** Turso `REAL`, Postgres `double precision`
+4. **Numeric type policy is inconsistent:** `double precision`
    for money/quantity in the treasury tables, while the executor's *stated* convention is
    decimal.js upstream (and the Go `markets`/`ledger` value models use decimal strings).
 5. **Snapshot vs canonical is unstated for `assets`:** it is a mutable latest-state table
-   in the system of record, with history only in the Postgres mirror.
+   in the system of record, with history only in the `asset_history` hypertable.
 6. **Embedded DDL duplication** (`executor-schema.sql` vs `EXECUTOR_DDL`) means the
    tracked schema file is documentation, not the artifact that runs.
 7. **Two unrelated identity/user stores** exist (`users` in Neon for CMS editors,
    Discord OAuth sessions in Go for platform users); neither references the other.
-8. **No foreign keys anywhere** in Turso/`public` (the executor schema *does* use FKs);
+8. **No foreign keys anywhere** in `public` (the executor schema *does* use FKs);
    relationships (`transactions.venue_id`→`venues.id`, `journal.*_account`→`accounts.code`,
    `trades.venue`→`venues.id`) are unenforced conventions.

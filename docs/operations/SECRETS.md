@@ -12,7 +12,7 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 
 | Name | Consumers (first-party) | Home (file) | Production consumer | CI needs it? |
 |------|------------------------|-------------|---------------------|--------------|
-| `TURSO_AUTH_TOKEN` | `frontend/web/src/platform/db/client.ts`, `backend/sync/src/persistence/db.rs`, `tests/oracle/sync-live.py`, `scripts/database/dump-schema.mjs` | `./.env` (root) + `frontend/web/.env.local` | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`; it REFUSES TO START without the token) | no |
+| `FUDCOURT_PG_URL` (Postgres DSN, DR-040) | `frontend/web/src/platform/db/client.ts`, `backend/sync/src/persistence/db.rs`, `tests/oracle/sync-live.py` | `./.env` (root) + `frontend/web/.env.local` (documented in `frontend/web/.env.example`) | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`) | no |
 | `ALCHEMY_KEY` | `tests/oracle/sync-live.py` (live ETH RPC) + the forensic `frontend/web/scripts/archive/*.mjs` one-offs (**deleted 2026-09-29**, after the rotation was recorded) | `./.env` (root) | `fudcourt-sync.timer` | no |
 | `FUDCOURT_BOT_TOKEN` | `src/app/(frontend)/api/auth/callback` + `src/app/(frontend)/(admin)` (reads guild member roles with the bot) | `frontend/web/.env.local` | `fudcourt-web` | no |
 | `FUDCOURT_CLIENT_SECRET` | `src/app/(frontend)/api/auth/callback` (OAuth code exchange) | `frontend/web/.env.local` | `fudcourt-web` | no |
@@ -50,8 +50,9 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
    credentials. Removed; both creds now come from the repo-root `.env` via
    `load_env()` or the run stops with an explicit error. Verified by running the
    script (RC 0, real sync, net worth reported).
-4. **`frontend/web/src/platform/db/client.ts` / `scripts/database/dump-schema.mjs` are clean** — Turso *URL* is public form
-   (`libsql://…turso.io`), the token is `process.env`-only.
+4. **`frontend/web/src/platform/db/client.ts` is clean** — the DSN is
+   `process.env`-only (`FUDCOURT_PG_URL`), never a literal. (The Turso token
+   and its `dump-schema.mjs` reader were removed with the store by DR-040.)
 5. **CI requires zero secrets.** The GitHub Actions web job (contract + tsc +
    build + shaper fixture tests) and blog job pass with no env configured.
 6. **Local env files are git-ignored** (root `.gitignore` `.env*` with
@@ -142,14 +143,13 @@ Production == this homeserver:
    worth line (the run stops with `missing ALCHEMY_KEY` if step 2 was skipped).
 4. Nothing else to update: the archived scripts read the same env var now.
 
-**R2. `TURSO_AUTH_TOKEN`.**
-1. Turso dashboard → database → *Create token* (least privilege: read/write on
-   the fudcourt DB), copy it, then revoke the old token.
+**R2. `FUDCOURT_PG_URL`.** (Postgres replaced the Turso token entirely — DR-040.)
+1. Rotate the `fudcourt` role's password in the `postgres-hardened` container,
+   then rebuild the DSN.
 2. Update BOTH homes: repo-root `.env` and `frontend/web/.env.local`.
-3. Verify: `node scripts/database/dump-schema.mjs --check` (RC 0, from the repo root) and
-   `python3 tests/oracle/sync-live.py` (RC 0); then `systemctl --user restart
-   fudcourt-web` and `curl -s -o /dev/null -w '%{http_code}'
-   http://127.0.0.1:3100/cryptorank` → 200.
+3. Verify: `python3 tests/oracle/sync-live.py` (RC 0, real sync); then
+   `systemctl --user restart fudcourt-web` and `curl -s -o /dev/null -w
+   '%{http_code}' http://127.0.0.1:3100/cryptorank` → 200.
 
 **R3. Discord OAuth trio + session secret.** (Added with the tier split; the
 old `FUD_MUTATION_TOKEN` pair is retired and can simply be deleted from
@@ -205,7 +205,7 @@ systemctl --user is-active fudcourt-web                  # active (serves the bl
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3100/cryptorank      # 200
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3100/portfolio       # 200 (rewrite kept)
 curl -s -o /dev/null -w '%{http_code}\n' 'http://127.0.0.1:3100/blog/cms/api/posts?limit=1&depth=0'  # 200 -> Neon live
-curl -s -o /dev/null -w '%{http_code}\n' 'http://127.0.0.1:3100/api/transactions'           # 200, rows -> Turso live
+curl -s -o /dev/null -w '%{http_code}\n' 'http://127.0.0.1:3100/api/transactions'           # 200, rows -> Postgres live
 curl -s -o /dev/null -X DELETE -w '%{http_code}\n' 'http://127.0.0.1:3100/api/transactions/1'  # 401 -> fail-closed (NO token used here)
 cd ../.. && (cd frontend/web && python3 scripts/checks/check-structure.py) && python3 scripts/verify/check-contract.py && (cd frontend/web && bun run test:shapers)   # offline gates
 ```

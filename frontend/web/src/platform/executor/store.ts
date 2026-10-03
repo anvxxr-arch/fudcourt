@@ -4,7 +4,8 @@
  *
  * All I/O targets LOCAL Postgres (`FUDCOURT_PG_URL`) inside the dedicated
  * `executor` schema (`EXECUTOR_SCHEMA`, DR-020). The `public` treasury tables are
- * the Turso->Postgres mirror's write territory and are never touched here.
+ * the sync's write territory (DR-040: `tests/oracle/sync-live.py` and the Rust
+ * crate write them directly) and are never touched here.
  *
  * Timestamps are bigint unix MILLISECONDS everywhere (`number` ms on the wire);
  * stored JSON columns round-trip `unknown` opaquely — jsonb keys are never
@@ -53,7 +54,7 @@ import {
 } from '@/platform/executor/types';
 
 // ---------------------------------------------------------------------------
-// Lazy Bun globals (same pattern as platform/db/mirror.ts): Next builds static
+// Lazy Bun globals (same pattern as platform/db/pg.ts): Next builds static
 // routes in a Node worker with no `bun` module, so the class is looked up at
 // call time and only the (erased) type comes from `bun`.
 // ---------------------------------------------------------------------------

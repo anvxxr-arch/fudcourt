@@ -2228,7 +2228,7 @@ export interface components {
             /** @description current − expected (per asset). */
             diff: number;
         };
-        /** @description A wallets-table row passed through raw from Turso. Every SELECTED column key is always present (the Rust reader inserts each column with `Value::Null` when a cell is absent), but every VALUE is nullable — including `address`/`chain` — so presence is guaranteed and non-null is not. */
+        /** @description A wallets-table row passed through raw from Postgres. Every SELECTED column key is always present (the Rust reader inserts each column with `Value::Null` when a cell is absent), but every VALUE is nullable — including `address`/`chain` — so presence is guaranteed and non-null is not. */
         ReconcileWalletRow: {
             address: string | null;
             label?: string | null;

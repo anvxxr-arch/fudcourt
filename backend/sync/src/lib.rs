@@ -7,7 +7,7 @@
 //! The tree is grouped by event-pipeline capability, each directory named after
 //! the stage it owns:
 //!   * `streams`         -- realtime ingestion of venue state (the balance sync)
-//!   * `persistence`     -- the Turso write path
+//!   * `persistence`     -- the Postgres write path
 //!   * `reconciliation`  -- reconcile maths + its HTTP surface
 //!
 //! `pyfmt` (CPython-exact float rendering), `oracle` (the Python-parity replay

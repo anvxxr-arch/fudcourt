@@ -1,6 +1,6 @@
-/** Direct proof that the treasury read path reads LOCAL Timescale, not Turso:
- *  prints every wallet label+address so a PG-only edit is visible verbatim.
- *  Uses the same getAll() the /api/all route calls. */
+/** Direct proof that the treasury read path reads the single local store
+ *  (Postgres+Timescale, DR-040): prints every wallet label+address so a PG-only
+ *  edit is visible verbatim. Uses the same getAll() the /api/all route calls. */
 import { getAll } from '@/platform/db/client';
 
 const d = (await getAll()) as Record<string, unknown>;

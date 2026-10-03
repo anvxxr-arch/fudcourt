@@ -5,6 +5,16 @@
 > Anything not built yet is in [Roadmap / INTENT](#roadmap--intent--not-done) and
 > is marked **NOT DONE**. There are no aspirational claims presented as fact.
 >
+> **Updated 2026-10-03 (DR-040):** Postgres+TimescaleDB is now the SINGLE system
+> of record and Turso/libSQL is dropped. The generated SQLite dump
+> `schema/schema.sql`, its generator `scripts/database/dump-schema.mjs` and the
+> whole `scripts/database/` directory are deleted; `schema/pg-schema.sql` is the
+> only treasury schema. The Turso→Postgres projection
+> (`frontend/web/scripts/tools/pg-load.ts`) and its `fudcourt-pgload.{service,timer}`
+> are removed (retirement note:
+> `infrastructure/systemd/RETIRED-fudcourt-pgload.service.txt`), and the web data
+> module moved from `platform/db/mirror.ts` to `platform/db/pg.ts`.
+>
 > Moved here from `apps/web/db/` (Phase 2 of the domain restructure); DDL semantics
 > were not changed by the move. Column-level documentation stays in
 > `docs/architecture/SCHEMA.md`.
@@ -13,7 +23,7 @@
 > two commits (`8c902dc`: `apps/`→`frontend/`, `services/`→`backend/`,
 > `packages/`→`shared/`, `deploy/`→`infrastructure/`; `44604ce`: `backend/data`
 > providers grouped under `internal/research`, `internal/platform`). Every
-> `path:line` below was re-read after `44604ce`; the three `.sql` files themselves
+> `path:line` below was re-read after `44604ce`; the `.sql` files themselves
 > did not change. Where a doc reference in this file still names the pre-move
 > path, it is listed under "Known stale references".
 
@@ -21,53 +31,34 @@
 
 | File | Dialect / role | Objects | Shape owner |
 |---|---|---|---|
-| `schema/schema.sql` | Turso (libsql/SQLite) dump — the treasury source-of-truth family | 9 objects: `accounts`, `assets`, `journal`, `ledger`, `sqlite_sequence`, `trades`, `transactions`, `venues`, `wallets` (no indexes) | **generated**, live Turso is the system of record |
-| `schema/pg-schema.sql` | Postgres 17 + TimescaleDB **read model** (`public` schema) | the same 8 treasury tables + `asset_history`, `price_history` (2 hypertables, 3 indexes) | hand-written (`pg-schema.sql:18` — Postgres DDL cannot be dumped from SQLite) |
+| `schema/pg-schema.sql` | Postgres 17 + TimescaleDB — the treasury **system of record** (`public` schema) | the 8 treasury tables + `asset_history`, `price_history` (2 hypertables, 3 indexes) + the `assets_snapshot` trigger that appends every `assets` insert to `asset_history` | hand-written; applied to the `fudcourt` database in the `postgres-hardened` container on `127.0.0.1:5432` |
 | `schema/executor-schema.sql` | Postgres `executor` schema (live execution ledger) | 20 statements: `CREATE SCHEMA`, 10 tables, 9 indexes | the executor runtime (`EXECUTOR_DDL` in `frontend/web/src/platform/executor/store.ts` READS this file; the Go worker applies a byte-pinned `embed` copy) |
 
-Object lines: `schema.sql` `:3,:10,:21,:33,:42,:44,:56,:71,:77`;
-`pg-schema.sql` tables `:20,:27,:38,:50,:59,:71,:89,:95,:112,:132`, hypertables
-`:122,:139`, indexes `:123,:127,:140`; `executor-schema.sql` `:24` (schema),
-tables `:32,:58,:100,:106,:129,:147,:157,:165,:173,:179`, indexes
+Object lines: `pg-schema.sql` tables `:20,:27,:38,:50,:59,:71,:89,:95,:112,:132`,
+hypertables `:122,:139`, indexes `:123,:127,:140`; `executor-schema.sql` `:24`
+(schema), tables `:32,:58,:100,:106,:129,:147,:157,:165,:173,:179`, indexes
 `:50,:95,:96,:124,:143,:154,:163,:171,:187`.
 
 ## Consumer map
 
 `file -> consumers (path:line) -> verdict`
 
-### `database/schema/schema.sql` — generated Turso dump
+### `database/schema/pg-schema.sql` — the treasury schema (sole owner)
 
 | Consumer | Kind |
 |---|---|
-| `scripts/database/dump-schema.mjs:38` | **writer** (`--check` mode at `:44` prints `SCHEMA_OK`, `:47` prints `SCHEMA_DRIFT`; usage documented `:3-4`) |
-| `README.md:91` | operator command (`node scripts/database/dump-schema.mjs --check`) |
-| docs: `docs/architecture/SCHEMA.md:8`, `docs/architecture/TECH-STACK.md:63-64` | drift-alarm documentation (both name `scripts/database/dump-schema.mjs`, which resolves from the repo root) |
-| `frontend/web/src/platform/db/mirror.ts:48` | comment: the projection mirrors this file's shape |
-| `database/schema/pg-schema.sql:11,:18` | comment: types map 1:1 from here |
-| `shared/contracts/openapi/fudcourt.yaml:4323` → `shared/sdk/typescript/src/generated/schema.d.ts` | contract comment (SDK is generated from the yaml) |
-| `backend/api/internal/finance/transactions/transactions.go:31,:41` | Go comment (column defaults mirror this file) |
-| — | **no other code reads the file.** The only `readFileSync` calls on paths under `database/` in the whole repo are its own generator (`dump-schema.mjs:42`, `--check` mode) and the executor drift test (`executor-store-tests.ts:502`); `dump-schema.mjs:55` is its writer |
-
-**Verdict:** the *live Turso database* is the system of record; this file is a
-generated snapshot of it, kept honest by `dump-schema.mjs --check`. It is the
-authoritative **source** half of the treasury segment.
-
-### `database/schema/pg-schema.sql` — hand-written Postgres read model
-
-| Consumer | Kind |
-|---|---|
-| `frontend/web/src/platform/db/mirror.ts` (`TABLES` `:50-58`, `asset_history` insert `:200`, retention `:207-208`) | the code that actually writes these tables (DML, not DDL) |
-| `frontend/web/scripts/tools/pg-load.ts` | CLI wrapper that calls `loadFromMirror()` |
-| `infrastructure/systemd/fudcourt-pgload.service:3,:11`, `fudcourt-pgload.timer:3`, `fudcourt-sync.service:41` | runs `pg-load.ts` (oneshot every 60 s; also after every sync) |
-| `infrastructure/systemd/fudcourt-pgload.service:4` | `Documentation=` line only |
+| `frontend/web/src/platform/db/pg.ts` (`pg()` client, `toPostgres()`, `DASHBOARD_READS`) | the app's Postgres client and dashboard read set; `frontend/web/src/platform/db/client.ts` (`query`/`execute`/`getAll`) is built on it |
+| `tests/oracle/sync-live.py` (psycopg2) | the deployed balance sync — writes `assets` directly and runs the 90-day retention `DELETE` on `asset_history`/`price_history` |
+| `backend/sync` (Rust, `tokio-postgres`) | the undeployed Rust sync writes the same tables; `fudcourt-reconciled` reads them for `/api/reconcile` |
+| `database/schema/pg-schema.sql` (`assets_snapshot` trigger) | appends each `assets` INSERT to `asset_history`; snapshots are taken by the database, not by application code |
 | `shared/contracts/openapi/fudcourt.yaml:4322,:4399` → SDK `schema.d.ts:2227` | contract comment |
-| docs: `docs/architecture/current.md:228`, `docs/architecture/final-review.md:40`, `docs/architecture/domain-map.md:50`, `docs/records/DECISIONS.md:1277` | docs (line numbers re-read post-restructure) |
+| docs: `docs/architecture/current.md`, `docs/architecture/final-review.md`, `docs/architecture/domain-map.md`, `docs/records/DECISIONS.md` | docs (line numbers move; deliberately not quoted here) |
 
-**Verdict:** the authoritative **representation** of the Postgres read model, but
-**no tool in this repo executes it**: there is no `psql` invocation anywhere in the
-tree, no migration runner, and no CI step references it. It is applied
-out-of-band to the local cluster; the automated path (`pg-load` → `mirror.ts`)
-only issues DML against tables this file must already have created.
+**Verdict:** the authoritative DDL for the treasury tables and the **only**
+treasury schema — the app, the sync and the reconcile service all read and write
+these tables directly. The DDL is applied out-of-band to the `fudcourt` cluster
+(there is no `psql` invocation in this repo), and the CI `reconcile-live` job
+applies this same file to its own throwaway TimescaleDB container.
 
 ### `database/schema/executor-schema.sql` — the executor DDL (sole owner)
 
@@ -88,22 +79,19 @@ patterns) and is guarded byte-for-byte.
 
 ## Authority and segmentation verdict
 
-**Two independent segments; nothing here is redundant with anything else.**
+**One treasury schema, one execution-ledger schema; nothing here is redundant.**
 
-1. **Treasury / `public` read-model segment** — `schema.sql` + `pg-schema.sql`.
-   These **deliberately overlap**: the same 8 logical tables in two dialects
-   (`TEXT→text`, `REAL→double precision`, `INTEGER PK→GENERATED BY DEFAULT AS
-   IDENTITY`; comments at `pg-schema.sql:11-19`). Authority is split by concern:
-   *live Turso* is the system of record, `schema.sql` is its generated
-   representation, `pg-schema.sql` is the hand-written Postgres projection. The
-   two Postgres-only tables (`asset_history`, `price_history`) have no Turso
-   counterpart — they exist for the time-series capability Turso never had
-   (`pg-schema.sql:107-110`).
+1. **Treasury / `public` segment** — `schema/pg-schema.sql`. Postgres+TimescaleDB
+   is the system of record (DR-040, superseding the DR-019 two-store split). The
+   hand-written DDL declares the 8 treasury tables plus the two Timescale
+   hypertables (`asset_history`, `price_history`) that give the time-series
+   capability the retired Turso store never had (`pg-schema.sql:107-110`), and the
+   `assets_snapshot` trigger that fills `asset_history` on every `assets` insert.
 2. **Execution-ledger segment** — `executor-schema.sql`. **Disjoint** from the
-   other two, by both table names and Postgres schema (`executor` vs `public`).
-   The separation is deliberate (`executor-schema.sql:4-6`): the mirror prunes
-   `public` wholesale, and the live executor data must not sit in that blast
-   radius.
+   treasury segment, by both table names and Postgres schema (`executor` vs
+   `public`). The separation is deliberate (`executor-schema.sql:4-6`): the
+   executor writes live data and must not share a namespace with the treasury
+   tables.
 
 Nothing is defined twice inside a segment. The only duplication anywhere is the Go
 `embed` copy of `executor-schema.sql`
@@ -115,16 +103,17 @@ file.
 
 ## How each file is consumed in a deployment (today)
 
-- **Turso** is written by `backend/sync` (Rust reconciler), `tests/oracle/sync-live.py`
-  and the web write path; `schema.sql` is periodically re-dumped from it and
-  `--check`'d.
-- **Postgres read model** is created out-of-band from `pg-schema.sql`, then filled
-  by `pg-load.ts`/`mirror.ts` on a 60 s timer and after every sync
-  (`infrastructure/systemd/fudcourt-sync.service:41`).
+- **Treasury (`public`)** is written directly by `tests/oracle/sync-live.py` (the
+  deployed sync, via psycopg2) and, in the undeployed Rust replacement, by
+  `backend/sync` (`tokio-postgres`); the web writes `transactions`/`wallets` and
+  reads everything through `platform/db/pg.ts`. `pg-schema.sql` is applied
+  out-of-band to the `fudcourt` database; there is no projection timer.
 - **`executor.*`** is created in-process at startup by `ensureExecutorSchema()`
   (no external migration step).
-- **No systemd unit and no CI workflow executes any `.sql` file.** CI only runs
-  Go/Rust/TS builds, the offline gates and the contracts drift check
+- **No systemd unit executes any `.sql` file.** The only automated application of
+  a `.sql` file is the CI `reconcile-live` job, which applies `pg-schema.sql` to
+  its own throwaway TimescaleDB container. Otherwise CI runs Go/Rust/TS builds,
+  the offline gates and the contracts drift check
   (`.github/workflows/{web,go,rust,contracts,integration}.yml`).
 
 ## Table ownership
@@ -132,7 +121,7 @@ file.
 One owner domain per table. "Owner" = the domain whose code writes it; readers
 may exist elsewhere per the dependency rules.
 
-### Turso — treasury system of record (`schema/schema.sql`)
+### Postgres `public` — treasury system of record (`schema/pg-schema.sql`)
 
 | Table | Owner domain | Notes |
 |---|---|---|
@@ -144,8 +133,8 @@ may exist elsewhere per the dependency rules.
 | `ledger` | ledger | postings |
 | `trades` | ledger | trade records |
 | `venues` | exchangeaccounts | venue registry |
-| `asset_history` | portfolio | history (projected to Timescale hypertable) |
-| `price_history` | markets | price history (projected to Timescale hypertable) |
+| `asset_history` | portfolio | history (appended by the `assets_snapshot` trigger on every `assets` insert) |
+| `price_history` | markets | price history hypertable (no producer — DR-036) |
 
 ### Postgres `executor` schema (`schema/executor-schema.sql`)
 
@@ -175,8 +164,9 @@ introduce a new migration framework unnecessarily"; DR-020):
 - `executor.*`: idempotent `CREATE … IF NOT EXISTS` DDL, one tracked copy +
   one embedded copy, drift-pinned by test. Forward-only; a column removal is a
   manual operation.
-- Turso treasury: schema is the live dump; changes are made in Turso and
-  re-dumped (drift gate keeps the repo honest).
+- Treasury `public`: schema is `pg-schema.sql`, applied out-of-band to the
+  `fudcourt` database. There is no dump and no drift gate — the SQLite dump and
+  its `dump-schema.mjs --check` alarm were retired together with Turso (DR-040).
 - Neon (Payload CMS): Payload's own migration folder
   (`frontend/web/src/cms/migrations/`) stays with the CMS by Payload convention.
 
@@ -185,8 +175,8 @@ introduce a new migration framework unnecessarily"; DR-020):
 - unique execution id (PK), unique `event_id`, unique
   `(execution_id, client_order_id)`, unique `(account_id, exchange_trade_id)`
 - `user_id` scoping on every executor query (wrong user ⇒ `null`/`[]`, API 404)
-- executor objects live **only** in the `executor` schema — the Turso→Postgres
-  mirror prunes `public` wholesale and must never touch executor data (DR-020)
+- executor objects live **only** in the `executor` schema, never in `public`
+  (DR-020), so the live execution ledger is isolated from the treasury tables
 - timestamps are `bigint` unix **milliseconds** (exact JS round-trip);
   money/quantity are `double precision` with `decimal.js` upstream in risk/sizing
 
@@ -200,8 +190,7 @@ mistakes the plan for the tree:
 - `database/migrations/NNNNNN_*.sql` as the **authoritative history**, with
   `database/schema/snapshot.sql` as the **current representation** — **NOT DONE.**
   There is no `migrations/` directory and no `snapshot.sql`; today's "current
-  representation" is the generated `schema/schema.sql` plus the hand-written
-  `schema/pg-schema.sql`.
+  representation" is the hand-written `schema/pg-schema.sql`.
 - `database/seeds/` — **NOT DONE, and no content exists to put in it.** (Not
   created: an empty directory would be a claim, not a fact.)
 - `database/fixtures/` — **NOT DONE.** No DB fixtures live here. (The brief's
@@ -237,8 +226,9 @@ purpose:
   `../sync` → `../../frontend/web` → `../..`) resolves, and every `scripts/…`
   path is read relative to the cwd its own `cd` leaves:
   `scripts/checks/check-structure.py` (`:77`) and `scripts/verify/…` (`:81-90`)
-  are correct as written, and `node scripts/database/dump-schema.mjs --check`
-  (`:91`) resolves from the repo root. The one genuinely dead path the snippet
+  are correct as written. Its `node scripts/database/dump-schema.mjs --check`
+  line (`:91`) is now **dead**: `scripts/database/` was deleted with Turso by
+  DR-040. The one genuinely dead path the snippet
   carried, `frontend/web/scripts/tools/sync-live.py` (`:75`), resolves to
   `tests/oracle/sync-live.py` at its current path (moved in `d4119ca`).
 

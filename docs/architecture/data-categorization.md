@@ -18,20 +18,20 @@ exist.
 |---|---|---|
 | `acq` | 58 | Go data sidecar acquisition surface — every family and every mode |
 | `routes` | 45 | HTTP route handlers under `frontend/web/src/app/**` — method, domain, auth tier, proxy target |
-| `db` | 50 | Persistence objects across the four stores (Turso, Postgres+Timescale, `executor` schema, Payload/Neon) |
+| `db` | 41 | Persistence objects across the three stores (Postgres+TimescaleDB, `executor` schema, Payload/Neon) |
 | `feeds` | 11 | Non-sidecar upstream feeds the app reads directly (ccxt venues, chain RPCs, DexScreener, CoinGecko, CMS, signals) |
-| **total** | **164** | |
+| **total** | **155** | |
 
 ## 2. Status and category roll-up
 
 | status | rows |  | category | rows |
 |---|---|---|---|---|
-| `active` | 141 | | `MARKET_DATA` | 37 |
-| `dead` | 13 | | `TRADING` | 28 |
-| `dark` | 7 | | `PORTFOLIO` | 20 |
+| `active` | 137 | | `MARKET_DATA` | 37 |
+| `dead` | 8 | | `TRADING` | 26 |
+| `dark` | 7 | | `PORTFOLIO` | 14 |
 | `scaffolded` | 3 | | `RESEARCH` | 17 |
 |  |  | | `NEWS` | 16 |
-|  |  | | `SYSTEM` | 13 |
+|  |  | | `SYSTEM` | 12 |
 |  |  | | `DERIVATIVES` | 12 |
 |  |  | | `ACCESS` | 8 |
 |  |  | | `ONCHAIN` | 7 |
@@ -110,11 +110,11 @@ exist.
 | route-blog-cms-api-graphql | POST\|OPTIONS /blog/cms/api/graphql — Payload GraphQL endpoint (CMS, generated) | RESEARCH | CANONICAL | keyless | STATIC | CANONICAL | PUBLIC | active | `frontend/web/src/app/blog/(payload)/cms/api/graphql/route.ts` |
 | route-blog-cms-api-rest | GET\|POST\|DELETE\|PATCH\|PUT\|OPTIONS /blog/cms/api/[...slug] — Payload REST catch-all (CMS, generated); public read path /blog/cms/api/posts | RESEARCH | CANONICAL | keyless | STATIC | CANONICAL | PUBLIC | active | `frontend/web/src/app/blog/(payload)/cms/api/[...slug]/route.ts` |
 | route-api-admin-members | GET\|POST /api/admin/members — admin guild-member list + role grant/revoke (PROXY -> Go api :3103 handleAdminMembers) | ACCESS | PRODUCT_VIEW | session:admin | REALTIME | NONE | INTERNAL | active | `frontend/web/src/app/(frontend)/api/admin/members/route.ts` |
-| route-api-all | GET /api/all — full treasury snapshot (wallets+assets+transactions) from Turso DB | PORTFOLIO | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/all/route.ts` |
-| route-api-coins | GET /api/coins — distinct assets grouped by total USD value from Turso DB | PORTFOLIO | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/coins/route.ts` |
-| route-api-wallets | GET\|POST /api/wallets — wallet table read + alias/metadata update (Turso DB); POST uses requireMutationAuth('team') | PORTFOLIO | CANONICAL | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/wallets/route.ts` |
-| route-api-transactions | GET\|POST\|DELETE\|PUT /api/transactions — transaction ledger read/filter + bulk insert/delete/update (Turso DB) | PORTFOLIO | CANONICAL | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/transactions/route.ts` |
-| route-api-transactions-id | PUT\|PATCH\|DELETE /api/transactions/[id] — single-row ledger edit/delete (Turso DB) | PORTFOLIO | CANONICAL | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/transactions/[id]/route.ts` |
+| route-api-all | GET /api/all — full treasury snapshot (wallets+assets+transactions) from Postgres | PORTFOLIO | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/all/route.ts` |
+| route-api-coins | GET /api/coins — distinct assets grouped by total USD value from Postgres | PORTFOLIO | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/coins/route.ts` |
+| route-api-wallets | GET\|POST /api/wallets — wallet table read + alias/metadata update (Postgres); POST uses requireMutationAuth('team') | PORTFOLIO | CANONICAL | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/wallets/route.ts` |
+| route-api-transactions | GET\|POST\|DELETE\|PUT /api/transactions — transaction ledger read/filter + bulk insert/delete/update (Postgres) | PORTFOLIO | CANONICAL | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/transactions/route.ts` |
+| route-api-transactions-id | PUT\|PATCH\|DELETE /api/transactions/[id] — single-row ledger edit/delete (Postgres) | PORTFOLIO | CANONICAL | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/transactions/[id]/route.ts` |
 | route-api-reconcile | GET /api/reconcile — wallet reconciliation (PROXY -> Rust fudcourt-reconciled :3102) | PORTFOLIO | CANONICAL | session:team | FREQUENT | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/reconcile/route.ts` |
 | route-api-auth-login | GET /api/auth/login — OAuth login redirect (PROXY -> Go api :3103 handleAuthLogin, Discord authorize) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `frontend/web/src/app/(frontend)/api/auth/login/route.ts` |
 | route-api-auth-callback | GET /api/auth/callback — OAuth code->session exchange (PROXY -> Go api :3103 handleAuthCallback) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `frontend/web/src/app/(frontend)/api/auth/callback/route.ts` |
@@ -152,28 +152,19 @@ exist.
 | route-api-executor-preview | POST /api/executor/preview — dry run only, nothing created, no external order | TRADING | PRODUCT_VIEW | session:team | REALTIME | NONE | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/preview/route.ts` |
 | route-api-executor-settings | GET\|PUT /api/executor/settings — per-user risk profile | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/settings/route.ts` |
 
-### 3.3 `db` — Persistence objects across the four stores (Turso, Postgres+Timescale, `executor` schema, Payload/Neon)
+### 3.3 `db` — Persistence objects across the three stores (Postgres+TimescaleDB, `executor` schema, Payload/Neon)
 
 | id | name | category | layer | auth | freshness | durability | sensitivity | status | path |
 |---|---|---|---|---|---|---|---|---|---|
-| turso-accounts | Turso `accounts` — chart of accounts (code/name/type/statement) | PORTFOLIO | CANONICAL | TURSO_AUTH_TOKEN | STATIC | CANONICAL | INTERNAL | dead | `database/schema/schema.sql` |
-| turso-assets | Turso `assets` — latest synced wallet balances (chain/asset/quantity/value_usd/share_pct/wallet) | PORTFOLIO | CANONICAL | TURSO_AUTH_TOKEN | FREQUENT | SNAPSHOT | INTERNAL | active | `backend/sync/src/persistence/db.rs` |
-| turso-journal | Turso `journal` — dated double-entry journal lines (entry_code/debit/credit/amount) | PORTFOLIO | CANONICAL | TURSO_AUTH_TOKEN | STATIC | CANONICAL | INTERNAL | dead | `database/schema/schema.sql` |
-| turso-ledger | Turso `ledger` — running balance per (account_code, side, currency) | PORTFOLIO | CANONICAL | TURSO_AUTH_TOKEN | STATIC | CANONICAL | INTERNAL | dead | `database/schema/schema.sql` |
-| turso-sqlite-sequence | Turso `sqlite_sequence` — SQLite AUTOINCREMENT bookkeeping (internal) | SYSTEM | CANONICAL | TURSO_AUTH_TOKEN | STATIC | NONE | INTERNAL | active | `database/schema/schema.sql` |
-| turso-trades | Turso `trades` — executed trade log (venue/symbol/side/qty/price/pnl) | TRADING | CANONICAL | TURSO_AUTH_TOKEN | STATIC | EVENT | INTERNAL | dead | `database/schema/schema.sql` |
-| turso-transactions | Turso `transactions` — user-entered on-chain/ledger movements | PORTFOLIO | CANONICAL | TURSO_AUTH_TOKEN | MANUAL | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/transactions/route.ts` |
-| turso-venues | Turso `venues` — exchange/venue registry (id text slug) | TRADING | CANONICAL | TURSO_AUTH_TOKEN | STATIC | CANONICAL | PUBLIC | dead | `database/schema/schema.sql` |
-| turso-wallets | Turso `wallets` — watched-wallet registry + UI metadata (alias/emoji/color) | PORTFOLIO | CANONICAL | TURSO_AUTH_TOKEN | MANUAL | CANONICAL | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/wallets/route.ts` |
-| pg-accounts | public.accounts — Postgres read-model mirror of Turso accounts | PORTFOLIO | CANONICAL | FUDCOURT_PG_URL | STATIC | CANONICAL | INTERNAL | dead | `database/schema/pg-schema.sql` |
-| pg-assets | public.assets — Postgres read-model mirror of Turso assets (latest state) | PORTFOLIO | CANONICAL | FUDCOURT_PG_URL | FREQUENT | SNAPSHOT | INTERNAL | active | `database/schema/pg-schema.sql` |
-| pg-journal | public.journal — Postgres read-model mirror of Turso journal | PORTFOLIO | CANONICAL | FUDCOURT_PG_URL | STATIC | CANONICAL | INTERNAL | dead | `database/schema/pg-schema.sql` |
-| pg-ledger | public.ledger — Postgres read-model mirror of Turso ledger | PORTFOLIO | CANONICAL | FUDCOURT_PG_URL | STATIC | CANONICAL | INTERNAL | dead | `database/schema/pg-schema.sql` |
-| pg-trades | public.trades — Postgres read-model mirror of Turso trades | TRADING | CANONICAL | FUDCOURT_PG_URL | STATIC | EVENT | INTERNAL | dead | `database/schema/pg-schema.sql` |
-| pg-transactions | public.transactions — Postgres read-model mirror of Turso transactions | PORTFOLIO | CANONICAL | FUDCOURT_PG_URL | MANUAL | CANONICAL | INTERNAL | active | `database/schema/pg-schema.sql` |
-| pg-venues | public.venues — Postgres read-model mirror of Turso venues | TRADING | CANONICAL | FUDCOURT_PG_URL | STATIC | CANONICAL | PUBLIC | dead | `database/schema/pg-schema.sql` |
-| pg-wallets | public.wallets — Postgres read-model mirror of Turso wallets | PORTFOLIO | CANONICAL | FUDCOURT_PG_URL | MANUAL | CANONICAL | USER_PRIVATE | active | `database/schema/pg-schema.sql` |
-| pg-asset-history | public.asset_history — TimescaleDB hypertable, one row per asset snapshot per projection | PORTFOLIO | DERIVED | FUDCOURT_PG_URL | FREQUENT | HISTORICAL | INTERNAL | active | `database/schema/pg-schema.sql` |
+| pg-accounts | public.accounts — chart of accounts (treasury system of record, DR-040) | PORTFOLIO | CANONICAL | FUDCOURT_PG_URL | STATIC | CANONICAL | INTERNAL | dead | `database/schema/pg-schema.sql` |
+| pg-assets | public.assets — latest synced wallet balances (treasury system of record, DR-040) | PORTFOLIO | CANONICAL | FUDCOURT_PG_URL | FREQUENT | SNAPSHOT | INTERNAL | active | `database/schema/pg-schema.sql` |
+| pg-journal | public.journal — double-entry journal lines (treasury system of record, DR-040) | PORTFOLIO | CANONICAL | FUDCOURT_PG_URL | STATIC | CANONICAL | INTERNAL | dead | `database/schema/pg-schema.sql` |
+| pg-ledger | public.ledger — running balance per account (treasury system of record, DR-040) | PORTFOLIO | CANONICAL | FUDCOURT_PG_URL | STATIC | CANONICAL | INTERNAL | dead | `database/schema/pg-schema.sql` |
+| pg-trades | public.trades — executed trade log (treasury system of record, DR-040) | TRADING | CANONICAL | FUDCOURT_PG_URL | STATIC | EVENT | INTERNAL | dead | `database/schema/pg-schema.sql` |
+| pg-transactions | public.transactions — user-entered on-chain/ledger movements (treasury system of record, DR-040) | PORTFOLIO | CANONICAL | FUDCOURT_PG_URL | MANUAL | CANONICAL | INTERNAL | active | `database/schema/pg-schema.sql` |
+| pg-venues | public.venues — exchange/venue registry (treasury system of record, DR-040) | TRADING | CANONICAL | FUDCOURT_PG_URL | STATIC | CANONICAL | PUBLIC | dead | `database/schema/pg-schema.sql` |
+| pg-wallets | public.wallets — watched-wallet registry + UI metadata (treasury system of record, DR-040) | PORTFOLIO | CANONICAL | FUDCOURT_PG_URL | MANUAL | CANONICAL | USER_PRIVATE | active | `database/schema/pg-schema.sql` |
+| pg-asset-history | public.asset_history — TimescaleDB hypertable, one row per `assets` INSERT (assets_snapshot trigger) | PORTFOLIO | DERIVED | FUDCOURT_PG_URL | FREQUENT | HISTORICAL | INTERNAL | active | `database/schema/pg-schema.sql` |
 | pg-price-history | public.price_history — TimescaleDB hypertable, intended compact price series (NO PRODUCER) | MARKET_DATA | CANONICAL | FUDCOURT_PG_URL | PERIODIC | HISTORICAL | PUBLIC | dead | `database/schema/pg-schema.sql` |
 | pg-canonical-reference | public.canonical_reference — (provider, provider_id) -> canonical_id resolution table, artifact-derived cache | SYSTEM | DERIVED | FUDCOURT_PG_URL | MANUAL | SNAPSHOT | INTERNAL | scaffolded | `database/schema/pg-schema.sql` |
 | pg-canonical-reference-miss | public.canonical_reference_miss — known-but-unresolved provider identifiers (artifact `misses`) | SYSTEM | DERIVED | FUDCOURT_PG_URL | MANUAL | SNAPSHOT | INTERNAL | scaffolded | `database/schema/pg-schema.sql` |
@@ -259,8 +250,8 @@ not installed. The Alchemy / Solana / Hyperliquid feeds are active **through the
 
 **F7 — the dead tables are confirmed writer-less from the tree.** No `INSERT` targets `accounts`,
 `journal`, `ledger`, `trades`, `venues` or `price_history` anywhere in source — only `SELECT`s in
-`frontend/web/src/platform/db/mirror.ts` and one 90-day retention `DELETE FROM price_history`
-(`mirror.ts:208`). `status=dead` is therefore verified independently, not copied from DR-036.
+`frontend/web/src/platform/db/pg.ts` and one 90-day retention `DELETE FROM price_history`
+(`pg.ts:208`). `status=dead` is therefore verified independently, not copied from DR-036.
 
 **F8 — defense-in-depth note, NOT a vulnerability.** `requiredTierForPath('/api/admin/members')`
 returns `null`: the middleware tier table covers the `/admin` **page** prefix and six team API paths,
@@ -273,7 +264,7 @@ recorded because the middleware table not covering the path is a real (non-explo
 ## 5. Verification
 
 ```
-python3 -c "import json;print(len(json.load(open('docs/architecture/data-categorization.json'))))"  # 164
+python3 -c "import json;print(len(json.load(open('docs/architecture/data-categorization.json'))))"  # 155
 curl -s http://127.0.0.1:3101/healthz                                  # 8 families, 28 cryptorank modes
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinglass?mode=statistics'   # 200 (web proxy)
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinank?mode=fundingRate'     # 502 dark (web proxy)

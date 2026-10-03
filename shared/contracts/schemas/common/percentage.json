@@ -2,6 +2,6 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/common/percentage.json",
   "title": "Exact percentage",
-  "description": "A decimal string PERCENT on the 0-100 scale, so 4.2 means +4.2%. The scale is part of the name: fields on the 0-1 scale must be called …_fraction or …_ratio instead (common/ratio.json). Mixed-scale incidents this rule exists to prevent: database/schema/schema.sql assets.share_pct is written as usd/total*100 (0-100) while frontend/web/src/features/ticker/client.ts VenueQuote.change24h is a fraction (0-1) and TickerRow.spread is a percent (0-100). All three are JavaScript numbers, so only the name carries the unit.",
+  "description": "A decimal string PERCENT on the 0-100 scale, so 4.2 means +4.2%. The scale is part of the name: fields on the 0-1 scale must be called …_fraction or …_ratio instead (common/ratio.json). Mixed-scale incidents this rule exists to prevent: database/schema/pg-schema.sql assets.share_pct is written as usd/total*100 (0-100) while frontend/web/src/features/ticker/client.ts VenueQuote.change24h is a fraction (0-1) and TickerRow.spread is a percent (0-100). All three are JavaScript numbers, so only the name carries the unit.",
   "$ref": "./decimal.json"
 }

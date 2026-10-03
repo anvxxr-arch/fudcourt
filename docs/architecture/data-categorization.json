@@ -1,7 +1,7 @@
 [
  {
   "id": "acq-cryptorank-home",
-  "name": "cryptorank mode=home: CryptoRank homepage market overview (HTML SSR -> __NEXT_DATA__) \u2014 upstream https://cryptorank.io/",
+  "name": "cryptorank mode=home: CryptoRank homepage market overview (HTML SSR -> __NEXT_DATA__) — upstream https://cryptorank.io/",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -17,7 +17,7 @@
  },
  {
   "id": "acq-cryptorank-coins",
-  "name": "cryptorank mode=coins: CryptoRank all-coins list \u2014 upstream https://cryptorank.io/all-coins-list",
+  "name": "cryptorank mode=coins: CryptoRank all-coins list — upstream https://cryptorank.io/all-coins-list",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -33,7 +33,7 @@
  },
  {
   "id": "acq-cryptorank-trending",
-  "name": "cryptorank mode=trending: CryptoRank trending coins \u2014 upstream https://cryptorank.io/trending",
+  "name": "cryptorank mode=trending: CryptoRank trending coins — upstream https://cryptorank.io/trending",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -49,7 +49,7 @@
  },
  {
   "id": "acq-cryptorank-gainers",
-  "name": "cryptorank mode=gainers: CryptoRank top gainers \u2014 upstream https://cryptorank.io/gainers",
+  "name": "cryptorank mode=gainers: CryptoRank top gainers — upstream https://cryptorank.io/gainers",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -65,7 +65,7 @@
  },
  {
   "id": "acq-cryptorank-losers",
-  "name": "cryptorank mode=losers: CryptoRank top losers \u2014 upstream https://cryptorank.io/losers",
+  "name": "cryptorank mode=losers: CryptoRank top losers — upstream https://cryptorank.io/losers",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -81,7 +81,7 @@
  },
  {
   "id": "acq-cryptorank-funding",
-  "name": "cryptorank mode=funding: CryptoRank funding-rounds (REFUSED: synthetic decoy upstream) \u2014 upstream https://cryptorank.io/funding-rounds (Next.js data-route, DISABLED)",
+  "name": "cryptorank mode=funding: CryptoRank funding-rounds (REFUSED: synthetic decoy upstream) — upstream https://cryptorank.io/funding-rounds (Next.js data-route, DISABLED)",
   "slice": "acq",
   "category": "RESEARCH",
   "domain": "markets / research",
@@ -97,7 +97,7 @@
  },
  {
   "id": "acq-cryptorank-unlocks",
-  "name": "cryptorank mode=unlocks: CryptoRank token-unlock (REFUSED: synthetic decoy upstream) \u2014 upstream https://cryptorank.io/token-unlock (Next.js data-route, DISABLED)",
+  "name": "cryptorank mode=unlocks: CryptoRank token-unlock (REFUSED: synthetic decoy upstream) — upstream https://cryptorank.io/token-unlock (Next.js data-route, DISABLED)",
   "slice": "acq",
   "category": "RESEARCH",
   "domain": "markets / research",
@@ -113,7 +113,7 @@
  },
  {
   "id": "acq-cryptorank-categories",
-  "name": "cryptorank mode=categories: CryptoRank category index/detail (keyed) \u2014 upstream https://cryptorank.io/categories/<key>",
+  "name": "cryptorank mode=categories: CryptoRank category index/detail (keyed) — upstream https://cryptorank.io/categories/<key>",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -129,7 +129,7 @@
  },
  {
   "id": "acq-cryptorank-exchanges",
-  "name": "cryptorank mode=exchanges: CryptoRank exchange lists (whitelisted venue list) \u2014 upstream https://cryptorank.io/exchanges/<list>",
+  "name": "cryptorank mode=exchanges: CryptoRank exchange lists (whitelisted venue list) — upstream https://cryptorank.io/exchanges/<list>",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -145,7 +145,7 @@
  },
  {
   "id": "acq-cryptorank-coin",
-  "name": "cryptorank mode=coin: CryptoRank coin price page (keyed slug) \u2014 upstream https://cryptorank.io/price/<slug>",
+  "name": "cryptorank mode=coin: CryptoRank coin price page (keyed slug) — upstream https://cryptorank.io/price/<slug>",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -161,7 +161,7 @@
  },
  {
   "id": "acq-cryptorank-listings",
-  "name": "cryptorank mode=listings: CryptoRank exchange listings \u2014 upstream https://cryptorank.io/listings",
+  "name": "cryptorank mode=listings: CryptoRank exchange listings — upstream https://cryptorank.io/listings",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -177,7 +177,7 @@
  },
  {
   "id": "acq-cryptorank-blockchains",
-  "name": "cryptorank mode=blockchains: CryptoRank chain index (278 chains) \u2014 upstream https://cryptorank.io/blockchains",
+  "name": "cryptorank mode=blockchains: CryptoRank chain index (278 chains) — upstream https://cryptorank.io/blockchains",
   "slice": "acq",
   "category": "ONCHAIN",
   "domain": "markets / research",
@@ -193,7 +193,7 @@
  },
  {
   "id": "acq-cryptorank-chain",
-  "name": "cryptorank mode=chain: CryptoRank chain ecosystem detail (keyed) \u2014 upstream https://cryptorank.io/blockchains/<key>",
+  "name": "cryptorank mode=chain: CryptoRank chain ecosystem detail (keyed) — upstream https://cryptorank.io/blockchains/<key>",
   "slice": "acq",
   "category": "ONCHAIN",
   "domain": "markets / research",
@@ -209,7 +209,7 @@
  },
  {
   "id": "acq-cryptorank-launchpool",
-  "name": "cryptorank mode=launchpool: CryptoRank launchpool event lists \u2014 upstream https://cryptorank.io/{past|active|upcoming}-launchpool",
+  "name": "cryptorank mode=launchpool: CryptoRank launchpool event lists — upstream https://cryptorank.io/{past|active|upcoming}-launchpool",
   "slice": "acq",
   "category": "RESEARCH",
   "domain": "markets / research",
@@ -225,7 +225,7 @@
  },
  {
   "id": "acq-cryptorank-nodesale",
-  "name": "cryptorank mode=nodesale: CryptoRank node-sale event lists \u2014 upstream https://cryptorank.io/{past|active|upcoming}-nodesale",
+  "name": "cryptorank mode=nodesale: CryptoRank node-sale event lists — upstream https://cryptorank.io/{past|active|upcoming}-nodesale",
   "slice": "acq",
   "category": "RESEARCH",
   "domain": "markets / research",
@@ -241,7 +241,7 @@
  },
  {
   "id": "acq-cryptorank-news",
-  "name": "cryptorank mode=news: CryptoRank news aggregator feed \u2014 upstream https://cryptorank.io/news",
+  "name": "cryptorank mode=news: CryptoRank news aggregator feed — upstream https://cryptorank.io/news",
   "slice": "acq",
   "category": "NEWS",
   "domain": "markets / research",
@@ -257,7 +257,7 @@
  },
  {
   "id": "acq-cryptorank-tags",
-  "name": "cryptorank mode=tags: CryptoRank tag taxonomy index \u2014 upstream https://cryptorank.io/tags",
+  "name": "cryptorank mode=tags: CryptoRank tag taxonomy index — upstream https://cryptorank.io/tags",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -273,7 +273,7 @@
  },
  {
   "id": "acq-cryptorank-tag",
-  "name": "cryptorank mode=tag: CryptoRank tag detail (keyed) \u2014 upstream https://cryptorank.io/tags/<key>",
+  "name": "cryptorank mode=tag: CryptoRank tag detail (keyed) — upstream https://cryptorank.io/tags/<key>",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -289,7 +289,7 @@
  },
  {
   "id": "acq-cryptorank-ecosystems",
-  "name": "cryptorank mode=ecosystems: CryptoRank ecosystem index (106) \u2014 upstream https://cryptorank.io/ecosystems",
+  "name": "cryptorank mode=ecosystems: CryptoRank ecosystem index (106) — upstream https://cryptorank.io/ecosystems",
   "slice": "acq",
   "category": "ONCHAIN",
   "domain": "markets / research",
@@ -305,7 +305,7 @@
  },
  {
   "id": "acq-cryptorank-ecosystem",
-  "name": "cryptorank mode=ecosystem: CryptoRank ecosystem detail (keyed) \u2014 upstream https://cryptorank.io/ecosystems/<key>",
+  "name": "cryptorank mode=ecosystem: CryptoRank ecosystem detail (keyed) — upstream https://cryptorank.io/ecosystems/<key>",
   "slice": "acq",
   "category": "ONCHAIN",
   "domain": "markets / research",
@@ -321,7 +321,7 @@
  },
  {
   "id": "acq-cryptorank-rwa",
-  "name": "cryptorank mode=rwa: CryptoRank RWA index (209) \u2014 upstream https://cryptorank.io/rwa",
+  "name": "cryptorank mode=rwa: CryptoRank RWA index (209) — upstream https://cryptorank.io/rwa",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -337,7 +337,7 @@
  },
  {
   "id": "acq-cryptorank-rwaasset",
-  "name": "cryptorank mode=rwaasset: CryptoRank RWA asset detail (keyed type/slug) \u2014 upstream https://cryptorank.io/rwa/<type>/<slug>",
+  "name": "cryptorank mode=rwaasset: CryptoRank RWA asset detail (keyed type/slug) — upstream https://cryptorank.io/rwa/<type>/<slug>",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -353,7 +353,7 @@
  },
  {
   "id": "acq-cryptorank-quarterly",
-  "name": "cryptorank mode=quarterly: CryptoRank BTC/ETH quarterly returns \u2014 upstream https://cryptorank.io/charts/quarterly-returns",
+  "name": "cryptorank mode=quarterly: CryptoRank BTC/ETH quarterly returns — upstream https://cryptorank.io/charts/quarterly-returns",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -369,7 +369,7 @@
  },
  {
   "id": "acq-cryptorank-prediction",
-  "name": "cryptorank mode=prediction: CryptoRank prediction-market aggregates \u2014 upstream https://cryptorank.io/prediction-markets",
+  "name": "cryptorank mode=prediction: CryptoRank prediction-market aggregates — upstream https://cryptorank.io/prediction-markets",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -385,7 +385,7 @@
  },
  {
   "id": "acq-cryptorank-converter",
-  "name": "cryptorank mode=converter: CryptoRank full price list (~4,975 coins) \u2014 upstream https://cryptorank.io/converter",
+  "name": "cryptorank mode=converter: CryptoRank full price list (~4,975 coins) — upstream https://cryptorank.io/converter",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "markets / research",
@@ -401,7 +401,7 @@
  },
  {
   "id": "acq-cryptorank-media",
-  "name": "cryptorank mode=media: CryptoRank media/video aggregator \u2014 upstream https://cryptorank.io/media",
+  "name": "cryptorank mode=media: CryptoRank media/video aggregator — upstream https://cryptorank.io/media",
   "slice": "acq",
   "category": "NEWS",
   "domain": "markets / research",
@@ -417,7 +417,7 @@
  },
  {
   "id": "acq-cryptorank-newstag",
-  "name": "cryptorank mode=newstag: CryptoRank news tag feed (soft-404 guarded) \u2014 upstream https://cryptorank.io/news/tag/<slug>",
+  "name": "cryptorank mode=newstag: CryptoRank news tag feed (soft-404 guarded) — upstream https://cryptorank.io/news/tag/<slug>",
   "slice": "acq",
   "category": "NEWS",
   "domain": "markets / research",
@@ -433,7 +433,7 @@
  },
  {
   "id": "acq-cryptorank-aioverview",
-  "name": "cryptorank mode=aioverview: CryptoRank AI market overview digest \u2014 upstream https://cryptorank.io/ai-market-overview",
+  "name": "cryptorank mode=aioverview: CryptoRank AI market overview digest — upstream https://cryptorank.io/ai-market-overview",
   "slice": "acq",
   "category": "RESEARCH",
   "domain": "markets / research",
@@ -465,7 +465,7 @@
  },
  {
   "id": "acq-khala-reports",
-  "name": "khala mode=reports: khala research-report list (newest-first, no dates) \u2014 upstream https://www.khala.io/ (homepage rows)",
+  "name": "khala mode=reports: khala research-report list (newest-first, no dates) — upstream https://www.khala.io/ (homepage rows)",
   "slice": "acq",
   "category": "RESEARCH",
   "domain": "research",
@@ -481,7 +481,7 @@
  },
  {
   "id": "acq-khala-report",
-  "name": "khala mode=report: khala single report by key=<slug> \u2014 upstream https://www.khala.io/<slug>",
+  "name": "khala mode=report: khala single report by key=<slug> — upstream https://www.khala.io/<slug>",
   "slice": "acq",
   "category": "RESEARCH",
   "domain": "research",
@@ -497,7 +497,7 @@
  },
  {
   "id": "acq-khala-latest",
-  "name": "khala mode=latest: khala newest N reports WITH dates (the news surface) \u2014 upstream https://www.khala.io/ (newest N with per-report dates)",
+  "name": "khala mode=latest: khala newest N reports WITH dates (the news surface) — upstream https://www.khala.io/ (newest N with per-report dates)",
   "slice": "acq",
   "category": "RESEARCH",
   "domain": "research",
@@ -529,7 +529,7 @@
  },
  {
   "id": "acq-llama-chains",
-  "name": "llama mode=chains: DeFiLlama chain TVL list (re-sorted by tvl desc) \u2014 upstream https://api.llama.fi/v2/chains",
+  "name": "llama mode=chains: DeFiLlama chain TVL list (re-sorted by tvl desc) — upstream https://api.llama.fi/v2/chains",
   "slice": "acq",
   "category": "DEFI",
   "domain": "defi",
@@ -545,7 +545,7 @@
  },
  {
   "id": "acq-llama-protocols",
-  "name": "llama mode=protocols: DeFiLlama protocol TVL list (head of 8.9MB body) \u2014 upstream https://api.llama.fi/protocols",
+  "name": "llama mode=protocols: DeFiLlama protocol TVL list (head of 8.9MB body) — upstream https://api.llama.fi/protocols",
   "slice": "acq",
   "category": "DEFI",
   "domain": "defi",
@@ -561,7 +561,7 @@
  },
  {
   "id": "acq-llama-historical",
-  "name": "llama mode=historical: DeFiLlama historical chain TVL (oldest-first tail) \u2014 upstream https://api.llama.fi/v2/historicalChainTvl",
+  "name": "llama mode=historical: DeFiLlama historical chain TVL (oldest-first tail) — upstream https://api.llama.fi/v2/historicalChainTvl",
   "slice": "acq",
   "category": "DEFI",
   "domain": "defi",
@@ -593,7 +593,7 @@
  },
  {
   "id": "acq-news-cointelegraph",
-  "name": "news source=cointelegraph: Cointelegraph RSS feed items \u2014 upstream https://cointelegraph.com/rss",
+  "name": "news source=cointelegraph: Cointelegraph RSS feed items — upstream https://cointelegraph.com/rss",
   "slice": "acq",
   "category": "NEWS",
   "domain": "news",
@@ -625,7 +625,7 @@
  },
  {
   "id": "acq-chainrank-stats",
-  "name": "chainrank mode=stats: chainrank.fyi leaderboard aggregate counters \u2014 upstream https://www.chainrank.fyi/api/stats",
+  "name": "chainrank mode=stats: chainrank.fyi leaderboard aggregate counters — upstream https://www.chainrank.fyi/api/stats",
   "slice": "acq",
   "category": "RESEARCH",
   "domain": "research",
@@ -641,7 +641,7 @@
  },
  {
   "id": "acq-chainrank-listings",
-  "name": "chainrank mode=listings: chainrank.fyi board rows (pagination relayed verbatim) \u2014 upstream https://www.chainrank.fyi/api/listings?page&pageSize",
+  "name": "chainrank mode=listings: chainrank.fyi board rows (pagination relayed verbatim) — upstream https://www.chainrank.fyi/api/listings?page&pageSize",
   "slice": "acq",
   "category": "RESEARCH",
   "domain": "research",
@@ -673,7 +673,7 @@
  },
  {
   "id": "acq-coinglass-statistics",
-  "name": "coinglass mode=statistics: CoinGlass futures home statistics (encrypted dashboard body) \u2014 upstream https://capi.coinglass.com/api/futures/home/statistics",
+  "name": "coinglass mode=statistics: CoinGlass futures home statistics (encrypted dashboard body) — upstream https://capi.coinglass.com/api/futures/home/statistics",
   "slice": "acq",
   "category": "DERIVATIVES",
   "domain": "derivatives",
@@ -689,7 +689,7 @@
  },
  {
   "id": "acq-coinglass-openInterest",
-  "name": "coinglass mode=openInterest: CoinGlass open interest for one symbol (keyed symbol) \u2014 upstream https://capi.coinglass.com/api/openInterest/info?symbol=<SYM>",
+  "name": "coinglass mode=openInterest: CoinGlass open interest for one symbol (keyed symbol) — upstream https://capi.coinglass.com/api/openInterest/info?symbol=<SYM>",
   "slice": "acq",
   "category": "DERIVATIVES",
   "domain": "derivatives",
@@ -705,7 +705,7 @@
  },
  {
   "id": "acq-coinglass-fundingRate",
-  "name": "coinglass mode=fundingRate: CoinGlass funding-rate rank (50 most extreme +/-) \u2014 upstream https://capi.coinglass.com/api/fundingRate/rank",
+  "name": "coinglass mode=fundingRate: CoinGlass funding-rate rank (50 most extreme +/-) — upstream https://capi.coinglass.com/api/fundingRate/rank",
   "slice": "acq",
   "category": "DERIVATIVES",
   "domain": "derivatives",
@@ -721,7 +721,7 @@
  },
  {
   "id": "acq-coinglass-markets",
-  "name": "coinglass mode=markets: CoinGlass futures coins markets table \u2014 upstream https://capi.coinglass.com/api/futures/v2/coins/markets",
+  "name": "coinglass mode=markets: CoinGlass futures coins markets table — upstream https://capi.coinglass.com/api/futures/v2/coins/markets",
   "slice": "acq",
   "category": "DERIVATIVES",
   "domain": "derivatives",
@@ -753,7 +753,7 @@
  },
  {
   "id": "acq-coinank-fundingRate",
-  "name": "coinank mode=fundingRate: CoinAnk funding rates (882 symbols x per-exchange maps) \u2014 upstream https://api.coinank.com/api/fundingRate/current",
+  "name": "coinank mode=fundingRate: CoinAnk funding rates (882 symbols x per-exchange maps) — upstream https://api.coinank.com/api/fundingRate/current",
   "slice": "acq",
   "category": "DERIVATIVES",
   "domain": "derivatives",
@@ -769,7 +769,7 @@
  },
  {
   "id": "acq-coinank-liquidation",
-  "name": "coinank mode=liquidation: CoinAnk per-exchange liquidation turnover (interval allowlist) \u2014 upstream https://api.coinank.com/api/liquidation/allExchange?interval=<1h|2h|4h|6h|12h|1d>",
+  "name": "coinank mode=liquidation: CoinAnk per-exchange liquidation turnover (interval allowlist) — upstream https://api.coinank.com/api/liquidation/allExchange?interval=<1h|2h|4h|6h|12h|1d>",
   "slice": "acq",
   "category": "DERIVATIVES",
   "domain": "derivatives",
@@ -785,7 +785,7 @@
  },
  {
   "id": "acq-coinank-longShort",
-  "name": "coinank mode=longShort: CoinAnk long/short ratios across exchanges \u2014 upstream https://api.coinank.com/api/longshort/all",
+  "name": "coinank mode=longShort: CoinAnk long/short ratios across exchanges — upstream https://api.coinank.com/api/longshort/all",
   "slice": "acq",
   "category": "DERIVATIVES",
   "domain": "derivatives",
@@ -801,7 +801,7 @@
  },
  {
   "id": "acq-coinank-etf",
-  "name": "coinank mode=etf: CoinAnk daily spot-ETF creations/redemptions \u2014 upstream https://api.coinank.com/api/etf/etfInflow",
+  "name": "coinank mode=etf: CoinAnk daily spot-ETF creations/redemptions — upstream https://api.coinank.com/api/etf/etfInflow",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "derivatives",
@@ -817,7 +817,7 @@
  },
  {
   "id": "acq-coinank-whales",
-  "name": "coinank mode=whales: CoinAnk Hyperliquid top positions by size \u2014 upstream https://api.coinank.com/api/hyper/topPosition",
+  "name": "coinank mode=whales: CoinAnk Hyperliquid top positions by size — upstream https://api.coinank.com/api/hyper/topPosition",
   "slice": "acq",
   "category": "DERIVATIVES",
   "domain": "derivatives",
@@ -849,7 +849,7 @@
  },
  {
   "id": "acq-coinmarketcap-listing",
-  "name": "coinmarketcap mode=listing: CoinMarketCap ranked coin list (start/limit paginated; local bounds [1,1000]) \u2014 upstream https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing",
+  "name": "coinmarketcap mode=listing: CoinMarketCap ranked coin list (start/limit paginated; local bounds [1,1000]) — upstream https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "market-data",
@@ -865,7 +865,7 @@
  },
  {
   "id": "acq-coinmarketcap-global",
-  "name": "coinmarketcap mode=global: CoinMarketCap global metrics (dominance/supply, object payload) \u2014 upstream https://api.coinmarketcap.com/data-api/v3/global-metrics/quotes/latest",
+  "name": "coinmarketcap mode=global: CoinMarketCap global metrics (dominance/supply, object payload) — upstream https://api.coinmarketcap.com/data-api/v3/global-metrics/quotes/latest",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "market-data",
@@ -881,7 +881,7 @@
  },
  {
   "id": "acq-coinmarketcap-marketPairs",
-  "name": "coinmarketcap mode=marketPairs: CoinMarketCap per-exchange pairs for one coin (slug required) \u2014 upstream https://api.coinmarketcap.com/data-api/v3/cryptocurrency/market-pairs/latest?slug=<SLUG>",
+  "name": "coinmarketcap mode=marketPairs: CoinMarketCap per-exchange pairs for one coin (slug required) — upstream https://api.coinmarketcap.com/data-api/v3/cryptocurrency/market-pairs/latest?slug=<SLUG>",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "market-data",
@@ -897,7 +897,7 @@
  },
  {
   "id": "acq-coinmarketcap-exchanges",
-  "name": "coinmarketcap mode=exchanges: CoinMarketCap ranked exchange list (start/limit paginated) \u2014 upstream https://api.coinmarketcap.com/data-api/v3/exchange/listing",
+  "name": "coinmarketcap mode=exchanges: CoinMarketCap ranked exchange list (start/limit paginated) — upstream https://api.coinmarketcap.com/data-api/v3/exchange/listing",
   "slice": "acq",
   "category": "MARKET_DATA",
   "domain": "market-data",
@@ -929,7 +929,7 @@
  },
  {
   "id": "route-blog-cms-api-graphql-playground",
-  "name": "GET /blog/cms/api/graphql-playground \u2014 Payload GraphQL playground (CMS, generated)",
+  "name": "GET /blog/cms/api/graphql-playground — Payload GraphQL playground (CMS, generated)",
   "slice": "routes",
   "category": "RESEARCH",
   "domain": "blog/cms",
@@ -950,7 +950,7 @@
  },
  {
   "id": "route-blog-cms-api-graphql",
-  "name": "POST|OPTIONS /blog/cms/api/graphql \u2014 Payload GraphQL endpoint (CMS, generated)",
+  "name": "POST|OPTIONS /blog/cms/api/graphql — Payload GraphQL endpoint (CMS, generated)",
   "slice": "routes",
   "category": "RESEARCH",
   "domain": "blog/cms",
@@ -972,7 +972,7 @@
  },
  {
   "id": "route-blog-cms-api-rest",
-  "name": "GET|POST|DELETE|PATCH|PUT|OPTIONS /blog/cms/api/[...slug] \u2014 Payload REST catch-all (CMS, generated); public read path /blog/cms/api/posts",
+  "name": "GET|POST|DELETE|PATCH|PUT|OPTIONS /blog/cms/api/[...slug] — Payload REST catch-all (CMS, generated); public read path /blog/cms/api/posts",
   "slice": "routes",
   "category": "RESEARCH",
   "domain": "blog/cms",
@@ -998,7 +998,7 @@
  },
  {
   "id": "route-api-admin-members",
-  "name": "GET|POST /api/admin/members \u2014 admin guild-member list + role grant/revoke (PROXY -> Go api :3103 handleAdminMembers)",
+  "name": "GET|POST /api/admin/members — admin guild-member list + role grant/revoke (PROXY -> Go api :3103 handleAdminMembers)",
   "slice": "routes",
   "category": "ACCESS",
   "domain": "access",
@@ -1010,7 +1010,7 @@
   "sensitivity": "INTERNAL",
   "status": "active",
   "code_path": "frontend/web/src/app/(frontend)/api/admin/members/route.ts:19-22",
-  "evidence": "route.ts:19 `const FUDCOURT_API = process.env.FUDCOURT_API_URL ?? 'http://127.0.0.1:3103'`; route.ts:6-13 header: Go does the admin tier check; NOTE guard.ts does NOT gate this path (requiredTierForPath('/api/admin/members')=null) \u2014 admin enforced upstream only (Go handleAdminMembers)",
+  "evidence": "route.ts:19 `const FUDCOURT_API = process.env.FUDCOURT_API_URL ?? 'http://127.0.0.1:3103'`; route.ts:6-13 header: Go does the admin tier check; NOTE guard.ts does NOT gate this path (requiredTierForPath('/api/admin/members')=null) — admin enforced upstream only (Go handleAdminMembers)",
   "path": "/api/admin/members",
   "methods": [
    "GET",
@@ -1020,11 +1020,11 @@
  },
  {
   "id": "route-api-all",
-  "name": "GET /api/all \u2014 full treasury snapshot (wallets+assets+transactions) from Turso DB",
+  "name": "GET /api/all — full treasury snapshot (wallets+assets+transactions) from Postgres",
   "slice": "routes",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
-  "provider": "fudcourt (Turso DB)",
+  "provider": "fudcourt (Postgres)",
   "layer": "PRODUCT_VIEW",
   "auth": "session:team",
   "freshness": "REALTIME",
@@ -1041,11 +1041,11 @@
  },
  {
   "id": "route-api-coins",
-  "name": "GET /api/coins \u2014 distinct assets grouped by total USD value from Turso DB",
+  "name": "GET /api/coins — distinct assets grouped by total USD value from Postgres",
   "slice": "routes",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
-  "provider": "fudcourt (Turso DB)",
+  "provider": "fudcourt (Postgres)",
   "layer": "PRODUCT_VIEW",
   "auth": "session:team",
   "freshness": "REALTIME",
@@ -1062,11 +1062,11 @@
  },
  {
   "id": "route-api-wallets",
-  "name": "GET|POST /api/wallets \u2014 wallet table read + alias/metadata update (Turso DB); POST uses requireMutationAuth('team')",
+  "name": "GET|POST /api/wallets — wallet table read + alias/metadata update (Postgres); POST uses requireMutationAuth('team')",
   "slice": "routes",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
-  "provider": "fudcourt (Turso DB)",
+  "provider": "fudcourt (Postgres)",
   "layer": "CANONICAL",
   "auth": "session:team",
   "freshness": "REALTIME",
@@ -1084,11 +1084,11 @@
  },
  {
   "id": "route-api-transactions",
-  "name": "GET|POST|DELETE|PUT /api/transactions \u2014 transaction ledger read/filter + bulk insert/delete/update (Turso DB)",
+  "name": "GET|POST|DELETE|PUT /api/transactions — transaction ledger read/filter + bulk insert/delete/update (Postgres)",
   "slice": "routes",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
-  "provider": "fudcourt (Turso DB)",
+  "provider": "fudcourt (Postgres)",
   "layer": "CANONICAL",
   "auth": "session:team",
   "freshness": "REALTIME",
@@ -1108,11 +1108,11 @@
  },
  {
   "id": "route-api-transactions-id",
-  "name": "PUT|PATCH|DELETE /api/transactions/[id] \u2014 single-row ledger edit/delete (Turso DB)",
+  "name": "PUT|PATCH|DELETE /api/transactions/[id] — single-row ledger edit/delete (Postgres)",
   "slice": "routes",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
-  "provider": "fudcourt (Turso DB)",
+  "provider": "fudcourt (Postgres)",
   "layer": "CANONICAL",
   "auth": "session:team",
   "freshness": "REALTIME",
@@ -1131,7 +1131,7 @@
  },
  {
   "id": "route-api-reconcile",
-  "name": "GET /api/reconcile \u2014 wallet reconciliation (PROXY -> Rust fudcourt-reconciled :3102)",
+  "name": "GET /api/reconcile — wallet reconciliation (PROXY -> Rust fudcourt-reconciled :3102)",
   "slice": "routes",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
@@ -1152,7 +1152,7 @@
  },
  {
   "id": "route-api-auth-login",
-  "name": "GET /api/auth/login \u2014 OAuth login redirect (PROXY -> Go api :3103 handleAuthLogin, Discord authorize)",
+  "name": "GET /api/auth/login — OAuth login redirect (PROXY -> Go api :3103 handleAuthLogin, Discord authorize)",
   "slice": "routes",
   "category": "ACCESS",
   "domain": "auth",
@@ -1173,7 +1173,7 @@
  },
  {
   "id": "route-api-auth-callback",
-  "name": "GET /api/auth/callback \u2014 OAuth code->session exchange (PROXY -> Go api :3103 handleAuthCallback)",
+  "name": "GET /api/auth/callback — OAuth code->session exchange (PROXY -> Go api :3103 handleAuthCallback)",
   "slice": "routes",
   "category": "ACCESS",
   "domain": "auth",
@@ -1194,7 +1194,7 @@
  },
  {
   "id": "route-api-auth-logout",
-  "name": "GET|POST /api/auth/logout \u2014 session cookie retire (PROXY -> Go api :3103 handleAuthLogout)",
+  "name": "GET|POST /api/auth/logout — session cookie retire (PROXY -> Go api :3103 handleAuthLogout)",
   "slice": "routes",
   "category": "ACCESS",
   "domain": "auth",
@@ -1216,7 +1216,7 @@
  },
  {
   "id": "route-api-chainrank",
-  "name": "GET /api/chainrank \u2014 chain rankings & listings (PROXY -> Go data fudcourt-data :3101)",
+  "name": "GET /api/chainrank — chain rankings & listings (PROXY -> Go data fudcourt-data :3101)",
   "slice": "routes",
   "category": "ONCHAIN",
   "domain": "markets/onchain",
@@ -1237,7 +1237,7 @@
  },
  {
   "id": "route-api-coinglass",
-  "name": "GET /api/coinglass \u2014 CoinGlass derivatives surfaces (PROXY -> Go data fudcourt-data :3101)",
+  "name": "GET /api/coinglass — CoinGlass derivatives surfaces (PROXY -> Go data fudcourt-data :3101)",
   "slice": "routes",
   "category": "DERIVATIVES",
   "domain": "derivatives",
@@ -1258,7 +1258,7 @@
  },
  {
   "id": "route-api-coinank",
-  "name": "GET /api/coinank \u2014 CoinAnk derivatives surfaces (PROXY -> Go data fudcourt-data :3101; upstream DARK)",
+  "name": "GET /api/coinank — CoinAnk derivatives surfaces (PROXY -> Go data fudcourt-data :3101; upstream DARK)",
   "slice": "routes",
   "category": "DERIVATIVES",
   "domain": "derivatives",
@@ -1279,7 +1279,7 @@
  },
  {
   "id": "route-api-coinmarketcap",
-  "name": "GET /api/coinmarketcap \u2014 CoinMarketCap market surfaces (PROXY -> Go data fudcourt-data :3101)",
+  "name": "GET /api/coinmarketcap — CoinMarketCap market surfaces (PROXY -> Go data fudcourt-data :3101)",
   "slice": "routes",
   "category": "MARKET_DATA",
   "domain": "market-data",
@@ -1300,7 +1300,7 @@
  },
  {
   "id": "route-api-cryptorank",
-  "name": "GET /api/cryptorank \u2014 crypto research board (market caps, listings, ecosystems, RWA) (PROXY -> Go data fudcourt-data :3101)",
+  "name": "GET /api/cryptorank — crypto research board (market caps, listings, ecosystems, RWA) (PROXY -> Go data fudcourt-data :3101)",
   "slice": "routes",
   "category": "MARKET_DATA",
   "domain": "markets/research",
@@ -1321,7 +1321,7 @@
  },
  {
   "id": "route-api-khala",
-  "name": "GET /api/khala \u2014 Khala research reports + reader blocks (PROXY -> Go data fudcourt-data :3101)",
+  "name": "GET /api/khala — Khala research reports + reader blocks (PROXY -> Go data fudcourt-data :3101)",
   "slice": "routes",
   "category": "RESEARCH",
   "domain": "research",
@@ -1342,7 +1342,7 @@
  },
  {
   "id": "route-api-llama",
-  "name": "GET /api/llama \u2014 DeFiLlama chains/protocols TVL (PROXY -> Go data fudcourt-data :3101)",
+  "name": "GET /api/llama — DeFiLlama chains/protocols TVL (PROXY -> Go data fudcourt-data :3101)",
   "slice": "routes",
   "category": "DEFI",
   "domain": "defi",
@@ -1363,7 +1363,7 @@
  },
  {
   "id": "route-api-news",
-  "name": "GET /api/news \u2014 Cointelegraph RSS headline feed (PROXY -> Go data fudcourt-data :3101)",
+  "name": "GET /api/news — Cointelegraph RSS headline feed (PROXY -> Go data fudcourt-data :3101)",
   "slice": "routes",
   "category": "NEWS",
   "domain": "news",
@@ -1384,7 +1384,7 @@
  },
  {
   "id": "route-api-dex",
-  "name": "GET /api/dex \u2014 DexScreener DEX pairs/profiles/boosts (direct external proxy)",
+  "name": "GET /api/dex — DexScreener DEX pairs/profiles/boosts (direct external proxy)",
   "slice": "routes",
   "category": "DEFI",
   "domain": "markets/dex",
@@ -1405,7 +1405,7 @@
  },
  {
   "id": "route-api-markets",
-  "name": "GET /api/markets \u2014 CoinGecko top-250 market-cap board (direct external proxy, local search/sort/page)",
+  "name": "GET /api/markets — CoinGecko top-250 market-cap board (direct external proxy, local search/sort/page)",
   "slice": "routes",
   "category": "MARKET_DATA",
   "domain": "markets",
@@ -1426,7 +1426,7 @@
  },
  {
   "id": "route-api-market-stock",
-  "name": "GET /api/market/stock \u2014 Yahoo Finance stock/indices board (direct external proxy)",
+  "name": "GET /api/market/stock — Yahoo Finance stock/indices board (direct external proxy)",
   "slice": "routes",
   "category": "MARKET_DATA",
   "domain": "markets",
@@ -1447,7 +1447,7 @@
  },
  {
   "id": "route-api-market-commodity",
-  "name": "GET /api/market/commodity \u2014 Yahoo Finance front-month futures board (direct external proxy)",
+  "name": "GET /api/market/commodity — Yahoo Finance front-month futures board (direct external proxy)",
   "slice": "routes",
   "category": "MARKET_DATA",
   "domain": "markets",
@@ -1468,7 +1468,7 @@
  },
  {
   "id": "route-api-market-forex",
-  "name": "GET /api/market/forex \u2014 curated FX majors from exchangerate-api (direct external proxy, pairs derived locally)",
+  "name": "GET /api/market/forex — curated FX majors from exchangerate-api (direct external proxy, pairs derived locally)",
   "slice": "routes",
   "category": "MARKET_DATA",
   "domain": "markets",
@@ -1489,7 +1489,7 @@
  },
  {
   "id": "route-api-signals",
-  "name": "GET /api/signals \u2014 trading signals feed + scoreboard (direct external proxy -> data-public.vercel.app)",
+  "name": "GET /api/signals — trading signals feed + scoreboard (direct external proxy -> data-public.vercel.app)",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/signals",
@@ -1510,7 +1510,7 @@
  },
  {
   "id": "route-api-ticker",
-  "name": "GET /api/ticker \u2014 cross-venue CEX ticker board (spot/swap/future/option) via CCXT",
+  "name": "GET /api/ticker — cross-venue CEX ticker board (spot/swap/future/option) via CCXT",
   "slice": "routes",
   "category": "MARKET_DATA",
   "domain": "markets/cex",
@@ -1531,7 +1531,7 @@
  },
  {
   "id": "route-api-ticker-instruments",
-  "name": "GET /api/ticker/instruments \u2014 listed instruments/expiries/strikes for a symbol (CCXT)",
+  "name": "GET /api/ticker/instruments — listed instruments/expiries/strikes for a symbol (CCXT)",
   "slice": "routes",
   "category": "MARKET_DATA",
   "domain": "markets/cex",
@@ -1552,7 +1552,7 @@
  },
  {
   "id": "route-api-ticker-instrument",
-  "name": "GET /api/ticker/instrument \u2014 price for one specific instrument across venues (CCXT)",
+  "name": "GET /api/ticker/instrument — price for one specific instrument across venues (CCXT)",
   "slice": "routes",
   "category": "MARKET_DATA",
   "domain": "markets/cex",
@@ -1573,7 +1573,7 @@
  },
  {
   "id": "route-api-executor-accounts",
-  "name": "GET|POST /api/executor/accounts \u2014 BYOK exchange account list/connect (secrets sealed server-side)",
+  "name": "GET|POST /api/executor/accounts — BYOK exchange account list/connect (secrets sealed server-side)",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/executor",
@@ -1595,7 +1595,7 @@
  },
  {
   "id": "route-api-executor-accounts-id",
-  "name": "GET|DELETE /api/executor/accounts/[id] \u2014 one masked-key account read / revoke",
+  "name": "GET|DELETE /api/executor/accounts/[id] — one masked-key account read / revoke",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/executor",
@@ -1617,7 +1617,7 @@
  },
  {
   "id": "route-api-executor-accounts-id-test",
-  "name": "POST /api/executor/accounts/[id]/test \u2014 live credential validation",
+  "name": "POST /api/executor/accounts/[id]/test — live credential validation",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/executor",
@@ -1638,7 +1638,7 @@
  },
  {
   "id": "route-api-executor-emergency",
-  "name": "POST /api/executor/emergency \u2014 Emergency Stop (halt strategies, cancel managed orders; never closes positions)",
+  "name": "POST /api/executor/emergency — Emergency Stop (halt strategies, cancel managed orders; never closes positions)",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/executor",
@@ -1659,7 +1659,7 @@
  },
  {
   "id": "route-api-executor-executions",
-  "name": "GET|POST /api/executor/executions \u2014 execution history / create with immutable input snapshot",
+  "name": "GET|POST /api/executor/executions — execution history / create with immutable input snapshot",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/executor",
@@ -1681,7 +1681,7 @@
  },
  {
   "id": "route-api-executor-executions-id",
-  "name": "GET /api/executor/executions/[id] \u2014 execution + immutable plan",
+  "name": "GET /api/executor/executions/[id] — execution + immutable plan",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/executor",
@@ -1702,7 +1702,7 @@
  },
  {
   "id": "route-api-executor-executions-id-cancel",
-  "name": "POST /api/executor/executions/[id]/cancel \u2014 cancel execution + managed child orders",
+  "name": "POST /api/executor/executions/[id]/cancel — cancel execution + managed child orders",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/executor",
@@ -1786,7 +1786,7 @@
  },
  {
   "id": "route-api-executor-executions-id-events",
-  "name": "GET /api/executor/executions/[id]/events \u2014 immutable event log",
+  "name": "GET /api/executor/executions/[id]/events — immutable event log",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/executor",
@@ -1807,7 +1807,7 @@
  },
  {
   "id": "route-api-executor-executions-id-fills",
-  "name": "GET /api/executor/executions/[id]/fills \u2014 deduped fill history",
+  "name": "GET /api/executor/executions/[id]/fills — deduped fill history",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/executor",
@@ -1828,7 +1828,7 @@
  },
  {
   "id": "route-api-executor-executions-id-orders",
-  "name": "GET /api/executor/executions/[id]/orders \u2014 child orders",
+  "name": "GET /api/executor/executions/[id]/orders — child orders",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/executor",
@@ -1849,7 +1849,7 @@
  },
  {
   "id": "route-api-executor-preview",
-  "name": "POST /api/executor/preview \u2014 dry run only, nothing created, no external order",
+  "name": "POST /api/executor/preview — dry run only, nothing created, no external order",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/executor",
@@ -1870,7 +1870,7 @@
  },
  {
   "id": "route-api-executor-settings",
-  "name": "GET|PUT /api/executor/settings \u2014 per-user risk profile",
+  "name": "GET|PUT /api/executor/settings — per-user risk profile",
   "slice": "routes",
   "category": "TRADING",
   "domain": "trading/executor",
@@ -1891,152 +1891,8 @@
   "guard_tier": "team"
  },
  {
-  "id": "turso-accounts",
-  "name": "Turso `accounts` \u2014 chart of accounts (code/name/type/statement)",
-  "category": "PORTFOLIO",
-  "domain": "portfolio/treasury",
-  "provider": "Turso (libSQL)",
-  "layer": "CANONICAL",
-  "auth": "TURSO_AUTH_TOKEN",
-  "freshness": "STATIC",
-  "durability": "CANONICAL",
-  "sensitivity": "INTERNAL",
-  "status": "dead",
-  "code_path": "database/schema/schema.sql:3",
-  "evidence": "grep -n 'CREATE TABLE' database/schema/schema.sql -> `3:CREATE TABLE accounts (`; writer search: grep -rn --include=*.py --include=*.ts --include=*.rs --include=*.go -E 'INSERT[^;]*INTO (accounts|journal|ledger|trades|venues)' . -> 0 hits (only SELECT in mirror.ts:75); DR-036 records 6 rows frozen at 2026-09-15 import",
-  "slice": "db"
- },
- {
-  "id": "turso-assets",
-  "name": "Turso `assets` \u2014 latest synced wallet balances (chain/asset/quantity/value_usd/share_pct/wallet)",
-  "category": "PORTFOLIO",
-  "domain": "portfolio/treasury",
-  "provider": "Turso (libSQL)",
-  "layer": "CANONICAL",
-  "auth": "TURSO_AUTH_TOKEN",
-  "freshness": "FREQUENT",
-  "durability": "SNAPSHOT",
-  "sensitivity": "INTERNAL",
-  "status": "active",
-  "code_path": "backend/sync/src/persistence/db.rs:133",
-  "evidence": "DDL database/schema/schema.sql:10; writer `backend/sync/src/persistence/db.rs:133` INSERT INTO assets (...) and `tests/oracle/sync-live.py:352`; rewritten wholesale (`db.rs:117` DELETE FROM assets); readers mirror.ts:52,79,82; api/coins/route.ts:16",
-  "slice": "db"
- },
- {
-  "id": "turso-journal",
-  "name": "Turso `journal` \u2014 dated double-entry journal lines (entry_code/debit/credit/amount)",
-  "category": "PORTFOLIO",
-  "domain": "portfolio/treasury",
-  "provider": "Turso (libSQL)",
-  "layer": "CANONICAL",
-  "auth": "TURSO_AUTH_TOKEN",
-  "freshness": "STATIC",
-  "durability": "CANONICAL",
-  "sensitivity": "INTERNAL",
-  "status": "dead",
-  "code_path": "database/schema/schema.sql:21",
-  "evidence": "DDL schema.sql:21; no INSERT/UPDATE/DELETE against journal anywhere (only SELECT in frontend/web/src/platform/db/mirror.ts:77); DR-036: 8 rows, max created_at 2026-09-15 23:48:35, frozen",
-  "slice": "db"
- },
- {
-  "id": "turso-ledger",
-  "name": "Turso `ledger` \u2014 running balance per (account_code, side, currency)",
-  "category": "PORTFOLIO",
-  "domain": "portfolio/treasury",
-  "provider": "Turso (libSQL)",
-  "layer": "CANONICAL",
-  "auth": "TURSO_AUTH_TOKEN",
-  "freshness": "STATIC",
-  "durability": "CANONICAL",
-  "sensitivity": "INTERNAL",
-  "status": "dead",
-  "code_path": "database/schema/schema.sql:33",
-  "evidence": "DDL schema.sql:33; no writer found (only SELECT in mirror.ts:78); DR-036: 3 rows frozen at 2026-09-15 import",
-  "slice": "db"
- },
- {
-  "id": "turso-sqlite-sequence",
-  "name": "Turso `sqlite_sequence` \u2014 SQLite AUTOINCREMENT bookkeeping (internal)",
-  "category": "SYSTEM",
-  "domain": "system",
-  "provider": "SQLite/Turso internal",
-  "layer": "CANONICAL",
-  "auth": "TURSO_AUTH_TOKEN",
-  "freshness": "STATIC",
-  "durability": "NONE",
-  "sensitivity": "INTERNAL",
-  "status": "active",
-  "code_path": "database/schema/schema.sql:42",
-  "evidence": "grep -n 'CREATE TABLE' database/schema/schema.sql -> `42:CREATE TABLE sqlite_sequence(name,seq);`; not in mirror.ts TABLES (not projected to Postgres)",
-  "slice": "db"
- },
- {
-  "id": "turso-trades",
-  "name": "Turso `trades` \u2014 executed trade log (venue/symbol/side/qty/price/pnl)",
-  "category": "TRADING",
-  "domain": "trading",
-  "provider": "Turso (libSQL)",
-  "layer": "CANONICAL",
-  "auth": "TURSO_AUTH_TOKEN",
-  "freshness": "STATIC",
-  "durability": "EVENT",
-  "sensitivity": "INTERNAL",
-  "status": "dead",
-  "code_path": "database/schema/schema.sql:44",
-  "evidence": "DDL schema.sql:44; no writer (only SELECT in mirror.ts:81); DR-036: 0 rows, never written. Duplicates executor.fills/child_orders with no link",
-  "slice": "db"
- },
- {
-  "id": "turso-transactions",
-  "name": "Turso `transactions` \u2014 user-entered on-chain/ledger movements",
-  "category": "PORTFOLIO",
-  "domain": "portfolio/treasury",
-  "provider": "Turso (libSQL)",
-  "layer": "CANONICAL",
-  "auth": "TURSO_AUTH_TOKEN",
-  "freshness": "MANUAL",
-  "durability": "CANONICAL",
-  "sensitivity": "INTERNAL",
-  "status": "active",
-  "code_path": "frontend/web/src/app/(frontend)/api/transactions/route.ts:78",
-  "evidence": "DDL schema.sql:56; writers `.../api/transactions/route.ts:78,116` (INSERT), `[id]/route.ts:36,73` (UPDATE), `:92` (DELETE); reader mirror.ts:76",
-  "slice": "db"
- },
- {
-  "id": "turso-venues",
-  "name": "Turso `venues` \u2014 exchange/venue registry (id text slug)",
-  "category": "TRADING",
-  "domain": "trading",
-  "provider": "Turso (libSQL)",
-  "layer": "CANONICAL",
-  "auth": "TURSO_AUTH_TOKEN",
-  "freshness": "STATIC",
-  "durability": "CANONICAL",
-  "sensitivity": "PUBLIC",
-  "status": "dead",
-  "code_path": "database/schema/schema.sql:71",
-  "evidence": "DDL schema.sql:71; no INSERT/UPDATE against venues (only mirror.ts:57); DR-036: 12 rows seeded once 2026-09-15, table dead BUT the venue ENTITY is live (reference.json 12 venue_ids; KnownExchange backend/api/internal/accounts/exchange/account.go:122)",
-  "slice": "db"
- },
- {
-  "id": "turso-wallets",
-  "name": "Turso `wallets` \u2014 watched-wallet registry + UI metadata (alias/emoji/color)",
-  "category": "PORTFOLIO",
-  "domain": "portfolio/treasury",
-  "provider": "Turso (libSQL)",
-  "layer": "CANONICAL",
-  "auth": "TURSO_AUTH_TOKEN",
-  "freshness": "MANUAL",
-  "durability": "CANONICAL",
-  "sensitivity": "USER_PRIVATE",
-  "status": "active",
-  "code_path": "frontend/web/src/app/(frontend)/api/wallets/route.ts:34",
-  "evidence": "DDL schema.sql:77; writer is UPDATE-only `.../api/wallets/route.ts:34` (UPDATE wallets SET ...); grep 'INSERT INTO wallets' -> 0 hits (rows created out-of-band); reader route.ts:10,36",
-  "slice": "db"
- },
- {
   "id": "pg-accounts",
-  "name": "public.accounts \u2014 Postgres read-model mirror of Turso accounts",
+  "name": "public.accounts — chart of accounts (treasury system of record, DR-040)",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
   "provider": "Postgres 17 + TimescaleDB (self-hosted)",
@@ -2047,12 +1903,12 @@
   "sensitivity": "INTERNAL",
   "status": "dead",
   "code_path": "database/schema/pg-schema.sql:20",
-  "evidence": "DDL pg-schema.sql:20; mirror writer frontend/web/src/platform/db/mirror.ts:75 (SELECT * FROM accounts) + loadFromMirror upsert/prune; source table dead (DR-036)",
+  "evidence": "DDL pg-schema.sql:20; writer frontend/web/src/platform/db/pg.ts:75 (SELECT * FROM accounts) + loadFromMirror upsert/prune; table dead (DR-036)",
   "slice": "db"
  },
  {
   "id": "pg-assets",
-  "name": "public.assets \u2014 Postgres read-model mirror of Turso assets (latest state)",
+  "name": "public.assets — latest synced wallet balances (treasury system of record, DR-040)",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
   "provider": "Postgres 17 + TimescaleDB (self-hosted)",
@@ -2063,12 +1919,12 @@
   "sensitivity": "INTERNAL",
   "status": "active",
   "code_path": "database/schema/pg-schema.sql:27",
-  "evidence": "DDL pg-schema.sql:27; projected by mirror.ts:52,79 (TABLES) on the fudcourt-pgload.timer 60 s tick; history split off into asset_history",
+  "evidence": "DDL pg-schema.sql:27; written directly by the sync (tests/oracle/sync-live.py / backend/sync); asset_history is appended by the assets_snapshot trigger",
   "slice": "db"
  },
  {
   "id": "pg-journal",
-  "name": "public.journal \u2014 Postgres read-model mirror of Turso journal",
+  "name": "public.journal — double-entry journal lines (treasury system of record, DR-040)",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
   "provider": "Postgres 17 + TimescaleDB (self-hosted)",
@@ -2079,12 +1935,12 @@
   "sensitivity": "INTERNAL",
   "status": "dead",
   "code_path": "database/schema/pg-schema.sql:38",
-  "evidence": "DDL pg-schema.sql:38; mirror.ts:77 SELECT; source dead (DR-036) so the mirror upserts a frozen table",
+  "evidence": "DDL pg-schema.sql:38; pg.ts:77 SELECT; table dead (DR-036), frozen at the 2026-09-15 import",
   "slice": "db"
  },
  {
   "id": "pg-ledger",
-  "name": "public.ledger \u2014 Postgres read-model mirror of Turso ledger",
+  "name": "public.ledger — running balance per account (treasury system of record, DR-040)",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
   "provider": "Postgres 17 + TimescaleDB (self-hosted)",
@@ -2095,12 +1951,12 @@
   "sensitivity": "INTERNAL",
   "status": "dead",
   "code_path": "database/schema/pg-schema.sql:50",
-  "evidence": "DDL pg-schema.sql:50; mirror.ts:78 SELECT; source dead (DR-036)",
+  "evidence": "DDL pg-schema.sql:50; pg.ts:78 SELECT; table dead (DR-036)",
   "slice": "db"
  },
  {
   "id": "pg-trades",
-  "name": "public.trades \u2014 Postgres read-model mirror of Turso trades",
+  "name": "public.trades — executed trade log (treasury system of record, DR-040)",
   "category": "TRADING",
   "domain": "portfolio/treasury",
   "provider": "Postgres 17 + TimescaleDB (self-hosted)",
@@ -2111,12 +1967,12 @@
   "sensitivity": "INTERNAL",
   "status": "dead",
   "code_path": "database/schema/pg-schema.sql:59",
-  "evidence": "DDL pg-schema.sql:59; mirror.ts:81 SELECT; source dead/empty (DR-036)",
+  "evidence": "DDL pg-schema.sql:59; pg.ts:81 SELECT; table dead/empty (DR-036)",
   "slice": "db"
  },
  {
   "id": "pg-transactions",
-  "name": "public.transactions \u2014 Postgres read-model mirror of Turso transactions",
+  "name": "public.transactions — user-entered on-chain/ledger movements (treasury system of record, DR-040)",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
   "provider": "Postgres 17 + TimescaleDB (self-hosted)",
@@ -2127,12 +1983,12 @@
   "sensitivity": "INTERNAL",
   "status": "active",
   "code_path": "database/schema/pg-schema.sql:71",
-  "evidence": "DDL pg-schema.sql:71; mirror.ts:76 SELECT + upsert; source written by api/transactions/route.ts:78",
+  "evidence": "DDL pg-schema.sql:71; pg.ts:76 SELECT + upsert; written by api/transactions/route.ts:78",
   "slice": "db"
  },
  {
   "id": "pg-venues",
-  "name": "public.venues \u2014 Postgres read-model mirror of Turso venues",
+  "name": "public.venues — exchange/venue registry (treasury system of record, DR-040)",
   "category": "TRADING",
   "domain": "portfolio/treasury",
   "provider": "Postgres 17 + TimescaleDB (self-hosted)",
@@ -2143,12 +1999,12 @@
   "sensitivity": "PUBLIC",
   "status": "dead",
   "code_path": "database/schema/pg-schema.sql:89",
-  "evidence": "DDL pg-schema.sql:89; mirrored (mirror.ts:57) but not in DASHBOARD_READS; source table dead (DR-036); text PK so mirror.ts skips sequence advance",
+  "evidence": "DDL pg-schema.sql:89; read by pg.ts:57 but not in DASHBOARD_READS; table dead (DR-036); text PK so pg.ts skips sequence advance",
   "slice": "db"
  },
  {
   "id": "pg-wallets",
-  "name": "public.wallets \u2014 Postgres read-model mirror of Turso wallets",
+  "name": "public.wallets — watched-wallet registry + UI metadata (treasury system of record, DR-040)",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
   "provider": "Postgres 17 + TimescaleDB (self-hosted)",
@@ -2159,12 +2015,12 @@
   "sensitivity": "USER_PRIVATE",
   "status": "active",
   "code_path": "database/schema/pg-schema.sql:95",
-  "evidence": "DDL pg-schema.sql:95; mirror.ts:80 SELECT; source written by api/wallets/route.ts:34",
+  "evidence": "DDL pg-schema.sql:95; pg.ts:80 SELECT; written by api/wallets/route.ts:34",
   "slice": "db"
  },
  {
   "id": "pg-asset-history",
-  "name": "public.asset_history \u2014 TimescaleDB hypertable, one row per asset snapshot per projection",
+  "name": "public.asset_history — TimescaleDB hypertable, one row per `assets` INSERT (assets_snapshot trigger)",
   "category": "PORTFOLIO",
   "domain": "portfolio/treasury",
   "provider": "Postgres 17 + TimescaleDB (self-hosted)",
@@ -2175,12 +2031,12 @@
   "sensitivity": "INTERNAL",
   "status": "active",
   "code_path": "database/schema/pg-schema.sql:112",
-  "evidence": "DDL pg-schema.sql:112 + create_hypertable :122 + unique asset_history_snapshot :127; writer mirror.ts:200-203 INSERT ... SELECT FROM assets ON CONFLICT (ts,chain,asset,coalesce(wallet,'')); 90-day DELETE mirror.ts:207; no in-app reader",
+  "evidence": "DDL pg-schema.sql:112 + create_hypertable :122 + unique asset_history_snapshot :127; appended by the assets_snapshot trigger on every assets INSERT (pg-schema.sql:131-146); 90-day DELETE in tests/oracle/sync-live.py; no in-app reader",
   "slice": "db"
  },
  {
   "id": "pg-price-history",
-  "name": "public.price_history \u2014 TimescaleDB hypertable, intended compact price series (NO PRODUCER)",
+  "name": "public.price_history — TimescaleDB hypertable, intended compact price series (NO PRODUCER)",
   "category": "MARKET_DATA",
   "domain": "markets",
   "provider": "Postgres 17 + TimescaleDB (self-hosted)",
@@ -2191,12 +2047,12 @@
   "sensitivity": "PUBLIC",
   "status": "dead",
   "code_path": "database/schema/pg-schema.sql:132",
-  "evidence": "DDL pg-schema.sql:132 + hypertable :139 + unique price_history_symbol_ts_source :140; grep -rn 'INSERT INTO price_history' over source globs -> 0 hits; only retention DELETE at frontend/web/src/platform/db/mirror.ts:208; DR-036: absent from Turso, 0 PG rows; DDL comment :131 names a 'price sampler' that does not exist",
+  "evidence": "DDL pg-schema.sql:132 + hypertable :139 + unique price_history_symbol_ts_source :140; grep -rn 'INSERT INTO price_history' over source globs -> 0 hits; only retention DELETE at frontend/web/src/platform/db/pg.ts:208; DR-036: 0 rows; DDL comment :131 names a 'price sampler' that does not exist",
   "slice": "db"
  },
  {
   "id": "pg-canonical-reference",
-  "name": "public.canonical_reference \u2014 (provider, provider_id) -> canonical_id resolution table, artifact-derived cache",
+  "name": "public.canonical_reference — (provider, provider_id) -> canonical_id resolution table, artifact-derived cache",
   "category": "SYSTEM",
   "domain": "system/reference",
   "provider": "Postgres 17 + TimescaleDB (self-hosted)",
@@ -2207,12 +2063,12 @@
   "sensitivity": "INTERNAL",
   "status": "scaffolded",
   "code_path": "database/schema/pg-schema.sql:168",
-  "evidence": "DDL pg-schema.sql:168 (+ CHECK canonical_reference_kind_prefix :193, guarded DO block :195-205); loader backend/api/internal/markets/reference/loader.go LoadReferenceRows/RenderSQL; DR-036 'additive and UNWIRED \u2014 nothing loads it and nothing joins through it yet'",
+  "evidence": "DDL pg-schema.sql:168 (+ CHECK canonical_reference_kind_prefix :193, guarded DO block :195-205); loader backend/api/internal/markets/reference/loader.go LoadReferenceRows/RenderSQL; DR-036 'additive and UNWIRED — nothing loads it and nothing joins through it yet'",
   "slice": "db"
  },
  {
   "id": "pg-canonical-reference-miss",
-  "name": "public.canonical_reference_miss \u2014 known-but-unresolved provider identifiers (artifact `misses`)",
+  "name": "public.canonical_reference_miss — known-but-unresolved provider identifiers (artifact `misses`)",
   "category": "SYSTEM",
   "domain": "system/reference",
   "provider": "Postgres 17 + TimescaleDB (self-hosted)",
@@ -2244,7 +2100,7 @@
  },
  {
   "id": "executor-exchange-accounts",
-  "name": "executor.exchange_accounts \u2014 CEX account merged with AES-256-GCM credential envelope",
+  "name": "executor.exchange_accounts — CEX account merged with AES-256-GCM credential envelope",
   "category": "ACCESS",
   "domain": "executor/trading",
   "provider": "Postgres 17 (executor schema, self-hosted)",
@@ -2260,7 +2116,7 @@
  },
  {
   "id": "executor-executions",
-  "name": "executor.executions \u2014 execution aggregate (plan snapshot refs + runtime state)",
+  "name": "executor.executions — execution aggregate (plan snapshot refs + runtime state)",
   "category": "TRADING",
   "domain": "executor/trading",
   "provider": "Postgres 17 (executor schema, self-hosted)",
@@ -2276,7 +2132,7 @@
  },
  {
   "id": "executor-execution-plans",
-  "name": "executor.execution_plans \u2014 immutable creation-time plan snapshot (jsonb)",
+  "name": "executor.execution_plans — immutable creation-time plan snapshot (jsonb)",
   "category": "TRADING",
   "domain": "executor/trading",
   "provider": "Postgres 17 (executor schema, self-hosted)",
@@ -2292,7 +2148,7 @@
  },
  {
   "id": "executor-child-orders",
-  "name": "executor.child_orders \u2014 one row per venue order (client_order_id + exchange_order_id)",
+  "name": "executor.child_orders — one row per venue order (client_order_id + exchange_order_id)",
   "category": "TRADING",
   "domain": "executor/trading",
   "provider": "Postgres 17 (executor schema, self-hosted)",
@@ -2308,7 +2164,7 @@
  },
  {
   "id": "executor-fills",
-  "name": "executor.fills \u2014 executed fills, dedup on (account_id, exchange_trade_id)",
+  "name": "executor.fills — executed fills, dedup on (account_id, exchange_trade_id)",
   "category": "TRADING",
   "domain": "executor/trading",
   "provider": "Postgres 17 (executor schema, self-hosted)",
@@ -2319,12 +2175,12 @@
   "sensitivity": "USER_PRIVATE",
   "status": "active",
   "code_path": "database/schema/executor-schema.sql:143",
-  "evidence": "DDL executor-schema.sql:143; writer TS store.ts:361-362 INSERT ... ON CONFLICT (account_id, exchange_trade_id) DO NOTHING; reader port_pg.go:441; the canonical trade/fill store the dead Turso `trades` duplicates",
+  "evidence": "DDL executor-schema.sql:143; writer TS store.ts:361-362 INSERT ... ON CONFLICT (account_id, exchange_trade_id) DO NOTHING; reader port_pg.go:441; the canonical trade/fill store the dead `trades` table duplicates",
   "slice": "db"
  },
  {
   "id": "executor-execution-events",
-  "name": "executor.execution_events \u2014 append-only execution event log (no UPDATE/DELETE path)",
+  "name": "executor.execution_events — append-only execution event log (no UPDATE/DELETE path)",
   "category": "TRADING",
   "domain": "executor/trading",
   "provider": "Postgres 17 (executor schema, self-hosted)",
@@ -2340,7 +2196,7 @@
  },
  {
   "id": "executor-balance-snapshots",
-  "name": "executor.balance_snapshots \u2014 periodic reconciliation balance snapshots (jsonb payload)",
+  "name": "executor.balance_snapshots — periodic reconciliation balance snapshots (jsonb payload)",
   "category": "TRADING",
   "domain": "executor/trading",
   "provider": "Postgres 17 (executor schema, self-hosted)",
@@ -2351,12 +2207,12 @@
   "sensitivity": "USER_PRIVATE",
   "status": "active",
   "code_path": "database/schema/executor-schema.sql:171",
-  "evidence": "DDL executor-schema.sql:171 (PRD \u00a741/\u00a759 reconciliation history); writer TS store.ts:375 insertBalanceSnapshot",
+  "evidence": "DDL executor-schema.sql:171 (PRD §41/§59 reconciliation history); writer TS store.ts:375 insertBalanceSnapshot",
   "slice": "db"
  },
  {
   "id": "executor-positions-snapshots",
-  "name": "executor.positions_snapshots \u2014 periodic reconciliation position snapshots (jsonb payload)",
+  "name": "executor.positions_snapshots — periodic reconciliation position snapshots (jsonb payload)",
   "category": "TRADING",
   "domain": "executor/trading",
   "provider": "Postgres 17 (executor schema, self-hosted)",
@@ -2372,7 +2228,7 @@
  },
  {
   "id": "executor-risk-profiles",
-  "name": "executor.risk_profiles \u2014 one risk profile per user (jsonb, upsert)",
+  "name": "executor.risk_profiles — one risk profile per user (jsonb, upsert)",
   "category": "TRADING",
   "domain": "executor/trading",
   "provider": "Postgres 17 (executor schema, self-hosted)",
@@ -2388,7 +2244,7 @@
  },
  {
   "id": "executor-audit-logs",
-  "name": "executor.audit_logs \u2014 executor action audit trail (jsonb payload)",
+  "name": "executor.audit_logs — executor action audit trail (jsonb payload)",
   "category": "SYSTEM",
   "domain": "system",
   "provider": "Postgres 17 (executor schema, self-hosted)",
@@ -2404,7 +2260,7 @@
  },
  {
   "id": "neon-users",
-  "name": "users \u2014 Payload CMS editor accounts (email + password digest)",
+  "name": "users — Payload CMS editor accounts (email + password digest)",
   "category": "ACCESS",
   "domain": "cms/access",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2420,7 +2276,7 @@
  },
  {
   "id": "neon-users-sessions",
-  "name": "users_sessions \u2014 Payload admin sessions (cascades on user delete)",
+  "name": "users_sessions — Payload admin sessions (cascades on user delete)",
   "category": "ACCESS",
   "domain": "cms/access",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2436,7 +2292,7 @@
  },
  {
   "id": "neon-posts",
-  "name": "posts \u2014 CMS editorial posts (Lexical content jsonb, drafts/published)",
+  "name": "posts — CMS editorial posts (Lexical content jsonb, drafts/published)",
   "category": "NEWS",
   "domain": "cms/editorial",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2452,7 +2308,7 @@
  },
  {
   "id": "neon-posts-tags",
-  "name": "posts_tags \u2014 Payload child array of post tags",
+  "name": "posts_tags — Payload child array of post tags",
   "category": "NEWS",
   "domain": "cms/editorial",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2468,7 +2324,7 @@
  },
  {
   "id": "neon-posts-rels",
-  "name": "posts_rels \u2014 Payload polymorphic join (post -> category)",
+  "name": "posts_rels — Payload polymorphic join (post -> category)",
   "category": "NEWS",
   "domain": "cms/editorial",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2484,7 +2340,7 @@
  },
  {
   "id": "neon-posts-v",
-  "name": "posts_v \u2014 Payload draft-version history for posts",
+  "name": "posts_v — Payload draft-version history for posts",
   "category": "NEWS",
   "domain": "cms/editorial",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2500,7 +2356,7 @@
  },
  {
   "id": "neon-posts-v-version-tags",
-  "name": "posts_v_version_tags \u2014 version child of post tags",
+  "name": "posts_v_version_tags — version child of post tags",
   "category": "NEWS",
   "domain": "cms/editorial",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2516,7 +2372,7 @@
  },
  {
   "id": "neon-posts-v-rels",
-  "name": "posts_v_rels \u2014 version join (post version -> category)",
+  "name": "posts_v_rels — version join (post version -> category)",
   "category": "NEWS",
   "domain": "cms/editorial",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2532,7 +2388,7 @@
  },
  {
   "id": "neon-media",
-  "name": "media \u2014 upload asset metadata (bytes live on disk frontend/web/media)",
+  "name": "media — upload asset metadata (bytes live on disk frontend/web/media)",
   "category": "NEWS",
   "domain": "cms/editorial",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2548,7 +2404,7 @@
  },
  {
   "id": "neon-categories",
-  "name": "categories \u2014 editorial content categories (not market categories)",
+  "name": "categories — editorial content categories (not market categories)",
   "category": "NEWS",
   "domain": "cms/editorial",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2564,7 +2420,7 @@
  },
  {
   "id": "neon-payload-kv",
-  "name": "payload_kv \u2014 Payload framework key/value store",
+  "name": "payload_kv — Payload framework key/value store",
   "category": "SYSTEM",
   "domain": "cms/framework",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2580,7 +2436,7 @@
  },
  {
   "id": "neon-payload-locked-documents",
-  "name": "payload_locked_documents \u2014 Payload document-lock table",
+  "name": "payload_locked_documents — Payload document-lock table",
   "category": "SYSTEM",
   "domain": "cms/framework",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2596,7 +2452,7 @@
  },
  {
   "id": "neon-payload-locked-documents-rels",
-  "name": "payload_locked_documents_rels \u2014 Payload lock join table",
+  "name": "payload_locked_documents_rels — Payload lock join table",
   "category": "SYSTEM",
   "domain": "cms/framework",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2612,7 +2468,7 @@
  },
  {
   "id": "neon-payload-preferences",
-  "name": "payload_preferences \u2014 Payload per-user UI preferences",
+  "name": "payload_preferences — Payload per-user UI preferences",
   "category": "SYSTEM",
   "domain": "cms/framework",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2628,7 +2484,7 @@
  },
  {
   "id": "neon-payload-preferences-rels",
-  "name": "payload_preferences_rels \u2014 Payload preferences join table",
+  "name": "payload_preferences_rels — Payload preferences join table",
   "category": "SYSTEM",
   "domain": "cms/framework",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2644,7 +2500,7 @@
  },
  {
   "id": "neon-payload-migrations",
-  "name": "payload_migrations \u2014 Payload CMS migration ledger",
+  "name": "payload_migrations — Payload CMS migration ledger",
   "category": "SYSTEM",
   "domain": "cms/framework",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2660,7 +2516,7 @@
  },
  {
   "id": "neon-enum-posts-status",
-  "name": "enum_posts_status \u2014 Postgres enum (draft|published)",
+  "name": "enum_posts_status — Postgres enum (draft|published)",
   "category": "SYSTEM",
   "domain": "cms/framework",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2676,7 +2532,7 @@
  },
  {
   "id": "neon-enum-posts-v-version-status",
-  "name": "enum__posts_v_version_status \u2014 Postgres enum (draft|published) for post versions",
+  "name": "enum__posts_v_version_status — Postgres enum (draft|published) for post versions",
   "category": "SYSTEM",
   "domain": "cms/framework",
   "provider": "Neon Postgres (Payload CMS)",
@@ -2692,7 +2548,7 @@
  },
  {
   "id": "ccxt-venue-vocabulary",
-  "name": "ccxt venue vocabulary \u2014 static canonical reference registry of 11 CEX venue ids (binance, bybit, mexc, okx, bitget, phemex, bingx, bitfinex, htx, coinbase, kraken)",
+  "name": "ccxt venue vocabulary — static canonical reference registry of 11 CEX venue ids (binance, bybit, mexc, okx, bitget, phemex, bingx, bitfinex, htx, coinbase, kraken)",
   "slice": "feeds",
   "category": "MARKET_DATA",
   "domain": "markets",
@@ -2708,7 +2564,7 @@
  },
  {
   "id": "ccxt-exchange-ticker",
-  "name": "CCXT direct exchange ticker feed \u2014 10 keyless CEX venues (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) over spot/swap/future/option",
+  "name": "CCXT direct exchange ticker feed — 10 keyless CEX venues (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) over spot/swap/future/option",
   "slice": "feeds",
   "category": "MARKET_DATA",
   "domain": "markets",
@@ -2724,7 +2580,7 @@
  },
  {
   "id": "dexscreener-api",
-  "name": "DexScreener public DEX API \u2014 token-profiles, token-boosts, boosts-top, search, tokens, token-pairs, orders",
+  "name": "DexScreener public DEX API — token-profiles, token-boosts, boosts-top, search, tokens, token-pairs, orders",
   "slice": "feeds",
   "category": "MARKET_DATA",
   "domain": "markets",
@@ -2756,7 +2612,7 @@
  },
  {
   "id": "alchemy-evm-rpc",
-  "name": "Alchemy EVM JSON-RPC \u2014 eth_getBalance / eth_call across Ethereum, BSC, Polygon, Arbitrum, Optimism, Base",
+  "name": "Alchemy EVM JSON-RPC — eth_getBalance / eth_call across Ethereum, BSC, Polygon, Arbitrum, Optimism, Base",
   "slice": "feeds",
   "category": "ONCHAIN",
   "domain": "portfolio",
@@ -2768,11 +2624,11 @@
   "sensitivity": "PUBLIC",
   "status": "active",
   "code_path": "backend/sync/src/streams/sync.rs:219 (url=format!(\"https://{}/v2/{}\", chain.host, env.alchemy_key)); backend/sync/src/chains.rs:14-64 (EVM[] hosts)",
-  "evidence": "read backend/sync/src/chains.rs:14-64 (eth-mainnet/bnb-mainnet/polygon-mainnet/arb-mainnet/opt-mainnet/base-mainnet.g.alchemy.com) + streams/sync.rs:219 url format + main.rs:145 require_env(\"ALCHEMY_KEY\"). NOT probed \u2014 requires ALCHEMY_KEY and NO credential was sent anywhere. DRIFT: the deployed reader is the Python oracle, not this Rust code: systemctl --user status fudcourt-sync.service -> ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/tests/oracle/sync-live.py (active, exit 0, NET WORTH $149.46); fudcourt-sync-rust.service/.timer are NOT installed ('Unit fudcourt-sync-rust.timer could not be found')."
+  "evidence": "read backend/sync/src/chains.rs:14-64 (eth-mainnet/bnb-mainnet/polygon-mainnet/arb-mainnet/opt-mainnet/base-mainnet.g.alchemy.com) + streams/sync.rs:219 url format + main.rs:145 require_env(\"ALCHEMY_KEY\"). NOT probed — requires ALCHEMY_KEY and NO credential was sent anywhere. DRIFT: the deployed reader is the Python oracle, not this Rust code: systemctl --user status fudcourt-sync.service -> ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/tests/oracle/sync-live.py (active, exit 0, NET WORTH $149.46); fudcourt-sync-rust.service/.timer are NOT installed ('Unit fudcourt-sync-rust.timer could not be found')."
  },
  {
   "id": "solana-rpc",
-  "name": "Solana mainnet-beta JSON-RPC \u2014 getBalance, getTokenAccountsByOwner (SPL)",
+  "name": "Solana mainnet-beta JSON-RPC — getBalance, getTokenAccountsByOwner (SPL)",
   "slice": "feeds",
   "category": "ONCHAIN",
   "domain": "portfolio",
@@ -2788,7 +2644,7 @@
  },
  {
   "id": "hyperliquid-info",
-  "name": "Hyperliquid info API \u2014 spotClearinghouseState, clearinghouseState, userFills (positions + realized PnL)",
+  "name": "Hyperliquid info API — spotClearinghouseState, clearinghouseState, userFills (positions + realized PnL)",
   "slice": "feeds",
   "category": "PORTFOLIO",
   "domain": "portfolio",
@@ -2804,7 +2660,7 @@
  },
  {
   "id": "payload-cms-content",
-  "name": "Payload CMS content store \u2014 Neon Postgres (posts, categories, media metadata)",
+  "name": "Payload CMS content store — Neon Postgres (posts, categories, media metadata)",
   "slice": "feeds",
   "category": "NEWS",
   "domain": "cms",
@@ -2820,7 +2676,7 @@
  },
  {
   "id": "payload-cms-users",
-  "name": "Payload CMS admin users \u2014 Neon Postgres auth collection",
+  "name": "Payload CMS admin users — Neon Postgres auth collection",
   "slice": "feeds",
   "category": "ACCESS",
   "domain": "cms",
@@ -2852,7 +2708,7 @@
  },
  {
   "id": "signals-feed",
-  "name": "FUDCourt signals feed (data-public.vercel.app) \u2014 index / feed / page / scoreboard modes",
+  "name": "FUDCourt signals feed (data-public.vercel.app) — index / feed / page / scoreboard modes",
   "slice": "feeds",
   "category": "RESEARCH",
   "domain": "research",

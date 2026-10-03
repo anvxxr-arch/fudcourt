@@ -1,5 +1,5 @@
 /**
- * Data-layer unit tests (DR-019): run OFFLINE, no Postgres, no Turso, no Valkey.
+ * Data-layer unit tests (DR-019, DR-040): run OFFLINE, no Postgres, no Valkey.
  *
  * Contract under test:
  *  - `toPostgres` translates the two SQLite constructs this app's statements use.
@@ -17,7 +17,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toPostgres, DASHBOARD_READS } from '@/platform/db/mirror';
+import { toPostgres, DASHBOARD_READS } from '@/platform/db/pg';
 
 test('toPostgres: ? placeholders are numbered from 1', () => {
   assert.equal(toPostgres('SELECT * FROM wallets WHERE address = ?'), 'SELECT * FROM wallets WHERE address = $1');

@@ -1,0 +1,15 @@
+# Runtime dependencies for the Python oracle (tests/oracle/sync-live.py).
+#
+# DR-040 made Postgres the system of record, so the sync's write half needs a
+# Postgres driver. On Debian/Ubuntu prefer the distro package (it matches the
+# system interpreter the systemd unit invokes):
+#
+#     sudo apt-get install -y python3-psycopg2
+#
+# Otherwise, into the interpreter that will run the sync:
+#
+#     python3 -m pip install -r tests/oracle/requirements.txt
+#
+# The driver is imported lazily inside `_pg_conn()` (not at module scope), so
+# the offline oracle gate can import this file without it installed.
+psycopg2-binary>=2.9,<3

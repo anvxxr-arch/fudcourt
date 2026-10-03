@@ -1,7 +1,7 @@
 //! Tests for the reconciliation maths and the HTTP routing table.
 //!
 //! OFFLINE and deterministic. The inputs are the three SELECT result sets as the
-//! Turso client hands them over, so the accumulation rules the TS route owned
+//! Postgres client hands them over, so the accumulation rules the TS route owned
 //! (`|| 'Unknown'`, `Number(x) || 0`, `direction === 'IN'`) are asserted directly
 //! rather than inferred from a live database.
 
@@ -301,10 +301,7 @@ async fn routing_table_refuses_everything_it_does_not_serve() {
     // they must not depend on a live database. `/healthz` and `/api/reconcile`
     // therefore answer 500 here (loud, with the real reason) rather than 200,
     // which is itself the rule under test.
-    let db = fudcourt_sync::persistence::db::Db::new(
-        "not-a-real-token".to_string(),
-        reqwest::Client::new(),
-    );
+    let db = fudcourt_sync::persistence::db::Db::unreachable();
     let (st, body) = route(&db, "POST", "/api/reconcile").await;
     assert_eq!(st, 405);
     assert_eq!(body["error"], json!("method not allowed"));

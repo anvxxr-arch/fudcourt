@@ -466,6 +466,25 @@ runnable. To serve a frozen build immune to sibling rebuilds of `frontend/web/.n
 snapshot dir needs `node_modules` (symlink), `package.json`, `next.config.js`, `public/`, and
 the app env files (`frontend/web/.env.local` plus repo-root `.env`) — without the env files
 `/` and `/ticker` never reach `networkidle` and the capture records only partial DOM.
+**LIVE-UNIT BUILD TRAP (do not run step 1 in place while `fudcourt-web` is live).** The
+`fudcourt-web` user unit runs `next start -p 3100` with `WorkingDirectory=/home/dwizzy/fudcourt/frontend/web`
+and `NODE_ENV=production`, i.e. it serves the **same** `frontend/web/.next` directory that
+`unset NODE_ENV && bun run build` rewrites — and a build does NOT restart the unit. So a build
+run in place swaps the served build out from under a live process: routes keep answering 200
+from already-rendered HTML while a `/_next/static/chunks/*.js` the HTML still references returns
+**500**, because the build replaced that file. The mismatch is provable without touching the
+unit: compare the unit's `ExecMainStartTimestamp` with `.next/BUILD_ID`'s mtime
+(`systemctl --user show fudcourt-web -p ExecMainStartTimestamp --value` vs
+`stat -c %y frontend/web/.next/BUILD_ID`) — a BUILD_ID written *after* the unit started means the
+unit is serving a build whose chunks have since been replaced. A peer workstream measured this
+today on `:3100`. The rule: **run the fingerprint's build against a FROZEN COPY of the app**
+(the E.7 recipe — `git archive HEAD` or a worktree snapshot, hardlinked `node_modules`, the env
+files), never in `frontend/web` while the unit is live. If a build in place is unavoidable, say
+so explicitly and tell the operator the unit needs a restart afterwards (the restart is the
+operator's call; the fingerprint procedure never restarts or reconfigures the unit). This is a
+property of the whole repo's gates — CI, `scripts/verify/verify-all.sh` and the pre-push hook all
+build — not of the design system alone; the design harness merely has a reason to build at an
+arbitrary time.
 
 ### E.2 The ignore-list (measured, not assumed)
 
@@ -498,7 +517,10 @@ PY=/home/dwizzy/farming/.venv/bin/python
 cd frontend/web && unset NODE_ENV && bunx tsc --noEmit && bun run build
 
 # 1. PRE-MIGRATION baseline. Capture it from the UNMIGRATED build with the CURRENT
-#    harness (fpA.json is a legacy index-based capture and is refused — see E.4):
+#    harness (fpA.json is a legacy index-based capture and is refused — see E.4).
+#    FREEZE THE BUILD FIRST (E.1 "LIVE-UNIT BUILD TRAP"): either build in a frozen copy,
+#    or leave the app alone and copy the CURRENT build out with the E.1 file list. Do NOT
+#    `bun run build` in place while the :3100 unit is live — the unit serves the same .next.
 $PY tests/design/fingerprint.py capture --base-url http://127.0.0.1:3211 \
   --out /tmp/design-baseline/baseline.json
 # 2. Build the migrated tree, serve it on a scratch port that is FREE (3211 here):
@@ -579,7 +601,9 @@ lagging row count at capture time, not a static-probe loss.)
 ### E.6 Interpreter and hygiene
 
 - Harness interpreter: `/home/dwizzy/farming/.venv/bin/python`. Harness sha256 at this writing:
-  `5e02461b1e42f51c999ec25dca293b9b4822c97f7ff66c3d4118c739490796fa`.
+  `b2e8fc06f4c4eea79f73a4e17e12413aee59b3c0a4d46bc9bc145cbd880287b1` (the `routes --check`
+  release; the migration-cutover hash was `5e02461b1e42f51c999ec25dca293b9b4822c97f7ff66c3d4118c739490796fa`).
+  Re-check coverage with `$PY frontend/web/tests/design/fingerprint.py routes --check` (exit 1 on drift).
 - Ports: scratch server on **3211** (killed at the end of this procedure); the deployed
   **3100** systemd unit is never restarted or reconfigured by this procedure.
 - Nothing under `frontend/web/src/` is modified by the harness.
@@ -657,6 +681,18 @@ compared and the intended changes authorized per-row in the budget instead.
 
 Every budget entry's `reason` MUST cite the row/section that authorizes it; an entry that cannot
 cite one does not belong in the budget.
+**Provenance-clean rule and the worktree baseline (added 2026-10-02, post-IA-rework).** The rule
+above holds only while the tree is clean: the whole point of a HEAD-bytes baseline is that the
+committed bytes ARE the surface. Once the product IA rework went in and the market families were
+still being edited, the worktree was **dirty** (84 entries under `frontend/web`), so a HEAD-bytes
+build would have been a surface the design system no longer serves. In that state the defensible
+baseline is the **worktree build**, captured from the worktree and **labelled as such** — never a
+HEAD claim. That baseline is `/tmp/design-baseline/baseline-worktree.json` (`sha256
+d5036b36ffdfde993b5c24601890b10a01ded8974c30c3e3adb038543e0343d9`), from HEAD
+`f50f9a608d25b0e116f37d94555f174f8650ecb8` with worktree `git status --porcelain -- frontend/web`
+sha1 `1ba0adc1f59260c3182bd61ed5f95b46c72d51e3`, build id `2U-N1k2ze8lB7a0QbQQc_`, served on port
+3214; 17 routes / 2744 probes; same-build default compare `FINGERPRINT: compared=2701 skipped=43
+diffs=0`. Full metadata in `/tmp/design-baseline/worktree-baseline-meta.txt`.
 
 ### E.8 Deployed `:3100` drift measures (read-only, informational)
 

@@ -19,7 +19,7 @@ services/sync/           backend/sync/                       LANDED
 packages/contracts/      shared/contracts/                   LANDED
 packages/sdk-ts/         shared/sdk/typescript/              LANDED
 packages/config/         —                                   NOT LANDED (DR-018 keeps one tsconfig per app; no shared config exists to move)
-database/{schema}        database/schema/                    LANDED (schema.sql, pg-schema.sql, executor-schema.sql)
+database/{schema}        database/schema/                    LANDED (pg-schema.sql, executor-schema.sql)
 database/{migrations,seeds,fixtures}  —                       NOT CREATED (empty; migrations/ deliberately not created, DR-020)
 tests/{integration,e2e,fixtures,oracle}  tests/{integration,e2e,fixtures,oracle}  LANDED
 infrastructure/systemd/  infrastructure/systemd/             LANDED (14 files: 12 live units + 2 retired tombstones)
@@ -91,10 +91,10 @@ and `check-schemas.mjs`.
 |---|---|
 | users, members, wallets, portfolio (+accounts, trades, journal, ledger, transactions) | `backend/api` |
 | execution, execution_orders, execution_fills, execution_events (today `executor.executions`, `executor.child_orders`, `executor.fills`, `executor.execution_events` + plans/snapshots/risk_profiles/audit_logs) | `backend/workers/executor` |
-| analytics (today `assets`, `asset_history`, `price_history` written by sync, projected by pg-load) | `backend/data` + `backend/sync` |
-SQLite/Turso remains the source of truth for balances; Postgres remains the read model
-(DR-019; Postgres as durable truth for the executor is DR-023). That split is unchanged by the
-restructure — only the code owning each write path moves.
+| analytics (today `assets`, `asset_history`, `price_history` written by sync; `asset_history` appended by the `assets_snapshot` trigger) | `backend/data` + `backend/sync` |
+Postgres is the single system of record for balances (DR-040, superseding DR-019's
+SQLite/Turso source-of-truth + Postgres read-model split; Postgres as durable truth for the
+executor is DR-023). The restructure changed only the code owning each write path.
 ## 6. Deploy target — LANDED
 - `infrastructure/systemd/` — one unit set per service (`fudcourt-api`, `fudcourt-executor`,
   `fudcourt-executor-worker`, `fudcourt-data`, `fudcourt-sync`, `fudcourt-sync-rust`,

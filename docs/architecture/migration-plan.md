@@ -61,9 +61,9 @@ runs on push in CI. Nothing remains open in this phase.
 ## Phase 2 — `database/` extraction
 > **Amended 2026-10-01 (partially executed), 2026-10-02 (DDL lift DONE):**
 > `frontend/web/db/{schema.sql,pg-schema.sql,executor-schema.sql}` are now
-> `database/schema/{schema.sql,pg-schema.sql,executor-schema.sql}`
-> (`database/README.md` records the move). `pg-load.ts`, `mirror.ts`, `store.ts`, `scripts/database/dump-schema.mjs`
-> path comments updated; `dump-schema.mjs --check` remains the Turso drift gate. **The DDL lift
+> `database/schema/{pg-schema.sql,executor-schema.sql}`
+> (`database/README.md` records the move). `pg-load.ts`, `mirror.ts`, `store.ts`
+> path comments updated. **The DDL lift
 > landed 2026-10-02:** `store.ts` no longer embeds the DDL — `EXECUTOR_DDL` reads
 > `database/schema/executor-schema.sql` (comment lines dropped) at module load, and the §59 test
 > asserts the constant is that file verbatim, so the tracked file is the sole copy on the TS side
@@ -73,16 +73,17 @@ runs on push in CI. Nothing remains open in this phase.
 
 - Move `frontend/web/db/{schema.sql,pg-schema.sql,executor-schema.sql}` →
   `database/{schema,seeds,fixtures}/`; keep a generated copy or path update in
-  `frontend/web/scripts/tools/pg-load.ts` and `src/platform/executor/store.ts`.
+  `frontend/web/src/platform/executor/store.ts` (the `pg-load.ts` projection script
+  was deleted by DR-040).
 - Lift `EXECUTOR_DDL` out of `store.ts` into the tracked schema file (store.ts imports
   the file or a generated constant). **Status 2026-10-02: DONE** — the tracked name is
   `database/schema/executor-schema.sql` (the `executor.sql` in the original bullet was never
   created) and `store.ts` now reads it rather than embedding a copy. What survives is the Go
   `embed` duplicate, which cannot be removed: `go:embed` refuses a pattern that reaches a parent
   directory.
-- **Risks:** `pg-load.ts` (60s timer, live) and `ensureExecutorSchema` (boot-time DDL) reference
-  the files by path — `check-deploy.py` won't catch a missing `.sql`; add a check or keep
-  shims one release.
+- **Risks:** `ensureExecutorSchema` (boot-time DDL) references the files by path —
+  `check-deploy.py` won't catch a missing `.sql`; add a check or keep shims one release.
+  (The `pg-load.ts` 60 s timer this bullet originally named was deleted by DR-040.)
 - **Ordering:** after Phase 1; before Phase 3 (contracts embed the DDL).
 - **Rollback:** revert the move; SQL files are static content.
 
@@ -201,7 +202,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
   favor of `infrastructure/systemd/fudcourt-sync-rust.*`), delete the Python original after one clean sync cycle.
 - Extend to websocket streams + event normalization (target.md §1).
 - **Risks:** `pyfmt.rs`/`db.rs` exist precisely to preserve byte-identical output — any
-  divergence corrupts the Turso journal; the honesty rule (failed RPC ≠ zero balance) MUST hold.
+  divergence corrupts the Postgres journal; the honesty rule (failed RPC ≠ zero balance) MUST hold.
 - **Ordering:** independent of Phases 4–5; DO after Phase 3 (event contracts) if event
   normalization lands here.
 - **Rollback:** timer points back at `sync-live.py`; both units coexist safely (verified in

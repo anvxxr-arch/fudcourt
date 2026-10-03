@@ -47,7 +47,7 @@ import { maskApiKey, venueKey } from './types';
 import { roundPrice, roundQuantityDown } from './risk';
 
 // ---------------------------------------------------------------------------
-// Lazy ccxt binding (CommonJS-safe; mirrors src/platform/db/mirror.ts)
+// Lazy ccxt binding (CommonJS-safe; mirrors src/platform/db/pg.ts)
 // ---------------------------------------------------------------------------
 
 /** Minimal structural view of a ccxt exchange — the surface this module uses. */
