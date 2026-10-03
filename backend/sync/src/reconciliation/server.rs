@@ -19,6 +19,17 @@ use crate::persistence::db::Db;
 /// an Accept header).
 const MAX_HEAD: usize = 8 * 1024;
 
+/// A ceiling on how long ONE read may wait. `MAX_HEAD` bounds memory but not
+/// TIME: a client that dribbles one byte at a time (slowloris) never fills the
+/// head, so without this it pins its task -- and its connection -- forever. The
+/// service is loopback-only and the Next route is the sole client, so 10 s is
+/// generous.
+const READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
+/// A ceiling on how long ONE response write may wait, so a peer that stops
+/// reading cannot pin the task on a full socket buffer.
+const WRITE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
 /// One parsed request: method, path, and nothing else (this service takes no
 /// query, no body and no headers that affect its answer).
 struct Request {
@@ -40,7 +51,18 @@ async fn read_request(s: &mut TcpStream) -> std::io::Result<Option<Request>> {
             ));
         }
         let mut chunk = [0u8; 512];
-        let n = s.read(&mut chunk).await?;
+        // Bound the WAIT, not just the size: a slowloris client dribbling bytes
+        // never trips MAX_HEAD, so without this it would hold this task (and its
+        // connection) open indefinitely.
+        let n = match tokio::time::timeout(READ_TIMEOUT, s.read(&mut chunk)).await {
+            Ok(r) => r?,
+            Err(_) => {
+                return Err(std::io::Error::new(
+                    ErrorKind::TimedOut,
+                    "request head timed out",
+                ))
+            }
+        };
         if n == 0 {
             if buf.is_empty() {
                 return Ok(None);
@@ -81,10 +103,21 @@ async fn respond(s: &mut TcpStream, status: u16, body: &Value) -> std::io::Resul
         reason = reason(status),
         len = payload.len(),
     );
-    s.write_all(head.as_bytes()).await?;
-    s.write_all(&payload).await?;
-    s.flush().await?;
-    Ok(())
+    // Bound the write too: a peer that stops reading fills the socket buffer and
+    // would otherwise pin this task on `write_all` forever.
+    let write = async {
+        s.write_all(head.as_bytes()).await?;
+        s.write_all(&payload).await?;
+        s.flush().await?;
+        Ok::<(), std::io::Error>(())
+    };
+    match tokio::time::timeout(WRITE_TIMEOUT, write).await {
+        Ok(r) => r,
+        Err(_) => Err(std::io::Error::new(
+            ErrorKind::TimedOut,
+            "response write timed out",
+        )),
+    }
 }
 
 fn reason(status: u16) -> &'static str {
@@ -92,6 +125,7 @@ fn reason(status: u16) -> &'static str {
         200 => "OK",
         404 => "Not Found",
         405 => "Method Not Allowed",
+        408 => "Request Timeout",
         500 => "Internal Server Error",
         _ => "Unknown",
     }
@@ -154,8 +188,18 @@ pub async fn serve(addr: &str, db: Db) -> Result<(), String> {
                     let _ = respond(&mut stream, status, &body).await;
                 }
                 Ok(None) => {}
-                Err(_) => {
-                    let _ = respond(&mut stream, 500, &json!({"error": "bad request"})).await;
+                Err(e) => {
+                    // A read that TIMED OUT is the slowloris case -- the client's
+                    // own fault, and the reason the read bound exists -- so it is
+                    // 408, not a 500 that would read as a server fault. Anything
+                    // else is a malformed request. Either way the connection
+                    // closes and the process is untouched.
+                    if e.kind() == ErrorKind::TimedOut {
+                        let _ =
+                            respond(&mut stream, 408, &json!({"error": "request timeout"})).await;
+                    } else {
+                        let _ = respond(&mut stream, 500, &json!({"error": "bad request"})).await;
+                    }
                 }
             }
             let _ = stream.shutdown().await;

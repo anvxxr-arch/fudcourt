@@ -30,6 +30,7 @@ import {
   __bucketCount,
   __resetRateLimit,
 } from '@/platform/http/rate-limit-inbound';
+import { limitedFetch, __resetLimiter } from '@/platform/http/rate-limit';
 const T0 = 1_700_000_000_000;
 const q = (mode?: string) => new URLSearchParams(mode === undefined ? {} : { mode });
 const cost = (path: string, mode?: string) => costForRequest(path, q(mode));
@@ -303,4 +304,52 @@ test('decision: every answer describes itself', () => {
   assert.equal(d.scope, 'public');
   assert.ok(d.remaining <= d.limit);
   assert.equal(d.remaining, d.limit - d.cost, 'the first request spends exactly its cost');
+});
+
+// --- outbound limiter (platform/http/rate-limit.ts) --------------------------
+//
+// The outbound limiter serialises every upstream call through ONE promise chain,
+// so a fetch that never settles would stall the whole family, not just its own
+// request. These prove the deadline is ALWAYS present -- with or without a
+// caller-supplied signal -- without waiting on a real clock.
+const realFetch = globalThis.fetch;
+const stubFetch = (impl: typeof fetch) => {
+  globalThis.fetch = impl;
+};
+
+test('outbound: a fetch always gets a deadline signal, even when the caller passes none', async () => {
+  __resetLimiter();
+  let seen: AbortSignal | null | undefined;
+  stubFetch(((url: string, init?: RequestInit) => {
+    seen = init?.signal;
+    return Promise.resolve(new Response('{"ok":true}', { status: 200 }));
+  }) as unknown as typeof fetch);
+  try {
+    await limitedFetch('http://example.test/no-signal');
+    assert.ok(seen, 'the limiter must supply a deadline when the caller gives none');
+    assert.ok(!seen!.aborted, 'a fresh deadline is not already aborted');
+  } finally {
+    globalThis.fetch = realFetch;
+    __resetLimiter();
+  }
+});
+
+test('outbound: a caller abort propagates through the composed signal', async () => {
+  __resetLimiter();
+  stubFetch(((url: string, init?: RequestInit) => {
+    const sig = init?.signal;
+    // Never settles on its own: only the composed abort can end it.
+    return new Promise<Response>((_resolve, reject) => {
+      sig?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+    });
+  }) as unknown as typeof fetch);
+  try {
+    await assert.rejects(
+      limitedFetch('http://example.test/caller-abort', { signal: AbortSignal.timeout(20) }),
+      /abort/i,
+    );
+  } finally {
+    globalThis.fetch = realFetch;
+    __resetLimiter();
+  }
 });

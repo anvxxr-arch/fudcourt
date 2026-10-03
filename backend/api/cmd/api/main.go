@@ -118,7 +118,19 @@ func main() {
 		Addr:              addr,
 		Handler:           newServer(reg).handler(),
 		ReadHeaderTimeout: 10 * time.Second,
-		WriteTimeout:      30 * time.Second,
+		// The api handler set is small (auth + admin, request/response JSON), so
+		// the whole request must land well inside a request budget; a slow-body
+		// client is a connection held open, which ReadHeaderTimeout alone does
+		// not bound.
+		ReadTimeout: 15 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		// Keep-alive reuse from the web layer is the point; the idle ceiling is
+		// what stops an abandoned keep-alive connection from lingering.
+		IdleTimeout: 120 * time.Second,
+		// The web layer forwards a small header set; 64 KiB is far above anything
+		// a legitimate caller sends and well under the 1 MiB stdlib default, so
+		// an oversized-header request is refused at the listener.
+		MaxHeaderBytes: 1 << 16,
 	}
 
 	done := make(chan struct{})

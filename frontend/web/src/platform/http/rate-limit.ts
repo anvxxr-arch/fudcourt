@@ -20,6 +20,12 @@
  */
 
 const MIN_GAP_MS = 200; // <= 5 upstream requests/sec
+/** Deadline applied when a caller supplies no signal of its own. Without one, a
+ *  fetch that never settles pins this limiter slot forever -- and because
+ *  `enqueue` serialises every call through ONE chain, it stalls every later
+ *  request too. The timeout is the backstop that keeps one hung upstream from
+ *  becoming a whole-family outage. Matches the shortest per-route budget. */
+const DEFAULT_TIMEOUT_MS = 20_000;
 const CACHE_TTL_MS = 15_000;
 /** Hard cap on retained bodies. The TTL alone does NOT bound memory: an entry is
  *  only ever ignored once it is stale, never removed, and a search box mints a
@@ -129,20 +135,38 @@ export async function limitedFetch(
   }
 
   const run = enqueue(async () => {
-    const res = await fetch(url, init);
-    // Read the body ONCE, here, so the winner and every coalesced waiter all
-    // get real bytes. Leaving it on the Response means the first caller drains
-    // the stream and the rest see an empty body.
-    const text = await res.text();
-    const contentType = res.headers.get('Content-Type') ?? 'application/json';
-    if (res.ok) {
-      try {
-        store(url, { at: Date.now(), body: JSON.parse(text) });
-      } catch {
-        /* a non-JSON 200 is not cacheable; just skip it */
-      }
+    // Compose the caller's signal (if any) with a default deadline. Every call
+    // site passes AbortSignal.timeout today, but the limiter must not DEPEND on
+    // that: a future caller that forgets one would hang the single serialised
+    // chain and take the whole family down, not just its own request.
+    const ctl = new AbortController();
+    const timer = setTimeout(
+      () => ctl.abort(new Error(`limitedFetch: no response in ${DEFAULT_TIMEOUT_MS}ms`)),
+      DEFAULT_TIMEOUT_MS
+    );
+    const caller = init.signal;
+    if (caller) {
+      if (caller.aborted) ctl.abort(caller.reason);
+      else caller.addEventListener('abort', () => ctl.abort(caller.reason), { once: true });
     }
-    return { text, status: res.status, contentType };
+    try {
+      const res = await fetch(url, { ...init, signal: ctl.signal });
+      // Read the body ONCE, here, so the winner and every coalesced waiter all
+      // get real bytes. Leaving it on the Response means the first caller drains
+      // the stream and the rest see an empty body.
+      const text = await res.text();
+      const contentType = res.headers.get('Content-Type') ?? 'application/json';
+      if (res.ok) {
+        try {
+          store(url, { at: Date.now(), body: JSON.parse(text) });
+        } catch {
+          /* a non-JSON 200 is not cacheable; just skip it */
+        }
+      }
+      return { text, status: res.status, contentType };
+    } finally {
+      clearTimeout(timer);
+    }
   });
 
   inflight.set(url, run);
