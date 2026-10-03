@@ -44,7 +44,7 @@ docs/
 | architecture | [data-catalog.md](architecture/data-catalog.md) | Per-dataset detail: today's layer, provider carrier, canonical target, identity, time semantics, consumers |
 | architecture | [data-classification.md](architecture/data-classification.md) | The classification matrix + provider-DTO leak audit + duplicate-concept audit |
 | architecture | [database-classification.md](architecture/database-classification.md) | Every table in Turso/Postgres/executor-schema/Neon classified: canonical/event/snapshot/cache/provider-specific/legacy/unknown, owner, durability, sensitivity, writer gaps |
-| architecture | [data-categorization.md](architecture/data-categorization.md) | The 2026-10-02 refresh: 156 data surfaces across four slices (sidecar acquisition modes, web routes, persistence objects, upstream feeds), each row evidence-backed — closes the gap where `coinglass`/`coinank` appeared zero times in the 2026-10-01 catalogs |
+| architecture | [data-categorization.md](architecture/data-categorization.md) | The 2026-10-02 refresh: 156 data surfaces across four slices (sidecar acquisition modes, web routes, persistence objects, upstream feeds), each row evidence-backed — closes the gap where `coinglass`/`coinank` appeared zero times in the 2026-10-01 catalogs; 161 after `coinmarketcap` folded in |
 | architecture | [canonical-acceptance.md](architecture/canonical-acceptance.md) | The acceptance-criteria scorecard: every criterion mapped to observed evidence, with unresolved ambiguities and P0/P1/P2 next actions |
 | operations | [PLAN.md](operations/PLAN.md) | Goal → subgoal → task → subtask breakdown with status |
 | operations | [SECRETS.md](operations/SECRETS.md) | Secret inventory, production (self-hosted) env model, rotation runbook |
@@ -53,6 +53,7 @@ docs/
 | architecture | [cryptorank-data-types.md](architecture/cryptorank-data-types.md) | CryptoRank data-type inventory: 81 endpoints / 16 tags with per-endpoint tier + credit cost, the free **Sandbox** tier (21 endpoints at $0), the keyless HTML path the repo runs, and the v2→v3 migration |
 | architecture | [coinglass-source-recon.md](architecture/coinglass-source-recon.md) | CoinGlass recon **and the shipped Go implementation**: official V4 (key-gated) vs the keyless `capi` surface, the AES-128-ECB×2 + gzip decryptor, the full `v` table, the endpoints the live probe dropped, and the `CgEnvelope` provenance contract |
 | architecture | [coinank-data-types.md](architecture/coinank-data-types.md) | CoinAnk data-type inventory: 78 endpoints / 20 categories, VIP1–VIP4 gating on the official host, and the **keyless** `api.coinank.com` client-computed signature — reconstructed and verified live; constants kept in code, not prose |
+| architecture | [coinmarketcap-data-types.md](architecture/coinmarketcap-data-types.md) | CoinMarketCap recon **and the shipped Go implementation**: the documented `pro-api` (key-gated, NOT wired) vs the keyless `data-api/v3` dashboard backend (no credential at all — the third keyless mechanism, after CoinGlass's decryption and CoinAnk's signature), the live probe matrix, and the quiet failure modes (`error_code != "0"` on a 200 → 502; `limit=0` is a success envelope with an empty list, hence LOCAL bounds) |
 
 ## One-line map of the repo
 
