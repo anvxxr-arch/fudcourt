@@ -168,6 +168,24 @@ the family correctly; the upstream refuses. The `monitor-coinank` job watches fo
 | `ca-etf-inflow` | `GET /api/etf/etfInflow` | CoinAnk | MARKET_DATA | daily spot-ETF creations/redemptions | same | ETF flow (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=etf` → 502 `403` |
 | `ca-whales` | `GET /api/hyper/topPosition` | CoinAnk | DERIVATIVES | Hyperliquid top positions by size | same | large-position metric (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=whales` → 502 `403` |
 
+### 1.8 CoinMarketCap (`https://api.coinmarketcap.com/data-api/v3`)
+
+Code: `backend/data/internal/research/coinmarketcap/{modes.go,fetch.go}`. Keyless for a **third**
+mechanism — neither an encrypted body to decrypt (CoinGlass) nor a computed signature (CoinAnk):
+this is the coinmarketcap.com dashboard's own backend and it takes **no credential of any kind**, so
+the fetch is a plain `net/http` GET. The documented `pro-api.coinmarketcap.com` (which needs an issued
+`X-CMC_PRO_API_KEY`) is NOT wired — a different product, not an alternative transport. All four modes
+are live. A refusal is **HTTP 200 with `status.error_code != "0"`** (not an HTTP status), so the handler
+surfaces it as a 502 carrying upstream's code; `limit=0` is a **success** envelope with an **empty
+list**, so the pagination bounds are validated locally (a bad value is a 400 before any request).
+
+| source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `cmc-listing` | `GET /cryptocurrency/listing?start&limit` | CoinMarketCap | MARKET_DATA | ranked coin listing (price/market-cap/volume) | `backend/data/internal/research/coinmarketcap/modes.go:UpstreamURL` | Instrument + quote metrics (target) | FREQUENT | NONE (disk cache) | keyless (none) | active | `curl 127.0.0.1:3101/api/coinmarketcap?mode=listing` → 200 |
+| `cmc-global` | `GET /global-metrics/quotes/latest` | CoinMarketCap | MARKET_DATA | global market aggregate (object payload) | same | market aggregate (target) | FREQUENT | NONE (disk cache) | keyless (none) | active | `curl ...mode=global` → 200 |
+| `cmc-market-pairs` | `GET /cryptocurrency/market-pairs/latest?slug=<SLUG>` | CoinMarketCap | MARKET_DATA | trading pairs for one coin (`slug` required) | same | Instrument markets (target) | FREQUENT | NONE (disk cache) | keyless (none) | active | `curl ...mode=marketPairs&slug=bitcoin` → 200 (no `slug` → 400) |
+| `cmc-exchanges` | `GET /exchange/listing?start&limit` | CoinMarketCap | MARKET_DATA | ranked exchange listing (volume/score) | same | venue metrics (target) | FREQUENT | NONE (disk cache) | keyless (none) | active | `curl ...mode=exchanges` → 200 |
+
 ---
 
 ## 2. Market-data feeds read directly by the Next.js web tier (:3100)
@@ -418,14 +436,14 @@ Counted mechanically from the tables above (`grep -c`/script over this file):
 
 | Section | Rows |
 |---|---|
-| §1 Research feed rows (CryptoRank 25, Khala 5, DefiLlama 3, News 1, ChainRank 3, CoinGlass 4, CoinAnk 5) | **46** |
+| §1 Research feed rows (CryptoRank 25, Khala 5, DefiLlama 3, News 1, ChainRank 3, CoinGlass 4, CoinAnk 5, CoinMarketCap 4) | **50** |
 | §2 Market-data rows read directly by the web tier | **12** |
 | §3 On-chain/RPC rows (6 Alchemy chains, Solana ×2, Hyperliquid, coins price) | **10** |
 | §4 CEX execution rows (Binance 4, Bybit 5, MEXC 5, paper 1) | **15** |
 | §5 Identity rows | **2** |
 | §6 Manual/user-entered rows | **5** |
 | §7 Internal persistence/infrastructure rows | **14** |
-| **Total registry rows** | **104** |
+| **Total registry rows** | **108** |
 | §8 Absent-in-repo rows | **14** |
 | §9 Frontend route rows | **18** |
 | §10 systemd unit rows | **11** (the 14 files in `infrastructure/systemd/` reduce to 11 table rows: the three `.service`+`.timer` pairs `fudcourt-sync`, `fudcourt-sync-rust` and `fudcourt-pgload` each collapse into one row — 6 single-unit rows plus 3 pair rows covering 6 files — and the two `RETIRED-*.service.txt` tombstones appear as their own rows: 6 + 3 + 2 = 11 rows / 6 + 6 + 2 = 14 files) |
@@ -433,7 +451,7 @@ Counted mechanically from the tables above (`grep -c`/script over this file):
 Facts behind the counts: CryptoRank declares **28** modes (`ModeCount = len(Modes)`; 26
 live-recorded in `MANIFEST.json.liveModes`, 2 refused-by-design); 10 ccxt venues × the
 measured `TICKER_VENUES` type table; 6 EVM chains + Solana + Hyperliquid under the
-5-minute sync; 3 live CEX venues + 1 paper venue in the executor; **CoinGlass** declares 4 keyless modes (all live) and **CoinAnk** 5 keyless modes (all `dark` — the upstream refuses every call with HTTP 502 `403`).
+5-minute sync; 3 live CEX venues + 1 paper venue in the executor; **CoinGlass** declares 4 keyless modes (all live), **CoinAnk** 5 keyless modes (all `dark` — the upstream refuses every call with HTTP 502 `403`), and **CoinMarketCap** 4 keyless modes (all live — keyless by having no credential at all).
 
 `[INFERENCE]` markers are used only where a claim rests on reading code rather than
 running it (e.g. tables with no in-repo writer). Every other row cites a file, route or

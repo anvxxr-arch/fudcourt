@@ -268,6 +268,7 @@ Enumerated, not implied:
 | Any table holding plaintext API keys/secrets | **Does not exist** | `executor.exchange_accounts` stores only `bytea` ciphertext + `iv`/`auth_tag` + `api_key_masked`; `users.hash`/`salt` are digests. |
 | A `raw_*` provider table namespace | **Does not exist** | The scope's suggested `raw_cryptorank_*`/`raw_exchange_*` naming has no implementation; raw payloads live in the disk cache (`~/.cache/crfetch`) and gzipped fixtures only. |
 | Tables for CoinGlass / CoinAnk derivatives metrics (funding, open interest, liquidations, long/short, ETF flows) | **Do not exist** | Neither family persists: `backend/data/internal/research/{coinglass,coinank}` serve the upstream body through the disk cache only (no DDL, no writer). CoinAnk is additionally `dark` — every mode returns HTTP 502 `403`. |
+| Tables for CoinMarketCap market surfaces (listing, global metrics, market pairs, exchanges) | **Do not exist** | `backend/data/internal/research/coinmarketcap` serves the upstream body through the disk cache only (no DDL, no writer); like its CoinGlass/CoinAnk siblings it is a pass-through acquisition family, not a persisted dataset. |
 
 ---
 

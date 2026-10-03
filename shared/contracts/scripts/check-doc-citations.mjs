@@ -105,8 +105,10 @@
  *     ("at the time of that run", "as observed on <date>") or leave it inside the dated row, and
  *     never update it to today's number (that would rewrite history);
  *   - a verdict presented as the CURRENT state is updated to the newest observed line.
- * Latest observed: `DOCS_OK docs=12 citations=1158 allowances=4` (2026-10-02, after
- * `docs/architecture/data-categorization.md` was added to `DOCS`; the earlier `docs=11
+ * Latest observed: `DOCS_OK docs=12 citations=1167 allowances=4` (2026-10-03, after `coinmarketcap`
+ * was folded into the catalogs — its new cited paths in source-catalog / data-catalog /
+ * data-classification / database-classification raised the count from 1158; the `docs=12
+ * citations=1158` reading is when `docs/architecture/data-categorization.md` was added to `DOCS`; the earlier `docs=11
  * citations=1031` reading is when `docs/architecture/design-debt.md` was added the day it landed,
  * DR-037 follow-up, the `docs=10 citations=985` reading is when `docs/architecture/DESIGN-SYSTEM.md`
  * was added, and `docs=9 citations=969 allowances=6` / `docs=8 citations=904` are the current-state
