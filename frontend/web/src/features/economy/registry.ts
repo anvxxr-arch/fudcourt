@@ -191,6 +191,15 @@ const SERIES: readonly SeriesDef[] = [
     fred: { id: 'M2SL', frequency: 'monthly', seasonalAdjustment: 'SA', shape: 'yoy', lag: 12, unit: '% YoY', decimals: 2 },
   },
   {
+    // The money-supply input for the 124 countries whose M2 is not on FRED. It is
+    // a GROWTH rate, not a level, because the regime engine reads the direction of
+    // money growth: a rising nominal money stock is not "expanding liquidity" if
+    // it is rising slower than before.
+    key: 'money-growth', label: 'Broad money growth', category: 'monetary', subcategory: 'money-supply', importance: 2,
+    note: 'Broad money growth, year over year',
+    wb: { id: 'FM.LBL.BMNY.ZG', frequency: 'annual', seasonalAdjustment: 'NA', shape: 'level', lag: 0, unit: '% YoY', decimals: 2 },
+  },
+  {
     key: 'broad-money', label: 'Broad money', category: 'money', subcategory: 'broad-money', importance: 2,
     note: 'Broad money, % of GDP',
     wb: { id: 'FM.LBL.BMNY.GD.ZS', frequency: 'annual', seasonalAdjustment: 'NA', shape: 'level', lag: 0, unit: '% GDP', decimals: 1 },

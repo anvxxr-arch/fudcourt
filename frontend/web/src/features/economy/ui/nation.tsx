@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { color, fontSize, fontWeight, space } from '@/styles/tokens';
 import { fetchCountry, formatDate, formatDelta, formatValue, type CountryEnvelope } from '@/features/economy/client';
 import { Card, DataTable, ECONOMY_NAV, ErrorState, ImportanceDots, Loading, PageHeader, Value } from '@/features/economy/ui/parts';
+import RegimeBoard from '@/features/economy/ui/regime';
 
 export default function NationProfile({ code }: { code: string }) {
   const [data, setData] = useState<CountryEnvelope | null>(null);
@@ -60,6 +61,8 @@ export default function NationProfile({ code }: { code: string }) {
           ))}
         </div>
       </Card>
+
+      <RegimeBoard country={c.iso3} embedded />
 
       <div style={{ display: 'grid', gap: space[14], gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', marginTop: space[14] }}>
         {data.groups.map((g) => (

@@ -22,12 +22,14 @@ import {
   fetchCentralBanks,
   fetchCompare,
   fetchLiquidity,
+  fetchRegime,
   formatDate,
   formatValue,
   type CalendarEnvelope,
   type CentralBanksEnvelope,
   type CompareEnvelope,
   type LiquidityEnvelope,
+  type RegimeEnvelope,
 } from '@/features/economy/client';
 import { Card, ECONOMY_NAV, ErrorState, ImportanceDots, Loading, PageHeader, Sparkline, Value } from '@/features/economy/ui/parts';
 
@@ -51,17 +53,18 @@ type State = {
   banks: CentralBanksEnvelope | null;
   liquidity: LiquidityEnvelope | null;
   calendar: CalendarEnvelope | null;
+  regime: RegimeEnvelope | null;
   errors: string[];
 };
 
 export default function EconomyDashboard() {
-  const [state, setState] = useState<State>({ pulse: null, banks: null, liquidity: null, calendar: null, errors: [] });
+  const [state, setState] = useState<State>({ pulse: null, banks: null, liquidity: null, calendar: null, regime: null, errors: [] });
 
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
       const errors: string[] = [];
-      const [pulse, banks, liquidity, calendar] = await Promise.all([
+      const [pulse, banks, liquidity, calendar, regime] = await Promise.all([
         fetchCompare(PULSE, '1y', ac.signal).catch((e) => {
           errors.push(`macro pulse: ${e instanceof Error ? e.message : String(e)}`);
           return null;
@@ -78,13 +81,17 @@ export default function EconomyDashboard() {
           errors.push(`calendar: ${e instanceof Error ? e.message : String(e)}`);
           return null;
         }),
+        fetchRegime(undefined, ac.signal).catch((e) => {
+          errors.push(`regime: ${e instanceof Error ? e.message : String(e)}`);
+          return null;
+        }),
       ]);
-      if (!ac.signal.aborted) setState({ pulse, banks, liquidity, calendar, errors });
+      if (!ac.signal.aborted) setState({ pulse, banks, liquidity, calendar, regime, errors });
     })();
     return () => ac.abort();
   }, []);
 
-  const { pulse, banks, liquidity, calendar, errors } = state;
+  const { pulse, banks, liquidity, calendar, regime, errors } = state;
 
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
@@ -103,6 +110,46 @@ export default function EconomyDashboard() {
       )}
 
       <div style={{ display: 'grid', gap: space[14], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+        <Card title="Macro Regime" subtitle="rule table over published readings — not a forecast">
+          {!regime ? (
+            <Loading what="regime" />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: space[10] }}>
+              {regime.regime ? (
+                <>
+                  <div style={{ fontSize: fontSize[20], fontWeight: fontWeight.bold, color: color.text }}>{regime.regime.label}</div>
+                  <div style={{ fontSize: fontSize[11], color: color.textMuted }}>
+                    evidence confidence: <span style={{ color: regime.confidence === 'high' ? color.positive : regime.confidence === 'medium' ? color.warn : color.negative }}>{regime.confidence}</span>
+                    {regime.missing.length > 0 ? ` · ${regime.missing.length} dimension(s) unreadable` : ''}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: fontSize[14], fontWeight: fontWeight.semibold, color: color.warn }}>No regime stated</div>
+                  <div style={{ fontSize: fontSize[11], color: color.textMuted, lineHeight: lineHeight.normal }}>{regime.regimeReason}</div>
+                </>
+              )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[6] }}>
+                {regime.dimensions.map((d) => (
+                  <span
+                    key={d.id}
+                    style={{
+                      padding: `${space[4]}px ${space[8]}px`,
+                      border: `1px solid ${color.border}`,
+                      borderRadius: radius[4],
+                      fontSize: fontSize[10],
+                      color: d.word ? color.text : color.textMuted,
+                    }}
+                  >
+                    {d.label}: {d.word ?? '—'}
+                  </span>
+                ))}
+              </div>
+              <Link href="/economy/regime" style={{ fontSize: fontSize[11], color: color.accent, textDecoration: 'none' }}>full regime board →</Link>
+            </div>
+          )}
+        </Card>
+
         <Card title="Global Macro Pulse" subtitle="latest observation of a curated basket; sparkline is the last year">
           {!pulse ? (
             <Loading what="macro pulse" />

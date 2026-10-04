@@ -29,6 +29,10 @@ export type {
   ValueShape,
 } from '@/features/economy/model';
 
+// The re-export above does not bind `Country` locally, and the regime envelope
+// needs it by name. Imported as a type only — this file stays view-safe.
+import type { Country } from '@/features/economy/model';
+
 /** One headline cell on a country or dashboard board. */
 export type Metric = {
   slug: string;
@@ -233,6 +237,53 @@ export type CalendarEnvelope = {
   asOf: number;
 };
 
+/** One dimension's reading in a macro regime. */
+export type RegimeDimension = {
+  id: string;
+  label: string;
+  /** The canonical slug the reading came from, or '' when none is bound. */
+  series: string;
+  unit: string;
+  decimals: number;
+  latest: { date: string; value: number } | null;
+  prior: { date: string; value: number } | null;
+  /** `null` when the series could not be read — a first-class answer, not "flat". */
+  trend: { direction: 'up' | 'down' | 'flat'; change: number; lookback: number; noise: number; strength: number } | null;
+  word: string | null;
+  tag: string | null;
+  reason: string | null;
+};
+
+export type RegimeImpact = {
+  asset: string;
+  label: string;
+  stance: string;
+  score: number;
+  /** Every weight that produced the score, so the sum can be audited. */
+  contributions: { dimension: string; word: string; weight: number }[];
+};
+
+export type RegimeEnvelope = {
+  /** The scope as an OBJECT. Distinct from `subject`, which is its display name. */
+  scope: { kind: 'global'; anchor: { iso3: string; name: string } } | { kind: 'country'; country: Country };
+  /** The scope's display name ("Global", or a country's name). */
+  subject: string;
+  dimensions: RegimeDimension[];
+  regime: { code: string; label: string; summary: string } | null;
+  /** Why no rule fired, when none did. */
+  regimeReason: string | null;
+  confidence: 'high' | 'medium' | 'low';
+  impacts: RegimeImpact[];
+  /** Dimensions that could not be read, by id. */
+  missing: string[];
+  /** A deterministic reading of the computed facts. No model involved. */
+  narrative: string;
+  failed: { symbol: string; reason: string }[];
+  upstream: string[];
+  derived: string;
+  asOf: number;
+};
+
 /** The base path every helper here talks to. Views never call an upstream. */
 export const ECONOMY_API = '/api/economy';
 
@@ -307,6 +358,12 @@ export function fetchCalendar(query: CalendarQuery = {}, signal?: AbortSignal): 
   }
   const qs = p.toString();
   return getJson(`${ECONOMY_API}/calendar${qs ? `?${qs}` : ''}`, signal);
+}
+
+/** The macro regime for a country, or global when `country` is omitted. */
+export function fetchRegime(country?: string, signal?: AbortSignal): Promise<RegimeEnvelope> {
+  const qs = country ? `?country=${encodeURIComponent(country)}` : '';
+  return getJson(`${ECONOMY_API}/regime${qs}`, signal);
 }
 
 // ---------------------------------------------------------------------------

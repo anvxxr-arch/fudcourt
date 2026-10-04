@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { LIQUIDITY_COMPONENTS, readLiquiditySeries } from '@/app/(frontend)/api/economy/_lib/adapters';
 import { mapPool } from '@/app/(frontend)/api/economy/_lib/rows';
+import { liquidityBreadth } from '@/features/economy/regime';
 import type { LiquidityComponent } from '@/features/economy/client';
 
 export const dynamic = 'force-dynamic';
@@ -62,22 +63,7 @@ export async function GET() {
   });
 
   const live = components.filter((c) => c.change !== null);
-  let index: { value: number; trend: 'Expanding' | 'Neutral' | 'Contracting'; components: number } | null = null;
-  if (live.length > 0) {
-    // Weight by importance-free count: each live component is one vote, cast by
-    // the sign of `change * direction`. A flat move (change === 0) abstains.
-    let expand = 0;
-    let contract = 0;
-    for (const c of live) {
-      const vote = Math.sign((c.change as number) * c.direction);
-      if (vote > 0) expand++;
-      else if (vote < 0) contract++;
-    }
-    const total = live.length;
-    const value = Math.round(((expand + (total - expand - contract) * 0.5) / total) * 100);
-    const trend = value >= 58 ? 'Expanding' : value <= 42 ? 'Contracting' : 'Neutral';
-    index = { value, trend, components: total };
-  }
+  const index = liquidityBreadth(components);
 
   if (live.length === 0) {
     return NextResponse.json(

@@ -139,6 +139,13 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 0.7,
   },
   {
+    path: '/economy/regime',
+    title: 'Macro regime — Growth, inflation, liquidity, policy | FUDCOURT',
+    description:
+      'Growth, inflation, labour, liquidity and policy read from published observations and matched against an explicit rule table, with a stated weight table for potential asset impact.',
+    priority: 0.7,
+  },
+  {
     path: '/economy/compare',
     title: 'Compare — Countries & series | FUDCOURT',
     description:
