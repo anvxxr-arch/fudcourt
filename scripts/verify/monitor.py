@@ -11,7 +11,8 @@ Deterministic monitor for the Hermes cron `monitor=` slot:
 
 Checks:
   1. fudcourt-web unit active
-  2. board page /cryptorank -> 200
+  2. board page / -> 200 (renders the CryptoRank home slice; the standalone
+     /cryptorank page was retired in b8e27c6 -- assert the page that ships)
   3. /api/cryptorank?mode=home     -> 200 + count/rows non-empty + upstream field
   4. /api/cryptorank?mode=coins    -> 200
   5. /api/cryptorank?mode=converter-> 200 (full-list converter path)
@@ -48,7 +49,7 @@ TRANSIENT = {429, 500, 502, 503, 504}
 
 # (name, path, want_status, nonempty) — fixed order = deterministic output
 CHECKS = [
-    ("board page", "/cryptorank", 200, False),
+    ("board page", "/", 200, False),
     ("mode=home", "/api/cryptorank?mode=home", 200, True),
     ("mode=coins", "/api/cryptorank?mode=coins", 200, False),
     ("mode=converter", "/api/cryptorank?mode=converter", 200, False),
