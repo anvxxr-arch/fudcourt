@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { PUBLIC_ROUTES } from '@/platform/routing/public-routes';
 import { TICKER_SYMBOLS } from '@/features/ticker/client';
+import { NATION_SLUGS } from '@/features/market/nation/client';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = PUBLIC_ROUTES.map((route) => ({
@@ -17,6 +18,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // hourly matches the price TTL.
   const tickerCoins = TICKER_SYMBOLS.map((symbol) => symbol.split('/')[0]);
 
+  // Per-country economy profiles — same rule: enumerated from the nation
+  // family's own country table, never from a crawl. The profile's annual data
+  // moves at most daily, so weekly is honest rather than hourly.
+  const nationPages = NATION_SLUGS.map((slug) => ({
+    url: `https://fc.dwirijal.my.id/economy/nation/${slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.6,
+  }));
+
   return [
     ...staticRoutes,
     ...tickerCoins.map((coin) => ({
@@ -25,5 +36,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'hourly' as const,
       priority: 0.6,
     })),
+    ...nationPages,
   ];
 }

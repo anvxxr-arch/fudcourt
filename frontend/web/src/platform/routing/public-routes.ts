@@ -89,4 +89,14 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
       'On-chain DEX section: per-pair liquidity, transactions and FDV, plus the live trench, from DexScreener.',
     priority: 0.7,
   },
+  {
+    // The country index. Its 125 profile pages are dynamic, so — like the
+    // per-coin pages — they are enumerated by sitemap.ts from the family's own
+    // allowlist rather than listed here.
+    path: '/economy/nation',
+    title: 'Economy by nation — 125 economies | FUDCOURT',
+    description:
+      'Per-country economy profiles: World Bank structural indicators, IMF Fiscal Monitor government finance, the central-bank policy rate and the currency against the dollar.',
+    priority: 0.7,
+  },
 ];

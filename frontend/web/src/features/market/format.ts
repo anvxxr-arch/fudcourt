@@ -65,6 +65,21 @@ export function fmtTime(unix: number | null): string {
   return new Date(unix * 1000).toLocaleTimeString(undefined, { hour12: false });
 }
 
+/**
+ * A unix second as a UTC date AND time: `2026-10-04 00:02 UTC`.
+ *
+ * `fmtTime` gives a clock time with no date, which is right for a live intraday
+ * quote and wrong for a daily fix: the FX feed stamps one rate per UTC day, so a
+ * bare `00:02:32` says which minute but not WHICH DAY, and a reader cannot tell
+ * today's rate from one three days stale.
+ */
+export function fmtDateTime(unix: number | null): string {
+  if (unix === null || !Number.isFinite(unix)) return dash;
+  const d = new Date(unix * 1000);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
+}
+
 /** A currency code as shown: Yahoo quotes cents-denominated futures as `USX`. */
 export function fmtCurrency(code: string | null): string {
   if (!code) return '';
@@ -75,4 +90,53 @@ export function fmtCurrency(code: string | null): string {
 export function tone(v: number | null): 'up' | 'down' | 'flat' {
   if (v === null || !Number.isFinite(v) || v === 0) return 'flat';
   return v > 0 ? 'up' : 'down';
+}
+
+/** 1.23T / 45.6B / 789.0M / 12.3K, else the plain number at `decimals`. */
+function compactCount(v: number, prefix: string, decimals: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1e12) return `${prefix}${(v / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `${prefix}${(v / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${prefix}${(v / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `${prefix}${(v / 1e3).toFixed(1)}K`;
+  return `${prefix}${v.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+}
+
+/**
+ * An annual indicator rendered for its KIND rather than as a bare number: a
+ * percent, a compact dollar amount, a head count, a number of years, a per-1,000
+ * rate or a tonnage. `decimals` rides on the series spec, so a 1dp indicator and
+ * a 2dp one do not silently render at the same precision.
+ *
+ * Null -> '—', and a non-finite value is treated as absent rather than printed.
+ */
+export function fmtIndicator(v: number | null, kind: string, decimals: number): string {
+  if (v === null || !Number.isFinite(v)) return dash;
+  switch (kind) {
+    case 'pct':
+      return `${v.toFixed(decimals)}%`;
+    case 'usd':
+      return compactCount(v, '$', decimals);
+    case 'count':
+    case 'pop':
+      return compactCount(v, '', decimals);
+    case 'years':
+      return `${v.toFixed(decimals)} yr`;
+    case 'per1k':
+      return `${v.toFixed(decimals)} /1k`;
+    case 'tonnes':
+      return `${v.toFixed(decimals)} t`;
+    default:
+      return v.toFixed(decimals);
+  }
+}
+
+/**
+ * The same rendering with an explicit sign, for a change between two
+ * observations of the same series. Null -> '—', exactly like the level: a change
+ * over a missing leg is withheld, never computed from a zero.
+ */
+export function fmtIndicatorDelta(v: number | null, kind: string, decimals: number): string {
+  if (v === null || !Number.isFinite(v)) return dash;
+  return `${v >= 0 ? '+' : ''}${fmtIndicator(v, kind, decimals)}`;
 }
