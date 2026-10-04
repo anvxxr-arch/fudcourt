@@ -65,11 +65,22 @@ export function TR({ children, style }: TRProps) {
   return <tr style={{ borderBottom: `1px solid ${color.border}`, ...style }}>{children}</tr>;
 }
 
-type THProps = { children?: React.ReactNode; align?: Align; style?: React.CSSProperties };
+type THProps = {
+  children?: React.ReactNode;
+  align?: Align;
+  style?: React.CSSProperties;
+  /** For a grouped header: a theme cell spans its columns, the label column spans its rows. */
+  colSpan?: number;
+  rowSpan?: number;
+};
 
-export function TH({ children, align = 'left', style }: THProps) {
+export function TH({ children, align = 'left', style, colSpan, rowSpan }: THProps) {
   return (
-    <th style={{ textAlign: align, color: color.textMuted, fontWeight: fontWeight.semibold, ...style }}>
+    <th
+      colSpan={colSpan}
+      rowSpan={rowSpan}
+      style={{ textAlign: align, color: color.textMuted, fontWeight: fontWeight.semibold, ...style }}
+    >
       {children}
     </th>
   );

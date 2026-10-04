@@ -20,7 +20,7 @@ import {
 import { YAHOO_CHART, YAHOO_UA, chartUrl, parseChart } from '@/features/market/quotes';
 import { daysAgo, fetchPolicyRates, SOURCE_UA } from '@/features/market/sources/bis';
 import { fetchFred } from '@/features/market/sources/fred';
-import { fetchWorldBank } from '@/features/market/sources/worldbank';
+import { fetchWorldBankSeries } from '@/features/market/sources/worldbank';
 import { limitedFetch } from '@/platform/http/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -42,8 +42,17 @@ type IndicatorRow = {
   date: string | null;
   note: string;
 };
-/** One cell of the worldwide table: a value and the year it was published for. */
-type WorldCell = { value: number | null; year: string | null };
+/**
+ * One cell of the worldwide table: the newest value, the year it was published
+ * for, and — where the window holds one at least ~8 years back — an earlier
+ * observation to compare it against. `prior` null means "no trend to show",
+ * never "no change".
+ */
+type WorldCell = {
+  value: number | null;
+  year: string | null;
+  prior: { value: number; year: string } | null;
+};
 
 /** One row of the worldwide table — a country or an aggregate. */
 type WorldRow = {
@@ -63,6 +72,8 @@ type WorldIndicatorRow = {
   kind: string;
   decimals: number;
   note: string;
+  /** The column block this indicator's header groups under. */
+  theme: string;
 };
 
 /**
@@ -74,7 +85,9 @@ type WorldIndicatorRow = {
  *  - FRED CSV            — US macro series (prices, labour, money, spreads).
  *  - World Bank          — the WORLDWIDE annual board: 125 countries and 18
  *    aggregates (World, the four income groups, and the regional/unions blocks)
- *    across eight structural series each.
+ *    across 24 themed structural series each, every cell carrying both its own
+ *    reference year and — where the window holds one — its change over the
+ *    decade.
  *
  * Each upstream is fetched and reported independently: one failing empties its own
  * block and is named in `failed[]`, while the rest of the board still renders.
@@ -85,7 +98,9 @@ type WorldIndicatorRow = {
  * Honest-by-construction throughout: a value an upstream did not publish is null
  * (the UI renders '—'), never 0-filled, and every annual cell carries the
  * reference YEAR it was published for — a World Bank figure lags, so a 2023
- * number printed without its year reads as current when it is not.
+ * number printed without its year reads as current when it is not. A cell's
+ * `prior` is null when the series has no observation far enough back to compare
+ * against; that means "no trend shown", not "no change".
  */
 export async function GET() {
   const failed: Failed[] = [];
@@ -179,18 +194,24 @@ export async function GET() {
 
   // ---- 4. worldwide economy board (World Bank) -----------------------------
   // One call per indicator over EVERY code at once (countries batch; the
-  // indicator list does not). Eight calls fill both tables. Each call is
-  // independent: a failing series empties only its own column and is named in
-  // `failed[]`, while every other column still fills.
+  // indicator list does not). 24 calls fill both tables, and they run through the
+  // World Bank's OWN concurrency pool rather than the shared serial limiter — see
+  // `sources/worldbank.ts` for the measurement that made that the right call.
+  // Each call is independent: a failing series empties only its own column and is
+  // named in `failed[]`, while every other column still fills.
   const cellByCode = new Map<string, Record<string, WorldCell>>();
   await Promise.all(
     ECONOMY_INDICATORS.map(async (spec) => {
       try {
-        const obs = await fetchWorldBank(spec.id, WORLD_CODES, ECONOMY_FROM_YEAR, WB_AGGREGATE_NAMES);
-        for (const o of obs) {
-          const cells = cellByCode.get(o.country) ?? {};
-          cells[spec.id] = { value: o.value, year: o.year };
-          cellByCode.set(o.country, cells);
+        const series = await fetchWorldBankSeries(spec.id, WORLD_CODES, ECONOMY_FROM_YEAR, WB_AGGREGATE_NAMES);
+        for (const s of series) {
+          const cells = cellByCode.get(s.country) ?? {};
+          cells[spec.id] = {
+            value: s.latest.value,
+            year: s.latest.year,
+            prior: s.prior ? { value: s.prior.value, year: s.prior.year } : null,
+          };
+          cellByCode.set(s.country, cells);
         }
       } catch (e) {
         failed.push({ symbol: `WB:${spec.id}`, reason: e instanceof Error ? e.message : String(e) });
@@ -219,6 +240,7 @@ export async function GET() {
     kind: s.kind,
     decimals: s.decimals,
     note: s.note,
+    theme: s.theme,
   }));
 
   // ---- derived curve spreads ----------------------------------------------
@@ -251,6 +273,6 @@ export async function GET() {
     upstream: [YAHOO_CHART, 'stats.bis.org WS_CBPOL', 'fred.stlouisfed.org CSV', 'api.worldbank.org v2'],
     userAgent: SOURCE_UA,
     asOf: Math.floor(Date.now() / 1000),
-    derived: `quotes: one Yahoo chart call per symbol; policy rates: BIS WS_CBPOL (daily, 60-day window); indicators: FRED CSV with the transform applied server-side; worldwide board: World Bank annual, ${WORLD_COUNTRIES.length} countries + ${WORLD_AGGREGATES.length} aggregates, newest non-null year per cell; ${failed.length} upstream item(s) failed`,
+    derived: `quotes: one Yahoo chart call per symbol; policy rates: BIS WS_CBPOL (daily, 60-day window); indicators: FRED CSV with the transform applied server-side; worldwide board: World Bank annual, ${WORLD_COUNTRIES.length} countries + ${WORLD_AGGREGATES.length} aggregates across ${ECONOMY_INDICATORS.length} series, newest non-null year per cell, each cell compared against its observation ~10 years earlier where the window holds one; ${failed.length} upstream item(s) failed`,
   });
 }

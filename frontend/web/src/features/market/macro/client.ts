@@ -373,7 +373,16 @@ export const WORLD_CODES: readonly string[] = [
 ];
 
 /** How a World Bank value is rendered. */
-export type WorldValueKind = 'pct' | 'usd' | 'count' | 'years';
+export type WorldValueKind = 'pct' | 'usd' | 'count' | 'pop' | 'years' | 'per1k' | 'tonnes';
+
+/** The themed column blocks the worldwide table groups its indicators under. */
+export type WorldTheme =
+  | 'Output & prices'
+  | 'People'
+  | 'Labour & welfare'
+  | 'External'
+  | 'Money & state'
+  | 'Structure & sustainability';
 
 export type WorldIndicatorSpec = {
   id: string;
@@ -384,24 +393,70 @@ export type WorldIndicatorSpec = {
   kind: WorldValueKind;
   decimals: number;
   note: string;
+  /** Which column block the header groups this indicator under. */
+  theme: WorldTheme;
 };
 
 /**
- * The eight annual series the worldwide table carries. All eight were measured
- * to resolve for every country AND every aggregate on the board — a series that
- * only covers countries (govt debt, current account, Gini, reserves, external
- * debt, lending rate) is deliberately excluded, because a column that is blank
- * for all 18 aggregates is not worth its width.
+ * The 24 annual series the worldwide table carries — a country PROFILE, not a
+ * two-line comparison. Array order is render order; `theme` groups the header.
+ *
+ * Every id here was measured against the live API across the WHOLE board (143
+ * codes) before being included, and the ones that failed the measurement were
+ * dropped rather than shipped as a mostly blank column: central-government debt
+ * resolves for only 46 of the 125 countries, lending rate 36/50, stunting 31/50,
+ * Gini 104/125, so none of those earns its width. What remains covers ≥99/125
+ * countries and, except for the current account and reserves — which the World
+ * Bank publishes for countries only — also most of the 18 aggregates, so the
+ * aggregates table fills too. Where a series genuinely has no observation for a
+ * row, that cell stays an em dash.
  */
 export const ECONOMY_INDICATORS: readonly WorldIndicatorSpec[] = [
-  { id: 'NY.GDP.MKTP.KD.ZG', name: 'GDP growth', short: 'GDP growth', kind: 'pct', decimals: 2, note: 'Annual real GDP growth' },
-  { id: 'NY.GDP.MKTP.CD', name: 'GDP (nominal)', short: 'GDP', kind: 'usd', decimals: 0, note: 'Gross domestic product, current US$' },
-  { id: 'NY.GDP.PCAP.CD', name: 'GDP per capita', short: 'GDP/capita', kind: 'usd', decimals: 0, note: 'GDP per capita, current US$' },
-  { id: 'SP.POP.TOTL', name: 'Population', short: 'Population', kind: 'count', decimals: 0, note: 'Total population' },
-  { id: 'FP.CPI.TOTL.ZG', name: 'Inflation', short: 'Inflation', kind: 'pct', decimals: 2, note: 'Consumer prices, annual %' },
-  { id: 'SL.UEM.TOTL.ZS', name: 'Unemployment', short: 'Unemp.', kind: 'pct', decimals: 2, note: 'Unemployment, total (% of labour force, ILO estimate)' },
-  { id: 'SP.DYN.LE00.IN', name: 'Life expectancy', short: 'Life exp.', kind: 'years', decimals: 1, note: 'Life expectancy at birth, total' },
-  { id: 'SP.URB.TOTL.IN.ZS', name: 'Urban population', short: 'Urban', kind: 'pct', decimals: 1, note: 'Urban population, % of total' },
+  // -- Output & prices ------------------------------------------------------
+  { id: 'NY.GDP.MKTP.KD.ZG', name: 'GDP growth', short: 'GDP growth', kind: 'pct', decimals: 2, theme: 'Output & prices', note: 'Annual real GDP growth' },
+  { id: 'NY.GDP.MKTP.CD', name: 'GDP (nominal)', short: 'GDP', kind: 'usd', decimals: 0, theme: 'Output & prices', note: 'Gross domestic product, current US$' },
+  { id: 'NY.GDP.PCAP.CD', name: 'GDP per capita', short: 'GDP/capita', kind: 'usd', decimals: 0, theme: 'Output & prices', note: 'GDP per capita, current US$' },
+  { id: 'FP.CPI.TOTL.ZG', name: 'Inflation', short: 'Inflation', kind: 'pct', decimals: 2, theme: 'Output & prices', note: 'Consumer prices, annual %' },
+
+  // -- People ---------------------------------------------------------------
+  { id: 'SP.POP.TOTL', name: 'Population', short: 'Population', kind: 'pop', decimals: 0, theme: 'People', note: 'Total population' },
+  { id: 'SP.POP.65UP.TO.ZS', name: 'Population 65+', short: 'Pop 65+', kind: 'pct', decimals: 1, theme: 'People', note: 'Population aged 65 and above, % of total' },
+  { id: 'SP.URB.TOTL.IN.ZS', name: 'Urban population', short: 'Urban', kind: 'pct', decimals: 1, theme: 'People', note: 'Urban population, % of total' },
+  { id: 'SP.DYN.LE00.IN', name: 'Life expectancy', short: 'Life exp.', kind: 'years', decimals: 1, theme: 'People', note: 'Life expectancy at birth, total' },
+
+  // -- Labour & welfare -----------------------------------------------------
+  { id: 'SL.UEM.TOTL.ZS', name: 'Unemployment', short: 'Unemp.', kind: 'pct', decimals: 2, theme: 'Labour & welfare', note: 'Unemployment, total (% of labour force, ILO estimate)' },
+  { id: 'SL.TLF.CACT.ZS', name: 'Labour force participation', short: 'LF part.', kind: 'pct', decimals: 1, theme: 'Labour & welfare', note: 'Labour force participation rate, ages 15+, total' },
+  { id: 'SP.DYN.IMRT.IN', name: 'Infant mortality', short: 'Inf. mort.', kind: 'per1k', decimals: 1, theme: 'Labour & welfare', note: 'Infant deaths per 1,000 live births' },
+  { id: 'SH.XPD.CHEX.GD.ZS', name: 'Health expenditure', short: 'Health', kind: 'pct', decimals: 1, theme: 'Labour & welfare', note: 'Current health expenditure, % of GDP' },
+
+  // -- External -------------------------------------------------------------
+  { id: 'NE.TRD.GNFS.ZS', name: 'Trade openness', short: 'Trade', kind: 'pct', decimals: 1, theme: 'External', note: 'Exports plus imports of goods and services, % of GDP' },
+  { id: 'BN.CAB.XOKA.GD.ZS', name: 'Current account', short: 'Cur. acct', kind: 'pct', decimals: 2, theme: 'External', note: 'Current account balance, % of GDP (countries only upstream)' },
+  { id: 'BX.KLT.DINV.WD.GD.ZS', name: 'FDI inflows', short: 'FDI', kind: 'pct', decimals: 2, theme: 'External', note: 'Foreign direct investment, net inflows, % of GDP' },
+  { id: 'FI.RES.TOTL.CD', name: 'Reserves', short: 'Reserves', kind: 'usd', decimals: 0, theme: 'External', note: 'Total reserves including gold, current US$ (countries only upstream)' },
+
+  // -- Money & state --------------------------------------------------------
+  { id: 'FM.LBL.BMNY.GD.ZS', name: 'Broad money', short: 'Broad money', kind: 'pct', decimals: 1, theme: 'Money & state', note: 'Broad money, % of GDP' },
+  { id: 'SE.XPD.TOTL.GD.ZS', name: 'Government education expenditure', short: 'Education', kind: 'pct', decimals: 1, theme: 'Money & state', note: 'Government expenditure on education, % of GDP' },
+  { id: 'GC.TAX.TOTL.GD.ZS', name: 'Tax revenue', short: 'Tax', kind: 'pct', decimals: 1, theme: 'Money & state', note: 'Tax revenue, % of GDP' },
+  { id: 'MS.MIL.XPND.GD.ZS', name: 'Military expenditure', short: 'Military', kind: 'pct', decimals: 1, theme: 'Money & state', note: 'Military expenditure, % of GDP' },
+
+  // -- Structure & sustainability -------------------------------------------
+  { id: 'NE.GDI.TOTL.ZS', name: 'Gross capital formation', short: 'Investment', kind: 'pct', decimals: 1, theme: 'Structure & sustainability', note: 'Gross capital formation, % of GDP' },
+  { id: 'NV.IND.MANF.ZS', name: 'Manufacturing', short: 'Mfg', kind: 'pct', decimals: 1, theme: 'Structure & sustainability', note: 'Manufacturing value added, % of GDP' },
+  { id: 'IT.NET.USER.ZS', name: 'Internet users', short: 'Internet', kind: 'pct', decimals: 1, theme: 'Structure & sustainability', note: 'Individuals using the internet, % of population' },
+  { id: 'EN.GHG.CO2.PC.CE.AR5', name: 'CO2 emissions', short: 'CO2', kind: 'tonnes', decimals: 1, theme: 'Structure & sustainability', note: 'Carbon dioxide emissions, metric tons per capita' },
+];
+
+/** The theme order the table's grouped header renders in. */
+export const WORLD_THEMES: readonly WorldTheme[] = [
+  'Output & prices',
+  'People',
+  'Labour & welfare',
+  'External',
+  'Money & state',
+  'Structure & sustainability',
 ];
 
 /** Earliest year to accept for the annual comparison. */

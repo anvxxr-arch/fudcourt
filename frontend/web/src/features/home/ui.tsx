@@ -24,9 +24,11 @@ import {
   STOCK_US_URL,
   TOP_LIMIT,
   TRENDING_URL,
+  deltaDir,
   fmtBp,
   fmtBpRaw,
   fmtDate,
+  fmtDelta,
   fmtEconomy,
   fmtGas,
   fmtIndicator,
@@ -426,12 +428,75 @@ const WORLD_REGIONS = ['Americas', 'Europe', 'Asia-Pacific', 'Africa & Middle Ea
 const WORLD_AGGREGATE_GROUPS = ['World & income', 'Regions & unions'];
 
 /**
+ * Theme order for the grouped header. Stated here rather than imported: the
+ * landing page must not reach across the feature boundary into the macro family,
+ * so each column carries its own `theme` and this list only fixes the ORDER the
+ * blocks appear in.
+ */
+const WORLD_THEME_ORDER = [
+  'Output & prices',
+  'People',
+  'Labour & welfare',
+  'External',
+  'Money & state',
+  'Structure & sustainability',
+];
+
+/** The theme band that spans a column block's headings. */
+const themeHeadStyle: React.CSSProperties = {
+  color: color.accent,
+  fontSize: fontSize[10],
+  fontWeight: fontWeight.semibold,
+  letterSpacing: letterSpacing.wider,
+  textTransform: 'uppercase',
+  paddingTop: space[8],
+  paddingBottom: space[6],
+  borderBottom: `1px solid ${color.border}`,
+};
+
+/**
+ * Cell padding for the worldwide board. The table component ships NO padding
+ * default — measured, deliberately, because the tree's existing padding is a flat
+ * spread with no winner — so every dense table states its own. Without this the
+ * numeric columns run together into one unreadable band.
+ */
+const worldHeadStyle: React.CSSProperties = {
+  padding: `${space[4]}px ${space[6]}px`,
+  whiteSpace: 'nowrap',
+};
+
+/** A numeric cell: value over its change, top-aligned so the two lines stay in their column. */
+const worldCellStyle: React.CSSProperties = {
+  padding: `${space[4]}px ${space[6]}px`,
+  whiteSpace: 'nowrap',
+  verticalAlign: 'top',
+};
+
+/**
+ * The rule that opens a theme block. With 24 columns and no vertical grid, a
+ * reader loses which values belong together; one hairline at each block boundary
+ * carries the grouping the theme band announces.
+ */
+const worldBlockStyle: React.CSSProperties = { borderLeft: `1px solid ${color.border}` };
+
+/** Colour a change by DIRECTION — a rising debt and a rising lifespan both print `+`. */
+function dirColor(dir: -1 | 0 | 1): string {
+  return dir > 0 ? color.positive : dir < 0 ? color.negative : color.textMuted;
+}
+
+/**
  * The worldwide economy board (World Bank, annual).
  *
- * A country × indicator matrix grouped by `region`. Every cell prints its OWN
- * reference year: the eight series publish on different lags, so one shared year
- * column would be wrong for most of them. A cell the upstream did not publish is
- * an em dash — never a zero — and its year is withheld with it.
+ * A country × indicator matrix grouped by `region`, with the indicator columns
+ * themselves grouped under their theme. Every cell prints its OWN reference year
+ * AND its change against the observation ~10 years earlier: the series publish on
+ * different lags, so one shared year column would be wrong for most of them, and
+ * a level without its trend is only half the picture.
+ *
+ * Columns this table cannot fill are DROPPED, not shown blank: the aggregates
+ * table has no current-account or reserves series upstream, and a permanently
+ * empty column costs width without carrying information. A cell missing WITHIN a
+ * rendered column stays an em dash — never a zero — and its year goes with it.
  */
 function WorldTable({
   rows,
@@ -443,14 +508,40 @@ function WorldTable({
   groups: string[];
 }) {
   const present = groups.filter(g => rows.some(r => r.region === g));
+  // A column renders only where THIS table can actually fill it. The aggregates
+  // table has no current-account or reserves series upstream, and a column that is
+  // mostly blank costs width without carrying information — so the bar is half the
+  // table's rows. A cell missing WITHIN a rendered column still shows as an em
+  // dash; a column that is mostly dashes is not a column, it is a gap.
+  const filled = columns.filter(c => rows.filter(r => r.cells[c.id]?.value != null).length * 2 >= rows.length);
+  const blocks = WORLD_THEME_ORDER.map(theme => ({ theme, cols: filled.filter(c => c.theme === theme) })).filter(
+    b => b.cols.length > 0
+  );
+  const cols = blocks.flatMap(b => b.cols);
+  /** The first column of each theme block, which carries the block's opening rule. */
+  const blockStart = new Set(blocks.map(b => b.cols[0].id));
   return (
     <div style={{ overflowX: 'auto', marginTop: space[12] }}>
       <Table style={{ fontSize: fontSize[11] }}>
         <THead>
           <TR style={theadRowStyle}>
-            <TH>Economy</TH>
-            {columns.map(c => (
-              <TH key={c.id} align="right">
+            <TH rowSpan={2} style={{ verticalAlign: 'bottom' }}>
+              Economy
+            </TH>
+            {blocks.map(b => (
+              <TH
+                key={b.theme}
+                colSpan={b.cols.length}
+                align="center"
+                style={{ ...themeHeadStyle, ...worldBlockStyle }}
+              >
+                {b.theme}
+              </TH>
+            ))}
+          </TR>
+          <TR style={theadRowStyle}>
+            {cols.map(c => (
+              <TH key={c.id} align="right" style={blockStart.has(c.id) ? { ...worldHeadStyle, ...worldBlockStyle } : worldHeadStyle}>
                 <span title={c.note}>{c.short}</span>
               </TH>
             ))}
@@ -460,7 +551,7 @@ function WorldTable({
           {present.map(group => (
             <Fragment key={group}>
               <TR>
-                <TD colSpan={columns.length + 1} style={groupRowStyle}>
+                <TD colSpan={cols.length + 1} style={groupRowStyle}>
                   {group.toUpperCase()}
                 </TD>
               </TR>
@@ -468,13 +559,37 @@ function WorldTable({
                 .filter(r => r.region === group)
                 .map(r => (
                   <TR key={r.code} style={rowStyle}>
-                    <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>{r.name}</TD>
-                    {columns.map(c => {
+                    <TD
+                      style={{
+                        color: color.text,
+                        fontWeight: fontWeight.bold,
+                        padding: `${space[4]}px ${space[12]}px ${space[4]}px 0`,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {r.name}
+                    </TD>
+                    {cols.map(c => {
                       const cell = r.cells[c.id];
+                      const value = cell?.value ?? null;
+                      const prior = cell?.prior ?? null;
+                      const dir = deltaDir(value, prior);
                       return (
-                        <TD key={c.id} align="right" style={{ color: color.text, whiteSpace: 'nowrap' }}>
-                          {fmtEconomy(cell?.value ?? null, c.kind, c.decimals)}{' '}
-                          <span style={{ color: color.textMuted }}>{fmtYear(cell?.year)}</span>
+                        <TD
+                          key={c.id}
+                          align="right"
+                          style={blockStart.has(c.id) ? { ...worldCellStyle, ...worldBlockStyle } : worldCellStyle}
+                        >
+                          <div style={{ color: color.text }}>
+                            {fmtEconomy(value, c.kind, c.decimals)}{' '}
+                            <span style={{ color: color.textMuted }}>{fmtYear(cell?.year)}</span>
+                          </div>
+                          <div
+                            style={{ color: dirColor(dir), fontSize: fontSize[10] }}
+                            title={prior ? `vs ${prior.year}: ${fmtEconomy(prior.value, c.kind, c.decimals)}` : 'no earlier observation to compare'}
+                          >
+                            {fmtDelta(value, prior, c.kind, c.decimals)}
+                          </div>
                         </TD>
                       );
                     })}
@@ -572,13 +687,15 @@ function MacroBoard() {
           {data.worldIndicators.length > 0 && data.economies.length > 0 && (
             <details>
               <summary style={summaryStyle}>
-                Major economies — {data.economies.length} countries × {data.worldIndicators.length} indicators
+                Major economies — {data.economies.length} countries × {data.worldIndicators.length} indicators, each with its decade change
               </summary>
               <WorldTable rows={data.economies} columns={data.worldIndicators} groups={WORLD_REGIONS} />
             </details>
           )}
           <p style={noteStyle}>
-            yields in %, delta in basis points (Δ × 100) · curve spreads derived locally, not published upstream · {data.derived}
+            each cell is value · reference year, over its change against the observation ~10 years earlier — a dash there means no
+            comparable observation exists, not that nothing moved · a column a table cannot fill is dropped, not shown blank · yields
+            in %, delta in basis points (Δ × 100) · curve spreads derived locally, not published upstream · {data.derived}
           </p>
           {data.failed.length > 0 && (
             <p style={noteStyle}>

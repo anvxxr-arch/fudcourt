@@ -2,22 +2,27 @@
  * World Bank indicators (API v2) — keyless, public.
  *
  * `https://api.worldbank.org/v2/country/<ISO3+ISO3+…>/indicator/<ID>?format=json`
- * answers annual country indicators. Two measured properties shape this module:
+ * answers annual country indicators. Three measured properties shape this module:
  *
  *  - ONE indicator per call. The documented `;`-separated indicator list is
  *    rejected with `{"message":[{"key":"Invalid value"}]}` (measured), so a board
  *    of N indicators is N calls, not one. Multiple COUNTRIES do batch, though
- *    (`IDN;WLD` works), which is why the global comparison costs one call per
+ *    (`IDN;WLD` works), which is why the worldwide board costs one call per
  *    indicator rather than one per country.
  *  - A country whose latest year is not yet published comes back as `null` for
  *    that year. The newest NON-NULL observation is used, and its year is reported
  *    alongside — a 2023 figure must never be printed as if it were 2025's.
+ *  - The API is FAST and tolerates concurrency (32 simultaneous calls answered
+ *    200 in 0.7s, measured), while the shared limiter serialises everything into
+ *    a ~2s-per-call chain. These calls therefore go through their own pool
+ *    (`platform/http/pool.ts`), not the limiter; the memo below still gives them
+ *    the long TTL and single-flight they need.
  *
- * The response is JSON, so the shared limiter caches it too; the memo here gives
- * the longer TTL these annual series deserve.
+ * The response is JSON, so it is cacheable — but the limiter's cache is bypassed
+ * with the limiter, which is why the memo here is the only cache these reads have.
  */
-import { limitedFetch } from '@/platform/http/rate-limit';
 import { memo } from './ttl';
+import { createFetchPool } from '@/platform/http/pool';
 import { SOURCE_UA } from './bis';
 
 /** World Bank API v2 root. */
@@ -26,7 +31,24 @@ export const WORLDBANK_API = 'https://api.worldbank.org/v2';
 /** Annual series: a day's staleness is irrelevant, an hour is plenty. */
 export const WORLDBANK_TTL_MS = 60 * 60_000;
 
+/** Concurrent World Bank calls. Measured safe well past this; 6 keeps the board
+ *  to a couple of seconds without leaning on the upstream's patience. */
+export const WORLDBANK_POOL = 6;
+
 const TIMEOUT_MS = 30_000;
+
+/** The one lane every World Bank call in this process shares. */
+const wbFetch = createFetchPool(WORLDBANK_POOL, TIMEOUT_MS);
+
+/**
+ * How far back the board looks for a comparison point, and the minimum span it
+ * will accept. A cell's "change" is the newest observation within a year of
+ * `latest - DELTA_TARGET_YEARS`; anything closer than `MIN_DELTA_SPAN_YEARS` is
+ * refused, because a change over two years is not a trend and printing it beside
+ * a genuine decade change would make the two look alike.
+ */
+export const DELTA_TARGET_YEARS = 10;
+export const MIN_DELTA_SPAN_YEARS = 8;
 
 /** ISO3 codes batched into one request (`;`-joined, as the API expects). */
 export function worldBankUrl(indicator: string, countries: readonly string[], fromYear: number): string {
@@ -39,8 +61,26 @@ export function worldBankUrl(indicator: string, countries: readonly string[], fr
   return `${WORLDBANK_API}/country/${countries.join(';')}/indicator/${indicator}?${p}`;
 }
 
+/** One observation: a value and the year it was published for. */
+export type WorldBankPoint = { year: string; value: number };
+
 /** One country's latest published observation of an indicator. */
 export type WorldBankObs = { country: string; countryName: string; year: string; value: number };
+
+/** One country's latest observation plus an earlier one to compare it against. */
+export type WorldBankSeries = {
+  country: string;
+  countryName: string;
+  /** Newest non-null observation in the window. */
+  latest: WorldBankPoint;
+  /**
+   * The observation `DELTA_TARGET_YEARS` earlier (±1 year), for a decade change.
+   * Null when the window holds no observation at least `MIN_DELTA_SPAN_YEARS`
+   * before `latest` — a series that only just started has no trend to show, and
+   * inventing one from two adjacent years would be worse than showing nothing.
+   */
+  prior: WorldBankPoint | null;
+};
 
 type RawRow = {
   // NOTE: `country.id` is the ISO2 code ("BR"), NOT the ISO3 the request was
@@ -53,7 +93,8 @@ type RawRow = {
 };
 
 /**
- * Newest non-null observation per country.
+ * The full per-country series in the window, each reduced to its newest
+ * observation and a decade-earlier comparison point.
  *
  * Returned in the order of `countries` so the board's row order is curated, not
  * the upstream's. A country with no published value in the window is dropped.
@@ -66,11 +107,11 @@ type RawRow = {
  * requested one — the name is the only field that maps back. Countries and the
  * other aggregates carry a real iso3 and never consult the map.
  */
-export function parseWorldBank(
+export function parseWorldBankSeries(
   json: unknown,
   countries: readonly string[],
   nameMap?: Readonly<Record<string, string>>
-): WorldBankObs[] {
+): WorldBankSeries[] {
   if (!Array.isArray(json)) return [];
   // An API-level rejection arrives as a ONE-element array ([{message:[…]}]), not
   // as a non-200 — so a short array is an error to surface, not an empty result.
@@ -78,7 +119,8 @@ export function parseWorldBank(
     throw new Error(`World Bank error payload: ${JSON.stringify(json).slice(0, 200)}`);
   }
   const rows = json[1] as RawRow[];
-  const best = new Map<string, WorldBankObs>();
+  const points = new Map<string, WorldBankPoint[]>();
+  const names = new Map<string, string>();
   for (const r of rows) {
     const name = r.country?.value;
     // `||` throughout, never `??`: the income-group aggregates ship an empty
@@ -86,28 +128,85 @@ export function parseWorldBank(
     const id = r.countryiso3code || (name && nameMap?.[name]) || r.country?.id;
     if (!id || typeof r.value !== 'number' || !Number.isFinite(r.value)) continue;
     const year = r.date ?? '';
-    const prev = best.get(id);
-    if (!prev || year > prev.year) {
-      best.set(id, { country: id, countryName: r.country?.value ?? id, year, value: r.value });
-    }
+    // Only a four-digit year can be compared or printed as one; anything else is
+    // a malformed row and would sort wrongly against real years.
+    if (!/^\d{4}$/.test(year)) continue;
+    const list = points.get(id);
+    if (list) list.push({ year, value: r.value });
+    else points.set(id, [{ year, value: r.value }]);
+    if (name && !names.has(id)) names.set(id, name);
   }
-  return countries.map((c) => best.get(c)).filter((r): r is WorldBankObs => r !== undefined);
+
+  return countries.flatMap((code) => {
+    const list = points.get(code);
+    if (!list || list.length === 0) return [];
+    // Ascending by year, so the last entry is the newest. String compare is safe
+    // because every year here matched /^\d{4}$/.
+    list.sort((a, b) => (a.year < b.year ? -1 : a.year > b.year ? 1 : 0));
+    const latest = list[list.length - 1];
+    const latestYear = Number(latest.year);
+    let prior: WorldBankPoint | null = null;
+    let bestGap = Number.POSITIVE_INFINITY;
+    for (const p of list) {
+      const span = latestYear - Number(p.year);
+      if (span < MIN_DELTA_SPAN_YEARS) continue;
+      const gap = Math.abs(span - DELTA_TARGET_YEARS);
+      // `<` (not `<=`) keeps the FIRST year at a given distance, i.e. the
+      // earliest when two are equidistant — the longer, more conservative span.
+      if (gap < bestGap) {
+        bestGap = gap;
+        prior = p;
+      }
+    }
+    return [{ country: code, countryName: names.get(code) ?? code, latest, prior }];
+  });
 }
 
-/** Fetch + memoise one indicator for a fixed country list. */
+/**
+ * Newest non-null observation per country — the series reduced to its head.
+ * Kept as the narrow entry point for callers that only want the current value
+ * (the Indonesia card); it shares this module's single parse path.
+ */
+export function parseWorldBank(
+  json: unknown,
+  countries: readonly string[],
+  nameMap?: Readonly<Record<string, string>>
+): WorldBankObs[] {
+  return parseWorldBankSeries(json, countries, nameMap).map((s) => ({
+    country: s.country,
+    countryName: s.countryName,
+    year: s.latest.year,
+    value: s.latest.value,
+  }));
+}
+
+/** Fetch + memoise one indicator's full series for a fixed country list. */
+export async function fetchWorldBankSeries(
+  indicator: string,
+  countries: readonly string[],
+  fromYear: number,
+  nameMap?: Readonly<Record<string, string>>
+): Promise<WorldBankSeries[]> {
+  const url = worldBankUrl(indicator, countries, fromYear);
+  return memo(`wb:${indicator}:${url}`, WORLDBANK_TTL_MS, async () => {
+    const res = await wbFetch(url, { headers: { 'User-Agent': SOURCE_UA } });
+    if (!res.ok) throw new Error(`World Bank upstream ${res.status}`);
+    return parseWorldBankSeries(await res.json(), countries, nameMap);
+  });
+}
+
+/** Fetch + memoise one indicator's newest observation per country. */
 export async function fetchWorldBank(
   indicator: string,
   countries: readonly string[],
   fromYear: number,
   nameMap?: Readonly<Record<string, string>>
 ): Promise<WorldBankObs[]> {
-  const url = worldBankUrl(indicator, countries, fromYear);
-  return memo(`wb:${indicator}:${url}`, WORLDBANK_TTL_MS, async () => {
-    const res = await limitedFetch(url, {
-      headers: { 'User-Agent': SOURCE_UA },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    if (!res.ok) throw new Error(`World Bank upstream ${res.status}`);
-    return parseWorldBank(await res.json(), countries, nameMap);
-  });
+  const series = await fetchWorldBankSeries(indicator, countries, fromYear, nameMap);
+  return series.map((s) => ({
+    country: s.country,
+    countryName: s.countryName,
+    year: s.latest.year,
+    value: s.latest.value,
+  }));
 }

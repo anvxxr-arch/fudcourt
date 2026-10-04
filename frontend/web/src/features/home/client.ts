@@ -220,23 +220,90 @@ export function fmtIndicator(v: number | null | undefined, unit: string, decimal
 }
 
 /**
- * A World Bank value rendered by its `kind`: `usd`/`count` are compacted, the
- * rest are plain. Absent -> `—`.
+ * A headcount, compacted to three significant figures (`8.22B`). The worldwide
+ * board compares 125 rows; the raw form (`8,215,424,893`) made the population
+ * column wider than any other two columns combined, for digits no reader takes in
+ * past the third. `count` stays exact for the tables that show one row at a time.
+ */
+export function fmtCountCompact(v: number | null | undefined): string {
+  if (!isNum(v)) return DASH;
+  const abs = Math.abs(v);
+  if (abs >= 1e12) return `${(v / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${(v / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
+  return v.toFixed(0);
+}
+
+/**
+ * A World Bank value rendered by its `kind`: `usd`/`pop` are compacted, the rest
+ * are plain with their unit. Absent -> `—`.
  */
 export function fmtEconomy(v: number | null | undefined, kind: string, decimals: number): string {
   if (!isNum(v)) return DASH;
   switch (kind) {
     case 'usd':
       return fmtUsdCompact(v);
+    case 'pop':
+      return fmtCountCompact(v);
     case 'count':
       return fmtNum(v, 0);
     case 'years':
       return `${v.toFixed(decimals)} yr`;
     case 'pct':
       return `${v.toFixed(decimals)}%`;
+    case 'per1k':
+      return `${v.toFixed(decimals)}/1k`;
+    case 'tonnes':
+      return `${v.toFixed(decimals)} t`;
     default:
       return v.toFixed(decimals);
   }
+}
+
+/**
+ * A worldwide cell's change against its decade-earlier observation, read by the
+ * same `kind` rules as the value itself: a percentage series moves in POINTS
+ * (`+1.2 pp`), a money or headcount series in PERCENT of its old level (`+38%`),
+ * and a level series (years, per-1,000 births, tonnes) in absolute units.
+ *
+ * Absent comparison -> `—`, never `+0`: "no trend shown" and "no change" are
+ * different claims and must not render the same. The direction is NOT a judgement
+ * — a rising government debt and a rising life expectancy both print `+`.
+ */
+export function fmtDelta(
+  value: number | null | undefined,
+  prior: { value: number; year: string } | null | undefined,
+  kind: string,
+  decimals: number
+): string {
+  if (!isNum(value) || !prior || !isNum(prior.value)) return DASH;
+  const d = value - prior.value;
+  const sign = d >= 0 ? '+' : '';
+  switch (kind) {
+    case 'pct':
+      return `${sign}${d.toFixed(1)} pp`;
+    case 'usd':
+    case 'pop':
+    case 'count': {
+      // A relative change off a zero base is undefined; withhold it rather than
+      // print an infinity.
+      if (prior.value === 0) return DASH;
+      return `${sign}${((d / Math.abs(prior.value)) * 100).toFixed(0)}%`;
+    }
+    default:
+      return `${sign}${d.toFixed(decimals)}`;
+  }
+}
+
+/** Direction of a cell's change: -1 down, 1 up, 0 flat or not comparable. */
+export function deltaDir(
+  value: number | null | undefined,
+  prior: { value: number } | null | undefined
+): -1 | 0 | 1 {
+  if (!isNum(value) || !prior || !isNum(prior.value)) return 0;
+  const d = value - prior.value;
+  return d > 0 ? 1 : d < 0 ? -1 : 0;
 }
 
 /** A policy rate level (`3.875%`). Absent -> `—`. */
@@ -424,13 +491,22 @@ export type IndicatorRow = {
   note: string;
 };
 
-/** One cell of the worldwide board: an annual value and the year it refers to. */
-export type WorldCell = { value: number | null; year: string | null };
+/**
+ * One cell of the worldwide board: the newest annual value, the year it refers
+ * to, and — where the window holds an observation at least ~8 years back — an
+ * earlier value to compare it against. `prior` null means "no trend to show",
+ * never "no change".
+ */
+export type WorldCell = {
+  value: number | null;
+  year: string | null;
+  prior: { value: number; year: string } | null;
+};
 
 /**
  * One row of the worldwide board (World Bank, annual) — a country or an
  * aggregate. `cells` is keyed by indicator id and each cell carries its OWN
- * reference year: the eight series publish on different lags, so one shared year
+ * reference year: the series publish on different lags, so one shared year
  * column would be wrong for most of them.
  */
 export type WorldRow = {
@@ -452,6 +528,8 @@ export type WorldIndicatorRow = {
   kind: string;
   decimals: number;
   note: string;
+  /** The column block this indicator's header groups under, in `WORLD_THEMES` order. */
+  theme: string;
 };
 
 /**
