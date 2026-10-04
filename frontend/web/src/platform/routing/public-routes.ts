@@ -90,13 +90,59 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 0.7,
   },
   {
+    // The macro module's front door (plan Phase 4). Its six sub-boards are
+    // listed below; the dynamic profiles (/economy/nation/<cc>,
+    // /economy/indicator/<slug>, /economy/central-bank/<slug>) are enumerated
+    // by sitemap.ts from the registry's own allowlist, never from a crawl.
+    path: '/economy',
+    title: 'Economy — Global macro dashboard | FUDCOURT',
+    description:
+      'Global macro dashboard: growth, inflation, labour, money and policy across the major economies, read from FRED, the World Bank and BIS and normalised to one canonical model.',
+    priority: 0.8,
+  },
+  {
     // The country index. Its 125 profile pages are dynamic, so — like the
     // per-coin pages — they are enumerated by sitemap.ts from the family's own
     // allowlist rather than listed here.
     path: '/economy/nation',
     title: 'Economy by nation — 125 economies | FUDCOURT',
     description:
-      'Per-country economy profiles: World Bank structural indicators, IMF Fiscal Monitor government finance, the central-bank policy rate and the currency against the dollar.',
+      'Per-country economy profiles: growth, inflation, labour, money, fiscal and trade series, plus the policy rate, normalised to one canonical model.',
     priority: 0.7,
+  },
+  {
+    path: '/economy/indicator',
+    title: 'Indicators — Canonical economic series | FUDCOURT',
+    description:
+      'Browse every canonical economic series by category, country, frequency and source. Each row is one upstream binding behind a stable slug.',
+    priority: 0.7,
+  },
+  {
+    path: '/economy/central-bank',
+    title: 'Central banks — Policy rates | FUDCOURT',
+    description:
+      'Policy rates for the major central banks, from BIS WS_CBPOL: level, last move and history, grouped by region.',
+    priority: 0.7,
+  },
+  {
+    path: '/economy/calendar',
+    title: 'Economic calendar — Release log | FUDCOURT',
+    description:
+      'A release log of market-moving economic series by reference period, filterable by country, category and date.',
+    priority: 0.6,
+  },
+  {
+    path: '/economy/liquidity',
+    title: 'Liquidity — Global plumbing | FUDCOURT',
+    description:
+      'Central-bank balance sheets, reserves, reverse repo, the dollar and financial conditions, with a derived global liquidity index for risk assets.',
+    priority: 0.7,
+  },
+  {
+    path: '/economy/compare',
+    title: 'Compare — Countries & series | FUDCOURT',
+    description:
+      'Compare any countries on any measures over one period. The query lives in the URL, so a comparison is shareable without a page per combination.',
+    priority: 0.6,
   },
 ];
