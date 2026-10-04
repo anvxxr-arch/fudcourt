@@ -610,6 +610,17 @@ export type IndonesiaEnvelope = {
   quotes: IndonesiaQuote[];
   policy: IndonesiaPolicy;
   economy: IndonesiaEconomyRow[];
+  /**
+   * Provenance of the IMF Fiscal Monitor block: which vintage, when it was
+   * published, the last fiscal year it can call an outturn, and how many
+   * projection years were withheld. Null when the IMF block is unavailable.
+   */
+  apbn: {
+    vintage: string;
+    published: string;
+    actualThrough: number;
+    droppedProjections: number;
+  } | null;
   count: number;
   failed: UpstreamFailure[];
   upstream: string[];

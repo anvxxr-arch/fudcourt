@@ -803,7 +803,8 @@ function IndonesiaBoard() {
             </div>
           )}
           <p style={noteStyle}>
-            quotes live · BI-Rate from BIS (daily) · annual rows from the World Bank, each with its own year · {data.derived}
+            quotes live · BI-Rate from BIS (daily) · annual rows from the World Bank, each with its own year · government finance from the IMF Fiscal Monitor
+            {data.apbn ? `, actuals through ${data.apbn.actualThrough}` : ''} · {data.derived}
           </p>
           {data.failed.length > 0 && (
             <p style={noteStyle}>withheld, not zero-filled: {data.failed.map(f => f.symbol).join(', ')}</p>

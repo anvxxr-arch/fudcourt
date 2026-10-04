@@ -56,7 +56,7 @@ export const ID_COUNTRY = 'IDN';
 /** Earliest year to accept; the newest non-null observation wins. */
 export const ID_ECONOMY_FROM_YEAR = 2015;
 
-export type IdEconomyGroup = 'Growth & output' | 'Prices & labour' | 'External' | 'Social';
+export type IdEconomyGroup = 'Growth & output' | 'Prices & labour' | 'External' | 'Social' | 'Government finance';
 
 /** How a value is rendered. `usd`/`count` are compacted; the rest are plain. */
 export type IdValueKind = 'usd' | 'count' | 'pct' | 'index' | 'years';
@@ -97,3 +97,33 @@ export const ID_ECONOMY: readonly IdEconomySpec[] = [
 ];
 
 export const ID_ECONOMY_IDS = ID_ECONOMY.map((e) => e.id);
+
+// ---- government finance / APBN (IMF Fiscal Monitor) -------------------------
+
+/**
+ * The World Bank publishes NOTHING here for Indonesia — all 19 indicators above
+ * that touch government finance answer `obs=0` on the raw API (measured), and so
+ * does every one of the ~30 `GC.*`/`DT.*` fiscal codes probed. The gap is filled
+ * from the IMF Fiscal Monitor instead, which is the only source found that is
+ * keyless, machine-readable AND stable for this data.
+ *
+ * `ID_APBN_FROM_YEAR` bounds the window; the ACTUAL/PROJECTION boundary is NOT
+ * set here — the vintage runs to 2030 and carries no flag separating an outturn
+ * from a forecast, so `sources/imf.ts` drops everything after `publicationYear - 1`
+ * and reports how many it dropped. The rows below are therefore the vintage's
+ * actuals, and every row still carries its own year.
+ */
+export const ID_APBN_FROM_YEAR = 2015;
+
+export const ID_APBN: readonly IdEconomySpec[] = [
+  { id: 'G1_S13_POGDP_PT', name: 'Revenue', group: 'Government finance', kind: 'pct', decimals: 2, note: 'General government revenue, % of GDP (IMF)' },
+  { id: 'G2M_S13_POGDP_PT', name: 'Expenditure', group: 'Government finance', kind: 'pct', decimals: 2, note: 'General government total expenditure, % of GDP (IMF)' },
+  { id: 'GNLB_S13_POGDP_PT', name: 'Balance', group: 'Government finance', kind: 'pct', decimals: 2, note: 'Net lending (+)/net borrowing (−) — the budget balance, % of GDP (IMF)' },
+  { id: 'GPB_S13_POGDP_PT', name: 'Primary balance', group: 'Government finance', kind: 'pct', decimals: 2, note: 'Balance excluding interest, % of GDP (IMF)' },
+  { id: 'G63G_S13_POGDP_PT', name: 'Gross debt', group: 'Government finance', kind: 'pct', decimals: 2, note: 'General government gross debt, % of GDP (IMF)' },
+  { id: 'G63N_S13_POGDP_PT', name: 'Net debt', group: 'Government finance', kind: 'pct', decimals: 2, note: 'General government net debt, % of GDP (IMF)' },
+  { id: 'CAB_S13_POPGDP_PT', name: 'Cyclically adjusted balance', group: 'Government finance', kind: 'pct', decimals: 2, note: 'Cyclically adjusted balance, % of POTENTIAL GDP (IMF)' },
+  { id: 'CAPB_S13_POPGDP_PT', name: 'Cyclically adjusted primary balance', group: 'Government finance', kind: 'pct', decimals: 2, note: 'Cyclically adjusted primary balance, % of POTENTIAL GDP (IMF)' },
+];
+
+export const ID_APBN_IDS = ID_APBN.map((e) => e.id);
