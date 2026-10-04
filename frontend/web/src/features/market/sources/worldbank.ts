@@ -57,8 +57,20 @@ type RawRow = {
  *
  * Returned in the order of `countries` so the board's row order is curated, not
  * the upstream's. A country with no published value in the window is dropped.
+ *
+ * `nameMap` (exact upstream `country.value` -> the code the request was scoped
+ * to) exists for the INCOME-GROUP aggregates only: High income / Low income /
+ * Lower- and Upper-middle income come back with `countryiso3code` as an EMPTY
+ * STRING (not absent), so `??` keeps `''` and the row is dropped, while
+ * `country.id` is an internal code (`XD`, `XM`, `XN`, `XT`) that is NOT the
+ * requested one — the name is the only field that maps back. Countries and the
+ * other aggregates carry a real iso3 and never consult the map.
  */
-export function parseWorldBank(json: unknown, countries: readonly string[]): WorldBankObs[] {
+export function parseWorldBank(
+  json: unknown,
+  countries: readonly string[],
+  nameMap?: Readonly<Record<string, string>>
+): WorldBankObs[] {
   if (!Array.isArray(json)) return [];
   // An API-level rejection arrives as a ONE-element array ([{message:[…]}]), not
   // as a non-200 — so a short array is an error to surface, not an empty result.
@@ -68,7 +80,10 @@ export function parseWorldBank(json: unknown, countries: readonly string[]): Wor
   const rows = json[1] as RawRow[];
   const best = new Map<string, WorldBankObs>();
   for (const r of rows) {
-    const id = r.countryiso3code ?? r.country?.id;
+    const name = r.country?.value;
+    // `||` throughout, never `??`: the income-group aggregates ship an empty
+    // string, which `??` would pass through as a (falsy but defined) id.
+    const id = r.countryiso3code || (name && nameMap?.[name]) || r.country?.id;
     if (!id || typeof r.value !== 'number' || !Number.isFinite(r.value)) continue;
     const year = r.date ?? '';
     const prev = best.get(id);
@@ -83,7 +98,8 @@ export function parseWorldBank(json: unknown, countries: readonly string[]): Wor
 export async function fetchWorldBank(
   indicator: string,
   countries: readonly string[],
-  fromYear: number
+  fromYear: number,
+  nameMap?: Readonly<Record<string, string>>
 ): Promise<WorldBankObs[]> {
   const url = worldBankUrl(indicator, countries, fromYear);
   return memo(`wb:${indicator}:${url}`, WORLDBANK_TTL_MS, async () => {
@@ -92,6 +108,6 @@ export async function fetchWorldBank(
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) throw new Error(`World Bank upstream ${res.status}`);
-    return parseWorldBank(await res.json(), countries);
+    return parseWorldBank(await res.json(), countries, nameMap);
   });
 }

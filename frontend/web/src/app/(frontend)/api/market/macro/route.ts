@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import {
-  ECONOMY_COUNTRIES,
   ECONOMY_FROM_YEAR,
   ECONOMY_INDICATORS,
   FRED_LOOKBACK_DAYS,
@@ -12,6 +11,10 @@ import {
   MACRO_TTL_MS,
   POLICY_RATES,
   POLICY_RATE_AREAS,
+  WB_AGGREGATE_NAMES,
+  WORLD_AGGREGATES,
+  WORLD_CODES,
+  WORLD_COUNTRIES,
   type MacroQuote,
 } from '@/features/market/macro/client';
 import { YAHOO_CHART, YAHOO_UA, chartUrl, parseChart } from '@/features/market/quotes';
@@ -39,13 +42,27 @@ type IndicatorRow = {
   date: string | null;
   note: string;
 };
-type EconomyRow = {
+/** One cell of the worldwide table: a value and the year it was published for. */
+type WorldCell = { value: number | null; year: string | null };
+
+/** One row of the worldwide table — a country or an aggregate. */
+type WorldRow = {
   code: string;
   name: string;
-  gdpGrowth: number | null;
-  gdpYear: string | null;
-  inflation: number | null;
-  inflationYear: string | null;
+  /** Grouping label: the country's region, or the aggregate's group. */
+  region: string;
+  /** Keyed by indicator id; a series the upstream did not publish stays absent. */
+  cells: Record<string, WorldCell>;
+};
+
+/** One column of the worldwide table — the spec the UI renders the header from. */
+type WorldIndicatorRow = {
+  id: string;
+  name: string;
+  short: string;
+  kind: string;
+  decimals: number;
+  note: string;
 };
 
 /**
@@ -55,8 +72,9 @@ type EconomyRow = {
  *    volatility indices (one call per symbol, as the stock/commodity families do).
  *  - BIS WS_CBPOL        — central-bank policy rates, ~33 banks.
  *  - FRED CSV            — US macro series (prices, labour, money, spreads).
- *  - World Bank          — an annual GDP-growth / inflation comparison of eight
- *    major economies.
+ *  - World Bank          — the WORLDWIDE annual board: 125 countries and 18
+ *    aggregates (World, the four income groups, and the regional/unions blocks)
+ *    across eight structural series each.
  *
  * Each upstream is fetched and reported independently: one failing empties its own
  * block and is named in `failed[]`, while the rest of the board still renders.
@@ -65,8 +83,9 @@ type EconomyRow = {
  * null rather than being computed against a missing leg.
  *
  * Honest-by-construction throughout: a value an upstream did not publish is null
- * (the UI renders '—'), never 0-filled, and an indicator is only ever reported
- * with the observation date it actually came from.
+ * (the UI renders '—'), never 0-filled, and every annual cell carries the
+ * reference YEAR it was published for — a World Bank figure lags, so a 2023
+ * number printed without its year reads as current when it is not.
  */
 export async function GET() {
   const failed: Failed[] = [];
@@ -158,32 +177,49 @@ export async function GET() {
     })
   );
 
-  // ---- 4. global economy comparison (World Bank) ---------------------------
-  const economyCodes = ECONOMY_COUNTRIES.map((c) => c.code);
-  // Keyed by country, holding one entry per ECONOMY_INDICATORS position.
-  const byCountry = new Map<string, { value: number; year: string }[]>();
-  for (const spec of ECONOMY_INDICATORS) {
-    try {
-      for (const o of await fetchWorldBank(spec.id, economyCodes, ECONOMY_FROM_YEAR)) {
-        const list = byCountry.get(o.country) ?? [];
-        list.push({ value: o.value, year: o.year });
-        byCountry.set(o.country, list);
+  // ---- 4. worldwide economy board (World Bank) -----------------------------
+  // One call per indicator over EVERY code at once (countries batch; the
+  // indicator list does not). Eight calls fill both tables. Each call is
+  // independent: a failing series empties only its own column and is named in
+  // `failed[]`, while every other column still fills.
+  const cellByCode = new Map<string, Record<string, WorldCell>>();
+  await Promise.all(
+    ECONOMY_INDICATORS.map(async (spec) => {
+      try {
+        const obs = await fetchWorldBank(spec.id, WORLD_CODES, ECONOMY_FROM_YEAR, WB_AGGREGATE_NAMES);
+        for (const o of obs) {
+          const cells = cellByCode.get(o.country) ?? {};
+          cells[spec.id] = { value: o.value, year: o.year };
+          cellByCode.set(o.country, cells);
+        }
+      } catch (e) {
+        failed.push({ symbol: `WB:${spec.id}`, reason: e instanceof Error ? e.message : String(e) });
       }
-    } catch (e) {
-      failed.push({ symbol: `WB:${spec.id}`, reason: e instanceof Error ? e.message : String(e) });
-    }
-  }
-  const economies: EconomyRow[] = ECONOMY_COUNTRIES.map((c) => {
-    const [gdp, cpi] = byCountry.get(c.code) ?? [];
-    return {
-      code: c.code,
-      name: c.name,
-      gdpGrowth: gdp?.value ?? null,
-      gdpYear: gdp?.year ?? null,
-      inflation: cpi?.value ?? null,
-      inflationYear: cpi?.year ?? null,
-    };
-  });
+    })
+  );
+  const economies: WorldRow[] = WORLD_COUNTRIES.map((c) => ({
+    code: c.code,
+    name: c.name,
+    region: c.region,
+    cells: cellByCode.get(c.code) ?? {},
+  }));
+  const aggregates: WorldRow[] = WORLD_AGGREGATES.map((a) => ({
+    code: a.code,
+    name: a.name,
+    region: a.group,
+    cells: cellByCode.get(a.code) ?? {},
+  }));
+  // The column specs ride in the payload for the same reason the quote metadata
+  // does: the landing page renders these headers from the API rather than
+  // importing the macro family across a feature boundary.
+  const worldIndicators: WorldIndicatorRow[] = ECONOMY_INDICATORS.map((s) => ({
+    id: s.id,
+    name: s.name,
+    short: s.short,
+    kind: s.kind,
+    decimals: s.decimals,
+    note: s.note,
+  }));
 
   // ---- derived curve spreads ----------------------------------------------
   const quoteBySymbol = new Map(quotes.map((q) => [q.symbol, q]));
@@ -207,12 +243,14 @@ export async function GET() {
     spreads,
     policyRates,
     indicators,
+    worldIndicators,
+    aggregates,
     economies,
     count: quotes.length,
     failed,
     upstream: [YAHOO_CHART, 'stats.bis.org WS_CBPOL', 'fred.stlouisfed.org CSV', 'api.worldbank.org v2'],
     userAgent: SOURCE_UA,
     asOf: Math.floor(Date.now() / 1000),
-    derived: `quotes: one Yahoo chart call per symbol; policy rates: BIS WS_CBPOL (daily, 60-day window); indicators: FRED CSV with the transform applied server-side; economy: World Bank annual, newest non-null year per country; ${failed.length} upstream item(s) failed`,
+    derived: `quotes: one Yahoo chart call per symbol; policy rates: BIS WS_CBPOL (daily, 60-day window); indicators: FRED CSV with the transform applied server-side; worldwide board: World Bank annual, ${WORLD_COUNTRIES.length} countries + ${WORLD_AGGREGATES.length} aggregates, newest non-null year per cell; ${failed.length} upstream item(s) failed`,
   });
 }

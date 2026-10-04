@@ -169,30 +169,239 @@ export const INDICATORS: readonly IndicatorSpec[] = [
 export const FRED_LOOKBACK_DAYS = 1_500;
 
 // ---------------------------------------------------------------------------
-// Global economy comparison (World Bank, annual).
+// The worldwide economy board (World Bank, annual).
 //
 // ONE indicator per request (the API rejects a `;`-separated list — measured),
-// but countries batch, so this is two calls for the whole table.
+// but countries batch, so the whole world is 8 calls: one per indicator, each
+// carrying every code at once. Every country and aggregate below was verified
+// live against the API — a code that returns nothing is deliberately absent,
+// because a row that can never fill is worse than no row. Taiwan (`TWN`) is the
+// one notable omission: it is not a World Bank member and returns no series.
+//
+// `region` groups the table; `name` is OUR display label, while `wbName` is the
+// exact upstream `country.value` the API answers with. The income-group
+// aggregates need `wbName` because they come back with an EMPTY `countryiso3code`
+// (see sources/worldbank.ts) — the name is the only key that maps them back.
 // ---------------------------------------------------------------------------
 
-export type EconomySpec = { code: string; name: string };
+export type WorldRegion = 'Americas' | 'Europe' | 'Asia-Pacific' | 'Africa & Middle East';
 
-export const ECONOMY_COUNTRIES: readonly EconomySpec[] = [
-  { code: 'USA', name: 'United States' },
-  { code: 'CHN', name: 'China' },
-  { code: 'JPN', name: 'Japan' },
-  { code: 'DEU', name: 'Germany' },
-  { code: 'IND', name: 'India' },
-  { code: 'GBR', name: 'United Kingdom' },
-  { code: 'BRA', name: 'Brazil' },
-  { code: 'IDN', name: 'Indonesia' },
+export type WorldCountrySpec = { code: string; name: string; region: WorldRegion };
+
+/**
+ * The countries on the board, grouped by region. 125 economies covering every
+ * continent and income level — the G20 in full plus the next tier of markets.
+ */
+export const WORLD_COUNTRIES: readonly WorldCountrySpec[] = [
+  // --- Americas (18) ---
+  { code: 'USA', name: 'United States', region: 'Americas' },
+  { code: 'CAN', name: 'Canada', region: 'Americas' },
+  { code: 'MEX', name: 'Mexico', region: 'Americas' },
+  { code: 'BRA', name: 'Brazil', region: 'Americas' },
+  { code: 'ARG', name: 'Argentina', region: 'Americas' },
+  { code: 'COL', name: 'Colombia', region: 'Americas' },
+  { code: 'CHL', name: 'Chile', region: 'Americas' },
+  { code: 'PER', name: 'Peru', region: 'Americas' },
+  { code: 'DOM', name: 'Dominican Republic', region: 'Americas' },
+  { code: 'GTM', name: 'Guatemala', region: 'Americas' },
+  { code: 'URY', name: 'Uruguay', region: 'Americas' },
+  { code: 'PRY', name: 'Paraguay', region: 'Americas' },
+  { code: 'ECU', name: 'Ecuador', region: 'Americas' },
+  { code: 'BOL', name: 'Bolivia', region: 'Americas' },
+  { code: 'PAN', name: 'Panama', region: 'Americas' },
+  { code: 'CRI', name: 'Costa Rica', region: 'Americas' },
+  { code: 'TTO', name: 'Trinidad and Tobago', region: 'Americas' },
+  { code: 'JAM', name: 'Jamaica', region: 'Americas' },
+  // --- Europe (40) ---
+  { code: 'DEU', name: 'Germany', region: 'Europe' },
+  { code: 'GBR', name: 'United Kingdom', region: 'Europe' },
+  { code: 'FRA', name: 'France', region: 'Europe' },
+  { code: 'ITA', name: 'Italy', region: 'Europe' },
+  { code: 'ESP', name: 'Spain', region: 'Europe' },
+  { code: 'NLD', name: 'Netherlands', region: 'Europe' },
+  { code: 'CHE', name: 'Switzerland', region: 'Europe' },
+  { code: 'SWE', name: 'Sweden', region: 'Europe' },
+  { code: 'POL', name: 'Poland', region: 'Europe' },
+  { code: 'TUR', name: 'Türkiye', region: 'Europe' },
+  { code: 'RUS', name: 'Russia', region: 'Europe' },
+  { code: 'NOR', name: 'Norway', region: 'Europe' },
+  { code: 'FIN', name: 'Finland', region: 'Europe' },
+  { code: 'IRL', name: 'Ireland', region: 'Europe' },
+  { code: 'PRT', name: 'Portugal', region: 'Europe' },
+  { code: 'GRC', name: 'Greece', region: 'Europe' },
+  { code: 'AUT', name: 'Austria', region: 'Europe' },
+  { code: 'BEL', name: 'Belgium', region: 'Europe' },
+  { code: 'CZE', name: 'Czechia', region: 'Europe' },
+  { code: 'HUN', name: 'Hungary', region: 'Europe' },
+  { code: 'ROU', name: 'Romania', region: 'Europe' },
+  { code: 'UKR', name: 'Ukraine', region: 'Europe' },
+  { code: 'ISL', name: 'Iceland', region: 'Europe' },
+  { code: 'LUX', name: 'Luxembourg', region: 'Europe' },
+  { code: 'CYP', name: 'Cyprus', region: 'Europe' },
+  { code: 'MLT', name: 'Malta', region: 'Europe' },
+  { code: 'SVK', name: 'Slovakia', region: 'Europe' },
+  { code: 'SVN', name: 'Slovenia', region: 'Europe' },
+  { code: 'HRV', name: 'Croatia', region: 'Europe' },
+  { code: 'BGR', name: 'Bulgaria', region: 'Europe' },
+  { code: 'LTU', name: 'Lithuania', region: 'Europe' },
+  { code: 'LVA', name: 'Latvia', region: 'Europe' },
+  { code: 'EST', name: 'Estonia', region: 'Europe' },
+  { code: 'ALB', name: 'Albania', region: 'Europe' },
+  { code: 'MKD', name: 'North Macedonia', region: 'Europe' },
+  { code: 'BIH', name: 'Bosnia and Herzegovina', region: 'Europe' },
+  { code: 'SRB', name: 'Serbia', region: 'Europe' },
+  { code: 'MNE', name: 'Montenegro', region: 'Europe' },
+  { code: 'BLR', name: 'Belarus', region: 'Europe' },
+  { code: 'MDA', name: 'Moldova', region: 'Europe' },
+  // --- Asia-Pacific (32) ---
+  { code: 'CHN', name: 'China', region: 'Asia-Pacific' },
+  { code: 'JPN', name: 'Japan', region: 'Asia-Pacific' },
+  { code: 'IND', name: 'India', region: 'Asia-Pacific' },
+  { code: 'KOR', name: 'South Korea', region: 'Asia-Pacific' },
+  { code: 'IDN', name: 'Indonesia', region: 'Asia-Pacific' },
+  { code: 'AUS', name: 'Australia', region: 'Asia-Pacific' },
+  { code: 'THA', name: 'Thailand', region: 'Asia-Pacific' },
+  { code: 'VNM', name: 'Vietnam', region: 'Asia-Pacific' },
+  { code: 'MYS', name: 'Malaysia', region: 'Asia-Pacific' },
+  { code: 'PHL', name: 'Philippines', region: 'Asia-Pacific' },
+  { code: 'SGP', name: 'Singapore', region: 'Asia-Pacific' },
+  { code: 'PAK', name: 'Pakistan', region: 'Asia-Pacific' },
+  { code: 'BGD', name: 'Bangladesh', region: 'Asia-Pacific' },
+  { code: 'LKA', name: 'Sri Lanka', region: 'Asia-Pacific' },
+  { code: 'NPL', name: 'Nepal', region: 'Asia-Pacific' },
+  { code: 'MMR', name: 'Myanmar', region: 'Asia-Pacific' },
+  { code: 'KHM', name: 'Cambodia', region: 'Asia-Pacific' },
+  { code: 'MNG', name: 'Mongolia', region: 'Asia-Pacific' },
+  { code: 'NZL', name: 'New Zealand', region: 'Asia-Pacific' },
+  { code: 'HKG', name: 'Hong Kong SAR', region: 'Asia-Pacific' },
+  { code: 'MAC', name: 'Macao SAR', region: 'Asia-Pacific' },
+  { code: 'BRN', name: 'Brunei', region: 'Asia-Pacific' },
+  { code: 'FJI', name: 'Fiji', region: 'Asia-Pacific' },
+  { code: 'PNG', name: 'Papua New Guinea', region: 'Asia-Pacific' },
+  { code: 'KAZ', name: 'Kazakhstan', region: 'Asia-Pacific' },
+  { code: 'AZE', name: 'Azerbaijan', region: 'Asia-Pacific' },
+  { code: 'UZB', name: 'Uzbekistan', region: 'Asia-Pacific' },
+  { code: 'TKM', name: 'Turkmenistan', region: 'Asia-Pacific' },
+  { code: 'KGZ', name: 'Kyrgyz Republic', region: 'Asia-Pacific' },
+  { code: 'TJK', name: 'Tajikistan', region: 'Asia-Pacific' },
+  { code: 'GEO', name: 'Georgia', region: 'Asia-Pacific' },
+  { code: 'ARM', name: 'Armenia', region: 'Asia-Pacific' },
+  // --- Africa & Middle East (35) ---
+  { code: 'SAU', name: 'Saudi Arabia', region: 'Africa & Middle East' },
+  { code: 'ARE', name: 'United Arab Emirates', region: 'Africa & Middle East' },
+  { code: 'ISR', name: 'Israel', region: 'Africa & Middle East' },
+  { code: 'QAT', name: 'Qatar', region: 'Africa & Middle East' },
+  { code: 'KWT', name: 'Kuwait', region: 'Africa & Middle East' },
+  { code: 'IRQ', name: 'Iraq', region: 'Africa & Middle East' },
+  { code: 'IRN', name: 'Iran', region: 'Africa & Middle East' },
+  { code: 'JOR', name: 'Jordan', region: 'Africa & Middle East' },
+  { code: 'OMN', name: 'Oman', region: 'Africa & Middle East' },
+  { code: 'BHR', name: 'Bahrain', region: 'Africa & Middle East' },
+  { code: 'EGY', name: 'Egypt', region: 'Africa & Middle East' },
+  { code: 'ZAF', name: 'South Africa', region: 'Africa & Middle East' },
+  { code: 'NGA', name: 'Nigeria', region: 'Africa & Middle East' },
+  { code: 'KEN', name: 'Kenya', region: 'Africa & Middle East' },
+  { code: 'ETH', name: 'Ethiopia', region: 'Africa & Middle East' },
+  { code: 'MAR', name: 'Morocco', region: 'Africa & Middle East' },
+  { code: 'DZA', name: 'Algeria', region: 'Africa & Middle East' },
+  { code: 'TZA', name: 'Tanzania', region: 'Africa & Middle East' },
+  { code: 'UGA', name: 'Uganda', region: 'Africa & Middle East' },
+  { code: 'GHA', name: 'Ghana', region: 'Africa & Middle East' },
+  { code: 'CIV', name: 'Côte d’Ivoire', region: 'Africa & Middle East' },
+  { code: 'SEN', name: 'Senegal', region: 'Africa & Middle East' },
+  { code: 'TUN', name: 'Tunisia', region: 'Africa & Middle East' },
+  { code: 'BWA', name: 'Botswana', region: 'Africa & Middle East' },
+  { code: 'NAM', name: 'Namibia', region: 'Africa & Middle East' },
+  { code: 'ZMB', name: 'Zambia', region: 'Africa & Middle East' },
+  { code: 'ZWE', name: 'Zimbabwe', region: 'Africa & Middle East' },
+  { code: 'CMR', name: 'Cameroon', region: 'Africa & Middle East' },
+  { code: 'MOZ', name: 'Mozambique', region: 'Africa & Middle East' },
+  { code: 'AGO', name: 'Angola', region: 'Africa & Middle East' },
+  { code: 'SDN', name: 'Sudan', region: 'Africa & Middle East' },
+  { code: 'LBY', name: 'Libya', region: 'Africa & Middle East' },
+  { code: 'SYR', name: 'Syria', region: 'Africa & Middle East' },
+  { code: 'YEM', name: 'Yemen', region: 'Africa & Middle East' },
+  { code: 'AFG', name: 'Afghanistan', region: 'Africa & Middle East' },
 ];
 
-export type EconomyIndicatorSpec = { id: string; name: string; unit: string; decimals: number };
+/**
+ * World Bank aggregates — the whole planet, the four income groups and the
+ * regional/unions blocks, so the board shows a country AGAINST its peer group.
+ * `wbName` must match the upstream `country.value` EXACTLY: it is what the
+ * parser keys these rows on (their `countryiso3code` is empty — measured).
+ */
+export type WorldAggregateSpec = {
+  code: string;
+  name: string;
+  wbName: string;
+  group: 'World & income' | 'Regions & unions';
+};
 
-export const ECONOMY_INDICATORS: readonly EconomyIndicatorSpec[] = [
-  { id: 'NY.GDP.MKTP.KD.ZG', name: 'GDP growth', unit: '%', decimals: 2 },
-  { id: 'FP.CPI.TOTL.ZG', name: 'Inflation', unit: '%', decimals: 2 },
+export const WORLD_AGGREGATES: readonly WorldAggregateSpec[] = [
+  { code: 'WLD', name: 'World', wbName: 'World', group: 'World & income' },
+  { code: 'HIC', name: 'High income', wbName: 'High income', group: 'World & income' },
+  { code: 'UMC', name: 'Upper middle income', wbName: 'Upper middle income', group: 'World & income' },
+  { code: 'LMC', name: 'Lower middle income', wbName: 'Lower middle income', group: 'World & income' },
+  { code: 'LIC', name: 'Low income', wbName: 'Low income', group: 'World & income' },
+  { code: 'MIC', name: 'Middle income', wbName: 'Middle income', group: 'World & income' },
+  { code: 'OED', name: 'OECD members', wbName: 'OECD members', group: 'Regions & unions' },
+  { code: 'EUU', name: 'European Union', wbName: 'European Union', group: 'Regions & unions' },
+  { code: 'EMU', name: 'Euro area', wbName: 'Euro area', group: 'Regions & unions' },
+  { code: 'ARB', name: 'Arab World', wbName: 'Arab World', group: 'Regions & unions' },
+  { code: 'EAS', name: 'East Asia & Pacific', wbName: 'East Asia & Pacific', group: 'Regions & unions' },
+  { code: 'ECS', name: 'Europe & Central Asia', wbName: 'Europe & Central Asia', group: 'Regions & unions' },
+  { code: 'LCN', name: 'Latin America & Caribbean', wbName: 'Latin America & Caribbean', group: 'Regions & unions' },
+  { code: 'SAS', name: 'South Asia', wbName: 'South Asia', group: 'Regions & unions' },
+  { code: 'MEA', name: 'Middle East & North Africa', wbName: 'Middle East, North Africa, Afghanistan & Pakistan', group: 'Regions & unions' },
+  { code: 'SSF', name: 'Sub-Saharan Africa', wbName: 'Sub-Saharan Africa', group: 'Regions & unions' },
+  { code: 'AFE', name: 'Africa Eastern & Southern', wbName: 'Africa Eastern and Southern', group: 'Regions & unions' },
+  { code: 'AFW', name: 'Africa Western & Central', wbName: 'Africa Western and Central', group: 'Regions & unions' },
+];
+
+/**
+ * Upstream name -> code, for the rows whose iso3 field comes back empty. Passed
+ * to the World Bank fetcher so those aggregates resolve instead of vanishing.
+ */
+export const WB_AGGREGATE_NAMES: Readonly<Record<string, string>> = Object.fromEntries(
+  WORLD_AGGREGATES.map((a) => [a.wbName, a.code]),
+);
+
+/** Every code the board requests: the countries then the aggregates. */
+export const WORLD_CODES: readonly string[] = [
+  ...WORLD_COUNTRIES.map((c) => c.code),
+  ...WORLD_AGGREGATES.map((a) => a.code),
+];
+
+/** How a World Bank value is rendered. */
+export type WorldValueKind = 'pct' | 'usd' | 'count' | 'years';
+
+export type WorldIndicatorSpec = {
+  id: string;
+  /** Full name, used as the column's title attribute. */
+  name: string;
+  /** Compact column heading. */
+  short: string;
+  kind: WorldValueKind;
+  decimals: number;
+  note: string;
+};
+
+/**
+ * The eight annual series the worldwide table carries. All eight were measured
+ * to resolve for every country AND every aggregate on the board — a series that
+ * only covers countries (govt debt, current account, Gini, reserves, external
+ * debt, lending rate) is deliberately excluded, because a column that is blank
+ * for all 18 aggregates is not worth its width.
+ */
+export const ECONOMY_INDICATORS: readonly WorldIndicatorSpec[] = [
+  { id: 'NY.GDP.MKTP.KD.ZG', name: 'GDP growth', short: 'GDP growth', kind: 'pct', decimals: 2, note: 'Annual real GDP growth' },
+  { id: 'NY.GDP.MKTP.CD', name: 'GDP (nominal)', short: 'GDP', kind: 'usd', decimals: 0, note: 'Gross domestic product, current US$' },
+  { id: 'NY.GDP.PCAP.CD', name: 'GDP per capita', short: 'GDP/capita', kind: 'usd', decimals: 0, note: 'GDP per capita, current US$' },
+  { id: 'SP.POP.TOTL', name: 'Population', short: 'Population', kind: 'count', decimals: 0, note: 'Total population' },
+  { id: 'FP.CPI.TOTL.ZG', name: 'Inflation', short: 'Inflation', kind: 'pct', decimals: 2, note: 'Consumer prices, annual %' },
+  { id: 'SL.UEM.TOTL.ZS', name: 'Unemployment', short: 'Unemp.', kind: 'pct', decimals: 2, note: 'Unemployment, total (% of labour force, ILO estimate)' },
+  { id: 'SP.DYN.LE00.IN', name: 'Life expectancy', short: 'Life exp.', kind: 'years', decimals: 1, note: 'Life expectancy at birth, total' },
+  { id: 'SP.URB.TOTL.IN.ZS', name: 'Urban population', short: 'Urban', kind: 'pct', decimals: 1, note: 'Urban population, % of total' },
 ];
 
 /** Earliest year to accept for the annual comparison. */

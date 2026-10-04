@@ -424,14 +424,34 @@ export type IndicatorRow = {
   note: string;
 };
 
-/** One country's annual growth/inflation pair (World Bank); year travels with value. */
-export type EconomyRow = {
+/** One cell of the worldwide board: an annual value and the year it refers to. */
+export type WorldCell = { value: number | null; year: string | null };
+
+/**
+ * One row of the worldwide board (World Bank, annual) — a country or an
+ * aggregate. `cells` is keyed by indicator id and each cell carries its OWN
+ * reference year: the eight series publish on different lags, so one shared year
+ * column would be wrong for most of them.
+ */
+export type WorldRow = {
   code: string;
   name: string;
-  gdpGrowth: number | null;
-  gdpYear: string | null;
-  inflation: number | null;
-  inflationYear: string | null;
+  region: string;
+  cells: Record<string, WorldCell>;
+};
+
+/**
+ * One COLUMN of the worldwide board. Rides in the payload so the landing page
+ * renders the headers (and formats the cells) from the API instead of importing
+ * the macro family across a feature boundary.
+ */
+export type WorldIndicatorRow = {
+  id: string;
+  name: string;
+  short: string;
+  kind: string;
+  decimals: number;
+  note: string;
 };
 
 /**
@@ -444,18 +464,24 @@ export type UpstreamFailure = { symbol: string; reason: string };
 /**
  * `/api/market/macro` — the GLOBAL macro board.
  *
- * Four independent blocks: live Yahoo quotes, locally-derived curve spreads, BIS
- * policy rates, FRED indicators, and a World Bank economy comparison. Any block
- * can be empty (with its cause named in `failed[]`) without the others being
- * withheld — which is why this is declared explicitly rather than as a
- * spread-carrying `QuotesEnvelope`, whose `failed` is a `string[]`.
+ * Independent blocks: live Yahoo quotes, locally-derived curve spreads, BIS
+ * policy rates, FRED indicators, and the World Bank worldwide board (countries
+ * plus the world/income/region aggregates). Any block can be empty (with its
+ * cause named in `failed[]`) without the others being withheld — which is why
+ * this is declared explicitly rather than as a spread-carrying `QuotesEnvelope`,
+ * whose `failed` is a `string[]`.
  */
 export type MacroEnvelope = {
   quotes: MacroQuote[];
   spreads: MacroSpread[];
   policyRates: PolicyRateRow[];
   indicators: IndicatorRow[];
-  economies: EconomyRow[];
+  /** Column specs for the worldwide table, in render order. */
+  worldIndicators: WorldIndicatorRow[];
+  /** The 125 countries on the worldwide board, grouped by `region`. */
+  economies: WorldRow[];
+  /** World, the four income groups and the regional/unions blocks. */
+  aggregates: WorldRow[];
   count: number;
   failed: UpstreamFailure[];
   upstream: string[];

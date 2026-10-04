@@ -43,7 +43,6 @@ import {
   type CrHome,
   type CrMovers,
   type CrTrending,
-  type EconomyRow,
   type ForexEnvelope,
   type IndicatorRow,
   type IndonesiaEnvelope,
@@ -57,6 +56,8 @@ import {
   type ScoreboardBucket,
   type ScoreboardCatch,
   type ScoreboardPayload,
+  type WorldIndicatorRow,
+  type WorldRow,
 } from './client';
 
 /**
@@ -122,6 +123,23 @@ const h3Style: React.CSSProperties = {
   fontSize: fontSize[12],
   fontWeight: fontWeight.bold,
   letterSpacing: letterSpacing.wide,
+};
+/** Sub-heading inside a card, for a block that sits under the card's own h3. */
+const h4Style: React.CSSProperties = {
+  margin: `${space[14]}px 0 ${space[6]}px`,
+  color: color.text,
+  fontSize: fontSize[11],
+  fontWeight: fontWeight.bold,
+  letterSpacing: letterSpacing.wide,
+};
+/** A `<summary>` that reads as a control, not as body copy. */
+const summaryStyle: React.CSSProperties = {
+  cursor: 'pointer',
+  color: color.accent,
+  fontSize: fontSize[11],
+  fontWeight: fontWeight.bold,
+  letterSpacing: letterSpacing.wide,
+  marginTop: space[12],
 };
 const noteStyle: React.CSSProperties = {
   margin: `${space[8]}px 0 0`,
@@ -401,36 +419,68 @@ function IndicatorTable({ rows }: { rows: IndicatorRow[] }) {
   );
 }
 
+/** Region order the worldwide table renders in — curated, not alphabetical. */
+const WORLD_REGIONS = ['Americas', 'Europe', 'Asia-Pacific', 'Africa & Middle East'];
+
+/** Group order for the aggregates table. */
+const WORLD_AGGREGATE_GROUPS = ['World & income', 'Regions & unions'];
+
 /**
- * Global economy comparison (World Bank, annual).
+ * The worldwide economy board (World Bank, annual).
  *
- * Each cell prints its OWN year: growth and inflation are published on different
- * lags, so a single shared year column would be wrong for at least one of them.
+ * A country × indicator matrix grouped by `region`. Every cell prints its OWN
+ * reference year: the eight series publish on different lags, so one shared year
+ * column would be wrong for most of them. A cell the upstream did not publish is
+ * an em dash — never a zero — and its year is withheld with it.
  */
-function EconomyTable({ rows }: { rows: EconomyRow[] }) {
+function WorldTable({
+  rows,
+  columns,
+  groups,
+}: {
+  rows: WorldRow[];
+  columns: WorldIndicatorRow[];
+  groups: string[];
+}) {
+  const present = groups.filter(g => rows.some(r => r.region === g));
   return (
     <div style={{ overflowX: 'auto', marginTop: space[12] }}>
       <Table style={{ fontSize: fontSize[11] }}>
         <THead>
           <TR style={theadRowStyle}>
             <TH>Economy</TH>
-            <TH align="right">GDP growth</TH>
-            <TH align="right">Inflation</TH>
+            {columns.map(c => (
+              <TH key={c.id} align="right">
+                <span title={c.note}>{c.short}</span>
+              </TH>
+            ))}
           </TR>
         </THead>
         <TBody>
-          {rows.map(r => (
-            <TR key={r.code} style={rowStyle}>
-              <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>{r.name}</TD>
-              <TD align="right" style={{ color: color.text }}>
-                {r.gdpGrowth === null ? DASH : `${r.gdpGrowth.toFixed(2)}%`}{' '}
-                <span style={{ color: color.textMuted }}>{fmtYear(r.gdpYear)}</span>
-              </TD>
-              <TD align="right" style={{ color: color.text }}>
-                {r.inflation === null ? DASH : `${r.inflation.toFixed(2)}%`}{' '}
-                <span style={{ color: color.textMuted }}>{fmtYear(r.inflationYear)}</span>
-              </TD>
-            </TR>
+          {present.map(group => (
+            <Fragment key={group}>
+              <TR>
+                <TD colSpan={columns.length + 1} style={groupRowStyle}>
+                  {group.toUpperCase()}
+                </TD>
+              </TR>
+              {rows
+                .filter(r => r.region === group)
+                .map(r => (
+                  <TR key={r.code} style={rowStyle}>
+                    <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>{r.name}</TD>
+                    {columns.map(c => {
+                      const cell = r.cells[c.id];
+                      return (
+                        <TD key={c.id} align="right" style={{ color: color.text, whiteSpace: 'nowrap' }}>
+                          {fmtEconomy(cell?.value ?? null, c.kind, c.decimals)}{' '}
+                          <span style={{ color: color.textMuted }}>{fmtYear(cell?.year)}</span>
+                        </TD>
+                      );
+                    })}
+                  </TR>
+                ))}
+            </Fragment>
           ))}
         </TBody>
       </Table>
@@ -513,7 +563,20 @@ function MacroBoard() {
           </div>
           {data.policyRates.length > 0 && <PolicyRateTable rows={data.policyRates} />}
           {data.indicators.length > 0 && <IndicatorTable rows={data.indicators} />}
-          {data.economies.length > 0 && <EconomyTable rows={data.economies} />}
+          {data.worldIndicators.length > 0 && data.aggregates.length > 0 && (
+            <>
+              <h4 style={h4Style}>World &amp; regional aggregates</h4>
+              <WorldTable rows={data.aggregates} columns={data.worldIndicators} groups={WORLD_AGGREGATE_GROUPS} />
+            </>
+          )}
+          {data.worldIndicators.length > 0 && data.economies.length > 0 && (
+            <details>
+              <summary style={summaryStyle}>
+                Major economies — {data.economies.length} countries × {data.worldIndicators.length} indicators
+              </summary>
+              <WorldTable rows={data.economies} columns={data.worldIndicators} groups={WORLD_REGIONS} />
+            </details>
+          )}
           <p style={noteStyle}>
             yields in %, delta in basis points (Δ × 100) · curve spreads derived locally, not published upstream · {data.derived}
           </p>
