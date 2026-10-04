@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
+  BALANCE_ID,
+  BALANCE_LEGS,
   ECONOMY_FROM_YEAR,
   ECONOMY_INDICATORS,
   FRED_LOOKBACK_DAYS,
@@ -20,7 +22,7 @@ import {
 import { YAHOO_CHART, YAHOO_UA, chartUrl, parseChart } from '@/features/market/quotes';
 import { daysAgo, fetchPolicyRates, SOURCE_UA } from '@/features/market/sources/bis';
 import { fetchFred } from '@/features/market/sources/fred';
-import { fetchWorldBankSeries } from '@/features/market/sources/worldbank';
+import { fetchWorldBankSeries, pickLatestAndPrior, type WorldBankPoint } from '@/features/market/sources/worldbank';
 import { limitedFetch } from '@/platform/http/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -77,6 +79,15 @@ type WorldIndicatorRow = {
 };
 
 /**
+ * Whether an indicator is one of the two legs the budget balance is derived
+ * from. Typed against `BALANCE_LEGS` so adding a leg to that tuple cannot
+ * silently stop being collected here.
+ */
+function isBalanceLeg(id: string): id is (typeof BALANCE_LEGS)[number] {
+  return (BALANCE_LEGS as readonly string[]).includes(id);
+}
+
+/**
  * Read-only proxy serving the GLOBAL macro board, from four keyless upstreams:
  *
  *  - Yahoo Finance chart — the live Treasury curve, the dollar index and the
@@ -85,14 +96,16 @@ type WorldIndicatorRow = {
  *  - FRED CSV            — US macro series (prices, labour, money, spreads).
  *  - World Bank          — the WORLDWIDE annual board: 125 countries and 18
  *    aggregates (World, the four income groups, and the regional/unions blocks)
- *    across 24 themed structural series each, every cell carrying both its own
+ *    across 32 themed structural series each, every cell carrying both its own
  *    reference year and — where the window holds one — its change over the
- *    decade.
+ *    decade. One of the 32 is not fetched: the budget balance is derived here
+ *    from the revenue and expense legs, which must share a year to mean anything.
  *
  * Each upstream is fetched and reported independently: one failing empties its own
  * block and is named in `failed[]`, while the rest of the board still renders.
- * `spreads[]` is DERIVED LOCALLY (the upstream publishes no spread series) and is
- * labelled as such in `derived`; a spread whose legs are not both present stays
+ * `spreads[]` and the budget-balance column are DERIVED LOCALLY (the upstream
+ * publishes no such series) and are labelled as such in `derived`; a spread whose
+ * legs are not both present, and a balance whose legs never share a year, stay
  * null rather than being computed against a missing leg.
  *
  * Honest-by-construction throughout: a value an upstream did not publish is null
@@ -194,14 +207,19 @@ export async function GET() {
 
   // ---- 4. worldwide economy board (World Bank) -----------------------------
   // One call per indicator over EVERY code at once (countries batch; the
-  // indicator list does not). 24 calls fill both tables, and they run through the
+  // indicator list does not). 31 calls fill both tables, and they run through the
   // World Bank's OWN concurrency pool rather than the shared serial limiter — see
   // `sources/worldbank.ts` for the measurement that made that the right call.
   // Each call is independent: a failing series empties only its own column and is
   // named in `failed[]`, while every other column still fills.
+  //
+  // `BALANCE_ID` is filtered out: it has no upstream series of its own. Its two
+  // legs are fetched as normal columns, and the observations behind them are kept
+  // here so the balance can be derived from them in step 4b.
   const cellByCode = new Map<string, Record<string, WorldCell>>();
+  const legPoints = new Map<string, Map<string, readonly WorldBankPoint[]>>();
   await Promise.all(
-    ECONOMY_INDICATORS.map(async (spec) => {
+    ECONOMY_INDICATORS.filter((spec) => spec.id !== BALANCE_ID).map(async (spec) => {
       try {
         const series = await fetchWorldBankSeries(spec.id, WORLD_CODES, ECONOMY_FROM_YEAR, WB_AGGREGATE_NAMES);
         for (const s of series) {
@@ -212,12 +230,48 @@ export async function GET() {
             prior: s.prior ? { value: s.prior.value, year: s.prior.year } : null,
           };
           cellByCode.set(s.country, cells);
+          if (isBalanceLeg(spec.id)) {
+            const legs = legPoints.get(s.country) ?? new Map<string, readonly WorldBankPoint[]>();
+            legs.set(spec.id, s.points);
+            legPoints.set(s.country, legs);
+          }
         }
       } catch (e) {
         failed.push({ symbol: `WB:${spec.id}`, reason: e instanceof Error ? e.message : String(e) });
       }
     })
   );
+
+  // ---- 4b. derived budget balance ------------------------------------------
+  // revenue − expense, but ONLY for years where BOTH legs carry an observation.
+  // The difference between a 2024 revenue and a 2023 expense is not any year's
+  // balance — it is a number that no agency ever published — so a country whose
+  // two legs never share a year gets NO balance cell rather than a fabricated
+  // one, and the cell renders an em dash like any other unpublished value.
+  // `prior` is picked from the derived series by the same decade-span rule every
+  // fetched column uses, so the change shown stays comparable with its
+  // neighbours; the legs are ascending, so the filtered list is too.
+  for (const [code, legs] of legPoints) {
+    const revenue = legs.get(BALANCE_LEGS[0]);
+    const expense = legs.get(BALANCE_LEGS[1]);
+    if (!revenue || !expense) continue;
+    const expenseByYear = new Map(expense.map((p) => [p.year, p.value]));
+    const points: WorldBankPoint[] = [];
+    for (const p of revenue) {
+      const spent = expenseByYear.get(p.year);
+      if (spent === undefined) continue;
+      points.push({ year: p.year, value: p.value - spent });
+    }
+    if (points.length === 0) continue;
+    const { latest, prior } = pickLatestAndPrior(points);
+    const cells = cellByCode.get(code) ?? {};
+    cells[BALANCE_ID] = {
+      value: latest.value,
+      year: latest.year,
+      prior: prior ? { value: prior.value, year: prior.year } : null,
+    };
+    cellByCode.set(code, cells);
+  }
   const economies: WorldRow[] = WORLD_COUNTRIES.map((c) => ({
     code: c.code,
     name: c.name,
@@ -273,6 +327,6 @@ export async function GET() {
     upstream: [YAHOO_CHART, 'stats.bis.org WS_CBPOL', 'fred.stlouisfed.org CSV', 'api.worldbank.org v2'],
     userAgent: SOURCE_UA,
     asOf: Math.floor(Date.now() / 1000),
-    derived: `quotes: one Yahoo chart call per symbol; policy rates: BIS WS_CBPOL (daily, 60-day window); indicators: FRED CSV with the transform applied server-side; worldwide board: World Bank annual, ${WORLD_COUNTRIES.length} countries + ${WORLD_AGGREGATES.length} aggregates across ${ECONOMY_INDICATORS.length} series, newest non-null year per cell, each cell compared against its observation ~10 years earlier where the window holds one; ${failed.length} upstream item(s) failed`,
+    derived: `quotes: one Yahoo chart call per symbol; policy rates: BIS WS_CBPOL (daily, 60-day window); indicators: FRED CSV with the transform applied server-side; worldwide board: World Bank annual, ${WORLD_COUNTRIES.length} countries + ${WORLD_AGGREGATES.length} aggregates across ${ECONOMY_INDICATORS.length} series, newest non-null year per cell, each cell compared against its observation ~10 years earlier where the window holds one; budget balance (${BALANCE_ID}) derived here as revenue − expense for a year BOTH legs observe, never across two reference years; ${failed.length} upstream item(s) failed`,
   });
 }

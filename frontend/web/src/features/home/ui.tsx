@@ -439,6 +439,8 @@ const WORLD_THEME_ORDER = [
   'Labour & welfare',
   'External',
   'Money & state',
+  'Government finance',
+  'Companies',
   'Structure & sustainability',
 ];
 

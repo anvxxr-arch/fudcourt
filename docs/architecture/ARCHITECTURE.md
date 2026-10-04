@@ -154,7 +154,11 @@ the full judgment record for the grouping is §4 of that file.
   them from the API rather than importing another feature's module (the structure gate forbids a
   cross-feature import). The two macro panels together are the **Indonesia + global macro** board:
   `Global macro` carries the live US curve/dollar/volatility, 33 central-bank policy rates (BIS),
-  ten US indicators (FRED) and an eight-economy World Bank comparison; `Indonesia macro` carries the
+  ten US indicators (FRED), and the worldwide annual board — 125 countries plus 18 world/income/
+  region aggregates, each across 32 themed series in eight blocks (output & prices / people /
+  labour & welfare / external / money & state / government finance / companies / structure &
+  sustainability), one column of which (the budget balance) is derived locally rather than fetched;
+  `Indonesia macro` carries the
   live rupiah crosses and IDX indices, the BI-Rate, and 19 annual World Bank indicators. Both are
   read as separate `useJson` fetches, so a slow annual upstream (World Bank) never holds the live
   block hostage. Every annual row prints **its own reference year** beside the value — a World Bank
@@ -185,7 +189,7 @@ the full judgment record for the grouping is §4 of that file.
 | public | market · forex | `/market/forex` | `MarketHub section="forex"` → `ForexBoard` | `/api/market/forex` |
 | public | market · commodity | `/market/commodity` | `MarketHub section="commodity"` → `CommodityBoard` | `/api/market/commodity` |
 | public | market · stock | `/market/stock` | `MarketHub section="stock"` → `StockBoard` (`?region=us\|asia\|europe`) | `/api/market/stock?region=…` |
-| public | market · macro (API-only) | — (read by `/` and any board) | `MacroBoard` in `features/home/ui.tsx` | `/api/market/macro` (US curve 13w/5y/10y/30y · DXY · VIX · VVIX · locally-derived curve spreads · 33 BIS policy rates · 10 FRED US indicators · 8-economy World Bank comparison) |
+| public | market · macro (API-only) | — (read by `/` and any board) | `MacroBoard` in `features/home/ui.tsx` | `/api/market/macro` (US curve 13w/5y/10y/30y · DXY · VIX · VVIX · locally-derived curve spreads · 33 BIS policy rates · 10 FRED US indicators · worldwide annual board: 125 countries + 18 aggregates × 32 themed series, budget balance derived locally) |
 | public | market · indonesia (API-only) | — (read by `/`) | `IndonesiaBoard` in `features/home/ui.tsx` | `/api/market/indonesia` (live USD/EUR/JPY/CNY-IDR · IHSG · LQ45 · BI-Rate via BIS · 19 annual World Bank indicators) |
 | public | market · trench | `/market/trench` | `MarketHub section="trench"` → `DexPage` · `TrenchPage` | `/api/dex?type=profiles&limit=50` |
 | public | signals | `/signals` | `SignalsPage` | `/api/signals?chain&type` |

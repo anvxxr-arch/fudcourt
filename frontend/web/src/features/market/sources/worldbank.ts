@@ -80,6 +80,16 @@ export type WorldBankSeries = {
    * inventing one from two adjacent years would be worse than showing nothing.
    */
   prior: WorldBankPoint | null;
+  /**
+   * Every observation in the window, ascending by year — the list `latest` and
+   * `prior` were picked FROM. Carried so a caller can align two series on a
+   * COMMON year: a fiscal balance computed from a 2024 revenue and a 2023
+   * expense is not any year's balance. The upstream's own cash-balance series
+   * would save the work but only exists in an archived source this API no longer
+   * serves (`GC.BAL.CASH.GD.ZS` -> `Invalid format` on the data endpoint,
+   * measured), so the alignment is done here instead.
+   */
+  points: readonly WorldBankPoint[];
 };
 
 type RawRow = {
@@ -91,6 +101,38 @@ type RawRow = {
   date?: string;
   value?: number | null;
 };
+
+/**
+ * The comparison pair for an ASCENDING observation list: the newest point and
+ * the one closest to `DELTA_TARGET_YEARS` earlier, refusing any span under
+ * `MIN_DELTA_SPAN_YEARS`. Shared by the parsed upstream series and by series
+ * DERIVED from them, so both apply the same span rule — a derived column whose
+ * change was computed by different rules would not be comparable with its
+ * neighbours.
+ *
+ * Caller must pass a non-empty list.
+ */
+export function pickLatestAndPrior(points: readonly WorldBankPoint[]): {
+  latest: WorldBankPoint;
+  prior: WorldBankPoint | null;
+} {
+  const latest = points[points.length - 1];
+  const latestYear = Number(latest.year);
+  let prior: WorldBankPoint | null = null;
+  let bestGap = Number.POSITIVE_INFINITY;
+  for (const p of points) {
+    const span = latestYear - Number(p.year);
+    if (span < MIN_DELTA_SPAN_YEARS) continue;
+    const gap = Math.abs(span - DELTA_TARGET_YEARS);
+    // `<` (not `<=`) keeps the FIRST year at a given distance, i.e. the
+    // earliest when two are equidistant — the longer, more conservative span.
+    if (gap < bestGap) {
+      bestGap = gap;
+      prior = p;
+    }
+  }
+  return { latest, prior };
+}
 
 /**
  * The full per-country series in the window, each reduced to its newest
@@ -143,22 +185,9 @@ export function parseWorldBankSeries(
     // Ascending by year, so the last entry is the newest. String compare is safe
     // because every year here matched /^\d{4}$/.
     list.sort((a, b) => (a.year < b.year ? -1 : a.year > b.year ? 1 : 0));
-    const latest = list[list.length - 1];
-    const latestYear = Number(latest.year);
-    let prior: WorldBankPoint | null = null;
-    let bestGap = Number.POSITIVE_INFINITY;
-    for (const p of list) {
-      const span = latestYear - Number(p.year);
-      if (span < MIN_DELTA_SPAN_YEARS) continue;
-      const gap = Math.abs(span - DELTA_TARGET_YEARS);
-      // `<` (not `<=`) keeps the FIRST year at a given distance, i.e. the
-      // earliest when two are equidistant — the longer, more conservative span.
-      if (gap < bestGap) {
-        bestGap = gap;
-        prior = p;
-      }
-    }
-    return [{ country: code, countryName: names.get(code) ?? code, latest, prior }];
+    return [
+      { country: code, countryName: names.get(code) ?? code, ...pickLatestAndPrior(list), points: list },
+    ];
   });
 }
 

@@ -382,6 +382,8 @@ export type WorldTheme =
   | 'Labour & welfare'
   | 'External'
   | 'Money & state'
+  | 'Government finance'
+  | 'Companies'
   | 'Structure & sustainability';
 
 export type WorldIndicatorSpec = {
@@ -398,18 +400,39 @@ export type WorldIndicatorSpec = {
 };
 
 /**
- * The 24 annual series the worldwide table carries — a country PROFILE, not a
+ * The derived budget-balance column's id. It has no upstream series of its own,
+ * so it is not fetched: the route computes it from `BALANCE_LEGS` after both
+ * legs land. The `derived:` prefix keeps it from ever colliding with a real
+ * World Bank indicator code.
+ */
+export const BALANCE_ID = 'derived:balance';
+
+/**
+ * The two legs the balance is derived from, in `revenue − expense` order.
+ * Net lending is negative, so a country spending more than it takes in shows a
+ * negative balance — the sign is the convention, not a judgement.
+ */
+export const BALANCE_LEGS = ['GC.REV.XGRT.GD.ZS', 'GC.XPN.TOTL.GD.ZS'] as const;
+
+/**
+ * The 32 annual series the worldwide table carries — a country PROFILE, not a
  * two-line comparison. Array order is render order; `theme` groups the header.
  *
  * Every id here was measured against the live API across the WHOLE board (143
  * codes) before being included, and the ones that failed the measurement were
  * dropped rather than shipped as a mostly blank column: central-government debt
  * resolves for only 46 of the 125 countries, lending rate 36/50, stunting 31/50,
- * Gini 104/125, so none of those earns its width. What remains covers ≥99/125
- * countries and, except for the current account and reserves — which the World
- * Bank publishes for countries only — also most of the 18 aggregates, so the
- * aggregates table fills too. Where a series genuinely has no observation for a
- * row, that cell stays an em dash.
+ * Gini 104/125, so none of those earns its width. The market series are the
+ * thinnest that still clear the board's half-a-table rule — listed companies
+ * 79/125 countries and 13/18 aggregates, stocks traded 76/125 and 11/18 — and
+ * each of those still fills most of the 18 aggregates, so the aggregates table
+ * does not lose a block. Where a series genuinely has no observation for a row,
+ * that cell stays an em dash.
+ *
+ * One column is NOT a World Bank series: `BALANCE_ID` is derived by the route
+ * from the revenue and expense legs, because the upstream's own cash-balance
+ * series is archived and no longer served. See its note for why the legs must
+ * share a year.
  */
 export const ECONOMY_INDICATORS: readonly WorldIndicatorSpec[] = [
   // -- Output & prices ------------------------------------------------------
@@ -442,6 +465,23 @@ export const ECONOMY_INDICATORS: readonly WorldIndicatorSpec[] = [
   { id: 'GC.TAX.TOTL.GD.ZS', name: 'Tax revenue', short: 'Tax', kind: 'pct', decimals: 1, theme: 'Money & state', note: 'Tax revenue, % of GDP' },
   { id: 'MS.MIL.XPND.GD.ZS', name: 'Military expenditure', short: 'Military', kind: 'pct', decimals: 1, theme: 'Money & state', note: 'Military expenditure, % of GDP' },
 
+  // -- Government finance ---------------------------------------------------
+  // The APBN block: what the state takes in, what it spends, the gap, and the
+  // cost of servicing what it already owes. Revenue and expense are the IMF's
+  // government-finance aggregates as the World Bank republishes them.
+  { id: 'GC.REV.XGRT.GD.ZS', name: 'Government revenue', short: 'Revenue', kind: 'pct', decimals: 1, theme: 'Government finance', note: 'Revenue, excluding grants, % of GDP (IMF GFS via World Bank)' },
+  { id: 'GC.XPN.TOTL.GD.ZS', name: 'Government expense', short: 'Expense', kind: 'pct', decimals: 1, theme: 'Government finance', note: 'Expense, % of GDP (IMF GFS via World Bank)' },
+  { id: BALANCE_ID, name: 'Budget balance', short: 'Balance', kind: 'pct', decimals: 2, theme: 'Government finance', note: 'Revenue minus expense, both legs read from the SAME year — a difference between a 2024 revenue and a 2023 expense is not any year’s balance, so the route aligns the two series and publishes nothing for a country whose legs never share a year. Negative is a deficit.' },
+  { id: 'GC.XPN.INTP.RV.ZS', name: 'Interest payments', short: 'Interest', kind: 'pct', decimals: 1, theme: 'Government finance', note: 'Interest payments, % of government revenue — the share of intake already committed to debt service' },
+
+  // -- Companies ------------------------------------------------------------
+  // The corporate sector as the market sizes it: how many firms are listed, how
+  // much they are worth, how much they change hands, and how fast new ones form.
+  { id: 'CM.MKT.LDOM.NO', name: 'Listed domestic companies', short: 'Listed cos.', kind: 'count', decimals: 0, theme: 'Companies', note: 'Listed domestic companies, total (countries only upstream)' },
+  { id: 'CM.MKT.LCAP.CD', name: 'Market capitalisation', short: 'Market cap', kind: 'usd', decimals: 0, theme: 'Companies', note: 'Market capitalisation of listed domestic companies, current US$' },
+  { id: 'CM.MKT.TRAD.CD', name: 'Stocks traded', short: 'Stocks traded', kind: 'usd', decimals: 0, theme: 'Companies', note: 'Stocks traded, total value, current US$ — turnover, not market size' },
+  { id: 'IC.BUS.NDNS.ZS', name: 'New business density', short: 'Firm density', kind: 'per1k', decimals: 1, theme: 'Companies', note: 'New business registrations per 1,000 people aged 15-64' },
+
   // -- Structure & sustainability -------------------------------------------
   { id: 'NE.GDI.TOTL.ZS', name: 'Gross capital formation', short: 'Investment', kind: 'pct', decimals: 1, theme: 'Structure & sustainability', note: 'Gross capital formation, % of GDP' },
   { id: 'NV.IND.MANF.ZS', name: 'Manufacturing', short: 'Mfg', kind: 'pct', decimals: 1, theme: 'Structure & sustainability', note: 'Manufacturing value added, % of GDP' },
@@ -456,6 +496,8 @@ export const WORLD_THEMES: readonly WorldTheme[] = [
   'Labour & welfare',
   'External',
   'Money & state',
+  'Government finance',
+  'Companies',
   'Structure & sustainability',
 ];
 
