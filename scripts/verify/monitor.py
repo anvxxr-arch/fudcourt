@@ -11,18 +11,15 @@ Deterministic monitor for the Hermes cron `monitor=` slot:
 
 Checks:
   1. fudcourt-web unit active
-  2. board page /cryptorank -> 200
+  2. board page / -> 200 (renders the CryptoRank home slice; the standalone
+     /cryptorank page was retired in b8e27c6 -- assert the page that ships)
   3. /api/cryptorank?mode=home     -> 200 + count/rows non-empty + upstream field
   4. /api/cryptorank?mode=coins    -> 200
   5. /api/cryptorank?mode=converter-> 200 (full-list converter path)
   6. /api/cryptorank?mode=newstag&key=defi -> 200 (keyed soft-404 handler)
   7. /api/cryptorank?mode=funding  -> 503 (decoy refusal still armed)
 
-  8. /api/khala?mode=reports       -> 200 + non-empty rows + upstream field
-     (ONE cheap probe for the whole khala family; the shape/dates/400/404
-     contract lives in scripts/verify/verify-khala.py -- this only proves the khala
-     sidecar path is alive and still answering with data)
-  9. fudcourt-reconciled unit active, AND its own /healthz direct on :3102
+  8. fudcourt-reconciled unit active, AND its own /healthz direct on :3102
      (DR-014). The unit check is here because a dead Rust service silently turns
      /api/reconcile into a 502 -- a failure nothing else in this file would see.
      The probe hits the service DIRECTLY rather than through :3100 because
@@ -52,7 +49,7 @@ TRANSIENT = {429, 500, 502, 503, 504}
 
 # (name, path, want_status, nonempty) — fixed order = deterministic output
 CHECKS = [
-    ("board page", "/cryptorank", 200, False),
+    ("board page", "/", 200, False),
     ("mode=home", "/api/cryptorank?mode=home", 200, True),
     ("mode=coins", "/api/cryptorank?mode=coins", 200, False),
     ("mode=converter", "/api/cryptorank?mode=converter", 200, False),
@@ -60,7 +57,6 @@ CHECKS = [
     ("mode=funding (decoy refusal)", "/api/cryptorank?mode=funding", 503, False),
     ("markets (coingecko)", "/api/markets?search=btc&limit=5", 200, True),
     ("news (cointelegraph rss)", "/api/news?limit=5", 200, True),
-    ("khala reports", "/api/khala?mode=reports", 200, True),
 ]
 
 
@@ -101,8 +97,7 @@ def check(args):
             # envelope shapes differ per mode: home has count/global (no rows),
             # list modes carry rows. Empty data MUST still fail loudly.
             # Families name their list field differently (CR: rows,
-            # markets: coins, news: items, khala: rows) -- presence of any is
-            # enough. `upstream` is a scalar string on khala (not an array).
+            # markets: coins, news: items) -- presence of any is enough.
             cnt = body.get("count") if body.get("count") is not None else body.get("total")
             rows = body.get("rows") or body.get("coins") or body.get("items")
             if cnt is None and rows is None:

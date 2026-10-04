@@ -51,13 +51,13 @@ def modes_from_lib() -> set:
 def sweep_modes_from(src: str) -> set:
     """Mode tokens of the route sweep's cryptorank table (the CR list only).
 
-    Scoped deliberately: the khala/llama/chainrank tables in the same file carry
-    their own mode= strings (`report`, `protocols`, `latest`, …) which are NOT
+    Scoped deliberately: the llama table in the same file carries
+    its own mode= strings (`protocols`, `historical`, …) which are NOT
     cryptorank modes, so a whole-file regex invents a false mismatch.
     """
     # NB the marker must NOT include the opening bracket: block_after() scans for
     # the open char AFTER the marker, so "CR = [" would skip this list's own `[`
-    # and capture the next one in the file (the khala table).
+    # and capture the next one in the file (the llama table).
     body = block_after(src, "CR = ", "[", "]")
     if body is None:
         return set()
@@ -192,36 +192,12 @@ elif lib and sweep != lib:
 check_guards()
 go_checked = check_go_table()
 check_route_is_proxy()
-# khala: the second sidecar-resident family. Its TS table (src/features/khala/client.ts) and Go
-# table (internal/khala/modes.go) are one contract; the mode set must be equal.
-# Both sides are skipped-not-failed when absent so this gate can land before the
-# family does (same convention as modes_from_sweep).
-KH_TS = SRC / "features" / "khala" / "client.ts"
-KH_GO = Path(os.environ.get("FUDCOURT_DATA_KHALA_GO",
-                            REPO / "backend" / "data" / "internal" / "research" / "khala" / "modes.go"))
-kh_parity = "khala absent"
-if KH_TS.exists() and KH_GO.exists():
-    kh_ts_modes = set(re.findall(
-        r"'([a-z0-9-]+)'", block_after(KH_TS.read_text(), "export const KH_MODES =", "[", "]") or ""))
-    kh_go_modes = set(re.findall(
-        r'"([a-z0-9-]+)"', block_after(KH_GO.read_text(), "var Modes = []string", "{", "}") or ""))
-    if not kh_ts_modes:
-        fails.append("src/features/khala/client.ts: KH_MODES not found (parse drift?)")
-    elif not kh_go_modes:
-        fails.append("internal/khala/modes.go: Modes not found (parse drift?)")
-    elif kh_ts_modes != kh_go_modes:
-        fails.append(f"KH_MODES drift TS vs Go: only-ts={sorted(kh_ts_modes - kh_go_modes)} "
-                     f"only-go={sorted(kh_go_modes - kh_ts_modes)}")
-    else:
-        kh_parity = f"khala KH_MODES parity ({len(kh_ts_modes)} modes)"
-elif KH_TS.exists() or KH_GO.exists():
-    # One side without the other is drift, not an absent family: both live in this
-    # tree, so a half-present pair would silently drop the comparison.
-    missing = "backend/data/internal/research/khala/modes.go" if KH_TS.exists() else str(KH_TS)
-    fails.append(f"khala parity cannot run: {missing} is missing (both sides are tracked)")
-    kh_parity = "khala parity FAILED (one side absent)"
-if check_route_is_proxy("khala"):
-    kh_parity += ", route is a proxy"
+# khala: its WEB surface was removed (the /khala board and the /api/khala proxy are
+# gone -- DECISIONS.md DR-041), so there is no TS mode table left to compare against
+# the Go one. The sidecar family (backend/data/internal/research/khala) stays as an
+# API-only surface on :3101, verified by scripts/verify/verify-khala.py; the TS<->Go
+# parity this block asserted no longer has a second side.
+kh_parity = "khala web surface removed (sidecar-only, DR-041)"
 # llama: the THIRD sidecar-resident family (PLAN G9 SG-9.3). Same convention as
 # khala -- src/features/llama/client.ts carries the TS mode list, backend/data/internal/research/llama/
 # modes.go the Go one, and the route must be the verbatim proxy.
@@ -290,45 +266,14 @@ if check_route_is_proxy("news", ("execFile", "child_process", "limitedFetch",
                                  "NEWS_SOURCES.includes", "parseInt", "Math.min",
                                  "<item>", "stripCdata")):
     nw_parity += ", route is a proxy"
-# chainrank: the FIFTH sidecar-resident family (PLAN G13 SG-13.4). Same
-# convention, with one extra assertion the relay-verbatim rule needs: the route
-# must not clamp pagination locally (a `Math.min`/`Number()` on pageSize is the
-# drift this row exists to catch, because upstream's own clamp is the answer the
-# board must show).
-CH_TS = SRC / "features" / "chainrank" / "client.ts"
-CH_GO = Path(os.environ.get("FUDCOURT_DATA_CHAINRANK_GO",
-                            REPO / "backend" / "data" / "internal" / "research" / "chainrank" / "modes.go"))
-ch_parity = "chainrank absent"
-if CH_TS.exists() and CH_GO.exists():
-    ch_ts_modes = set(re.findall(
-        r"'([a-z0-9-]+)'", block_after(CH_TS.read_text(), "CR_MODES =", "[", "]") or ""))
-    ch_go_modes = set(re.findall(
-        r'"([a-z0-9-]+)"', block_after(CH_GO.read_text(), "var Modes = []string", "{", "}") or ""))
-    if not ch_ts_modes:
-        fails.append("src/features/chainrank/client.ts: CR_MODES not found (parse drift?)")
-    elif not ch_go_modes:
-        fails.append("internal/chainrank/modes.go: Modes not found (parse drift?)")
-    elif ch_ts_modes != ch_go_modes:
-        fails.append(f"chainrank CR_MODES drift TS vs Go: only-ts={sorted(ch_ts_modes - ch_go_modes)} "
-                     f"only-go={sorted(ch_go_modes - ch_ts_modes)}")
-    else:
-        ch_parity = f"chainrank CR_MODES parity ({len(ch_ts_modes)} modes)"
-    # The write endpoints stay unproxied: a route that learned /api/click would
-    # be relaying someone else's production mutation.
-    route_src = re.sub(r"/\*.*?\*/", "", (SRC / "app" / "(frontend)" / "api" / "chainrank" / "route.ts").read_text(), flags=re.S)
-    for verb in ("click", "presence", "claim", "upload"):
-        if f"/api/{verb}" in route_src:
-            fails.append(f"app/api/chainrank/route.ts: /api/{verb} present — writes must never be proxied")
-elif CH_TS.exists() or CH_GO.exists():
-    missing = "backend/data/internal/research/chainrank/modes.go" if CH_TS.exists() else str(CH_TS)
-    fails.append(f"chainrank parity cannot run: {missing} is missing (both sides are tracked)")
-    ch_parity = "chainrank parity FAILED (one side absent)"
-if check_route_is_proxy("chainrank", ("execFile", "child_process", "limitedFetch",
-                                      "CR_MODES.includes", "Math.min", "pageSize")):
-    ch_parity += ", route is a proxy"
+# chainrank: its WEB surface was removed alongside khala's (the /chainrank board and
+# the /api/chainrank proxy are gone -- DECISIONS.md DR-041). The sidecar family
+# (backend/data/internal/research/chainrank) stays API-only on :3101, verified by
+# scripts/verify/verify-chainrank.py; with no TS client the parity has no second side.
+ch_parity = "chainrank web surface removed (sidecar-only, DR-041)"
 # coinglass / coinank / coinmarketcap: the three KEYLESS sidecar families, whose web
 # half (the `/api/<family>` proxy + the typing mirror) is now wired. Same convention
-# as khala/llama/news/chainrank -- src/features/<family>/client.ts carries the TS mode
+# as llama/news -- src/features/<family>/client.ts carries the TS mode
 # table, backend/data/internal/research/<family>/modes.go the Go one, and the route must be
 # the verbatim proxy. Their modes are camelCase (`openInterest`, `marketPairs`), so
 # the token regex admits uppercase where the older families' all-lowercase one did not.

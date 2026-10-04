@@ -24,6 +24,10 @@ Snapshot: 2026-10-02, sidecar `:3101` (Go), Next proxy `:3100`. Reproduce any bl
 client. That single fact is the whole argument of the consolidation map (see
 `provider-consolidation.md`).
 
+> **DR-041 (2026-10-03):** the `/khala` and `/chainrank` *boards* — the Next pages and their
+> `/api/*` proxies — were removed. Both families remain API-only on the `:3101` sidecar, which
+> is exactly what this document captures; the `curl` commands below already target `:3101`.
+
 ---
 
 ## 1. DeFiLlama — `api.llama.fi` (keyless)
@@ -135,7 +139,8 @@ layer — no other provider gives decisions, only numbers.
   (measured 2026-09-29). `latest` *is* the news surface. Dates resolved by fetching each report
   page (disk-cached, ETag-revalidated).
 - **Verdict: KEEP — unique qualitative research.** 8 deep-dive reports, not news; complements
-  the quantitative feeds. Small but orthogonal.
+  the quantitative feeds. Small but orthogonal. The `/khala` web board was removed by DR-041;
+  the family stays API-only on `:3101`.
 
 ---
 
@@ -146,7 +151,8 @@ layer — no other provider gives decisions, only numbers.
 - **`stats`** → `{online:0, totalClicks:22, listings:1, totalUsdCents:508, topUsdCents:508, claimTopCents:1100}`.
 - **`listings`** → paginated verbatim, row `{id, key, kind, url, handle, title, description, logoUrl, totalUsdCents, clicks, ownerAddress, lastPaidAt, createdAt, rank}`.
 - **Verdict: KEEP as a novelty.** A pay-to-rank leaderboard (money ≠ merit, by design). Tiny
-  volume (1 listing, $5.08) and pure fun; no consolidation pressure, but low priority.
+  volume (1 listing, $5.08) and pure fun; no consolidation pressure, but low priority. The
+  `/chainrank` web board was removed by DR-041; the family stays API-only on `:3101`.
 
 ---
 

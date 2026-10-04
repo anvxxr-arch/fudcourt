@@ -17,24 +17,24 @@ exist.
 | slice | rows | enumerates |
 |---|---|---|
 | `acq` | 58 | Go data sidecar acquisition surface — every family and every mode |
-| `routes` | 45 | HTTP route handlers under `frontend/web/src/app/**` — method, domain, auth tier, proxy target |
+| `routes` | 43 | HTTP route handlers under `frontend/web/src/app/**` — method, domain, auth tier, proxy target |
 | `db` | 41 | Persistence objects across the three stores (Postgres+TimescaleDB, `executor` schema, Payload/Neon) |
 | `feeds` | 11 | Non-sidecar upstream feeds the app reads directly (ccxt venues, chain RPCs, DexScreener, CoinGecko, CMS, signals) |
-| **total** | **155** | |
+| **total** | **153** | |
 
 ## 2. Status and category roll-up
 
 | status | rows |  | category | rows |
 |---|---|---|---|---|
-| `active` | 137 | | `MARKET_DATA` | 37 |
+| `active` | 135 | | `MARKET_DATA` | 37 |
 | `dead` | 8 | | `TRADING` | 26 |
 | `dark` | 7 | | `PORTFOLIO` | 14 |
-| `scaffolded` | 3 | | `RESEARCH` | 17 |
+| `scaffolded` | 3 | | `RESEARCH` | 16 |
 |  |  | | `NEWS` | 16 |
 |  |  | | `SYSTEM` | 12 |
 |  |  | | `DERIVATIVES` | 12 |
 |  |  | | `ACCESS` | 8 |
-|  |  | | `ONCHAIN` | 7 |
+|  |  | | `ONCHAIN` | 6 |
 |  |  | | `DEFI` | 6 |
 
 ## 3. The categorization
@@ -119,12 +119,10 @@ exist.
 | route-api-auth-login | GET /api/auth/login — OAuth login redirect (PROXY -> Go api :3103 handleAuthLogin, Discord authorize) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `frontend/web/src/app/(frontend)/api/auth/login/route.ts` |
 | route-api-auth-callback | GET /api/auth/callback — OAuth code->session exchange (PROXY -> Go api :3103 handleAuthCallback) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `frontend/web/src/app/(frontend)/api/auth/callback/route.ts` |
 | route-api-auth-logout | GET\|POST /api/auth/logout — session cookie retire (PROXY -> Go api :3103 handleAuthLogout) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `frontend/web/src/app/(frontend)/api/auth/logout/route.ts` |
-| route-api-chainrank | GET /api/chainrank — chain rankings & listings (PROXY -> Go data fudcourt-data :3101) | ONCHAIN | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/chainrank/route.ts` |
 | route-api-coinglass | GET /api/coinglass — CoinGlass derivatives surfaces (PROXY -> Go data fudcourt-data :3101) | DERIVATIVES | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/coinglass/route.ts` |
 | route-api-coinank | GET /api/coinank — CoinAnk derivatives surfaces (PROXY -> Go data fudcourt-data :3101; upstream DARK) | DERIVATIVES | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | dark | `frontend/web/src/app/(frontend)/api/coinank/route.ts` |
 | route-api-coinmarketcap | GET /api/coinmarketcap — CoinMarketCap market surfaces (PROXY -> Go data fudcourt-data :3101) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/coinmarketcap/route.ts` |
 | route-api-cryptorank | GET /api/cryptorank — crypto research board (market caps, listings, ecosystems, RWA) (PROXY -> Go data fudcourt-data :3101) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/cryptorank/route.ts` |
-| route-api-khala | GET /api/khala — Khala research reports + reader blocks (PROXY -> Go data fudcourt-data :3101) | RESEARCH | PARSED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/khala/route.ts` |
 | route-api-llama | GET /api/llama — DeFiLlama chains/protocols TVL (PROXY -> Go data fudcourt-data :3101) | DEFI | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/llama/route.ts` |
 | route-api-news | GET /api/news — Cointelegraph RSS headline feed (PROXY -> Go data fudcourt-data :3101) | NEWS | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/news/route.ts` |
 | route-api-dex | GET /api/dex — DexScreener DEX pairs/profiles/boosts (direct external proxy) | DEFI | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/dex/route.ts` |
@@ -132,6 +130,8 @@ exist.
 | route-api-market-stock | GET /api/market/stock — Yahoo Finance stock/indices board (direct external proxy) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/market/stock/route.ts` |
 | route-api-market-commodity | GET /api/market/commodity — Yahoo Finance front-month futures board (direct external proxy) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/market/commodity/route.ts` |
 | route-api-market-forex | GET /api/market/forex — curated FX majors from exchangerate-api (direct external proxy, pairs derived locally) | MARKET_DATA | DERIVED | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/market/forex/route.ts` |
+| route-api-market-macro | GET /api/market/macro — global macro board: US curve + DXY + volatility (Yahoo), 33 BIS policy rates, 10 FRED US indicators, 8-economy World Bank comparison; spreads derived locally | MARKET_DATA | DERIVED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/market/macro/route.ts` |
+| route-api-market-indonesia | GET /api/market/indonesia — Indonesia macro board: live rupiah crosses + IDX indices (Yahoo), BI-Rate (BIS), 19 annual World Bank indicators | MARKET_DATA | DERIVED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/market/indonesia/route.ts` |
 | route-api-signals | GET /api/signals — trading signals feed + scoreboard (direct external proxy -> data-public.vercel.app) | TRADING | NORMALIZED | keyless | REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/signals/route.ts` |
 | route-api-ticker | GET /api/ticker — cross-venue CEX ticker board (spot/swap/future/option) via CCXT | MARKET_DATA | NORMALIZED | keyless | REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/ticker/route.ts` |
 | route-api-ticker-instruments | GET /api/ticker/instruments — listed instruments/expiries/strikes for a symbol (CCXT) | MARKET_DATA | NORMALIZED | keyless | REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/ticker/instruments/route.ts` |
@@ -230,12 +230,12 @@ wires it correctly; the upstream refuses. Status `dark`, nothing broken on our s
 **F4 — `coinglass`/`coinank` are unreachable through the web app.** The sidecar exposes
 `/api/coinglass` (`backend/data/cmd/data/main.go:231`) and `/api/coinank` (`:234`) on `:3101`, but
 **0 of the 42** `route.ts` handlers under `frontend/web/src/app` proxy them. Corroborated by the
-contract gate, whose per-family proxy-parity list covers cryptorank, khala, llama, news and chainrank —
+contract gate, whose per-family proxy-parity list covers cryptorank, llama and news —
 not coinglass or coinank.
 **Resolved 2026-10-03.** All three keyless families now have a thin web proxy route —
-`api/{coinglass,coinank,coinmarketcap}/route.ts` — so **3 of the 45** `route.ts` handlers under
+`api/{coinglass,coinank,coinmarketcap}/route.ts` — so **3 of the 43** `route.ts` handlers under
 `frontend/web/src/app` relay them (`:3101`, verbatim), and the contract gate's per-family
-proxy-parity list now covers all eight research families (CG/CN/CMC mode tables kept TS↔Go equal).
+proxy-parity list now covers all six research families (CG/CN/CMC mode tables kept TS↔Go equal).
 `coinank` stays `dark` through the new route: the proxy answers upstream's 502 as written.
 
 **F5 — the `markets` surface is unwired.** `backend/api/internal/markets/**` contributes vocabulary
@@ -264,14 +264,14 @@ recorded because the middleware table not covering the path is a real (non-explo
 ## 5. Verification
 
 ```
-python3 -c "import json;print(len(json.load(open('docs/architecture/data-categorization.json'))))"  # 155
+python3 -c "import json;print(len(json.load(open('docs/architecture/data-categorization.json'))))"  # 153
 curl -s http://127.0.0.1:3101/healthz                                  # 8 families, 28 cryptorank modes
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinglass?mode=statistics'   # 200 (web proxy)
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinank?mode=fundingRate'     # 502 dark (web proxy)
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinmarketcap?mode=global'    # 200 (web proxy)
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=statistics'  # 200
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinank?mode=fundingRate'    # 502 dark
-find frontend/web/src/app \( -name 'route.ts' -o -name 'route.tsx' \) | wc -l              # 45
+find frontend/web/src/app \( -name 'route.ts' -o -name 'route.tsx' \) | wc -l              # 43
 grep -rn coinglass frontend/web/src/app | wc -l                        # 6 (client.ts + route.ts, not "no web proxy")
 curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3103/api/markets                      # 404
 curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3103/api/admin/members                # 401

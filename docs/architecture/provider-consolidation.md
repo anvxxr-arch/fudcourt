@@ -8,6 +8,13 @@ up.
 Grounded on the live tree: 14 public pages under `frontend/web/src/app/(frontend)/` and the
 provider routes under `…/api/`. Snapshot 2026-10-02.
 
+> **Superseded in part by DR-041 (2026-10-03).** The owner removed the `/khala` and
+> `/chainrank` **boards** outright — the Next pages, their `/api/*` proxy routes and their nav
+> tabs are gone. Every row below that proposed to *fold `/khala` into Signals* or to *keep
+> `/chainrank` as-is* is therefore **moot** and is marked inline; the Go sidecar families
+> (`backend/data/internal/research/{khala,chainrank}`) **stay**, serving API-only on `:3101`.
+> The rows are kept, not deleted, so the analysis this map recorded is not lost.
+
 ## 1. Current surface inventory
 
 | public page | api route | provider | nature |
@@ -21,8 +28,8 @@ provider routes under `…/api/`. Snapshot 2026-10-02.
 | `/signals` | `/api/signals` | data-public | 🟢 scored signals |
 | `/scoreboard` | `/api/signals` | data-public | 🟢 same provider |
 | `/news` | `/api/news` | Cointelegraph RSS | 🟢 news |
-| `/khala` | `/api/khala` | khala.io | 🟢 research |
-| `/chainrank` | `/api/chainrank` | chainrank.fyi | 🟡 pay-to-rank |
+| `/khala` | `/api/khala` | khala.io | 🟢 research — **page removed, DR-041** |
+| `/chainrank` | `/api/chainrank` | chainrank.fyi | 🟡 pay-to-rank — **page removed, DR-041** |
 | `/llama` | `/api/llama` | DeFiLlama | 🟢 TVL/chain |
 | `/cryptorank` | `/api/cryptorank` (28 modes) | cryptorank.io | 🔴 mostly dup |
 
@@ -40,8 +47,8 @@ DeFiLlama  /api/llama   ─────────────── supersedes
 Cointelegraph /api/news ─────────────── supersedes ─┘  CryptoRank news,newstag
 DexScreener /api/dex    ── overlaps CoinGecko on DEX pairs (adds per-pair liq/txns/fdv)
 data-public /api/signals ── unique (scored/vetoed signals)
-Khala       /api/khala   ── unique (research reports)
-ChainRank   /api/chainrank ── unique (pay-to-rank board)
+Khala       /api/khala   ── unique (research reports)   [web board removed, DR-041; family API-only]
+ChainRank   /api/chainrank ── unique (pay-to-rank board) [web board removed, DR-041; family API-only]
 CryptoRank unique modes  ── launchpool,nodesale,rwa,prediction,media,aioverview,quarterly,funding-slice
 ```
 
@@ -49,6 +56,10 @@ Three price/tvl/news mirrors collapse onto three keyless, stable providers. Cryp
 only the eight modes nothing else serves — and those are page-1 truncated.
 
 ## 3. Target: 14 pages → 5 surfaces
+
+> The two boxes that carried the `/khala`-into-Signals fold and the standalone `CHAINRANK`
+> surface are **superseded by DR-041** (both boards removed outright). The proposal is kept
+> below as the historical target.
 
 ```
 ┌─ MARKETS ────────────────────────────────────────────────┐
@@ -61,14 +72,14 @@ only the eight modes nothing else serves — and those are page-1 truncated.
 │  Khala       /api/khala    research reports              │
 │  CryptoRank  enrichment    funding, unlocks, launchpool, │
 │                            rwa, prediction, aioverview   │
-│  ← absorbs /signals /scoreboard /khala                   │
+│  ← absorbs /signals /scoreboard /khala  (moot, DR-041)   │
 ├─ NEWS ───────────────────────────────────────────────────┤
 │  Cointelegraph /api/news                                 │
 │  ← absorbs /news  (CryptoRank news retired)              │
 ├─ TICKER ─────────────────────────────────────────────────┤
 │  internal venue sweep        (unchanged, sole non-mirror)│
-└─ CHAINRANK ──────────────────────────────────────────────┘
-   pay-to-rank board          (kept as-is, low priority)
+└─ CHAINRANK ── superseded by DR-041 (board removed) ──────┘
+   pay-to-rank board          (kept as-is; board removed)
 ```
 
 ## 4. Per-page disposition
@@ -82,15 +93,16 @@ only the eight modes nothing else serves — and those are page-1 truncated.
 | `/trench` | 🟢 **KEEP** (→ Markets tab) | keep | live pair trench on the same provider |
 | `/signals` | 🟢 **ELEVATE** | becomes the **Signals** hub | scored/vetoed feed = the intelligence layer |
 | `/scoreboard` | 🟢 **MERGE** | make it a **Signals** tab | same provider (`data-public`), same envelope family |
-| `/khala` | 🟢 **KEEP** (→ Signals tab) | keep or fold into Signals | unique qualitative research |
+| `/khala` | 🟢 ~~**KEEP** (→ Signals tab)~~ **superseded by DR-041** | board removed outright; family stays API-only | unique qualitative research |
 | `/news` | 🟢 **KEEP** | keep | Cointelegraph is the news source; retire CR news |
-| `/chainrank` | 🟡 **KEEP as-is** | no change | novelty, tiny volume, zero effort |
+| `/chainrank` | 🟡 ~~**KEEP as-is**~~ **superseded by DR-041** | board removed outright; family stays API-only | novelty, tiny volume, zero effort |
 | `/ticker` | 🟢 **KEEP** | no change | the only genuinely internal surface |
 | `/`, `/login`, `/member` | — | no change | landing + auth |
 
-Net: the ten provider pages collapse to **five surfaces** (Markets · Signals · News · Ticker ·
-ChainRank), and CryptoRank leaves the page layer entirely, surviving only as headless
-enrichment behind Signals.
+Net: the plan's provider pages were to collapse to **five surfaces** (Markets · Signals · News ·
+Ticker · ChainRank). **DR-041 supersedes the fifth and the `/khala` fold**: both boards were
+removed outright, leaving **four surfaces** (Markets · Signals · News · Ticker), and CryptoRank
+leaves the page layer entirely, surviving only as headless enrichment behind Signals.
 
 ## 5. CryptoRank demotion (28 → 15, and where the survivors go)
 
@@ -111,7 +123,8 @@ The "must defeat Cloudflare" dependency becomes optional and off the render path
 
 1. **Stand up the Markets surface** from `/api/markets` + `/api/llama` + `/api/dex`; absorb
    `/tracker` + `/llama`. Verify pages 200 + envelopes unchanged.
-2. **Make `/signals` the hub**; turn `/scoreboard` into a tab; fold `/khala`.
+2. **Make `/signals` the hub**; turn `/scoreboard` into a tab; ~~fold `/khala`~~ — **superseded
+   by DR-041**: the `/khala` board was removed outright, so there is nothing to fold.
 3. **Retire `/cryptorank` page**; move the 8 unique modes behind a Signals enrichment route
    (page-1-labelled).
 4. **Point `/news`** at Cointelegraph only; drop the CryptoRank news mode.

@@ -87,8 +87,9 @@ probe (build counts, asserted by `backend/data/cmd/data/main_test.go`).
 | `llama` (3 modes — `llama/modes.go:69` `ModeCount = len(Modes)`) | `LlamaEnvelope` — `backend/data/internal/research/llama/shape.go:85`; projection `:210` (`projectProtocols`), `:242` (`projectHistorical`) | `SCHEMA.md` §3.3 (`/api/llama` row) | `scripts/verify/verify-llama.py`; `DR-009` | yes |
 | `chainrank` (2 modes — `chainrank/modes.go:63` `ModeCount = len(Modes)`) | **no struct** — upstream body is SPREAD into `map[string]json.RawMessage`: `backend/data/internal/research/chainrank/shape.go:36` (`Service.Envelope`), shape refusal `:64` (`CheckShape`) | `SCHEMA.md` §3.1d | `scripts/verify/verify-chainrank.py`; `DR-013` | yes |
 
-All five Next proxies are thin (`route validates nothing`) and live:
-`frontend/web/src/app/(frontend)/api/{cryptorank,khala,llama,news,chainrank}/route.ts`.
+Three of the five families still have a thin Next proxy (`route validates nothing`) and are live:
+`frontend/web/src/app/(frontend)/api/{cryptorank,llama,news}/route.ts`. The `khala` and `chainrank`
+families have no Next proxy — their boards were removed (DR-041) and they answer on `:3101` only.
 
 ### 1.2 The `:3102` `/api/reconcile` shape
 | item | artifact | pinned today by | unchanged |

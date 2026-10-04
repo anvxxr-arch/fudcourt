@@ -2,10 +2,10 @@
 
 **Fudcourt** is a personal multi-chain treasury & market-intelligence OS: a Next.js
 dashboard that tracks wallets, balances, reconciliation and live market boards
-(cryptorank / chainrank / dexscreener / defillama / news / signals), plus a
-Payload CMS blog — now ONE Next app (`frontend/web`) rather than two (DR-017), installed with Bun — there is no npm `workspaces` field. A **`khala`** research-report
-family (khala.io, Framer SSR) is **served** (sidecar-registered, on the board and the
-public hostname) — PLAN G8 ✅, [DR-006](records/DECISIONS.md), design record
+(cryptorank / dexscreener / defillama / news / signals), plus a
+Payload CMS blog — now ONE Next app (`frontend/web`) rather than two (DR-017), installed with Bun — there is no npm `workspaces` field. The **`chainrank`** and **`khala`** research
+families (chainrank.fyi, khala.io) are served **API-only** by the Go sidecar on `:3101`;
+their web boards were removed (DR-041) — [DR-006](records/DECISIONS.md), design record
 `/home/dwizzy/khala-probe/DESIGN.md`.
 
 - Repo: `github.com/anvxxr-arch/fudcourt` · remote head at time of writing: `957836d`
@@ -30,7 +30,7 @@ docs/
 | product | [PRD.md](product/PRD.md) | Product requirements: goals, personas, FR/NFR, scope, out-of-scope |
 | product | [ANALYSIS.md](product/ANALYSIS.md) | Fully comprehensive analysis: architecture, reasoning, evidence, risks |
 | product | [RECOMMENDATIONS.md](product/RECOMMENDATIONS.md) | Ranked recommendations with impact/effort |
-| architecture | [ARCHITECTURE.md](architecture/ARCHITECTURE.md) | **The clear map**: product statement, system picture, 16-view shell (18-row registry), 10 data families + trust classes, verification tiers, deploy model |
+| architecture | [ARCHITECTURE.md](architecture/ARCHITECTURE.md) | **The clear map**: product statement, system picture, 14-view shell (18-row registry), 10 data families + trust classes, verification tiers, deploy model |
 | architecture | [TECH-STACK.md](architecture/TECH-STACK.md) | Languages, frameworks, data stores, infra, verification tooling |
 | architecture | [DESIGN-SYSTEM.md](architecture/DESIGN-SYSTEM.md) | The design system: `src/styles/tokens.ts` as SSOT, the generated `:root` block + `tailwind.tokens.json`, the drift/design gates, allowlists, the atom shelf, and the zero-visual-change rule |
 | architecture | [design-inventory.md](architecture/design-inventory.md) | Read-only baseline the design system was built from: raw colour inventory, scale histograms, value→token mapping, orphan audit |
@@ -58,7 +58,7 @@ docs/
 ## One-line map of the repo
 
 ```
-frontend/web/    Next.js 16.3.6 portfolio OS (16 views; the API routes live at
+frontend/web/    Next.js 16.3.6 portfolio OS (14 views; the API routes live at
                  `src/app/(frontend)/api/**`) + the Payload blog + verify harnesses
 backend/api/     Go — primary HTTP API (unit `fudcourt-api` :3103, `cmd/api`;
                  `internal/{access,accounts,finance,markets,notifications,audit,jobs,
@@ -72,8 +72,9 @@ backend/data/    Go sidecar :3101 — one package per family, under `internal/re
                  `news` (Cointelegraph RSS: feed table, strict source/limit, RSS
                  parse), `chainrank` (chainrank.fyi reads; pagination relayed
                  verbatim) + `platform/httpx` (shared escaping rule) and
-                 `platform/cache`; /api/{cryptorank,khala,llama,news,chainrank}
-                 proxy to it (DR-005/DR-006/DR-009/DR-012/DR-013)
+                 `platform/cache`; /api/{cryptorank,llama,news} proxy to it
+                 (DR-005/DR-009/DR-012); the mux still serves /api/khala and
+                 /api/chainrank API-only, with no web proxy (DR-006/DR-013, DR-041)
 backend/sync/    Rust crate — TWO binaries: `fudcourt-sync` (the live multi-chain
                  balance sync → Postgres + share %, parity-checked against
                  tests/oracle/sync-live.py; SG-9.4) and

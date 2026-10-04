@@ -9,7 +9,7 @@ const TONE = {
 /**
  * The label/value/hint KPI card. Defaults match the dashboard's NET WORTH card
  * (label muted 12/wider, value `fontSize[24]` accent/bold, surface + border, radius[8],
- * padding `space[12]`). The repeated KPI tiles (chainrank, llama) are the SAME shape at
+ * padding `space[12]`). The repeated KPI tiles (llama) are the SAME shape at
  * `padding: '8px 10px'` / label `fontSize[9]` uppercase `letterSpacing.xs` / value
  * `fontSize[16]` `fontWeight.heavy` — they were deliberately NOT pinned as defaults
  * because the NET WORTH card is the canonical 24px display figure; a tile adoption

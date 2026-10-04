@@ -31,24 +31,10 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 0.7,
   },
   {
-    path: '/chainrank',
-    title: 'ChainRank — Chain rankings | FUDCOURT',
-    description:
-      'ChainRank compares chains by activity, liquidity and treasury flow.',
-    priority: 0.6,
-  },
-  {
     path: '/news',
     title: 'News — Crypto market news | FUDCOURT',
     description:
       'Latest crypto market news aggregated for treasury and trading decisions.',
-    priority: 0.5,
-  },
-  {
-    path: '/khala',
-    title: 'Khala — Research reports | FUDCOURT',
-    description:
-      'Khala Research reports read inside FUDCOURT: latest publications with resolved dates, the full archive, and the complete report text as a reader view.',
     priority: 0.5,
   },
   {
@@ -102,5 +88,68 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     description:
       'On-chain DEX section: per-pair liquidity, transactions and FDV, plus the live trench, from DexScreener.',
     priority: 0.7,
+  },
+  {
+    // The macro module's front door (plan Phase 4). Its six sub-boards are
+    // listed below; the dynamic profiles (/economy/nation/<cc>,
+    // /economy/indicator/<slug>, /economy/central-bank/<slug>) are enumerated
+    // by sitemap.ts from the registry's own allowlist, never from a crawl.
+    path: '/economy',
+    title: 'Economy — Global macro dashboard | FUDCOURT',
+    description:
+      'Global macro dashboard: growth, inflation, labour, money and policy across the major economies, read from FRED, the World Bank and BIS and normalised to one canonical model.',
+    priority: 0.8,
+  },
+  {
+    // The country index. Its 125 profile pages are dynamic, so — like the
+    // per-coin pages — they are enumerated by sitemap.ts from the family's own
+    // allowlist rather than listed here.
+    path: '/economy/nation',
+    title: 'Economy by nation — 125 economies | FUDCOURT',
+    description:
+      'Per-country economy profiles: growth, inflation, labour, money, fiscal and trade series, plus the policy rate, normalised to one canonical model.',
+    priority: 0.7,
+  },
+  {
+    path: '/economy/indicator',
+    title: 'Indicators — Canonical economic series | FUDCOURT',
+    description:
+      'Browse every canonical economic series by category, country, frequency and source. Each row is one upstream binding behind a stable slug.',
+    priority: 0.7,
+  },
+  {
+    path: '/economy/central-bank',
+    title: 'Central banks — Policy rates | FUDCOURT',
+    description:
+      'Policy rates for the major central banks, from BIS WS_CBPOL: level, last move and history, grouped by region.',
+    priority: 0.7,
+  },
+  {
+    path: '/economy/calendar',
+    title: 'Economic calendar — Release log | FUDCOURT',
+    description:
+      'A release log of market-moving economic series by reference period, filterable by country, category and date.',
+    priority: 0.6,
+  },
+  {
+    path: '/economy/liquidity',
+    title: 'Liquidity — Global plumbing | FUDCOURT',
+    description:
+      'Central-bank balance sheets, reserves, reverse repo, the dollar and financial conditions, with a derived global liquidity index for risk assets.',
+    priority: 0.7,
+  },
+  {
+    path: '/economy/regime',
+    title: 'Macro regime — Growth, inflation, liquidity, policy | FUDCOURT',
+    description:
+      'Growth, inflation, labour, liquidity and policy read from published observations and matched against an explicit rule table, with a stated weight table for potential asset impact.',
+    priority: 0.7,
+  },
+  {
+    path: '/economy/compare',
+    title: 'Compare — Countries & series | FUDCOURT',
+    description:
+      'Compare any countries on any measures over one period. The query lives in the URL, so a comparison is shareable without a page per combination.',
+    priority: 0.6,
   },
 ];

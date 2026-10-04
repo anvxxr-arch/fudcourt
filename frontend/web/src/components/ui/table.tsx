@@ -17,7 +17,7 @@ type Align = 'left' | 'right' | 'center';
  *
  *   <table>  width '100%' 24/24 (100%) · borderCollapse 28/28 (100%) · fontSize 12 25/32 (78%,
  *            11 5/32, 13 2/32)  → all three defaulted. Every live `<Table>` caller that wants
- *            another size already passes one (dex 11; chainrank/khala/llama 12; scoreboard/
+ *            another size already passes one (dex 11; llama 12; scoreboard/
  *            signals 11); executor's cells all carry their own `fontSize`, so nothing moves.
  *   <th>     fontWeight semibold 13/33 (39%, tied with unset) — kept as the header treatment,
  *            which matches the `<tr style={{ color: …, textAlign: 'left' }}>` idiom the tree
@@ -29,7 +29,7 @@ type Align = 'left' | 'right' | 'center';
  *   <tr>     borderBottom `1px solid color.border` 21/37 mapped body rows (57%) vs unset 6 —
  *            a clear plurality, and the 21 are cryptorank's 14 tables, which migrated to a
  *            bare `<TR key=…>` and would lose their row rules without it. The sites that want
- *            a different rule already override it (chainrank/khala/llama `borderBottom: 0` +
+ *            a different rule already override it (llama `borderBottom: 0` +
  *            borderTop; dex the same; signals/scoreboard/reconciliation an alpha border), so
  *            defaulting it is a no-op for them and restores cryptorank's HEAD rendering.
  *
@@ -65,11 +65,22 @@ export function TR({ children, style }: TRProps) {
   return <tr style={{ borderBottom: `1px solid ${color.border}`, ...style }}>{children}</tr>;
 }
 
-type THProps = { children?: React.ReactNode; align?: Align; style?: React.CSSProperties };
+type THProps = {
+  children?: React.ReactNode;
+  align?: Align;
+  style?: React.CSSProperties;
+  /** For a grouped header: a theme cell spans its columns, the label column spans its rows. */
+  colSpan?: number;
+  rowSpan?: number;
+};
 
-export function TH({ children, align = 'left', style }: THProps) {
+export function TH({ children, align = 'left', style, colSpan, rowSpan }: THProps) {
   return (
-    <th style={{ textAlign: align, color: color.textMuted, fontWeight: fontWeight.semibold, ...style }}>
+    <th
+      colSpan={colSpan}
+      rowSpan={rowSpan}
+      style={{ textAlign: align, color: color.textMuted, fontWeight: fontWeight.semibold, ...style }}
+    >
       {children}
     </th>
   );

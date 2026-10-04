@@ -43,13 +43,6 @@ test('cost: the payload each route can serve sets its price', () => {
   assert.equal(cost('/api/llama', 'chains'), 2); // 64,245 B
   assert.equal(cost('/api/llama', 'historical'), DEFAULT_COST); // 7,031 B
   assert.equal(cost('/api/ticker'), 2); // 69,445 B full board
-  assert.equal(cost('/api/chainrank'), DEFAULT_COST); // 692 B
-  // khala is priced on its own measurement, not on the page it read: the
-  // longest report (x402, 506 blocks) ships 84,315 B of structured JSON after
-  // the sidecar fetched a 579,989 B report page. ceil(84315/51200) = 2.
-  assert.equal(cost('/api/khala'), 2); // mode=report worst case 84,315 B
-  assert.equal(cost('/api/khala', 'latest'), 2); // limit=10 is 4,198 B — one entry covers all three modes
-  assert.equal(cost('/api/khala', 'reports'), 2); // 3,596 B, priced like the rest of the family
   // Sub-paths inherit the family price: the instrument lookup is the same data
   // family as the ticker board and must not be a cheaper way in.
   assert.equal(cost('/api/ticker/instrument'), 2);
@@ -76,7 +69,7 @@ test('cost: every route-level entry above one unit is a measurement, and the tab
   // and (on POST) persist an execution. A flat request counter would let one
   // window buy hundreds of live orders; 8 units makes a window ≈ a handful, and
   // the comment above the table records that reasoning.
-  assert.deepEqual(Object.keys(ROUTE_COST).sort(), ['executor', 'khala', 'market', 'markets', 'ticker']);
+  assert.deepEqual(Object.keys(ROUTE_COST).sort(), ['executor', 'market', 'markets', 'ticker']);
 });
 test('cost: the executor family is priced above the default — placing an order is not a cheap read', () => {
   // Every sub-path must inherit the family price, so a nested route can never be
