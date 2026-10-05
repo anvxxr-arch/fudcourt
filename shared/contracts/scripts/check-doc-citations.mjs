@@ -129,13 +129,11 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
+import { repoRoot as discoverRepoRoot } from './lib.mjs';
 // ---------------------------------------------------------------------------
 // Arguments (same contract as check-schemas.mjs)
 // ---------------------------------------------------------------------------
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-let repoRoot = path.resolve(scriptDir, '..', '..', '..');
+let repoRoot = discoverRepoRoot();
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === '--root') {

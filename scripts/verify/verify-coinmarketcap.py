@@ -61,6 +61,8 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from verifylib import (as_dict, as_list, check_counted as check, hget, info,
+                       skip)
 
 PASS = 0
 FAIL = 0
@@ -82,32 +84,6 @@ MODE_SHAPE = {
     "marketPairs": ("/cryptocurrency/market-pairs/latest?slug=bitcoin&start=1&limit=100", "marketPairs"),
 }
 PAGINATED = ["listing", "exchanges", "marketPairs"]
-
-
-# --------------------------------------------------------------- reporting
-def check(name: str, ok: bool, detail: str = "") -> bool:
-    global PASS, FAIL
-    tag = "PASS" if ok else "FAIL"
-    print(f"[{tag}] {name}" + (f" -- {detail}" if detail else ""))
-    RESULTS.append({"name": name, "ok": bool(ok), "detail": detail})
-    if ok:
-        PASS += 1
-    else:
-        FAIL += 1
-    return bool(ok)
-
-
-def skip(name: str, detail: str) -> None:
-    global SKIP
-    print(f"[SKIP] {name} -- {detail}")
-    RESULTS.append({"name": name, "ok": None, "detail": detail})
-    SKIP += 1
-
-
-def info(name: str, detail: str) -> None:
-    print(f"[INFO] {name} -- {detail}")
-    RESULTS.append({"name": name, "ok": None, "detail": detail})
-    NOTES.append(f"{name}: {detail}")
 
 
 # ------------------------------------------------------- transport helpers
@@ -144,21 +120,6 @@ def api(base: str, qs: str, timeout: float = 90.0) -> dict:
             continue
         return last
     return last
-
-
-def hget(hdr: dict, name: str) -> str | None:
-    for k, v in hdr.items():
-        if k.lower() == name.lower():
-            return v
-    return None
-
-
-def as_dict(v) -> dict:
-    return v if isinstance(v, dict) else {}
-
-
-def as_list(v) -> list:
-    return v if isinstance(v, list) else []
 
 
 # ------------------------------------------------------------- THE ORACLE

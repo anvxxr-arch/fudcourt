@@ -78,15 +78,10 @@ REQUIRED_ON_MATURE = ("chainId", "dexId", "url", "pairAddress",
                       "baseToken", "quoteToken", "priceUsd", "volume",
                       "liquidity", "txns")
 
-GREEN, RED, YELLOW, DIM, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[2m", "\033[0m"
+from verifylib import as_dict_loud as as_dict, check_tuple as check
+from verifylib import note_join as note, section_yellow as section
+from verifylib import GREEN, RED, DIM, RESET
 results: list[tuple[bool, str, str]] = []
-
-
-def check(ok: bool, label: str, detail: str = "") -> bool:
-    results.append((ok, label, detail))
-    print(f"  [{GREEN + 'PASS' + RESET if ok else RED + 'FAIL' + RESET}] {label}"
-          + (f"  {DIM}{detail}{RESET}" if detail else ""))
-    return ok
 
 
 def get(url: str, timeout: int = 45):
@@ -112,20 +107,8 @@ def get(url: str, timeout: int = 45):
         return status, body[:200].decode("utf-8", "replace")
 
 
-def as_dict(body) -> dict:
-    """Narrow a body to a dict, or record why it could not be narrowed."""
-    if isinstance(body, dict):
-        return body
-    return {"__unexpected__": (body if isinstance(body, str) else type(body).__name__)[:120]}
-
-
 def bad(d: dict) -> str | None:
     return d["__unexpected__"] if "__unexpected__" in d else None
-
-
-def note(*parts) -> str:
-    """Coerce mixed-type diagnostic fragments to a printable string."""
-    return " ".join(str(p) for p in parts if p)[:160]
 
 
 def require(status: int, body) -> tuple[dict, str | None]:
@@ -137,10 +120,6 @@ def require(status: int, body) -> tuple[dict, str | None]:
     if status != 200:
         return d, f"got HTTP {status}: {d.get('error')}"
     return d, None
-
-
-def section(t):
-    print(f"\n{YELLOW}▸ {t}{RESET}")
 
 
 # --- 1. every type serves real data ---------------------------------------

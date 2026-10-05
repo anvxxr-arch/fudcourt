@@ -51,6 +51,11 @@ import time
 from difflib import SequenceMatcher
 
 import requests
+from functools import partial
+
+from verifylib import check_counted, info, note_msg as note
+
+check = partial(check_counted, coerce_bool=False)
 
 PASS = 0
 FAIL = 0
@@ -61,28 +66,6 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 APP_DIR = os.path.join(REPO, "frontend", "web")
 CR_VENV_PY = "/home/dwizzy/.venvs/crfetch/bin/python"
 HELPER = os.path.join(REPO, "tests", "oracle", "cr_fetch.py")
-
-
-def note(msg: str) -> None:
-    print(f"--- {msg}")
-
-
-def check(name: str, ok: bool, detail: str = "") -> bool:
-    global PASS, FAIL
-    tag = "PASS" if ok else "FAIL"
-    print(f"[{tag}] {name}" + (f" -- {detail}" if detail else ""))
-    RESULTS.append({"name": name, "ok": ok, "detail": detail})
-    if ok:
-        PASS += 1
-    else:
-        FAIL += 1
-    return ok
-
-
-def info(name: str, detail: str) -> None:
-    print(f"[INFO] {name} -- {detail}")
-    RESULTS.append({"name": name, "ok": None, "detail": detail})
-    NOTES.append(f"{name}: {detail}")
 
 
 def get(base: str, mode: str, fresh: bool = False, key: str | None = None) -> tuple[int, dict | None, dict]:

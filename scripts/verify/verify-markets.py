@@ -42,55 +42,24 @@ LLAMA_TRUTH = ("https://coins.llama.fi/prices/current/"
 CR_KEYS = {"BTC": "bitcoin", "ETH": "ethereum"}
 GATE_BAND = 0.03  # 3%: measured CR-vs-llama drift <= 1.33% (harness n=6)
 
-GREEN, RED, DIM, RESET = "\033[32m", "\033[31m", "\033[2m", "\033[0m"
+from functools import partial
+from verifylib import call_get as call, check_tuple as check, hdr, jload
+from verifylib import note_join, section
+from verifylib import GREEN, RED, DIM, RESET
+note = partial(note_join, maxlen=150)
 results: list[tuple[bool, str, str]] = []
 
 
-def check(ok: bool, label: str, detail: str = "") -> bool:
-    results.append((ok, label, detail))
-    print(f"  [{GREEN + 'PASS' + RESET if ok else RED + 'FAIL' + RESET}] {label}"
-          + (f"  {DIM}{detail}{RESET}" if detail else ""))
-    return ok
 
 
-def note(*parts) -> str:
-    return " ".join(str(p) for p in parts if p)[:150]
 
 
-def call(url: str, timeout: int = 60):
-    """(status, headers, body-bytes). HTTPError IS a response -- read its body."""
-    req = urllib.request.Request(url, headers={"User-Agent": "fudcourt-verify/1.0",
-                                               "Accept": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.status, dict(r.headers), r.read()
-    except urllib.error.HTTPError as e:
-        try:
-            body = e.read()
-        except Exception:
-            body = b""
-        return e.code, dict(e.headers), body
-    except Exception as e:
-        return 0, {}, f"{type(e).__name__}: {e}".encode()
 
 
-def jload(body: bytes):
-    try:
-        return json.loads(body)
-    except Exception:
-        return None
 
 
-def hdr(headers: dict, name: str) -> str:
-    lname = name.lower()
-    for k, v in headers.items():
-        if k.lower() == lname:
-            return v
-    return "-"
 
 
-def section(title: str) -> None:
-    print(f"\n\u25b8 {title}")
 
 
 def find_symbol(coins: list, sym: str):

@@ -300,22 +300,33 @@ time — so it would read as dead; if utility-class-only consumption becomes the
 the gate the utility names rather than silence the alarm. A renamed import (`import { color as c }`)
 also reads as dead.
 
-## The atom shelf: `components/ui/`
+## The atom shelf: `src/ui/`
 
-The presentational shelf holds ATOMS — the smallest reusable leaves. The shelf is on disk with the
-adoption pass still in flight (the migration sessions are re-pointing call sites at the atoms as
-this lands): `frontend/web/src/components/ui/` currently carries the primitives plus the atoms the
-adoption pass introduced. Shelf rules, enforced by the DR-018 layer gate
+The presentational shelf holds ATOMS — the smallest reusable leaves. The shelf now lives at
+`frontend/web/src/ui/`: the primitives (`Button`, `Input`, `Select`, `Modal`, `Label`, `Card` in
+`primitives.tsx`) plus the atoms the feature migrations consolidated:
+
+- `badge.tsx` (`Badge`), `banner.tsx` (`Banner`), `breadcrumb.tsx`, `card.tsx` (`Card` — the
+  economy/trade data-module card: a titled `h2` panel), `change-chip.tsx` (`ChangeChip`),
+  `checkbox.tsx` (`Checkbox`), `data-table.tsx` (`DataTable`), `feedback.tsx` (`Loading`/`ErrorState`),
+  `field.tsx` (`Field`), `meter.tsx` (`Meter`), `navbar.tsx`, `notice.tsx` (`Notice`),
+  `page-chrome.tsx` (`PagePanel` / `PagePanelLink`), `page-header.tsx` (`PageHeader` — the one
+  shared page header the economy/trade modals both carried verbatim; the prior "NO page-chrome atom"
+  call stays for the broader page shell, which still differs per surface), `perm.tsx` (`Perm` —
+  tri-state ✓/✕/— with `tone="risk" | "capability"`), `row.tsx` (`Row`), `site-nav.ts`,
+  `sparkline.tsx` (`Sparkline`), `stat.tsx` (`Stat`), `status-pill.tsx` (`StatusPill`), `table.tsx`,
+  `toolbar.tsx`, `value.tsx` (`Value`).
+
+Shelf rules, enforced by the DR-018 layer gate
 (`frontend/web/scripts/checks/check-structure.py`):
 
 - an atom may import **itself only** and `@/styles/**` — never `features/`, `platform/`, `app/` or
-  another `components/` shelf. `components/layout/` is the documented exception: composing
+  another `components/` shelf; `components/layout/` is the documented exception: composing
   features is its whole job;
 - an atom takes props and owns no data access, no store and no route knowledge;
 - an atom styles itself from tokens (`color`, `space`, `radius`, `fontSize`) — an atom with a raw
   literal is exactly what the migration gate exists to catch;
-- new atoms go on a named shelf (`ui`, `layout`, `navigation`, `data-display`, `feedback`); a file
-  dropped directly at `src/components/` fails the structure gate.
+- new atoms go on a named shelf; a file dropped directly at `src/components/` fails the structure gate.
 
 Two shelf members landed with the shell/admin pass: `ui/meter.tsx` (`Meter` — a part-to-whole
 composition bar: one stacked flex track of token-hued segments plus a legend; the caller supplies

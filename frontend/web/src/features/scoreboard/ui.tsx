@@ -6,6 +6,7 @@ import { alpha, color, fontSize, fontWeight, radius, space } from '@/styles/toke
 import { Loading } from '@/ui/feedback';
 import { Table, TBody, THead } from '@/ui/table';
 import { Toolbar } from '@/ui/toolbar';
+import { Meter } from '@/ui/meter';
 import { fetchScoreboard } from './client';
 
 type Bucket = { day: string; n: number; run: number; flat: number; dump: number; unknown: number };
@@ -159,6 +160,19 @@ export default function ScoreboardPage() {
             </div>
           )}
 
+          {totals && (
+            <div style={{ marginBottom: space[16] }}>
+              <h4 style={{ color: color.labelPrimary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>Outcome composition</h4>
+              <Meter
+                parts={[
+                  { label: 'run', value: totals.run, color: color.blue },
+                  { label: 'flat', value: totals.flat, color: color.orange },
+                  { label: 'dump', value: totals.dump, color: color.red },
+                  { label: 'unknown', value: totals.unknown, color: color.separator },
+                ]}
+              />
+            </div>
+          )}
           <h4 style={{ color: color.labelPrimary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>Daily cohorts</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: space[4], marginBottom: space[20] }}>
             {(board.series || []).map(s => {

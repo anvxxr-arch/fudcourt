@@ -112,14 +112,28 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
       <PageHeader
-        title={entry ? `${entry.label} — trading` : 'Trade — command center'}
+        title={entry ? `${entry.label} — trading` : 'Trade every market from one surface'}
         description={
           entry
             ? entry.note
-            : 'One trading surface across every market type and venue. Market type is what you trade; the venue is only where it executes. Connect a venue to see balances, positions and risk.'
+            : 'Spot, margin, perps, futures, options and swap — one surface. Market type is what you trade; the venue is only where it executes.'
         }
         nav={TRADE_NAV}
       />
+
+      {/* Primary action — one CTA; the market-type tabs below stay as secondary nav. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: space[8], marginBottom: space[16] }}>
+        <Link
+          href="/executor/accounts"
+          style={{ background: color.blue, color: color.labelOnAccent, padding: `${space[8]}px ${space[16]}px`, borderRadius: radius[8], fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none' }}
+        >
+          {connected ? 'Manage connected venues →' : 'Connect a venue →'}
+        </Link>
+        <span style={{ fontSize: fontSize[11], color: color.labelTertiary }}>
+          Your exchange keys, never ours — the masked key is the only key the API returns.
+        </span>
+      </div>
+
 
       {/* Market-type tabs — the canonical routes from the plan. */}
       <nav aria-label="Market types" style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[16] }}>

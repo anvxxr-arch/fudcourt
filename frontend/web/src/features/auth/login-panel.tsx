@@ -43,7 +43,7 @@ export default function LoginPanel({ error, next }: { error?: string; next?: str
           padding: space[32],
         }}
       >
-        <h1 style={{ margin: 0, fontSize: fontSize[20], letterSpacing: letterSpacing.wide }}>FUDCOURT ACCESS</h1>
+        <h1 style={{ margin: 0, fontSize: fontSize[20], letterSpacing: letterSpacing.wide }}>Your private terminal starts here</h1>
         <p style={{ color: color.labelTertiary, fontSize: fontSize[13], lineHeight: lineHeight.normal }}>
           Sign in with Discord to unlock member, terminal, and management. Your access level follows your
           Discord role in the FUDCOURT guild.

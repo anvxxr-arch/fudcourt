@@ -1,0 +1,13 @@
+{
+  "name": "FUDCOURT — Community, terminal, and management",
+  "short_name": "FUDCOURT",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#0A0E14",
+  "background_color": "#0A0E14",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "16x16 32x32 48x48", "type": "image/x-icon" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/og-cover.png", "sizes": "1200x630", "type": "image/png", "purpose": "any" }
+  ]
+}

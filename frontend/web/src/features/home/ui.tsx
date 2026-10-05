@@ -1,8 +1,6 @@
 'use client';
-
-import { Fragment, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { alpha, color, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
+import { color, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
 import { Badge } from '@/ui/badge';
 import { Banner } from '@/ui/banner';
 import { Loading } from '@/ui/feedback';
@@ -14,69 +12,58 @@ import {
   CR_HOME_URL,
   DASH,
   DEFI_PROTOCOLS_URL,
-  FOREX_URL,
   GAINERS_URL,
-  INDONESIA_URL,
   LOSERS_URL,
-  MACRO_URL,
   MARKETS_TOP_URL,
   NEWS_URL,
-  SCOREBOARD_URL,
   STOCK_US_URL,
   TOP_LIMIT,
   TRENDING_URL,
-  deltaDir,
-  fmtBp,
-  fmtBpRaw,
   fmtDate,
-  fmtDelta,
-  fmtEconomy,
   fmtGas,
-  fmtIndicator,
   fmtNum,
   fmtPct,
-  fmtPolicyRate,
   fmtPrice,
-  fmtRate,
   fmtUsdCompact,
-  fmtX,
-  fmtYear,
-  fmtYield,
-  fetchJson,
   toneOf,
   type CrHome,
-  type CrMovers,
   type CrTrending,
-  type ForexEnvelope,
-  type IndicatorRow,
-  type IndonesiaEnvelope,
-  type IndonesiaQuote,
   type LlamaProtocols,
-  type MacroEnvelope,
   type MarketsEnvelope,
   type NewsEnvelope,
-  type PolicyRateRow,
-  type QuotesEnvelope,
-  type ScoreboardBucket,
-  type ScoreboardCatch,
-  type ScoreboardPayload,
-  type WorldIndicatorRow,
-  type WorldRow,
 } from './client';
-
-/**
- * The landing page (`/`).
- *
- * Read-only: it composes the public families the boards already serve and links
- * into the routed surfaces. It is NOT a second shell — the nav lives in
- * `features/overview/store-shell.tsx`; this page only answers "what is FUDCOURT,
- * and what is the market doing right now".
- *
- * Every section is an independent fetch. A family that fails renders a loud
- * banner and WITHHOLDS its body (never a zero-filled grid), and it does not take
- * its siblings down with it: a CryptoRank outage leaves the DeFi, cross-asset
- * and news panels intact. Every absent metric renders `—`, never `0`.
- */
+import {
+  cardStyle,
+  h2Style,
+  h3Style,
+  noteStyle,
+  listRowStyle,
+  theadRowStyle,
+  rowStyle,
+  useJson,
+  Panel,
+  Change,
+  CoinCell,
+} from './ui-shared';
+import { MoversColumn, FxColumn, QuoteColumn } from './ui-panels';
+import { MacroBoard, IndonesiaBoard, SignalQuality, ProofStrip } from './ui-boards';
+export {
+  cardStyle,
+  h2Style,
+  h3Style,
+  h4Style,
+  summaryStyle,
+  noteStyle,
+  listRowStyle,
+  theadRowStyle,
+  rowStyle,
+  useJson,
+  Panel,
+  Change,
+  CoinCell,
+} from './ui-shared';
+export { MoversColumn, FxColumn, QuoteColumn } from './ui-panels';
+export { Bp, PolicyRateTable, IndicatorTable, WorldTable, MacroBoard, IndonesiaBoard, SignalQuality, ProofStrip } from './ui-boards';
 
 const DESTINATIONS: { href: string; label: string; blurb: string }[] = [
   {
@@ -106,785 +93,19 @@ const DESTINATIONS: { href: string; label: string; blurb: string }[] = [
   },
 ];
 
-// ---- shared styles (token-only; the design gate forbids literals here) ------
-
-const cardStyle: React.CSSProperties = {
-  background: color.bgSecondary,
-  border: `1px solid ${color.separator}`,
-  borderRadius: radius[8],
-  padding: space[12],
-};
-const h2Style: React.CSSProperties = {
-  margin: `0 0 ${space[8]}px`,
-  color: color.blue,
-  fontSize: fontSize[15],
-  fontWeight: fontWeight.bold,
-  letterSpacing: letterSpacing.wide,
-};
-const h3Style: React.CSSProperties = {
-  margin: `0 0 ${space[8]}px`,
-  color: color.blue,
-  fontSize: fontSize[12],
-  fontWeight: fontWeight.bold,
-  letterSpacing: letterSpacing.wide,
-};
-/** Sub-heading inside a card, for a block that sits under the card's own h3. */
-const h4Style: React.CSSProperties = {
-  margin: `${space[12]}px 0 ${space[8]}px`,
-  color: color.labelPrimary,
-  fontSize: fontSize[11],
-  fontWeight: fontWeight.bold,
-  letterSpacing: letterSpacing.wide,
-};
-/** A `<summary>` that reads as a control, not as body copy. */
-const summaryStyle: React.CSSProperties = {
-  cursor: 'pointer',
-  color: color.blue,
-  fontSize: fontSize[11],
-  fontWeight: fontWeight.bold,
-  letterSpacing: letterSpacing.wide,
-  marginTop: space[12],
-};
-const noteStyle: React.CSSProperties = {
-  margin: `${space[8]}px 0 0`,
-  color: color.labelTertiary,
-  fontSize: fontSize[11],
-};
-const listRowStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'baseline',
-  gap: space[8],
-  fontSize: fontSize[11],
-};
-const theadRowStyle: React.CSSProperties = {
-  color: color.labelTertiary,
-  textAlign: 'left',
-  borderBottom: `1px solid ${color.separator}`,
-};
-const rowStyle: React.CSSProperties = { borderBottom: `1px solid ${alpha(color.separator, 0.4)}` };
-
-// ---- primitives -------------------------------------------------------------
-
-/** One fetch, one state machine. `alive` guards a setState after unmount. */
-function useJson<T>(url: string) {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    setError('');
-    fetchJson<T>(url)
-      .then(j => { if (alive) { setData(j); setLoading(false); } })
-      .catch(e => { if (alive) { setError(e instanceof Error ? e.message : String(e)); setLoading(false); } });
-    return () => { alive = false; };
-  }, [url]);
-  return { data, error, loading };
-}
-
-/** A titled section whose body is withheld on error and never zero-filled. */
-function Panel<T>({
-  title,
-  url,
-  label,
-  render,
-}: {
-  title: string;
-  url: string;
-  label?: string;
-  render: (d: T) => React.ReactNode;
-}) {
-  const { data, error, loading } = useJson<T>(url);
-  return (
-    <section style={{ marginBottom: space[24] }}>
-      <h2 style={h2Style}>{title}</h2>
-      {error && (
-        <Banner variant="error">
-          {title} unavailable — {error}. Section withheld rather than rendered empty.
-        </Banner>
-      )}
-      {loading && !error && <Loading label={label ?? `loading live figures…`} />}
-      {!error && data != null && render(data)}
-    </section>
-  );
-}
-
-/** A signed percent, coloured by sign; absent -> `—` in the muted tone. */
-function Change({ v, digits = 2 }: { v: number | null | undefined; digits?: number }) {
-  const t = toneOf(v);
-  const c = t === 'negative' ? color.red : t === 'positive' ? color.green : color.labelTertiary;
-  return <span style={{ color: c }}>{fmtPct(v, digits)}</span>;
-}
-
 /**
- * Symbol + optional name, with the coin icon (or a neutral disc when absent).
+ * The landing page (`/`).
  *
- * A venue sometimes lists a coin with no ticker yet (pre-launch): the symbol is
- * the empty string and every metric is null. The label falls back to the name so
- * the row is identifiable, and the absent metrics stay `—` — the row is not
- * dropped, because "trending, price unpublished" is real information.
- */
-function CoinCell({ image, symbol, name }: { image: string | null; symbol: string | null; name?: string | null }) {
-  const label = symbol || name || DASH;
-  const sub = symbol && name ? name : null;
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8] }}>
-      {image
-        ? <img src={imgSrc(image)} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
-        : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.separator, display: 'inline-block' }} />}
-      <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{label}</span>
-      {sub ? <span style={{ color: color.labelTertiary }}>{sub}</span> : null}
-    </span>
-  );
-}
-
-// ---- sections that need more than a single fetch ----------------------------
-
-/** One column of the gainers/losers pair. */
-function MoversColumn({ title, url }: { title: string; url: string }) {
-  const { data, error, loading } = useJson<CrMovers>(url);
-  return (
-    <div style={cardStyle}>
-      <h3 style={h3Style}>{title}</h3>
-      {error && <Banner variant="error">{error}</Banner>}
-      {loading && !error && <Loading label={`loading live figures…`} />}
-      {!error && data && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
-          {data.rows.slice(0, 6).map((r, i) => (
-            <div key={`${r.key ?? r.symbol ?? 'row'}-${i}`} style={listRowStyle}>
-              <CoinCell image={r.image} symbol={r.symbol} />
-              <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(r.priceUsd)}</span>
-              <Change v={r.change24h} />
-            </div>
-          ))}
-        </div>
-      )}
-      {!error && data && <p style={noteStyle}>{data.changeSource} · {data.upstream}</p>}
-    </div>
-  );
-}
-
-/** FX majors. The upstream carries no change, so none is shown — never a fake 0%. */
-function FxColumn() {
-  const { data, error, loading } = useJson<ForexEnvelope>(FOREX_URL);
-  return (
-    <div style={cardStyle}>
-      <h3 style={h3Style}>FX majors</h3>
-      {error && <Banner variant="error">{error}</Banner>}
-      {loading && !error && <Loading label="loading live figures…" />}
-      {!error && data && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
-          {data.pairs.slice(0, 5).map(p => (
-            <div key={p.pair} style={listRowStyle}>
-              <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{p.pair}</span>
-              <span style={{ color: color.labelPrimary }}>{fmtRate(p.rate)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {!error && data && <p style={noteStyle}>base {data.base} · {data.derived}</p>}
-    </div>
-  );
-}
-
-/** Commodities or stock indices — the same Yahoo shape, one column each. */
-function QuoteColumn({ title, url }: { title: string; url: string }) {
-  const { data, error, loading } = useJson<QuotesEnvelope>(url);
-  return (
-    <div style={cardStyle}>
-      <h3 style={h3Style}>{title}</h3>
-      {error && <Banner variant="error">{error}</Banner>}
-      {loading && !error && <Loading label={`loading live figures…`} />}
-      {!error && data && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
-          {data.quotes.slice(0, 5).map(q => (
-            <div key={q.symbol} style={listRowStyle}>
-              <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.name}</span>
-              <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(q.price)}</span>
-              <Change v={q.changePercent} />
-            </div>
-          ))}
-        </div>
-      )}
-      {!error && data && (
-        <p style={noteStyle}>
-          {data.derived}{data.failed.length > 0 ? ` · failed: ${data.failed.join(', ')}` : ''}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/** A yield delta rendered in basis points, coloured by sign; absent -> `—`. */
-function Bp({ v }: { v: number | null | undefined }) {
-  const t = toneOf(v);
-  const c = t === 'negative' ? color.red : t === 'positive' ? color.green : color.labelTertiary;
-  return <span style={{ color: c }}>{fmtBp(v)}</span>;
-}
-
-/** Region order the policy-rate table renders in — curated, not alphabetical. */
-const POLICY_REGIONS = ['Americas', 'Europe', 'Asia-Pacific', 'Africa & Middle East'];
-
-/** Shared style for a table's group-divider row. */
-const groupRowStyle: React.CSSProperties = {
-  color: color.blue,
-  fontWeight: fontWeight.bold,
-  fontSize: fontSize[11],
-  letterSpacing: letterSpacing.wider,
-  paddingTop: space[8],
-};
-
-/**
- * Central-bank policy rates (BIS).
+ * Read-only: it composes the public families the boards already serve and links
+ * into the routed surfaces. It is NOT a second shell — the nav lives in
+ * `features/overview/store-shell.tsx`; this page only answers "what is FUDCOURT,
+ * and what is the market doing right now".
  *
- * Grouped by region so a 33-row table stays scannable, and every row carries the
- * observation date — a policy rate is a step function, so "3.875%" is meaningless
- * without knowing when it was last set. An area BIS did not return stays `—`.
+ * Every section is an independent fetch. A family that fails renders a loud
+ * banner and WITHHOLDS its body (never a zero-filled grid), and it does not take
+ * its siblings down with it: a CryptoRank outage leaves the DeFi, cross-asset
+ * and news panels intact. Every absent metric renders `—`, never `0`.
  */
-function PolicyRateTable({ rows }: { rows: PolicyRateRow[] }) {
-  const regions = POLICY_REGIONS.filter(r => rows.some(x => x.region === r));
-  return (
-    <div style={{ overflowX: 'auto', marginTop: space[12] }}>
-      <Table style={{ fontSize: fontSize[11] }}>
-        <THead>
-          <TR style={theadRowStyle}>
-            <TH>Central bank</TH>
-            <TH align="right">Policy rate</TH>
-            <TH align="right">As of</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {regions.map(region => (
-            <Fragment key={region}>
-              <TR>
-                <TD colSpan={3} style={groupRowStyle}>{region.toUpperCase()}</TD>
-              </TR>
-              {rows.filter(r => r.region === region).map(r => (
-                <TR key={r.area} style={rowStyle}>
-                  <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
-                    <span title={r.note}>{r.bank}</span>
-                  </TD>
-                  <TD align="right" style={{ color: color.labelPrimary }}>{fmtPolicyRate(r.rate)}</TD>
-                  <TD align="right" style={{ color: color.labelTertiary }}>{r.date || DASH}</TD>
-                </TR>
-              ))}
-            </Fragment>
-          ))}
-        </TBody>
-      </Table>
-    </div>
-  );
-}
-
-/**
- * US macro indicators (FRED).
- *
- * `value` arrives already transformed — a level, a year-over-year percent, or a
- * period change — together with the `unit` that names which, so this prints it
- * verbatim beside its observation date. Grouped by theme; nothing is recomputed.
- */
-function IndicatorTable({ rows }: { rows: IndicatorRow[] }) {
-  const groups = Array.from(new Set(rows.map(r => r.group)));
-  return (
-    <div style={{ overflowX: 'auto', marginTop: space[12] }}>
-      <Table style={{ fontSize: fontSize[11] }}>
-        <THead>
-          <TR style={theadRowStyle}>
-            <TH>US indicator</TH>
-            <TH align="right">Value</TH>
-            <TH align="right">Observed</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {groups.map(group => (
-            <Fragment key={group}>
-              <TR>
-                <TD colSpan={3} style={groupRowStyle}>{group.toUpperCase()}</TD>
-              </TR>
-              {rows.filter(r => r.group === group).map(r => (
-                <TR key={r.id} style={rowStyle}>
-                  <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
-                    <span title={r.note}>{r.name}</span>
-                  </TD>
-                  <TD align="right" style={{ color: color.labelPrimary }}>{fmtIndicator(r.value, r.unit, r.decimals)}</TD>
-                  <TD align="right" style={{ color: color.labelTertiary }}>{fmtDate(r.date)}</TD>
-                </TR>
-              ))}
-            </Fragment>
-          ))}
-        </TBody>
-      </Table>
-    </div>
-  );
-}
-
-/** Region order the worldwide table renders in — curated, not alphabetical. */
-const WORLD_REGIONS = ['Americas', 'Europe', 'Asia-Pacific', 'Africa & Middle East'];
-
-/** Group order for the aggregates table. */
-const WORLD_AGGREGATE_GROUPS = ['World & income', 'Regions & unions'];
-
-/**
- * Theme order for the grouped header. Stated here rather than imported: the
- * landing page must not reach across the feature boundary into the macro family,
- * so each column carries its own `theme` and this list only fixes the ORDER the
- * blocks appear in.
- */
-const WORLD_THEME_ORDER = [
-  'Output & prices',
-  'People',
-  'Labour & welfare',
-  'External',
-  'Money & state',
-  'Government finance',
-  'Companies',
-  'Structure & sustainability',
-];
-
-/** The theme band that spans a column block's headings. */
-const themeHeadStyle: React.CSSProperties = {
-  color: color.blue,
-  fontSize: fontSize[11],
-  fontWeight: fontWeight.semibold,
-  letterSpacing: letterSpacing.wider,
-  textTransform: 'uppercase',
-  paddingTop: space[8],
-  paddingBottom: space[8],
-  borderBottom: `1px solid ${color.separator}`,
-};
-
-/**
- * Cell padding for the worldwide board. The table component ships NO padding
- * default — measured, deliberately, because the tree's existing padding is a flat
- * spread with no winner — so every dense table states its own. Without this the
- * numeric columns run together into one unreadable band.
- */
-const worldHeadStyle: React.CSSProperties = {
-  padding: `${space[4]}px ${space[8]}px`,
-  whiteSpace: 'nowrap',
-};
-
-/** A numeric cell: value over its change, top-aligned so the two lines stay in their column. */
-const worldCellStyle: React.CSSProperties = {
-  padding: `${space[4]}px ${space[8]}px`,
-  whiteSpace: 'nowrap',
-  verticalAlign: 'top',
-};
-
-/**
- * The rule that opens a theme block. With 24 columns and no vertical grid, a
- * reader loses which values belong together; one hairline at each block boundary
- * carries the grouping the theme band announces.
- */
-const worldBlockStyle: React.CSSProperties = { borderLeft: `1px solid ${color.separator}` };
-
-/** Colour a change by DIRECTION — a rising debt and a rising lifespan both print `+`. */
-function dirColor(dir: -1 | 0 | 1): string {
-  return dir > 0 ? color.green : dir < 0 ? color.red : color.labelTertiary;
-}
-
-/**
- * The worldwide economy board (World Bank, annual).
- *
- * A country × indicator matrix grouped by `region`, with the indicator columns
- * themselves grouped under their theme. Every cell prints its OWN reference year
- * AND its change against the observation ~10 years earlier: the series publish on
- * different lags, so one shared year column would be wrong for most of them, and
- * a level without its trend is only half the picture.
- *
- * Columns this table cannot fill are DROPPED, not shown blank: the aggregates
- * table has no current-account or reserves series upstream, and a permanently
- * empty column costs width without carrying information. A cell missing WITHIN a
- * rendered column stays an em dash — never a zero — and its year goes with it.
- */
-function WorldTable({
-  rows,
-  columns,
-  groups,
-}: {
-  rows: WorldRow[];
-  columns: WorldIndicatorRow[];
-  groups: string[];
-}) {
-  const present = groups.filter(g => rows.some(r => r.region === g));
-  // A column renders only where THIS table can actually fill it. The aggregates
-  // table has no current-account or reserves series upstream, and a column that is
-  // mostly blank costs width without carrying information — so the bar is half the
-  // table's rows. A cell missing WITHIN a rendered column still shows as an em
-  // dash; a column that is mostly dashes is not a column, it is a gap.
-  const filled = columns.filter(c => rows.filter(r => r.cells[c.id]?.value != null).length * 2 >= rows.length);
-  const blocks = WORLD_THEME_ORDER.map(theme => ({ theme, cols: filled.filter(c => c.theme === theme) })).filter(
-    b => b.cols.length > 0
-  );
-  const cols = blocks.flatMap(b => b.cols);
-  /** The first column of each theme block, which carries the block's opening rule. */
-  const blockStart = new Set(blocks.map(b => b.cols[0].id));
-  return (
-    <div style={{ overflowX: 'auto', marginTop: space[12] }}>
-      <Table style={{ fontSize: fontSize[11] }}>
-        <THead>
-          <TR style={theadRowStyle}>
-            <TH rowSpan={2} style={{ verticalAlign: 'bottom' }}>
-              Economy
-            </TH>
-            {blocks.map(b => (
-              <TH
-                key={b.theme}
-                colSpan={b.cols.length}
-                align="center"
-                style={{ ...themeHeadStyle, ...worldBlockStyle }}
-              >
-                {b.theme}
-              </TH>
-            ))}
-          </TR>
-          <TR style={theadRowStyle}>
-            {cols.map(c => (
-              <TH key={c.id} align="right" style={blockStart.has(c.id) ? { ...worldHeadStyle, ...worldBlockStyle } : worldHeadStyle}>
-                <span title={c.note}>{c.short}</span>
-              </TH>
-            ))}
-          </TR>
-        </THead>
-        <TBody>
-          {present.map(group => (
-            <Fragment key={group}>
-              <TR>
-                <TD colSpan={cols.length + 1} style={groupRowStyle}>
-                  {group.toUpperCase()}
-                </TD>
-              </TR>
-              {rows
-                .filter(r => r.region === group)
-                .map(r => (
-                  <TR key={r.code} style={rowStyle}>
-                    <TD
-                      style={{
-                        color: color.labelPrimary,
-                        fontWeight: fontWeight.bold,
-                        padding: `${space[4]}px ${space[12]}px ${space[4]}px 0`,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {r.name}
-                    </TD>
-                    {cols.map(c => {
-                      const cell = r.cells[c.id];
-                      const value = cell?.value ?? null;
-                      const prior = cell?.prior ?? null;
-                      const dir = deltaDir(value, prior);
-                      return (
-                        <TD
-                          key={c.id}
-                          align="right"
-                          style={blockStart.has(c.id) ? { ...worldCellStyle, ...worldBlockStyle } : worldCellStyle}
-                        >
-                          <div style={{ color: color.labelPrimary }}>
-                            {fmtEconomy(value, c.kind, c.decimals)}{' '}
-                            <span style={{ color: color.labelTertiary }}>{fmtYear(cell?.year)}</span>
-                          </div>
-                          <div
-                            style={{ color: dirColor(dir), fontSize: fontSize[11] }}
-                            title={prior ? `vs ${prior.year}: ${fmtEconomy(prior.value, c.kind, c.decimals)}` : 'no earlier observation to compare'}
-                          >
-                            {fmtDelta(value, prior, c.kind, c.decimals)}
-                          </div>
-                        </TD>
-                      );
-                    })}
-                  </TR>
-                ))}
-            </Fragment>
-          ))}
-        </TBody>
-      </Table>
-    </div>
-  );
-}
-
-/**
- * Macro — the US Treasury curve, the dollar index and the volatility indices.
- *
- * A yield is quoted in percent and its move is rendered in BASIS POINTS
- * (`Δ × 100`), the convention for a rate; the index rows keep the percent delta.
- * The curve spreads are the route's locally-derived series and are labelled as
- * such. Everything is a read of the macro family; nothing is recomputed here.
- */
-function MacroBoard() {
-  const { data, error, loading } = useJson<MacroEnvelope>(MACRO_URL);
-  const rates = data ? data.quotes.filter(q => q.unit === 'yield') : [];
-  const idx = data ? data.quotes.filter(q => q.unit === 'index') : [];
-  return (
-    <div style={cardStyle}>
-      <h3 style={h3Style}>Rates · dollar · volatility</h3>
-      {error && <Banner variant="error">{error}</Banner>}
-      {loading && !error && <Loading label="loading live figures…" />}
-      {!error && data && (
-        <>
-          <div style={{ overflowX: 'auto' }}>
-            <Table style={{ fontSize: fontSize[11] }}>
-              <THead>
-                <TR style={theadRowStyle}>
-                  <TH>US rates</TH>
-                  <TH align="right">Yield</TH>
-                  <TH align="right">Δ</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {rates.map(q => (
-                  <TR key={q.symbol} style={rowStyle}>
-                    <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
-                      <span title={q.note}>{q.name}</span>
-                    </TD>
-                    <TD align="right" style={{ color: color.labelPrimary }}>{fmtYield(q.price)}</TD>
-                    <TD align="right"><Bp v={q.change} /></TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          </div>
-          {data.spreads.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[12], marginTop: space[8] }}>
-              {data.spreads.map(s => (
-                <span key={s.label} style={{ fontSize: fontSize[11], color: color.labelTertiary }} title={s.note}>
-                  {s.label}{' '}
-                  <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{fmtBpRaw(s.bp)}</span>
-                </span>
-              ))}
-            </div>
-          )}
-          <div style={{ overflowX: 'auto', marginTop: space[12] }}>
-            <Table style={{ fontSize: fontSize[11] }}>
-              <THead>
-                <TR style={theadRowStyle}>
-                  <TH>Dollar &amp; volatility</TH>
-                  <TH align="right">Level</TH>
-                  <TH align="right">Δ</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {idx.map(q => (
-                  <TR key={q.symbol} style={rowStyle}>
-                    <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
-                      <span title={q.note}>{q.name}</span>
-                    </TD>
-                    <TD align="right" style={{ color: color.labelPrimary }}>{fmtNum(q.price, 2)}</TD>
-                    <TD align="right"><Change v={q.changePercent} /></TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          </div>
-          {data.policyRates.length > 0 && <PolicyRateTable rows={data.policyRates} />}
-          {data.indicators.length > 0 && <IndicatorTable rows={data.indicators} />}
-          {data.worldIndicators.length > 0 && data.aggregates.length > 0 && (
-            <>
-              <h4 style={h4Style}>World &amp; regional aggregates</h4>
-              <WorldTable rows={data.aggregates} columns={data.worldIndicators} groups={WORLD_AGGREGATE_GROUPS} />
-            </>
-          )}
-          {data.worldIndicators.length > 0 && data.economies.length > 0 && (
-            <details>
-              <summary style={summaryStyle}>
-                Major economies — {data.economies.length} countries × {data.worldIndicators.length} indicators, each with its decade change
-              </summary>
-              <WorldTable rows={data.economies} columns={data.worldIndicators} groups={WORLD_REGIONS} />
-            </details>
-          )}
-          <p style={noteStyle}>
-            each cell is value · reference year, over its change against the observation ~10 years earlier — a dash there means no
-            comparable observation exists, not that nothing moved · a column a table cannot fill is dropped, not shown blank · yields
-            in %, delta in basis points (Δ × 100) · curve spreads derived locally, not published upstream · {data.derived}
-          </p>
-          {data.failed.length > 0 && (
-            <p style={noteStyle}>
-              withheld, not zero-filled: {data.failed.map(f => f.symbol).join(', ')}
-            </p>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-/** The live half of the Indonesia board: rupiah crosses and IDX indices. */
-function IndonesiaLive({ quotes }: { quotes: IndonesiaQuote[] }) {
-  const groups = Array.from(new Set(quotes.map(q => q.group)));
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <Table style={{ fontSize: fontSize[11] }}>
-        <THead>
-          <TR style={theadRowStyle}>
-            <TH>Rupiah &amp; IDX</TH>
-            <TH align="right">Level</TH>
-            <TH align="right">Δ</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {groups.map(g => (
-            <Fragment key={g}>
-              <TR>
-                <TD colSpan={3} style={groupRowStyle}>{g.toUpperCase()}</TD>
-              </TR>
-              {quotes.filter(q => q.group === g).map(q => (
-                <TR key={q.symbol} style={rowStyle}>
-                  <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
-                    <span title={q.note}>{q.name}</span>
-                  </TD>
-                  <TD align="right" style={{ color: color.labelPrimary }}>{fmtNum(q.price, 2)}</TD>
-                  <TD align="right"><Change v={q.changePercent} /></TD>
-                </TR>
-              ))}
-            </Fragment>
-          ))}
-        </TBody>
-      </Table>
-    </div>
-  );
-}
-
-/**
- * Indonesia — the rupiah and IDX (live), the BI-Rate, and the annual structure.
- *
- * Three horizons in one panel, each row labelled with the one it belongs to:
- * quotes are live, the BI-Rate carries its BIS observation date, and every World
- * Bank row prints the year it was published FOR. The annual block is deliberately
- * not folded into the live table — a 2025 GDP figure sitting next to a live FX
- * quote reads as if both were current, which is exactly the lie to avoid.
- */
-function IndonesiaBoard() {
-  const { data, error, loading } = useJson<IndonesiaEnvelope>(INDONESIA_URL);
-  const economyGroups = data ? Array.from(new Set(data.economy.map(e => e.group))) : [];
-  return (
-    <div style={cardStyle}>
-      <h3 style={h3Style}>Rupiah · BI-Rate · economy</h3>
-      {error && <Banner variant="error">{error}</Banner>}
-      {loading && !error && <Loading label="loading live figures…" />}
-      {!error && data && (
-        <>
-          {data.quotes.length > 0 && <IndonesiaLive quotes={data.quotes} />}
-          <p style={{ ...noteStyle, marginTop: space[12] }} title={data.policy.note}>
-            {data.policy.label}{' '}
-            <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{fmtPolicyRate(data.policy.rate)}</span>
-            {data.policy.date ? <span> · as of {data.policy.date}</span> : null}
-          </p>
-          {economyGroups.length > 0 && (
-            <div style={{ overflowX: 'auto', marginTop: space[12] }}>
-              <Table style={{ fontSize: fontSize[11] }}>
-                <THead>
-                  <TR style={theadRowStyle}>
-                    <TH>Indonesia — annual</TH>
-                    <TH align="right">Value</TH>
-                    <TH align="right">Year</TH>
-                  </TR>
-                </THead>
-                <TBody>
-                  {economyGroups.map(g => (
-                    <Fragment key={g}>
-                      <TR>
-                        <TD colSpan={3} style={groupRowStyle}>{g.toUpperCase()}</TD>
-                      </TR>
-                      {data.economy.filter(e => e.group === g).map(e => (
-                        <TR key={e.id} style={rowStyle}>
-                          <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
-                            <span title={e.note}>{e.name}</span>
-                          </TD>
-                          <TD align="right" style={{ color: color.labelPrimary }}>{fmtEconomy(e.value, e.kind, e.decimals)}</TD>
-                          <TD align="right" style={{ color: color.labelTertiary }}>{fmtYear(e.year)}</TD>
-                        </TR>
-                      ))}
-                    </Fragment>
-                  ))}
-                </TBody>
-              </Table>
-            </div>
-          )}
-          <p style={noteStyle}>
-            quotes live · BI-Rate from BIS (daily) · annual rows from the World Bank, each with its own year · government finance from the IMF Fiscal Monitor
-            {data.apbn ? `, actuals through ${data.apbn.actualThrough}` : ''} · {data.derived}
-          </p>
-          {data.failed.length > 0 && (
-            <p style={noteStyle}>withheld, not zero-filled: {data.failed.map(f => f.symbol).join(', ')}</p>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-/**
- * Signal quality — the cohort scoreboard. `run`/`flat`/`dump` are the UPSTREAM's
- * outcome buckets over the cohort window, not our verdict on a token, so the
- * panel labels them as such rather than implying the board endorses a call.
- */
-function SignalQuality() {
-  const { data, error, loading } = useJson<ScoreboardPayload>(SCOREBOARD_URL);
-  const entries = data ? Object.entries(data.chains).filter(([, c]) => c.latest) : [];
-  const catches: ScoreboardCatch[] = data ? Object.values(data.chains).flatMap(c => c.catches) : [];
-  const best = catches.reduce<ScoreboardCatch | null>(
-    (a, b) => ((b.x24h ?? -Infinity) > (a?.x24h ?? -Infinity) ? b : a),
-    null
-  );
-  return (
-    <section style={{ marginBottom: space[24] }}>
-      <h2 style={h2Style}>Signal quality</h2>
-      {error && (
-        <Banner variant="error">
-          signal quality unavailable — {error}. Section withheld rather than rendered empty.
-        </Banner>
-      )}
-      {loading && !error && <Loading label="loading live figures…" />}
-      {!error && data && (
-        <>
-          <div style={{ overflowX: 'auto' }}>
-            <Table style={{ fontSize: fontSize[11] }}>
-              <THead>
-                <TR style={theadRowStyle}>
-                  <TH>Chain</TH>
-                  <TH>Cohort day</TH>
-                  <TH align="right">Tracked</TH>
-                  <TH align="right">Ran</TH>
-                  <TH align="right">Flat</TH>
-                  <TH align="right">Dumped</TH>
-                  <TH align="right">Unknown</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {entries.map(([chain, c]) => {
-                  const b = c.latest as ScoreboardBucket;
-                  return (
-                    <TR key={chain} style={rowStyle}>
-                      <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{chain}</TD>
-                      <TD style={{ color: color.labelTertiary }}>{b.day}</TD>
-                      <TD align="right" style={{ color: color.labelPrimary }}>{fmtNum(b.n)}</TD>
-                      <TD align="right" style={{ color: color.green }}>{fmtNum(b.run)}</TD>
-                      <TD align="right" style={{ color: color.labelTertiary }}>{fmtNum(b.flat)}</TD>
-                      <TD align="right" style={{ color: color.red }}>{fmtNum(b.dump)}</TD>
-                      <TD align="right" style={{ color: color.labelTertiary }}>{fmtNum(b.unknown)}</TD>
-                    </TR>
-                  );
-                })}
-              </TBody>
-            </Table>
-          </div>
-          {best && (
-            <p style={noteStyle}>
-              best cohort catch:{' '}
-              <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{best.symbol || DASH}</span>{' '}
-              <span style={{ color: color.blue }}>{fmtX(best.x24h)}</span> peak 24h · score{' '}
-              {fmtNum(best.score, 1)} · {best.decision || DASH} · {best.day}
-            </p>
-          )}
-          <p style={noteStyle}>
-            {data.cohortDays}-day cohort · run/flat/dump are the upstream&apos;s outcome buckets, not our verdict · {data.upstream}
-          </p>
-        </>
-      )}
-    </section>
-  );
-}
-
 // ---- the page ---------------------------------------------------------------
 
 export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
@@ -929,6 +150,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
             <li>Known-decoy classes rejected, not hidden</li>
             <li>Free to browse {'—'} sign-in only for private terminals</li>
           </ul>
+          <ProofStrip />
         </header>
 
         {/* ---- 1. global market header --------------------------------------- */}

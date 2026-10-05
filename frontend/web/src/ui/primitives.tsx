@@ -46,32 +46,36 @@ type InputProps = {
   spellCheck?: boolean;
 };
 
-export function Input({ value, onChange, placeholder, type = 'text', style }: InputProps) {
+export function Input({ value, onChange, placeholder, type = 'text', style, disabled, autoComplete, spellCheck }: InputProps) {
   return (
-    <input type={type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
+    <input type={type} value={value} placeholder={placeholder} disabled={disabled} autoComplete={autoComplete} spellCheck={spellCheck} onChange={e => onChange(e.target.value)}
       style={{
         width: '100%', background: color.bgBase, color: color.labelPrimary,
         border: `1px solid ${color.separator}`, borderRadius: radius[8],
-        padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box', ...style,
+        padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box', opacity: disabled ? 0.5 : 1, ...style,
       }} />
   );
 }
 
-type SelectProps = {
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
+type SelectProps<T extends string> = {
+  value: T;
+  onChange: (v: T) => void;
+  options: readonly (T | { value: T; label: string })[];
   style?: React.CSSProperties;
+  disabled?: boolean;
 };
 
-export function Select({ value, onChange, options, style }: SelectProps) {
+export function Select<T extends string>({ value, onChange, options, style, disabled }: SelectProps<T>) {
   return (
-    <select value={value} onChange={e => onChange(e.target.value)}
+    <select value={value} disabled={disabled} onChange={e => onChange(e.target.value as T)}
       style={{
         background: color.bgBase, color: color.labelPrimary, border: `1px solid ${color.separator}`,
-        borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box', ...style,
+        borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box', opacity: disabled ? 0.5 : 1, ...style,
       }}>
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
+      {options.map(o => {
+        const opt = typeof o === 'string' ? { value: o, label: o } : o;
+        return <option key={opt.value} value={opt.value}>{opt.label}</option>;
+      })}
     </select>
   );
 }

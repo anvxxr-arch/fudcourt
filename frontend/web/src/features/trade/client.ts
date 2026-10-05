@@ -281,25 +281,7 @@ export function isLiveExecution(status: string): boolean {
 // compile here.
 // ---------------------------------------------------------------------------
 
-/**
- * The executor's market vocabulary is narrower than the trade taxonomy: it can
- * work a spot book or a linear perpetual, and nothing else. A trade market type
- * with no executor counterpart returns `null`, and the composer renders that as
- * a stated gap rather than sending a request the planner would reject.
- */
-export function executorMarketTypeFor(marketType: MarketType): 'spot' | 'linear_perp' | null {
-  switch (marketType) {
-    case 'spot':
-    case 'margin':
-      return 'spot';
-    case 'perpetual':
-    case 'futures':
-      return 'linear_perp';
-    case 'options':
-    case 'swap':
-      return null;
-  }
-}
+export { executorMarketTypeFor } from './model-taxonomy';
 
 /** The trade venue an executor account belongs to, or `null` when it is not a routable venue. */
 export function venueOfExchange(exchange: string): VenueId | null {

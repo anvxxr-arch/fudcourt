@@ -102,7 +102,7 @@ export default function EconomyDashboard() {
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
       <PageHeader
-        title="Global Macro Dashboard"
+        title="Macro prints, normalised - never compared apples-to-oranges"
         description="Canonical economic series across growth, inflation, labour, money and policy — read from FRED, the World Bank and BIS, normalised to one model so a monthly US print and an annual World Bank print are never compared as if they were the same measurement."
         nav={ECONOMY_NAV}
       />
@@ -116,7 +116,7 @@ export default function EconomyDashboard() {
       )}
 
       <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
-        <Card title="Macro Regime" subtitle="rule table over published readings — not a forecast">
+        <Card title="Regime snapshot" subtitle="rule table over published readings — not a forecast">
           {!regime ? (
             <Loading what="regime" />
           ) : (
@@ -156,7 +156,7 @@ export default function EconomyDashboard() {
           )}
         </Card>
 
-        <Card title="Global Macro Pulse" subtitle="latest observation of a curated basket; sparkline is the last year">
+        <Card title="Pulse snapshot" subtitle="latest observation of a curated basket; sparkline is the last year">
           {!pulse ? (
             <Loading what="macro pulse" />
           ) : (
@@ -183,7 +183,7 @@ export default function EconomyDashboard() {
           )}
         </Card>
 
-        <Card title="Global Liquidity" subtitle="derived position in a curated basket of real liquidity series">
+        <Card title="Liquidity snapshot" subtitle="derived position in a curated basket of real liquidity series">
           {!liquidity ? (
             <Loading what="liquidity" />
           ) : (
@@ -213,7 +213,7 @@ export default function EconomyDashboard() {
           )}
         </Card>
 
-        <Card title="Central Banks" subtitle="policy rate, latest BIS observation">
+        <Card title="Policy rates snapshot" subtitle="policy rate, latest BIS observation">
           {!banks ? (
             <Loading what="central banks" />
           ) : (
@@ -246,7 +246,7 @@ export default function EconomyDashboard() {
           <Link href="/economy/nation" style={{ display: 'inline-block', marginTop: space[8], fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>all countries →</Link>
         </Card>
 
-        <Card title="Recent Releases" subtitle="reference periods, newest first — a release log, not a forward schedule">
+        <Card title="Release log snapshot" subtitle="reference periods, newest first — a release log, not a forward schedule">
           {!calendar ? (
             <Loading what="releases" />
           ) : (

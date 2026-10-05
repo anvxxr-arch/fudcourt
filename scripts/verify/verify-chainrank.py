@@ -33,60 +33,10 @@ import urllib.request
 DEFAULT_BASE = "http://127.0.0.1:3100"
 UPSTREAM = "https://www.chainrank.fyi"
 
-GREEN, RED, DIM, RESET = "\033[32m", "\033[31m", "\033[2m", "\033[0m"
+from verifylib import call, check_tuple as check, hdr, jload
+from verifylib import note_join as note, section
+from verifylib import GREEN, RED, DIM, RESET
 results: list[tuple[bool, str, str]] = []
-
-
-def check(ok: bool, label: str, detail: str = "") -> bool:
-    results.append((ok, label, detail))
-    print(f"  [{GREEN + 'PASS' + RESET if ok else RED + 'FAIL' + RESET}] {label}"
-          + (f"  {DIM}{detail}{RESET}" if detail else ""))
-    return ok
-
-
-def note(*parts) -> str:
-    return " ".join(str(p) for p in parts if p)[:160]
-
-
-def call(url: str, method: str = "GET", payload: bytes | None = None,
-         ctype: str = "application/json", timeout: int = 45):
-    """(status, headers, body-bytes). An HTTPError IS a response -- read its body."""
-    req = urllib.request.Request(url, data=payload, method=method, headers={
-        "User-Agent": "fudcourt-verify/1.0", "Accept": "application/json",
-        **({"Content-Type": ctype} if payload is not None else {}),
-    })
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.status, dict(r.headers), r.read()
-    except urllib.error.HTTPError as e:
-        try:
-            body = e.read()
-        except Exception:
-            body = b""
-        return e.code, dict(e.headers), body
-    except Exception as e:
-        return 0, {}, f"{type(e).__name__}: {e}".encode()
-
-
-def jload(body: bytes):
-    try:
-        return json.loads(body)
-    except Exception:
-        return None
-
-
-def hdr(headers: dict, name: str) -> str:
-    """HTTP header lookup, case-insensitive -- Node lowercases names, but the
-    harness shouldn't depend on that."""
-    lname = name.lower()
-    for k, v in headers.items():
-        if k.lower() == lname:
-            return v
-    return "-"
-
-
-def section(title: str) -> None:
-    print(f"\n▸ {title}")
 
 
 def verify_reads(base: str) -> None:

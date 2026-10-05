@@ -86,18 +86,6 @@ const tabStyle = (active: boolean): CSSProperties => ({
   textDecoration: 'none',
 });
 
-function SectionNav({ active }: { active?: MarketSection }) {
-  return (
-    <nav style={{ display: 'flex', gap: space[8], marginBottom: space[16], flexWrap: 'wrap' }}>
-      {SECTIONS.map((s) => (
-        <Link key={s.key} href={s.href} style={tabStyle(active === s.key)}>
-          {s.label}
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
 function Overview() {
   const cardStyle: CSSProperties = {
     display: 'flex',
@@ -172,7 +160,6 @@ function StockSection() {
 export default function MarketHub({ section }: { section?: MarketSection }) {
   return (
     <div>
-      <SectionNav active={section} />
       {!section && <Overview />}
       {section === 'crypto' && <CryptoSection />}
       {section === 'trench' && <TrenchSection />}

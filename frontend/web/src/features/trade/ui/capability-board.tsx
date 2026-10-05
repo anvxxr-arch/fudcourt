@@ -20,15 +20,8 @@ import { MARKET_TYPE_BY_ID, VENUE_BY_ID, type MarketType, type VenueId } from '@
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
 import { Notice } from '@/ui/notice';
+import { Perm } from '@/ui/perm';
 
-/** A stated boolean capability: `✓` when present, a muted `✕` when the venue lacks it. */
-function Flag({ on }: { on: boolean }) {
-  return (
-    <span style={{ color: on ? color.green : color.labelTertiary, fontWeight: on ? fontWeight.bold : fontWeight.regular }}>
-      {on ? '✓' : '✕'}
-    </span>
-  );
-}
 
 /** Who slices a TWAP/VWAP/iceberg here: the venue natively, or the executor engine. */
 function Slicer({ native }: { native: boolean }) {
@@ -77,14 +70,14 @@ export function CapabilityBoard({ venue, marketType }: { venue?: VenueId; market
               <span key="v" style={{ fontWeight: fontWeight.semibold }}>{VENUE_BY_ID[row.venue].label}</span>,
               <span key="m" style={{ color: color.labelTertiary }}>{MARKET_TYPE_BY_ID[row.marketType].label}</span>,
               <span key="i" style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{row.instrumentId}</span>,
-              ...columns.map((c) => <Flag key={c.id} on={row.orderTypes[c.id]} />),
+              ...columns.map((c) => <Perm key={c.id} value={row.orderTypes[c.id]} tone="capability" />),
               <Slicer key="twap" native={row.nativeTwap} />,
               <Slicer key="vwap" native={row.nativeVwap} />,
               <Slicer key="iceberg" native={row.nativeIceberg} />,
-              <Flag key="lev" on={row.leverage} />,
+              <Perm key="lev" value={row.leverage} tone="capability" />,
               <MarginModes key="mm" modes={row.marginModes} />,
-              <Flag key="ro" on={row.reduceOnly} />,
-              <Flag key="po" on={row.postOnly} />,
+              <Perm key="ro" value={row.reduceOnly} tone="capability" />,
+              <Perm key="po" value={row.postOnly} tone="capability" />,
             ],
           }))}
         />

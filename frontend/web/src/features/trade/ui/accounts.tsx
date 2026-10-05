@@ -40,6 +40,7 @@ import { Loading } from '@/ui/feedback';
 import { Notice } from '@/ui/notice';
 import { PageHeader } from '@/ui/page-header';
 import { Value } from '@/ui/value';
+import { Perm } from '@/ui/perm';
 
 type Panel = { accounts: TradeAccountLite[]; error: string | null; loading: boolean };
 
@@ -56,11 +57,6 @@ function useAccounts(): Panel {
   return panel;
 }
 
-/** A tri-state venue permission: `null` means the venue does not report it. */
-function Perm({ value }: { value: boolean | null }) {
-  if (value === null) return <span style={{ color: color.labelTertiary }} title="the venue does not report this flag">{NO_VALUE}</span>;
-  return <span style={{ color: value ? color.green : color.labelTertiary }}>{value ? '✓' : '✕'}</span>;
-}
 
 /** "supports X, Y, Z — not W", from the exhaustive capability record. */
 function capabilityLine(capability: VenueCapability): string {
@@ -138,11 +134,11 @@ function AccountTable({ accounts }: { accounts: TradeAccountLite[] }) {
             venue === null ? account.exchange : `${VENUE_BY_ID[venue].label} · ${VENUE_BY_ID[venue].type}`,
             account.revokedAt === null ? account.health : 'revoked',
             <span key="k" style={{ color: color.labelTertiary }}>{account.apiKeyMasked}</span>,
-            <Perm key="r" value={account.permissions.read} />,
-            <Perm key="s" value={account.permissions.spotTrade} />,
-            <Perm key="f" value={account.permissions.futuresTrade} />,
+            <Perm key="r" value={account.permissions.read} tone="capability" />,
+            <Perm key="s" value={account.permissions.spotTrade} tone="capability" />,
+            <Perm key="f" value={account.permissions.futuresTrade} tone="capability" />,
             <span key="w" style={{ color: account.permissions.withdraw === true ? color.red : color.labelPrimary }}>
-              <Perm value={account.permissions.withdraw} />
+              <Perm value={account.permissions.withdraw} tone="capability" />
               {account.permissions.withdraw === true && (
                 <span style={{ fontWeight: fontWeight.bold }}> · remove it</span>
               )}

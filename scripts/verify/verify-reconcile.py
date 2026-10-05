@@ -40,39 +40,21 @@ import urllib.error
 import urllib.request
 
 DEFAULT_BASE = "http://127.0.0.1:3102"
-GREEN, RED, DIM, RESET = "\033[32m", "\033[31m", "\033[2m", "\033[0m"
+from functools import partial
+from verifylib import call_plain as call, check_tuple as check, jload
+from verifylib import note_join
+from verifylib import GREEN, RED, DIM, RESET
+note = partial(note_join, maxlen=200)
 results: list[tuple[bool, str, str]] = []
 skipped: list[str] = []
 
 
-def check(ok: bool, label: str, detail: str = "") -> bool:
-    results.append((ok, label, detail))
-    print(f"  [{GREEN + 'PASS' + RESET if ok else RED + 'FAIL' + RESET}] {label}"
-          + (f"  {DIM}{detail}{RESET}" if detail else ""))
-    return ok
 
 
-def note(*parts) -> str:
-    return " ".join(str(p) for p in parts if p)[:200]
 
 
-def call(url: str, method: str = "GET", timeout: int = 60):
-    """(status, headers, body-bytes). An HTTPError IS a response -- read its body."""
-    req = urllib.request.Request(url, method=method, headers={
-        "User-Agent": "fudcourt-verify-reconcile/1.0", "Accept": "application/json",
-    })
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.status, dict(r.headers), r.read()
-    except urllib.error.HTTPError as e:
-        return e.code, dict(e.headers), e.read()
 
 
-def jload(b: bytes):
-    try:
-        return json.loads(b)
-    except Exception:
-        return None
 
 
 def main() -> int:

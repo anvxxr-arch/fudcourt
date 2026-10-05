@@ -38,6 +38,34 @@ const nextConfig = {
   async rewrites() {
     return [{ source: '/portfolio/:path*', destination: '/:path*' }];
   },
+  // Round-5 hardening: security headers on every response. Round-6 adds the
+  // staged CSP from /tmp/audit_security_r5.md §1 as REPORT-ONLY — it never
+  // blocks loads; violations only surface in the browser console. No
+  // report-uri/report-to is shipped because the app has no trivial report
+  // endpoint (only /api/img); add one before ever promoting to enforced
+  // `Content-Security-Policy`. Enforcement would also need nonces/hashes for
+  // the inline hydration scripts ('unsafe-inline' stays until then).
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+          {
+            key: 'Content-Security-Policy-Report-Only',
+            value:
+              "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://fc.dwirijal.my.id wss: https:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'",
+          },
+        ],
+      },
+    ];
+  },
   // Pin the workspace root explicitly: the monorepo has two lockfiles, and
   // without this Next infers the wrong one and warns on every build.
   turbopack: {

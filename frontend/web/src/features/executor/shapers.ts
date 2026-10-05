@@ -144,17 +144,6 @@ export function formatCompletionPct(pct: number | null | undefined): string {
   return `${Math.round((pct as number) * 100)}%`;
 }
 
-/**
- * PRD §86's progress bar: `██████████████░░░░░░`. Geometry is clamped to the
- * bar width (a bar cannot render negative blocks); the percent beside it is
- * untouched.
- */
-export function progressBar(pct: number | null | undefined, width = 20): string {
-  if (isAbsent(pct)) return DASH;
-  const filled = Math.max(0, Math.min(width, Math.round((pct as number) * width)));
-  return `${'█'.repeat(filled)}${'░'.repeat(width - filled)}`;
-}
-
 /** `YYYY-MM-DD HH:MM:SS` (UTC) — stable across time zones for tables/tests. */
 export function formatTimestamp(ms: number | null | undefined): string {
   if (isAbsent(ms)) return DASH;

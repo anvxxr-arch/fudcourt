@@ -46,13 +46,10 @@ RUST_BIN = REPO / "backend" / "sync" / "target" / "release" / "fudcourt-sync"
 BEGIN = "#ASSETS-PROJECTION-BEGIN"
 END = "#ASSETS-PROJECTION-END"
 
-GREEN, RED, DIM, RESET = "\033[32m", "\033[31m", "\033[2m", "\033[0m"
+from verifylib import check_bare as check
+from verifylib import GREEN, RED, RESET
 
 
-def check(ok: bool, label: str, detail: str = "") -> bool:
-    print(f"  [{GREEN + 'PASS' + RESET if ok else RED + 'FAIL' + RESET}] {label}"
-          + (f"  {DIM}{detail}{RESET}" if detail else ""))
-    return ok
 
 
 def run(cmd: list[str], env: dict | None = None) -> tuple[int, str]:

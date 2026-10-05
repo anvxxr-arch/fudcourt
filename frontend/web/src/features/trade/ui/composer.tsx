@@ -35,6 +35,10 @@ import {
 import { VENUE_MARKET_TYPES, VENUE_BY_ID, type MarketType, type VenueId } from '@/features/trade/model';
 import { BASIS_SIZING, buildTradeRequest, missingRequired, type ComposerState } from '@/features/trade/model';
 import { Card } from '@/ui/card';
+import { Button, Input, Select } from '@/ui/primitives';
+import { Field } from '@/ui/field';
+import { Banner } from '@/ui/banner';
+import { Row } from '@/ui/row';
 import { Notice } from '@/ui/notice';
 import type { BalanceBasis, PreviewResult, SizingMode } from '@/lib/executor';
 
@@ -59,103 +63,11 @@ const h3Style: CSSProperties = {
   letterSpacing: letterSpacing.sm,
 };
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <span style={{ display: 'block', fontSize: fontSize[11], color: color.labelTertiary, marginBottom: 2 }}>{label}</span>
-      {children}
-    </div>
-  );
-}
 
-function Select<T extends string>({ value, onChange, options, disabled }: {
-  value: T;
-  onChange: (v: T) => void;
-  options: readonly { value: T; label: string }[];
-  disabled?: boolean;
-}) {
-  return (
-    <select
-      value={value}
-      disabled={disabled}
-      onChange={(e) => onChange(e.target.value as T)}
-      style={{ ...inputStyle, opacity: disabled ? 0.5 : 1 }}
-    >
-      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  );
-}
 
-function Input({ value, onChange, placeholder, type = 'text', disabled }: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  type?: string;
-  disabled?: boolean;
-}) {
-  return (
-    <input
-      type={type}
-      value={value}
-      placeholder={placeholder}
-      disabled={disabled}
-      spellCheck={false}
-      onChange={(e) => onChange(e.target.value)}
-      style={{ ...inputStyle, opacity: disabled ? 0.5 : 1 }}
-    />
-  );
-}
 
-function Button({ onClick, children, disabled, primary }: { onClick: () => void; children: ReactNode; disabled?: boolean; primary?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        background: primary ? color.blue : color.bgSecondary,
-        color: primary ? color.labelOnAccent : color.labelPrimary,
-        border: `1px solid ${primary ? color.blue : color.separator}`,
-        padding: `${space[8]}px ${space[12]}px`,
-        borderRadius: radius[8],
-        fontSize: fontSize[11],
-        fontWeight: primary ? fontWeight.bold : fontWeight.regular,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.45 : 1,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
 
-function Err({ text }: { text: string }) {
-  if (text === '') return null;
-  return (
-    <p style={{
-      color: color.red,
-      fontSize: fontSize[11],
-      fontWeight: fontWeight.bold,
-      background: alpha(color.red, 0.08),
-      border: `1px solid ${alpha(color.red, 0.35)}`,
-      padding: `${space[8]}px ${space[8]}px`,
-      borderRadius: radius[8],
-      margin: `0 0 ${space[8]}px`,
-      whiteSpace: 'pre-wrap',
-    }}>
-      ⚠ {text}
-    </p>
-  );
-}
 
-function Line({ label, value, tone }: { label: string; value: string; tone?: 'good' | 'bad' }) {
-  const toneColor = tone === 'good' ? color.green : tone === 'bad' ? color.red : color.labelPrimary;
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: space[8], padding: '3px 0', borderBottom: `1px solid ${color.separator}` }}>
-      <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{label}</span>
-      <span style={{ color: toneColor, fontSize: fontSize[11], fontWeight: fontWeight.bold, textAlign: 'right' }}>{value}</span>
-    </div>
-  );
-}
 
 const SIZING_OPTIONS: ReadonlyArray<{ value: SizingMode; label: string }> = [
   { value: 'risk_percent', label: 'Risk % of basis' },
@@ -193,23 +105,23 @@ function PreviewPanel({ shown }: { shown: TradePreviewResponse | null }) {
   const plan = preview.plan;
   return (
     <Card title="Risk preview" subtitle={`${plan.symbol} · ${plan.side.toUpperCase()} · ${plan.venueKey}`}>
-      <Line label="Risk Budget" value={formatUsd(plan.risk.budget)} />
-      <Line label="Sizing Reference Balance" value={formatUsd(plan.balanceReference)} />
-      <Line label="Quantity" value={String(plan.quantity)} />
-      <Line label="Notional" value={formatUsd(plan.notional)} />
-      <Line label="Margin Required" value={formatUsd(plan.margin.estimatedInitial)} />
-      <Line
+      <Row label="Risk Budget" value={formatUsd(plan.risk.budget)} />
+      <Row label="Sizing Reference Balance" value={formatUsd(plan.balanceReference)} />
+      <Row label="Quantity" value={String(plan.quantity)} />
+      <Row label="Notional" value={formatUsd(plan.notional)} />
+      <Row label="Margin Required" value={formatUsd(plan.margin.estimatedInitial)} />
+      <Row
         label="Leverage"
         value={plan.leverage.selected === null ? NO_VALUE : `${plan.leverage.selected}x · ${plan.leverage.mode}`}
       />
-      <Line label="Entry Estimate" value={formatPrice(plan.estimatedEntry)} />
-      <Line label="Stop" value={formatPrice(plan.stopLoss)} />
-      <Line label="Estimated Fees" value={formatUsd(plan.risk.estimatedFees)} />
-      <Line label="Total Planned Risk" value={formatUsd(plan.risk.estimatedTotalRisk)} />
-      <Line label="Loss @ SL" value={formatUsd(preview.expectedLossAtStop)} tone="bad" />
-      <Line label="Profit @ TP" value={formatUsd(preview.expectedProfitAtTarget)} tone="good" />
-      <Line label="Risk / Reward" value={preview.riskReward === null ? NO_VALUE : preview.riskReward.toFixed(2)} />
-      <Line label="Liquidation Price" value={formatPrice(plan.liquidation.priceApprox)} />
+      <Row label="Entry Estimate" value={formatPrice(plan.estimatedEntry)} />
+      <Row label="Stop" value={formatPrice(plan.stopLoss)} />
+      <Row label="Estimated Fees" value={formatUsd(plan.risk.estimatedFees)} />
+      <Row label="Total Planned Risk" value={formatUsd(plan.risk.estimatedTotalRisk)} />
+      <Row label="Loss @ SL" value={formatUsd(preview.expectedLossAtStop)} tone="neg" />
+      <Row label="Profit @ TP" value={formatUsd(preview.expectedProfitAtTarget)} tone="pos" />
+      <Row label="Risk / Reward" value={preview.riskReward === null ? NO_VALUE : preview.riskReward.toFixed(2)} />
+      <Row label="Liquidation Price" value={formatPrice(plan.liquidation.priceApprox)} />
       {preview.conflicts.length > 0 && (
         <div style={{ marginTop: space[8], borderTop: `1px solid ${color.red}`, paddingTop: space[8] }}>
           {preview.conflicts.map((c) => (
@@ -338,7 +250,7 @@ export function TradeComposer({ marketType, defaultBase, defaultQuote }: {
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(300px, 400px)', gap: space[12], alignItems: 'start' }}>
       <Card>
         <h3 style={h3Style}>COMPOSE A TRADE · {marketType.toUpperCase()}</h3>
-        <Err text={accountsError} />
+        {accountsError !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap' }}>⚠ {accountsError}</Banner>}
 
         <div style={{ ...pairStyle }}>
           <Field label="Account">
@@ -472,8 +384,8 @@ export function TradeComposer({ marketType, defaultBase, defaultQuote }: {
             </div>
           </div>
           <div style={{ display: 'flex', gap: space[8], marginTop: space[8], flexWrap: 'wrap' }}>
-            <Button onClick={runPreview} disabled={busy || blocking.length > 0} primary>Preview</Button>
-            <Button onClick={place} disabled={busy || conflictCount > 0 || blocking.length > 0} primary={state.mode !== 'live'}>
+            <Button onClick={runPreview} disabled={busy || blocking.length > 0} variant="primary">Preview</Button>
+            <Button onClick={place} disabled={busy || conflictCount > 0 || blocking.length > 0} variant={state.mode !== 'live' ? 'primary' : 'ghost'}>
               {state.mode === 'live' ? 'Place LIVE order' : 'Place paper order'}
             </Button>
           </div>
@@ -486,8 +398,8 @@ export function TradeComposer({ marketType, defaultBase, defaultQuote }: {
       </Card>
 
       <div>
-        <Err text={previewError} />
-        <Err text={submitError} />
+        {previewError !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap' }}>⚠ {previewError}</Banner>}
+        {submitError !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap' }}>⚠ {submitError}</Banner>}
         {createdId !== '' && (
           <Card>
             <p style={{ margin: `0 0 ${space[8]}px`, fontSize: fontSize[11], color: color.labelPrimary }}>

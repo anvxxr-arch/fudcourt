@@ -14,6 +14,12 @@ export const dynamic = 'force-dynamic';
  * re-implements a decision. Redirects pass through with `redirect: 'manual'`
  * so the 307 is never rewritten. Unreachable api is a loud 502 (house rule —
  * never a fake 200).
+ *
+ * Graceful degradation (r8): when Go reports `auth_unconfigured` (owner has
+ * not set Discord OAuth env), a raw JSON 500 on a CTA click reads as broken.
+ * Bounce back to /login instead, where the panel already renders the
+ * auth_unconfigured message plus the browse-first link. The `next` value is
+ * re-validated by the login panel's isSafeNext, so no open redirect is added.
  */
 const FUDCOURT_API = process.env.FUDCOURT_API_URL ?? 'http://127.0.0.1:3103';
 
@@ -57,6 +63,13 @@ async function proxy(request: Request): Promise<Response> {
         : String(err);
     return NextResponse.json({ error: `api unreachable: ${reason}` }, { status: 502 });
   }
+  const text = await upstream.text();
+  if (upstream.status === 500 && text.includes('"auth_unconfigured"')) {
+    const params = new URLSearchParams({ error: 'auth_unconfigured' });
+    const next = url.searchParams.get('next');
+    if (next !== null && next !== '' && next !== '/') params.set('next', next);
+    return new NextResponse(null, { status: 303, headers: { location: '/login?' + params } });
+  }
   const out = new Headers();
   for (const name of ['content-type', 'location', 'allow', 'x-request-id', 'retry-after']) {
     const value = upstream.headers.get(name);
@@ -64,5 +77,5 @@ async function proxy(request: Request): Promise<Response> {
   }
   const cookieHeaders = upstream.headers as Headers & { getSetCookie?: () => string[] };
   for (const cookie of cookieHeaders.getSetCookie?.() ?? []) out.append('set-cookie', cookie);
-  return new NextResponse(await upstream.text(), { status: upstream.status, headers: out });
+  return new NextResponse(text, { status: upstream.status, headers: out });
 }

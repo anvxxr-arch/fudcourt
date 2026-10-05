@@ -20,10 +20,9 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { repoRoot as discoverRepoRoot, parseOpenApiEnums } from './lib.mjs';
 
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(scriptDir, '..', '..', '..');
+const repoRoot = discoverRepoRoot();
 
 // The executor type surface moved in the frontend refactor:
 // frontend/web/src/platform/executor/types.ts -> frontend/web/src/lib/executor.ts.
@@ -43,30 +42,6 @@ function parseLiteralUnion(tsSource, name) {
   const m = tsSource.match(new RegExp(`export type ${name}\\s*=\\s*([\\s\\S]*?);`));
   if (!m) return null;
   return [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]);
-}
-
-/** Parse `    Name:` ... `      enum:` ... `        - VALUE` from the YAML. */
-function parseYamlEnum(yaml, name) {
-  const lines = yaml.split('\n');
-  const start = lines.findIndex((l) => l === `    ${name}:`);
-  if (start === -1) return null;
-  let inEnum = false;
-  const values = [];
-  for (let i = start + 1; i < lines.length; i += 1) {
-    const line = lines[i];
-    if (line.trim() === '') continue;
-    if (/^\s{0,4}\S/.test(line)) break; // dedent out of the schema block
-    if (line === '      enum:') {
-      inEnum = true;
-      continue;
-    }
-    if (inEnum) {
-      const item = line.match(/^        - (\S+)\s*$/);
-      if (item) values.push(item[1]);
-      else break;
-    }
-  }
-  return values.length > 0 ? values : null;
 }
 
 /** All documented paths → their methods. */
@@ -133,10 +108,11 @@ if (!/^paths:\s*$/m.test(openapiYaml)) {
 }
 // (a) enums: OpenAPI components vs types.ts literal unions
 // ---------------------------------------------------------------------------
+const parsedOpenApiEnums = parseOpenApiEnums(openapiYaml);
 let enumChecks = 0;
 for (const name of CHECKED_ENUMS) {
   const tsValues = parseLiteralUnion(typesTs, name);
-  const yamlValues = parseYamlEnum(openapiYaml, name);
+  const yamlValues = parsedOpenApiEnums.get(name) ?? null;
   if (!tsValues) {
     failures.push(`enum ${name}: literal union not found in types.ts`);
     continue;

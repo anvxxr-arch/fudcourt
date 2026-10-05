@@ -17,6 +17,7 @@ import { ECONOMY_NAV } from '@/features/economy/nav';
 import { ErrorState } from '@/ui/feedback';
 import { Loading } from '@/ui/feedback';
 import { PageHeader } from '@/ui/page-header';
+import { Meter } from '@/ui/meter';
 
 export default function LiquidityBoard() {
   const [data, setData] = useState<LiquidityEnvelope | null>(null);
@@ -65,6 +66,22 @@ export default function LiquidityBoard() {
         </Card>
       )}
 
+      <Card title="Component vote" subtitle="how the live components' 30-day changes line up with each component's loosening direction">
+        <Meter
+          parts={(() => {
+            const loosening = data.components.filter((c) => c.change !== null && Math.sign(c.change * c.direction) > 0).length;
+            const tightening = data.components.filter((c) => c.change !== null && Math.sign(c.change * c.direction) < 0).length;
+            const flat = data.components.filter((c) => c.change !== null && Math.sign(c.change * c.direction) === 0).length;
+            const unreadable = data.components.filter((c) => c.change === null).length;
+            return [
+              { label: 'loosening', value: loosening, color: color.green },
+              { label: 'tightening', value: tightening, color: color.red },
+              { label: 'flat', value: flat, color: color.labelTertiary },
+              { label: 'unreadable', value: unreadable, color: color.separator },
+            ];
+          })()}
+        />
+      </Card>
       <div style={{ marginTop: space[12] }}>
         <Card title="Components" subtitle="level, 30-day change, and the direction that counts as loosening">
           <DataTable

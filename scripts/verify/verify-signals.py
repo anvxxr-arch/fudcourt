@@ -49,16 +49,13 @@ PAGE_REJECTED = {0: 400, 1: 400, -1: 400, 11: 404, 12: 404}
 # "not present", never be coerced to 0. Recorded as expected-null, not a count.
 SPARSE_METRICS = ("liq", "score", "holdersCount", "topHolderPct", "sightings", "price")
 
-GREEN, RED, YELLOW, DIM, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[2m", "\033[0m"
+from verifylib import as_dict_loud as as_dict, check_mark as check
+from verifylib import section_yellow as section
+from verifylib import GREEN, RED, DIM, RESET
 
 results: list[tuple[bool, str, str]] = []
 
 
-def check(ok: bool, label: str, detail: str = "") -> bool:
-    results.append((ok, label, detail))
-    mark = f"{GREEN}PASS{RESET}" if ok else f"{RED}FAIL{RESET}"
-    print(f"  [{mark}] {label}" + (f"  {DIM}{detail}{RESET}" if detail else ""))
-    return ok
 
 
 def get(url: str, timeout: int = 40) -> tuple[int, dict | str | None]:
@@ -88,18 +85,6 @@ def get(url: str, timeout: int = 40) -> tuple[int, dict | str | None]:
         return status, body[:200].decode("utf-8", "replace")
 
 
-def as_dict(body: object) -> dict:
-    """
-    Narrow a response body to a dict, or fail loudly.
-
-    Every assertion below depends on a JSON *object* arriving. If a body is a
-    string (HTML error page, empty body) or None, the honest move is to say so
-    -- not to carry on and report a confusing downstream AttributeError.
-    """
-    if isinstance(body, dict):
-        return body
-    preview = body if isinstance(body, str) else type(body).__name__
-    return {"__unexpected__": preview[:120]}
 
 
 def unexpected(body: dict) -> str | None:
@@ -109,8 +94,6 @@ def unexpected(body: dict) -> str | None:
     return None
 
 
-def section(title: str) -> None:
-    print(f"\n{YELLOW}▸ {title}{RESET}")
 
 
 # --- 1. mode x chain status matrix ----------------------------------------

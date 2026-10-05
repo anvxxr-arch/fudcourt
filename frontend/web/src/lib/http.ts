@@ -55,6 +55,10 @@ export function createFetchPool(limit: number, timeoutMs = DEFAULT_TIMEOUT_MS) {
 
   return async function pooledFetch(url: string, init: RequestInit = {}): Promise<Response> {
     await sem.acquire();
+    // Cold-500 trace: the clock starts at slot acquisition so pool queueing
+    // shows up in the elapsed figure on the failure path. Logging happens on
+    // failure only — the success path below is byte-for-byte the old behavior.
+    const start = Date.now();
     // Compose the caller's signal with this pool's own deadline: a caller that
     // forgets one must not be able to hold a slot forever.
     const ctl = new AbortController();
@@ -68,7 +72,18 @@ export function createFetchPool(limit: number, timeoutMs = DEFAULT_TIMEOUT_MS) {
       else caller.addEventListener('abort', () => ctl.abort(caller.reason), { once: true });
     }
     try {
-      return await fetch(url, { ...init, signal: ctl.signal });
+      const res = await fetch(url, { ...init, signal: ctl.signal });
+      if (!res.ok) {
+        console.error(
+          `[pooledFetch] upstream-not-ok route=${url} status=${res.status} elapsedMs=${Date.now() - start} aborted=${ctl.signal.aborted}`
+        );
+      }
+      return res;
+    } catch (err) {
+      console.error(
+        `[pooledFetch] throw route=${url} elapsedMs=${Date.now() - start} aborted=${ctl.signal.aborted} reason=${String(ctl.signal.reason ?? '').slice(0, 120)} err=${err instanceof Error ? err.message : String(err)}`
+      );
+      throw err;
     } finally {
       clearTimeout(timer);
       sem.release();
