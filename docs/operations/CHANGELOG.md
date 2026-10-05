@@ -11,6 +11,11 @@ measured on this host, never estimated.
 > single `ci.yml` is now five path-filtered workflows. Use `docs/architecture/final-review.md` §1
 > for the tree today.
 
+## 2026-10-05
+| Change | Surface | Evidence | Record |
+|---|---|---|---|
+| **DR-004 amendment 2 — the "harness budget for verify-cryptorank.py" residual is closed with NO code change: the `local` scope class the card proposed to add already exists and already fires for the harness** — the residual (SG-7.6 #2) claimed the operator's harness runs `scope: public` and 429s from call ~25 because a full run costs 137 units against the 80-unit heavy window; re-measured on the live origin, both halves are false and the SG-6.5 peer-address amendment is the reason. `clientKey()` classifies the harness's `X-Forwarded-For: ::ffff:127.0.0.1` (Next 16 `base-server.js:612`) as a loopback peer, so `:3100` answers `X-RateLimit-Scope: local` with limit 8000 (heavy) / 12000 (light); a full `verify-cryptorank.py --base :3100` run has **zero `429` checks** and its fail set differs from the same-session `:3101` run by exactly **3 `launchpool` `got 0` connection blips** (a sibling session restarting `fudcourt-web` mid-run — `ExecMainStartTimestamp` moved 08:09:24 → 08:12:24 → 08:16:16), the other 30 fails being the retired-`/cryptorank` shell/component block and world-state checks byte-identical across both bases. Neither Option A (a declared `X-Local-Operator` header + third scope class) nor Option B (a per-route harness allowance in `ROUTE_COST`) is adopted — a second mechanism for a solved problem, and a declared header is a weaker signal than the socket peer the module already reads. | `docs/records/DECISIONS.md`, `docs/operations/PLAN.md` | live `curl -D - :3100/api/cryptorank?mode=chain` → `X-RateLimit-Scope: local`, `Limit: 8000`; `?mode=coin` → `Limit: 12000`; full `verify-cryptorank.py --base :3100` → 0 checks mentioning `429`, fail-set diff vs `:3101` = 3 `launchpool` `got 0` only; AST call table = **55 `get()` sites summing to 137 units**; forged-`CF-Connecting-IP` replay ×6 → `200 200 200 200 429 429` (scope `public`, limit 80); `bun run test:shapers` rate-limit suite **16 pass / 0 fail** (whole suite blocked only by a sibling's in-flight `trade-tests.ts`) | DR-004 amendment 2 · this change |
+
 ## 2026-10-04
 | Change | Surface | Evidence | Record |
 |---|---|---|---|

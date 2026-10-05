@@ -243,6 +243,68 @@ spend 100× while reached from the origin's own address space. That is the
 intended operator allowance (and DR-002 keeps the only ingress the tunnel), but
 it becomes a real question the day a second, non-proxy ingress is added — the
 allowance would then need to key on something else.
+### DR-004 amendment 2 — the harness-budget question is CLOSED: the local scope already answers it (2026-10-05)
+**Status:** accepted, measured on the live origin. **No code change.**
+**Found by:** the residual `[Fudcourt] DR-004 open: harness budget for
+verify-cryptorank.py under :3100 middleware` (kanban `t_7327e6d9`, a child of the
+2026-10-05 tracker), which re-opened SG-7.6 residual #2 and framed the fix as a
+choice between two NEW mechanisms (Option A — a declared `X-Local-Operator`
+header + a third scope class; Option B — a per-route harness allowance in
+`ROUTE_COST`).
+**What was claimed.** That `verify-cryptorank.py` "cannot complete a full run
+through the `:3100` middleware under the DR-004 budget it helped calibrate":
+137 units over 53 calls against the 80-unit heavy window ⇒ 429 from call ~25,
+"exactly the two `got 429` failures the cutover harness reported", because the
+harness is priced `scope: public`.
+**What is measured now.** Both halves of that claim are false on the current
+tree, and the first amendment (SG-6.5) is the reason:
+- **The scope is `local`, not `public`.** `GET :3100/api/cryptorank?mode=chain`
+  answers `X-RateLimit-Scope: local`, `X-RateLimit-Limit: 8000` (heavy) and
+  `?mode=coin` answers `Limit: 12000` (light) — `HEAVY_ALLOWANCE × LOCAL_MULTIPLIER`
+  and `LIGHT_ALLOWANCE × LOCAL_MULTIPLIER`. `clientKey()` decides scope from the
+  **peer address** (amendment 1), so the harness's `X-Forwarded-For:
+  ::ffff:127.0.0.1` from Next 16 `base-server.js:612` is classified local, exactly
+  as the amendment intended.
+- **The run completes with ZERO rate-limit failures.** A full
+  `verify-cryptorank.py --base http://127.0.0.1:3100` run: **0 checks mention
+  `429`** anywhere in the run log or the report. Diffed against the same session's
+  `--base http://127.0.0.1:3101` run, the fail sets are **30 common / 3 :3100-only**
+  and the 3 extras are `launchpool` checks whose detail is `got 0` (a
+  connection refusal), not `got 429` — they are a sibling session restarting
+  `fudcourt-web` mid-run (`ExecMainStartTimestamp` moved 08:09:24 → 08:12:24 →
+  08:16:16 while this card ran), not the limiter. The 30 common fails are the
+  retired-`/cryptorank` shell/component block and world-state checks that are
+  **byte-identical across both bases** (card `t_dc1fa218` owns them).
+- **The call table is confirmed, and it is not 53 calls of network `get()`.**
+  AST count of the harness: **55** `get()` call sites. Of those, the ones that
+  reach `/api/cryptorank` and are cost-weighted (`chain` ×3 @20, `converter` @20,
+  `tag` ×3 @3, `tags` @2, `blockchains` @2, the rest @1) sum to **exactly 137
+  units** — matching SG-6.5. 137 ≪ 8000 local, so no window is approached. (The
+  "53 calls" figure in the card and in SG-7.5b's narrative is an approximation;
+  the unit total is the figure that matters and it is reproduced here.)
+- **The public budget is untouched.** A forged `CF-Connecting-IP` replay through
+  `:3100` (`GET /api/cryptorank?mode=converter` ×6) answers
+  **`200 200 200 200 429 429`** — scope `public`, limit 80, cost 20 — i.e. the
+  SG-6.4 abuse wall is intact and the local allowance does not leak into it.
+**Decision. Neither Option A nor Option B.** The scope class the card proposed to
+ADD (`local`, distinguished from `public`) already exists and already fires for
+this caller; adding a third class or a parallel harness budget would be a second
+mechanism for a problem amendment 1 already solved, and a declared header (Option
+A) would be a *weaker* signal than the socket peer the module reads today. The
+residual was a **stale record** — SG-7.5b's `235/5` reading was taken before the
+amendment-1 fix was deployed (its own text says the harness "is priced
+`scope: public`"), and the card inherited that wording — not a live defect.
+**Consequences.**
+- SG-7.6 residual #2 is **closed** as "already fixed by amendment 1"; the PLAN
+  bullet and the CHANGELOG row carry the closure.
+- The lesson recorded: a residual written against a pre-fix measurement must be
+  **re-measured against the live origin before a fix is scoped** — the card spent
+  two option designs on a bug that the preceding amendment had already closed.
+  The tell was available: `curl -D -` on `:3100` prints `X-RateLimit-Scope`, so
+  the claim was falsifiable in one request.
+- No header, no allowance multiplier, no new scope constant, and no change to
+  `ROUTE_COST`, `clientKey`, `middleware.ts`, or the public budget. The limiter
+  module and its 16 offline tests are unchanged.
 ---
 ## DR-005 — CryptoRank runtime: Python helper → Go `apicalls` sidecar (2026-09-29)
 **Status:** accepted, deployed (`fudcourt-apicalls` :3101 + cut-over

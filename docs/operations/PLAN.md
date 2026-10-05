@@ -354,6 +354,18 @@ holds a real browser TLS fingerprint (→ [DR-005](../records/DECISIONS.md)).
      Either the harness needs a declared local scope/header, or the budget needs
      a harness allowance in `lib/rate-limit-inbound.ts` — a DR-004 decision and
      outside this cutover's file scope.
+     **✅ CLOSED 2026-10-05 — already fixed by the SG-6.5 amendment; no new
+     mechanism.** Re-measured on the live origin (`t_7327e6d9`, DR-004 amendment
+     2): `:3100` returns `X-RateLimit-Scope: local` (limit 8000 heavy / 12000
+     light), a full `verify-cryptorank.py --base :3100` run has **0 `429`
+     checks** and its fail set differs from the `:3101` run by **3 `launchpool`
+     `got 0` connection blips** (a sibling restarting `fudcourt-web` mid-run),
+     the 30 shared fails being the retired-`/cryptorank` shell block
+     (`t_dc1fa218`); the AST call table confirms **55 `get()` sites = 137 units
+     ≪ 8000**, and the forged-`CF-Connecting-IP` public replay still caps at
+     **80** (`200 200 200 200 429 429`). Neither Option A (declared header) nor
+     Option B (harness allowance) is adopted — the `local` scope class the card
+     proposed to add already exists and fires for this caller.
   3. Two harness checks are stale against upstream/session drift, both proven
      path-independent (the TS `envelope()` over the same payload fails
      identically): `news: titles + publisher URLs intact` (upstream spacer row
