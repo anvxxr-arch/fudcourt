@@ -36,6 +36,7 @@ export interface NavSection {
 export const NAV_SECTIONS: readonly NavSection[] = [
   { key: 'home', href: '/', label: 'Home', blurb: 'What FUDCOURT is, and what the market is doing right now.' },
   { key: 'market', href: '/market', label: 'Market', blurb: 'Crypto, forex, commodity, stock and on-chain DEX boards.' },
+  { key: 'trade', href: '/trade', label: 'Trade', blurb: 'Spot, margin, perpetual, futures, options and swap across CEX and DEX venues.' },
   { key: 'economy', href: '/economy', label: 'Economy', blurb: 'Global macro: growth, inflation, labour, money and policy.' },
   { key: 'signals', href: '/signals', label: 'Signals', blurb: 'Curated trading signals with entry levels and confidence.' },
   { key: 'scoreboard', href: '/scoreboard', label: 'Scoreboard', blurb: 'Tracked traders and wallets ranked by realised performance.' },

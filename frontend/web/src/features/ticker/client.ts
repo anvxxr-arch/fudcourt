@@ -261,7 +261,14 @@ export type TickerRow = {
   instrument: TickerInstrument;
   /** Median of the venue quotes, or null when no venue answered. */
   price: number | null;
-  /** 24h change as a fraction (0.042 = +4.2%), or null if uncomputable. */
+  /**
+   * 24h change in PERCENT (1.39 = +1.39%), or null if uncomputable.
+   *
+   * This is ccxt's `percentage` field, reported as-is — NOT a fraction. The
+   * board's own `fmtPct` appends '%' with no x100, which is what fixed this
+   * doc: it previously said "as a fraction (0.042 = +4.2%)", and a consumer
+   * that trusted it printed +138.87% for a +1.39% move.
+   */
   change24h: number | null;
   high24h: number | null;
   low24h: number | null;

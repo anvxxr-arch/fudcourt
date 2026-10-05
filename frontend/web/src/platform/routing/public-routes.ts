@@ -90,6 +90,16 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 0.7,
   },
   {
+    // The trading domain's front door (trade plan Phase 6). Its market-type
+    // boards (/trade/<marketType>) are a bounded, known set — the taxonomy
+    // itself — so sitemap.ts enumerates them from it, never from a crawl.
+    path: '/trade',
+    title: 'Trade — Command center | FUDCOURT',
+    description:
+      'One trading surface across spot, margin, perpetual, futures, options and swap. Market type is what you trade; the venue is only where it executes — CEX and DEX behind one intent, risk engine and execution engine.',
+    priority: 0.8,
+  },
+  {
     // The macro module's front door (plan Phase 4). Its six sub-boards are
     // listed below; the dynamic profiles (/economy/nation/<cc>,
     // /economy/indicator/<slug>, /economy/central-bank/<slug>) are enumerated

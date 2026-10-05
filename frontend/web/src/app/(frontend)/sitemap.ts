@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { PUBLIC_ROUTES } from '@/platform/routing/public-routes';
 import { TICKER_SYMBOLS } from '@/features/ticker/client';
 import { COUNTRY_LIST, INDICATORS, CENTRAL_BANKS } from '@/features/economy/registry';
+import { MARKET_TYPES } from '@/features/trade/taxonomy';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = PUBLIC_ROUTES.map((route) => ({
@@ -46,6 +47,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
+  // Per-market-type trading boards. Same rule as the rest: a bounded, known set
+  // — the trade taxonomy itself — enumerated from it, never crawled. A market
+  // type that is not in the taxonomy has no page (the route 404s), so it must
+  // not appear here. Prices move hourly, so hourly matches the ticker TTL.
+  const tradeBoardPages = MARKET_TYPES.map((market) => ({
+    url: `https://fc.dwirijal.my.id/trade/${market.id}`,
+    lastModified: new Date(),
+    changeFrequency: 'hourly' as const,
+    priority: 0.6,
+  }));
+
   return [
     ...staticRoutes,
     ...tickerCoins.map((coin) => ({
@@ -57,5 +69,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...nationPages,
     ...indicatorPages,
     ...centralBankPages,
+    ...tradeBoardPages,
   ];
 }
