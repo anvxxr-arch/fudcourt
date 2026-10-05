@@ -12,7 +12,7 @@
  *
  * WHERE THE VALUES COME FROM. They are the domain's DECLARED capabilities, not a
  * live probe. For Binance, Bybit and MEXC they agree with the executor's own
- * probed registry (`@/platform/executor/exchange` EXCHANGE_CAPABILITIES): a
+ * probed registry (`backend/workers/executor/internal/exchanges` EXCHANGE_CAPABILITIES): a
  * `nativeTwap: false` there is a `nativeTwap: false` here, so the board's
  * "TWAP: executor" cell matches the engine that actually slices the order. The
  * venues the executor does not route yet (OKX, Hyperliquid, Uniswap, Jupiter)

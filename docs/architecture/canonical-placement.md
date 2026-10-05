@@ -123,11 +123,11 @@ says "The TS production path is untouched", and `grep -rn '3105' frontend/web/sr
 `node_modules`) returned **no match**, so the same URL was served twice while the cutover was pending.
 **Current (2026-10-02, commits `9d7de04`/`f166a0e`).** The re-point is now **coded**: all 15
 `/api/executor/*` handlers delegate to one helper,
-`frontend/web/src/platform/executor/executor-proxy.ts` (`DEFAULT_UPSTREAM_ADDR = '127.0.0.1:3105'`),
+`frontend/web/src/app/(frontend)/api/executor/_proxy.ts` (`DEFAULT_UPSTREAM_ADDR = '127.0.0.1:3105'`),
 enabled only by `FUDCOURT_EXECUTOR_PROXY=go` — default OFF, so the TS runtime is still the live path
 and the same URL is still served twice. The earlier "no match" claim is now **false**:
 `grep -rn '3105' frontend/web/src --include='*.ts'` returns
-`frontend/web/src/platform/executor/executor-proxy.ts` (the built `.next/**` output matches too and is
+`frontend/web/src/app/(frontend)/api/executor/_proxy.ts` (the built `.next/**` output matches too and is
 not source). The count (**15**) and the "unchanged by this workstream" verdict both still hold — the
 canonical workstream touched none of these handlers. `backend/api` (`:3103`) is a **different**
 service and still serves only `/healthz`, `/readyz`, `/api/auth/{login,callback,logout}`,

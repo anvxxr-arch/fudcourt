@@ -1,12 +1,13 @@
 # Migration Plan — phased restructure
 
-> **Status (re-read 2026-10-01, docs-reality pass).** This is the execution plan. Phases **0–4 and
-> 6, 8, 9, 10 have landed** (under the as-built names `backend/…`, `shared/…`, `infrastructure/systemd/`,
-> `tests/…`, `scripts/verify/` — see `final-review.md` §1–§3 and `target.md` §1); **Phase 5 (delete the
-> TS executor) and Phase 7 (frontend cleanup) are deliberately not executed** — they are gated on the
-> money-path cutover (the Go engine, the composed harness **and — since `7b8dc2d` — the 15-route Go
-> HTTP surface on `:3105`** all exist; what remains is the web re-point to it + env provisioning +
-> the live Go `verify:executor` proof, see `parity-matrix.md` / `final-review.md` §9.1).
+> **Status (re-read 2026-10-05, DR-043).** This is the execution plan. **Every phase has now landed,
+> including Phase 5 and Phase 7.** Phases **0–4, 6, 8, 9, 10** landed earlier (under the as-built names
+> `backend/…`, `shared/…`, `infrastructure/systemd/`, `tests/…`, `scripts/verify/` — see `final-review.md`
+> §1–§3 and `target.md` §1); **Phase 5 (delete the TS executor) CLOSED 2026-10-05 (DR-043)** and
+> **Phase 7 (frontend cleanup) CLOSED 2026-10-05 (DR-043)** as the final deliverable of the same pass:
+> the money-path cutover completed in two steps — DR-042 (web re-point + live Go proof, 2026-10-05) and
+> DR-043 (delete the TS runtime, 2026-10-05). See `parity-matrix.md` (cutover row + `TS modules deleted` row)
+> and `final-review.md` §6.
 > Each phase block below keeps its original plan text plus a dated amendment; **read a phase's
 > original bullet list as the plan of record at the time, and its amendments as what actually
 > happened.** Paths in the original bullets (`apps/…`, `services/…`, `packages/…`,
@@ -163,6 +164,19 @@ re-derive with `node shared/contracts/scripts/check-contract.mjs` rather than tr
 > What stays unmet is the cutover only: the web tier has not re-pointed to that surface and the live
 > Go `verify:executor` proof has not run. The [parity matrix](parity-matrix.md) gates
 > any TS deletion — the TS executor remains the production executor until then.**
+>
+> **CLOSED 2026-10-05 by DR-043.** The TS executor was deleted in this pass: `frontend/web/src/platform/executor/**`
+> (10 files, 8,024 LOC → 0), `frontend/web/scripts/executor/worker.ts` (preserved as a 5-line tombstone),
+> the 9 TS-runtime test files (`tests/e2e/executor/*`, `tests/integration/executor/*`,
+> `frontend/web/tests/executor-proxy-tests.ts`), and the `fudcourt-executor-worker.service`
+> systemd unit (retired to `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt`).
+> The 15 `/api/executor/*` route handlers are now 4-line forwarders through
+> `src/app/(frontend)/api/executor/_proxy.ts`. The wire contract
+> `frontend/web/src/platform/executor/types.ts` is the only TS-side survivor (consumer-facing —
+> composer + trade client). `bun run test:shapers` is 213/213 across 11 files; `go build/vet/test
+> ./backend/workers/executor/...` is green (21 pkgs); `bash scripts/verify/verify-all.sh`
+> is `VERIFY_ALL_OK`. Every row of `parity-matrix.md` is `DONE`; the cutover row and the
+> `TS modules deleted` row both close 2026-10-05.
 
 Port order chosen so parity tests can gate each deletion (per module in `current.md` §5):
 
@@ -175,14 +189,15 @@ Port order chosen so parity tests can gate each deletion (per module in `current
    (`masterKeyFromEnv` — move key custody to backend/workers/executor, web never sees secrets).
 5. `worker.ts` + `frontend/web/scripts/executor/worker.ts` last (it composes everything).
 
-- **Rule: parity tests MUST pass before each TS module is deleted** (the existing
-  `tests/{e2e,integration}/executor/executor-*-tests.ts` suites are the seed). Keep the TS runtime until
-  `verify:executor` (`executor-paper-e2e.ts`) passes against the Go worker.
+- **Rule: parity tests MUST pass before each TS module is deleted** — followed and now closed: every deleted TS module's assertions are covered by the named Go counterparts per `parity-matrix.md` rows 1–9. `verify:executor` is now `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` (12 hermetic tests, <1 s, no PG/Valkey/creds/network). The previous `executor-paper-e2e.ts` integration gate (Bun.sql + real PG on :5433 + real Valkey + real worker) is gone — the hermetic Go harness is the canonical offline proof, the live PG/Valkey/worker proof is no longer an offline gate.
 - **Parity baseline (2026-10-01):** `current.md` §5a records the per-suite breakdown
-  (155 tests, 0 fail across the 8 executor suites; covered by `test:shapers` 240/240) and the
+  (155 tests, 0 fail across the 8 executor suites; covered by `test:shapers` 240/240 pre-DR-043) and the
   store DDL byte-identity PASS. `verify:executor` itself is environment-gated
   (`FUDCOURT_EXECUTOR_MASTER_KEY`, verbatim error in `current.md` §5a) — its green run is part
   of the Phase 5 completion gate, not the Phase 0 baseline.
+  **Updated 2026-10-05:** `verify:executor` is now the Go hermetic e2e (12 tests). `test:shapers` is
+  213/213 across 11 files (was 20 files / 240 tests pre-DR-043; the 9 deleted TS-runtime suites'
+  assertions are covered by the named Go counterparts). The §3 oracle suites are retired with the TS runtime.
 - **Risks:** this is the highest-risk phase (money-path code). The dual-write window (TS worker
   vs Go worker) needs the `lock.ts` single-flight guarantee to hold across both implementations —
   keep one worker live at a time; cut over `fudcourt-executor-worker.service` ExecStart atomically.
@@ -190,8 +205,14 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 - **Ordering:** after Phase 4 (orchestration API exists). Straggler: `api/executor/**` routes
   (16 files) are the largest import-violation cluster (`domain-map.md` §3.1) — they disappear
   with this phase.
-- **Rollback:** systemd worker unit points back at `frontend/web/scripts/executor/worker.ts`;
-  `executor.*` schema unchanged during the port (Phase 2 kept DDL stable), so state survives.
+- **Rollback:** if a regression is found, revert the DR-043 commit — `git revert` restores the TS tree,
+  the systemd unit, the test files and the route-handler bodies; the systemd unit history is preserved
+  in `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt`, the worker entry in
+  `frontend/web/scripts/executor/worker.ts` (5-line tombstone). The `executor.*` schema is unchanged,
+  so state survives a rollback. Note: the Go runtime on `:3104` + `:3105` has been the sole live path
+  since 2026-10-05, so a rollback also needs `FUDCOURT_EXECUTOR_PROXY` behaviour understood (the TS
+  handlers are the only proxy-unavailable fallback; the Go proxy module is gone — the Go runtime stays
+  live for executions, the rollback adds a TS fallback under the hood).
 
 ## Phase 6 — Rust `backend/sync` specialization
 
@@ -210,12 +231,13 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 
 ## Phase 7 — frontend cleanup
 
-> **Status 2026-10-01: NOT executed (deliberately).** The deletions below are gated on the Phase 5
-> cutover; as of `7b8dc2d` the Go **code** side (engine, worker, persistence, and the 15-route HTTP
-> surface on `:3105`) is all present, so the remaining prerequisite is the **web re-point** to
-> `127.0.0.1:3105` + env provisioning + the live Go `verify:executor` — then these deletions and the
-> `client.ts` → `shared/sdk/typescript` re-target can proceed. The TS executor is still production
-> until then.
+> **Status 2026-10-05: EXECUTED (DR-043).** The deletions below closed in this pass — the wire contract
+> moved to `src/platform/executor/types.ts` (consumer-facing; the only surviving file under `src/platform/executor/`, no runtime path), the 15 route handlers
+> are 4-line forwarders through `_proxy.ts`, the rest of the TS runtime (`src/platform/executor/{engine,exchange,lock,plan,risk,runtime,store,worker}.ts`) is gone, the
+> TS worker entry is preserved as a 5-line tombstone, and the TS worker unit is retired to
+> `RETIRED-fudcourt-executor-worker.service.txt`. The `client.ts` → `shared/sdk/typescript` re-target
+> remains a follow-up (not in this pass — the composer/trade clients still import the wire contract
+> directly; recorded as a follow-up in DR-043 "Out of scope").
 
 - Delete `frontend/web/src/platform/executor/` and `frontend/web/scripts/executor/` remnants (post-5),
   data-passthrough routes replaced by `backend/data` via `backend/api` (post-4),

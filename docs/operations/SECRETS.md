@@ -23,8 +23,8 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 | `CR_PYTHON` | interpreter for the **verifier oracle** `tests/oracle/cr_fetch.py` (no longer a runtime path — DR-005: the route proxies to `fudcourt-data`) | code default (`~/.venvs/crfetch/bin/python`) | `verify-cryptorank.py` runs on this host | no |
 | `FUDCOURT_DATA_URL` | upstream base of the CryptoRank route's proxy target | code default (`http://127.0.0.1:3101`) | `fudcourt-web` (`:3100`) | no |
 | `VERCEL_OIDC_TOKEN` (legacy residue) | — none anymore — | `frontend/web/.env.local` | — | no — **safe to delete this line** |
-| **`FUDCOURT_EXECUTOR_MASTER_KEY`** (added with the CEX Executor, DR-021) | `src/platform/executor/store.ts` — seals/opens every exchange credential (AES-256-GCM) and is read by `scripts/executor/worker.ts` indirectly through the store | `frontend/web/.env.local` (**never** committed; git-ignored) | `fudcourt-web` (`:3100`) + `fudcourt-executor-worker` | no |
-| `FUDCOURT_EXECUTOR_LIVE` | not a secret — the §108 **kill switch**; `=1` is the only value that enables live order placement | `frontend/web/.env.local` (absent = paper only) | `fudcourt-executor-worker` | no |
+| **`FUDCOURT_EXECUTOR_MASTER_KEY`** (added with the CEX Executor, DR-021) | `backend/workers/executor/internal/platform/credentials` — seals/opens every exchange credential (AES-256-GCM); was previously read by `frontend/web/scripts/executor/worker.ts` through the TS `store.ts`, both now retired (DR-043) | `frontend/web/.env.local` (**never** committed; git-ignored) | `fudcourt-executor.service` (:3104 + :3105) | no |
+| `FUDCOURT_EXECUTOR_LIVE` | not a secret — the §108 **kill switch**; `=1` is the only value that enables live order placement; was previously read by the TS worker (retired 2026-10-05, DR-043); the Go worker honours it as well | `frontend/web/.env.local` (absent = paper only) | `fudcourt-executor.service` | no |
 
 `./frontend/web/.next/standalone/…/.env` is a *build artifact copy* on local disk
 (`.next/` is git-ignored) — re-created on every build, never edit it. (It was
@@ -73,8 +73,8 @@ Production == this homeserver:
 | Blog / Payload (merged into `frontend/web`, DR-017) | `fudcourt-web.service` | `127.0.0.1:3100` (`/blog`, `/blog/cms/*`) | `frontend/web/.env.local` |
 | Live balance sync | `fudcourt-sync.timer` (5 min) | — (outbound only) | repo-root `.env` via `load_env()` |
 | CEX Executor API + composer (`frontend/web`) | `fudcourt-web.service` | `127.0.0.1:3100` (`/executor`, `/api/executor`, tier `team`) | `frontend/web/.env.local` (`FUDCOURT_EXECUTOR_MASTER_KEY`; exchange API secrets are **not** in any env file) |
-| CEX Executor worker | `fudcourt-executor-worker.service` (`bun scripts/executor/worker.ts`, unit versioned at `infrastructure/systemd/fudcourt-executor-worker.service`) | — (outbound only: venue APIs) | `frontend/web/.env.local` via the unit's `EnvironmentFile`; **independent of `fudcourt-web`** — restarting the web unit never stops an execution |
-| CEX Executor **Go** service (`backend/workers/executor`, `7b8dc2d`) | `fudcourt-executor.service` (unit versioned at `infrastructure/systemd/fudcourt-executor.service`) | `127.0.0.1:3104` (`/healthz`+`/readyz`) and `127.0.0.1:3105` (`/api/executor/*`, `FUDCOURT_EXECUTOR_API_ADDR`) | Needs `FUDCOURT_SESSION_SECRET` (it verifies the same `fud_session` cookie the web tier signs — the unit documents this coupling and deliberately does **not** set the secret itself) + `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY`. **Env is fail-visible: the unit cannot start until `FUDCOURT_SESSION_SECRET` and `FUDCOURT_EXECUTOR_PG_URL` are present in the process env** (name-only; no value here). Not yet the live web path — the web thin-proxy is coded and flips at `FUDCOURT_EXECUTOR_PROXY=go` (default OFF, so `frontend/web/src/platform/executor/*` still serves it; see DR-035) |
+| CEX Executor worker (TS, **TOMBSTONE — retired 2026-10-05 by DR-043; was retired from runtime by DR-042**) | `fudcourt-executor-worker.service` → renamed to `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt` (preserves history; the unit is **not installed**); the entry script is preserved at `frontend/web/scripts/executor/worker.ts` with a tombstone header. The live executor is the Go service below. | — (was outbound only: venue APIs) | `frontend/web/.env.local` was the unit's `EnvironmentFile`; that file still carries the executor env names (the Go service reads the same ones). Restarting `fudcourt-web` never stopped an execution; the Go service is the runtime now. |
+| CEX Executor **Go** service (`backend/workers/executor`, `7b8dc2d`) | `fudcourt-executor.service` (unit versioned at `infrastructure/systemd/fudcourt-executor.service`) | `127.0.0.1:3104` (`/healthz`+`/readyz`) and `127.0.0.1:3105` (`/api/executor/*`, `FUDCOURT_EXECUTOR_API_ADDR`) | Needs `FUDCOURT_SESSION_SECRET` (it verifies the same `fud_session` cookie the web tier signs — the unit documents this coupling and deliberately does **not** set the secret itself) + `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY`. **Env is fail-visible: the unit cannot start until `FUDCOURT_SESSION_SECRET` and `FUDCOURT_EXECUTOR_PG_URL` are present in the process env** (name-only; no value here). Also reads `VALKEY_ADDR`+`VALKEY_PASSWORD` (distributed leases; the host requires AUTH). **Sole live web path since 2026-10-05 (DR-043):** `fudcourt-web` thin-proxies `/api/executor/*` to `:3105` via `src/app/(frontend)/api/executor/_proxy.ts`; the TS executor runtime (`frontend/web/src/platform/executor/**`) was retired in this pass and the wire contract is the only survivor at `src/platform/executor/types.ts`. |
 
 - **No third-party deploy target.** The `fudcourt.vercel.app` domain answers
   `404 DEPLOYMENT_NOT_FOUND` (measured 2026-09-28) — there is nothing deployed
@@ -111,23 +111,25 @@ Production == this homeserver:
   `iv`/`auth_tag` — 12 + 16 bytes per secret). Per-field sealing means a wrong key or
   a tampered row **throws** on the GCM tag rather than returning garbage.
 - **`FUDCOURT_EXECUTOR_MASTER_KEY` must be exactly 64 hex chars (32 bytes)** —
-  `masterKeyFromEnv()` refuses anything else, and its absence is **fail-closed**:
-  credential operations throw and nothing is stored or decrypted. Generate with
-  `openssl rand -hex 32`. The key lives **outside Postgres** (only the sealed bytes
-  do), **must never be committed** (it belongs in the git-ignored
-  `frontend/web/.env.local`), and **must never be printed** — check with
-  `grep -c '^FUDCOURT_EXECUTOR_MASTER_KEY=' frontend/web/.env.local` (expect 1), never by
-  echoing the value. The key is read lazily at first use, so a missing key surfaces
-  as a credential operation throwing, not as the worker refusing to boot.
-- **Decryption is server-side only.** The store's `revealCredentials` is the ONLY
-  plaintext path; API responses carry the masked `CredentialRecord`
-  (`apiKeyMasked`, `***` when the key is ≤8 chars) and never the secret, and adapter
-  errors are sanitised by `mapError` so no key, secret, passphrase or signed payload
-  can reach a log or an error body. Wrong owner ⇒ the row is not visible at all
-  (`null`/`[]` server-side, 404 at the API).
-- **A lost master key is unrecoverable by design** (there is no escrow): the sealed
-  bytes are unreadable, and the operator must re-connect the exchange accounts.
-  Rotate with `store.rotateCredentialKeys(newKey, oldKey)`, not by deleting rows.
+  the credentials package's `masterKeyFromEnv()` refuses anything else, and its
+  absence is **fail-closed**: credential operations throw and nothing is stored
+  or decrypted. Generate with `openssl rand -hex 32`. The key lives **outside
+  Postgres** (only the sealed bytes do), **must never be committed** (it
+  belongs in the git-ignored `frontend/web/.env.local`), and **must never be
+  printed** — check with `grep -c '^FUDCOURT_EXECUTOR_MASTER_KEY='
+  frontend/web/.env.local` (expect 1), never by echoing the value. The key is
+  read lazily at first use, so a missing key surfaces as a credential operation
+  throwing, not as the worker refusing to boot.
+- **Decryption is server-side only.** The Go credentials package's
+  `RevealCredentials` is the ONLY plaintext path; API responses carry the
+  masked `CredentialRecord` (`apiKeyMasked`, `***` when the key is ≤8 chars)
+  and never the secret, and adapter errors are sanitised so no key, secret,
+  passphrase or signed payload can reach a log or an error body. Wrong owner ⇒
+  the row is not visible at all (`null`/`[]` server-side, 404 at the API).
+- **A lost master key is unrecoverable by design** (there is no escrow): the
+  sealed bytes are unreadable, and the operator must re-connect the exchange
+  accounts. Rotate with the credentials package's `RotateMasterKey(newKey,
+  oldKey)`, not by deleting rows.
 - **`FUDCOURT_EXECUTOR_LIVE` is the kill switch, not a credential**: unset or
   anything other than `1` pauses live executions at the placement boundary while
   paper mode and reconciliation keep running.
@@ -181,11 +183,11 @@ delete the line from `frontend/web/.env.local`. Nothing reads it.
 1. Generate a new key: `openssl rand -hex 32` → **64 hex chars**. Never `echo` it
    into a terminal that logs; paste it into `frontend/web/.env.local` in a local editor.
 2. Re-encrypt the existing sealed secrets under the new key rather than deleting
-   rows: call `store.rotateCredentialKeys(newMasterKey, oldMasterKey)` once, then
-   verify a credential still opens (the count it returns is the number of accounts
-   re-sealed).
-3. Verify: `systemctl --user restart fudcourt-executor-worker` then
-   `systemctl --user is-active fudcourt-executor-worker` → active. A malformed key
+   rows: call the Go credentials package's `RotateMasterKey(newMasterKey,
+   oldMasterKey)` once, then verify a credential still opens (the count it
+   returns is the number of accounts re-sealed).
+3. Verify: `systemctl --user restart fudcourt-executor.service` then
+   `systemctl --user is-active fudcourt-executor.service` → active. A malformed key
    (not 64 hex chars) throws at the first credential operation with
    `FUDCOURT_EXECUTOR_MASTER_KEY missing or malformed …` — fail-closed, never a
    silent plaintext fallback. Note the boot path itself does not read the key: the

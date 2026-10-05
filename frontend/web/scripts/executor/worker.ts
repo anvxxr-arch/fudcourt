@@ -1,4 +1,15 @@
+// @ts-nocheck — tombstone preserved for the historical record only (DR-043);
+// its imports target the now-deleted `frontend/web/src/platform/executor/**` tree.
 /**
+ * RETIRED 2026-10-05 by DR-043 — the TS executor worker was replaced by the
+ * Go service `fudcourt-executor.service` (DR-042) and this composition
+ * root is no longer run. The file is preserved here as a record of the
+ * previous Bun-run entry (the corresponding systemd unit, also retired,
+ * lives at `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt`).
+ * Do not execute. The live executor is the Go binary at
+ * `backend/workers/executor/cmd/executor` running under
+ * `fudcourt-executor.service`.
+ *
  * worker.ts — the executor worker's composition root (PRD §68, §100).
  *
  * Run by `fudcourt-executor-worker.service` under Bun:

@@ -9,8 +9,8 @@
 
 ## 1. Domain map — what the executor is made of
 The execution lifecycle (PRD §57) is one table, owned today by
-`frontend/web/src/platform/executor/types.ts` (`EXECUTION_TRANSITIONS`) and ported
-1:1 by `backend/workers/executor/internal/core/execution/lifecycle.go` (`ExecutionTransitions`,
+`frontend/web/src/platform/executor/types.ts` (`EXECUTION_TRANSITIONS` — the wire contract moved, DR-043)
+and ported 1:1 by `backend/workers/executor/internal/core/execution/lifecycle.go` (`ExecutionTransitions`,
 "the ONE lifecycle truth for API intents and worker transitions alike").
 Terminal states accept nothing:
 
@@ -108,43 +108,38 @@ lock — no business rules), plus `repository/` (executor-schema persistence) an
 | `tests/e2e` | `paper_e2e_test.go` (composed paper harness, `go test`) | landed |
 | `cmd/executor` | `main.go`, `health.go`, `lease.go`, `api.go` + tests — mounts the `internal/api` surface on its own loopback listener `FUDCOURT_EXECUTOR_API_ADDR` (default `127.0.0.1:3105`), separate from the `:3104` `/healthz`+`/readyz` surface | landed (`7b8dc2d`) |
 
-## 3. TS parity policy
-**The TypeScript executor is the PARITY ORACLE and the PRODUCTION executor until
-parity is proven** (objective §22; `.ai/restructure-fudcourt.md` "Do NOT remove
-the existing TypeScript executor until Go parity is demonstrated through tests";
-`migration-plan.md` Phase 5: "parity tests MUST pass before each TS module is
-deleted"). What that means in practice:
+## 3. TS parity policy — RESOLVED 2026-10-05 (DR-043)
+**The Go runtime is the SOLE executor.** The TS executor (the previous parity oracle and
+production executor) was retired in DR-043; the wire contract `src/platform/executor/types.ts`
+is the only TS-side survivor (consumer-facing — composer + trade client), and the 15
+`/api/executor/*` route handlers are now 4-line forwarders through
+`src/app/(frontend)/api/executor/_proxy.ts`. The TS-runtime test suites
+(`tests/e2e/executor/*`, `tests/integration/executor/*`, `frontend/web/tests/executor-proxy-tests.ts`)
+are gone; their assertions are covered by the named Go counterparts in `parity-matrix.md`
+rows 1–9 (253+ test funcs across 19 internal packages). `verify:executor` is
+`go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` (12 hermetic
+tests, <1 s, no PG/Valkey/creds/network). The Linux TS worker systemd unit is retired to
+`infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt`; the entry script is
+preserved as a 5-line tombstone at `frontend/web/scripts/executor/worker.ts`.
 
-- Production traffic runs on `frontend/web/src/platform/executor/*` +
-  `frontend/web/scripts/executor/worker.ts` (unit
-  `infrastructure/systemd/fudcourt-executor-worker.service`) — the API routes under
-  `frontend/web/src/app/(frontend)/api/executor/**` — **15 `route.ts` files exporting 19
-  route-method handlers** (recounted 2026-10-02: `find … -name route.ts | wc -l` → 15;
-  `grep -c 'export async function {GET,POST,PUT,DELETE}'` → 19), matching
-  `shared/contracts/openapi/fudcourt.yaml` **15 paths / 19 operations** (paths ≠ operations:
-  `accounts` and `executions` carry GET+POST, `accounts/{id}` GET+DELETE, `settings`
-  GET+PUT) and the Go surface's 15 contract routes (`internal/api`, §2) — and the worker.
-- The oracle suites are `tests/e2e/executor/executor-{engine,plan,risk,runtime,worker}-tests.ts`,
-  `tests/integration/executor/executor-{exchange,store}-tests.ts` and
-  `frontend/web/tests/executor-ui-tests.ts` — **155 tests, 0 fail** as recorded in
-  `docs/architecture/current.md` §5a (engine 20, exchange 1, plan 25, risk 39,
-  runtime 12, store 41, worker 9, ui 8). The paper E2E
-  (`tests/e2e/executor/executor-paper-e2e.ts`, `bun run verify:executor`) is
-  the integration gate; it is environment-gated on `FUDCOURT_EXECUTOR_MASTER_KEY`.
-- Go code mirrors the TS contract field-for-field and says so
-  (`backend/workers/executor/internal/core/execution/records.go`: "mirror
-  frontend/web/src/platform/executor/types.ts field-for-field … Where the two
-  disagree, the TS contract and its tests are the parity oracle until cutover").
-- Cutover (delete TS) requires: every row below `DONE` — i.e. each feature's TS oracle test paired
-  with its named Go test (not merely green Go coverage; see the table's status vocabulary), the paper
-  E2E green against the Go worker, and an atomic `fudcourt-executor-worker.service`
-  switch (`migration-plan.md` Phase 5 — one worker live at a time).
-  **2026-10-02 (web re-point coded):** all 15 `/api/executor/*` route handlers now thin-proxy to
-  `127.0.0.1:3105` through `frontend/web/src/platform/executor/executor-proxy.ts`, enabled only by
-  `FUDCOURT_EXECUTOR_PROXY=go` (default OFF, so the TS runtime remains the live path). Still open
-  before deletion: `FUDCOURT_SESSION_SECRET` + `FUDCOURT_EXECUTOR_PG_URL` (+ `FUDCOURT_EXECUTOR_MASTER_KEY`)
-  must be provisioned so the unit can start, the gate flipped, and the live `verify:executor` run
-  against the **Go** worker.
+What that means in practice (history — kept for the audit trail):
+
+- **Sole live path since 2026-10-05 (DR-043).** Production traffic runs on the Go service
+  (`backend/workers/executor`, unit `fudcourt-executor.service` on `:3104` + `:3105`); the web tier
+  thin-proxies `/api/executor/*` through `src/app/(frontend)/api/executor/_proxy.ts`. Every one of the
+  15 routes is a 4-line forwarder (`export async function GET|POST|...(req, { params }) { void (await params); return forwardExecutor(req); }`).
+- The TS oracle suites are retired:
+  `tests/e2e/executor/executor-{engine,plan,risk,runtime,worker}-tests.ts` (engine 20, plan 25, risk 39,
+  runtime 12, worker 9), `tests/integration/executor/executor-{exchange,store}-tests.ts` (exchange 1, store 41),
+  `tests/e2e/executor/executor-paper-e2e.ts` (the §127 integration gate), and
+  `frontend/web/tests/executor-proxy-tests.ts` are gone. The only surviving TS test referencing the contract
+  shape is `frontend/web/tests/executor-ui-tests.ts` (still in `test:shapers`).
+- Go code mirrors the frozen TS contract field-for-field (`backend/workers/executor/internal/core/execution/records.go`).
+  The contract now lives at `frontend/web/src/platform/executor/types.ts` (consumer-facing); the Go-side
+  counterpart is `internal/core/execution/{types,enums,lifecycle,records}.go` (row 1 of `parity-matrix.md`).
+- Cutover is **CLOSED** by DR-043: every row of `parity-matrix.md` is `DONE`, `bun run test:shapers` is
+  213/213 across 11 files, `go build/vet/test ./backend/workers/executor/...` is green (21 pkgs),
+  `bash scripts/verify/verify-all.sh` is `VERIFY_ALL_OK`, and `find frontend/web/src/platform/executor -type f` → 0.
 
 Feature × TS × Go parity matrix (objective §22 skeleton). **Status vocabulary — read first:**
 `DONE` means **a TS oracle test (file + test title, from the §3 suites) is paired with a named Go test
@@ -180,8 +175,7 @@ TS test has no Go counterpart — is `PARTIAL`, gap named in one clause. The sta
 from **both** sides: the Go test list (`go test -list '.*'` over `core/{risk,sizing,planner,orders,execution}`,
 `strategies`, `exchanges(+binance,bybit,mexc,paper)`, `runtime/{worker,idempotency}`, `tests/e2e/` — **209 named
 tests across 14 packages**, all green) and the §3 oracle suites (155 tests, 0 fail), cross-checked against
-`parity-matrix.md`. `DONE` is not the cutover itself: the cutover stays OPEN on the web re-point + env provisioning
-+ the live `verify:executor` against the Go worker (see `parity-matrix.md`, cutover row). The 17 rows above map
+`parity-matrix.md`. `DONE` is not the cutover itself: the cutover is **CLOSED 2026-10-05 by DR-043** (the entire TS runtime was retired); see `parity-matrix.md`, cutover row + `TS modules deleted` row. The 17 rows above map
 onto `parity-matrix.md` rows 1–9 (`DONE 2026-10-01`) at feature granularity; `parity-matrix.md` is the canonical
 **module**-granular cutover gate and stays authoritative. `market`, `limit` and `futures` stay `PARTIAL` because
 the Go tests do not carry them all the way to a live venue (and the market/limit strategy tests are Go-only);

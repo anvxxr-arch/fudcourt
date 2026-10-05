@@ -1,3 +1,11 @@
+# RETIRED 2026-10-05 by DR-043 — the TS executor worker was replaced by the
+# Go service `fudcourt-executor.service` (DR-042) and is no longer installed
+# or run. The live executor is `fudcourt-executor.service` on :3104 + :3105;
+# this file is preserved as a record of the previous Bun-run entry. Do not
+# install or enable. If a host has the legacy unit installed, stop+disable+remove
+# it: `systemctl --user disable --now fudcourt-executor-worker.service && rm
+# ~/.config/systemd/user/fudcourt-executor-worker.service`.
+#
 # FUDCourt CEX executor worker (execution runtime, PRD §68)
 #
 # Deployed to ~/.config/systemd/user/fudcourt-executor-worker.service. Keep this

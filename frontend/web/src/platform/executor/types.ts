@@ -1,28 +1,39 @@
 /**
  * types.ts — THE SHARED CONTRACT of the FUDCourt CEX Executor (PRD §48–§56, §57–§63).
  *
- * Every executor slice imports THIS module and nothing else across slice
- * boundaries. The module map (also the dependency direction) is:
+ * Path note (DR-043, 2026-10-05): this module lives at
+ * `@/platform/executor/types`. The TS executor runtime that used to live
+ * beside it was retired in DR-043; the Go service
+ * `backend/workers/executor` owns the risk/engine/exchange/store/worker
+ * surfaces, and this file is the FROZEN WIRE CONTRACT the web tier and
+ * the Go surface both speak. The Go side has its own canonical
+ * enum/struct definitions (`internal/api/types.go` and the
+ * per-package `*_test.go` fixtures); renames on either side are coupled
+ * by the parity matrix `parity-matrix.md` row 1.
  *
- *   @/platform/executor/types        ← this file: wire + domain contract (no code)
- *   @/platform/executor/risk         ← pure deterministic math (PRD §102: no HTTP,
- *                                      no DB, no exchange, no frontend)
- *   @/platform/executor/engine       ← strategy planning + lifecycle (TWAP, iceberg,
- *                                      chase, scale; no credentials, no I/O)
- *   @/platform/executor/exchange     ← ExchangeAdapter implementations (ccxt-backed
- *                                      live adapters + PaperExchangeAdapter),
- *                                      symbol normalization, capabilities, error map
- *   @/platform/executor/store        ← Postgres persistence (executor.* schema),
- *                                      credential envelope encryption
- *   @/platform/executor/worker       ← runtime orchestrator: scheduler, locks,
- *                                      state machine, reconciliation, recovery
+ * Every consumer of the executor wire contract imports THIS module and
+ * nothing else across slice boundaries. As of 2026-10-05 (DR-043) the
+ * runtime is no longer in this tree: the Go service
+ * `backend/workers/executor` owns the risk / engine / exchange / store /
+ * worker surfaces, and this file is the FROZEN contract the web tier
+ * types against. The Go side's own canonical enums and structs live in
+ * `internal/api/types.go` and the per-package `*_test.go` fixtures; field
+ * renames on either side are coupled by `parity-matrix.md` row 1.
+ *
+ *   @/platform/executor/types     ← this file: web-side wire contract
+ *   backend/workers/executor         ← the runtime: risk, engine, exchange,
+ *                                      store, worker, api (per Go package)
  *   src/features/executor/           ← UI slice (client + shapers + panel)
- *   src/app/(frontend)/api/executor/ ← API routes (thin; validate + delegate)
+ *                                      imports only from this file
+ *   src/app/(frontend)/api/executor/ ← API routes — one-line forwarders to
+ *                                      the Go /api/executor/* surface via
+ *                                      _proxy.ts; no executor logic
  *
- * Layer rules (DR-018, scripts/checks/check-structure.py): platform never imports
- * features or app; features may import platform. `src/platform/executor/` is
- * deliberately inside `platform/` — the structure gate enforces a CLOSED layer
- * set, so PRD §101's `packages/*` layout is adapted to one app (see DR-020).
+ * Layer rules (DR-018, scripts/checks/check-structure.py): features never
+ * import from app; features import the wire contract from platform/executor.
+ * platform never imports features or app. The structure gate enforces a
+ * CLOSED layer set, so PRD §101's `packages/*` layout is adapted to one
+ * app (see DR-020).
  *
  * Naming: TypeScript/wire names are camelCase exactly as PRD §51–§55 declare
  * them; the Postgres columns are snake_case (PRD §60–§62). Repositories map
@@ -465,7 +476,7 @@ export interface ExecutionRequest {
 }
 
 // ---------------------------------------------------------------------------
-// Risk engine contract (PRD §103–§106) — `@/platform/executor/risk` exports EXACTLY this.
+// Risk engine contract (PRD §103–§106) — `backend/workers/executor/internal/risk` exports EXACTLY this.
 // ---------------------------------------------------------------------------
 
 /** Risk breakdown (PRD §22–§23). All values in quote currency. */
@@ -622,7 +633,7 @@ export interface AutoLeverageResult {
 }
 
 /**
- * `@/platform/executor/risk` — the pure risk engine. Deterministic, decimal-backed,
+ * `backend/workers/executor/internal/risk` — the pure risk engine. Deterministic, decimal-backed,
  * zero I/O (PRD §102). Signatures are frozen here so every other slice can be
  * built against them in parallel.
  */
@@ -739,7 +750,7 @@ export interface PreviewResult {
 }
 
 // ---------------------------------------------------------------------------
-// Engine contract (PRD §25–§37) — `@/platform/executor/engine` exports this surface.
+// Engine contract (PRD §25–§37) — `backend/workers/executor/internal/engine` exports this surface.
 // ---------------------------------------------------------------------------
 
 /** A child order the strategy wants on the venue. */
@@ -836,7 +847,7 @@ export interface StrategyProgress {
   remainingRiskBudget: number | null;
 }
 
-/** `@/platform/executor/engine` — deterministic strategy planning + lifecycle. */
+/** `backend/workers/executor/internal/engine` — deterministic strategy planning + lifecycle. */
 export interface ExecutionEngineApi {
   /** Build initial state for a planned execution (pure). */
   createStrategy(args: {
@@ -869,7 +880,7 @@ export type ChildOrderEvent =
   | 'unknown';
 
 // ---------------------------------------------------------------------------
-// Exchange adapter contract (PRD §48) — implemented in `@/platform/executor/exchange`.
+// Exchange adapter contract (PRD §48) — implemented in `backend/workers/executor/internal/exchanges`.
 // ---------------------------------------------------------------------------
 
 export interface AccountPermissions {
@@ -1078,7 +1089,7 @@ export interface CredentialRecord {
   revokedAt: number | null;
 }
 
-/** Decrypted secrets — NEVER leaves `@/platform/executor/store` (PRD §44, §108). */
+/** Decrypted secrets — NEVER leaves `backend/workers/executor/internal/store` (PRD §44, §108). */
 export interface DecryptedCredentials {
   apiKey: string;
   apiSecret: string;
@@ -1216,7 +1227,7 @@ export const DEFAULT_RISK_PROFILE: RiskProfile = {
 };
 
 // ---------------------------------------------------------------------------
-// Store contract (PRD §59) — `@/platform/executor/store` implements this.
+// Store contract (PRD §59) — `backend/workers/executor/internal/store` implements this.
 // Every method is scoped by `userId`; ownership is checked server-side (PRD §108).
 // ---------------------------------------------------------------------------
 /**
@@ -1316,7 +1327,7 @@ export interface ExecutorStore {
 }
 
 // ---------------------------------------------------------------------------
-// Worker contract (PRD §64–§68, §114) — `@/platform/executor/worker` implements this.
+// Worker contract (PRD §64–§68, §114) — `backend/workers/executor/internal/runtime` implements this.
 // ---------------------------------------------------------------------------
 
 export interface ExecutorWorkerApi {

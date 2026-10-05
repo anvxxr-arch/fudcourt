@@ -1,30 +1,14 @@
-import { NextResponse } from 'next/server';
-import { executorProxyEnabled, proxyExecutorRequest } from '@/platform/executor/executor-proxy';
-import { store } from '@/platform/executor/store';
-import { deleteAccount, notFound, requireExecutorUser } from '@/platform/executor/runtime';
-
+import { forwardExecutor } from '../../_proxy';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
 type Params = { params: Promise<{ id: string }> };
-
 /** GET /api/executor/accounts/:id — one account, masked key only (PRD §87, §109). */
 export async function GET(req: Request, { params }: Params) {
-  if (executorProxyEnabled()) return proxyExecutorRequest(req);
-  const auth = await requireExecutorUser();
-  if (auth.denied) return auth.denied;
-  const { id } = await params;
-  const account = await store.getCredential(auth.user.id, id);
-  if (!account) return notFound('account');
-  return NextResponse.json({ account });
+  void (await params);
+  return forwardExecutor(req);
 }
-
 /** DELETE /api/executor/accounts/:id — revocation, never a plaintext round trip (PRD §87). */
 export async function DELETE(req: Request, { params }: Params) {
-  if (executorProxyEnabled()) return proxyExecutorRequest(req);
-  const auth = await requireExecutorUser();
-  if (auth.denied) return auth.denied;
-  const { id } = await params;
-  const result = await deleteAccount(store, auth.user, id);
-  return 'status' in result ? result : NextResponse.json(result);
+  void (await params);
+  return forwardExecutor(req);
 }

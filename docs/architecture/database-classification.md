@@ -12,7 +12,7 @@ transcript is `history://source-inventory`.
 | Storage | DDL file | Generator / provenance | Extra DBs |
 |---|---|---|---|
 | Postgres 17 + TimescaleDB 2.30.1, `public` (database `fudcourt`) | `database/schema/pg-schema.sql` | hand-written, `IF NOT EXISTS` throughout; **the single system of record since DR-040** (the generated SQLite dump and its `dump-schema.mjs` generator are deleted) | system of record |
-| Postgres, `executor` schema | `database/schema/executor-schema.sql` | tracked copy; executed from an **embedded duplicate** `EXECUTOR_DDL` in `frontend/web/src/platform/executor/store.ts` via `ensureExecutorSchema()`; pinned by `tests/integration/executor/executor-store-tests.ts` | execution system of record |
+| Postgres, `executor` schema | `database/schema/executor-schema.sql` | tracked copy; executed from an **embedded duplicate** `EXECUTOR_DDL` in `backend/workers/executor/internal/repository/store.go` via `ensureExecutorSchema()`; pinned by `backend/workers/executor/internal/repository/schema_test.go` | execution system of record |
 | Neon Postgres | `frontend/web/src/cms/migrations/20260917_194354.ts` (+ `.json` snapshot, `index.ts` manifest) | Payload PostgreSQL adapter migration, generated | CMS content store |
 
 Connection facts (names only, no values):
@@ -190,7 +190,7 @@ history `asset_history` is appended by the `assets_snapshot` trigger, not by a l
 
 Writer split (both found in-repo):
 
-- **Next app** (`frontend/web/src/platform/executor/store.ts`, `EXECUTOR_DDL` +
+- **Next app** (`backend/workers/executor/internal/repository/store.go`, `EXECUTOR_DDL` +
   `STATEMENTS`) — owns `exchange_accounts` writes (sealing via
   `sealCredentials`, `aes-256-gcm`), execution/plan creation, lifecycle transitions,
   settings, audit.
@@ -214,9 +214,9 @@ Writer split (both found in-repo):
 
 **Embedded-DDL duplication (violation to record, not fix here):** the same 10
 `CREATE TABLE` statements exist twice — `database/schema/executor-schema.sql` and the
-`EXECUTOR_DDL` template literal in `frontend/web/src/platform/executor/store.ts:97-227`.
+`EXECUTOR_DDL` template literal (retired with the TS store module 2026-10-05, DR-043) lived at the TS platform store path; the canonical embeddable is now `backend/workers/executor/internal/repository/schema.go`.
 The tracked file is *not* what runs; `ensureExecutorSchema()` executes the embedded copy.
-`tests/integration/executor/executor-store-tests.ts` compares them after normalizing
+`backend/workers/executor/internal/repository/schema_test.go` compares them after normalizing
 blank/comment lines, so drift is caught only by that test.
 
 The Go worker does **not** create the schema; it assumes it exists

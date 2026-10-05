@@ -6,16 +6,20 @@
   // `paths`, which is exactly why the suites broke when the tree moved).
   //
   // Phase 7 relocation: this one project spans two roots — the web-only suites
-  // live in frontend/web/tests, the cross-system executor suites in the repo-root
-  // tests/{e2e,integration}/executor. They are listed in `files`, NOT `include`:
-  // tsc silently drops `../` entries from an include glob. No explicit rootDir is
-  // set, so tsc infers the repo root as the common source directory and the
-  // compiled tree mirrors the repo — test:shapers therefore runs
-  // .shaper-tests/frontend/web/tests/*.js and .shaper-tests/tests/**/*.js, and
-  // alias-resolver.cjs maps `@/x` to .shaper-tests/frontend/web/src/x.
+  // live in frontend/web/tests, the cross-system shaper source modules live in
+  // frontend/web/src/features/* and platform/* (the TS executor runtime was
+  // retired 2026-10-05 by DR-043; the only surviving file is the wire contract
+  // `src/platform/executor/types.ts`, kept in `files` because trade/client.ts and
+  // features/executor/ui.tsx (also listed) import it). They are listed
+  // in `files`, NOT `include`: tsc silently drops `../` entries from an include
+  // glob. No explicit rootDir is set, so tsc infers the repo root as the
+  // common source directory and the compiled tree mirrors the repo —
+  // test:shapers therefore runs .shaper-tests/frontend/web/tests/*.js and
+  // .shaper-tests/frontend/web/src/**/*.js, and alias-resolver.cjs maps `@/x`
+  // to .shaper-tests/frontend/web/src/x.
   //
   // `scripts/verify/parity-reconcile.ts` (repo-wide, moved out of frontend/web) is not
-  // bun-run ESM script (top-level await) and never goes through this compiler.
+  // a bun-run ESM script (top-level await) and never goes through this compiler.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": false,
@@ -42,14 +46,6 @@
     "src/platform/http/rate-limit-inbound.ts",
     "src/platform/db/pg.ts",
     "src/platform/executor/types.ts",
-    "src/platform/executor/risk.ts",
-    "src/platform/executor/engine.ts",
-    "src/platform/executor/exchange.ts",
-    "src/platform/executor/store.ts",
-    "src/platform/executor/lock.ts",
-    "src/platform/executor/runtime.ts",
-    "src/platform/routing/public-routes.ts",
-    "src/platform/routing/site-nav.ts",
     "src/features/market/sources/imf.ts",
     "src/features/economy/taxonomy.ts",
     "src/features/economy/model.ts",
@@ -72,14 +68,6 @@
     "tests/nav-tests.ts",
     "tests/trade-tests.ts",
     "tests/executor-ui-tests.ts",
-    "tests/executor-proxy-tests.ts",
-    "../../tests/e2e/executor/executor-risk-tests.ts",
-    "../../tests/e2e/executor/executor-engine-tests.ts",
-    "../../tests/e2e/executor/executor-plan-tests.ts",
-    "../../tests/e2e/executor/executor-worker-tests.ts",
-    "../../tests/e2e/executor/executor-runtime-tests.ts",
-    "../../tests/integration/executor/executor-exchange-tests.ts",
-    "../../tests/integration/executor/executor-store-tests.ts",
     "../../tests/oracle/record-fixtures.ts",
     "../../tests/oracle/dump-envelopes.ts"
   ]

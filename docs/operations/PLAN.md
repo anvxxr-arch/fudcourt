@@ -924,14 +924,25 @@ program that direction names; the subgoals below are what this session measured.
 ### SG-14.5 [OK] Verification
 - T-14.5.1 [OK] 137 offline tests across `executor-{risk,engine,exchange,store,plan,worker,ui}-tests.ts`,
   wired into `bun run test:shapers` (CommonJS `node --test` + the `@/` resolver
-  shim; no network)
+  shim; no network). **Updated 2026-10-05 (DR-043):** the eight executor-runtime
+  suites (`executor-{risk,engine,exchange,store,plan,worker,ui,paper-e2e}-tests.ts`,
+  `executor-proxy-tests.ts`) are retired with the TS runtime; their assertions are
+  covered by the named Go counterparts per `parity-matrix.md` rows 1–9 (253+ test funcs
+  across 19 packages). The surviving TS executor suite is `executor-ui-tests.ts`.
+  `bun run test:shapers` is 213/213 across 11 files (was 20 files / 240 tests pre-DR-043).
 - T-14.5.2 [OK] `bun run verify:executor` — paper-mode E2E against the REAL
   Postgres + Valkey + worker loop (no mocks): **38/38 PASS** measured 2026-09-30.
   Risk sizing from a $40 budget → qty 0.0198 < 0.02, projected risk 39.996 ≤ budget;
   `Σ child 0.0171 ≤ planned 0.0198`; over-order still holds after a worker restart;
   lock contention refuses a second worker; cancel leaves protective legs on the
   venue; 30 events recorded; the plaintext secret appears in neither the API list
-  payload nor the database row
+  payload nor the database row.
+  **Updated 2026-10-05 (DR-043):** `bun run verify:executor` is now
+  `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` — the
+  composed Go hermetic harness (12 tests, no PG/Valkey/creds/network, <1 s). The
+  TS `executor-paper-e2e.ts` integration gate is retired with the TS runtime (its
+  assertions are covered by `parity-matrix.md` rows 1–9 paired Go counterparts +
+  the DR-042 live `verify:executor` proof from 2026-10-05).
 
 ### SG-14.6 [OK] Portfolio risk gates — §73 open risk, §74 daily loss
 - T-14.6.1 [OK] `store.summarizePortfolioRisk` — one statement, so the ceiling is
