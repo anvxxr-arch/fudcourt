@@ -6,10 +6,10 @@
  * canonical model). A route composes the two, which is why a provider can be
  * replaced by editing one file and a rendered cell by editing the other.
  */
-import { CATEGORY_BY_ID, SUBCATEGORY_LABELS } from '@/features/economy/taxonomy';
-import { COUNTRY_BY_ISO3 } from '@/features/economy/registry';
+import { CATEGORY_BY_ID, SUBCATEGORY_LABELS } from '@/features/economy/model';
+import { COUNTRY_BY_ISO3 } from '@/features/economy/model';
 import type { EconomicIndicator, EconomicObservation } from '@/features/economy/model';
-import type { IndicatorMeta, IndicatorRow, Metric, ReleaseRow } from '@/features/economy/client';
+import type { IndicatorMeta, IndicatorRow, Metric, ReleaseRow } from '@/features/economy/model';
 import { latestOf, nextExpected } from './adapters';
 
 /** The headline cell for one indicator. */

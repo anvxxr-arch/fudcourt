@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
  *
  * WHY A PROXY: the reconciliation maths is now a Rust implementation
  * (`backend/sync/src/reconciliation/reconcile.rs`) with the original TS shaper kept beside it
- * (`src/features/treasury/reconcile.ts`) as the independent oracle. Both were diffed section by
+ * (`src/features/overview/reconcile.ts`) as the independent oracle. Both were diffed section by
  * section on live data (`scripts/verify/parity-reconcile.ts`: identical rows,
  * wallets and walletSummary, key order included) before this route was pointed at
  * the service.
@@ -13,7 +13,7 @@ import { NextResponse } from 'next/server';
  * WHY NOT FALL BACK TO THE TS SHAPER: a silent fallback is exactly the failure
  * mode this house refuses — a board that keeps rendering while its real source is
  * down. If the service is unreachable this answers 502 with the real reason, and
- * the page shows the error. `src/features/treasury/reconcile.ts` is a test/oracle artifact, not a
+ * the page shows the error. `src/features/overview/reconcile.ts` is a test/oracle artifact, not a
  * runtime path (the same status `tests/oracle/cr_fetch.py` has).
  *
  * Everything the service returns is forwarded VERBATIM apart from the body's

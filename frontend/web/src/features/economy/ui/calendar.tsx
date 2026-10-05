@@ -12,15 +12,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { color, fontSize, radius, space } from '@/styles/tokens';
-import { fetchCalendar, formatDate, formatValue, type CalendarEnvelope } from '@/features/economy/client';
+import { fetchCalendar, formatDate, formatValue, type CalendarEnvelope } from '@/features/economy/model';
 import { Card, DataTable, ECONOMY_NAV, ErrorState, ImportanceDots, Loading, PageHeader } from '@/features/economy/ui/parts';
 
 const FIELD = {
-  padding: `${space[6]}px ${space[8]}px`,
-  background: color.surface,
-  border: `1px solid ${color.border}`,
-  borderRadius: radius[6],
-  color: color.text,
+  padding: `${space[8]}px ${space[8]}px`,
+  background: color.bgSecondary,
+  border: `1px solid ${color.separator}`,
+  borderRadius: radius[8],
+  color: color.labelPrimary,
   fontSize: fontSize[11],
 } as const;
 
@@ -60,19 +60,19 @@ export default function EconomyCalendar() {
         nav={ECONOMY_NAV}
       />
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[14], alignItems: 'center' }}>
-        <label style={{ fontSize: fontSize[11], color: color.textMuted }}>
-          From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ ...FIELD, marginLeft: space[6] }} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12], alignItems: 'center' }}>
+        <label style={{ fontSize: fontSize[11], color: color.labelTertiary }}>
+          From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ ...FIELD, marginLeft: space[8] }} />
         </label>
-        <label style={{ fontSize: fontSize[11], color: color.textMuted }}>
-          To <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ ...FIELD, marginLeft: space[6] }} />
+        <label style={{ fontSize: fontSize[11], color: color.labelTertiary }}>
+          To <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ ...FIELD, marginLeft: space[8] }} />
         </label>
         <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Category" style={FIELD}>
           <option value="">Any category</option>
           {['growth', 'labor', 'inflation', 'monetary', 'fiscal', 'trade'].map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <input value={country} onChange={(e) => setCountry(e.target.value.toUpperCase())} placeholder="ISO3 (e.g. USA)" aria-label="Country" style={{ ...FIELD, width: 130 }} />
-        {data && <span style={{ fontSize: fontSize[11], color: color.textMuted }}>{data.total} event(s) in {data.window.from} → {data.window.to}</span>}
+        {data && <span style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{data.total} event(s) in {data.window.from} → {data.window.to}</span>}
       </div>
 
       {error && <ErrorState title="Could not load the calendar" detail={error} />}
@@ -81,7 +81,7 @@ export default function EconomyCalendar() {
       {data && (
         <Card title="Releases" subtitle="reference periods, newest first">
           {data.events.length === 0 ? (
-            <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>No releases in this window. Widen the date range or clear the filters.</p>
+            <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>No releases in this window. Widen the date range or clear the filters.</p>
           ) : (
             <DataTable
               head={['Indicator', 'Country', 'Period', 'Actual', 'Previous', 'Imp.']}
@@ -89,10 +89,10 @@ export default function EconomyCalendar() {
                 href: `/economy/indicator/${e.slug}`,
                 cells: [
                   e.label,
-                  <span key="c" style={{ color: color.textMuted }}>{e.country ?? '—'}</span>,
-                  <span key="d" style={{ color: color.textMuted }}>{formatDate(e.releaseAt)}</span>,
+                  <span key="c" style={{ color: color.labelTertiary }}>{e.country ?? '—'}</span>,
+                  <span key="d" style={{ color: color.labelTertiary }}>{formatDate(e.releaseAt)}</span>,
                   <span key="a">{e.actual === null ? '—' : formatValue(e.actual, 2)}</span>,
-                  <span key="p" style={{ color: color.textMuted }}>{e.previous === null ? '—' : formatValue(e.previous, 2)}</span>,
+                  <span key="p" style={{ color: color.labelTertiary }}>{e.previous === null ? '—' : formatValue(e.previous, 2)}</span>,
                   <ImportanceDots key={`i${i}`} level={e.importance} />,
                 ],
               }))}
@@ -102,14 +102,14 @@ export default function EconomyCalendar() {
       )}
 
       {data && data.failed.length > 0 && (
-        <div style={{ marginTop: space[14] }}>
+        <div style={{ marginTop: space[12] }}>
           <ErrorState title={`${data.failed.length} series could not be read`} detail={data.failed.map((f) => `${f.symbol}: ${f.reason}`).join(' · ')} />
         </div>
       )}
 
-      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: color.textMuted }}>{data?.derived}</p>
-      <p style={{ marginTop: space[8], fontSize: fontSize[11], color: color.textMuted }}>
-        Looking for a single series? Open it from the <Link href="/economy/indicator" style={{ color: color.accent }}>indicator explorer</Link>.
+      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: color.labelTertiary }}>{data?.derived}</p>
+      <p style={{ marginTop: space[8], fontSize: fontSize[11], color: color.labelTertiary }}>
+        Looking for a single series? Open it from the <Link href="/economy/indicator" style={{ color: color.blue }}>indicator explorer</Link>.
       </p>
     </main>
   );

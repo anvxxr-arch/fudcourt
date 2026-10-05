@@ -34,9 +34,10 @@ func (p *Paper) matchOrderLocked(o *orderState) error {
 	if o.order.Status != execution.ChildOpen && o.order.Status != execution.ChildPartial {
 		return nil
 	}
-	mark, ok := p.marks[o.order.Symbol]
+	mark, ok := p.priceLocked(o.order.Symbol)
 	if !ok {
-		// No mark, no price source: the order rests until a mark arrives.
+		// No honest price (no mark, or the live source failed/refused): the
+		// order rests until a price arrives — it never fills at a guess.
 		return nil
 	}
 	isMarket := o.order.Type == "market"

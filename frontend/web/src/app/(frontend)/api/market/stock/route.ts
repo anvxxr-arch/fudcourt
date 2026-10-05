@@ -6,15 +6,15 @@ import {
   STOCK_SYMBOLS,
   STOCK_TTL_MS,
   isStockRegion,
-} from '@/features/market/stock/client';
+} from '@/features/market/stock';
 import {
   YAHOO_CHART,
   YAHOO_UA,
   chartUrl,
   parseChart,
   type MarketQuote,
-} from '@/features/market/quotes';
-import { limitedFetch } from '@/platform/http/rate-limit';
+} from '@/features/market/clients';
+import { limitedFetch } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

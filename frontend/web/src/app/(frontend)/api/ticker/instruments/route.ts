@@ -11,17 +11,17 @@ import {
   venuesForType,
   type TickerExchange,
   type TickerType,
-} from '@/features/ticker/client';
+  type TickerInstrument,
+  } from '@/features/ticker/client';
 import {
   defaultInstrument,
   ensureMarkets,
   expiriesFor,
   instrumentsFor,
   strikesFor,
-  type TickerInstrument,
+  tickerClients,
   type TypeInstrumentSummary,
-} from '@/features/ticker/instruments';
-import { tickerClients } from '@/features/ticker/venues';
+} from '@/server/ticker';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

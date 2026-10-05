@@ -11,12 +11,6 @@ import {
   TICKER_TYPE_LABELS,
   medianOf,
   medianPrice,
-  SWEEP_FRESH_MS,
-  SWEEP_STALE_MS,
-  primeSweep,
-  readSweepL2,
-  runSweep,
-  sweepSnapshot,
   spreadBetween,
   venueServes,
   venuesForType,
@@ -26,14 +20,20 @@ import {
   type TickerSort,
   type TickerType,
   type VenueQuote,
+  type TickerInstrument,
 } from '@/features/ticker/client';
 import {
+  SWEEP_FRESH_MS,
+  SWEEP_STALE_MS,
+  primeSweep,
+  readSweepL2,
+  runSweep,
+  sweepSnapshot,
   ensureMarkets,
   defaultInstrument,
   instrumentsFor,
-  type TickerInstrument,
-} from '@/features/ticker/instruments';
-import { tickerClients } from '@/features/ticker/venues';
+  tickerClients,
+} from '@/server/ticker';
 import type { Exchange as CcxtExchange } from 'ccxt';
 
 export const dynamic = 'force-dynamic';

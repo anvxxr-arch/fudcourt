@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { color, fontFamily, fontSize, fontWeight, radius, space } from '@/styles/tokens';
-import { Loading } from '@/components/ui/feedback';
+import { color, fontFamily, fontSize, fontWeight, motion, radius, space } from '@/styles/tokens';
+import { Loading } from '@/ui/feedback';
+import { fetchTickerInstrument, fetchTickerInstruments } from './client';
+import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 
 /**
  * Detail view for one coin across all four CEX market types.
@@ -102,12 +104,7 @@ export default function TickerDetailPage() {
     let cancelled = false;
     setMeta(null);
     setMetaError('');
-    fetch(`/api/ticker/instruments?symbol=${encodeURIComponent(`${base}/USDT`)}`, { cache: 'no-store' })
-      .then(async (res) => {
-        const body = await res.json();
-        if (!res.ok) throw new Error(`${body.error}: ${body.detail ?? ''}`.trim());
-        return body as InstrumentsEnvelope;
-      })
+    fetchTickerInstruments<InstrumentsEnvelope>(base)
       .then((body) => {
         if (cancelled) return;
         setMeta(body);
@@ -145,21 +142,7 @@ export default function TickerDetailPage() {
     setLoading(true);
     setError('');
     try {
-      const qs = new URLSearchParams({ base, type });
-      // Only send a selector the chosen type actually has; sending an expiry
-      // for spot would ask for an instrument that does not exist.
-      const needsDated = type === 'future' || type === 'option';
-      if (needsDated && expiry) qs.set('expiry', expiry);
-      if (type === 'option') {
-        if (strike) qs.set('strike', strike);
-        qs.set('kind', kind);
-      }
-      const res = await fetch(`/api/ticker/instrument?${qs}`, { cache: 'no-store' });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error ? `${body.error}: ${body.detail ?? ''}`.trim() : `HTTP ${res.status}`);
-      }
-      const body = (await res.json()) as QuoteEnvelope;
+      const body = await fetchTickerInstrument<QuoteEnvelope>(base, type, { expiry, strike, kind });
       // A superseded request must not write state, including its error state.
       if (id !== requestId.current) return;
       setData(body);
@@ -241,38 +224,38 @@ export default function TickerDetailPage() {
   const fmtOi = (o: number | null) => (o === null ? '—' : o.toLocaleString('en-US', { maximumFractionDigits: 0 }));
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
-    padding: '5px 12px', borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer',
-    background: active ? color.accent : color.surface, color: active ? color.textOnAccent : color.text,
-    border: `1px solid ${color.border}`, fontWeight: active ? fontWeight.bold : fontWeight.regular,
+    padding: '5px 12px', borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer',
+    background: active ? color.blue : color.bgSecondary, color: active ? color.labelOnAccent : color.labelPrimary,
+    border: `1px solid ${color.separator}`, fontWeight: active ? fontWeight.bold : fontWeight.regular,
   });
   const selectStyle: React.CSSProperties = {
-    background: color.surface, color: color.text, border: `1px solid ${color.border}`,
-    padding: `5px ${space[8]}px`, borderRadius: radius[6], fontSize: fontSize[11],
+    background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`,
+    padding: `5px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11],
   };
 
-  if (!base) return <p style={{ color: color.negative, fontSize: fontSize[12] }}>No coin in the URL.</p>;
-  if (metaError) return <p style={{ color: color.negative, fontSize: fontSize[12] }}>{metaError}</p>;
+  if (!base) return <p style={{ color: color.red, fontSize: fontSize[12] }}>No coin in the URL.</p>;
+  if (metaError) return <p style={{ color: color.red, fontSize: fontSize[12] }}>{metaError}</p>;
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[12], flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h3 style={{ color: color.accent, margin: 0 }}>
-            <Link href="/market/crypto" style={{ color: color.textMuted, textDecoration: 'none', fontSize: fontSize[13] }}>← </Link>
+          <h3 style={{ color: color.blue, margin: 0 }}>
+            <Link href="/market/crypto" style={{ color: color.labelTertiary, textDecoration: 'none', fontSize: fontSize[13] }}>← </Link>
             {base} · centralized exchange instruments
           </h3>
-          <p style={{ color: color.textMuted, fontSize: fontSize[11], margin: `${space[4]}px 0 0` }}>
+          <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `${space[4]}px 0 0` }}>
             {summary
               ? `${summary.venues.length} venue${summary.venues.length === 1 ? '' : 's'} list ${meta?.typeLabels[type].toLowerCase() ?? type} for this coin`
               : 'Loading venues…'}
           </p>
         </div>
-        <button onClick={load} style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[14]}px`, borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer' }}>
+        <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: space[6], marginBottom: space[10], flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: space[8], marginBottom: space[8], flexWrap: 'wrap' }}>
         {TYPES.map(t => {
           const count = meta?.types[t]?.venues.length ?? 0;
           return (
@@ -291,7 +274,7 @@ export default function TickerDetailPage() {
       {summary && (summary.expiries.length > 0 || type === 'option') && (
         <div style={{ display: 'flex', gap: space[12], marginBottom: space[12], alignItems: 'center', flexWrap: 'wrap' }}>
           {summary.expiries.length > 0 && (
-            <label style={{ fontSize: fontSize[11], color: color.textMuted, display: 'flex', gap: space[6], alignItems: 'center' }}>
+            <label style={{ fontSize: fontSize[11], color: color.labelTertiary, display: 'flex', gap: space[8], alignItems: 'center' }}>
               Expiry
               <select value={expiry} onChange={e => setExpiry(e.target.value)} style={selectStyle} aria-label="Expiry">
                 {summary.expiries.map(e => <option key={e} value={e}>{e}</option>)}
@@ -300,14 +283,14 @@ export default function TickerDetailPage() {
           )}
           {type === 'option' && (
             <>
-              <label style={{ fontSize: fontSize[11], color: color.textMuted, display: 'flex', gap: space[6], alignItems: 'center' }}>
+              <label style={{ fontSize: fontSize[11], color: color.labelTertiary, display: 'flex', gap: space[8], alignItems: 'center' }}>
                 Strike
                 <select value={strike} onChange={e => setStrike(e.target.value)} style={selectStyle} aria-label="Strike">
                   {strikes.length === 0 && <option value="">—</option>}
                   {strikes.map(s => <option key={s} value={String(s)}>{s.toLocaleString('en-US')}</option>)}
                 </select>
               </label>
-              <label style={{ fontSize: fontSize[11], color: color.textMuted }}>
+              <label style={{ fontSize: fontSize[11], color: color.labelTertiary }}>
                 <select value={kind} onChange={e => setKind(e.target.value as 'call' | 'put')} style={selectStyle} aria-label="Option kind">
                   <option value="call">Call</option>
                   <option value="put">Put</option>
@@ -319,7 +302,7 @@ export default function TickerDetailPage() {
       )}
 
       {error && (
-        <p style={{ color: color.negative, fontSize: fontSize[12] }}>
+        <p style={{ color: color.red, fontSize: fontSize[12] }}>
           {error}
           {stale && data && ' — showing the last successful read; these prices are stale.'}
         </p>
@@ -328,14 +311,14 @@ export default function TickerDetailPage() {
       {loading ? (
         <Loading label="Loading..." />
       ) : !data || priced.length === 0 ? (
-        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>
+        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>
           No venue is currently pricing this instrument.
           {data && data.notListed.length > 0 && ` Not listed by: ${data.notListed.join(', ')}.`}
         </p>
       ) : (
-        <div style={{ opacity: stale ? 0.45 : 1, transition: 'opacity 150ms' }}>
-          <div style={{ display: 'flex', gap: space[18], marginBottom: space[12], flexWrap: 'wrap' }}>
-            <Stat label={`Price (median of ${priced.length})`} value={fmtPrice(data.price, settle)} tone={color.accent} />
+        <div style={{ opacity: stale ? 0.45 : 1, transition: 'opacity ' + motion.quick }}>
+          <div style={{ display: 'flex', gap: space[20], marginBottom: space[12], flexWrap: 'wrap' }}>
+            <Stat label={`Price (median of ${priced.length})`} value={fmtPrice(data.price, settle)} tone={color.blue} />
             <Stat label="Cross-venue spread" value={fmtSpread(spread)} />
             <Stat label="24h change" value={fmtPct(medianOf(priced.map(q => q.change24h)))} tone={chgColor(medianOf(priced.map(q => q.change24h)))} />
             <Stat label="24h volume" value={fmtVol(medianOf(priced.map(q => q.quoteVolume)))} />
@@ -349,49 +332,49 @@ export default function TickerDetailPage() {
               directly comparable. Saying so is the honest framing; a reader
               who wants comparable prices can read the settlement column. */}
           {data.settlements.length > 1 && (
-            <p style={{ color: color.textMuted, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
+            <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
               These venues settle in different currencies ({data.settlements.join(', ')}), so the prices are comparable only up to the basis between them.
             </p>
           )}
 
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fontSize[12] }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${color.border}`, color: color.textMuted }}>
-                <th style={{ textAlign: 'left', padding: space[6] }}>Venue</th>
-                <th style={{ textAlign: 'left', padding: space[6] }}>Instrument</th>
-                <th style={{ textAlign: 'right', padding: space[6] }}>Last</th>
-                <th style={{ textAlign: 'right', padding: space[6] }}>Bid</th>
-                <th style={{ textAlign: 'right', padding: space[6] }}>Ask</th>
-                <th style={{ textAlign: 'right', padding: space[6] }}>24h %</th>
-                <th style={{ textAlign: 'right', padding: space[6] }}>Volume</th>
-                {type !== 'spot' && <th style={{ textAlign: 'right', padding: space[6] }}>Open interest</th>}
-                {type === 'swap' && <th style={{ textAlign: 'right', padding: space[6] }}>Funding</th>}
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <THead>
+              <TR style={{ borderBottom: `1px solid ${color.separator}`, color: color.labelTertiary }}>
+                <TH style={{ padding: space[8] }}>Venue</TH>
+                <TH style={{ padding: space[8] }}>Instrument</TH>
+                <TH align="right" style={{ padding: space[8] }}>Last</TH>
+                <TH align="right" style={{ padding: space[8] }}>Bid</TH>
+                <TH align="right" style={{ padding: space[8] }}>Ask</TH>
+                <TH align="right" style={{ padding: space[8] }}>24h %</TH>
+                <TH align="right" style={{ padding: space[8] }}>Volume</TH>
+                {type !== 'spot' && <TH align="right" style={{ padding: space[8] }}>Open interest</TH>}
+                {type === 'swap' && <TH align="right" style={{ padding: space[8] }}>Funding</TH>}
+              </TR>
+            </THead>
+            <TBody>
               {quotes.map(q => (
-                <tr key={q.exchange} style={{ borderBottom: `1px solid ${color.border}`, opacity: q.last === null ? 0.55 : 1 }}>
-                  <td style={{ padding: space[6], color: color.text, fontWeight: fontWeight.bold }}>{q.exchange}</td>
-                  <td style={{ padding: space[6], color: color.textMuted, fontSize: fontSize[10], fontFamily: fontFamily.mono }}>{q.symbol}</td>
-                  <td style={{ padding: space[6], textAlign: 'right', color: q.last === null ? color.textMuted : color.accent }}>{fmtPrice(q.last, q.settle)}</td>
-                  <td style={{ padding: space[6], textAlign: 'right', color: color.text }}>{fmtPrice(q.bid, q.settle)}</td>
-                  <td style={{ padding: space[6], textAlign: 'right', color: color.text }}>{fmtPrice(q.ask, q.settle)}</td>
-                  <td style={{ padding: space[6], textAlign: 'right', color: chgColor(q.change24h) }}>{fmtPct(q.change24h)}</td>
-                  <td style={{ padding: space[6], textAlign: 'right', color: color.text }}>{fmtVol(q.quoteVolume)}</td>
-                  {type !== 'spot' && <td style={{ padding: space[6], textAlign: 'right', color: color.text }}>{fmtOi(q.openInterest)}</td>}
-                  {type === 'swap' && <td style={{ padding: space[6], textAlign: 'right', color: color.text }}>{fmtFunding(q.fundingRate)}</td>}
-                </tr>
+                <TR key={q.exchange} style={{ borderBottom: `1px solid ${color.separator}`, opacity: q.last === null ? 0.55 : 1 }}>
+                  <TD style={{ padding: space[8], color: color.labelPrimary, fontWeight: fontWeight.bold }}>{q.exchange}</TD>
+                  <TD mono style={{ padding: space[8], color: color.labelTertiary, fontSize: fontSize[11] }}>{q.symbol}</TD>
+                  <TD align="right" mono style={{ padding: space[8], color: q.last === null ? color.labelTertiary : color.blue }}>{fmtPrice(q.last, q.settle)}</TD>
+                  <TD align="right" mono style={{ padding: space[8], color: color.labelPrimary }}>{fmtPrice(q.bid, q.settle)}</TD>
+                  <TD align="right" mono style={{ padding: space[8], color: color.labelPrimary }}>{fmtPrice(q.ask, q.settle)}</TD>
+                  <TD align="right" mono style={{ padding: space[8], color: chgColor(q.change24h) }}>{fmtPct(q.change24h)}</TD>
+                  <TD align="right" mono style={{ padding: space[8], color: color.labelPrimary }}>{fmtVol(q.quoteVolume)}</TD>
+                  {type !== 'spot' && <TD align="right" mono style={{ padding: space[8], color: color.labelPrimary }}>{fmtOi(q.openInterest)}</TD>}
+                  {type === 'swap' && <TD align="right" mono style={{ padding: space[8], color: color.labelPrimary }}>{fmtFunding(q.fundingRate)}</TD>}
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
 
           {data.notListed.length > 0 && (
-            <p style={{ color: color.textMuted, fontSize: fontSize[11], marginTop: space[8] }}>
+            <p style={{ color: color.labelTertiary, fontSize: fontSize[11], marginTop: space[8] }}>
               Not listed on this instrument: {data.notListed.join(', ')}. That is a fact about the market, not a failed venue.
             </p>
           )}
           {data.failed.length > 0 && (
-            <p style={{ color: color.negative, fontSize: fontSize[11], marginTop: space[6] }}>
+            <p style={{ color: color.red, fontSize: fontSize[11], marginTop: space[8] }}>
               Listed but did not answer: {data.failed.join(', ')}. Shown as missing rather than filled from another venue.
             </p>
           )}
@@ -402,8 +385,8 @@ export default function TickerDetailPage() {
 }
 
 function chgColor(p: number | null): string | undefined {
-  if (p === null) return color.textMuted;
-  return p >= 0 ? color.accent : color.negative;
+  if (p === null) return color.labelTertiary;
+  return p >= 0 ? color.blue : color.red;
 }
 
 /** Median of the non-null values, or null when there are none. */
@@ -417,8 +400,8 @@ function medianOf(values: (number | null)[]): number | null {
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div>
-      <div style={{ color: color.textMuted, fontSize: fontSize[10] }}>{label}</div>
-      <div style={{ color: tone ?? color.text, fontSize: fontSize[14], fontWeight: fontWeight.bold }}>{value}</div>
+      <div style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{label}</div>
+      <div style={{ color: tone ?? color.labelPrimary, fontSize: fontSize[15], fontWeight: fontWeight.bold }}>{value}</div>
     </div>
   );
 }

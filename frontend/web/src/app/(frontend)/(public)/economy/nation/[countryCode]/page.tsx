@@ -1,5 +1,5 @@
-import NationProfile from '@/features/economy/ui/nation';
-import { countryByAnyCode } from '@/features/economy/registry';
+import { NationProfile } from '@/features/economy/ui/nation';
+import { countryByAnyCode } from '@/features/economy/model';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 

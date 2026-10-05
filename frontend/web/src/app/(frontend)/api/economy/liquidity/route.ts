@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { LIQUIDITY_COMPONENTS, readLiquiditySeries } from '@/app/(frontend)/api/economy/_lib/adapters';
 import { mapPool } from '@/app/(frontend)/api/economy/_lib/rows';
-import { liquidityBreadth } from '@/features/economy/regime';
-import type { LiquidityComponent } from '@/features/economy/client';
+import { liquidityBreadth } from '@/features/economy/model';
+import type { LiquidityComponent } from '@/features/economy/model';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

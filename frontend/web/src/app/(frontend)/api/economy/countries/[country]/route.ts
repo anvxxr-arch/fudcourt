@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { countryByAnyCode, indicatorsForCountry } from '@/features/economy/registry';
-import { CATEGORY_BY_ID, TAXONOMY } from '@/features/economy/taxonomy';
+import { countryByAnyCode, indicatorsForCountry } from '@/features/economy/model';
+import { CATEGORY_BY_ID, TAXONOMY } from '@/features/economy/model';
 import { readObservations } from '@/app/(frontend)/api/economy/_lib/adapters';
 import { mapPool, toIndicatorRow, toMetric, toReleaseRow } from '@/app/(frontend)/api/economy/_lib/rows';
 import type { EconomicIndicator, EconomicObservation } from '@/features/economy/model';
-import type { CategoryBlock, Metric, ReleaseRow } from '@/features/economy/client';
+import type { CategoryBlock, Metric, ReleaseRow } from '@/features/economy/model';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

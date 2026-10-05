@@ -2,7 +2,7 @@
  * Site navigation model tests (navbar + breadcrumb): run OFFLINE, no network,
  * no clock, no DOM.
  *
- * Contract under test (`src/platform/routing/site-nav.ts`):
+ * Contract under test (`src/ui/site-nav.ts`):
  *  - the section list and the crawl registry describe the SAME site. A navbar is
  *    the one place a visitor is guaranteed to see, so a link that is not a
  *    registered public route is either a typo or a page nobody can crawl;
@@ -22,8 +22,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NAV_SECTIONS, TERMINAL, activeSection, buildTrail, humanizeSegment } from '@/platform/routing/site-nav';
-import { PUBLIC_ROUTES } from '@/platform/routing/public-routes';
+import { NAV_SECTIONS, TERMINAL, activeSection, buildTrail, humanizeSegment } from '@/ui/site-nav';
+import { PUBLIC_ROUTES } from '@/server/routes';
 
 test('nav: every section is a registered public route (navbar and sitemap agree)', () => {
   const registered = new Set(PUBLIC_ROUTES.map((r) => r.path));

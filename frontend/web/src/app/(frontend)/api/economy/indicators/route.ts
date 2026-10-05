@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { COUNTRY_BY_ISO3, INDICATORS } from '@/features/economy/registry';
-import { CATEGORY_BY_ID, TAXONOMY } from '@/features/economy/taxonomy';
+import { COUNTRY_BY_ISO3, INDICATORS } from '@/features/economy/model';
+import { CATEGORY_BY_ID, TAXONOMY } from '@/features/economy/model';
 import { toMeta } from '@/app/(frontend)/api/economy/_lib/rows';
 import type { EconomicIndicator } from '@/features/economy/model';
 

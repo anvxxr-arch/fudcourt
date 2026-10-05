@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { DEX, DEX_TYPES, DEX_CHAINS, type DexType, type DexChain, type DexPair, type DexProfile, isMint } from '@/features/dex/client';
-import { limitedFetch } from '@/platform/http/rate-limit';
+import { limitedFetch } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

@@ -18,19 +18,19 @@
  */
 import { useEffect, useState } from 'react';
 import { color, fontSize, fontWeight, lineHeight, radius, space } from '@/styles/tokens';
-import { fetchRegime, formatDate, formatValue, type RegimeEnvelope } from '@/features/economy/client';
+import { fetchRegime, formatDate, formatValue, type RegimeEnvelope } from '@/features/economy/model';
 import { Card, DataTable, ECONOMY_NAV, ErrorState, Loading, PageHeader } from '@/features/economy/ui/parts';
 
 const ARROW: Record<string, string> = { up: '↑', down: '↓', flat: '→' };
-const ARROW_COLOR: Record<string, string> = { up: color.accent, down: color.warn, flat: color.textMuted };
+const ARROW_COLOR: Record<string, string> = { up: color.blue, down: color.orange, flat: color.labelTertiary };
 const STANCE_COLOR: Record<string, string> = {
-  'strongly bullish': color.positive,
-  bullish: color.positive,
-  neutral: color.textMuted,
-  bearish: color.negative,
-  'strongly bearish': color.negative,
+  'strongly bullish': color.green,
+  bullish: color.green,
+  neutral: color.labelTertiary,
+  bearish: color.red,
+  'strongly bearish': color.red,
 };
-const CONFIDENCE_COLOR: Record<string, string> = { high: color.positive, medium: color.warn, low: color.negative };
+const CONFIDENCE_COLOR: Record<string, string> = { high: color.green, medium: color.orange, low: color.red };
 
 export default function RegimeBoard({ country, embedded = false }: { country?: string; embedded?: boolean }) {
   const [data, setData] = useState<RegimeEnvelope | null>(null);
@@ -66,17 +66,17 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
     <>
       {data.regime ? (
         <Card title={data.regime.label} subtitle={`${label} · evidence confidence: ${data.confidence}`}>
-          <p style={{ margin: 0, fontSize: fontSize[14], color: color.text, lineHeight: lineHeight.normal }}>{data.regime.summary}</p>
-          <p style={{ margin: `${space[10]}px 0 0`, fontSize: fontSize[12], color: color.textMuted, lineHeight: lineHeight.normal }}>{data.narrative}</p>
+          <p style={{ margin: 0, fontSize: fontSize[15], color: color.labelPrimary, lineHeight: lineHeight.normal }}>{data.regime.summary}</p>
+          <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[12], color: color.labelTertiary, lineHeight: lineHeight.normal }}>{data.narrative}</p>
         </Card>
       ) : (
         <Card title="No regime stated" subtitle={`${label} · evidence confidence: ${data.confidence}`}>
-          <p style={{ margin: 0, fontSize: fontSize[14], color: color.warn, lineHeight: lineHeight.normal }}>{data.regimeReason}</p>
-          <p style={{ margin: `${space[10]}px 0 0`, fontSize: fontSize[12], color: color.textMuted, lineHeight: lineHeight.normal }}>{data.narrative}</p>
+          <p style={{ margin: 0, fontSize: fontSize[15], color: color.orange, lineHeight: lineHeight.normal }}>{data.regimeReason}</p>
+          <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[12], color: color.labelTertiary, lineHeight: lineHeight.normal }}>{data.narrative}</p>
         </Card>
       )}
 
-      <div style={{ marginTop: space[14] }}>
+      <div style={{ marginTop: space[12] }}>
         <Card title="Dimensions" subtitle="direction is declared only past each series' own noise floor">
           <DataTable
             head={['Dimension', 'Reading', 'Latest', 'Compared with', 'Change', 'Signal / noise', 'Series']}
@@ -88,31 +88,31 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
                   <span key="l" style={{ fontWeight: fontWeight.semibold }}>{d.label}</span>,
                   readable ? (
                     <span key="w">
-                      <span style={{ color: ARROW_COLOR[dir], marginRight: space[6] }}>{ARROW[dir]}</span>
+                      <span style={{ color: ARROW_COLOR[dir], marginRight: space[8] }}>{ARROW[dir]}</span>
                       {d.word}
                     </span>
                   ) : (
-                    <span key="w" style={{ color: color.textMuted }} title={d.reason ?? undefined}>— not readable</span>
+                    <span key="w" style={{ color: color.labelTertiary }} title={d.reason ?? undefined}>— not readable</span>
                   ),
-                  <span key="v" style={{ color: readable ? color.text : color.textMuted }}>
+                  <span key="v" style={{ color: readable ? color.labelPrimary : color.labelTertiary }}>
                     {d.latest ? `${formatValue(d.latest.value, d.decimals)} ${d.unit}` : '—'}
                   </span>,
-                  <span key="p" style={{ color: color.textMuted }}>
+                  <span key="p" style={{ color: color.labelTertiary }}>
                     {d.prior ? `${formatValue(d.prior.value, d.decimals)} ${d.unit}` : '—'}
                     {d.prior?.date ? ` · ${formatDate(d.prior.date)}` : ''}
                   </span>,
-                  <span key="c" style={{ color: readable ? ARROW_COLOR[dir] : color.textMuted }}>
+                  <span key="c" style={{ color: readable ? ARROW_COLOR[dir] : color.labelTertiary }}>
                     {d.trend ? `${d.trend.change > 0 ? '+' : ''}${formatValue(d.trend.change, d.decimals)}` : '—'}
                   </span>,
-                  <span key="s" style={{ color: color.textMuted }}>
+                  <span key="s" style={{ color: color.labelTertiary }}>
                     {d.trend ? `${d.trend.strength.toFixed(2)}× (noise ${d.trend.noise.toPrecision(2)})` : '—'}
                   </span>,
-                  <span key="slug" style={{ color: color.textMuted }}>{d.series || '—'}</span>,
+                  <span key="slug" style={{ color: color.labelTertiary }}>{d.series || '—'}</span>,
                 ],
               };
             })}
           />
-          <p style={{ margin: `${space[10]}px 0 0`, fontSize: fontSize[11], color: color.textMuted, lineHeight: lineHeight.normal }}>
+          <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>
             A dimension is read only when its series published at least four observations. A move smaller than the
             series&apos; own period-to-period variation is reported as steady, so rounding noise cannot flip a regime.
           </p>
@@ -120,7 +120,7 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
       </div>
 
       {data.missing.length > 0 && (
-        <div style={{ marginTop: space[14] }}>
+        <div style={{ marginTop: space[12] }}>
           <ErrorState
             title={`${data.missing.length} dimension(s) could not be read`}
             detail={`${data.missing.join(', ')} — no rule that needs them can fire, and they are left blank rather than filled in.`}
@@ -128,18 +128,18 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
         </div>
       )}
 
-      <div style={{ marginTop: space[14] }}>
+      <div style={{ marginTop: space[12] }}>
         <Card title="Potential market impact" subtitle="a stated weight table over the readings above — not a forecast">
           <DataTable
             head={['Asset', 'Stance', 'Score', 'Contributions']}
             rows={data.impacts.map((i) => ({
               cells: [
                 <span key="a" style={{ fontWeight: fontWeight.semibold }}>{i.label}</span>,
-                <span key="s" style={{ color: STANCE_COLOR[i.stance] ?? color.textMuted, fontWeight: fontWeight.semibold }}>{i.stance}</span>,
-                <span key="sc" style={{ color: i.score > 0 ? color.positive : i.score < 0 ? color.negative : color.textMuted }}>
+                <span key="s" style={{ color: STANCE_COLOR[i.stance] ?? color.labelTertiary, fontWeight: fontWeight.semibold }}>{i.stance}</span>,
+                <span key="sc" style={{ color: i.score > 0 ? color.green : i.score < 0 ? color.red : color.labelTertiary }}>
                   {i.score > 0 ? '+' : ''}{i.score.toFixed(2)}
                 </span>,
-                <span key="c" style={{ color: color.textMuted }}>
+                <span key="c" style={{ color: color.labelTertiary }}>
                   {i.contributions.length === 0
                     ? '— no dimension is moving in a scored direction'
                     : i.contributions.map((c) => `${c.dimension} ${c.word} ${c.weight > 0 ? '+' : ''}${c.weight}`).join(' · ')}
@@ -147,7 +147,7 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
               ],
             }))}
           />
-          <p style={{ margin: `${space[10]}px 0 0`, fontSize: fontSize[11], color: color.textMuted, lineHeight: lineHeight.normal }}>
+          <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>
             Weights encode the conventional transmission channel — liquidity and policy dominate risk assets, inflation
             dominates duration, a stronger dollar tightens global conditions. Every contribution is listed so the sum can
             be audited.
@@ -156,7 +156,7 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
       </div>
 
       {data.failed.length > 0 && (
-        <div style={{ marginTop: space[14] }}>
+        <div style={{ marginTop: space[12] }}>
           <ErrorState
             title={`${data.failed.length} upstream item(s) failed`}
             detail={data.failed.map((f) => `${f.symbol}: ${f.reason}`).join(' · ')}
@@ -164,8 +164,8 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
         </div>
       )}
 
-      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: color.textMuted, lineHeight: lineHeight.normal }}>{data.derived}</p>
-      <p style={{ marginTop: space[6], fontSize: fontSize[11], color: color.textMuted, lineHeight: lineHeight.normal }}>
+      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>{data.derived}</p>
+      <p style={{ marginTop: space[8], fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>
         Sources: {data.upstream.join(' · ')} · read {formatDate(new Date(data.asOf * 1000).toISOString().slice(0, 10))}
       </p>
     </>
@@ -173,8 +173,8 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
 
   if (embedded) {
     return (
-      <div style={{ marginTop: space[14] }}>
-        <h2 style={{ margin: `0 0 ${space[10]}px`, fontSize: fontSize[18], fontWeight: fontWeight.semibold, color: color.text }}>
+      <div style={{ marginTop: space[12] }}>
+        <h2 style={{ margin: `0 0 ${space[8]}px`, fontSize: fontSize[20], fontWeight: fontWeight.semibold, color: color.labelPrimary }}>
           Macro regime
         </h2>
         {body}
@@ -190,10 +190,10 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
         nav={ECONOMY_NAV}
       />
       {body}
-      <div style={{ marginTop: space[14], display: 'flex', gap: space[10] }}>
-        <span style={{ fontSize: fontSize[11], color: color.textMuted }}>
+      <div style={{ marginTop: space[12], display: 'flex', gap: space[8] }}>
+        <span style={{ fontSize: fontSize[11], color: color.labelTertiary }}>
           Confidence:{' '}
-          <span style={{ color: CONFIDENCE_COLOR[data.confidence] ?? color.textMuted, fontWeight: fontWeight.semibold }}>
+          <span style={{ color: CONFIDENCE_COLOR[data.confidence] ?? color.labelTertiary, fontWeight: fontWeight.semibold }}>
             {data.confidence}
           </span>{' '}
           — evidence confidence, not a probability that the regime is correct.

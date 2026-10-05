@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import '@/app/(frontend)/globals.css';
-import { Navbar } from '@/components/layout/navbar';
-import { Breadcrumb } from '@/components/layout/breadcrumb';
+import { Navbar } from '@/ui/navbar';
+import { Breadcrumb } from '@/ui/breadcrumb';
 
 /**
  * The canonical origin, written down ONCE. `metadataBase` and the breadcrumb's

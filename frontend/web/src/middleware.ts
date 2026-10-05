@@ -1,17 +1,16 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { SESSION_COOKIE, readSession } from '@/platform/auth/session';
-import { hasTier, requiredTierForPath } from '@/platform/auth/guard';
-import { checkInbound, clientKey, rateHeaders } from '@/platform/http/rate-limit-inbound';
-// Route policy lives in @/platform/auth/guard.ts (single source of truth); this file only
+import { SESSION_COOKIE, hasTier, readSession, requiredTierForPath } from '@/server/auth';
+import { checkInbound, clientKey, rateHeaders } from '@/lib/rate-limit';
+// Route policy lives in @/server/auth.ts (single source of truth); this file only
 // enforces it on the way in. The session cookie is HMAC-signed, so an unreadable
 // or forged cookie is simply "no session" here — readSession never throws.
 //
 // Every `/api/*` request passes two checks, in this order:
-//  1. the inbound rate limit (@/platform/http/rate-limit-inbound.ts) — a per-client budget
+//  1. the inbound rate limit (@/lib/rate-limit.ts) — a per-client budget
 //     charged by the payload the route can serve, so one client cannot pull
 //     921 KB twenty-five times a minute. A refusal is a 429 with Retry-After,
 //     never an HTML page.
-//  2. the tier gate (@/platform/auth/guard.ts) — a JSON 401 for a fetch caller.
+//  2. the tier gate (@/server/auth.ts) — a JSON 401 for a fetch caller.
 // Order matters: an unauthorised flood is throttled like any other flood, and
 // the session is read once for both checks (signed-in callers get a larger
 // budget, not a free pass).
@@ -68,8 +67,8 @@ export async function middleware(request: NextRequest) {
   return NextResponse.redirect(login);
 }
 export const config = {
-  // The matcher is an OPTIMISATION, not the policy: @/platform/auth/guard.ts decides access
-  // and @/platform/http/rate-limit-inbound.ts decides cost, and a request can only avoid
+  // The matcher is an OPTIMISATION, not the policy: @/server/auth.ts decides access
+  // and @/lib/rate-limit.ts decides cost, and a request can only avoid
   // both by never reaching the middleware. `/api/:path*` is deliberately broad —
   // the limiter must see every API route, including ones the tier table does not
   // gate.

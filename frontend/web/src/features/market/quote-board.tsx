@@ -2,19 +2,11 @@
 
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
-import { Loading } from '@/components/ui/feedback';
-import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
-import { Toolbar } from '@/components/ui/toolbar';
-import { dash, fmtCurrency, fmtPct, fmtPrice, fmtVolume, tone } from '@/features/market/format';
-import type { MarketQuote } from '@/features/market/quotes';
-
-type Envelope = {
-  quotes?: MarketQuote[];
-  failed?: { symbol: string; reason: string }[];
-  derived?: string;
-  error?: string;
-  detail?: string;
-};
+import { Loading } from '@/ui/feedback';
+import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
+import { Toolbar } from '@/ui/toolbar';
+import { dash, fmtCurrency, fmtPct, fmtPrice, fmtVolume, tone } from '@/lib/format';
+import { fetchQuotes, type MarketQuote } from '@/features/market/clients';
 
 /**
  * One Yahoo-quote board. The stock and commodity sections render the same
@@ -39,11 +31,7 @@ export default function QuoteBoard({
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(endpoint, { cache: 'no-store' });
-      const body: Envelope = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(body.error ? `${body.error}${body.detail ? ` — ${body.detail}` : ''}` : `HTTP ${res.status}`);
-      }
+      const body = await fetchQuotes(endpoint);
       setQuotes(body.quotes ?? []);
       setFailed(body.failed ?? []);
       setDerived(body.derived ?? '');
@@ -61,15 +49,15 @@ export default function QuoteBoard({
   }, [load]);
 
   const toneColor = (v: number | null): string =>
-    tone(v) === 'up' ? color.accent : tone(v) === 'down' ? color.negative : color.textMuted;
-  // `TH` already defaults `color` to `color.textMuted` and takes `align` as a prop; the
+    tone(v) === 'up' ? color.blue : tone(v) === 'down' ? color.red : color.labelTertiary;
+  // `TH` already defaults `color` to `color.labelTertiary` and takes `align` as a prop; the
   // padding / weight / nowrap are this board's own and ride the atom's last-wins spread.
   const thStyle: CSSProperties = {
-    padding: space[6],
+    padding: space[8],
     fontWeight: fontWeight.regular,
     whiteSpace: 'nowrap',
   };
-  const tdStyle: CSSProperties = { padding: space[6], whiteSpace: 'nowrap' };
+  const tdStyle: CSSProperties = { padding: space[8], whiteSpace: 'nowrap' };
 
   return (
     <div>
@@ -79,11 +67,11 @@ export default function QuoteBoard({
           <button
             onClick={load}
             style={{
-              background: color.surface,
-              color: color.text,
-              border: `1px solid ${color.border}`,
-              padding: `${space[6]}px ${space[14]}px`,
-              borderRadius: radius[6],
+              background: color.bgSecondary,
+              color: color.labelPrimary,
+              border: `1px solid ${color.separator}`,
+              padding: `${space[8]}px ${space[12]}px`,
+              borderRadius: radius[8],
               fontSize: fontSize[11],
               cursor: 'pointer',
             }}
@@ -92,10 +80,10 @@ export default function QuoteBoard({
           </button>
         }
       >
-        <h3 style={{ color: color.accent, margin: 0 }}>
+        <h3 style={{ color: color.blue, margin: 0 }}>
           {title}
           {unitHint ? (
-            <span style={{ color: color.textMuted, fontSize: fontSize[11], fontWeight: fontWeight.regular }}>
+            <span style={{ color: color.labelTertiary, fontSize: fontSize[11], fontWeight: fontWeight.regular }}>
               {' '}
               · {unitHint}
             </span>
@@ -103,7 +91,7 @@ export default function QuoteBoard({
         </h3>
       </Toolbar>
 
-      {error && <p style={{ color: color.negative, fontSize: fontSize[12] }}>{error}</p>}
+      {error && <p style={{ color: color.red, fontSize: fontSize[12] }}>{error}</p>}
 
       {loading ? (
         <Loading />
@@ -123,36 +111,36 @@ export default function QuoteBoard({
             {quotes.map((q) => (
               <TR key={q.symbol}>
                 <TD style={tdStyle}>
-                  <div style={{ fontWeight: fontWeight.bold, color: color.text }}>{q.symbol}</div>
-                  <div style={{ fontSize: fontSize[10], color: color.textMuted }}>
+                  <div style={{ fontWeight: fontWeight.bold, color: color.labelPrimary }}>{q.symbol}</div>
+                  <div style={{ fontSize: fontSize[11], color: color.labelTertiary }}>
                     {q.name}
                     {q.exchange ? ` · ${q.exchange}` : ''}
                   </div>
                 </TD>
-                <TD align="right" style={{ ...tdStyle, color: color.accent }}>
+                <TD align="right" style={{ ...tdStyle, color: color.blue }}>
                   {fmtPrice(q.price)}
                   {q.currency ? (
-                    <span style={{ color: color.textMuted, fontSize: fontSize[10] }}> {fmtCurrency(q.currency)}</span>
+                    <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}> {fmtCurrency(q.currency)}</span>
                   ) : null}
                 </TD>
                 <TD align="right" style={{ ...tdStyle, color: toneColor(q.change) }}>
                   {q.change === null ? dash : `${q.change >= 0 ? '+' : ''}${fmtPrice(q.change)}`}
                 </TD>
                 <TD align="right" style={{ ...tdStyle, color: toneColor(q.changePercent) }}>{fmtPct(q.changePercent)}</TD>
-                <TD align="right" style={{ ...tdStyle, color: color.textMuted }}>
+                <TD align="right" style={{ ...tdStyle, color: color.labelTertiary }}>
                   {q.dayLow === null || q.dayHigh === null ? dash : `${fmtPrice(q.dayLow)} – ${fmtPrice(q.dayHigh)}`}
                 </TD>
-                <TD align="right" style={{ ...tdStyle, color: color.text }}>{fmtVolume(q.volume)}</TD>
+                <TD align="right" style={{ ...tdStyle, color: color.labelPrimary }}>{fmtVolume(q.volume)}</TD>
               </TR>
             ))}
           </TBody>
         </Table>
       )}
 
-      <div style={{ marginTop: space[10], color: color.textMuted, fontSize: fontSize[10] }}>
+      <div style={{ marginTop: space[8], color: color.labelTertiary, fontSize: fontSize[11] }}>
         {derived}
         {failed.length > 0 && (
-          <span style={{ color: color.warn }}>
+          <span style={{ color: color.orange }}>
             {' '}
             · {failed.length} failed: {failed.map((f) => `${f.symbol} (${f.reason})`).join(', ')}
           </span>

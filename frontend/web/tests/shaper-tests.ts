@@ -18,8 +18,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import { CR_DISABLED, CR_MODES, CR_MODE_UPSTREAM, type CrLiveMode } from '@/features/cryptorank/client';
-import { envelope, type HelperOut } from '@/features/cryptorank/shapers';
+import { CR_DISABLED, CR_MODES, CR_MODE_UPSTREAM, envelope, type CrLiveMode, type HelperOut } from '@/features/market-data/cryptorank';
 
 // The fixtures moved out of frontend/web (spec Phase 7): they are shared by the web
 // shaper suites, the TS fixture tools and the Go parity gate, so they now live at

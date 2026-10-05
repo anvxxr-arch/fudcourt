@@ -42,17 +42,23 @@ frontend/web/src/styles/tokens.ts          ← SSOT: the only place a design val
    inline styles (var(--fc-…), via tokens.ts)   Tailwind theme.extend → utility classes
 ```
 
-**Cutover state (final for this milestone).** The migration landed: `C` in `shared.ts` and the
-drifted HSL `:root` intents are **deleted** (not aliased, not re-exported), every consumer is
-re-pointed at a token, and the gate reports `DESIGN_TOKENS_OK (files=150 exemptions=6)` with zero
-offender lines and zero dead tokens. `shared.ts` remains the home of the domain palettes and the
-shared view types/helpers; `styles/` is still a leaf layer.
+**Cutover state (Apple HIG generation).** The token system follows the Apple Human Interface
+Guidelines: semantic backgrounds/labels/separators with a `.dark` flip, HIG accent ramps, the SF
+stack, the HIG type scale, an 8pt spacing grid, continuous-corner radii, a 44pt touch target, HIG
+motion, and `prefers-reduced-motion` support. The gate reports
+`DESIGN_TOKENS_OK (files=232 exemptions=6)` with zero offender lines and zero dead tokens.
+`shared.ts` remains the home of the domain palettes and the shared view types/helpers; `styles/`
+is still a leaf layer. The pixel change this generation is INTENTIONAL (green accent -> blue,
+dark-green chrome -> system backgrounds) — the first generation's value-for-value proof served its
+purpose and is retired.
 
-`tokens.ts` is a **leaf module**: no imports, no JSX, `as const` on every object. It exports
-`color`, `space`, `radius`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`, `zIndex` and
-`fontFamily`. Every px-keyed scale is keyed by its own value (`space[12] === 12`,
-`fontSize[13] === 13`), so reading a call site tells you the pixel value without opening the token
-file, and the migration off raw literals is value-for-value.
+`tokens.ts` is a **leaf module**: no imports, no JSX, `as const` on every object except `darkColor`
+(which is typed `{ [K in keyof typeof color]: string }` so a light key without its dark twin is a
+compile error; it is consumed by the emitter into the `.dark` block, never referenced at call
+sites). It exports `color`, `darkColor`, `space`, `radius`, `fontSize`, `fontWeight`, `lineHeight`,
+`letterSpacing`, `zIndex`, `fontFamily`, `motion` and `target`. Every px-keyed scale is keyed by
+its own value (`space[12] === 12`, `fontSize[13] === 13`), so reading a call site tells you the
+pixel value without opening the token file.
 
 ### Var scheme
 
@@ -60,39 +66,47 @@ Emitted by `emit-tokens.ts`, consumed by `tailwind.tokens.json` and by hand-writ
 
 | Token | Custom property | Rendered |
 |---|---|---|
-| `color.bg` | `--fc-color-bg` | `#07110f` |
-| `color.overlay` | `--fc-color-overlay` | `rgba(0,0,0,0.8)` |
+| `color.bgBase` | `--fc-color-bgBase` | `#FFFFFF` (`:root`), `#000000` (`.dark`) |
+| `color.scrim` | `--fc-color-scrim` | `rgba(0, 0, 0, 0.35)` (`:root`), `rgba(0, 0, 0, 0.6)` (`.dark`) |
 | `space[12]` | `--fc-space-12` | `12px` |
-| `radius.full` | `--fc-radius-full` | `9999px` |
 | `radius.circle` | `--fc-radius-circle` | `50%` (keyword — rendered verbatim) |
 | `fontSize[13]` | `--fc-font-size-13` | `13px` |
 | `fontWeight.bold` | `--fc-font-weight-bold` | `700` (unitless, verbatim) |
 | `lineHeight.normal` | `--fc-line-height-normal` | `1.6` (unitless, verbatim) |
 | `letterSpacing.wide` | `--fc-letter-spacing-wide` | `1` (unitless, verbatim) |
 | `zIndex.modal` | `--fc-z-index-modal` | `100` (unitless, verbatim) |
+| `motion.normal` | `--fc-motion-normal` | `200ms` (verbatim) |
+| `target.min` | `--fc-target-min` | `44px` |
 | `fontFamily.mono` | `--fc-font-mono` | `ui-monospace, monospace` |
-| `fontFamily.sans` | `--fc-font-sans` | `Inter, ui-sans-serif, system-ui, sans-serif` |
+| `fontFamily.sans` | `--fc-font-sans` | `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, ui-sans-serif, system-ui, sans-serif` |
 
 The rule: `--fc-color-<name>`, `--fc-space-<n>`, `--fc-radius-<key>`, `--fc-font-size-<n>`,
 `--fc-font-weight-<name>`, `--fc-line-height-<name>`, `--fc-letter-spacing-<name>`,
-`--fc-z-index-<name>`, `--fc-font-mono`, `--fc-font-sans`. px values render as `Npx`; unitless
-values (weights, line heights, letter spacings, z-index) are emitted verbatim so CSS applies its
-normal numeric semantics; string-valued entries (`radius.circle`) render as written.
+`--fc-z-index-<name>`, `--fc-motion-<name>`, `--fc-target-<name>`, `--fc-font-mono`,
+`--fc-font-sans`. px values render as `Npx`; unitless values (weights, line heights, letter
+spacings, z-index) are emitted verbatim so CSS applies its normal numeric semantics;
+string-valued entries (`radius.circle`, `motion.ease`) render as written. Every `color` key also
+renders a `.dark` override from `darkColor`. The block closes with a `prefers-reduced-motion`
+rule that collapses transitions/animations to `0.01ms`. The hand-written `body` rule uses
+`--fc-color-bgBase` / `--fc-color-labelPrimary`, the SF stack, and `font-variant-numeric:
+tabular-nums` for figures.
 
 ### Token set (`tokens.ts`)
 
 | Export | Keys |
 |---|---|
-| `color` | `bg, surface, border, text, textMuted, textOnAccent, textInverse, accent, positive, negative, warn, attention, overlay` |
-| `space` | `0, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 30, 32, 40` |
-| `radius` | `0, 4, 6, 8, 10, 12, 14, full (9999), circle ('50%')` |
-| `fontSize` | `9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 32, 40` |
-| `fontWeight` | `regular 400, medium 500, semibold 600, bold 700, heavy 800` |
-| `lineHeight` | `tight 1.3, snug 1.4, relaxed 1.5, normal 1.6, loose 1.7` |
+| `color` (+ `darkColor` flip) | `bgBase, bgSecondary, bgTertiary, bgElevated, labelPrimary, labelSecondary, labelTertiary, separator, blue, green, red, orange, labelOnAccent, scrim` |
+| `space` | `0, 4, 8, 12, 16, 20, 24, 32, 40` |
+| `radius` | `0, 8, 10, 12, 16, 20, circle ('50%')` |
+| `fontSize` | `11, 12, 13, 15, 17, 20, 22, 28, 34` (HIG largeTitle 34 … caption2 11) |
+| `fontWeight` | `regular 400, medium 500, semibold 600, bold 700` |
+| `lineHeight` | `tight 1.3, normal 1.6, loose 1.7` |
 | `letterSpacing` | `none 0, xs 0.4, sm 0.5, wide 1, wider 2` |
 | `zIndex` | `modal 100` |
-| `fontFamily` | `mono, sans` |
-| `alpha(hex, a)` | a function, not a scale: derives a tint from a token (`alpha(color.accent, 0.08)`) |
+| `fontFamily` | `mono, sans` (SF stack + tabular-nums on `body` for figures) |
+| `motion` | `quick 100ms, normal 200ms, deliberate 250ms, slow 350ms, ease cubic-bezier(0.32, 0.72, 0, 1)` |
+| `target` | `min 44` (HIG 44pt minimum tappable target) |
+| `alpha(hex, a)` | a function, not a scale: derives a tint from a token (`alpha(color.blue, 0.08)`); never called with `color.scrim` (used verbatim) |
 
 Every key has real consumers in the tree today (the counts are in
 [design-inventory.md](design-inventory.md) §A.1–A.2), so **no invented tokens**. "I need a tint of
@@ -101,7 +115,7 @@ tint from the token instead of minting a near-duplicate of it.
 
 ### How the migrated code uses a token
 
-Prefer the token module in TS/TSX — it is typed, so `color.bg2` is a compile error:
+Prefer the token module in TS/TSX — it is typed, so `color.bg` is a compile error:
 
 ```ts
 import { color, fontSize, space, radius } from '@/styles/tokens';
@@ -144,8 +158,11 @@ change NOT in this table is a bug.
 
 | from | to |
 |---|---|
-| `fontSize` 11.5 / 12.5 / 15 / 34 | `fontSize[12]` / `fontSize[13]` / `fontSize[16]` / `fontSize[32]` |
-| `borderRadius` 2 / 3 / 999 / `'50%'` | `radius[4]` / `radius[4]` / `radius.full` / `radius.circle` |
+| `fontSize` 9 / 10 / 14 / 16 / 18 / 24 / 32 / 40 (pre-HIG scale) | `fontSize[11]` / `fontSize[11]` / `fontSize[15]` / `fontSize[17]` / `fontSize[17or20]` / `fontSize[22]` / `fontSize[28]` / `fontSize[34]` |
+| `borderRadius` 4 / 6 / 14 (pre-HIG scale) | `radius[8]` / `radius[8]` / `radius[16]` |
+| `space` 5 / 6 / 10 / 14 / 18 / 28 / 30 (pre-HIG scale) | `space[4]` / `space[8]` / `space[8]` / `space[12]` / `space[16or20]` / `space[32or24]` / `space[32]` |
+| `fontWeight.heavy` 800 | `fontWeight.bold` 700 |
+| green accent `#3ddc97` / dark-green chrome | HIG `color.blue` `#007AFF` / semantic backgrounds (intentional re-theme) |
 | `fontFamily` `'monospace'`, `'ui-monospace, monospace'` | `fontFamily.mono` |
 | `fontFamily` `'system-ui, sans-serif'` | `fontFamily.sans` |
 | `#4ade80`, `#3fb950`, `#22c55e`, `#06d6a0` | `color.positive` |
@@ -203,7 +220,7 @@ bun run check:design                          # the python migration gate + the 
 A hand-edit to either artifact, or an edit to `tokens.ts` that was not re-emitted, prints
 `TOKENS_DRIFT` plus a unified diff and exits 1. `--check` also fails when the sentinels are missing
 or when exactly one is present. A successful run reports, e.g.
-`TOKENS_OK (13 colors, 15 space, 12 font-size, 67 vars total)`.
+`TOKENS_OK (14 colors, 9 space, 9 font-size, 60 vars total)`.
 
 ## The gates
 
@@ -265,7 +282,7 @@ stays visible, and are deliberately NOT a build failure.
 Scale rules are exempted in `src/styles/tokens.ts` only. The gate fails if an exempted exact path
 disappears OR if a glob entry matches nothing, so neither the list nor a convention can rot silently.
 
-**The gate is GREEN.** Current verdict: `DESIGN_TOKENS_OK (files=150 exemptions=6)` — zero
+**The gate is GREEN.** Current verdict: `DESIGN_TOKENS_OK (files=232 exemptions=6)` — zero
 offender lines, zero dead tokens. While the migration was in flight it printed
 `DESIGN_FAIL: files=… colors=… scales=… deadtokens=…` counting the remaining work; a green run
 *before* the migration would have meant the gate was broken, not that the tree was clean, and it
@@ -300,6 +317,12 @@ adoption pass introduced. Shelf rules, enforced by the DR-018 layer gate
 - new atoms go on a named shelf (`ui`, `layout`, `navigation`, `data-display`, `feedback`); a file
   dropped directly at `src/components/` fails the structure gate.
 
+Two shelf members landed with the shell/admin pass: `ui/meter.tsx` (`Meter` — a part-to-whole
+composition bar: one stacked flex track of token-hued segments plus a legend; the caller supplies
+raw parts and zero-magnitude values are skipped, so an empty bucket never paints a sliver) and
+`ui/page-chrome.tsx` (`PagePanel` / `PagePanelLink` — the one chrome shared by the app router's
+route-level `loading.tsx` / `error.tsx` / `not-found.tsx` slots).
+
 **Decision: there is NO page-chrome atom.** A shared page shell was attempted for the three page
 surfaces (member, admin, login) and then **deleted rather than kept as indirection**: each needed
 something a shared shell could not express value-for-value — different wrappers, different
@@ -310,22 +333,14 @@ what the gate measures) and each keeps the structure its own surface needs. That
 future cases: an atom is extracted when two call sites are genuinely the same thing, not when they
 merely look similar.
 
-## The zero-visual-change rule
+## The HIG re-theme rule
 
-Adding the token layer MUST NOT move a pixel. Concretely:
-
-- token values ARE the values the app renders today (`C`'s hex, the existing body font stack), so no
-  re-tinting and no rounding happens on the way in;
-- px scales are keyed by their own value, so `fontSize: 13` → `fontSize: fontSize[13]` and
-  `padding: '10px 18px'` → two `space[...]` lookups — arithmetic identity, not an approximation;
-- the **only** exceptions are the rows of the normalization table above, each a one-line pixel
-  change that the migration commit must state in its own words;
-- the one-off proof of the above lives in `frontend/web/scripts/design/prove-value-for-value.ts`
-  (`VALUE_FOR_VALUE_OK`), which compares every token against a frozen snapshot of the values the
-  migration replaced. The emitter used to carry the same check against the then-live sources; both
-  of those sources (`C`, the HSL `:root`) are deleted at the cutover, so the live comparison was
-  removed with them rather than left as a check that can no longer fail.
-
+This generation INTENTIONALLY moves pixels: green accent -> HIG blue, dark-green chrome ->
+semantic system backgrounds, off-scale steps -> the nearest 8pt/HIG-type/radius step. Concretely:
+- every call site references a token (the gate proves it: no raw literals, no dead tokens);
+- px scales stay keyed by their own value, so `fontSize[13]` still reads as 13px without opening the token file;
+- the **only** value changes are the rows of the normalization table above plus the HIG palette itself — any value change NOT covered there is a bug;
+- the first generation's value-for-value proof served its purpose and is retired with the re-theme.
 ## How to add a token
 
 A token is a two-part change; **no invented tokens**.

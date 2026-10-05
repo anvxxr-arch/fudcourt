@@ -12,7 +12,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { color, fontSize, radius, space } from '@/styles/tokens';
-import { fetchCompare, formatDate, formatValue, type CompareEnvelope } from '@/features/economy/client';
+import { fetchCompare, formatDate, formatValue, type CompareEnvelope } from '@/features/economy/model';
 import { Card, ECONOMY_NAV, ErrorState, Loading, PageHeader, Sparkline } from '@/features/economy/ui/parts';
 
 const COUNTRIES = ['us', 'cn', 'de', 'jp', 'gb', 'in', 'id', 'br', 'fr', 'kr'] as const;
@@ -27,11 +27,11 @@ const SERIES = [
 const PERIODS = ['1y', '2y', '5y', '10y', 'max'] as const;
 
 const FIELD = {
-  padding: `${space[6]}px ${space[8]}px`,
-  background: color.surface,
-  border: `1px solid ${color.border}`,
-  borderRadius: radius[6],
-  color: color.text,
+  padding: `${space[8]}px ${space[8]}px`,
+  background: color.bgSecondary,
+  border: `1px solid ${color.separator}`,
+  borderRadius: radius[8],
+  color: color.labelPrimary,
   fontSize: fontSize[11],
 } as const;
 
@@ -75,11 +75,11 @@ export default function CompareBoard() {
       />
 
       <Card title="Countries">
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[6] }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
           {COUNTRIES.map((c) => {
             const on = selectedCountries.includes(c);
             return (
-              <button key={c} onClick={() => toggle(selectedCountries, setSelectedCountries, c)} aria-pressed={on} style={{ ...FIELD, cursor: 'pointer', background: on ? color.accent : color.surface, color: on ? color.textOnAccent : color.text }}>
+              <button key={c} onClick={() => toggle(selectedCountries, setSelectedCountries, c)} aria-pressed={on} style={{ ...FIELD, cursor: 'pointer', background: on ? color.blue : color.bgSecondary, color: on ? color.labelOnAccent : color.labelPrimary }}>
                 {c.toUpperCase()}
               </button>
             );
@@ -87,13 +87,13 @@ export default function CompareBoard() {
         </div>
       </Card>
 
-      <div style={{ marginTop: space[10] }}>
+      <div style={{ marginTop: space[8] }}>
         <Card title="Series">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[6] }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
             {SERIES.map((s) => {
               const on = selectedSeries.includes(s.id);
               return (
-                <button key={s.id} onClick={() => toggle(selectedSeries, setSelectedSeries, s.id)} aria-pressed={on} style={{ ...FIELD, cursor: 'pointer', background: on ? color.accent : color.surface, color: on ? color.textOnAccent : color.text }}>
+                <button key={s.id} onClick={() => toggle(selectedSeries, setSelectedSeries, s.id)} aria-pressed={on} style={{ ...FIELD, cursor: 'pointer', background: on ? color.blue : color.bgSecondary, color: on ? color.labelOnAccent : color.labelPrimary }}>
                   {s.label}
                 </button>
               );
@@ -105,31 +105,31 @@ export default function CompareBoard() {
         </Card>
       </div>
 
-      {error && <div style={{ marginTop: space[14] }}><ErrorState title="Could not compare" detail={error} /></div>}
-      {!data && !error && selectedCountries.length > 0 && selectedSeries.length > 0 && <div style={{ marginTop: space[14] }}><Loading what="comparison" /></div>}
+      {error && <div style={{ marginTop: space[12] }}><ErrorState title="Could not compare" detail={error} /></div>}
+      {!data && !error && selectedCountries.length > 0 && selectedSeries.length > 0 && <div style={{ marginTop: space[12] }}><Loading what="comparison" /></div>}
 
       {data && (
-        <div style={{ marginTop: space[14] }}>
+        <div style={{ marginTop: space[12] }}>
           <Card title={`${data.series.length} series`} subtitle={`period ${data.period}${data.missing.length ? ` · unresolved: ${data.missing.join(', ')}` : ''}`}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: space[10] }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
               {data.series.map((s) => {
                 const latest = [...s.points].reverse().find((p) => p.value !== null);
                 return (
-                  <div key={s.slug} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[10], borderBottom: `1px solid ${color.border}`, paddingBottom: space[8] }}>
+                  <div key={s.slug} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[8], borderBottom: `1px solid ${color.separator}`, paddingBottom: space[8] }}>
                     <div style={{ minWidth: 0 }}>
-                      <Link href={`/economy/indicator/${s.slug}`} style={{ color: color.text, textDecoration: 'none', fontSize: fontSize[12] }}>{s.label}</Link>
-                      <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{latest ? formatDate(latest.date) : '—'} · {s.frequency} · {s.unit}</div>
+                      <Link href={`/economy/indicator/${s.slug}`} style={{ color: color.labelPrimary, textDecoration: 'none', fontSize: fontSize[12] }}>{s.label}</Link>
+                      <div style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{latest ? formatDate(latest.date) : '—'} · {s.frequency} · {s.unit}</div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: space[10] }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: space[8] }}>
                       <Sparkline points={s.points.map((p) => p.value)} width={140} />
-                      <span style={{ fontSize: fontSize[14], color: color.text, minWidth: 64, textAlign: 'right' }}>{latest ? formatValue(latest.value, s.decimals) : '—'}</span>
+                      <span style={{ fontSize: fontSize[15], color: color.labelPrimary, minWidth: 64, textAlign: 'right' }}>{latest ? formatValue(latest.value, s.decimals) : '—'}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
           </Card>
-          <p style={{ marginTop: space[12], fontSize: fontSize[11], color: color.textMuted }}>{data.derived}</p>
+          <p style={{ marginTop: space[12], fontSize: fontSize[11], color: color.labelTertiary }}>{data.derived}</p>
         </div>
       )}
     </main>

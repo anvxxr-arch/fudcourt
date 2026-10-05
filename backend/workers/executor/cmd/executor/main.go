@@ -46,6 +46,7 @@ import (
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchanges/binance"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchanges/bybit"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchanges/mexc"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchanges/paper"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/credentials"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/lock"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/repository"
@@ -185,7 +186,29 @@ func (r *resolver) adapterFor(ctx context.Context, rec execution.ExecutionRecord
 	creds := exchanges.Credentials{APIKey: apiKey, APISecret: apiSecret}
 	http := exchanges.DefaultHTTPClient(r.httpTimeout)
 	market := rec.MarketType
-	switch rec.Exchange {
+	// Paper mode (parity with the TS PaperExchangeAdapter): a deterministic
+	// in-memory venue that fills/settles itself but reads its TAPE from a live
+	// adapter for the execution's exchange — so paper pricing is real and paper
+	// placement is simulated. The live adapter built here is used only for its
+	// read surface; the paper venue never calls its CreateOrder/CancelOrder.
+	if rec.Mode == execution.ModePaper {
+		src, err := buildLiveAdapter(rec.Exchange, market, creds, http)
+		if err != nil {
+			return nil, err
+		}
+		return paper.NewPaper(paper.PaperConfig{
+			MarketType: market,
+			Source:     liveMarketSource{live: src},
+		})
+	}
+	return buildLiveAdapter(rec.Exchange, market, creds, http)
+}
+
+// buildLiveAdapter constructs the live venue adapter for an exchange. It is the
+// single place paper mode sources its tape from, so the two paths can never
+// diverge on which venue a paper execution is priced against.
+func buildLiveAdapter(exchange execution.ExchangeID, market execution.MarketType, creds exchanges.Credentials, http exchanges.HTTPClient) (exchanges.Exchange, error) {
+	switch exchange {
 	case execution.ExchangeBinance:
 		return binance.New(binance.Config{Credentials: creds, HTTP: http, MarketType: market})
 	case execution.ExchangeBybit:
@@ -193,8 +216,26 @@ func (r *resolver) adapterFor(ctx context.Context, rec execution.ExecutionRecord
 	case execution.ExchangeMEXC:
 		return mexc.New(mexc.Config{Credentials: creds, HTTP: http, MarketType: market})
 	default:
-		return nil, fmt.Errorf("credential %s: unknown exchange %q", row.MaskedKeyOrFingerprint(), rec.Exchange)
+		return nil, fmt.Errorf("unknown exchange %q", exchange)
 	}
+}
+
+// liveMarketSource adapts a live exchange adapter to paper.MarketSource: paper
+// reads the live tape through it (ticker/markets/fees) and does its own
+// matching. The reverse direction (paper's order methods) is never reachable
+// through this seam, so a paper execution cannot place on the live venue.
+type liveMarketSource struct{ live exchanges.Exchange }
+
+func (s liveMarketSource) GetTicker(ctx context.Context, symbol string) (execution.Ticker, error) {
+	return s.live.GetTicker(ctx, symbol)
+}
+
+func (s liveMarketSource) GetMarkets(ctx context.Context) ([]exchanges.Market, error) {
+	return s.live.GetMarkets(ctx)
+}
+
+func (s liveMarketSource) GetFees(ctx context.Context, symbol string) (exchanges.FeeModel, error) {
+	return s.live.GetFees(ctx, symbol)
 }
 
 // exchanges adapts worker.Config.Exchanges. The ctx comes from the worker's
@@ -297,6 +338,7 @@ func main() {
 		Lock:         leaseAdapter{lock: lease},
 		Exchanges:    r.exchanges,
 		QuantityStep: r.quantityStep,
+		LiveEnabled:  os.Getenv("FUDCOURT_EXECUTOR_LIVE") == "1",
 	})
 	if err != nil {
 		slog.Error("executor: worker config refused", "error", err)

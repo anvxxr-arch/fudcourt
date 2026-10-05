@@ -283,7 +283,7 @@ def verify_ui_wiring(base: str) -> None:
     root = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "web"  # scripts/verify -> frontend/web
     route = (root / "src/app/(frontend)/api/markets/route.ts").read_text()
     tracker = (root / "src/features/tracker/ui.tsx").read_text()
-    shell = (root / "src/components/layout/store-shell.tsx").read_text()
+    shell = (root / "src/features/overview/store-shell.tsx").read_text()
 
     check("/api/markets" in tracker, "tracker fetches /api/markets")
     check("sort=mcap&order=desc&limit=50" in tracker, "tracker requests the mcap window")
@@ -300,8 +300,8 @@ def verify_ui_wiring(base: str) -> None:
         check(frag in route, label, "")
     check("'ticker'" in shell, "shell wires the ticker tab")
     check(not (root / "src/app/(frontend)/coin/page.tsx").exists(), "/coin deep-link is removed")
-    check((root / "src/features/markets/client.ts").exists(), "src/features/markets/client.ts owns the family contract")
-    m = re.search(r"export const MARKETS_SORTS = \[([^\]]+)\]", (root / "src/features/markets/client.ts").read_text())
+    check((root / "src/features/market-data/sources/markets.ts").exists(), "src/features/market-data/sources/markets.ts owns the family contract")
+    m = re.search(r"export const MARKETS_SORTS = \[([^\]]+)\]", (root / "src/features/market-data/sources/markets.ts").read_text())
     declared = set(re.findall(r"'(\w+)'", m.group(1))) if m else set()
     check(declared == {"mcap", "volume", "price", "change", "name"},
           "lib declares the 5 sorts (4 UI offers + mcap for the tracker)", note(sorted(declared)))

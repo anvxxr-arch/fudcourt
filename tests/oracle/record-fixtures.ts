@@ -30,7 +30,7 @@ import {
   CR_MODE_ARGS,
   CR_MODE_UPSTREAM,
   CR_MODES,
-} from '@/features/cryptorank/client';
+} from '@/features/market-data/cryptorank';
 
 const PYTHON = process.env.CR_PYTHON ?? '/home/dwizzy/.venvs/crfetch/bin/python';
 // This recorder lives in the repo-root tests/oracle/ beside the helper it drives

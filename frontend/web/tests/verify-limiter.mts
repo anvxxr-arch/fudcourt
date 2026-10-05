@@ -19,7 +19,7 @@
  * with DISTINCT QUERIES EVER MADE -- unbounded, and trivially reachable through
  * the search box.
  */
-import { limitedFetch, __resetLimiter, __cacheStats } from '../src/platform/http/rate-limit.ts';
+import { limitedFetch, __resetLimiter, __cacheStats } from '../src/lib/rate-limit.ts';
 
 const TTL = 600_000; // 10 min -- long enough that expiry cannot explain a MISS
 const OPTS = { ttlMs: TTL };

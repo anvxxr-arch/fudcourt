@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { TradeInstrument } from '@/features/trade/ui/instrument';
-import { isInstrumentId, instrumentLabel } from '@/features/trade/instrument';
-import { MARKET_TYPE_BY_ID, isMarketType } from '@/features/trade/taxonomy';
+import { isInstrumentId, instrumentLabel } from '@/features/trade/model';
+import { MARKET_TYPE_BY_ID, isMarketType } from '@/features/trade/model';
 
 /**
  * An instrument is a route parameter, so the title is per-instrument. It is

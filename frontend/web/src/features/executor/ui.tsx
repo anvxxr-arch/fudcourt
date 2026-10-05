@@ -32,7 +32,8 @@ import {
   radius,
   space,
 } from '@/styles/tokens';
-import { Card, Label } from '@/components/ui/primitives';
+import { Card, Label } from '@/ui/primitives';
+import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import {
   DEFAULT_RISK_PROFILE,
   isTerminalExecution,
@@ -56,7 +57,7 @@ import {
   type SizingDefinition,
   type SizingMode,
   type TakeProfitDefinition,
-} from '@/platform/executor/types';
+} from '@/lib/executor';
 import {
   DASH,
   decimalsForStep,
@@ -100,20 +101,20 @@ import {
 
 const inputStyle: CSSProperties = {
   width: '100%',
-  background: color.bg,
-  color: color.text,
-  border: `1px solid ${color.border}`,
-  borderRadius: radius[6],
-  padding: `${space[6]}px ${space[8]}px`,
+  background: color.bgBase,
+  color: color.labelPrimary,
+  border: `1px solid ${color.separator}`,
+  borderRadius: radius[8],
+  padding: `${space[8]}px ${space[8]}px`,
   fontSize: fontSize[12],
   boxSizing: 'border-box',
 };
 
 const pairStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: space[8] };
 
-const h3Style: CSSProperties = { color: color.accent, fontSize: fontSize[12], fontWeight: fontWeight.heavy, margin: `0 0 ${space[8]}px`, letterSpacing: letterSpacing.wide };
+const h3Style: CSSProperties = { color: color.blue, fontSize: fontSize[12], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px`, letterSpacing: letterSpacing.wide };
 
-const noteStyle: CSSProperties = { color: color.textMuted, fontSize: fontSize[10], margin: `${space[4]}px 0 0` };
+const noteStyle: CSSProperties = { color: color.labelTertiary, fontSize: fontSize[11], margin: `${space[4]}px 0 0` };
 
 /** A `<select>` over a closed option list, so the value stays a real union member. */
 function Choice<T extends string, U extends T = T>({ value, onChange, options, disabled }: {
@@ -169,14 +170,14 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     <div>
       <Label>{label}</Label>
       {children}
-      {hint && <div style={{ fontSize: fontSize[10], color: color.textMuted, marginTop: 2 }}>{hint}</div>}
+      {hint && <div style={{ fontSize: fontSize[11], color: color.labelTertiary, marginTop: 2 }}>{hint}</div>}
     </div>
   );
 }
 
 function Checkbox({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: space[6], fontSize: fontSize[11], color: color.text, cursor: 'pointer' }}>
+    <label style={{ display: 'flex', alignItems: 'center', gap: space[8], fontSize: fontSize[11], color: color.labelPrimary, cursor: 'pointer' }}>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {label}
     </label>
@@ -191,18 +192,18 @@ function Btn({ onClick, children, disabled, tone = 'ghost' }: {
 }) {
   const toneStyle: CSSProperties =
     tone === 'primary'
-      ? { background: color.accent, color: color.textOnAccent, border: `1px solid ${color.accent}`, fontWeight: fontWeight.bold }
+      ? { background: color.blue, color: color.labelOnAccent, border: `1px solid ${color.blue}`, fontWeight: fontWeight.bold }
       : tone === 'danger'
-        ? { background: 'transparent', color: color.negative, border: `1px solid ${color.negative}` }
-        : { background: color.surface, color: color.text, border: `1px solid ${color.border}` };
+        ? { background: 'transparent', color: color.red, border: `1px solid ${color.red}` }
+        : { background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}` };
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
         ...toneStyle,
-        padding: `${space[6]}px ${space[12]}px`,
-        borderRadius: radius[6],
+        padding: `${space[8]}px ${space[12]}px`,
+        borderRadius: radius[8],
         fontSize: fontSize[11],
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.45 : 1,
@@ -217,13 +218,13 @@ function ErrorBanner({ text }: { text: string }) {
   if (text === '') return null;
   return (
     <p style={{
-      color: color.negative,
+      color: color.red,
       fontSize: fontSize[11],
       fontWeight: fontWeight.bold,
-      background: alpha(color.negative, 0.08),
-      border: `1px solid ${alpha(color.negative, 0.35)}`,
-      padding: `${space[8]}px ${space[10]}px`,
-      borderRadius: radius[6],
+      background: alpha(color.red, 0.08),
+      border: `1px solid ${alpha(color.red, 0.35)}`,
+      padding: `${space[8]}px ${space[8]}px`,
+      borderRadius: radius[8],
       margin: `0 0 ${space[8]}px`,
       whiteSpace: 'pre-wrap',
     }}>
@@ -234,27 +235,27 @@ function ErrorBanner({ text }: { text: string }) {
 
 /** One label/value line. A null value is `—`; the shapers never print a fake 0. */
 function Row({ label, value, tone }: { label: string; value: string; tone?: 'good' | 'bad' }) {
-  const toneColor = tone === 'good' ? color.accent : tone === 'bad' ? color.negative : color.text;
+  const toneColor = tone === 'good' ? color.blue : tone === 'bad' ? color.red : color.labelPrimary;
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: space[10], padding: '3px 0', borderBottom: `1px solid ${color.border}` }}>
-      <span style={{ color: color.textMuted, fontSize: fontSize[11] }}>{label}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: space[8], padding: '3px 0', borderBottom: `1px solid ${color.separator}` }}>
+      <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{label}</span>
       <span style={{ color: toneColor, fontSize: fontSize[11], fontWeight: fontWeight.bold, textAlign: 'right' }}>{value}</span>
     </div>
   );
 }
 
-const thStyle: CSSProperties = { textAlign: 'left', padding: '5px 6px', color: color.textMuted, fontSize: fontSize[10], borderBottom: `1px solid ${color.border}` };
+const thStyle: CSSProperties = { textAlign: 'left', padding: '5px 6px', color: color.labelTertiary, fontSize: fontSize[11], borderBottom: `1px solid ${color.separator}` };
 
-const tdStyle: CSSProperties = { padding: '5px 6px', fontSize: fontSize[11], borderBottom: `1px solid ${color.border}` };
+const tdStyle: CSSProperties = { padding: '5px 6px', fontSize: fontSize[11], borderBottom: `1px solid ${color.separator}` };
 
 /** A status badge: colour carries meaning, the text always carries it too. */
 function StatusPill({ status }: { status: string }) {
   const good = status === 'ACTIVE' || status === 'FILLED' || status === 'READY' || status === 'RUNNING' || status === 'VALIDATED';
   const bad = status === 'INVALID' || status === 'EXPIRED' || status === 'REVOKED'
     || status === 'PERMISSION_ERROR' || status === 'REJECTED' || status === 'FAILED' || status === 'RISK_STOPPED';
-  const statusColor = good ? color.accent : bad ? color.negative : color.text;
+  const statusColor = good ? color.blue : bad ? color.red : color.labelPrimary;
   return (
-    <span style={{ color: statusColor, border: `1px solid ${statusColor}`, borderRadius: radius[4], padding: '1px 6px', fontSize: fontSize[10], fontWeight: fontWeight.bold }}>
+    <span style={{ color: statusColor, border: `1px solid ${statusColor}`, borderRadius: radius[8], padding: '1px 6px', fontSize: fontSize[11], fontWeight: fontWeight.bold }}>
       {status}
     </span>
   );
@@ -263,9 +264,9 @@ function StatusPill({ status }: { status: string }) {
 /** Tri-state venue permission: `null` means the venue does not report it (§48). */
 function Perm({ value }: { value: boolean | null }) {
   if (value === null) {
-    return <span style={{ color: color.textMuted }} title="the venue does not report this flag">{DASH}</span>;
+    return <span style={{ color: color.labelTertiary }} title="the venue does not report this flag">{DASH}</span>;
   }
-  return <span style={{ color: value ? color.accent : color.negative }}>{value ? '✓' : '✕'}</span>;
+  return <span style={{ color: value ? color.blue : color.red }}>{value ? '✓' : '✕'}</span>;
 }
 
 /** Numbers arrive from inputs as text: empty stays absent, never a silent 0. */
@@ -300,25 +301,25 @@ const NAV_LINKS: ReadonlyArray<{ href: string; label: string }> = [
 
 export function ExecutorFrame({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <main style={{ background: color.bg, minHeight: '100vh', color: color.text, fontFamily: fontFamily.mono, padding: space[20] }}>
-      <h1 style={{ margin: 0, color: color.accent, letterSpacing: letterSpacing.wider, fontSize: fontSize[18] }}>CEX EXECUTOR</h1>
-      <p style={{ margin: `${space[4]}px 0 0`, color: color.textMuted, fontSize: fontSize[11] }}>{title} · {subtitle}</p>
+    <main style={{ background: color.bgBase, minHeight: '100vh', color: color.labelPrimary, fontFamily: fontFamily.mono, padding: space[20] }}>
+      <h1 style={{ margin: 0, color: color.blue, letterSpacing: letterSpacing.wider, fontSize: fontSize[17] }}>CEX EXECUTOR</h1>
+      <p style={{ margin: `${space[4]}px 0 0`, color: color.labelTertiary, fontSize: fontSize[11] }}>{title} · {subtitle}</p>
       <p style={noteStyle}>
         non-custodial · your exchange keys, never ours · every figure on this page is what the risk engine returned
         for your own account — a `—` means the engine did not compute it
       </p>
-      <div style={{ marginTop: space[14] }}>
-        <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap', margin: `0 0 ${space[14]}px` }}>
+      <div style={{ marginTop: space[12] }}>
+        <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap', margin: `0 0 ${space[12]}px` }}>
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               style={{
-                background: color.surface,
-                color: color.accent,
-                border: `1px solid ${color.border}`,
-                padding: `${space[6]}px ${space[12]}px`,
-                borderRadius: radius[6],
+                background: color.bgSecondary,
+                color: color.blue,
+                border: `1px solid ${color.separator}`,
+                padding: `${space[8]}px ${space[12]}px`,
+                borderRadius: radius[8],
                 fontSize: fontSize[11],
                 textDecoration: 'none',
               }}
@@ -326,7 +327,7 @@ export function ExecutorFrame({ title, subtitle, children }: { title: string; su
               {link.label}
             </Link>
           ))}
-          <Link href="/team/balance" style={{ color: color.textMuted, fontSize: fontSize[11], padding: `${space[6]}px ${space[4]}px` }}>← back to store</Link>
+          <Link href="/team/balance" style={{ color: color.labelTertiary, fontSize: fontSize[11], padding: `${space[8]}px ${space[4]}px` }}>← back to store</Link>
         </div>
         {children}
       </div>
@@ -713,7 +714,7 @@ function PreviewBlock({ shown, stale }: { shown: PreviewResponse | null; stale: 
     : plan.marketType === 'spot' ? balances.spotEquity : balances.futuresEquity;
   const conflictCount = preview?.conflicts.length ?? 0;
   return (
-    <Card style={{ borderColor: conflictCount > 0 ? color.negative : color.border }}>
+    <Card style={{ borderColor: conflictCount > 0 ? color.red : color.separator }}>
       <h3 style={h3Style}>RISK PREVIEW · §84</h3>
       {preview === null && (
         <p style={noteStyle}>
@@ -724,7 +725,7 @@ function PreviewBlock({ shown, stale }: { shown: PreviewResponse | null; stale: 
       )}
       {plan !== null && (
         <>
-          <p style={{ color: color.text, fontSize: fontSize[13], fontWeight: fontWeight.heavy, margin: '0 0 2px' }}>
+          <p style={{ color: color.labelPrimary, fontSize: fontSize[13], fontWeight: fontWeight.bold, margin: '0 0 2px' }}>
             {plan.symbol} · {plan.side.toUpperCase()} · {plan.venueKey}
           </p>
           <p style={noteStyle}>
@@ -779,27 +780,27 @@ function PreviewBlock({ shown, stale }: { shown: PreviewResponse | null; stale: 
         </>
       )}
       {preview !== null && conflictCount > 0 && (
-        <div style={{ marginTop: space[10], borderTop: `1px solid ${color.negative}`, paddingTop: space[8] }}>
-          <p style={{ color: color.negative, fontSize: fontSize[11], fontWeight: fontWeight.heavy, margin: `0 0 ${space[4]}px` }}>
+        <div style={{ marginTop: space[8], borderTop: `1px solid ${color.red}`, paddingTop: space[8] }}>
+          <p style={{ color: color.red, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[4]}px` }}>
             {conflictCount} CONFLICT{conflictCount === 1 ? '' : 'S'} — creation is blocked (PRD §117)
           </p>
           {preview.conflicts.map((conflict) => (
-            <p key={conflict.code} style={{ color: color.text, fontSize: fontSize[11], margin: `0 0 ${space[4]}px` }}>
-              <span style={{ color: color.negative, fontWeight: fontWeight.bold }}>{conflict.code}</span> — {conflict.message}
+            <p key={conflict.code} style={{ color: color.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[4]}px` }}>
+              <span style={{ color: color.red, fontWeight: fontWeight.bold }}>{conflict.code}</span> — {conflict.message}
               {conflict.detail !== undefined && (
-                <span style={{ color: color.textMuted }}>{' '}({Object.entries(conflict.detail).map(([key, value]) => `${key}=${value}`).join(', ')})</span>
+                <span style={{ color: color.labelTertiary }}>{' '}({Object.entries(conflict.detail).map(([key, value]) => `${key}=${value}`).join(', ')})</span>
               )}
             </p>
           ))}
         </div>
       )}
       {preview !== null && preview.warnings.length > 0 && (
-        <div style={{ marginTop: space[10], borderTop: `1px solid ${color.border}`, paddingTop: space[8] }}>
-          <p style={{ color: color.accent, fontSize: fontSize[11], fontWeight: fontWeight.heavy, margin: `0 0 ${space[4]}px` }}>
+        <div style={{ marginTop: space[8], borderTop: `1px solid ${color.separator}`, paddingTop: space[8] }}>
+          <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[4]}px` }}>
             {preview.warnings.length} WARNING{preview.warnings.length === 1 ? '' : 'S'} — shown, not blocking
           </p>
           {preview.warnings.map((warning) => (
-            <p key={warning} style={{ color: color.textMuted, fontSize: fontSize[11], margin: '0 0 3px' }}>· {warning}</p>
+            <p key={warning} style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: '0 0 3px' }}>· {warning}</p>
           ))}
         </div>
       )}
@@ -816,7 +817,7 @@ function LevelEditor({ title, rows, onChange }: { title: string; rows: LevelRow[
     <div style={{ marginTop: space[8] }}>
       <Label>{title}</Label>
       {rows.map((row, index) => (
-        <div key={index} style={{ ...pairStyle, marginBottom: space[6] }}>
+        <div key={index} style={{ ...pairStyle, marginBottom: space[8] }}>
           <Text
             value={row.price}
             onChange={(price) => {
@@ -827,7 +828,7 @@ function LevelEditor({ title, rows, onChange }: { title: string; rows: LevelRow[
             placeholder="price"
             type="number"
           />
-          <div style={{ display: 'flex', gap: space[6] }}>
+          <div style={{ display: 'flex', gap: space[8] }}>
             <Text
               value={row.fraction}
               onChange={(fraction) => {
@@ -925,7 +926,7 @@ export function ExecutorComposer() {
   }, [blocking, request]);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(320px, 420px)', gap: space[14], alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(320px, 420px)', gap: space[12], alignItems: 'start' }}>
       <Card>
         <h3 style={h3Style}>NEW EXECUTION · §82</h3>
         <ErrorBanner text={accountsError} />
@@ -945,7 +946,7 @@ export function ExecutorComposer() {
         </Field>
         {accounts.length === 0 && (
           <p style={noteStyle}>
-            <Link href="/executor/accounts" style={{ color: color.accent }}>connect an exchange account →</Link>
+            <Link href="/executor/accounts" style={{ color: color.blue }}>connect an exchange account →</Link>
           </p>
         )}
 
@@ -966,8 +967,8 @@ export function ExecutorComposer() {
           </Field>
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.border}`, marginTop: space[10], paddingTop: space[10] }}>
-          <p style={{ color: color.accent, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[6]}px` }}>ENTRY · STOP · TARGETS</p>
+        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
+          <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>ENTRY · STOP · TARGETS</p>
           <div style={pairStyle}>
             <Field label="Entry type">
               <Choice
@@ -1004,8 +1005,8 @@ export function ExecutorComposer() {
           />
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.border}`, marginTop: space[10], paddingTop: space[10] }}>
-          <p style={{ color: color.accent, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[6]}px` }}>SIZING · LEVERAGE</p>
+        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
+          <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>SIZING · LEVERAGE</p>
           <div style={pairStyle}>
             <Field label="Sizing mode">
               <Choice value={state.sizingMode} onChange={(sizingMode) => patch({ sizingMode })} options={SIZING_OPTIONS} />
@@ -1037,8 +1038,8 @@ export function ExecutorComposer() {
           </div>
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.border}`, marginTop: space[10], paddingTop: space[10] }}>
-          <p style={{ color: color.accent, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[6]}px` }}>EXECUTION METHOD</p>
+        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
+          <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>EXECUTION METHOD</p>
           <Field label="Method">
             <Choice value={state.strategy} onChange={(strategy) => patch({ strategy })} options={STRATEGY_OPTIONS} />
           </Field>
@@ -1097,10 +1098,10 @@ export function ExecutorComposer() {
           )}
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.border}`, marginTop: space[10], paddingTop: space[10] }}>
+        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
           <button
             onClick={() => setShowAdvanced((open) => !open)}
-            style={{ background: 'transparent', color: color.accent, border: 'none', cursor: 'pointer', fontSize: fontSize[11], fontWeight: fontWeight.bold, padding: 0 }}
+            style={{ background: 'transparent', color: color.blue, border: 'none', cursor: 'pointer', fontSize: fontSize[11], fontWeight: fontWeight.bold, padding: 0 }}
           >
             {showAdvanced ? '▾' : '▸'} ADVANCED CONSTRAINTS
           </button>
@@ -1127,7 +1128,7 @@ export function ExecutorComposer() {
                   <Text value={state.maxDurationMinutes} onChange={(maxDurationMinutes) => patch({ maxDurationMinutes })} type="number" />
                 </Field>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: space[6], marginTop: space[8] }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: space[8], marginTop: space[8] }}>
                 <Checkbox label="Maker only" checked={state.makerOnly} onChange={(makerOnly) => patch({ makerOnly })} />
                 <Checkbox label="Allow market fallback" checked={state.allowMarketFallback} onChange={(allowMarketFallback) => patch({ allowMarketFallback })} />
                 <Checkbox label="Cancel if risk exceeded" checked={state.cancelIfRiskExceeded} onChange={(cancelIfRiskExceeded) => patch({ cancelIfRiskExceeded })} />
@@ -1149,20 +1150,20 @@ export function ExecutorComposer() {
           )}
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.border}`, marginTop: space[10], paddingTop: space[10] }}>
+        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
           <div style={pairStyle}>
             <Field label="Execution mode">
               <Choice value={state.mode} onChange={(mode) => patch({ mode })} options={MODE_OPTIONS} />
             </Field>
             <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: space[4] }}>
-              <span style={{ color: state.mode === 'live' ? color.negative : color.textMuted, fontSize: fontSize[10] }}>
+              <span style={{ color: state.mode === 'live' ? color.red : color.labelTertiary, fontSize: fontSize[11] }}>
                 {state.mode === 'live'
                   ? `live is ${liveEnabled ? 'enabled' : 'BLOCKED by the server kill switch'}`
                   : 'paper — the venue adapter simulates the fills'}
               </span>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: space[8], marginTop: space[10], flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: space[8], marginTop: space[8], flexWrap: 'wrap' }}>
             <Btn onClick={runPreview} disabled={busy || blocking.length > 0} tone="primary">Preview</Btn>
             <Btn onClick={submit} disabled={busy || conflictCount > 0 || blocking.length > 0} tone={state.mode === 'live' ? 'danger' : 'primary'}>
               {state.mode === 'live' ? 'Create LIVE execution' : 'Create execution'}
@@ -1170,14 +1171,14 @@ export function ExecutorComposer() {
             <Btn onClick={() => { setResult(null); setPreviewError(''); setSubmitError(''); setState(INITIAL); }}>Reset</Btn>
           </div>
           {blocking.length > 0 && (
-            <ul style={{ color: color.textMuted, fontSize: fontSize[10], margin: `${space[8]}px 0 0`, paddingLeft: space[16] }}>
+            <ul style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `${space[8]}px 0 0`, paddingLeft: space[16] }}>
               {blocking.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
           )}
           {state.mode === 'live' && !liveEnabled && (
-            <p style={{ ...noteStyle, color: color.negative }}>
+            <p style={{ ...noteStyle, color: color.red }}>
               live creation is refused by the server unless FUDCOURT_EXECUTOR_LIVE=1 (PRD §108) — paper mode works now
             </p>
           )}
@@ -1188,10 +1189,10 @@ export function ExecutorComposer() {
         <ErrorBanner text={previewError} />
         <ErrorBanner text={submitError} />
         {createdId !== '' && (
-          <Card style={{ borderColor: color.accent }}>
+          <Card style={{ borderColor: color.blue }}>
             <h3 style={h3Style}>CREATED · READY</h3>
-            <p style={{ color: color.text, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
-              execution <span style={{ color: color.accent }}>{createdId}</span> exists and is waiting — start it from its
+            <p style={{ color: color.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
+              execution <span style={{ color: color.blue }}>{createdId}</span> exists and is waiting — start it from its
               own page, or keep composing.
             </p>
             <Btn onClick={() => router.push(`/executor/${createdId}`)} tone="primary">go to execution →</Btn>
@@ -1232,34 +1233,34 @@ function ChildOrderTable({ orders }: { orders: ChildOrderRecord[] }) {
       <h3 style={h3Style}>CHILD ORDERS · {orders.length}</h3>
       {orders.length === 0 && <p style={noteStyle}>no child orders yet — the worker plans them when the execution starts</p>}
       {orders.length > 0 && (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Client Order Id</th>
-              <th style={thStyle}>Status</th>
-              <th style={thStyle}>Side</th>
-              <th style={thStyle}>Type</th>
-              <th style={thStyle}>Price</th>
-              <th style={thStyle}>Qty</th>
-              <th style={thStyle}>Filled</th>
-              <th style={thStyle}>Leg</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <THead>
+            <TR>
+              <TH style={thStyle}>Client Order Id</TH>
+              <TH style={thStyle}>Status</TH>
+              <TH style={thStyle}>Side</TH>
+              <TH style={thStyle}>Type</TH>
+              <TH align="right" style={thStyle}>Price</TH>
+              <TH align="right" style={thStyle}>Qty</TH>
+              <TH align="right" style={thStyle}>Filled</TH>
+              <TH style={thStyle}>Leg</TH>
+            </TR>
+          </THead>
+          <TBody>
             {orders.map((order) => (
-              <tr key={order.id}>
-                <td style={{ ...tdStyle, color: color.textMuted }}>{order.clientOrderId}</td>
-                <td style={tdStyle}><StatusPill status={order.status} /></td>
-                <td style={{ ...tdStyle, color: order.side === 'buy' ? color.accent : color.negative }}>{order.side.toUpperCase()}</td>
-                <td style={tdStyle}>{order.type}</td>
-                <td style={tdStyle}>{formatPrice(order.price)}</td>
-                <td style={tdStyle}>{formatQty(order.quantity)}</td>
-                <td style={tdStyle}>{formatQty(order.filledQuantity)}</td>
-                <td style={{ ...tdStyle, color: order.isExit ? color.accent : color.textMuted }}>{order.isExit ? 'exit' : 'entry'}</td>
-              </tr>
+              <TR key={order.id}>
+                <TD style={{ ...tdStyle, color: color.labelTertiary }}>{order.clientOrderId}</TD>
+                <TD style={tdStyle}><StatusPill status={order.status} /></TD>
+                <TD style={{ ...tdStyle, color: order.side === 'buy' ? color.blue : color.red }}>{order.side.toUpperCase()}</TD>
+                <TD style={tdStyle}>{order.type}</TD>
+                <TD align="right" mono style={tdStyle}>{formatPrice(order.price)}</TD>
+                <TD align="right" mono style={tdStyle}>{formatQty(order.quantity)}</TD>
+                <TD align="right" mono style={tdStyle}>{formatQty(order.filledQuantity)}</TD>
+                <TD style={{ ...tdStyle, color: order.isExit ? color.blue : color.labelTertiary }}>{order.isExit ? 'exit' : 'entry'}</TD>
+              </TR>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       )}
     </Card>
   );
@@ -1271,30 +1272,30 @@ function FillTable({ fills }: { fills: FillRecord[] }) {
       <h3 style={h3Style}>FILLS · {fills.length}</h3>
       {fills.length === 0 && <p style={noteStyle}>no fills recorded</p>}
       {fills.length > 0 && (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Time</th>
-              <th style={thStyle}>Price</th>
-              <th style={thStyle}>Qty</th>
-              <th style={thStyle}>Quote</th>
-              <th style={thStyle}>Fee</th>
-              <th style={thStyle}>Trade Id</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <THead>
+            <TR>
+              <TH style={thStyle}>Time</TH>
+              <TH align="right" style={thStyle}>Price</TH>
+              <TH align="right" style={thStyle}>Qty</TH>
+              <TH align="right" style={thStyle}>Quote</TH>
+              <TH align="right" style={thStyle}>Fee</TH>
+              <TH style={thStyle}>Trade Id</TH>
+            </TR>
+          </THead>
+          <TBody>
             {fills.map((fill) => (
-              <tr key={fill.id}>
-                <td style={{ ...tdStyle, color: color.textMuted }}>{formatTimestamp(fill.timestamp)}</td>
-                <td style={tdStyle}>{formatPrice(fill.price)}</td>
-                <td style={tdStyle}>{formatQty(fill.quantity)}</td>
-                <td style={tdStyle}>{formatMoney(fill.quoteQuantity)}</td>
-                <td style={tdStyle}>{formatMoney(fill.fee)} {fill.feeAsset}</td>
-                <td style={{ ...tdStyle, color: color.textMuted }}>{fill.exchangeTradeId}</td>
-              </tr>
+              <TR key={fill.id}>
+                <TD style={{ ...tdStyle, color: color.labelTertiary }}>{formatTimestamp(fill.timestamp)}</TD>
+                <TD align="right" mono style={tdStyle}>{formatPrice(fill.price)}</TD>
+                <TD align="right" mono style={tdStyle}>{formatQty(fill.quantity)}</TD>
+                <TD align="right" mono style={tdStyle}>{formatMoney(fill.quoteQuantity)}</TD>
+                <TD align="right" mono style={tdStyle}>{formatMoney(fill.fee)} {fill.feeAsset}</TD>
+                <TD style={{ ...tdStyle, color: color.labelTertiary }}>{fill.exchangeTradeId}</TD>
+              </TR>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       )}
     </Card>
   );
@@ -1306,24 +1307,24 @@ function EventTable({ events }: { events: ExecutionEventRecord[] }) {
       <h3 style={h3Style}>EVENT LOG · {events.length}</h3>
       {events.length === 0 && <p style={noteStyle}>no events recorded</p>}
       {events.length > 0 && (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Time</th>
-              <th style={thStyle}>Event</th>
-              <th style={thStyle}>Payload</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <THead>
+            <TR>
+              <TH style={thStyle}>Time</TH>
+              <TH style={thStyle}>Event</TH>
+              <TH style={thStyle}>Payload</TH>
+            </TR>
+          </THead>
+          <TBody>
             {events.map((event) => (
-              <tr key={event.id}>
-                <td style={{ ...tdStyle, color: color.textMuted }}>{formatTimestamp(event.createdAt)}</td>
-                <td style={{ ...tdStyle, color: color.accent, fontWeight: fontWeight.bold }}>{event.name}</td>
-                <td style={{ ...tdStyle, color: color.textMuted }}>{JSON.stringify(event.payload)}</td>
-              </tr>
+              <TR key={event.id}>
+                <TD style={{ ...tdStyle, color: color.labelTertiary }}>{formatTimestamp(event.createdAt)}</TD>
+                <TD style={{ ...tdStyle, color: color.blue, fontWeight: fontWeight.bold }}>{event.name}</TD>
+                <TD mono style={{ ...tdStyle, color: color.labelTertiary }}>{JSON.stringify(event.payload)}</TD>
+              </TR>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       )}
     </Card>
   );
@@ -1387,7 +1388,7 @@ export function ExecutorProgress({ executionId }: { executionId: string }) {
       <Card>
         <ErrorBanner text={error} />
         {error === '' && <p style={noteStyle}>loading execution {executionId}…</p>}
-        <Link href="/executor/history" style={{ color: color.accent, fontSize: fontSize[11] }}>← back to history</Link>
+        <Link href="/executor/history" style={{ color: color.blue, fontSize: fontSize[11] }}>← back to history</Link>
       </Card>
     );
   }
@@ -1399,13 +1400,13 @@ export function ExecutorProgress({ executionId }: { executionId: string }) {
 
   return (
     <>
-      <Card style={{ borderColor: color.accent }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: space[10], flexWrap: 'wrap' }}>
+      <Card style={{ borderColor: color.blue }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: space[8], flexWrap: 'wrap' }}>
           <div>
             <h3 style={{ ...h3Style, margin: 0 }}>{execution.executionStrategy.toUpperCase()} · {execution.status}</h3>
             <p style={{ ...noteStyle, marginTop: space[4] }}>
               {execution.symbol} · {execution.side.toUpperCase()} · {execution.intent} · {execution.mode.toUpperCase()}
-              {' · '}{execution.exchange} · <span style={{ color: color.textMuted }}>{execution.id}</span>
+              {' · '}{execution.exchange} · <span style={{ color: color.labelTertiary }}>{execution.id}</span>
             </p>
           </div>
           <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap' }}>
@@ -1429,8 +1430,8 @@ export function ExecutorProgress({ executionId }: { executionId: string }) {
         </div>
 
         {confirmingCancel && (
-          <div style={{ marginTop: space[10], border: `1px solid ${color.negative}`, borderRadius: radius[6], padding: space[10] }}>
-            <p style={{ color: color.text, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
+          <div style={{ marginTop: space[8], border: `1px solid ${color.red}`, borderRadius: radius[8], padding: space[8] }}>
+            <p style={{ color: color.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
               Cancel this execution and the child orders it manages? It cancels open orders — it does <b>not</b> close
               a position that has already opened (PRD §75); closing is a separate, explicit action.
             </p>
@@ -1444,11 +1445,11 @@ export function ExecutorProgress({ executionId }: { executionId: string }) {
         <ErrorBanner text={error} />
 
         <div style={{ marginTop: space[12] }}>
-          <p style={{ color: color.text, fontSize: fontSize[12], fontFamily: fontFamily.mono, margin: `0 0 ${space[4]}px` }}>
+          <p style={{ color: color.labelPrimary, fontSize: fontSize[12], fontFamily: fontFamily.mono, margin: `0 0 ${space[4]}px` }}>
             {progressBar(fillFraction(execution))}{' '}
-            <span style={{ color: color.accent, fontWeight: fontWeight.bold }}>{formatCompletionPct(fillFraction(execution))}</span>
+            <span style={{ color: color.blue, fontWeight: fontWeight.bold }}>{formatCompletionPct(fillFraction(execution))}</span>
           </p>
-          <div style={{ marginTop: space[6] }}>
+          <div style={{ marginTop: space[8] }}>
             <Row label="Filled / Planned" value={`${formatQty(execution.actualQuantity)} / ${formatQty(execution.plannedQuantity)}`} />
             <Row label="Remaining Quantity" value={formatQty(remainingQuantity)} />
             <Row label="Average Fill" value={formatPrice(execution.averageFillPrice)} />
@@ -1528,58 +1529,58 @@ export function ExecutorHistory() {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: space[10], alignItems: 'center', flexWrap: 'wrap', marginBottom: space[10] }}>
+      <div style={{ display: 'flex', gap: space[8], alignItems: 'center', flexWrap: 'wrap', marginBottom: space[8] }}>
         <h3 style={{ ...h3Style, margin: 0 }}>EXECUTIONS · §22</h3>
         <Choice value={status} onChange={setStatus} options={STATUS_FILTERS} />
         <Btn onClick={load} disabled={loading}>↻ Refresh</Btn>
         <Link
           href="/executor/new"
-          style={{ background: color.accent, color: color.textOnAccent, padding: `${space[6]}px ${space[12]}px`, borderRadius: radius[6], fontSize: fontSize[11], fontWeight: fontWeight.bold, textDecoration: 'none' }}
+          style={{ background: color.blue, color: color.labelOnAccent, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], fontWeight: fontWeight.bold, textDecoration: 'none' }}
         >
           + New execution
         </Link>
-        <span style={{ color: color.textMuted, fontSize: fontSize[10] }}>{loading ? 'loading…' : `${executions.length} shown`}</span>
+        <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{loading ? 'loading…' : `${executions.length} shown`}</span>
       </div>
       <ErrorBanner text={error} />
       <Card>
         {executions.length === 0 && !loading && <p style={noteStyle}>no executions recorded for this account yet</p>}
         {executions.length > 0 && (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Created</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Mode</th>
-                <th style={thStyle}>Symbol</th>
-                <th style={thStyle}>Side</th>
-                <th style={thStyle}>Strategy</th>
-                <th style={thStyle}>Planned Qty</th>
-                <th style={thStyle}>Filled Qty</th>
-                <th style={thStyle}>Risk Budget</th>
-                <th style={thStyle}>Projected Risk</th>
-                <th style={thStyle}></th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <THead>
+              <TR>
+                <TH style={thStyle}>Created</TH>
+                <TH style={thStyle}>Status</TH>
+                <TH style={thStyle}>Mode</TH>
+                <TH style={thStyle}>Symbol</TH>
+                <TH style={thStyle}>Side</TH>
+                <TH style={thStyle}>Strategy</TH>
+                <TH align="right" style={thStyle}>Planned Qty</TH>
+                <TH align="right" style={thStyle}>Filled Qty</TH>
+                <TH align="right" style={thStyle}>Risk Budget</TH>
+                <TH align="right" style={thStyle}>Projected Risk</TH>
+                <TH style={thStyle}></TH>
+              </TR>
+            </THead>
+            <TBody>
               {executions.map((execution) => (
-                <tr key={execution.id}>
-                  <td style={{ ...tdStyle, color: color.textMuted }}>{formatAgo(execution.createdAt)}</td>
-                  <td style={tdStyle}><StatusPill status={execution.status} /></td>
-                  <td style={{ ...tdStyle, color: execution.mode === 'live' ? color.negative : color.textMuted }}>{execution.mode}</td>
-                  <td style={tdStyle}>{execution.symbol}</td>
-                  <td style={{ ...tdStyle, color: execution.side === 'buy' ? color.accent : color.negative }}>{execution.side.toUpperCase()}</td>
-                  <td style={tdStyle}>{execution.executionStrategy}</td>
-                  <td style={tdStyle}>{formatQty(execution.plannedQuantity)}</td>
-                  <td style={tdStyle}>{formatQty(execution.actualQuantity)}</td>
-                  <td style={tdStyle}>{formatMoney(execution.riskBudget)}</td>
-                  <td style={tdStyle}>{formatMoney(execution.currentRisk)}</td>
-                  <td style={tdStyle}>
-                    <Link href={`/executor/${execution.id}`} style={{ color: color.accent, fontSize: fontSize[11] }}>open →</Link>
-                  </td>
-                </tr>
+                <TR key={execution.id}>
+                  <TD style={{ ...tdStyle, color: color.labelTertiary }}>{formatAgo(execution.createdAt)}</TD>
+                  <TD style={tdStyle}><StatusPill status={execution.status} /></TD>
+                  <TD style={{ ...tdStyle, color: execution.mode === 'live' ? color.red : color.labelTertiary }}>{execution.mode}</TD>
+                  <TD style={tdStyle}>{execution.symbol}</TD>
+                  <TD style={{ ...tdStyle, color: execution.side === 'buy' ? color.blue : color.red }}>{execution.side.toUpperCase()}</TD>
+                  <TD style={tdStyle}>{execution.executionStrategy}</TD>
+                  <TD align="right" mono style={tdStyle}>{formatQty(execution.plannedQuantity)}</TD>
+                  <TD align="right" mono style={tdStyle}>{formatQty(execution.actualQuantity)}</TD>
+                  <TD align="right" mono style={tdStyle}>{formatMoney(execution.riskBudget)}</TD>
+                  <TD align="right" mono style={tdStyle}>{formatMoney(execution.currentRisk)}</TD>
+                  <TD style={tdStyle}>
+                    <Link href={`/executor/${execution.id}`} style={{ color: color.blue, fontSize: fontSize[11] }}>open →</Link>
+                  </TD>
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         )}
       </Card>
     </>
@@ -1637,7 +1638,7 @@ function ConnectForm({ onConnected }: { onConnected: () => void }) {
     <Card>
       <h3 style={h3Style}>CONNECT AN EXCHANGE · §43</h3>
       <ErrorBanner text={error} />
-      {notice !== '' && <p style={{ color: color.accent, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
+      {notice !== '' && <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: space[8] }}>
         <Field label="Exchange">
           <Choice value={exchange} onChange={setExchange} options={EXCHANGE_OPTIONS} />
@@ -1723,66 +1724,66 @@ export function ExecutorAccounts() {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: space[10], alignItems: 'center', flexWrap: 'wrap', marginBottom: space[10] }}>
+      <div style={{ display: 'flex', gap: space[8], alignItems: 'center', flexWrap: 'wrap', marginBottom: space[8] }}>
         <h3 style={{ ...h3Style, margin: 0 }}>EXCHANGE ACCOUNTS · §87</h3>
         <Btn onClick={load} disabled={loading}>↻ Refresh</Btn>
-        <span style={{ color: color.textMuted, fontSize: fontSize[10] }}>{loading ? 'loading…' : `${accounts.length} connected`}</span>
+        <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{loading ? 'loading…' : `${accounts.length} connected`}</span>
       </div>
       <ErrorBanner text={error} />
-      {notice !== '' && <p style={{ color: color.accent, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
+      {notice !== '' && <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
 
       <Card>
         {accounts.length === 0 && !loading && <p style={noteStyle}>no accounts connected yet — add one below to size a trade</p>}
         {accounts.length > 0 && (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Label</th>
-                <th style={thStyle}>Exchange</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Key</th>
-                <th style={thStyle}>Read</th>
-                <th style={thStyle}>Spot</th>
-                <th style={thStyle}>Futures</th>
-                <th style={thStyle}>Withdraw</th>
-                <th style={thStyle}>Last Sync</th>
-                <th style={thStyle}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <THead>
+              <TR>
+                <TH style={thStyle}>Label</TH>
+                <TH style={thStyle}>Exchange</TH>
+                <TH style={thStyle}>Status</TH>
+                <TH style={thStyle}>Key</TH>
+                <TH style={thStyle}>Read</TH>
+                <TH style={thStyle}>Spot</TH>
+                <TH style={thStyle}>Futures</TH>
+                <TH style={thStyle}>Withdraw</TH>
+                <TH style={thStyle}>Last Sync</TH>
+                <TH style={thStyle}>Actions</TH>
+              </TR>
+            </THead>
+            <TBody>
               {accounts.map((account) => (
-                <tr key={account.id}>
-                  <td style={tdStyle}>{account.label}</td>
-                  <td style={tdStyle}>{account.exchange}</td>
-                  <td style={tdStyle}>
+                <TR key={account.id}>
+                  <TD style={tdStyle}>{account.label}</TD>
+                  <TD style={tdStyle}>{account.exchange}</TD>
+                  <TD style={tdStyle}>
                     <StatusPill status={account.revokedAt === null ? account.health : 'REVOKED'} />
-                  </td>
-                  <td style={{ ...tdStyle, color: color.textMuted }}>{account.apiKeyMasked}</td>
-                  <td style={tdStyle}><Perm value={account.permissions.read} /></td>
-                  <td style={tdStyle}><Perm value={account.permissions.spotTrade} /></td>
-                  <td style={tdStyle}><Perm value={account.permissions.futuresTrade} /></td>
-                  <td style={tdStyle}>
+                  </TD>
+                  <TD mono style={{ ...tdStyle, color: color.labelTertiary }}>{account.apiKeyMasked}</TD>
+                  <TD style={tdStyle}><Perm value={account.permissions.read} /></TD>
+                  <TD style={tdStyle}><Perm value={account.permissions.spotTrade} /></TD>
+                  <TD style={tdStyle}><Perm value={account.permissions.futuresTrade} /></TD>
+                  <TD style={tdStyle}>
                     <Perm value={account.permissions.withdraw} />
-                    {account.permissions.withdraw === true && <span style={{ color: color.negative, fontWeight: fontWeight.bold }}> · remove it</span>}
-                  </td>
-                  <td style={{ ...tdStyle, color: color.textMuted }}>{formatAgo(account.lastUsedAt)}</td>
-                  <td style={tdStyle}>
-                    <div style={{ display: 'flex', gap: space[6] }}>
+                    {account.permissions.withdraw === true && <span style={{ color: color.red, fontWeight: fontWeight.bold }}> · remove it</span>}
+                  </TD>
+                  <TD style={{ ...tdStyle, color: color.labelTertiary }}>{formatAgo(account.lastUsedAt)}</TD>
+                  <TD style={tdStyle}>
+                    <div style={{ display: 'flex', gap: space[8] }}>
                       <Btn onClick={() => runTest(account)} disabled={busyId === account.id || account.revokedAt !== null}>Test</Btn>
                       <Btn onClick={() => setConfirming(account)} disabled={account.revokedAt !== null} tone="danger">Delete</Btn>
                     </div>
-                  </td>
-                </tr>
+                  </TD>
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         )}
       </Card>
 
       {confirming !== null && (
-        <Card style={{ borderColor: color.negative }}>
-          <h3 style={{ ...h3Style, color: color.negative }}>REVOKE {confirming.label.toUpperCase()}?</h3>
-          <p style={{ color: color.text, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
+        <Card style={{ borderColor: color.red }}>
+          <h3 style={{ ...h3Style, color: color.red }}>REVOKE {confirming.label.toUpperCase()}?</h3>
+          <p style={{ color: color.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
             This destroys the sealed key for {confirming.exchange} ({confirming.apiKeyMasked}). Any execution that still
             needs it can no longer place or cancel orders through FUDCourt, and the secret cannot be recovered. It
             cannot be undone.
@@ -1847,14 +1848,14 @@ export function ExecutorSettings() {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: space[10], alignItems: 'center', flexWrap: 'wrap', marginBottom: space[10] }}>
+      <div style={{ display: 'flex', gap: space[8], alignItems: 'center', flexWrap: 'wrap', marginBottom: space[8] }}>
         <h3 style={{ ...h3Style, margin: 0 }}>RISK SETTINGS · §88</h3>
         <Btn onClick={load} disabled={loading}>↻ Refresh</Btn>
         <Btn onClick={save} disabled={saving || loading} tone="primary">Save profile</Btn>
-        <span style={{ color: color.textMuted, fontSize: fontSize[10] }}>{loading ? 'loading…' : ''}</span>
+        <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{loading ? 'loading…' : ''}</span>
       </div>
       <ErrorBanner text={error} />
-      {notice !== '' && <p style={{ color: color.accent, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
+      {notice !== '' && <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
 
       <Card>
         <div style={{ ...pairStyle }}>

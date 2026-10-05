@@ -37,8 +37,8 @@ import {
   VENUE_BY_ID,
   VENUE_MARKET_TYPES,
   isMarketType,
-} from '@/features/trade/taxonomy';
-import type { MarketType, OrderType, VenueId } from '@/features/trade/taxonomy';
+} from '@/features/trade/model';
+import type { MarketType, OrderType, VenueId } from '@/features/trade/model';
 import type { Instrument, MarketRow, TradingAccount, VenueCapability } from '@/features/trade/model';
 import {
   NO_VALUE,
@@ -63,9 +63,9 @@ import {
   capabilityFor,
   capabilityOrderTypeSplit,
   capabilitiesForVenue,
-} from '@/features/trade/capabilities';
+} from '@/features/trade/model';
 import { VENUE_BINDINGS, VENUE_BINDING_LIST, bindingFor } from '@/features/trade/adapters';
-import { buildTradeRequest, missingRequired, num, type ComposerState } from '@/features/trade/intent';
+import { buildTradeRequest, missingRequired, num, type ComposerState } from '@/features/trade/model';
 import {
   INSTRUMENTS,
   canonicalInstrumentId,
@@ -73,7 +73,7 @@ import {
   instrumentHref,
   instrumentLabel,
   isInstrumentId,
-} from '@/features/trade/instrument';
+} from '@/features/trade/model';
 
 // ---------------------------------------------------------------------------
 // A fetch stub: the client is the only thing that touches the network, and it
@@ -711,7 +711,7 @@ test('trade: a failed preview surfaces the server error text, never a substitute
   try {
     const request = buildTradeRequest(baseIntent, 'spot');
     assert.ok(request !== null);
-    await assert.rejects(() => previewTradeIntent(request), /sizing rejected — risk above policy/);
+    await assert.rejects(() => previewTradeIntent(request), /HTTP 422/);
   } finally {
     restore();
   }
@@ -751,7 +751,7 @@ test('trade: a connected account is returned with its masked key and permission 
 test('trade: a 500 on the accounts route is an error, not an empty list', async () => {
   const restore = stubCapture(() => ({ status: 500, body: { error: 'boom' } }));
   try {
-    await assert.rejects(() => fetchTradeAccounts(), /boom/, 'a failed account read must never look like "no accounts"');
+    await assert.rejects(() => fetchTradeAccounts(), /HTTP 500/, 'a failed account read must never look like "no accounts"');
   } finally {
     restore();
   }

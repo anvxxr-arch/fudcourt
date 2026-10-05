@@ -231,7 +231,7 @@ def verify_ui_wiring(base: str) -> None:
     # The tab registry moved out of app/page.tsx into the shell during the
     # repurpose pass: page.tsx now only reads the session and renders
     # StoreShell, so the wiring assertion belongs on the shell.
-    shell = (root / "src/components/layout/store-shell.tsx").read_text()
+    shell = (root / "src/features/overview/store-shell.tsx").read_text()
 
     # Modes declared in the lib, served in the route, requested in the UI.
     lib = (root / "src/features/llama/client.ts").read_text()

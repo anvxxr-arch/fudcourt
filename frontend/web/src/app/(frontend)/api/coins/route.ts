@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/platform/db/client';
+import { query } from '@/server/db';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

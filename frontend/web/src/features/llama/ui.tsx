@@ -2,9 +2,9 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { alpha, color, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
-import { Banner } from '@/components/ui/banner';
-import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
-import type { LlamaChain, LlamaProtocol, LlamaHistoricalPoint } from './client';
+import { Banner } from '@/ui/banner';
+import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
+import { fetchLlamaBoards, type LlamaChain, type LlamaProtocol, type LlamaHistoricalPoint } from './client';
 
 /** Big-number USD: $1.23T / $45.6B / $789M. null -> em-dash, never 0. */
 function usdBig(n: number | null | undefined, digits = 2) {
@@ -23,8 +23,8 @@ function pct(n: number | null | undefined) {
 }
 
 function pctColor(n: number | null | undefined) {
-  if (n == null) return color.textMuted;
-  return n >= 0 ? color.positive : color.negative;
+  if (n == null) return color.labelTertiary;
+  return n >= 0 ? color.green : color.red;
 }
 
 /**
@@ -51,17 +51,7 @@ export default function LlamaPage() {
     setLoading(true);
     setError('');
     try {
-      const [cRes, pRes, hRes] = await Promise.all([
-        fetch('/api/llama?mode=chains', { cache: 'no-store' }),
-        fetch('/api/llama?mode=protocols&top=50', { cache: 'no-store' }),
-        fetch('/api/llama?mode=historical&days=180', { cache: 'no-store' }),
-      ]);
-      const [cJson, pJson, hJson] = await Promise.all(
-        [cRes, pRes, hRes].map((r) => r.json().catch(() => ({})))
-      );
-      if (!cRes.ok) throw new Error(cJson.error || `chains HTTP ${cRes.status}`);
-      if (!pRes.ok) throw new Error(pJson.error || `protocols HTTP ${pRes.status}`);
-      if (!hRes.ok) throw new Error(hJson.error || `historical HTTP ${hRes.status}`);
+      const [cJson, pJson, hJson] = await fetchLlamaBoards();
 
       setChains(cJson.rows ?? []);
       setProtos(pJson.rows ?? []);
@@ -117,17 +107,17 @@ export default function LlamaPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: space[10], flexWrap: 'wrap', marginBottom: space[8] }}>
-        <h3 style={{ color: color.text, fontSize: fontSize[16], fontWeight: fontWeight.heavy }}>DeFiLlama — TVL board</h3>
+      <div style={{ display: 'flex', alignItems: 'center', gap: space[8], flexWrap: 'wrap', marginBottom: space[8] }}>
+        <h3 style={{ color: color.labelPrimary, fontSize: fontSize[17], fontWeight: fontWeight.bold }}>DeFiLlama — TVL board</h3>
         <button onClick={load}
-          style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: '5px 12px', borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer' }}>
+          style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: '5px 12px', borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
         {fetchedAt != null && !stale && (
-          <span style={{ color: color.textMuted, fontSize: fontSize[10] }}>{new Date(fetchedAt * 1000).toLocaleTimeString()}</span>
+          <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{new Date(fetchedAt * 1000).toLocaleTimeString()}</span>
         )}
       </div>
-      <p style={{ color: color.textMuted, fontSize: fontSize[10], margin: `0 0 ${space[10]}px` }}>
+      <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
         read-only relay of api.llama.fi (chains + protocols head + TVL history) · tables are derived views — the
         “of N” line is upstream’s own total · em-dash means the field is absent upstream, never zero · CEX
         deposits sit in the protocols table but not in global TVL — upstream’s accounting, relayed as-is
@@ -148,49 +138,49 @@ export default function LlamaPage() {
           { k: 'top chain', v: chains && chains[0] ? chains[0].name : '—' },
           { k: 'top protocol', v: protos && protos[0] ? protos[0].name : '—' },
         ].map((s) => (
-          <div key={s.k} style={{ background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius[8], padding: `${space[8]}px ${space[10]}px` }}>
-            <div style={{ color: color.textMuted, fontSize: fontSize[9], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>{s.k}</div>
-            <div style={{ color: s.color ?? color.text, fontSize: fontSize[16], fontWeight: fontWeight.heavy, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.v}</div>
+          <div key={s.k} style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px` }}>
+            <div style={{ color: color.labelTertiary, fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>{s.k}</div>
+            <div style={{ color: s.color ?? color.labelPrimary, fontSize: fontSize[17], fontWeight: fontWeight.bold, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.v}</div>
           </div>
         ))}
       </div>
 
       {spark && (
-        <div style={{ background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius[8], padding: `${space[10]}px ${space[12]}px`, marginBottom: space[12] }}>
-          <div style={{ color: color.textMuted, fontSize: fontSize[9], textTransform: 'uppercase', letterSpacing: letterSpacing.xs, marginBottom: space[6] }}>
+        <div style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[12]}px`, marginBottom: space[12] }}>
+          <div style={{ color: color.labelTertiary, fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs, marginBottom: space[8] }}>
             total TVL · {meta.historical}
           </div>
           <svg viewBox="0 0 600 60" width="100%" height="60" preserveAspectRatio="none">
-            <polyline points={spark} fill="none" stroke={color.accent} strokeWidth="1.5" />
+            <polyline points={spark} fill="none" stroke={color.blue} strokeWidth="1.5" />
           </svg>
         </div>
       )}
 
       {loading ? (
-        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>loading defillama…</p>
+        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>loading defillama…</p>
       ) : error && !chains ? (
-        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>tables withheld — the request above failed.</p>
+        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>tables withheld — the request above failed.</p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: space[14] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: space[12] }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[4] }}>
-              <h4 style={{ color: color.text, fontSize: fontSize[12], fontWeight: fontWeight.heavy }}>chains by TVL</h4>
-              <span style={{ color: color.textMuted, fontSize: fontSize[9] }}>top 15 of {totals.chains} · {meta.chains}</span>
+              <h4 style={{ color: color.labelPrimary, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>chains by TVL</h4>
+              <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>top 15 of {totals.chains} · {meta.chains}</span>
             </div>
             <Table style={{ fontSize: fontSize[12] }}>
               <THead>
                 <TR style={{ borderBottom: 0 }}>
-                  <TH style={{ padding: `${space[4]}px ${space[6]}px`, width: space[30], fontWeight: fontWeight.bold }}>#</TH>
-                  <TH style={{ padding: `${space[4]}px ${space[6]}px`, fontWeight: fontWeight.bold }}>chain</TH>
-                  <TH align="right" style={{ padding: `${space[4]}px ${space[6]}px`, fontWeight: fontWeight.bold }}>TVL</TH>
+                  <TH style={{ padding: `${space[4]}px ${space[8]}px`, width: space[32], fontWeight: fontWeight.bold }}>#</TH>
+                  <TH style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>chain</TH>
+                  <TH align="right" style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>TVL</TH>
                 </TR>
               </THead>
               <TBody>
                 {(chains ?? []).slice(0, 15).map((c, i) => (
-                  <TR key={c.name} style={{ borderTop: `1px solid ${color.border}`, borderBottom: 0 }}>
-                    <TD style={{ padding: `${space[6]}px`, color: i < 3 ? color.accent : color.textMuted, fontWeight: fontWeight.bold }}>{i + 1}</TD>
-                    <TD style={{ padding: `${space[6]}px`, color: color.text, fontWeight: fontWeight.semibold }}>{c.name}</TD>
-                    <TD align="right" style={{ padding: `${space[6]}px`, color: color.text }}>{usdBig(c.tvl)}</TD>
+                  <TR key={c.name} style={{ borderTop: `1px solid ${color.separator}`, borderBottom: 0 }}>
+                    <TD style={{ padding: `${space[8]}px`, color: i < 3 ? color.blue : color.labelTertiary, fontWeight: fontWeight.bold }}>{i + 1}</TD>
+                    <TD style={{ padding: `${space[8]}px`, color: color.labelPrimary, fontWeight: fontWeight.semibold }}>{c.name}</TD>
+                    <TD align="right" style={{ padding: `${space[8]}px`, color: color.labelPrimary }}>{usdBig(c.tvl)}</TD>
                   </TR>
                 ))}
               </TBody>
@@ -199,33 +189,33 @@ export default function LlamaPage() {
 
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[4] }}>
-              <h4 style={{ color: color.text, fontSize: fontSize[12], fontWeight: fontWeight.heavy }}>protocols by TVL</h4>
-              <span style={{ color: color.textMuted, fontSize: fontSize[9] }}>{meta.protocols}</span>
+              <h4 style={{ color: color.labelPrimary, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>protocols by TVL</h4>
+              <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{meta.protocols}</span>
             </div>
             <Table style={{ fontSize: fontSize[12] }}>
               <THead>
                 <TR style={{ borderBottom: 0 }}>
-                  <TH style={{ padding: `${space[4]}px ${space[6]}px`, width: space[30], fontWeight: fontWeight.bold }}>#</TH>
-                  <TH style={{ padding: `${space[4]}px ${space[6]}px`, fontWeight: fontWeight.bold }}>protocol</TH>
-                  <TH align="right" style={{ padding: `${space[4]}px ${space[6]}px`, fontWeight: fontWeight.bold }}>TVL</TH>
-                  <TH align="right" style={{ padding: `${space[4]}px ${space[6]}px`, fontWeight: fontWeight.bold }}>1d</TH>
-                  <TH style={{ padding: `${space[4]}px ${space[6]}px`, fontWeight: fontWeight.bold }}>category</TH>
+                  <TH style={{ padding: `${space[4]}px ${space[8]}px`, width: space[32], fontWeight: fontWeight.bold }}>#</TH>
+                  <TH style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>protocol</TH>
+                  <TH align="right" style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>TVL</TH>
+                  <TH align="right" style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>1d</TH>
+                  <TH style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>category</TH>
                 </TR>
               </THead>
               <TBody>
                 {(protos ?? []).map((p, i) => (
-                  <TR key={p.slug || p.name} style={{ borderTop: `1px solid ${color.border}`, borderBottom: 0 }}>
-                    <TD style={{ padding: `${space[6]}px`, color: i < 3 ? color.accent : color.textMuted, fontWeight: fontWeight.bold }}>{i + 1}</TD>
-                    <TD style={{ padding: `${space[6]}px` }}>
-                      <a href={p.url ?? undefined} target="_blank" rel="noopener nofollow"
-                        style={{ color: color.text, textDecoration: 'none', fontWeight: fontWeight.semibold }}>{p.name}</a>
-                      <div style={{ color: color.textMuted, fontSize: fontSize[9] }}>
+                  <TR key={p.slug || p.name} style={{ borderTop: `1px solid ${color.separator}`, borderBottom: 0 }}>
+                    <TD style={{ padding: `${space[8]}px`, color: i < 3 ? color.blue : color.labelTertiary, fontWeight: fontWeight.bold }}>{i + 1}</TD>
+                    <TD style={{ padding: `${space[8]}px` }}>
+                      <span
+                        style={{ color: color.labelPrimary, textDecoration: 'none', fontWeight: fontWeight.semibold }}>{p.name}</span>
+                      <div style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>
                         {(p.chains ?? []).length === 1 ? '1 chain' : `${(p.chains ?? []).length} chains`}
                       </div>
                     </TD>
-                    <TD align="right" style={{ padding: `${space[6]}px`, color: color.text }}>{usdBig(p.tvl)}</TD>
-                    <TD align="right" style={{ padding: `${space[6]}px`, color: pctColor(p.change_1d) }}>{pct(p.change_1d)}</TD>
-                    <TD style={{ padding: `${space[6]}px`, color: color.textMuted, fontSize: fontSize[10] }}>{p.category ?? '—'}</TD>
+                    <TD align="right" style={{ padding: `${space[8]}px`, color: color.labelPrimary }}>{usdBig(p.tvl)}</TD>
+                    <TD align="right" style={{ padding: `${space[8]}px`, color: pctColor(p.change_1d) }}>{pct(p.change_1d)}</TD>
+                    <TD style={{ padding: `${space[8]}px`, color: color.labelTertiary, fontSize: fontSize[11] }}>{p.category ?? '—'}</TD>
                   </TR>
                 ))}
               </TBody>

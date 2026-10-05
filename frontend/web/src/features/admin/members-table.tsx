@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { TIER_COLOR } from './palette';
-
-type Row = { id: string; username: string; globalName: string | null; avatar: string | null; tier: string };
+import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
+import { fetchMembers, setMemberRole, type MemberRow as Row, type MemberRole } from './client';
 
 export default function MemberTable() {
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -17,13 +17,7 @@ export default function MemberTable() {
   // here lets the table refresh itself after a role change.
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/members', { cache: 'no-store' });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(body.detail ?? `HTTP ${res.status}`);
-        setRows(null);
-        return;
-      }
+      const body = await fetchMembers();
       setError(null);
       setRows(Array.isArray(body.members) ? body.members : []);
     } catch (err) {
@@ -34,21 +28,12 @@ export default function MemberTable() {
 
   useEffect(() => { load(); }, [load]);
 
-  const run = useCallback(async (row: Row, role: 'team' | 'admin', action: 'add' | 'remove') => {
+  const run = useCallback(async (row: Row, role: MemberRole, action: 'add' | 'remove') => {
     const key = `${row.id}:${role}:${action}`;
     setBusy(key);
     setNote(null);
     try {
-      const res = await fetch('/api/admin/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: row.id, role, action }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setNote(`${row.globalName ?? row.username}: ${body.detail ?? `HTTP ${res.status}`}`);
-        return;
-      }
+      await setMemberRole(row.id, role, action);
       await load();
     } catch (err) {
       setNote(`${row.username}: ${err instanceof Error ? err.message : 'request failed'}`);
@@ -73,53 +58,53 @@ export default function MemberTable() {
 
   return (
     <div>
-      {note && <p style={{ color: color.negative, fontSize: fontSize[12], margin: `0 0 ${space[10]}px` }}>{note}</p>}
+      {note && <p style={{ color: color.red, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>{note}</p>}
       {error !== null ? (
-        <p style={{ color: color.negative, fontSize: fontSize[12] }}>{error}</p>
+        <p style={{ color: color.red, fontSize: fontSize[12] }}>{error}</p>
       ) : rows === null ? (
-        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>Loading guild members…</p>
+        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>Loading guild members…</p>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fontSize[12] }}>
-          <thead>
-            <tr style={{ color: color.textMuted, textAlign: 'left' }}>
-              <th style={{ padding: `${space[6]}px ${space[8]}px`, fontWeight: fontWeight.regular }}>user</th>
-              <th style={{ padding: `${space[6]}px ${space[8]}px`, fontWeight: fontWeight.regular }}>tier</th>
-              <th style={{ padding: `${space[6]}px ${space[8]}px`, fontWeight: fontWeight.regular }}>roles</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <THead>
+            <TR style={{ borderBottom: 'none' }}>
+              <TH style={{ padding: `${space[8]}px ${space[8]}px`, fontWeight: fontWeight.regular }}>user</TH>
+              <TH style={{ padding: `${space[8]}px ${space[8]}px`, fontWeight: fontWeight.regular }}>tier</TH>
+              <TH style={{ padding: `${space[8]}px ${space[8]}px`, fontWeight: fontWeight.regular }}>roles</TH>
+            </TR>
+          </THead>
+          <TBody>
             {rows.map(row => (
-              <tr key={row.id} style={{ borderTop: `1px solid ${color.border}` }}>
-                <td style={{ padding: `${space[6]}px ${space[8]}px` }}>
+              <TR key={row.id} style={{ borderBottom: 'none', borderTop: `1px solid ${color.separator}` }}>
+                <TD style={{ padding: `${space[8]}px ${space[8]}px` }}>
                   {row.globalName ?? row.username}
                   {row.globalName && row.globalName !== row.username && (
-                    <span style={{ color: color.textMuted }}> ({row.username})</span>
+                    <span style={{ color: color.labelTertiary }}> ({row.username})</span>
                   )}
-                </td>
-                <td style={{ padding: `${space[6]}px ${space[8]}px`, color: TIER_COLOR[row.tier] ?? color.text }}>{row.tier}</td>
-                <td style={{ padding: `${space[6]}px ${space[8]}px`, display: 'flex', gap: space[6], flexWrap: 'wrap' }}>
+                </TD>
+                <TD style={{ padding: `${space[8]}px ${space[8]}px`, color: TIER_COLOR[row.tier] ?? color.labelPrimary }}>{row.tier}</TD>
+                <TD style={{ padding: `${space[8]}px ${space[8]}px`, display: 'flex', gap: space[8], flexWrap: 'wrap' }}>
                   {actions(row)}
-                </td>
-              </tr>
+                </TD>
+              </TR>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       )}
     </div>
   );
 }
 
-function action0(row: Row, role: 'team' | 'admin', action: 'add' | 'remove'): boolean {
+function action0(row: Row, role: MemberRole, action: 'add' | 'remove'): boolean {
   const held = row.tier === role || (role === 'team' && row.tier === 'admin');
   return action === 'add' ? !held : held;
 }
 
 function btn(
   row: Row,
-  role: 'team' | 'admin',
+  role: MemberRole,
   action: 'add' | 'remove',
   busy: string | null,
-  run: (row: Row, role: 'team' | 'admin', action: 'add' | 'remove') => void,
+  run: (row: Row, role: MemberRole, action: 'add' | 'remove') => void,
   label: string,
 ) {
   const key = `${row.id}:${role}:${action}`;
@@ -129,10 +114,10 @@ function btn(
       disabled={busy === key}
       onClick={() => run(row, role, action)}
       style={{
-        background: adding ? color.accent : 'transparent',
-        color: adding ? color.textOnAccent : color.negative,
-        border: `1px solid ${adding ? color.accent : color.negative}`,
-        borderRadius: radius[6], padding: `${space[4]}px ${space[10]}px`, fontSize: fontSize[11], cursor: 'pointer',
+        background: adding ? color.blue : 'transparent',
+        color: adding ? color.labelOnAccent : color.red,
+        border: `1px solid ${adding ? color.blue : color.red}`,
+        borderRadius: radius[8], padding: `${space[4]}px ${space[8]}px`, fontSize: fontSize[11], cursor: 'pointer',
         fontFamily: 'inherit', opacity: busy === key ? 0.5 : 1,
       }}>
       {label}

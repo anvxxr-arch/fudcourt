@@ -32,12 +32,12 @@ export default async function PostPage({
         lineHeight: lineHeight.loose,
       }}
     >
-      <a href="/blog" style={{ color: color.positive, textDecoration: 'none', fontSize: fontSize[14] }}>
+      <a href="/blog" style={{ color: color.green, textDecoration: 'none', fontSize: fontSize[15] }}>
         ← All posts
       </a>
-      <h1 style={{ fontSize: fontSize[32], margin: `${space[24]}px 0 ${space[8]}px` }}>{post.title}</h1>
+      <h1 style={{ fontSize: fontSize[28], margin: `${space[24]}px 0 ${space[8]}px` }}>{post.title}</h1>
       {post.publishedAt && (
-        <time style={{ color: color.textMuted, fontSize: fontSize[13] }}>
+        <time style={{ color: color.labelTertiary, fontSize: fontSize[13] }}>
           {new Date(post.publishedAt).toLocaleDateString(undefined, {
             year: 'numeric',
             month: 'long',
@@ -46,9 +46,9 @@ export default async function PostPage({
         </time>
       )}
       {post.excerpt && (
-        <p style={{ color: color.textMuted, fontStyle: 'italic', marginTop: space[20] }}>{post.excerpt}</p>
+        <p style={{ color: color.labelTertiary, fontStyle: 'italic', marginTop: space[20] }}>{post.excerpt}</p>
       )}
-      <hr style={{ border: 0, borderTop: `1px solid ${color.border}`, margin: `${space[32]}px 0` }} />
+      <hr style={{ border: 0, borderTop: `1px solid ${color.separator}`, margin: `${space[32]}px 0` }} />
       <article>{post.content ? <RichText data={post.content} /> : <p>No content.</p>}</article>
     </main>
   );

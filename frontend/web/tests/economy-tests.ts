@@ -41,9 +41,9 @@ import {
   countryByAnyCode,
   indicatorsForCategory,
   indicatorsForCountry,
-} from '@/features/economy/registry';
-import { CATEGORY_BY_ID, SUBCATEGORY_LABELS, TAXONOMY } from '@/features/economy/taxonomy';
-import { POLICY_RATES, WORLD_COUNTRIES } from '@/features/market/macro/client';
+} from '@/features/economy/model';
+import { CATEGORY_BY_ID, SUBCATEGORY_LABELS, TAXONOMY } from '@/features/economy/model';
+import { POLICY_RATES, WORLD_COUNTRIES } from '@/features/market/clients';
 
 test('economy: the country table is exactly the worldwide board allowlist', () => {
   const board = WORLD_COUNTRIES.map((c) => c.code).sort();

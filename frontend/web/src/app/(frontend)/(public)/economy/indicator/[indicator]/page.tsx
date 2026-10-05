@@ -1,5 +1,5 @@
-import IndicatorDetail from '@/features/economy/ui/indicator';
-import { INDICATOR_BY_SLUG } from '@/features/economy/registry';
+import { IndicatorDetail } from '@/features/economy/ui/indicator';
+import { INDICATOR_BY_SLUG } from '@/features/economy/model';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 

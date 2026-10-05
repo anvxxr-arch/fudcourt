@@ -8,6 +8,7 @@ const tokens = JSON.parse(
   require('fs').readFileSync(require('path').join(__dirname, 'tailwind.tokens.json'), 'utf8'),
 );
 module.exports = {
+  darkMode: 'class',
   // One tree, one glob (DR-018): routes, features, platform, ui, styles and cms
   // all live under src/, so the previous `./app/**` + `./components/**` pair —
   // which had already gone stale once — cannot drift again.

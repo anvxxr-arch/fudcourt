@@ -36,7 +36,7 @@ import {
   type ExecutionLite,
 } from '@/features/trade/client';
 import type { MarketRow, PortfolioSummary } from '@/features/trade/model';
-import { instrumentHref, isInstrumentId } from '@/features/trade/instrument';
+import { instrumentHref, isInstrumentId } from '@/features/trade/model';
 import {
   EXECUTION_STRATEGIES,
   MARKET_TYPES,
@@ -44,7 +44,7 @@ import {
   VENUES,
   VENUE_MARKET_TYPES,
   type MarketType,
-} from '@/features/trade/taxonomy';
+} from '@/features/trade/model';
 import { Card, ChangeChip, DataTable, ErrorState, Loading, Notice, PageHeader, Value } from '@/features/trade/ui/parts';
 import { CapabilityBoard } from '@/features/trade/ui/capability-board';
 import { ConnectedAccountsStrip, TradeAccountsView } from '@/features/trade/ui/accounts';
@@ -115,7 +115,7 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
       />
 
       {/* Market-type tabs — the canonical routes from the plan. */}
-      <nav aria-label="Market types" style={{ display: 'flex', flexWrap: 'wrap', gap: space[6], marginBottom: space[16] }}>
+      <nav aria-label="Market types" style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[16] }}>
         <TypeTab href="/trade" label="All" active={!marketType} />
         {MARKET_TYPES.map((m) => (
           <TypeTab key={m.id} href={marketTypeHref(m.id)} label={m.label} active={marketType === m.id} />
@@ -127,7 +127,7 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
         title="Portfolio"
         subtitle={connected ? 'connected venue account' : 'no venue account connected'}
         right={
-          <Link href="/executor/accounts" style={{ fontSize: fontSize[11], color: color.accent, textDecoration: 'none' }}>
+          <Link href="/executor/accounts" style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>
             {connected ? 'manage accounts →' : 'connect a venue →'}
           </Link>
         }
@@ -137,7 +137,7 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
         ) : portfolio.loading ? (
           <Loading what="portfolio" />
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: space[14] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: space[12] }}>
             <Value label="Equity" value={formatUsd(portfolio.value?.equity)} tone={portfolio.value?.equity == null ? 'muted' : 'default'} hint="Total equity across connected venues. — until a venue answers; never a guessed zero." />
             <Value label="Available" value={formatUsd(portfolio.value?.available)} tone={portfolio.value?.available == null ? 'muted' : 'default'} />
             <Value label="Exposure" value={formatUsd(portfolio.value?.exposure)} tone={portfolio.value?.exposure == null ? 'muted' : 'default'} />
@@ -151,19 +151,19 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
           market with no quotable instrument of its own, so the margin route shows
           the account view below rather than a deliberately-empty board. */}
       {isMargin ? (
-        <div style={{ marginTop: space[14] }}>
+        <div style={{ marginTop: space[12] }}>
           <TradeAccountsView
             showPortfolio={false}
             note="Margin is an account-level market: it has no quotable instrument of its own, so there is no separate board. It trades the spot pairs on the spot board against borrowed collateral — this route shows the connected accounts and their margin-capable venues instead."
           />
         </div>
       ) : (
-      <div style={{ marginTop: space[14] }}>
+      <div style={{ marginTop: space[12] }}>
         <Card
           title={entry ? `${entry.label} markets` : 'Markets'}
           subtitle="cross-venue price, each venue's own quote and their divergence — read live"
           right={
-            <Link href="/market/crypto" style={{ fontSize: fontSize[11], color: color.accent, textDecoration: 'none' }}>
+            <Link href="/market/crypto" style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>
               full board →
             </Link>
           }
@@ -202,26 +202,26 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
       )}
 
       {!isMargin && marketType !== undefined && (
-        <div style={{ marginTop: space[14] }}>
+        <div style={{ marginTop: space[12] }}>
           <TradeComposer marketType={marketType} />
         </div>
       )}
 
       {!isMargin && (
-        <div style={{ marginTop: space[14] }}>
+        <div style={{ marginTop: space[12] }}>
           <ConnectedAccountsStrip />
         </div>
       )}
 
       {!isMargin && (
-        <div style={{ marginTop: space[14] }}>
+        <div style={{ marginTop: space[12] }}>
           <CapabilityBoard marketType={marketType} />
         </div>
       )}
 
       {/* Account panels: positions, orders, risk — honest empty states. */}
       {!isMargin && (
-      <div style={{ display: 'grid', gap: space[14], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', marginTop: space[14] }}>
+      <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', marginTop: space[12] }}>
         <Card title="Open positions" subtitle="normalized across CEX and DEX">
           {executions.error ? (
             <ErrorState title="Positions unavailable" detail={executions.error} />
@@ -258,7 +258,7 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
             <Value label="Committed risk" value={formatUsd(committedNotional)} tone={committedNotional === null ? 'muted' : 'default'} hint="Sum of planned notional over live executions. — when none are working." />
             <Value label="Portfolio risk" value={NO_VALUE} tone="muted" hint="Sum of committed risk over the whole portfolio; needs venue balances." />
           </div>
-          <p style={{ margin: `${space[10]}px 0 0`, fontSize: fontSize[10], color: color.textMuted, lineHeight: lineHeight.normal }}>
+          <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>
             Risk is a deterministic calculation over entry, stop and size (plan Phase 13). It is never inferred from a model.
           </p>
         </Card>
@@ -266,16 +266,16 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
       )}
 
       {/* Venue + execution-strategy reference: the domain's vocabulary. */}
-      <div style={{ display: 'grid', gap: space[14], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', marginTop: space[14] }}>
+      <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', marginTop: space[12] }}>
         <Card title="Venues" subtitle="where an order can execute — CEX and DEX">
           <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
             {VENUES.map((v) => (
               <div key={v.id} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: space[8] }}>
-                <span style={{ fontSize: fontSize[12], color: color.text }}>
+                <span style={{ fontSize: fontSize[12], color: color.labelPrimary }}>
                   {v.label}{' '}
-                  <span style={{ fontSize: fontSize[10], color: color.textMuted, letterSpacing: letterSpacing.sm, textTransform: 'uppercase' }}>{v.type}</span>
+                  <span style={{ fontSize: fontSize[11], color: color.labelTertiary, letterSpacing: letterSpacing.sm, textTransform: 'uppercase' }}>{v.type}</span>
                 </span>
-                <span style={{ fontSize: fontSize[10], color: color.textMuted, textAlign: 'right' }}>
+                <span style={{ fontSize: fontSize[11], color: color.labelTertiary, textAlign: 'right' }}>
                   {VENUE_MARKET_TYPES[v.id].map((m) => MARKET_TYPE_BY_ID[m].label).join(' · ')}
                 </span>
               </div>
@@ -287,8 +287,8 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
           <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
             {EXECUTION_STRATEGIES.map((s) => (
               <div key={s.id}>
-                <span style={{ fontSize: fontSize[12], color: color.text }}>{s.label}</span>
-                <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[10], color: color.textMuted, lineHeight: lineHeight.normal }}>{s.note}</p>
+                <span style={{ fontSize: fontSize[12], color: color.labelPrimary }}>{s.label}</span>
+                <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>{s.note}</p>
               </div>
             ))}
           </div>
@@ -296,19 +296,19 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
       </div>
 
       {/* The architecture the domain is built around. */}
-      <div style={{ marginTop: space[14] }}>
+      <div style={{ marginTop: space[12] }}>
         <Card title="How a trade flows" subtitle="market type and venue are orthogonal — this is the path from intent to position">
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: space[6] }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: space[8] }}>
             {PIPELINE.map((step, i) => (
-              <span key={step} style={{ display: 'inline-flex', alignItems: 'center', gap: space[6] }}>
-                <span style={{ padding: `${space[4]}px ${space[10]}px`, border: `1px solid ${alpha(color.accent, 0.35)}`, borderRadius: radius[6], fontSize: fontSize[11], color: color.text }}>
+              <span key={step} style={{ display: 'inline-flex', alignItems: 'center', gap: space[8] }}>
+                <span style={{ padding: `${space[4]}px ${space[8]}px`, border: `1px solid ${alpha(color.blue, 0.35)}`, borderRadius: radius[8], fontSize: fontSize[11], color: color.labelPrimary }}>
                   {step}
                 </span>
-                {i < PIPELINE.length - 1 && <span aria-hidden="true" style={{ color: color.textMuted }}>→</span>}
+                {i < PIPELINE.length - 1 && <span aria-hidden="true" style={{ color: color.labelTertiary }}>→</span>}
               </span>
             ))}
           </div>
-          <p style={{ margin: `${space[12]}px 0 0`, fontSize: fontSize[11], color: color.textMuted, lineHeight: lineHeight.normal }}>
+          <p style={{ margin: `${space[12]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>
             Spot, margin, perpetual, futures, options and swap are MARKET TYPES. Binance, Bybit, Hyperliquid and Uniswap are VENUES. TWAP, VWAP and iceberg are EXECUTION STRATEGIES. Keeping the three apart is what lets the engine grow without being rebuilt.
           </p>
         </Card>
@@ -323,11 +323,11 @@ function TypeTab({ href, label, active }: { href: string; label: string; active:
       href={href}
       aria-current={active ? 'page' : undefined}
       style={{
-        padding: `${space[4]}px ${space[10]}px`,
-        border: `1px solid ${active ? color.accent : color.border}`,
-        borderRadius: radius[6],
-        background: active ? alpha(color.accent, 0.12) : 'transparent',
-        color: active ? color.text : color.textMuted,
+        padding: `${space[4]}px ${space[8]}px`,
+        border: `1px solid ${active ? color.blue : color.separator}`,
+        borderRadius: radius[8],
+        background: active ? alpha(color.blue, 0.12) : 'transparent',
+        color: active ? color.labelPrimary : color.labelTertiary,
         fontSize: fontSize[11],
         fontWeight: active ? fontWeight.semibold : fontWeight.regular,
         textDecoration: 'none',

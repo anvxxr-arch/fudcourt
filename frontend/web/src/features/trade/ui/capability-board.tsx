@@ -15,14 +15,14 @@
  */
 import { color, fontSize, fontWeight } from '@/styles/tokens';
 import { NO_VALUE } from '@/features/trade/client';
-import { capabilityBoard } from '@/features/trade/capabilities';
-import { MARKET_TYPE_BY_ID, VENUE_BY_ID, type MarketType, type VenueId } from '@/features/trade/taxonomy';
+import { capabilityBoard } from '@/features/trade/model';
+import { MARKET_TYPE_BY_ID, VENUE_BY_ID, type MarketType, type VenueId } from '@/features/trade/model';
 import { Card, DataTable, Notice } from '@/features/trade/ui/parts';
 
 /** A stated boolean capability: `✓` when present, a muted `✕` when the venue lacks it. */
 function Flag({ on }: { on: boolean }) {
   return (
-    <span style={{ color: on ? color.positive : color.textMuted, fontWeight: on ? fontWeight.bold : fontWeight.regular }}>
+    <span style={{ color: on ? color.green : color.labelTertiary, fontWeight: on ? fontWeight.bold : fontWeight.regular }}>
       {on ? '✓' : '✕'}
     </span>
   );
@@ -30,12 +30,12 @@ function Flag({ on }: { on: boolean }) {
 
 /** Who slices a TWAP/VWAP/iceberg here: the venue natively, or the executor engine. */
 function Slicer({ native }: { native: boolean }) {
-  return <span style={{ color: native ? color.positive : color.textMuted }}>{native ? 'venue' : 'executor'}</span>;
+  return <span style={{ color: native ? color.green : color.labelTertiary }}>{native ? 'venue' : 'executor'}</span>;
 }
 
 /** Margin modes, or the em dash for a market type with no margin concept. */
 function MarginModes({ modes }: { modes: { cross: boolean; isolated: boolean } | null }) {
-  if (modes === null) return <span style={{ color: color.textMuted }}>{NO_VALUE}</span>;
+  if (modes === null) return <span style={{ color: color.labelTertiary }}>{NO_VALUE}</span>;
   const on = [modes.cross ? 'cross' : null, modes.isolated ? 'isolated' : null].filter((v): v is string => v !== null);
   return <span>{on.length === 0 ? NO_VALUE : on.join(' · ')}</span>;
 }
@@ -73,8 +73,8 @@ export function CapabilityBoard({ venue, marketType }: { venue?: VenueId; market
           rows={shown.map((row) => ({
             cells: [
               <span key="v" style={{ fontWeight: fontWeight.semibold }}>{VENUE_BY_ID[row.venue].label}</span>,
-              <span key="m" style={{ color: color.textMuted }}>{MARKET_TYPE_BY_ID[row.marketType].label}</span>,
-              <span key="i" style={{ color: color.textMuted, fontSize: fontSize[11] }}>{row.instrumentId}</span>,
+              <span key="m" style={{ color: color.labelTertiary }}>{MARKET_TYPE_BY_ID[row.marketType].label}</span>,
+              <span key="i" style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{row.instrumentId}</span>,
               ...columns.map((c) => <Flag key={c.id} on={row.orderTypes[c.id]} />),
               <Slicer key="twap" native={row.nativeTwap} />,
               <Slicer key="vwap" native={row.nativeVwap} />,
@@ -87,10 +87,10 @@ export function CapabilityBoard({ venue, marketType }: { venue?: VenueId; market
           }))}
         />
       )}
-      <p style={{ margin: '10px 0 0', fontSize: fontSize[10], color: color.textMuted }}>
+      <p style={{ margin: '10px 0 0', fontSize: fontSize[11], color: color.labelTertiary }}>
         {shown.length} row{shown.length === 1 ? '' : 's'} · one per venue × market type the taxonomy serves ·{' '}
-        <span style={{ color: color.textMuted }}>TWAP/VWAP/Iceberg read</span> <Slicer native={false} />{' '}
-        <span style={{ color: color.textMuted }}>when the venue has no native slice and FUDCourt slices it itself.</span>
+        <span style={{ color: color.labelTertiary }}>TWAP/VWAP/Iceberg read</span> <Slicer native={false} />{' '}
+        <span style={{ color: color.labelTertiary }}>when the venue has no native slice and FUDCourt slices it itself.</span>
       </p>
     </Card>
   );

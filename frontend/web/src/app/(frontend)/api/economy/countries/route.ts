@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { COUNTRY_LIST, INDICATORS } from '@/features/economy/registry';
+import { COUNTRY_LIST, INDICATORS } from '@/features/economy/model';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

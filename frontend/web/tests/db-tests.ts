@@ -17,7 +17,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toPostgres, DASHBOARD_READS } from '@/platform/db/pg';
+import { toPostgres, DASHBOARD_READS } from '@/server/db';
 
 test('toPostgres: ? placeholders are numbered from 1', () => {
   assert.equal(toPostgres('SELECT * FROM wallets WHERE address = ?'), 'SELECT * FROM wallets WHERE address = $1');

@@ -1,7 +1,7 @@
 /**
  * IMF Fiscal Monitor source tests: run OFFLINE, no network.
  *
- * Contract under test (features/market/sources/imf.ts):
+ * Contract under test (features/market/imf.ts):
  *  - a vintage runs years PAST its publication date, and the payload carries no
  *    flag separating an outturn from a forecast (measured: no OBS_STATUS
  *    attribute in the DSD, `DERIVATION_TYPE` a constant "M" on every obs of
@@ -19,7 +19,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseImfFiscal, pickLatestVintage } from '@/features/market/sources/imf';
+import { parseImfFiscal, pickLatestVintage } from '@/features/market/imf';
 
 /** A vintage body shaped like the real one: 2 series, years spanning the boundary. */
 const VINTAGE = `<?xml version='1.0' encoding='UTF-8'?>

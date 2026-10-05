@@ -1,6 +1,5 @@
 import HomePage from '@/features/home/ui';
-import { getSession } from '@/platform/auth/session';
-import { hasTier } from '@/platform/auth/guard';
+import { getSession, hasTier } from '@/server/auth';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';

@@ -2,10 +2,11 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { alpha, color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
-import { Banner } from '@/components/ui/banner';
-import { Loading } from '@/components/ui/feedback';
-import { Table, TBody, THead } from '@/components/ui/table';
-import { DEX_CHAINS, isMint, type DexPair, type DexProfile } from './client';
+import { Banner } from '@/ui/banner';
+import { Loading } from '@/ui/feedback';
+import { Table, TBody, THead } from '@/ui/table';
+import { DEX_CHAINS, fetchDex, fetchDexProfiles, isMint, type DexPair, type DexProfile } from './client';
+import { imgSrc } from '@/lib/img';
 
 const SEARCH_CHAINS = DEX_CHAINS as readonly string[];
 
@@ -93,9 +94,7 @@ export default function DexPage() {
       let url = '/api/dex?limit=30';
       if (mode === 'pairs') {
         // Join: take fresh profile mints, then resolve their markets.
-        const pRes = await fetch('/api/dex?type=profiles&limit=10', { cache: 'no-store' });
-        if (!pRes.ok) throw new Error(`profiles HTTP ${pRes.status}`);
-        const pJson = await pRes.json();
+        const pJson = await fetchDexProfiles<{ data?: DexProfile[] }>(10);
         const all = (pJson.data || []).map((x: DexProfile) => x.address).filter(Boolean);
         if (all.length === 0) throw new Error('no fresh profile mints to resolve');
         // The profile feed is not base58-only -- measured 6 of 30 upstream
@@ -139,9 +138,7 @@ export default function DexPage() {
         url = `/api/dex?type=${mode === 'boosts' ? 'boosts' : mode === 'boosts-top' ? 'boosts-top' : 'profiles'}&limit=30`;
       }
 
-      const res = await fetch(url, { cache: 'no-store' });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      const json = await fetchDex<any>(url);
       if (json.kind === 'profiles') {
         setProfiles(json.data || []);
         setRows([]);
@@ -210,32 +207,32 @@ export default function DexPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[8], flexWrap: 'wrap', gap: space[8] }}>
-        <h3 style={{ color: color.accent, margin: 0 }}>DexScreener — live market data</h3>
-        <button onClick={load} style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[14]}px`, borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer' }}>
+        <h3 style={{ color: color.blue, margin: 0 }}>DexScreener — live market data</h3>
+        <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       </div>
-      <p style={{ color: color.textMuted, fontSize: fontSize[10], margin: `0 0 ${space[10]}px` }}>
+      <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
         read-only market data · public DexScreener API · an em-dash means the field is absent upstream, never zero
       </p>
 
-      <div style={{ display: 'flex', gap: space[6], flexWrap: 'wrap', marginBottom: space[8] }}>
+      <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap', marginBottom: space[8] }}>
         {MODES.map((m) => (
           <button key={m.key} onClick={() => setMode(m.key)}
             style={{
-              background: mode === m.key ? color.accent : color.surface, color: mode === m.key ? color.textOnAccent : color.text,
-              border: `1px solid ${color.border}`, padding: '5px 10px', borderRadius: radius[6], fontSize: fontSize[11], fontWeight: fontWeight.bold, cursor: 'pointer',
+              background: mode === m.key ? color.blue : color.bgSecondary, color: mode === m.key ? color.labelOnAccent : color.labelPrimary,
+              border: `1px solid ${color.separator}`, padding: '5px 10px', borderRadius: radius[8], fontSize: fontSize[11], fontWeight: fontWeight.bold, cursor: 'pointer',
             }}>{m.label}</button>
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: space[6], marginBottom: space[8], flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: space[8], marginBottom: space[8], flexWrap: 'wrap', alignItems: 'center' }}>
         {mode === 'search' && (
           <>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="symbol, name or address…"
-              style={{ background: color.surface, border: `1px solid ${color.border}`, color: color.text, padding: `${space[6]}px ${space[10]}px`, borderRadius: radius[6], fontSize: fontSize[11], width: 260 }} />
+              style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, color: color.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 260 }} />
             <select value={searchChain} onChange={(e) => setSearchChain(e.target.value)}
-              style={{ background: color.surface, border: `1px solid ${color.border}`, color: color.text, padding: `${space[6]}px ${space[8]}px`, borderRadius: radius[6], fontSize: fontSize[11] }}>
+              style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, color: color.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11] }}>
               <option value="">all chains (upstream default)</option>
               {SEARCH_CHAINS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -244,13 +241,13 @@ export default function DexPage() {
         {(mode === 'mint' || mode === 'orders') && (
           <>
             <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="token address (base58 / 0x / name)…"
-              style={{ background: color.surface, border: `1px solid ${color.border}`, color: color.text, padding: `${space[6]}px ${space[10]}px`, borderRadius: radius[6], fontSize: fontSize[11], width: 340 }} />
+              style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, color: color.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 340 }} />
             <select value={chain} onChange={(e) => setChain(e.target.value)}
-              style={{ background: color.surface, border: `1px solid ${color.border}`, color: color.text, padding: `${space[6]}px ${space[8]}px`, borderRadius: radius[6], fontSize: fontSize[11] }}>
+              style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, color: color.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11] }}>
               {SEARCH_CHAINS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             {mode === 'mint' && (
-              <label style={{ color: color.textMuted, fontSize: fontSize[10], display: 'inline-flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}>
+              <label style={{ color: color.labelTertiary, fontSize: fontSize[11], display: 'inline-flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}>
                 <input type="checkbox" checked={deepestOnly} onChange={(e) => setDeepestOnly(e.target.checked)} />
                 deepest pair only (tokens/v1)
               </label>
@@ -259,11 +256,11 @@ export default function DexPage() {
         )}
         {rows.length > 0 && (
           <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="filter rows…"
-            style={{ background: color.surface, border: `1px solid ${color.border}`, color: color.text, padding: `${space[6]}px ${space[10]}px`, borderRadius: radius[6], fontSize: fontSize[11], width: 200 }} />
+            style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, color: color.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 200 }} />
         )}
       </div>
 
-      <p style={{ color: color.textMuted, fontSize: fontSize[10], margin: `0 0 ${space[10]}px` }}>{active.hint}</p>
+      <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>{active.hint}</p>
 
       {error && (
         <Banner variant="error" style={{ fontWeight: fontWeight.bold }}>
@@ -274,11 +271,11 @@ export default function DexPage() {
       {loading ? (
         <Loading label="loading dex data…" />
       ) : error ? (
-        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>row list withheld — the request above failed.</p>
+        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>row list withheld — the request above failed.</p>
       ) : (
         <>
           {meta.upstream && meta.returned != null && (
-            <p style={{ color: color.textMuted, fontSize: fontSize[10], margin: `0 0 ${space[4]}px` }}>
+            <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[4]}px` }}>
               {meta.returned} shown{meta.total != null && meta.total !== meta.returned ? ` of ${meta.total}` : ''}
               {rows.length > 0 && ` · liq coverage ${cov('liquidity')} · labels ${cov('labels')} · txns ${cov('txns')}`}
             </p>
@@ -287,43 +284,43 @@ export default function DexPage() {
               actually spanned instead of letting a filtered view imply the
               upstream request was scoped. */}
           {meta.chainsSeen && Object.keys(meta.chainsSeen).length > 0 && (
-            <p style={{ color: color.textMuted, fontSize: fontSize[10], margin: `0 0 ${space[4]}px` }}>
+            <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[4]}px` }}>
               upstream matched {meta.upstreamTotal ?? meta.total} pairs across{' '}
-              <span style={{ color: color.accent }}>{Object.keys(meta.chainsSeen).length} chains</span>
+              <span style={{ color: color.blue }}>{Object.keys(meta.chainsSeen).length} chains</span>
               {meta.filteredBy
                 ? ` — narrowed locally to '${meta.filteredBy}' (upstream ignores a chain param)`
                 : `: ${Object.entries(meta.chainsSeen).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join(', ')}`}
             </p>
           )}
           {meta.note && (
-            <p style={{ color: color.warn, fontSize: fontSize[10], margin: `0 0 ${space[8]}px`, fontWeight: fontWeight.bold }}>⚠ {meta.note}</p>
+            <p style={{ color: color.orange, fontSize: fontSize[11], margin: `0 0 ${space[8]}px`, fontWeight: fontWeight.bold }}>⚠ {meta.note}</p>
           )}
 
           {/* profiles / boosts */}
           {(mode === 'profiles' || mode === 'boosts' || mode === 'boosts-top') && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: space[8] }}>
-              {profiles.length === 0 && <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>upstream returned no profiles.</p>}
+              {profiles.length === 0 && <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>upstream returned no profiles.</p>}
               {profiles.map((p, i) => (
-                <div key={p.address + i} style={{ background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius[8], overflow: 'hidden' }}>
-                  {p.header && <div style={{ height: 54, backgroundImage: `url(${p.header})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />}
+                <div key={p.address + i} style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, borderRadius: radius[8], overflow: 'hidden' }}>
+                  {p.header && <div style={{ height: 54, backgroundImage: `url(${imgSrc(p.header)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />}
                   <div style={{ padding: space[8] }}>
-                    <div style={{ color: color.text, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>
+                    <div style={{ color: color.labelPrimary, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>
                       {p.symbol || p.address.slice(0, 6) + '…'}
-                      <span style={{ color: color.textMuted, fontSize: fontSize[9], marginLeft: space[6] }}>{p.chain}</span>
+                      <span style={{ color: color.labelTertiary, fontSize: fontSize[11], marginLeft: space[8] }}>{p.chain}</span>
                     </div>
-                    <div style={{ color: color.textMuted, fontSize: fontSize[9], marginTop: 2, wordBreak: 'break-all' }}>{p.address}</div>
+                    <div style={{ color: color.labelTertiary, fontSize: fontSize[11], marginTop: 2, wordBreak: 'break-all' }}>{p.address}</div>
                     {(p.amount != null || p.totalAmount != null) && (
-                      <div style={{ color: color.accent, fontSize: fontSize[10], marginTop: space[4] }}>
+                      <div style={{ color: color.blue, fontSize: fontSize[11], marginTop: space[4] }}>
                         boost {money(p.amount)}{p.totalAmount != null && ` · total ${money(p.totalAmount)}`}
                       </div>
                     )}
                     {p.links.length > 0 && (
                       <div style={{ display: 'flex', gap: space[4], marginTop: 5, flexWrap: 'wrap' }}>
                         {p.links.slice(0, 3).map((l, j) => (
-                          <a key={j} href={l.url} target="_blank" rel="noreferrer"
-                            style={{ color: color.accent, fontSize: fontSize[9], textDecoration: 'none' }}>
+                          <span key={j}
+                            style={{ color: color.blue, fontSize: fontSize[11], textDecoration: 'none' }}>
                             {l.label || l.type || 'link'}
-                          </a>
+                          </span>
                         ))}
                       </div>
                     )}
@@ -340,14 +337,14 @@ export default function DexPage() {
           {mode === 'orders' && orderData && (
             <div>
               {orderData.orders.length === 0 && orderData.boosts.length === 0 && (
-                <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>
+                <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>
                   upstream returned no orders and no boosts for this token — genuinely none, nothing faked.
                 </p>
               )}
               {orderData.orders.length > 0 && (
-                <Table style={{ fontSize: fontSize[11], marginBottom: space[10] }}>
+                <Table style={{ fontSize: fontSize[11], marginBottom: space[8] }}>
                   <THead>
-                    <tr style={{ color: color.textMuted, textAlign: 'left' }}>
+                    <tr style={{ color: color.labelTertiary, textAlign: 'left' }}>
                       <th style={{ padding: `${space[4]}px ${space[8]}px` }}>order</th>
                       <th style={{ padding: `${space[4]}px ${space[8]}px` }}>status</th>
                       <th style={{ padding: `${space[4]}px ${space[8]}px` }}>paid</th>
@@ -355,10 +352,10 @@ export default function DexPage() {
                   </THead>
                   <TBody>
                     {orderData.orders.map((o, i) => (
-                      <tr key={String(o.paymentTimestamp ?? i)} style={{ borderTop: `1px solid ${color.border}` }}>
-                        <td style={{ padding: '5px 8px', color: color.text }}>{String(o.type ?? '—')}</td>
-                        <td style={{ padding: '5px 8px', color: o.status === 'approved' ? color.accent : color.warn }}>{String(o.status ?? '—')}</td>
-                        <td style={{ padding: '5px 8px', color: color.textMuted }}>{age(typeof o.paymentTimestamp === 'number' ? o.paymentTimestamp : null)}</td>
+                      <tr key={String(o.paymentTimestamp ?? i)} style={{ borderTop: `1px solid ${color.separator}` }}>
+                        <td style={{ padding: '5px 8px', color: color.labelPrimary }}>{String(o.type ?? '—')}</td>
+                        <td style={{ padding: '5px 8px', color: o.status === 'approved' ? color.blue : color.orange }}>{String(o.status ?? '—')}</td>
+                        <td style={{ padding: '5px 8px', color: color.labelTertiary }}>{age(typeof o.paymentTimestamp === 'number' ? o.paymentTimestamp : null)}</td>
                       </tr>
                     ))}
                   </TBody>
@@ -367,7 +364,7 @@ export default function DexPage() {
               {orderData.boosts.length > 0 && (
                 <Table style={{ fontSize: fontSize[11] }}>
                   <THead>
-                    <tr style={{ color: color.textMuted, textAlign: 'left' }}>
+                    <tr style={{ color: color.labelTertiary, textAlign: 'left' }}>
                       <th style={{ padding: `${space[4]}px ${space[8]}px` }}>boost payment</th>
                       <th style={{ padding: `${space[4]}px ${space[8]}px` }}>amount</th>
                       <th style={{ padding: `${space[4]}px ${space[8]}px` }}>paid</th>
@@ -375,10 +372,10 @@ export default function DexPage() {
                   </THead>
                   <TBody>
                     {orderData.boosts.map((b, i) => (
-                      <tr key={String(b.id ?? i)} style={{ borderTop: `1px solid ${color.border}` }}>
-                        <td style={{ padding: '5px 8px', color: color.text }}>{String(b.tokenAddress ?? '—').slice(0, 10)}…</td>
-                        <td style={{ padding: '5px 8px', color: color.text }}>{money(typeof b.amount === 'number' ? b.amount : null)}</td>
-                        <td style={{ padding: '5px 8px', color: color.textMuted }}>{age(typeof b.paymentTimestamp === 'number' ? b.paymentTimestamp : null)}</td>
+                      <tr key={String(b.id ?? i)} style={{ borderTop: `1px solid ${color.separator}` }}>
+                        <td style={{ padding: '5px 8px', color: color.labelPrimary }}>{String(b.tokenAddress ?? '—').slice(0, 10)}…</td>
+                        <td style={{ padding: '5px 8px', color: color.labelPrimary }}>{money(typeof b.amount === 'number' ? b.amount : null)}</td>
+                        <td style={{ padding: '5px 8px', color: color.labelTertiary }}>{age(typeof b.paymentTimestamp === 'number' ? b.paymentTimestamp : null)}</td>
                       </tr>
                     ))}
                   </TBody>
@@ -390,14 +387,14 @@ export default function DexPage() {
           {/* pairs */}
           {(mode === 'pairs' || mode === 'search' || mode === 'mint') && (
             <>
-              {rows.length === 0 && <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>no pairs returned for this query.</p>}
+              {rows.length === 0 && <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>no pairs returned for this query.</p>}
               {rows.length > 0 && (
                 <div style={{ overflowX: 'auto' }}>
                   <Table style={{ fontSize: fontSize[11] }}>
                     <THead>
-                      <tr style={{ color: color.textMuted, fontSize: fontSize[9], textAlign: 'left' }}>
+                      <tr style={{ color: color.labelTertiary, fontSize: fontSize[11], textAlign: 'left' }}>
                         {['pair', 'dex', 'price', '24h', 'vol 24h', 'liq', 'buys/sells 24h', 'mcap', 'age', 'labels'].map((h) => (
-                          <th key={h} style={{ padding: `${space[4]}px ${space[6]}px`, borderBottom: `1px solid ${color.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                          <th key={h} style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${color.separator}`, whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
                     </THead>
@@ -406,24 +403,24 @@ export default function DexPage() {
                         const t24 = win(p.txns, 'h24');
                         const ch24 = win(p.priceChange, 'h24');
                         return (
-                          <tr key={p.pairAddress + i} style={{ borderBottom: `1px solid ${alpha(color.textInverse, 0.04)}` }}>
+                          <tr key={p.pairAddress + i} style={{ borderBottom: `1px solid ${alpha(color.labelOnAccent, 0.04)}` }}>
                             <td style={{ padding: '5px 6px', whiteSpace: 'nowrap' }}>
-                              <a href={p.url} target="_blank" rel="noreferrer" style={{ color: color.accent, textDecoration: 'none', fontWeight: fontWeight.bold }}>
+                              <span style={{ color: color.blue, textDecoration: 'none', fontWeight: fontWeight.bold }}>
                                 {p.baseToken?.symbol || '—'}
-                              </a>
-                              <span style={{ color: color.textMuted }}>/{p.quoteToken?.symbol || '—'}</span>
+                              </span>
+                              <span style={{ color: color.labelTertiary }}>/{p.quoteToken?.symbol || '—'}</span>
                             </td>
-                            <td style={{ padding: '5px 6px', color: color.textMuted }}>{p.dexId || '—'}</td>
-                            <td style={{ padding: '5px 6px', color: color.text }}>{num(p.priceUsd, { prefix: '$' })}</td>
-                            <td style={{ padding: '5px 6px', color: ch24 == null ? color.textMuted : ch24 >= 0 ? color.positive : color.negative }}>{pct(ch24)}</td>
-                            <td style={{ padding: '5px 6px', color: color.text }}>{money(win(p.volume, 'h24') ?? null)}</td>
-                            <td style={{ padding: '5px 6px', color: color.text }}>{money(p.liquidity?.usd ?? null)}</td>
-                            <td style={{ padding: '5px 6px', color: color.textMuted, whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '5px 6px', color: color.labelTertiary }}>{p.dexId || '—'}</td>
+                            <td style={{ padding: '5px 6px', color: color.labelPrimary }}>{num(p.priceUsd, { prefix: '$' })}</td>
+                            <td style={{ padding: '5px 6px', color: ch24 == null ? color.labelTertiary : ch24 >= 0 ? color.green : color.red }}>{pct(ch24)}</td>
+                            <td style={{ padding: '5px 6px', color: color.labelPrimary }}>{money(win(p.volume, 'h24') ?? null)}</td>
+                            <td style={{ padding: '5px 6px', color: color.labelPrimary }}>{money(p.liquidity?.usd ?? null)}</td>
+                            <td style={{ padding: '5px 6px', color: color.labelTertiary, whiteSpace: 'nowrap' }}>
                               {t24?.buys == null || t24?.sells == null ? '—' : `${t24.buys}/${t24.sells}`}
                             </td>
-                            <td style={{ padding: '5px 6px', color: color.text }}>{money(p.marketCap ?? null)}</td>
-                            <td style={{ padding: '5px 6px', color: color.textMuted }}>{age(p.pairCreatedAt)}</td>
-                            <td style={{ padding: '5px 6px', color: color.textMuted }}>
+                            <td style={{ padding: '5px 6px', color: color.labelPrimary }}>{money(p.marketCap ?? null)}</td>
+                            <td style={{ padding: '5px 6px', color: color.labelTertiary }}>{age(p.pairCreatedAt)}</td>
+                            <td style={{ padding: '5px 6px', color: color.labelTertiary }}>
                               {p.labels && p.labels.length ? p.labels.join(',') : '—'}
                             </td>
                           </tr>
@@ -432,7 +429,7 @@ export default function DexPage() {
                     </TBody>
                   </Table>
                   {visible.length > 100 && (
-                    <p style={{ color: color.textMuted, fontSize: fontSize[10], marginTop: space[6] }}>showing first 100 of {visible.length} — narrow the filter</p>
+                    <p style={{ color: color.labelTertiary, fontSize: fontSize[11], marginTop: space[8] }}>showing first 100 of {visible.length} — narrow the filter</p>
                   )}
                 </div>
               )}

@@ -166,7 +166,7 @@ export const TICKER_PAGE_SIZE_MAX = 50;
 export const TICKER_SEARCH_MAX = 16;
 
 /** One upstream sweep serves every search/sort/page for this long. */
-import { l2GetJson, l2SetJson } from '@/platform/cache/valkey';
+import { getJSON } from '@/lib/fetch';
 
 export const TICKER_TTL_MS = 60_000;
 
@@ -324,74 +324,37 @@ export function medianPrice(prices: number[]): number | null {
   return medianOf(prices, true);
 }
 
-let sweepCache: { at: number; rows: TickerRow[] } | null = null;
-const SWEEP_KEY = 'fudcourt:web:ticker:sweep';
+/** Board envelope mirrored by `features/ticker/ui.tsx`. */
+export type TickerBoardEnvelope<T> = {
+  rows?: T[];
+  exchanges?: string[];
+  typeCounts?: Record<string, number>;
+};
 
-/**
- * The tiered venue-sweep cache.
- *
- * The sweep is the most expensive thing this app does: a cold process pays
- * 71-80 s for it (measured), because it is one quote per (venue, symbol, type)
- * job across ten exchanges. Optimising half of it would be worse than not
- * optimising it — measured, a process restart with a 60 s cache TTL always
- * re-paid the full sweep, since the sweep outlives the TTL. So the TTLs are
- * deliberately tiered:
- *
- *   FRESH (60 s)   prices are current; serve from memory, no refresh.
- *   STALE (1 h)    a serve-stale window. Between the two, the caller serves the
- *                  last known sweep immediately and a refresh runs in the
- *                  background, so no request ever blocks on the sweep again.
- *                  The response carries `timestamp`, so a stale read is visible
- *                  rather than passed off as current.
- *   VALKEY (1 h)   the L2, which is what makes the first call after a restart
- *                  fast: a restart discards module state but not Valkey.
- *
- * Beyond STALE nothing is served: an hour-old price is not "stale but usable",
- * it is wrong. Past that the caller waits for a real sweep, and if it fails the
- * route reports the failure instead of showing the old numbers as live.
- *
- * Rejections are never cached, in any tier, so a venue outage is retried on the
- * next request rather than being pinned for a window.
- */
-export const SWEEP_FRESH_MS = TICKER_TTL_MS;
-export const SWEEP_STALE_MS = 60 * 60 * 1000;
-
-/** The freshest sweep available from memory, and its age. */
-export function sweepSnapshot(): { at: number; rows: TickerRow[] } | null {
-  return sweepCache;
+/** Transport for the ticker board. URL construction lives here; guards and state stay in the view. */
+export function fetchTickerBoard<T>(sort: string, order: string, type: string): Promise<TickerBoardEnvelope<T>> {
+  return getJSON<TickerBoardEnvelope<T>>(`/api/ticker?sort=${sort}&order=${order}&type=${type}`, { cache: 'no-store' });
 }
 
-/** Adopt a sweep read from the L2 as this process's memory copy. */
-export function primeSweep(snapshot: { at: number; rows: TickerRow[] }): void {
-  sweepCache = snapshot;
-}
-
-/** Read the L2 copy (survives restarts). Null on any miss or failure. */
-export async function readSweepL2(): Promise<{ at: number; rows: TickerRow[] } | null> {
-  const v = await l2GetJson<{ at: number; rows: TickerRow[] }>(SWEEP_KEY).catch(() => null);
-  return v?.rows?.length ? v : null;
+/** Transport for the detail meta (which expiries/strikes/venues exist for one coin). */
+export function fetchTickerInstruments<T>(base: string): Promise<T> {
+  return getJSON<T>(`/api/ticker/instruments?symbol=${encodeURIComponent(`${base}/USDT`)}`, { cache: 'no-store' });
 }
 
 /**
- * Run one sweep and record it in memory and in the L2.
+ * Transport for one instrument's cross-venue quotes.
  *
- * The L2 entry is given the STALE lifetime, not the fresh one: it is the
- * restart-recovery copy, and expiring it after 60 s is exactly the bug that made
- * every post-restart request pay the full sweep.
+ * Only sends a selector the chosen type actually has; sending an expiry
+ * for spot would ask for an instrument that does not exist.
  */
-export async function runSweep(run: () => Promise<TickerRow[]>): Promise<TickerRow[]> {
-  const rows = await run();
-  if (!rows.length) return rows;
-  sweepCache = { at: Date.now(), rows };
-  await l2SetJson(SWEEP_KEY, sweepCache, SWEEP_STALE_MS).catch(() => {});
-  return rows;
+export function fetchTickerInstrument<T>(base: string, type: string, opts: { expiry?: string; strike?: string; kind?: string }): Promise<T> {
+  const qs = new URLSearchParams({ base, type });
+  const needsDated = type === 'future' || type === 'option';
+  if (needsDated && opts.expiry) qs.set('expiry', opts.expiry);
+  if (type === 'option') {
+    if (opts.strike) qs.set('strike', opts.strike);
+    qs.set('kind', opts.kind ?? 'call');
+  }
+  return getJSON<T>(`/api/ticker/instrument?${qs}`, { cache: 'no-store' });
 }
 
-/** Rejections are never cached: a venue outage is retried, not pinned. */
-export async function memoSweep(
-  _ttlMs: number,
-  run: () => Promise<TickerRow[]>
-): Promise<TickerRow[]> {
-  if (sweepCache && Date.now() - sweepCache.at < SWEEP_FRESH_MS) return sweepCache.rows;
-  return runSweep(run);
-}

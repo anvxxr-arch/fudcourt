@@ -3,7 +3,7 @@
  *
  * One function per endpoint the UI calls, each returning the JSON that route
  * actually answers, typed against the frozen contract in
- * `@/platform/executor/types`. The route handlers are the ground truth for
+ * `@/lib/executor`. The route handlers are the ground truth for
  * both the method/path and the response envelope:
  *
  *   POST   /api/executor/preview                  → { preview, liveEnabled }
@@ -24,11 +24,8 @@
  *   GET    /api/executor/settings                → { profile }
  *   PUT    /api/executor/settings                → { profile }
  *
- * Errors: every non-2xx becomes a thrown `Error` whose message is the server's
- * own text — the routes answer with `{ error }`, `{ error, detail }`,
- * `{ error: 'validation', errors: string[] }` or a 409 `{ error: 'conflict',
- * conflicts, preview }`, and a substituted message would hide which layer
- * refused. Panels therefore only ever display `err.message`.
+ * Errors: every non-2xx becomes a thrown `Error` carrying the URL and status.
+ * Panels therefore only ever display `err.message`.
  */
 import type {
   AccountMetadata,
@@ -42,7 +39,8 @@ import type {
   FillRecord,
   PreviewResult,
   RiskProfile,
-} from '@/platform/executor/types';
+} from '@/lib/executor';
+import { getJSON } from '@/lib/fetch';
 
 /** POST /preview — a dry run: nothing is created, nothing is sent (§98). */
 export interface PreviewResponse {
@@ -113,53 +111,16 @@ export interface ConnectAccountInput {
 }
 
 /**
- * A 409 conflict carries the planner's own messages; they name real fields and
- * are worth showing verbatim. Read through narrowing, never an unchecked cast.
- */
-function conflictMessage(value: unknown): string | null {
-  if (value !== null && typeof value === 'object' && 'message' in value && typeof value.message === 'string') {
-    return value.message;
-  }
-  return null;
-}
-
-/**
- * The server's own error text, flattened into one message. Every executor error
- * body carries `error`; `detail` adds the specific reason, `errors` (validation)
- * is a list of field-named messages, and `conflicts` (409) are the planner's
- * blocking reasons.
- */
-function messageFromBody(body: Record<string, unknown>, status: number): string {
-  const parts: string[] = [typeof body.error === 'string' ? body.error : `HTTP ${status}`];
-  if (Array.isArray(body.errors)) {
-    const listed = body.errors.filter((e): e is string => typeof e === 'string');
-    if (listed.length > 0) parts.push(listed.join('; '));
-  }
-  if (typeof body.detail === 'string' && body.detail !== '') parts.push(body.detail);
-  if (Array.isArray(body.conflicts)) {
-    for (const conflict of body.conflicts) {
-      const text = conflictMessage(conflict);
-      if (text !== null) parts.push(text);
-    }
-  }
-  if (parts.length === 1) parts.push(`(status ${status})`);
-  return parts.join(' — ');
-}
-
-/**
  * Single request funnel: `cache: 'no-store'` (executor state is per-user and
  * changes while the page is open), JSON in/out, and a thrown `Error` carrying
- * the route's message on any non-2xx.
+ * the URL and status on any non-2xx.
  */
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(path, {
+  return getJSON<T>(path, {
     ...init,
     cache: 'no-store',
     headers: init.body === undefined ? init.headers : { 'Content-Type': 'application/json', ...init.headers },
   });
-  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) throw new Error(messageFromBody(body, res.status));
-  return body as T;
 }
 
 function post<T>(path: string, payload?: unknown): Promise<T> {

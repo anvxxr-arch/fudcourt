@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { INDICATOR_BY_SLUG } from '@/features/economy/registry';
+import { INDICATOR_BY_SLUG } from '@/features/economy/model';
 import { readObservations } from '@/app/(frontend)/api/economy/_lib/adapters';
 import { mapPool } from '@/app/(frontend)/api/economy/_lib/rows';
 

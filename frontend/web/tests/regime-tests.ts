@@ -40,7 +40,7 @@ import {
   type DimensionReading,
   type SeriesInput,
   type TrendDirection,
-} from '@/features/economy/regime';
+} from '@/features/economy/model';
 
 /** A rising series with real period-to-period noise, so MAD is not zero. */
 const UP = [1, 1.1, 1.05, 1.2, 1.15, 1.3, 1.25, 1.4, 1.5, 1.6, 1.7, 1.8];

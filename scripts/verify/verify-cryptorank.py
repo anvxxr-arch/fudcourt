@@ -11,9 +11,9 @@ verify-cryptorank.py -- executable contract for the CryptoRank integration.
                 dex/spot, perpetuals; else 400)
                 funding | unlocks   (503 loud refusal -- synthetic data-route)
                 funding | unlocks -> 503 REFUSED (upstream /_next/data class
-                serves synthetic decoy; see src/features/cryptorank/client.ts CR_DISABLED)
+                serves synthetic decoy; see src/features/market-data/cryptorank.ts CR_DISABLED)
     data path:  route -> tests/oracle/cr_fetch.py (venv curl_cffi) -> cryptorank.io
-                market-page __NEXT_DATA__ SSR payload (see src/features/cryptorank/client.ts header
+                market-page __NEXT_DATA__ SSR payload (see src/features/market-data/cryptorank.ts header
                 for the measured access matrix: API host challenged, market pages
                 readable, fundraising tree walled).
 
@@ -549,7 +549,7 @@ def main() -> int:
             "decoy detector",
             f"nonexistent slug still returns 200 ({probe.get('bytes')}B fabricated payload) -> "
             "funding/unlocks stay REFUSED; re-enable gate: slug must 404 AND content must match "
-            "an independent source (see src/features/cryptorank/client.ts CR_DISABLED)",
+            "an independent source (see src/features/market-data/cryptorank.ts CR_DISABLED)",
         )
     elif probe.get("ok") and probe.get("status") == 404:
         info(
@@ -988,7 +988,7 @@ def main() -> int:
         # upstream's PINNED PROMO slot (measured 2026-09-29: url:null AND
         # date:null). Requiring a URL on EVERY row tested upstream's CMS, not our
         # shaping. url:null is the documented promo marker
-        # (src/features/cryptorank/client.ts: "null upstream = pinned promo
+        # (src/features/market-data/cryptorank.ts: "null upstream = pinned promo
         # slot"). The honest invariant kept here: titles always intact; every
         # REAL url is non-empty http; a null url only on a pinned promo slot.
         # Captured upstream rows (promo + real; recorded + live):
@@ -1688,20 +1688,20 @@ def main() -> int:
         return open(p, encoding="utf-8").read() if os.path.exists(p) else ""
 
     # The SPA tab registry and the render branch moved out of app/page.tsx into
-    # src/components/layout/store-shell.tsx (page.tsx is now a wrapper that renders
+    # src/features/overview/store-shell.tsx (page.tsx is now a wrapper that renders
     # <StoreShell/>).
     # A hard-coded path rots the moment the shell is refactored -- so DISCOVER
     # which file owns each half and require the invariant in EITHER, reporting
     # which one satisfied it. The invariant stays load-bearing: the halves are
     # asserted separately, so a tab registered but never rendered (or rendered
     # without its component import) still fails loudly.
-    shell_files = ["src/components/layout/store-shell.tsx", "src/app/(frontend)/(public)/page.tsx"]
+    shell_files = ["src/features/overview/store-shell.tsx", "src/app/(frontend)/(public)/page.tsx"]
     shells = {f: read(f) for f in shell_files}
     _reg_needle = "key: 'cryptorank'"
     _ren_needle = "page === 'cryptorank' && <CryptorankPage />"
     # The DR-017 merge rewrote the shell's imports to the @/ alias (the
     # (frontend) route group made every ../src/ path longer and move-fragile).
-    _imp_needle = "@/features/cryptorank/ui"
+    _imp_needle = "@/features/market-data/ui"
     reg_ok = next((f for f in shell_files if _reg_needle in shells[f]), None)
     ren_ok = next((f for f in shell_files if _ren_needle in shells[f]), None)
     imp_ok = next((f for f in shell_files if _imp_needle in shells[f]), None)
@@ -1729,7 +1729,7 @@ def main() -> int:
           bool(_dl) and _dl_needle in _dl,
           "searched src/app/(frontend)/(public)/cryptorank/page.tsx: "
           f"exists={bool(_dl)} {_dl_needle!r} present={_dl_needle in _dl}")
-    comp = read("src/features/cryptorank/ui.tsx")
+    comp = read("src/features/market-data/cryptorank.ts")
     check("component: fetches /api/cryptorank", "/api/cryptorank?mode=" in comp, "")
     check("component: em-dash never 0 for absent", "'—'" in comp, "")
     check("component: unlocks section ABSENT (synthetic upstream)",
@@ -1797,7 +1797,7 @@ def main() -> int:
           and "_next/data" in helper_src, "")
     check("helper: buildId rotation handled", "force=True" in helper_src
           and "buildid.txt" in helper_src, "")
-    lib = read("src/features/cryptorank/client.ts")
+    lib = read("src/features/market-data/cryptorank.ts")
     lib_modes = set(re.findall(
         r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool|nodesale|news|tags|tag|ecosystems|ecosystem|rwa|rwaasset|quarterly|prediction|converter|media|newstag|aioverview)'", lib))
     check(

@@ -1,5 +1,5 @@
-import StoreShell from '@/components/layout/store-shell';
-import { requireTier } from '@/platform/auth/guard';
+import StoreShell from '@/features/overview/store-shell';
+import { requireTier } from '@/server/auth';
 import { color, fontFamily, fontSize, letterSpacing, space } from '@/styles/tokens';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -9,17 +9,18 @@ export const revalidate = 0;
 export default async function MemberPage() {
   const user = await requireTier('member');
   return (
-    <main style={{ background: color.bg, minHeight: '100vh', color: color.text, fontFamily: fontFamily.mono }}>
+    <main style={{ background: color.bgBase, minHeight: '100vh', color: color.labelPrimary, fontFamily: fontFamily.mono }}>
       <div style={{ padding: `${space[20]}px ${space[20]}px 0` }}>
-        <h1 style={{ margin: 0, color: color.accent, letterSpacing: letterSpacing.wider, fontSize: fontSize[18] }}>MEMBER OVERVIEW</h1>
-        <p style={{ margin: `${space[4]}px 0 0`, color: color.textMuted, fontSize: fontSize[12] }}>
+        <h1 style={{ margin: 0, color: color.blue, letterSpacing: letterSpacing.wider, fontSize: fontSize[17] }}>MEMBER OVERVIEW</h1>
+        <p style={{ margin: `${space[4]}px 0 0`, color: color.labelTertiary, fontSize: fontSize[12] }}>
           {`Signed in as ${user.username} (${user.tier}).`}
         </p>
-        <p style={{ margin: `${space[4]}px 0 0`, color: color.textMuted, fontSize: fontSize[12] }}>
-          Your personal member view lands here next; below are the shared market boards.
+        <p style={{ margin: `${space[4]}px 0 0`, color: color.labelTertiary, fontSize: fontSize[12] }}>
+          This is your member home: the same public market boards the anonymous surface shows, served live from the
+          origin APIs. Nothing here touches the treasury — a member account earns the team terminal via Discord rank.
         </p>
       </div>
-      <StoreShell initialPage="ticker" />
+      <StoreShell initialPage="market" />
     </main>
   );
 }

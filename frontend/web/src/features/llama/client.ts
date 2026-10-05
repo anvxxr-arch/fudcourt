@@ -67,3 +67,20 @@ export interface LlamaEnvelope {
   upstreamTotal: number;
   derived: string; // e.g. "sorted by tvl (upstream sends unsorted)"
 }
+
+import { getJSON } from '@/lib/fetch';
+
+/** Proxy-board payload: rows plus the derived-view markers from LlamaEnvelope. */
+export interface LlamaBoardResponse {
+  rows?: any[];
+  derived?: string;
+  upstreamTotal?: number;
+}
+
+export function fetchLlamaBoards(): Promise<[LlamaBoardResponse, LlamaBoardResponse, LlamaBoardResponse]> {
+  return Promise.all([
+    getJSON<LlamaBoardResponse>('/api/llama?mode=chains', { cache: 'no-store' }),
+    getJSON<LlamaBoardResponse>('/api/llama?mode=protocols&top=50', { cache: 'no-store' }),
+    getJSON<LlamaBoardResponse>('/api/llama?mode=historical&days=180', { cache: 'no-store' }),
+  ]);
+}

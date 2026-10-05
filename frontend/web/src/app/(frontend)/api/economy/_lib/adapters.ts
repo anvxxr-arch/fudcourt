@@ -3,7 +3,7 @@
  *
  * WHY THIS LIVES IN THE ROUTE LAYER AND NOT IN `features/economy`. The structure
  * gate forbids a feature from importing another feature, and these adapters read
- * `features/market/sources` (FRED, the World Bank, BIS). Putting them in `app/`
+ * `features/market` (FRED, the World Bank, BIS). Putting them in `app/`
  * is not a workaround — it is the layering the plan asks for: the domain
  * (`features/economy`) owns the taxonomy, the model and the registry, and knows
  * nothing about a provider; only the route layer, which is allowed to depend on
@@ -26,12 +26,12 @@
  *  - the derived balance is emitted ONLY for a year BOTH legs observe — a 2024
  *    revenue minus a 2023 expense is not any year's balance.
  */
-import { limitedFetch } from '@/platform/http/rate-limit';
-import { BIS_ACCEPT, SOURCE_UA, bisUrl, daysAgo } from '@/features/market/sources/bis';
-import { FRED_TTL_MS, fredUrl, parseFredCsv } from '@/features/market/sources/fred';
-import { fetchWorldBankSeries } from '@/features/market/sources/worldbank';
-import { memo } from '@/features/market/sources/ttl';
-import { DERIVED_LEGS } from '@/features/economy/registry';
+import { limitedFetch } from '@/lib/rate-limit';
+import { BIS_ACCEPT, SOURCE_UA, bisUrl, daysAgo } from '@/features/market/bis';
+import { FRED_TTL_MS, fredUrl, parseFredCsv } from '@/features/market/fred';
+import { fetchWorldBankSeries } from '@/features/market/worldbank';
+import { memo } from '@/features/market/bis';
+import { DERIVED_LEGS } from '@/features/economy/model';
 import type { EconomicIndicator, EconomicObservation, Frequency, ValueShape } from '@/features/economy/model';
 
 const TIMEOUT_MS = 25_000;

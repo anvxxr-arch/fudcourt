@@ -16,8 +16,9 @@
  * compile against the new shape, which is the point.
  */
 import type { MarketRow, PortfolioSummary } from '@/features/trade/model';
-import { MARKET_TYPE_BY_ID, VENUE_BY_ID, type MarketType, type TickerType, type VenueId } from '@/features/trade/taxonomy';
-import type { ExecutionPlan, ExecutionRecord, ExecutionRequest, PreviewResult } from '@/platform/executor/types';
+import { MARKET_TYPE_BY_ID, VENUE_BY_ID, type MarketType, type TickerType, type VenueId } from '@/features/trade/model';
+import type { ExecutionPlan, ExecutionRecord, ExecutionRequest, PreviewResult } from '@/lib/executor';
+import { getJSON } from '@/lib/fetch';
 
 /** The one em dash the module prints for "the source did not report this". */
 export const NO_VALUE = '—';
@@ -134,11 +135,7 @@ export async function fetchMarketRows(
     if (tickerType === null) return [];
     params.set('type', tickerType);
   }
-  const res = await fetch(`/api/ticker?${params.toString()}`, { signal: bounded(signal), cache: 'no-store' });
-  const body = (await res.json().catch(() => ({}))) as TickerEnvelope;
-  if (!res.ok) {
-    throw new Error(body.detail ? `${body.error ?? `HTTP ${res.status}`} — ${body.detail}` : (body.error ?? `HTTP ${res.status}`));
-  }
+  const body = await getJSON<TickerEnvelope>(`/api/ticker?${params.toString()}`, { signal: bounded(signal), cache: 'no-store' });
   return (body.rows ?? []).map((r) =>
     toMarketRow(r, marketType === 'all' ? marketTypeOfTickerRow(r.type) : marketType),
   );
@@ -199,11 +196,7 @@ export async function fetchInstrumentDetail(
   signal?: AbortSignal,
 ): Promise<InstrumentDetail> {
   const params = new URLSearchParams({ base, type: tickerType });
-  const res = await fetch(`/api/ticker/instrument?${params.toString()}`, { signal: bounded(signal), cache: 'no-store' });
-  const body = (await res.json().catch(() => ({}))) as Partial<InstrumentDetail> & { error?: string; detail?: string };
-  if (!res.ok) {
-    throw new Error(body.detail ? `${body.error ?? `HTTP ${res.status}`} — ${body.detail}` : (body.error ?? `HTTP ${res.status}`));
-  }
+  const body = await getJSON<Partial<InstrumentDetail> & { error?: string; detail?: string }>(`/api/ticker/instrument?${params.toString()}`, { signal: bounded(signal), cache: 'no-store' });
   return {
     base: typeof body.base === 'string' ? body.base : base,
     type: (body.type ?? tickerType) as TickerType,
@@ -224,13 +217,14 @@ export async function fetchInstrumentDetail(
  * surfaced, because a 500 on a funded account must never look like an empty one.
  */
 export async function fetchPortfolioSummary(signal?: AbortSignal): Promise<PortfolioSummary> {
-  const res = await fetch('/api/executor/accounts', { signal: bounded(signal), cache: 'no-store' });
-  if (res.status === 401 || res.status === 403) {
-    return { equity: null, available: null, exposure: null, pnlToday: null, connected: false };
-  }
-  const body = (await res.json().catch(() => ({}))) as { accounts?: unknown[]; error?: string; detail?: string };
-  if (!res.ok) {
-    throw new Error(body.detail ? `${body.error ?? `HTTP ${res.status}`} — ${body.detail}` : (body.error ?? `HTTP ${res.status}`));
+  let body: { accounts?: unknown[] };
+  try {
+    body = await getJSON<{ accounts?: unknown[] }>('/api/executor/accounts', { signal: bounded(signal), cache: 'no-store' });
+  } catch (err) {
+    if (err instanceof Error && /HTTP 40[13]$/.test(err.message)) {
+      return { equity: null, available: null, exposure: null, pnlToday: null, connected: false };
+    }
+    throw err;
   }
   const connected = Array.isArray(body.accounts) && body.accounts.length > 0;
   // Equity/available/exposure are not on the accounts endpoint; a funded figure
@@ -261,11 +255,12 @@ const LIVE_STATUSES = new Set(['RUNNING', 'PARTIALLY_FILLED', 'PAUSED', 'CANCEL_
  * error is never rendered as "no orders".
  */
 export async function fetchExecutions(signal?: AbortSignal): Promise<ExecutionLite[]> {
-  const res = await fetch('/api/executor/executions', { signal: bounded(signal), cache: 'no-store' });
-  if (res.status === 401 || res.status === 403) return [];
-  const body = (await res.json().catch(() => ({}))) as { executions?: ExecutionLite[]; error?: string; detail?: string };
-  if (!res.ok) {
-    throw new Error(body.detail ? `${body.error ?? `HTTP ${res.status}`} — ${body.detail}` : (body.error ?? `HTTP ${res.status}`));
+  let body: { executions?: ExecutionLite[] };
+  try {
+    body = await getJSON<{ executions?: ExecutionLite[] }>('/api/executor/executions', { signal: bounded(signal), cache: 'no-store' });
+  } catch (err) {
+    if (err instanceof Error && /HTTP 40[13]$/.test(err.message)) return [];
+    throw err;
   }
   return Array.isArray(body.executions) ? body.executions : [];
 }
@@ -281,7 +276,7 @@ export function isLiveExecution(status: string): boolean {
 // The trade domain does NOT place orders: it COMPOSES the executor's own routes
 // (`/api/executor/preview`, `/api/executor/executions`, `/api/executor/accounts`).
 // Feature families are independent (DR-018), so this is a local contract over
-// those endpoints, typed against the frozen `@/platform/executor/types` — the
+// those endpoints, typed against the frozen `@/lib/executor` — the
 // same contract the executor's own client speaks, so a field rename fails to
 // compile here.
 // ---------------------------------------------------------------------------
@@ -342,35 +337,15 @@ export interface TradeCreateResponse {
   plan: ExecutionPlan;
 }
 
-/** The server's own error text, flattened into one message — never a substituted one. */
-function apiError(body: Record<string, unknown>, status: number): string {
-  const parts: string[] = [typeof body.error === 'string' ? body.error : `HTTP ${status}`];
-  if (Array.isArray(body.errors)) {
-    const listed = body.errors.filter((e): e is string => typeof e === 'string');
-    if (listed.length > 0) parts.push(listed.join('; '));
-  }
-  if (typeof body.detail === 'string' && body.detail !== '') parts.push(body.detail);
-  if (Array.isArray(body.conflicts)) {
-    for (const conflict of body.conflicts) {
-      if (conflict !== null && typeof conflict === 'object' && 'message' in conflict && typeof conflict.message === 'string') {
-        parts.push(conflict.message);
-      }
-    }
-  }
-  return parts.join(' — ');
-}
-
+/** POST a JSON payload: the same no-store, bounded call as the reads above. */
 async function postJson<T>(url: string, payload: unknown, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(url, {
+  return getJSON<T>(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload),
     signal: bounded(signal),
     cache: 'no-store',
   });
-  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) throw new Error(apiError(body, res.status));
-  return body as T;
 }
 
 /**
@@ -393,10 +368,13 @@ export function createTradeExecution(request: ExecutionRequest, signal?: AbortSi
  * a 500 on a funded account must never look like an empty one.
  */
 export async function fetchTradeAccounts(signal?: AbortSignal): Promise<TradeAccountLite[]> {
-  const res = await fetch('/api/executor/accounts', { signal: bounded(signal), cache: 'no-store' });
-  if (res.status === 401 || res.status === 403) return [];
-  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) throw new Error(apiError(body, res.status));
+  let body: Record<string, unknown>;
+  try {
+    body = await getJSON<Record<string, unknown>>('/api/executor/accounts', { signal: bounded(signal), cache: 'no-store' });
+  } catch (err) {
+    if (err instanceof Error && /HTTP 40[13]$/.test(err.message)) return [];
+    throw err;
+  }
   return Array.isArray(body.accounts) ? (body.accounts as TradeAccountLite[]) : [];
 }
 

@@ -1,4 +1,4 @@
-import StoreShell from '@/components/layout/store-shell';
+import StoreShell from '@/features/overview/store-shell';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';

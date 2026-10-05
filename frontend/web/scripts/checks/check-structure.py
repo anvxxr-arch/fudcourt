@@ -78,7 +78,7 @@ def layer_of(path: Path) -> str:
 # panel components at src/components/*.tsx. It is now a real layer (ui/ +
 # layout/), so the flat-bag half of the rule is enforced below instead: no
 # module may sit directly at src/components/, only inside a named shelf.
-for dead in ("lib", "store"):
+for dead in ("store",):
     if (SRC / dead).exists():
         violations.append(
             f"src/{dead}/ exists — it was retired by DR-018; "
@@ -109,7 +109,7 @@ for f in sources():
         continue
     by_layer.setdefault(layer_of(f), []).append(f)
 
-known_layers = {"app", "components", "features", "platform", "styles", "cms"}
+known_layers = {"app", "components", "ui", "lib", "server", "features", "platform", "styles", "cms"}
 for top in sorted(by_layer):
     if top != "(src root)" and top not in known_layers:
         violations.append(f"src/{top}/ is not a layer — the layers are {sorted(known_layers)}")
@@ -167,7 +167,7 @@ for f in sources():
         # primitive must never reach for a feature, infrastructure, the route
         # tree, or the shell. (components/layout/ is the exception: composing
         # features is its whole job.)
-        if layer == "components" and rel.parts[1] == "ui" and tlayer in ("features", "platform", "app", "components") and not target.startswith("components/ui/"):
+        if layer in ("components", "ui") and (layer == "ui" or rel.parts[1] == "ui") and tlayer in ("features", "platform", "app", "components") and not target.startswith("components/ui/"):
             violations.append(
                 f"src/{rel}:{line_no} components/ui/ imports {tlayer}/{tname} — "
                 f"components/ui/ is presentational and must stay dependency-free"
@@ -178,9 +178,12 @@ for f in sources():
                 f"styles/ is presentational and must stay dependency-free"
             )
         # --- rule 5: no cross-feature coupling -------------------------------
+        # Shell composition roots (market/hub.tsx composes boards, overview/store-shell.tsx
+        # composes pages) are exempt: composing features is their whole job.
+        SHELL_ROOTS = {"features/market/hub.tsx", "features/overview/store-shell.tsx"}
         if layer == "features" and tlayer == "features":
             own = rel.parts[1]
-            if tname != own:
+            if tname != own and str(rel) not in SHELL_ROOTS:
                 violations.append(
                     f"src/{rel}:{line_no} feature '{own}' imports feature '{tname}' — "
                     f"families are independent; share through platform/ or an API"

@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { alpha, color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
-import { Loading } from '@/components/ui/feedback';
-import { chainColor } from '@/styles/shared';
-import { Table, TBody, THead } from '@/components/ui/table';
-import { Toolbar } from '@/components/ui/toolbar';
+import { Loading } from '@/ui/feedback';
+import { chainColor } from '@/lib/format';
+import { Table, TBody, THead } from '@/ui/table';
+import { Toolbar } from '@/ui/toolbar';
+import { imgSrc } from '@/lib/img';
+import { fetchSignals } from './client';
 
 type Sighting = { n: number; spanH: number; sources: number; surfaced: number };
 type Social = { type: string; url: string };
@@ -54,7 +56,7 @@ type Payload = {
 const CHAINS = [
   { key: 'solana', label: '◎ Solana', color: chainColor('solana') },
   { key: 'robinhood', label: '🪶 Robinhood Chain', color: chainColor('robinhood') },
-  { key: 'all', label: '⧉ Both', color: color.warn },
+  { key: 'all', label: '⧉ Both', color: color.orange },
 ] as const;
 type ChainKey = (typeof CHAINS)[number]['key'];
 
@@ -70,12 +72,12 @@ const MODES = [
 type Mode = (typeof MODES)[number]['key'];
 
 const DECISION_COLOR: Record<string, string> = {
-  surfaced: color.accent,
-  watching: color.warn,
-  'low score': color.textMuted,
-  vetoed: color.negative,
-  blocked: color.negative,
-  bundle: color.attention,
+  surfaced: color.blue,
+  watching: color.orange,
+  'low score': color.labelTertiary,
+  vetoed: color.red,
+  blocked: color.red,
+  bundle: color.orange,
 };
 
 // A missing metric is NOT zero. Upstream omits fields per row (e.g. liq on
@@ -126,9 +128,7 @@ export default function SignalsPage() {
     setError('');
     try {
       const suffix = mode === 'page' ? `&n=${page}` : '';
-      const res = await fetch(`/api/signals?chain=${chain}&type=${mode}${suffix}`, { cache: 'no-store' });
-      const json: Payload = await res.json();
-      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      const json = await fetchSignals<Payload>(chain, mode, suffix);
       setData(json);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -178,21 +178,21 @@ export default function SignalsPage() {
 
   return (
     <div>
-      <Toolbar style={{ flexWrap: 'wrap', gap: space[10] }}>
+      <Toolbar style={{ flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h3 style={{ color: color.accent, margin: 0 }}>Signals Feed</h3>
-          <p style={{ color: color.textMuted, fontSize: fontSize[10], margin: '2px 0 0' }}>
+          <h3 style={{ color: color.blue, margin: 0 }}>Signals Feed</h3>
+          <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: '2px 0 0' }}>
             read-only screening output · {data ? `${data.windowH}h window` : '—'}
             {data?.solDelayMin ? ` · solana delayed ${data.solDelayMin}m` : ''}
             {' · '}not trading signals, not financial advice
           </p>
         </div>
-        <button onClick={load} style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[14]}px`, borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer' }}>
+        <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       </Toolbar>
 
-      <div style={{ display: 'flex', gap: space[8], alignItems: 'center', flexWrap: 'wrap', marginBottom: space[10] }}>
+      <div style={{ display: 'flex', gap: space[8], alignItems: 'center', flexWrap: 'wrap', marginBottom: space[8] }}>
         {CHAINS.map(c => {
           const allowed = activeMode.chains.includes(c.key);
           return (
@@ -202,10 +202,10 @@ export default function SignalsPage() {
               disabled={!allowed}
               title={allowed ? c.label : `${c.label} is not served by the ${activeMode.label} endpoint`}
               style={{
-                background: chain === c.key ? c.color : color.surface,
-                color: chain === c.key ? color.textOnAccent : allowed ? color.textMuted : alpha(color.textMuted, 0.35),
-                border: `1px solid ${color.border}`,
-                padding: `${space[6]}px ${space[12]}px`, borderRadius: radius[6], fontSize: fontSize[11],
+                background: chain === c.key ? c.color : color.bgSecondary,
+                color: chain === c.key ? color.labelOnAccent : allowed ? color.labelTertiary : alpha(color.labelTertiary, 0.35),
+                border: `1px solid ${color.separator}`,
+                padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11],
                 cursor: allowed ? 'pointer' : 'not-allowed',
                 fontWeight: fontWeight.bold, textDecoration: allowed ? 'none' : 'line-through',
               }}
@@ -220,69 +220,69 @@ export default function SignalsPage() {
           onChange={e => setQ(e.target.value)}
           placeholder="filter symbol / name / mint…"
           style={{
-            flex: '1 1 200px', minWidth: 160, background: color.surface, color: color.text,
-            border: `1px solid ${color.border}`, borderRadius: radius[6], padding: `${space[6]}px ${space[10]}px`, fontSize: fontSize[11], outline: 'none',
+            flex: '1 1 200px', minWidth: 160, background: color.bgSecondary, color: color.labelPrimary,
+            border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[11], outline: 'none',
           }}
         />
 
         <select
           value={onlyDecision}
           onChange={e => setOnlyDecision(e.target.value)}
-          style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, borderRadius: radius[6], padding: `${space[6]}px ${space[8]}px`, fontSize: fontSize[11] }}
+          style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[11] }}
         >
           <option value="">all decisions</option>
           {decisions.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
       </div>
 
-      <div style={{ display: 'flex', gap: space[6], marginBottom: space[12], flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: space[8], marginBottom: space[12], flexWrap: 'wrap' }}>
         {MODES.map(m => (
           <button
             key={m.key}
             onClick={() => setMode(m.key)}
             title={m.hint}
             style={{
-              background: mode === m.key ? color.accent : color.surface,
-              color: mode === m.key ? color.textOnAccent : color.textMuted,
-              border: `1px solid ${color.border}`, padding: '5px 10px', borderRadius: radius[6],
-              fontSize: fontSize[10], cursor: 'pointer', fontWeight: fontWeight.bold,
+              background: mode === m.key ? color.blue : color.bgSecondary,
+              color: mode === m.key ? color.labelOnAccent : color.labelTertiary,
+              border: `1px solid ${color.separator}`, padding: '5px 10px', borderRadius: radius[8],
+              fontSize: fontSize[11], cursor: 'pointer', fontWeight: fontWeight.bold,
             }}
           >
             {m.label}
           </button>
         ))}
         {mode === 'page' && data?.pages && (
-          <span style={{ display: 'inline-flex', gap: space[4], alignItems: 'center', marginLeft: space[6] }}>
+          <span style={{ display: 'inline-flex', gap: space[4], alignItems: 'center', marginLeft: space[8] }}>
             <button
               onClick={() => setPage(p => Math.max(2, p - 1))}
               disabled={page <= 2}
               style={{
-                background: color.surface, color: page <= 2 ? alpha(color.textMuted, 0.35) : color.text,
-                border: `1px solid ${color.border}`, padding: '5px 10px', borderRadius: radius[6],
-                fontSize: fontSize[10], cursor: page <= 2 ? 'not-allowed' : 'pointer', fontWeight: fontWeight.bold,
+                background: color.bgSecondary, color: page <= 2 ? alpha(color.labelTertiary, 0.35) : color.labelPrimary,
+                border: `1px solid ${color.separator}`, padding: '5px 10px', borderRadius: radius[8],
+                fontSize: fontSize[11], cursor: page <= 2 ? 'not-allowed' : 'pointer', fontWeight: fontWeight.bold,
               }}
             >
               ← prev
             </button>
-            <span style={{ color: color.accent, fontSize: fontSize[10], fontWeight: fontWeight.bold }}>
+            <span style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold }}>
               page {data.page ?? page} / {data.pages}
             </span>
             <button
               onClick={() => setPage(p => Math.min(data.pages || 10, p + 1))}
               disabled={page >= (data.pages || 10)}
               style={{
-                background: color.surface, color: page >= (data.pages || 10) ? alpha(color.textMuted, 0.35) : color.text,
-                border: `1px solid ${color.border}`, padding: '5px 10px', borderRadius: radius[6],
-                fontSize: fontSize[10], cursor: page >= (data.pages || 10) ? 'not-allowed' : 'pointer', fontWeight: fontWeight.bold,
+                background: color.bgSecondary, color: page >= (data.pages || 10) ? alpha(color.labelTertiary, 0.35) : color.labelPrimary,
+                border: `1px solid ${color.separator}`, padding: '5px 10px', borderRadius: radius[8],
+                fontSize: fontSize[11], cursor: page >= (data.pages || 10) ? 'not-allowed' : 'pointer', fontWeight: fontWeight.bold,
               }}
             >
               next →
             </button>
-            <span style={{ color: color.textMuted, fontSize: fontSize[10] }}>page 1 = feed</span>
+            <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>page 1 = feed</span>
           </span>
         )}
         {data?.windowH !== undefined && (
-          <span style={{ color: color.textMuted, fontSize: fontSize[10], alignSelf: 'center' }}>
+          <span style={{ color: color.labelTertiary, fontSize: fontSize[11], alignSelf: 'center' }}>
             window {data.windowH}h · {stats.liqCoverage}% liq coverage
             {stats.holderCoverage < 100 && ` · ${stats.holderCoverage}% holders`}
             {MERGED.includes(chain) && data.counts.rh !== undefined && data.counts.sol !== undefined &&
@@ -292,13 +292,13 @@ export default function SignalsPage() {
       </div>
 
       {error && (
-        <p style={{ color: color.negative, fontSize: fontSize[12], background: alpha(color.negative, 0.08), border: `1px solid ${color.negative}`, borderRadius: radius[6], padding: space[8] }}>
+        <p style={{ color: color.red, fontSize: fontSize[12], background: alpha(color.red, 0.08), border: `1px solid ${color.red}`, borderRadius: radius[8], padding: space[8] }}>
           upstream failed: {error} — no data faked, retry or check data-public.vercel.app
         </p>
       )}
 
       {!error && data && (
-        <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap', marginBottom: space[12], fontSize: fontSize[10] }}>
+        <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap', marginBottom: space[12], fontSize: fontSize[11] }}>
           {[
             ['rows', n2(stats.total)],
             ['avg score', stats.avgScore === null ? '—' : stats.avgScore.toFixed(1)],
@@ -307,9 +307,9 @@ export default function SignalsPage() {
             ['liq coverage', `${stats.liqCoverage}%`],
             ['generated', new Date(data.generatedAt * 1000).toISOString().replace('T', ' ').slice(0, 16)],
           ].map(([k, v]) => (
-            <div key={k} style={{ background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius[6], padding: `${space[6]}px ${space[10]}px` }}>
-              <span style={{ color: color.textMuted }}>{k} </span>
-              <span style={{ color: color.accent, fontWeight: fontWeight.bold }}>{v}</span>
+            <div key={k} style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px` }}>
+              <span style={{ color: color.labelTertiary }}>{k} </span>
+              <span style={{ color: color.blue, fontWeight: fontWeight.bold }}>{v}</span>
             </div>
           ))}
         </div>
@@ -322,13 +322,13 @@ export default function SignalsPage() {
         // table. An empty grid with "no rows match filter" reads as a
         // legitimate empty result, which is exactly the silent fake this
         // project must never produce.
-        <p style={{ color: color.negative, fontSize: fontSize[12] }}>
+        <p style={{ color: color.red, fontSize: fontSize[12] }}>
           no data loaded — the table is withheld because the upstream fetch failed.
         </p>
       ) : error && data ? (
         // Stale-but-real data is still worth showing, provided it is labelled
         // with the timestamp it was actually generated at.
-        <p style={{ color: color.attention, fontSize: fontSize[11], marginBottom: space[8] }}>
+        <p style={{ color: color.orange, fontSize: fontSize[11], marginBottom: space[8] }}>
           ⚠ stale — showing the last successful load from{' '}
           {new Date(data.generatedAt * 1000).toISOString().replace('T', ' ').slice(0, 16)}
           , not live data. Refresh failed: {error}
@@ -339,9 +339,9 @@ export default function SignalsPage() {
         <div style={{ overflowX: 'auto' }}>
           <Table style={{ fontSize: fontSize[11] }}>
             <THead>
-              <tr style={{ color: color.textMuted, textAlign: 'left', borderBottom: `1px solid ${color.border}` }}>
+              <tr style={{ color: color.labelTertiary, textAlign: 'left', borderBottom: `1px solid ${color.separator}` }}>
                 {['age', ...(MERGED.includes(chain) ? ['chain'] : []), 'token', 'decision', 'score', 'mcap', 'liq', 'price', 'holders', 'top%', 'sight', 'src', 'kind'].map(h => (
-                  <th key={h} style={{ padding: `${space[6]}px ${space[8]}px`, fontWeight: fontWeight.medium, whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h} style={{ padding: `${space[8]}px ${space[8]}px`, fontWeight: fontWeight.medium, whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </THead>
@@ -349,53 +349,52 @@ export default function SignalsPage() {
               {rows.slice(0, 300).map(r => (
                 <tr
                   key={`${r.id}-${r.mint}`}
-                  onClick={() => window.open(r.url, '_blank')}
-                  style={{ borderBottom: `1px solid ${alpha(color.border, 0.4)}`, cursor: 'pointer' }}
-                  onMouseOver={e => { e.currentTarget.style.background = alpha(color.accent, 0.05); }}
+                  style={{ borderBottom: `1px solid ${alpha(color.separator, 0.4)}` }}
+                  onMouseOver={e => { e.currentTarget.style.background = alpha(color.blue, 0.05); }}
                   onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.textMuted, whiteSpace: 'nowrap' }}>{ago(r.ts)}</td>
+                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary, whiteSpace: 'nowrap' }}>{ago(r.ts)}</td>
                   {MERGED.includes(chain) && (
-                    <td style={{ padding: `${space[6]}px ${space[8]}px`, color: r.chain === 'robinhood' ? chainColor('robinhood') : chainColor('solana'), whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: r.chain === 'robinhood' ? chainColor('robinhood') : chainColor('solana'), whiteSpace: 'nowrap' }}>
                       {r.chain === 'robinhood' ? '🪶 rh' : r.chain === 'solana' ? '◎ sol' : r.chain || '—'}
                     </td>
                   )}
-                  <td style={{ padding: `${space[6]}px ${space[8]}px`, whiteSpace: 'nowrap' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[6] }}>
+                  <td style={{ padding: `${space[8]}px ${space[8]}px`, whiteSpace: 'nowrap' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8] }}>
                       {r.image
-                        ? <img src={r.image} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
-                        : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.border, display: 'inline-block' }} />}
-                      <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{r.symbol || '?'}</span>
-                      <span style={{ color: color.textMuted }}>{shortAddr(r.mint)}</span>
+                        ? <img src={imgSrc(r.image)} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
+                        : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.separator, display: 'inline-block' }} />}
+                      <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{r.symbol || '?'}</span>
+                      <span style={{ color: color.labelTertiary }}>{shortAddr(r.mint)}</span>
                     </span>
                   </td>
-                  <td style={{ padding: `${space[6]}px ${space[8]}px`, whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: `${space[8]}px ${space[8]}px`, whiteSpace: 'nowrap' }}>
                     {r.decision
-                      ? <span style={{ color: DECISION_COLOR[r.decision] || color.textMuted }}>{r.decision}</span>
-                      : <span style={{ color: color.textMuted }}>—</span>}
+                      ? <span style={{ color: DECISION_COLOR[r.decision] || color.labelTertiary }}>{r.decision}</span>
+                      : <span style={{ color: color.labelTertiary }}>—</span>}
                   </td>
-                  <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.accent }}>{typeof r.score === 'number' ? r.score.toFixed(1) : '—'}</td>
-                  <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.text }}>{usd(r.mcap)}</td>
-                  <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.text }}>{typeof r.liq === 'number' ? usd(r.liq) : '—'}</td>
-                  <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.text }}>{typeof r.price === 'number' ? `$${r.price.toPrecision(4)}` : '—'}</td>
-                  <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.text }}>{typeof r.holdersCount === 'number' ? n2(r.holdersCount) : '—'}</td>
-                  <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.text }}>{typeof r.topHolderPct === 'number' ? `${r.topHolderPct.toFixed(1)}%` : '—'}</td>
-                  <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.textMuted }}>
+                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.blue }}>{typeof r.score === 'number' ? r.score.toFixed(1) : '—'}</td>
+                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{usd(r.mcap)}</td>
+                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof r.liq === 'number' ? usd(r.liq) : '—'}</td>
+                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof r.price === 'number' ? `$${r.price.toPrecision(4)}` : '—'}</td>
+                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof r.holdersCount === 'number' ? n2(r.holdersCount) : '—'}</td>
+                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof r.topHolderPct === 'number' ? `${r.topHolderPct.toFixed(1)}%` : '—'}</td>
+                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>
                     {r.sightings ? `${r.sightings.n}×/${r.sightings.spanH}h` : typeof r.persistCount === 'number' ? `×${r.persistCount}` : '—'}
                   </td>
-                  <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.textMuted }}>{r.source || '—'}</td>
-                  <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.textMuted }}>{r.kind}</td>
+                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>{r.source || '—'}</td>
+                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>{r.kind}</td>
                 </tr>
               ))}
             </TBody>
           </Table>
           {rows.length === 0 && !loading && (
-            <p style={{ color: color.textMuted, fontSize: fontSize[12], marginTop: space[10] }}>
+            <p style={{ color: color.labelTertiary, fontSize: fontSize[12], marginTop: space[8] }}>
               {error ? 'upstream failed — row list withheld, not empty' : 'no rows match filter'}
             </p>
           )}
           {rows.length > 300 && (
-            <p style={{ color: color.textMuted, fontSize: fontSize[10], marginTop: space[8] }}>
+            <p style={{ color: color.labelTertiary, fontSize: fontSize[11], marginTop: space[8] }}>
               showing first 300 of {n2(rows.length)} — narrow the filter to see more
             </p>
           )}

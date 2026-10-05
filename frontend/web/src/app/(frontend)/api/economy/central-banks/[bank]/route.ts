@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { CENTRAL_BANK_BY_SLUG, INDICATORS } from '@/features/economy/registry';
+import { CENTRAL_BANK_BY_SLUG, INDICATORS } from '@/features/economy/model';
 import { readObservations } from '@/app/(frontend)/api/economy/_lib/adapters';
 import { toMeta } from '@/app/(frontend)/api/economy/_lib/rows';
 

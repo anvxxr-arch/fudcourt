@@ -18,12 +18,12 @@ import {
   WORLD_CODES,
   WORLD_COUNTRIES,
   type MacroQuote,
-} from '@/features/market/macro/client';
-import { YAHOO_CHART, YAHOO_UA, chartUrl, parseChart } from '@/features/market/quotes';
-import { daysAgo, fetchPolicyRates, SOURCE_UA } from '@/features/market/sources/bis';
-import { fetchFred } from '@/features/market/sources/fred';
-import { fetchWorldBankSeries, pickLatestAndPrior, type WorldBankPoint } from '@/features/market/sources/worldbank';
-import { limitedFetch } from '@/platform/http/rate-limit';
+} from '@/features/market/clients';
+import { YAHOO_CHART, YAHOO_UA, chartUrl, parseChart } from '@/features/market/clients';
+import { daysAgo, fetchPolicyRates, SOURCE_UA } from '@/features/market/bis';
+import { fetchFred } from '@/features/market/fred';
+import { fetchWorldBankSeries, pickLatestAndPrior, type WorldBankPoint } from '@/features/market/worldbank';
+import { limitedFetch } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

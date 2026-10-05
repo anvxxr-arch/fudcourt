@@ -26,8 +26,8 @@
  * Usage: cd frontend/web && npm run dump:envelopes
  *   (Same tsc -> node pattern as test:shapers / record:fixtures: plain
  *    `node tests/oracle/dump-envelopes.ts` cannot resolve the extensionless
- *    `@/features/cryptorank/...` imports. Equivalent one-liner:
- *      npx tsc src/features/cryptorank/{client,shapers}.ts tests/oracle/dump-envelopes.ts \
+ *    `@/features/market-data/cryptorank` import. Equivalent one-liner:
+ *      npx tsc src/features/market-data/cryptorank.ts tests/oracle/dump-envelopes.ts \
  *        --outDir .shaper-tests --module commonjs --moduleResolution node \
  *        --target es2020 --esModuleInterop --skipLibCheck --types node --noEmitOnError \
  *      && node --require ./tests/alias-resolver.cjs .shaper-tests/tests/oracle/dump-envelopes.js
@@ -50,8 +50,9 @@ import {
   CR_MODE_ARGS,
   CR_MODE_UPSTREAM,
   type CrLiveMode,
-} from '@/features/cryptorank/client';
-import { envelope, type HelperOut } from '@/features/cryptorank/shapers';
+  envelope,
+  type HelperOut,
+} from '@/features/market-data/cryptorank';
 
 // This generator lives in the repo-root tests/oracle/ (it produces the shared
 // oracle, not web-app tooling). The shared tree is resolved by walking up from the

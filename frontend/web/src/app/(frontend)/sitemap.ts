@@ -1,9 +1,9 @@
 import type { MetadataRoute } from 'next';
-import { PUBLIC_ROUTES } from '@/platform/routing/public-routes';
+import { PUBLIC_ROUTES } from '@/server/routes';
 import { TICKER_SYMBOLS } from '@/features/ticker/client';
-import { COUNTRY_LIST, INDICATORS, CENTRAL_BANKS } from '@/features/economy/registry';
-import { MARKET_TYPES } from '@/features/trade/taxonomy';
-import { INSTRUMENTS } from '@/features/trade/instrument';
+import { COUNTRY_LIST, INDICATORS, CENTRAL_BANKS } from '@/features/economy/model';
+import { MARKET_TYPES } from '@/features/trade/model';
+import { INSTRUMENTS } from '@/features/trade/model';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = PUBLIC_ROUTES.map((route) => ({

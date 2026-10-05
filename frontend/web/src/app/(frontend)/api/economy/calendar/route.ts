@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { INDICATORS } from '@/features/economy/registry';
+import { INDICATORS } from '@/features/economy/model';
 import { readObservations } from '@/app/(frontend)/api/economy/_lib/adapters';
 import { mapPool, toReleaseRow } from '@/app/(frontend)/api/economy/_lib/rows';
-import { CATEGORY_BY_ID } from '@/features/economy/taxonomy';
+import { CATEGORY_BY_ID } from '@/features/economy/model';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

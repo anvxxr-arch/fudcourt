@@ -1,4 +1,4 @@
-import CentralBankIndex from '@/features/economy/ui/central-bank-index';
+import CentralBankIndex from '@/features/economy/ui/central-bank';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';

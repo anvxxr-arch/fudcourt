@@ -9,8 +9,11 @@ import {
   type TickerInstrument,
   type TickerType,
 } from '@/features/ticker/client';
-import { ensureMarkets, instrumentsFor } from '@/features/ticker/instruments';
-import { tickerClients } from '@/features/ticker/venues';
+import {
+  ensureMarkets,
+  instrumentsFor,
+  tickerClients,
+} from '@/server/ticker';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

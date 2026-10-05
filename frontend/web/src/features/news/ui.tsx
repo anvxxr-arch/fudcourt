@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { color, fontSize, fontWeight, lineHeight, radius, space } from '@/styles/tokens';
-import { EmptyState, Loading } from '@/components/ui/feedback';
-import { Toolbar } from '@/components/ui/toolbar';
+import { EmptyState, Loading } from '@/ui/feedback';
+import { Toolbar } from '@/ui/toolbar';
+import { imgSrc } from '@/lib/img';
+import { fetchNews } from './client';
 
 type NewsItem = {
   title: string;
@@ -23,9 +25,7 @@ export default function NewsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/news?limit=30', { cache: 'no-store' });
-      if (!res.ok) throw new Error('API error');
-      const json = await res.json();
+      const json = await fetchNews();
       setItems(json.items || []);
     } catch (e: any) {
       setError(e.message);
@@ -44,46 +44,44 @@ export default function NewsPage() {
   return (
     <div>
       <Toolbar actions={
-        <button onClick={load} style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[14]}px`, borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer' }}>
+        <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       }>
-        <h3 style={{ color: color.accent, margin: 0 }}>Crypto News</h3>
+        <h3 style={{ color: color.blue, margin: 0 }}>Crypto News</h3>
       </Toolbar>
 
-      {error && <p style={{ color: color.negative, fontSize: fontSize[12] }}>{error}</p>}
+      {error && <p style={{ color: color.red, fontSize: fontSize[12] }}>{error}</p>}
 
       {loading ? (
         <Loading label="Loading news..." />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: space[10] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: space[8] }}>
           {items.map((item, i) => (
             <div
               key={i}
               style={{
-                background: color.surface,
-                border: `1px solid ${color.border}`,
+                background: color.bgSecondary,
+                border: `1px solid ${color.separator}`,
                 borderRadius: radius[8],
                 overflow: 'hidden',
-                cursor: 'pointer',
               }}
-              onClick={() => window.open(item.link, '_blank')}
             >
               {item.image && (
                 <div style={{
                   height: 100,
-                  backgroundImage: `url(${item.image})`,
+                  backgroundImage: `url(${imgSrc(item.image)})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                 }} />
               )}
-              <div style={{ padding: space[10] }}>
-                <div style={{ fontSize: fontSize[10], color: color.accent, marginBottom: space[4] }}>{item.source} · {fmtDate(item.pubDate)}</div>
-                <div style={{ fontWeight: fontWeight.bold, fontSize: fontSize[12], color: color.text, marginBottom: space[4], lineHeight: lineHeight.tight }}>
+              <div style={{ padding: space[8] }}>
+                <div style={{ fontSize: fontSize[11], color: color.blue, marginBottom: space[4] }}>{item.source} · {fmtDate(item.pubDate)}</div>
+                <div style={{ fontWeight: fontWeight.bold, fontSize: fontSize[12], color: color.labelPrimary, marginBottom: space[4], lineHeight: lineHeight.tight }}>
                   {item.title}
                 </div>
                 {item.description && (
-                  <p style={{ fontSize: fontSize[10], color: color.textMuted, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  <p style={{ fontSize: fontSize[11], color: color.labelTertiary, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {item.description}
                   </p>
                 )}

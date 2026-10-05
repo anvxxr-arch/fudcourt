@@ -10,8 +10,8 @@ import {
   type MarketsCoin,
   type MarketsOrder,
   type MarketsSort,
-} from '@/features/markets/client';
-import { limitedFetch } from '@/platform/http/rate-limit';
+} from '@/features/market-data/markets';
+import { limitedFetch } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

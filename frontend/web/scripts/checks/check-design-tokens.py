@@ -53,7 +53,7 @@ RULES over `src/**/*.{css,scss}`:
 
 Why rule 1 is a WHITELIST (`CSS_NAMED_COLORS`) rather than a `[A-Za-z]+` value pattern: the generic
 shape matched `fill: 'FILLED'` in the executor's child-order lifecycle table (`TRANSITIONS`,
-`src/platform/executor/engine.ts`) — `fill` is an EVENT key and `'FILLED'` a STATUS there, and a rule
+`src/lib/executor.ts`) — `fill` is an EVENT key and `'FILLED'` a STATUS there, and a rule
 that calls a status a colour cannot go green on a correct tree.
 
 EXEMPTIONS (minimal, justified per entry; the gate fails if an exact path is gone or a glob entry
@@ -62,7 +62,7 @@ with `fnmatch`, never by dict membership: a key like `src/features/*/palette.ts`
 PATTERNS, and would otherwise exempt only a file literally named `*`.
   RAW COLOURS
   - `src/styles/tokens.ts` — the SSOT itself: it necessarily contains every raw value.
-  - `src/styles/shared.ts` — keeps the DOMAIN palettes `CHAIN_COLOR` and `COLOR_PRESETS`: brand and
+  - `src/lib/format.ts` — keeps the DOMAIN palettes `CHAIN_COLOR` and `COLOR_PRESETS`: brand and
     provider colours (chain identity) and the user's own wallet-swatch choices. These are DATA the
     user picks at runtime, not design chrome; `C` in this file is the legacy table the cutover
     deletes and `tokens.ts` intentionally does not re-export it.
@@ -100,7 +100,7 @@ WHAT THIS CANNOT CATCH (stated, not implied)
     known property is matched, so a colour computed in a map, passed through a variable, or written
     as a bare CSS value in a template string is not seen. State-driven tables are why the value
     pattern is a whitelist (see above): `fill: 'FILLED'` in
-    `src/platform/executor/engine.ts` is an event/status pair, not a colour, and must not be
+    `src/lib/executor.ts` is an event/status pair, not a colour, and must not be
     reported.
 
 Exit codes: 0 every rule held · 1 at least one violation.
@@ -123,7 +123,7 @@ SENTINEL_END = "/* @generated design-tokens:end */"
 # Raw colours are permitted in these files, for the reasons in the header.
 COLOR_EXEMPT: dict[str, str] = {
     "src/styles/tokens.ts": "the token SSOT itself — where the raw values are written down",
-    "src/styles/shared.ts": "keeps the DOMAIN palettes CHAIN_COLOR + COLOR_PRESETS (brand/provider colours and the user's wallet swatches — data, not chrome)",
+    "src/lib/format.ts": "keeps the DOMAIN palettes CHAIN_COLOR + COLOR_PRESETS (brand/provider colours and the user's wallet swatches — data, not chrome)",
     "src/cms/seed.ts": "inline SVG placeholder asset uploaded as CMS media, not UI chrome",
 }
 COLOR_EXEMPT_DIRS: dict[str, str] = {
@@ -137,7 +137,7 @@ COLOR_EXEMPT_GLOBS: dict[str, str] = {
 PERMITTED_KEYWORDS = {"transparent", "currentcolor", "inherit"}
 # A WHITELIST of the CSS Colour Level 4 named colours (plus the permitted keywords above), not
 # `[A-Za-z]+`. The generic shape matched `fill: 'FILLED'` in the executor's child-order lifecycle
-# table (`TRANSITIONS`, `src/platform/executor/engine.ts`) — `fill` there is an EVENT name and
+# table (`TRANSITIONS`, `src/lib/executor.ts`) — `fill` there is an EVENT name and
 # `'FILLED'` a STATUS, not a CSS value, and the gate cannot go green on a correct tree while a rule
 # confuses the two. Anything not on this list is not a colour and is left alone.
 CSS_NAMED_COLORS = {
@@ -199,6 +199,8 @@ VAR_SCHEME = {
     "lineHeight": "--fc-line-height-",
     "letterSpacing": "--fc-letter-spacing-",
     "zIndex": "--fc-z-index-",
+    "motion": "--fc-motion-",
+    "target": "--fc-target-",
 }
 
 hard: dict[str, list[str]] = {"color": [], "scale": [], "dead": []}

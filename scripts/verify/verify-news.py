@@ -274,7 +274,7 @@ def verify_ui_wiring(base: str) -> None:
               note(m_lo.group(1) if m_lo else "?", "..", m_hi.group(1) if m_hi else "?"))
         check("must be between 1 and 100" in go_src,
               "the 400 phrase matches the bounds (a drifting message is the bug)")
-    shell = (root / "src/components/layout/store-shell.tsx").read_text()
+    shell = (root / "src/features/overview/store-shell.tsx").read_text()
     page = (root / "src/features/news/ui.tsx").read_text()
     check("'news'" in shell and "NewsPage" in shell, "shell wires the news tab")
     check("src/app/(frontend)/(public)/news/page.tsx" or (root / "src/app/(frontend)/(public)/news/page.tsx").exists(),

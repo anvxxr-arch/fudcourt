@@ -5,8 +5,8 @@ import {
   FOREX_UPSTREAM,
   buildPair,
   type ForexPair,
-} from '@/features/market/forex/client';
-import { limitedFetch } from '@/platform/http/rate-limit';
+} from '@/features/market/forex';
+import { limitedFetch } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

@@ -176,6 +176,13 @@ func (w *Worker) runActions(ctx context.Context, rec execution.ExecutionRecord, 
 			if !placementEnabled {
 				break // recovery reconciles first (§114); belt and braces on the gate
 			}
+			// §108 kill switch (parity with the TS liveBlocked): a live
+			// execution may not place unless the operator enabled live trading.
+			// Pause it honestly and stop the pass — never send the order.
+			if rec.Mode == execution.ModeLive && !w.cfg.LiveEnabled {
+				w.pauseLiveDisabled(ctx, rec, w.clock.Now())
+				return true
+			}
 			if w.placeChild(ctx, rec, ex, a) {
 				return true
 			}
@@ -449,6 +456,23 @@ func (w *Worker) cancelEntryAndFinish(ctx context.Context, rec execution.Executi
 	}
 	_ = w.cfg.Store.SaveExecution(ctx, updated)
 	w.event(ctx, updated.ID, eventName, map[string]any{"reason": reason}, now)
+}
+
+// pauseLiveDisabled lands a live execution in PAUSED because the §108 kill
+// switch (FUDCOURT_EXECUTOR_LIVE) is off — the exact posture the TS worker's
+// liveBlocked() produces: refuse to place, emit reason, stop the pass.
+// Nothing is sent to the venue and the execution is recoverable (resume places
+// on a later pass once live trading is enabled).
+func (w *Worker) pauseLiveDisabled(ctx context.Context, rec execution.ExecutionRecord, now int64) {
+	agg := execution.New(rec)
+	updated, transitioned, err := agg.Apply(execution.CommandPause, now)
+	if err != nil || !transitioned {
+		return // already paused/terminal, or an illegal move: nothing to record
+	}
+	_ = w.cfg.Store.SaveExecution(ctx, updated)
+	w.event(ctx, updated.ID, execution.EventExecutionPaused, map[string]any{
+		"reason": "live trading disabled: FUDCOURT_EXECUTOR_LIVE is not 1 (kill switch, PRD §108)",
+	}, now)
 }
 
 // cancelChild cancels ONE child at the venue and records the outcome.

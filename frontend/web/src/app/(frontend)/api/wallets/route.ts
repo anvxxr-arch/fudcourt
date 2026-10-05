@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/platform/db/client';
-import { requireMutationAuth } from '@/platform/auth/mutation';
+import { query } from '@/server/db';
+import { requireMutationAuth } from '@/server/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Offline contract checks — no network, no DB (PLAN T-2.2.2, R-2).
-1. CR_MODES in src/features/cryptorank/client.ts must match the cryptorank query list in
+1. CR_MODES in src/features/market-data/cryptorank.ts must match the cryptorank query list in
    verify_all_routes.py and the mode spot-list in verify-cryptorank.py.
 2. Every mutating handler in app/api/{transactions,transactions/[id],wallets}
    must `await requireMutationAuth(req)` (R-6 fail-closed session-tier auth —
@@ -9,7 +9,7 @@
    bundle).
 3. ONE CONTRACT, TWO IMPLEMENTATIONS: the Go sidecar (backend/data) owns the
    CryptoRank mode/key tables at runtime, so its table in
-   internal/research/cryptorank/modes.go must EQUAL the TS table in src/features/cryptorank/client.ts --
+   internal/research/cryptorank/modes.go must EQUAL the TS table in src/features/market-data/cryptorank.ts --
    mode list, disabled list, the exchange/launchpool/nodesale/RWA whitelists
    and the two keyed tables. Drift here means the Go service accepts or serves
    something the rest of this repo does not document (or vice versa), which is
@@ -42,10 +42,10 @@ GO_TABLE = Path(os.environ.get(
     "FUDCOURT_DATA_MODES_GO", REPO / "backend" / "data" / "internal" / "research" / "cryptorank" / "modes.go"))
 fails = []
 def modes_from_lib() -> set:
-    src = (SRC / "features" / "cryptorank" / "client.ts").read_text()
+    src = (SRC / "features" / "market-data" / "cryptorank.ts").read_text()
     m = re.search(r"export const CR_MODES = \[([^\]]*)\]", src, re.S)
     if not m:
-        fails.append("src/features/cryptorank/client.ts: CR_MODES not found")
+        fails.append("src/features/market-data/cryptorank.ts: CR_MODES not found")
         return set()
     return set(re.findall(r"'([a-z0-9-]+)'", m.group(1)))
 def sweep_modes_from(src: str) -> set:
@@ -127,7 +127,7 @@ def check_go_table() -> bool:
         fails.append(f"backend/data mode table not found at {GO_TABLE} — the TS<->Go parity "
                      "rows cannot run (tracked source missing?)")
         return False
-    ts = (SRC / "features" / "cryptorank" / "client.ts").read_text()
+    ts = (SRC / "features" / "market-data" / "cryptorank.ts").read_text()
     go = GO_TABLE.read_text()
     # (label, TS declaration, Go declaration, kind) -- kind: list | map
     pairs = [
@@ -149,7 +149,7 @@ def check_go_table() -> bool:
             want = keys_of(block_after(ts, f"export const {ts_name}", "{", "}"), quote=None)
             got = keys_of(block_after(go, f"var {go_name} = map[", "{", "}"))
         if want is None:
-            fails.append(f"src/features/cryptorank/client.ts: {label} not found (parse drift?)")
+            fails.append(f"src/features/market-data/cryptorank.ts: {label} not found (parse drift?)")
         elif got is None:
             fails.append(f"internal/cryptorank/modes.go: {go_name} not found (parse drift?)")
         elif want != got:
@@ -291,7 +291,21 @@ def _keyless_parity(prefix, family, needles):
     go = Path(os.environ.get(f"FUDCOURT_DATA_{family.upper()}_GO",
                              str(REPO / "backend" / "data" / "internal" / "research" / family / "modes.go")))
     row = f"{family} absent"
-    if ts.exists() and go.exists():
+    if not ts.exists():
+        # The TS typing mirror was retired with the features/* -> features/market-data
+        # migration: the Go mode table is now the only mode-table source (same
+        # convention as DR-041's khala/chainrank rows). The route-proxy check below
+        # still runs; the Go table itself must still exist and parse as a mode list.
+        if not go.exists():
+            fails.append(f"{go}: Go mode table missing — the retired-mirror row requires it")
+        else:
+            go_modes = set(re.findall(
+                r'"([A-Za-z0-9-]+)"', block_after(go.read_text(), "var Modes = []string", "{", "}") or ""))
+            if not go_modes:
+                fails.append(f"{go}: Go mode table empty/unparseable — retired-mirror row requires a real mode list")
+            else:
+                row = f"{family} TS mirror retired (Go-only mode table, {len(go_modes)} modes)"
+    elif ts.exists() and go.exists():
         ts_modes = set(re.findall(
             r"'([A-Za-z0-9-]+)'", block_after(ts.read_text(), f"{prefix}_MODES =", "[", "]") or ""))
         go_modes = set(re.findall(
@@ -342,12 +356,12 @@ if RC_ROUTE.exists():
     # implementation a runtime path again.
     if re.search(r"import[^;]*from\s+['\"][^'\"]*lib/reconcile", src_nocomment) or "reconcile(" in src_nocomment:
         fails.append("src/app/(frontend)/api/reconcile/route.ts: imports/calls the TS shaper — the Rust "
-                     "service owns this route; src/features/treasury/reconcile.ts is the oracle, not a fallback")
+                     "service owns this route; src/features/overview/reconcile.ts is the oracle, not a fallback")
     if "502" not in src_nocomment:
         fails.append("src/app/(frontend)/api/reconcile/route.ts: no 502 path — an unreachable service must fail loud")
-    # src/features/treasury/reconcile.ts must still exist as the oracle, or parity has no second side.
-    if not (SRC / "features" / "treasury" / "reconcile.ts").exists():
-        fails.append("src/features/treasury/reconcile.ts: the TS oracle is gone — parity has no second side")
+    # src/features/overview/reconcile.ts must still exist as the oracle, or parity has no second side.
+    if not (SRC / "features" / "overview" / "reconcile.ts").exists():
+        fails.append("src/features/overview/reconcile.ts: the TS oracle is gone — parity has no second side")
     elif not (REPO / "scripts" / "verify" / "verify-reconcile.py").exists():
         fails.append("scripts/verify/verify-reconcile.py: contract harness is gone")
     else:

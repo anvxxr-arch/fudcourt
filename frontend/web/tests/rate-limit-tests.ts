@@ -29,8 +29,9 @@ import {
   costForRequest,
   __bucketCount,
   __resetRateLimit,
-} from '@/platform/http/rate-limit-inbound';
-import { limitedFetch, __resetLimiter } from '@/platform/http/rate-limit';
+  __resetLimiter,
+  limitedFetch,
+} from '@/lib/rate-limit';
 const T0 = 1_700_000_000_000;
 const q = (mode?: string) => new URLSearchParams(mode === undefined ? {} : { mode });
 const cost = (path: string, mode?: string) => costForRequest(path, q(mode));
@@ -87,7 +88,7 @@ test('cost: the executor family is priced above the default — placing an order
 });
 test('budget: a real cryptorank board mount still fits one window', () => {
   __resetRateLimit();
-  // Measured mount (src/components/CryptorankPage.tsx §useEffect):
+  // Measured mount (src/features/market-data/cryptorank.ts §useEffect):
   // home + coin + exchanges + listings + blockchains + chain + news + tags + tag
   // = 1 + 1 + 1 + 1 + 2 + 20 + 1 + 2 + 3 = 32 units. Tuning the heavy allowance
   // below two mounts would break the board on the fix meant to protect it.
@@ -299,7 +300,7 @@ test('decision: every answer describes itself', () => {
   assert.equal(d.remaining, d.limit - d.cost, 'the first request spends exactly its cost');
 });
 
-// --- outbound limiter (platform/http/rate-limit.ts) --------------------------
+// --- outbound limiter (src/lib/rate-limit.ts) --------------------------
 //
 // The outbound limiter serialises every upstream call through ONE promise chain,
 // so a fetch that never settles would stall the whole family, not just its own

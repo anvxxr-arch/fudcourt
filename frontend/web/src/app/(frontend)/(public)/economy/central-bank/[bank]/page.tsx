@@ -1,5 +1,5 @@
-import CentralBankDetail from '@/features/economy/ui/central-bank';
-import { CENTRAL_BANK_BY_SLUG } from '@/features/economy/registry';
+import { CentralBankDetail } from '@/features/economy/ui/central-bank';
+import { CENTRAL_BANK_BY_SLUG } from '@/features/economy/model';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 

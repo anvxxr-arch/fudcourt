@@ -21,8 +21,7 @@ process.env.FUDCOURT_SESSION_SECRET = 'test-secret-at-least-32-characters-long!!
 
 // Imported after the env is set: readSession/sign are read at call time, but
 // tierFromRoles reads env on every call, so the order still matters for clarity.
-import { createSessionToken, readSession, TIER_RANK, type SessionUser } from '@/platform/auth/session';
-import { hasTier, isSafeNext, requiredTierForPath, tierFromRoles } from '@/platform/auth/guard';
+import { TIER_RANK, createSessionToken, hasTier, isSafeNext, readSession, requiredTierForPath, tierFromRoles, type SessionUser } from '@/server/auth';
 
 const SECRET = process.env.FUDCOURT_SESSION_SECRET;
 
@@ -147,7 +146,7 @@ test('secret hygiene: no build-time auth secret reaches the client bundle', () =
   // baked into a public JS chunk. Guard that regression: only executable code
   // is checked, with comment lines stripped, so the explanatory note naming
   // the retired variable does not trip the assertion.
-  const source = readFileSync(join(process.cwd(), 'src', 'platform', 'http', 'mut-client.ts'), 'utf8')
+  const source = readFileSync(join(process.cwd(), 'src', 'lib', 'http.ts'), 'utf8')
     .split('\n')
     .filter(line => !line.trimStart().startsWith('//'))
     .join('\n');

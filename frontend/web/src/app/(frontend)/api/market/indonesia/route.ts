@@ -13,12 +13,12 @@ import {
   ID_APBN_IDS,
   ID_POLICY_AREA,
   ID_POLICY_LABEL,
-} from '@/features/market/indonesia/client';
-import { YAHOO_CHART, YAHOO_UA, chartUrl, parseChart } from '@/features/market/quotes';
-import { fetchPolicyRates, SOURCE_UA } from '@/features/market/sources/bis';
-import { fetchWorldBank } from '@/features/market/sources/worldbank';
-import { fetchImfFiscal } from '@/features/market/sources/imf';
-import { limitedFetch } from '@/platform/http/rate-limit';
+} from '@/features/market/clients';
+import { YAHOO_CHART, YAHOO_UA, chartUrl, parseChart } from '@/features/market/clients';
+import { fetchPolicyRates, SOURCE_UA } from '@/features/market/bis';
+import { fetchWorldBank } from '@/features/market/worldbank';
+import { fetchImfFiscal } from '@/features/market/imf';
+import { limitedFetch } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

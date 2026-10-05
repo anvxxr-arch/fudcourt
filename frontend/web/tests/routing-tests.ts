@@ -23,7 +23,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
-import { PUBLIC_ROUTES } from '@/platform/routing/public-routes';
+import { PUBLIC_ROUTES } from '@/server/routes';
 import robots from '@/app/robots';
 
 const APP = path.join(process.cwd(), 'src', 'app');

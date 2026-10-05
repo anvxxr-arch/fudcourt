@@ -114,6 +114,9 @@ type Paper struct {
 
 	balances  map[string]balanceState
 	marks     map[string]string
+	// source is the optional live market-data delegate; nil is the hermetic
+	// simulator. Guarded by mu like every other field.
+	source MarketSource
 	orders    map[string]*orderState
 	byClient  map[string]string // ClientOrderID -> order id (idempotency, objective §23)
 	orderSeq  []string          // acceptance order for stable iteration
@@ -220,6 +223,7 @@ func NewPaper(cfg PaperConfig) (*Paper, error) {
 		rejectCat:    rejectCat,
 		balances:     balances,
 		marks:        marks,
+		source:       cfg.Source,
 		instruments:  cfg.Instruments,
 		makerBps:     strconv.FormatInt(maker, 10),
 		takerBps:     strconv.FormatInt(taker, 10),
@@ -537,6 +541,11 @@ func (p *Paper) GetTicker(ctx context.Context, symbol string) (execution.Ticker,
 	if err := validateSymbol(symbol); err != nil {
 		return execution.Ticker{}, err
 	}
+	// Live source: delegate the quote (the faithful TS mirror — the paper
+	// venue owns matching, the source owns the tape).
+	if src := p.sourceRef(); src != nil {
+		return src.GetTicker(ctx, symbol)
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if err := p.beginCall(); err != nil {
@@ -764,6 +773,9 @@ func (p *Paper) GetFills(ctx context.Context, symbol string) ([]execution.Fill, 
 // the simulator genuinely has no tradable set, and the planner's missing-symbol
 // refusal — not a fabricated grid — is the honest outcome.
 func (p *Paper) GetMarkets(ctx context.Context) ([]exchanges.Market, error) {
+	if src := p.sourceRef(); src != nil {
+		return src.GetMarkets(ctx)
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if err := p.beginCall(); err != nil {
@@ -788,6 +800,9 @@ func (p *Paper) GetMarkets(ctx context.Context) ([]exchanges.Market, error) {
 func (p *Paper) GetFees(ctx context.Context, symbol string) (exchanges.FeeModel, error) {
 	if err := validateSymbol(symbol); err != nil {
 		return exchanges.FeeModel{}, err
+	}
+	if src := p.sourceRef(); src != nil {
+		return src.GetFees(ctx, symbol)
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()

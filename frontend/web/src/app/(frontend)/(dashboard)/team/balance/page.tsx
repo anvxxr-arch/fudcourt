@@ -1,5 +1,5 @@
-import StoreShell from '@/components/layout/store-shell';
-import { requireTier } from '@/platform/auth/guard';
+import StoreShell from '@/features/overview/store-shell';
+import { requireTier } from '@/server/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

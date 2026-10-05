@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { color, fontFamily, fontSize, fontWeight, radius, space } from '@/styles/tokens';
-import { Loading } from '@/components/ui/feedback';
+import { color, fontFamily, fontSize, fontWeight, motion, radius, space } from '@/styles/tokens';
+import { Loading } from '@/ui/feedback';
+import { fetchTickerBoard } from './client';
+import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 
 // Mirrors the /api/ticker envelope (app/api/ticker/route.ts). Prices are
 // relayed from each exchange directly, never from an aggregator, and every
@@ -82,13 +84,8 @@ export default function TickerPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/ticker?sort=${sort}&order=${order}&type=${type}`, { cache: 'no-store' });
-      if (!res.ok) {
-        // Loud failure with the route's real error, never a silent empty table.
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error ? `${body.error}: ${body.detail ?? ''}`.trim() : `HTTP ${res.status}`);
-      }
-      const data = await res.json();
+      // Loud failure with the route's real status, never a silent empty table.
+      const data = await fetchTickerBoard<TickerRow>(sort, order, type);
       if (id !== requestId.current) return;
       setRows(data.rows || []);
       setVenues(data.exchanges || []);
@@ -167,10 +164,10 @@ export default function TickerPage() {
   // the venues agree for practical purposes, over 0.1% is a real divergence
   // worth looking at before trusting the displayed median.
   const spreadColor = (r: TickerRow) => {
-    if (r.spread === null) return color.textMuted;
-    if (r.spread < 0.01) return color.accent;
-    if (r.spread < 0.1) return color.text;
-    return color.negative;
+    if (r.spread === null) return color.labelTertiary;
+    if (r.spread < 0.01) return color.blue;
+    if (r.spread < 0.1) return color.labelPrimary;
+    return color.red;
   };
 
   const toggleSort = (key: Sort) => {
@@ -180,10 +177,10 @@ export default function TickerPage() {
   const arrow = (key: Sort) => (sort !== key ? '' : order === 'desc' ? ' ↓' : ' ↑');
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
-    padding: '5px 12px', borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer',
-    background: active ? color.accent : color.surface,
-    color: active ? color.textOnAccent : color.text,
-    border: `1px solid ${color.border}`,
+    padding: '5px 12px', borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer',
+    background: active ? color.blue : color.bgSecondary,
+    color: active ? color.labelOnAccent : color.labelPrimary,
+    border: `1px solid ${color.separator}`,
     fontWeight: active ? fontWeight.bold : fontWeight.regular,
   });
 
@@ -191,8 +188,8 @@ export default function TickerPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: space[12], flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h3 style={{ color: color.accent, margin: 0 }}>Exchange Ticker</h3>
-          <p style={{ color: color.textMuted, fontSize: fontSize[11], margin: `${space[4]}px 0 0` }}>
+          <h3 style={{ color: color.blue, margin: 0 }}>Exchange Ticker</h3>
+          <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `${space[4]}px 0 0` }}>
             Centralized-exchange instruments relayed from {venues.join(', ') || '—'} and cross-checked between venues. Not a market-cap ranking.
           </p>
         </div>
@@ -202,9 +199,9 @@ export default function TickerPage() {
             onChange={e => setSearch(e.target.value)}
             placeholder="Filter symbol"
             aria-label="Filter symbol"
-            style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[10]}px`, borderRadius: radius[6], fontSize: fontSize[11], width: 120 }}
+            style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 120 }}
           />
-          <button onClick={load} style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[14]}px`, borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer' }}>
+          <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
             ↻ Refresh
           </button>
         </div>
@@ -212,7 +209,7 @@ export default function TickerPage() {
 
       {/* Market type is a first-class filter, not a column: a spot price and a
           perpetual price are different instruments, so they are listed apart. */}
-      <div style={{ display: 'flex', gap: space[6], marginBottom: space[10], flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: space[8], marginBottom: space[8], flexWrap: 'wrap' }}>
         <button onClick={() => setType('all')} style={tabStyle(type === 'all')}>
           All ({Object.values(typeCounts).reduce((a, b) => a + b, 0)})
         </button>
@@ -224,7 +221,7 @@ export default function TickerPage() {
       </div>
 
       {error && (
-        <p style={{ color: color.negative, fontSize: fontSize[12] }}>
+        <p style={{ color: color.red, fontSize: fontSize[12] }}>
           {error}
           {stale && rows.length > 0 && ' — showing the last successful read; these prices are stale.'}
         </p>
@@ -233,61 +230,61 @@ export default function TickerPage() {
       {loading ? (
         <Loading label="Loading..." />
       ) : (
-        <div style={{ opacity: stale ? 0.45 : 1, transition: 'opacity 150ms' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: fontSize[12] }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${color.border}`, color: color.textMuted }}>
-                <th style={{ textAlign: 'left', padding: space[6], cursor: 'pointer' }} onClick={() => toggleSort('symbol')}>Pair{arrow('symbol')}</th>
-                <th style={{ textAlign: 'left', padding: space[6] }}>Instrument</th>
-                <th style={{ textAlign: 'right', padding: space[6], cursor: 'pointer' }} onClick={() => toggleSort('price')}>Price{arrow('price')}</th>
-                <th style={{ textAlign: 'right', padding: space[6], cursor: 'pointer' }} onClick={() => toggleSort('change')}>24h %{arrow('change')}</th>
-                <th style={{ textAlign: 'right', padding: space[6], cursor: 'pointer' }} onClick={() => toggleSort('volume')}>Volume{arrow('volume')}</th>
-                <th style={{ textAlign: 'right', padding: space[6], cursor: 'pointer' }} onClick={() => toggleSort('spread')}>Spread{arrow('spread')}</th>
-                <th style={{ textAlign: 'right', padding: space[6] }}>Venues</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div style={{ opacity: stale ? 0.45 : 1, transition: 'opacity ' + motion.quick }}>
+          <Table>
+            <THead>
+              <TR style={{ borderBottom: `1px solid ${color.separator}`, color: color.labelTertiary }}>
+                <TH style={{ padding: space[8] }}><span onClick={() => toggleSort('symbol')} style={{ cursor: 'pointer' }}>Pair{arrow('symbol')}</span></TH>
+                <TH style={{ padding: space[8] }}>Instrument</TH>
+                <TH align="right" style={{ padding: space[8] }}><span onClick={() => toggleSort('price')} style={{ cursor: 'pointer' }}>Price{arrow('price')}</span></TH>
+                <TH align="right" style={{ padding: space[8] }}><span onClick={() => toggleSort('change')} style={{ cursor: 'pointer' }}>24h %{arrow('change')}</span></TH>
+                <TH align="right" style={{ padding: space[8] }}><span onClick={() => toggleSort('volume')} style={{ cursor: 'pointer' }}>Volume{arrow('volume')}</span></TH>
+                <TH align="right" style={{ padding: space[8] }}><span onClick={() => toggleSort('spread')} style={{ cursor: 'pointer' }}>Spread{arrow('spread')}</span></TH>
+                <TH align="right" style={{ padding: space[8] }}>Venues</TH>
+              </TR>
+            </THead>
+            <TBody>
               {shown.map((r) => (
-                <tr key={`${r.type}|${r.symbol}`} style={{ borderBottom: `1px solid ${color.border}` }}>
-                  <td style={{ padding: space[6] }}>
+                <TR key={`${r.type}|${r.symbol}`} style={{ borderBottom: `1px solid ${color.separator}` }}>
+                  <TD style={{ padding: space[8] }}>
                     <Link
                       href={`/market/ticker/${r.base}`}
-                      style={{ fontWeight: fontWeight.bold, color: color.accent, textDecoration: 'none' }}
+                      style={{ fontWeight: fontWeight.bold, color: color.blue, textDecoration: 'none' }}
                       title={`Open ${r.base} detail`}
                     >
                       {r.base}
                     </Link>
-                    <div style={{ fontSize: fontSize[10], color: color.textMuted }}>{r.quote}</div>
-                  </td>
-                  <td style={{ padding: space[6] }}>
-                    <div style={{ color: color.text, fontSize: fontSize[11] }}>{TYPE_LABELS[r.type]}</div>
+                    <div style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{r.quote}</div>
+                  </TD>
+                  <TD style={{ padding: space[8] }}>
+                    <div style={{ color: color.labelPrimary, fontSize: fontSize[11] }}>{TYPE_LABELS[r.type]}</div>
                     {instrumentLabel(r) && (
-                      <div style={{ fontSize: fontSize[10], color: color.textMuted, fontFamily: fontFamily.mono }}>{instrumentLabel(r)}</div>
+                      <div style={{ fontSize: fontSize[11], color: color.labelTertiary, fontFamily: fontFamily.mono }}>{instrumentLabel(r)}</div>
                     )}
-                  </td>
-                  <td style={{ padding: space[6], textAlign: 'right', color: color.accent, fontWeight: fontWeight.bold }}>{fmtPrice(r.price, r.instrument.settle)}</td>
-                  <td style={{ padding: space[6], textAlign: 'right', color: r.change24h === null ? color.textMuted : r.change24h >= 0 ? color.accent : color.negative }}>
+                  </TD>
+                  <TD align="right" mono style={{ padding: space[8], color: color.blue, fontWeight: fontWeight.bold }}>{fmtPrice(r.price, r.instrument.settle)}</TD>
+                  <TD align="right" mono style={{ padding: space[8], color: r.change24h === null ? color.labelTertiary : r.change24h >= 0 ? color.blue : color.red }}>
                     {fmtPct(r.change24h)}
-                  </td>
-                  <td style={{ padding: space[6], textAlign: 'right', color: color.text }}>{fmtVol(r.quoteVolume)}</td>
-                  <td style={{ padding: space[6], textAlign: 'right', color: spreadColor(r), fontFamily: fontFamily.mono }} title="Cross-venue divergence in percent, relative to the median of the venues that answered">
-                    {fmtSpread(r.spread)}
-                  </td>
-                  <td style={{ padding: space[6], textAlign: 'right' }}>
-                    <div style={{ color: color.text }}>{r.venues.map(v => v.exchange).join(' · ')}</div>
+                  </TD>
+                  <TD align="right" mono style={{ padding: space[8], color: color.labelPrimary }}>{fmtVol(r.quoteVolume)}</TD>
+                  <TD align="right" mono style={{ padding: space[8], color: spreadColor(r), fontFamily: fontFamily.mono }}>
+                    <span title="Cross-venue divergence in percent, relative to the median of the venues that answered">{fmtSpread(r.spread)}</span>
+                  </TD>
+                  <TD align="right" style={{ padding: space[8] }}>
+                    <div style={{ color: color.labelPrimary }}>{r.venues.map(v => v.exchange).join(' · ')}</div>
                     {r.failed.length > 0 && (
-                      <div style={{ fontSize: fontSize[10], color: color.negative }}>no quote: {r.failed.join(', ')}</div>
+                      <div style={{ fontSize: fontSize[11], color: color.red }}>no quote: {r.failed.join(', ')}</div>
                     )}
-                  </td>
-                </tr>
+                  </TD>
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
       )}
 
       {!loading && shown.length === 0 && !error && (
-        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>No pair matches “{search}”.</p>
+        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>No pair matches “{search}”.</p>
       )}
     </div>
   );

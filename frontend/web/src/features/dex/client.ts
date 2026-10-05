@@ -1,3 +1,4 @@
+import { getJSON } from '@/lib/fetch';
 /**
  * DexScreener client surface, shared by the API route and the UI.
  *
@@ -128,4 +129,15 @@ export function pairMetricPresence(pairs: DexPair[]) {
     pairCreatedAt: has('pairCreatedAt'),
     coverage: (k: keyof DexPair) => `${((has(k) / n) * 100).toFixed(1)}%`,
   };
+}
+
+
+/** Transport for one DEX proxy read. URL construction lives here; guards and state stay in the view. */
+export function fetchDex<T>(url: string): Promise<T> {
+  return getJSON<T>(url, { cache: 'no-store' });
+}
+
+/** Transport for the fresh-profile feed behind the pairs join and the trench board. */
+export function fetchDexProfiles<T>(limit: number): Promise<T> {
+  return getJSON<T>(`/api/dex?type=profiles&limit=${limit}`, { cache: 'no-store' });
 }

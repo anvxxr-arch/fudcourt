@@ -36,6 +36,13 @@ const (
 // configurable; SpreadBps and Latency are the exception: their documented
 // semantics ARE "0 means none". Negative values are refused, never clamped.
 type PaperConfig struct {
+	// Source is the optional LIVE market-data source (a live venue adapter).
+	// Nil keeps the hermetic simulator: prices come from Marks and no network
+	// is touched. Non-nil makes this the production paper venue whose tape is
+	// live while matching and settlement stay paper-owned — the faithful
+	// mirror of the TS PaperExchangeAdapter. When Source is set, Marks is used
+	// only as an initial seed and is superseded by the live ticker.
+	Source MarketSource
 	// MarketType selects the settlement model ("" defaults to
 	// execution.MarketSpot): spot moves base vs quote, linear_perp settles
 	// quote with realized PnL (see settleLocked).

@@ -1,3 +1,4 @@
+import { getJSON } from '@/lib/fetch';
 /**
  * Home page (`/`) data contract.
  *
@@ -680,3 +681,12 @@ export type ScoreboardPayload = {
   chains: Record<string, ScoreboardChain>;
   upstream: string;
 };
+
+
+/**
+ * Transport behind the home page's `useJson` hook. URL constants live here;
+ * the hook (guards, loading/error state) stays in `ui.tsx`.
+ */
+export function fetchJson<T>(url: string): Promise<T> {
+  return getJSON<T>(url, { cache: 'no-store' });
+}

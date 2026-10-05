@@ -1,4 +1,4 @@
-import NationExplorer from '@/features/economy/ui/nation-index';
+import NationExplorer from '@/features/economy/ui/nation';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';

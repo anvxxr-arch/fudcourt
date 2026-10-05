@@ -45,3 +45,9 @@ export type NewsEnvelope = {
   /** Milliseconds, matching Date.now() (the Go side multiplies Unix seconds). */
   timestamp: number;
 };
+
+import { getJSON } from '@/lib/fetch';
+
+export function fetchNews(limit = NEWS_LIMIT_DEFAULT): Promise<{ items?: NewsItem[] }> {
+  return getJSON<{ items?: NewsItem[] }>(`/api/news?limit=${limit}`, { cache: 'no-store' });
+}

@@ -21,7 +21,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { alpha, color, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
 import { bindingFor } from '@/features/trade/adapters';
-import { capabilityOrderTypeSplit, capabilitiesForVenue } from '@/features/trade/capabilities';
+import { capabilityOrderTypeSplit, capabilitiesForVenue } from '@/features/trade/model';
 import {
   errorMessage,
   fetchTradeAccounts,
@@ -32,7 +32,7 @@ import {
   type TradeAccountLite,
 } from '@/features/trade/client';
 import type { VenueCapability } from '@/features/trade/model';
-import { MARKET_TYPE_BY_ID, VENUE_BY_ID } from '@/features/trade/taxonomy';
+import { MARKET_TYPE_BY_ID, VENUE_BY_ID } from '@/features/trade/model';
 import { Card, DataTable, ErrorState, Loading, Notice, PageHeader, Value } from '@/features/trade/ui/parts';
 
 type Panel = { accounts: TradeAccountLite[]; error: string | null; loading: boolean };
@@ -52,8 +52,8 @@ function useAccounts(): Panel {
 
 /** A tri-state venue permission: `null` means the venue does not report it. */
 function Perm({ value }: { value: boolean | null }) {
-  if (value === null) return <span style={{ color: color.textMuted }} title="the venue does not report this flag">{NO_VALUE}</span>;
-  return <span style={{ color: value ? color.positive : color.textMuted }}>{value ? '✓' : '✕'}</span>;
+  if (value === null) return <span style={{ color: color.labelTertiary }} title="the venue does not report this flag">{NO_VALUE}</span>;
+  return <span style={{ color: value ? color.green : color.labelTertiary }}>{value ? '✓' : '✕'}</span>;
 }
 
 /** "supports X, Y, Z — not W", from the exhaustive capability record. */
@@ -77,7 +77,7 @@ export function ConnectedAccountsStrip() {
       title="Connected accounts"
       subtitle="your exchange keys, never ours — the masked key is the only key the API returns"
       right={
-        <Link href="/trade/accounts" style={{ fontSize: fontSize[11], color: color.accent, textDecoration: 'none' }}>
+        <Link href="/trade/accounts" style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>
           manage accounts →
         </Link>
       }
@@ -89,22 +89,22 @@ export function ConnectedAccountsStrip() {
       ) : accounts.length === 0 ? (
         <Notice>
           No venue account connected. Connect one in the executor and it appears here —{' '}
-          <Link href="/executor/accounts" style={{ color: color.accent }}>connect a venue →</Link>
+          <Link href="/executor/accounts" style={{ color: color.blue }}>connect a venue →</Link>
         </Notice>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: space[12] }}>
           {accounts.map((account) => (
             <div key={account.id} style={{ display: 'flex', flexDirection: 'column', gap: space[4] }}>
-              <span style={{ fontSize: fontSize[12], color: color.text, fontWeight: fontWeight.semibold }}>
+              <span style={{ fontSize: fontSize[12], color: color.labelPrimary, fontWeight: fontWeight.semibold }}>
                 {account.label}
-                <span style={{ color: color.textMuted, fontWeight: fontWeight.regular }}> · {account.exchange}</span>
+                <span style={{ color: color.labelTertiary, fontWeight: fontWeight.regular }}> · {account.exchange}</span>
               </span>
-              <span style={{ fontSize: fontSize[11], color: color.textMuted }}>{account.apiKeyMasked}</span>
-              <span style={{ fontSize: fontSize[10], color: account.revokedAt === null ? color.textMuted : color.negative }}>
+              <span style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{account.apiKeyMasked}</span>
+              <span style={{ fontSize: fontSize[11], color: account.revokedAt === null ? color.labelTertiary : color.red }}>
                 {account.revokedAt === null ? `health ${account.health}` : 'revoked'}
               </span>
               {account.permissions.withdraw === true && (
-                <span style={{ fontSize: fontSize[10], color: color.negative, fontWeight: fontWeight.bold }}>
+                <span style={{ fontSize: fontSize[11], color: color.red, fontWeight: fontWeight.bold }}>
                   ⚠ key has withdrawal permission — remove it on the venue
                 </span>
               )}
@@ -131,11 +131,11 @@ function AccountTable({ accounts }: { accounts: TradeAccountLite[] }) {
             account.label,
             venue === null ? account.exchange : `${VENUE_BY_ID[venue].label} · ${VENUE_BY_ID[venue].type}`,
             account.revokedAt === null ? account.health : 'revoked',
-            <span key="k" style={{ color: color.textMuted }}>{account.apiKeyMasked}</span>,
+            <span key="k" style={{ color: color.labelTertiary }}>{account.apiKeyMasked}</span>,
             <Perm key="r" value={account.permissions.read} />,
             <Perm key="s" value={account.permissions.spotTrade} />,
             <Perm key="f" value={account.permissions.futuresTrade} />,
-            <span key="w" style={{ color: account.permissions.withdraw === true ? color.negative : color.text }}>
+            <span key="w" style={{ color: account.permissions.withdraw === true ? color.red : color.labelPrimary }}>
               <Perm value={account.permissions.withdraw} />
               {account.permissions.withdraw === true && (
                 <span style={{ fontWeight: fontWeight.bold }}> · remove it</span>
@@ -153,7 +153,7 @@ function VenueCapabilitySummary({ exchange }: { exchange: string }) {
   const venue = venueOfExchange(exchange);
   if (venue === null) {
     return (
-      <p style={{ margin: 0, fontSize: fontSize[11], color: color.textMuted }}>
+      <p style={{ margin: 0, fontSize: fontSize[11], color: color.labelTertiary }}>
         {exchange} is not a venue the trade domain can route to yet, so it has no capability row.
       </p>
     );
@@ -161,18 +161,18 @@ function VenueCapabilitySummary({ exchange }: { exchange: string }) {
   const rows = capabilitiesForVenue(venue);
   const binding = bindingFor(venue);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
       {rows.map((row) => (
         <div key={row.marketType}>
-          <span style={{ fontSize: fontSize[11], color: color.text, fontWeight: fontWeight.semibold }}>
+          <span style={{ fontSize: fontSize[11], color: color.labelPrimary, fontWeight: fontWeight.semibold }}>
             {MARKET_TYPE_BY_ID[row.marketType].label}
           </span>
-          <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[10], color: color.textMuted, lineHeight: lineHeight.normal }}>
+          <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>
             {capabilityLine(row)}
           </p>
         </div>
       ))}
-      <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[10], color: color.textMuted }}>
+      <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary }}>
         reads · positions {binding.reads.positions.live ? binding.reads.positions.path : `not served yet (${binding.reads.positions.path})`}
         {' · '}balances {binding.reads.balances.live ? binding.reads.balances.path : `not served yet (${binding.reads.balances.path})`}
         {' · '}account {binding.reads.account.path}
@@ -188,7 +188,7 @@ export function TradeAccountsView({ note, showPortfolio = true }: { note?: strin
     <>
       {showPortfolio && (
         <Card title="Portfolio" subtitle="one account per connected venue — figures appear once a venue answers">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: space[14] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: space[12] }}>
             <Value label="Connected venues" value={loading ? NO_VALUE : String(accounts.length)} />
             <Value label="Equity" value={formatUsd(null)} tone="muted" hint="No positions/balances route yet, so equity is unknown, not zero." />
             <Value label="Available" value={formatUsd(null)} tone="muted" />
@@ -198,12 +198,12 @@ export function TradeAccountsView({ note, showPortfolio = true }: { note?: strin
       )}
 
       {note !== undefined && (
-        <div style={{ marginTop: space[14] }}>
+        <div style={{ marginTop: space[12] }}>
           <Notice>{note}</Notice>
         </div>
       )}
 
-      <div style={{ marginTop: space[14] }}>
+      <div style={{ marginTop: space[12] }}>
         <Card title="Connected accounts" subtitle="masked key · venue type · permissions — a withdrawal-capable key is warned, never hidden">
           {error ? (
             <ErrorState title="Accounts unavailable" detail={error} />
@@ -212,7 +212,7 @@ export function TradeAccountsView({ note, showPortfolio = true }: { note?: strin
           ) : accounts.length === 0 ? (
             <Notice>
               No venue account connected yet. BYOK lives in the executor (Phase 18 reuses its sealed key) —{' '}
-              <Link href="/executor/accounts" style={{ color: color.accent }}>connect a venue →</Link>
+              <Link href="/executor/accounts" style={{ color: color.blue }}>connect a venue →</Link>
             </Notice>
           ) : (
             <AccountTable accounts={accounts} />
@@ -221,7 +221,7 @@ export function TradeAccountsView({ note, showPortfolio = true }: { note?: strin
       </div>
 
       {accounts.length > 0 && (
-        <div style={{ display: 'grid', gap: space[14], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', marginTop: space[14] }}>
+        <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', marginTop: space[12] }}>
           {accounts.map((account) => (
             <Card key={account.id} title={`${account.label} — capability`} subtitle="what this venue supports, and what FUDCourt covers for it">
               <VenueCapabilitySummary exchange={account.exchange} />
@@ -236,7 +236,7 @@ export function TradeAccountsView({ note, showPortfolio = true }: { note?: strin
 /** The /trade/accounts page body (Phase 17). */
 export function TradeAccountsPage() {
   return (
-    <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px`, background: color.bg, color: color.text }}>
+    <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px`, background: color.bgBase, color: color.labelPrimary }}>
       <PageHeader
         title="Trade accounts"
         description="Every venue your trading connects to: the masked key, the permission the venue reports, and a capability summary read from the same matrix the boards use."

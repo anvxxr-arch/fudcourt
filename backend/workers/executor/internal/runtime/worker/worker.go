@@ -123,6 +123,12 @@ type Config struct {
 	// Seed seeds strategy PRNGs (PRD §28). Zero selects the deterministic
 	// default — jitter stays opt-in per execution config (DR-021 §2g).
 	Seed uint32
+	// LiveEnabled is the §108 kill switch (FUDCOURT_EXECUTOR_LIVE == "1"),
+	// mirroring the TS worker's liveBlocked(). False REFUSES to place a live
+	// execution: the pass pauses it (PAUSED + EXECUTION_PAUSED) instead of
+	// sending an order. Paper executions are unaffected — the switch only
+	// governs real venue placement.
+	LiveEnabled bool
 }
 
 // ErrConfig is returned when a Config is unusable (missing store/lock, non-

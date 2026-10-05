@@ -108,7 +108,7 @@ ROUTES = [
 # map — so a route cannot be dropped from the fingerprint surface silently.
 # These are the only legitimate non-probes: a probe needs a RENDERED page, and
 # these never render one to an anonymous harness (they redirect to `/login`,
-# merged from `TIER_PAGES` in `src/platform/auth/guard.ts`, enforced by
+# merged from `TIER_PAGES` in `src/server/auth.ts`, enforced by
 # `src/middleware.ts` and confirmed live: `/member`, `/team/*`, `/executor`,
 # `/admin` all answered 307 to an anonymous request). The harness has NO cookie
 # or session mechanism (grep `cookies` in this file: none), so a session-gated
@@ -117,7 +117,7 @@ ROUTES = [
 # to paper over: the ledger (`docs/architecture/design-debt.md`) records these
 # as routes with no pixel-level guarantee.
 EXCLUDED_ROUTES: dict[str, str] = {
-    "/admin": "session-gated: TIER_PAGES '/admin'->admin (src/platform/auth/guard.ts); the middleware redirects an anonymous request to /login (live probe 307), so there is no rendered page to fingerprint",
+    "/admin": "session-gated: TIER_PAGES '/admin'->admin (src/server/auth.ts); the middleware redirects an anonymous request to /login (live probe 307), so there is no rendered page to fingerprint",
     "/member": "session-gated: TIER_PAGES '/member'->member; the guard's own comment notes it is enforced in middleware like the others (live probe 307)",
     "/executor": "session-gated: TIER_PAGES '/executor'->team (CEX Executor, PRD section 108); live probe 307",
     "/executor/[id]": "session-gated: under the TIER_PAGES '/executor'->team prefix; live probe of the prefix 307",

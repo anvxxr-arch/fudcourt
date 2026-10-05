@@ -28,13 +28,6 @@
  * the tree has been migrated off raw literals — that is `scripts/checks/check-design-tokens.py`,
  * which is deliberately red until the migration lands and must not be worked around here.
  *
- * The pre-migration value check (ZERO-VISUAL-CHANGE): before the migration removes them, the
- * emitted colours MUST equal the values the app renders today — the `C` hex table and the
- * globals.css `:root` HSL intents. A `--check` run only compares bytes, so an edited `tokens.ts`
- * could be re-emitted and pass while silently changing a pixel; this run-time comparison against
- * `src/styles/shared.ts` + the hand-written globals `:root` closes that hole until the sources are
- * deleted together.
- *
  * EXIT: 0 on success (`TOKENS_OK`, or a successful write); 1 on `TOKENS_DRIFT`, a missing sentinel,
  * a missing file, unknown arguments, or a value that no longer matches the current effective value.
  */
@@ -43,13 +36,16 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   color,
+  darkColor,
   fontFamily,
   fontSize,
   fontWeight,
   letterSpacing,
   lineHeight,
+  motion,
   radius,
   space,
+  target,
   zIndex,
 } from '../../src/styles/tokens';
 
@@ -78,12 +74,21 @@ const cssVars: Array<{ name: string; value: string }> = [
   ...Object.entries(lineHeight).map(([k, v]) => ({ name: `--fc-line-height-${k}`, value: String(v) })),
   ...Object.entries(letterSpacing).map(([k, v]) => ({ name: `--fc-letter-spacing-${k}`, value: String(v) })),
   ...Object.entries(zIndex).map(([k, v]) => ({ name: `--fc-z-index-${k}`, value: String(v) })),
+  ...Object.entries(motion).map(([k, v]) => ({ name: `--fc-motion-${k}`, value: v })),
+  ...Object.entries(target).map(([k, v]) => ({ name: `--fc-target-${k}`, value: `${v}px` })),
 ];
 
 function renderRootBlock(): string {
   const lines = [SENTINEL_START, ':root {'];
   for (const v of cssVars) lines.push(`  ${v.name}: ${v.value};`);
-  lines.push('}', SENTINEL_END);
+  lines.push('}');
+  lines.push('.dark {');
+  for (const [k, v] of Object.entries(darkColor)) lines.push(`  --fc-color-${k}: ${v};`);
+  lines.push('}');
+  lines.push('@media (prefers-reduced-motion: reduce) {');
+  lines.push('  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }');
+  lines.push('}');
+  lines.push(SENTINEL_END);
   return lines.join('\n');
 }
 
@@ -188,14 +193,6 @@ function spliceRootBlock(css: string): string {
   return `${css.replace(/\n*$/, '\n')}\n${renderRootBlock()}\n`;
 }
 
-// ---------------------------------------------------------------------------
-// The zero-visual-change proof used to live here: while the migration was in flight this emitter
-// compared every emitted colour against the then-current sources (`C` in `shared.ts` and the HSL
-// `:root` intents in the hand-written half of globals.css) and refused to write when they disagreed.
-// BOTH SOURCES ARE NOW DELETED with the cutover (DR-037), so the comparison has nothing left to read
-// — the pre-migration values survive as a frozen snapshot in `prove-value-for-value.ts`, which is
-// where a one-off proof belongs. Keeping an inert check here would be a green light nobody wired up.
-// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 function main(): number {
   const unknown = process.argv.slice(2).filter((a) => a !== '--check');

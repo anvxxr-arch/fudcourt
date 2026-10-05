@@ -1,93 +1,94 @@
 /**
- * Design tokens — the single source of truth (SSOT) for every visual value in the web app.
+ * Design tokens — the single source of truth (SSOT), Apple HIG semantic system.
  *
- * Before this module the design values lived in three places that could drift: `C` in
- * `src/styles/shared.ts` (flat hex), a separate HSL `:root` set in
- * `src/app/(frontend)/globals.css` (which did NOT match `C` — every one of the seven
- * comparable pairs had drifted), and `tailwind.config.js` (`theme.extend` empty, so no
- * utility class could reach a token at all). Feature UIs additionally hand-rolled raw hex
- * (`#ffd166`, `#ff9f43`, `#04140f`, rgba overlays), magic font sizes, paddings and radii.
- * This module is the one place those values are written down.
+ * Second generation of this module: the first generation proved the migration
+ * off three drifted sources value-for-value. This generation re-points every value at the Apple Human
+ * Interface Guidelines system — semantic backgrounds/labels/separators with a `.dark`
+ * flip, HIG accent ramps, the SF stack, the HIG type scale, an 8pt spacing grid,
+ * continuous-corner radii, a 44pt touch target, HIG motion, and reduced-motion.
+ * The pixel change is INTENTIONAL this time (green accent -> blue, dark-green
+ * chrome -> system backgrounds); the gate that keeps it honest is still
+ * `scripts/checks/check-design-tokens.py` (no raw literals outside this file,
+ * no token without a consumer).
  *
- * NO INVENTED TOKENS — the rule this module is governed by. Every value below is one that
- * already has (or, for the colours the migration is re-pointing, is about to gain) REAL
- * consumers in the tree; a token with no consumer is drift in the other direction and the
- * `check-design-tokens.py` dead-token alarm fails the build for it. Adding a token is
- * therefore a two-part change: the value here AND the call site that uses it. ("I need a TINT
- * of an existing token" is not a reason to add one — that is `alpha()` at the bottom of this
- * module, which derives the tint from the token instead of minting a near-duplicate of it.)
+ * NO INVENTED TOKENS — every value below has REAL consumers in the tree; a token
+ * with no consumer fails the dead-token alarm. Tints stay derived: `alpha()` at
+ * the bottom of this module. All colour tokens it receives must be `#rrggbb`
+ * (the opaque HIG solids); `scrim` is the one rgba token and is never passed
+ * to `alpha()` — it is used verbatim as the modal dim layer.
  *
- * WHY THE SCALES ARE KEYED BY THEIR OWN VALUE (`space[12] === 12`, `fontSize[13] === 13`):
- * the migration off the three drifted sources is value-for-value — `fontSize: 13` becomes
- * `fontSize: fontSize[13]`, `padding: '10px 18px'` becomes `padding: \`${space[10]}px ${space[18]}px\``.
- * No rounding, no rem conversion, no re-tint: the rendered pixels are provably unchanged, so
- * a visual regression can only come from a mistake in the migration, never from the token
- * table.
+ * DARK MODE: `color` holds the LIGHT (default `:root`) values; `darkColor` holds
+ * the `.dark` overrides, key-for-key (`{ [K in keyof typeof color]: string }`,
+ * so adding a light key without its dark twin is a compile error). `darkColor`
+ * is deliberately NOT `as const` — the dead-token gate only parses `as const`
+ * blocks, and the dark values are consumed by the emitter (into the `.dark`
+ * block), never referenced as `darkColor.x` at call sites.
  *
- * WHAT IS DELIBERATELY NOT HERE: the domain palettes (`CHAIN_COLOR`, `COLOR_PRESETS` in
- * `src/styles/shared.ts`) are DATA, not design chrome — provider/brand colours and the
- * user's own wallet swatch choices — and the status-colour maps that key off them stay
- * with their domain. The legacy `C` object is likewise retained until the migration
- * cutover; this module does not re-export it.
- *
- * Leaf module (DR-018): no imports, no JSX, `as const` everywhere so every key and value is
- * a literal type — a typo'd `color.bg2` is a compile error, and the emitted CSS
- * (`scripts/design/emit-tokens.ts`) reads these exact keys.
+ * Leaf module (DR-018): no imports, no JSX.
  */
 export const color = {
-  bg: '#07110f',
-  surface: '#0d1f1a',
-  border: '#1c3a31',
-  text: '#e8fff7',
-  textMuted: '#6b8f82',
-  textOnAccent: '#04140f',
-  textInverse: '#ffffff',
-  accent: '#3ddc97',
-  positive: '#3ddc97',
-  negative: '#ff6b6b',
-  warn: '#ffd166',
-  attention: '#ff9f43',
-  overlay: 'rgba(0,0,0,0.8)',
+  bgBase: '#FFFFFF',
+  bgSecondary: '#F2F2F7',
+  bgTertiary: '#E5E5EA',
+  bgElevated: '#FFFFFF',
+  labelPrimary: '#000000',
+  labelSecondary: '#3C3C43',
+  labelTertiary: '#8E8E93',
+  separator: '#C6C6C8',
+  blue: '#007AFF',
+  green: '#34C759',
+  red: '#FF3B30',
+  orange: '#FF9500',
+  labelOnAccent: '#FFFFFF',
+  scrim: 'rgba(0, 0, 0, 0.35)',
 } as const;
-
-/** px, key === value (see the header: the migration is value-for-value). */
-export const space = { 0: 0, 4: 4, 6: 6, 8: 8, 10: 10, 12: 12, 14: 14, 16: 16, 18: 18, 20: 20, 24: 24, 28: 28, 30: 30, 32: 32, 40: 40 } as const;
-
-/**
- * px, key === value, plus one special: `circle` is the `'50%'` keyword used for round avatars
- * and dots — a keyword, not a scale value, which is why it stays a string.
- */
-export const radius = { 0: 0, 4: 4, 6: 6, 8: 8, 12: 12, 14: 14, circle: '50%' } as const;
-
-/** px, key === value. */
-export const fontSize = { 9: 9, 10: 10, 11: 11, 12: 12, 13: 13, 14: 14, 16: 16, 18: 18, 20: 20, 24: 24, 32: 32, 40: 40 } as const;
-
-export const fontWeight = { regular: 400, medium: 500, semibold: 600, bold: 700, heavy: 800 } as const;
-
+/** `.dark` flip of `color`, key-for-key (see header). Consumed by the emitter only. */
+export const darkColor: { [K in keyof typeof color]: string } = {
+  bgBase: '#000000',
+  bgSecondary: '#1C1C1E',
+  bgTertiary: '#2C2C2E',
+  bgElevated: '#1C1C1E',
+  labelPrimary: '#FFFFFF',
+  labelSecondary: '#EBEBF5',
+  labelTertiary: '#8E8E93',
+  separator: '#38383A',
+  blue: '#0A84FF',
+  green: '#30D158',
+  red: '#FF453A',
+  orange: '#FF9F0A',
+  labelOnAccent: '#FFFFFF',
+  scrim: 'rgba(0, 0, 0, 0.6)',
+};
+/** px, 8pt grid + 4pt sub-step. */
+export const space = { 0: 0, 4: 4, 8: 8, 12: 12, 16: 16, 20: 20, 24: 24, 32: 32, 40: 40 } as const;
+/** px continuous corners, plus the `'50%'` keyword for round avatars/dots. */
+export const radius = { 0: 0, 8: 8, 10: 10, 12: 12, 16: 16, 20: 20, circle: '50%' } as const;
+/** px, HIG type scale (largeTitle 34 … caption2 11). */
+export const fontSize = { 11: 11, 12: 12, 13: 13, 15: 15, 17: 17, 20: 20, 22: 22, 28: 28, 34: 34 } as const;
+export const fontWeight = { regular: 400, medium: 500, semibold: 600, bold: 700 } as const;
 /** unitless CSS ratios (not px). */
 export const lineHeight = { tight: 1.3, normal: 1.6, loose: 1.7 } as const;
-
 /** unitless (px at a 1px advance width). */
 export const letterSpacing = { none: 0, xs: 0.4, sm: 0.5, wide: 1, wider: 2 } as const;
-
 export const zIndex = { modal: 100 } as const;
-
-export const fontFamily = { mono: 'ui-monospace, monospace', sans: 'Inter, ui-sans-serif, system-ui, sans-serif' } as const;
-
+export const fontFamily = { mono: 'ui-monospace, monospace', sans: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, ui-sans-serif, system-ui, sans-serif" } as const;
+/** HIG motion: durations plus the standard easing curve. */
+export const motion = { quick: '100ms', normal: '200ms', deliberate: '250ms', slow: '350ms', ease: 'cubic-bezier(0.32, 0.72, 0, 1)' } as const;
+/** Minimum tappable target, px (HIG 44pt). */
+export const target = { min: 44 } as const;
 /**
  * A token colour's tint: `#rrggbb` + alpha → `rgba(r,g,b,a)`.
  *
- * This is the ONLY sanctioned way to make a tint of a token. The palette is deliberately flat hex
- * (no alpha channel), so before this helper every tint was hand-spelled inline — and the same tint
- * spelled twice had already drifted (`#ff6b6b` vs `rgba(255,80,80,…)`, both meant "negative at
- * low alpha"). An `rgba()` literal in a component is a gate violation; `alpha(color.negative, 0.08)`
- * is not. Alpha is clamped to [0,1]; anything other than a 6-digit `#rrggbb` throws, so a typo
+ * The ONLY sanctioned way to make a tint of a token. An `rgba()` literal in a
+ * component is a gate violation; `alpha(color.red, 0.08)` is not. Alpha is
+ * clamped to [0,1]; anything other than a 6-digit `#rrggbb` throws, so a typo
  * surfaces at the call site rather than as a transparent box in production.
+ * Never called with `color.scrim` (already rgba — used verbatim).
  */
 export function alpha(hex: string, a: number): string {
   const match = /^#([0-9a-fA-F]{6})$/.exec(hex);
-  if (!match) throw new Error(`alpha(): expected a #rrggbb colour, got '${hex}'`);
+  if (!match) throw new Error('alpha(): expected a #rrggbb colour, got ' + hex);
   const value = parseInt(match[1], 16);
   const clamped = Math.min(1, Math.max(0, a));
-  return `rgba(${(value >> 16) & 0xff}, ${(value >> 8) & 0xff}, ${value & 0xff}, ${clamped})`;
+  return 'rgba(' + ((value >> 16) & 0xff) + ', ' + ((value >> 8) & 0xff) + ', ' + (value & 0xff) + ', ' + clamped + ')';
 }

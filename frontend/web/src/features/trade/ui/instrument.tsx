@@ -25,8 +25,8 @@ import {
   TRADE_NAV,
   type InstrumentDetail,
 } from '@/features/trade/client';
-import { instrumentById, instrumentLabel } from '@/features/trade/instrument';
-import { MARKET_TYPE_BY_ID, type MarketType } from '@/features/trade/taxonomy';
+import { instrumentById, instrumentLabel } from '@/features/trade/model';
+import { MARKET_TYPE_BY_ID, type MarketType } from '@/features/trade/model';
 import { Card, ChangeChip, DataTable, ErrorState, Loading, Notice, PageHeader, Value } from '@/features/trade/ui/parts';
 import { TradeComposer } from '@/features/trade/ui/composer';
 
@@ -67,12 +67,12 @@ export function TradeInstrument({ marketType, instrumentId }: { marketType: Mark
       />
 
       {/* The trail the plan's routes follow: type → instrument. */}
-      <nav aria-label="Instrument trail" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: space[6], marginBottom: space[14] }}>
+      <nav aria-label="Instrument trail" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: space[8], marginBottom: space[12] }}>
         <TrailLink href="/trade" label="Trade" />
-        <span aria-hidden="true" style={{ color: alpha(color.textMuted, 0.7) }}>/</span>
+        <span aria-hidden="true" style={{ color: alpha(color.labelTertiary, 0.7) }}>/</span>
         <TrailLink href={`/trade/${marketType}`} label={entry.label} />
-        <span aria-hidden="true" style={{ color: alpha(color.textMuted, 0.7) }}>/</span>
-        <span style={{ color: color.text, fontSize: fontSize[11] }}>{label}</span>
+        <span aria-hidden="true" style={{ color: alpha(color.labelTertiary, 0.7) }}>/</span>
+        <span style={{ color: color.labelPrimary, fontSize: fontSize[11] }}>{label}</span>
       </nav>
 
       {tickerType === null ? (
@@ -88,7 +88,7 @@ export function TradeInstrument({ marketType, instrumentId }: { marketType: Mark
           title="Cross-venue quotes"
           subtitle="each venue's own quote for this instrument, read live — never a built symbol"
           right={
-            <Link href={`/market/ticker/${base}`} style={{ fontSize: fontSize[11], color: color.accent, textDecoration: 'none' }}>
+            <Link href={`/market/ticker/${base}`} style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>
               full coin page →
             </Link>
           }
@@ -101,7 +101,7 @@ export function TradeInstrument({ marketType, instrumentId }: { marketType: Mark
             <Notice>No venue returned a quote for {label} right now. An empty result is reported as empty, never padded with another instrument&apos;s price.</Notice>
           ) : (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: space[14], marginBottom: space[14] }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: space[12], marginBottom: space[12] }}>
                 <Value label="Median price" value={formatPrice(detail.value.price)} tone={detail.value.price === null ? 'muted' : 'default'} hint="Median of the venues that priced it; — when none did." />
                 <Value label="Venues priced" value={`${detail.value.priced} / ${detail.value.quotes.length}`} />
                 <Value label="Not listed" value={String(detail.value.notListed.length)} tone={detail.value.notListed.length > 0 ? 'muted' : 'default'} hint="Venues that list no such instrument — a fact about the market, not a failure." />
@@ -122,7 +122,7 @@ export function TradeInstrument({ marketType, instrumentId }: { marketType: Mark
                 }))}
               />
               {(detail.value.notListed.length > 0 || detail.value.failed.length > 0) && (
-                <p style={{ margin: `${space[10]}px 0 0`, fontSize: fontSize[10], color: color.textMuted, lineHeight: lineHeight.normal }}>
+                <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>
                   {detail.value.notListed.length > 0 && <>not listed: {detail.value.notListed.join(', ')}. </>}
                   {detail.value.failed.length > 0 && <>failed: {detail.value.failed.join(', ')}.</>}
                 </p>
@@ -132,20 +132,20 @@ export function TradeInstrument({ marketType, instrumentId }: { marketType: Mark
         </Card>
       )}
 
-      <div style={{ marginTop: space[14] }}>
+      <div style={{ marginTop: space[12] }}>
         <TradeComposer marketType={marketType} defaultBase={instrument?.base} defaultQuote={instrument?.quote} />
       </div>
 
-      <div style={{ marginTop: space[14] }}>
+      <div style={{ marginTop: space[12] }}>
         <Card title="Instrument" subtitle="the canonical identity — the venue's own symbol is a field, never the id">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: space[14] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: space[12] }}>
             <Value label="Canonical id" value={instrumentId} hint="What a route resolves and an order references." />
             <Value label="Base" value={base} />
             <Value label="Quote" value={instrument?.quote ?? NO_VALUE} />
             <Value label="Market type" value={entry.label} />
             <Value label="Ticker type" value={tickerType ?? '—'} tone={tickerType === null ? 'muted' : 'default'} hint="The vocabulary the public ticker board speaks, or — when it has none." />
           </div>
-          <p style={{ margin: `${space[10]}px 0 0`, fontSize: fontSize[10], color: color.textMuted, lineHeight: lineHeight.normal }}>
+          <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>
             A venue spells this instrument its own way ({detail.value?.quotes[0]?.symbol ?? 'e.g. BTCUSDT'}); the adapter resolves
             that form. No view builds a native symbol, and no route carries one.
           </p>
@@ -160,10 +160,10 @@ function TrailLink({ href, label }: { href: string; label: string }) {
     <Link
       href={href}
       style={{
-        padding: `${space[4]}px ${space[10]}px`,
-        border: `1px solid ${color.border}`,
-        borderRadius: radius[6],
-        color: color.textMuted,
+        padding: `${space[4]}px ${space[8]}px`,
+        border: `1px solid ${color.separator}`,
+        borderRadius: radius[8],
+        color: color.labelTertiary,
         fontSize: fontSize[11],
         textDecoration: 'none',
       }}

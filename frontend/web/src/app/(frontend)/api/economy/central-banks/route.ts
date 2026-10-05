@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { CENTRAL_BANKS } from '@/features/economy/registry';
-import { fetchPolicyRates } from '@/features/market/sources/bis';
+import { CENTRAL_BANKS } from '@/features/economy/model';
+import { fetchPolicyRates } from '@/features/market/bis';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

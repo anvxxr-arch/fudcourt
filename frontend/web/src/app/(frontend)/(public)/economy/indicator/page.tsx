@@ -1,4 +1,4 @@
-import IndicatorExplorer from '@/features/economy/ui/indicator-index';
+import IndicatorExplorer from '@/features/economy/ui/indicator';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';

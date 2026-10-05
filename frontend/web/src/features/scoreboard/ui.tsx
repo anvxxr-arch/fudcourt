@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { chainColor } from '@/styles/shared';
+import { chainColor } from '@/lib/format';
 import { alpha, color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
-import { Loading } from '@/components/ui/feedback';
-import { Table, TBody, THead } from '@/components/ui/table';
-import { Toolbar } from '@/components/ui/toolbar';
+import { Loading } from '@/ui/feedback';
+import { Table, TBody, THead } from '@/ui/table';
+import { Toolbar } from '@/ui/toolbar';
+import { fetchScoreboard } from './client';
 
 type Bucket = { day: string; n: number; run: number; flat: number; dump: number; unknown: number };
 type Catch = {
@@ -20,12 +21,12 @@ type Board = {
 
 const CHAIN_LABEL: Record<string, { label: string; color: string }> = {
   solana: { label: '◎ Solana', color: chainColor('solana') },
-  robinhood: { label: '🪶 Robinhood', color: color.accent },
+  robinhood: { label: '🪶 Robinhood', color: color.blue },
 };
 
 const DECISION_COLOR: Record<string, string> = {
-  surfaced: color.accent, watching: color.warn, 'low score': color.textMuted,
-  vetoed: color.negative, blocked: color.negative, bundle: color.attention,
+  surfaced: color.blue, watching: color.orange, 'low score': color.labelTertiary,
+  vetoed: color.red, blocked: color.red, bundle: color.orange,
 };
 
 // Bucket shares are computed from n, which upstream guarantees equals
@@ -47,9 +48,7 @@ export default function ScoreboardPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/signals?type=scoreboard', { cache: 'no-store' });
-      const json: Board = await res.json();
-      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      const json = await fetchScoreboard<Board>();
       setData(json);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -86,27 +85,27 @@ export default function ScoreboardPage() {
 
   return (
     <div>
-      <Toolbar style={{ flexWrap: 'wrap', gap: space[10] }}>
+      <Toolbar style={{ flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h3 style={{ color: color.accent, margin: 0 }}>Scoreboard</h3>
-          <p style={{ color: color.textMuted, fontSize: fontSize[10], margin: '2px 0 0' }}>
+          <h3 style={{ color: color.blue, margin: 0 }}>Scoreboard</h3>
+          <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: '2px 0 0' }}>
             daily cohort outcomes{data?.cohortDays ? ` · ${data.cohortDays}d cohort` : ''}
             {data ? ` · generated ${new Date(data.generatedAt * 1000).toISOString().replace('T', ' ').slice(0, 16)}` : ''}
           </p>
         </div>
-        <button onClick={load} style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[14]}px`, borderRadius: radius[6], fontSize: fontSize[11], cursor: 'pointer' }}>
+        <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       </Toolbar>
 
       {error && (
-        <p style={{ color: color.negative, fontSize: fontSize[12], background: alpha(color.negative, 0.08), border: `1px solid ${color.negative}`, borderRadius: radius[6], padding: space[8] }}>
+        <p style={{ color: color.red, fontSize: fontSize[12], background: alpha(color.red, 0.08), border: `1px solid ${color.red}`, borderRadius: radius[8], padding: space[8] }}>
           scoreboard failed: {error} — nothing faked
         </p>
       )}
 
       {mismatches > 0 && (
-        <p style={{ color: color.attention, fontSize: fontSize[11], margin: `0 0 ${space[10]}px` }}>
+        <p style={{ color: color.orange, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
           ⚠ {mismatches} bucket(s) where run+flat+dump+unknown ≠ n — upstream schema changed, shares shown raw
         </p>
       )}
@@ -117,9 +116,9 @@ export default function ScoreboardPage() {
             key={c}
             onClick={() => setChain(c)}
             style={{
-              background: c === active ? (CHAIN_LABEL[c]?.color || color.accent) : color.surface,
-              color: c === active ? color.textOnAccent : color.textMuted,
-              border: `1px solid ${color.border}`, padding: `${space[6]}px ${space[12]}px`, borderRadius: radius[6],
+              background: c === active ? (CHAIN_LABEL[c]?.color || color.blue) : color.bgSecondary,
+              color: c === active ? color.labelOnAccent : color.labelTertiary,
+              border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8],
               fontSize: fontSize[11], cursor: 'pointer', fontWeight: fontWeight.bold,
             }}
           >
@@ -134,15 +133,15 @@ export default function ScoreboardPage() {
         // Same rule as SignalsPage: a failed fetch must never fall through to
         // the "no data for this chain" branch, which reads as a real empty
         // result rather than a dead upstream.
-        <p style={{ color: color.negative, fontSize: fontSize[12] }}>
+        <p style={{ color: color.red, fontSize: fontSize[12] }}>
           no data loaded — cohorts and catches withheld because the upstream fetch failed.
         </p>
       ) : !board ? (
-        <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>no scoreboard data for this chain</p>
+        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>no scoreboard data for this chain</p>
       ) : (
         <>
           {totals && (
-            <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap', marginBottom: space[14], fontSize: fontSize[10] }}>
+            <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap', marginBottom: space[12], fontSize: fontSize[11] }}>
               {[
                 ['scored', totals.n.toLocaleString()],
                 ['run', `${totals.run.toLocaleString()} (${totals.runRate?.toFixed(1)}%)`],
@@ -152,82 +151,82 @@ export default function ScoreboardPage() {
                 ['run+flat hit rate', totals.hitRate === null ? '—' : `${totals.hitRate.toFixed(1)}%`],
                 ['days', String((board.series || []).length)],
               ].map(([k, v]) => (
-                <div key={k} style={{ background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius[6], padding: `${space[6]}px ${space[10]}px` }}>
-                  <span style={{ color: color.textMuted }}>{k} </span>
-                  <span style={{ color: color.accent, fontWeight: fontWeight.bold }}>{v}</span>
+                <div key={k} style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px` }}>
+                  <span style={{ color: color.labelTertiary }}>{k} </span>
+                  <span style={{ color: color.blue, fontWeight: fontWeight.bold }}>{v}</span>
                 </div>
               ))}
             </div>
           )}
 
-          <h4 style={{ color: color.text, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>Daily cohorts</h4>
+          <h4 style={{ color: color.labelPrimary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>Daily cohorts</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: space[4], marginBottom: space[20] }}>
             {(board.series || []).map(s => {
               const p = parts(s);
               return (
-                <div key={s.day} style={{ display: 'flex', alignItems: 'center', gap: space[8], fontSize: fontSize[10] }}>
-                  <span style={{ color: color.textMuted, width: 84, flexShrink: 0 }}>{s.day}</span>
-                  <span style={{ color: color.text, width: 46, flexShrink: 0, textAlign: 'right' }}>{s.n}</span>
+                <div key={s.day} style={{ display: 'flex', alignItems: 'center', gap: space[8], fontSize: fontSize[11] }}>
+                  <span style={{ color: color.labelTertiary, width: 84, flexShrink: 0 }}>{s.day}</span>
+                  <span style={{ color: color.labelPrimary, width: 46, flexShrink: 0, textAlign: 'right' }}>{s.n}</span>
                   <div
                     style={{
-                      flex: 1, display: 'flex', height: space[14], borderRadius: radius[4], overflow: 'hidden',
-                      background: color.surface, border: `1px solid ${color.border}`,
+                      flex: 1, display: 'flex', height: space[12], borderRadius: radius[8], overflow: 'hidden',
+                      background: color.bgSecondary, border: `1px solid ${color.separator}`,
                     }}
                     title={`run ${s.run} · flat ${s.flat} · dump ${s.dump} · unknown ${s.unknown}`}
                   >
-                    <div style={{ width: `${p.pct(s.run)}%`, background: color.accent }} />
-                    <div style={{ width: `${p.pct(s.flat)}%`, background: color.warn }} />
-                    <div style={{ width: `${p.pct(s.dump)}%`, background: color.negative }} />
-                    <div style={{ width: `${p.pct(s.unknown)}%`, background: color.border }} />
+                    <div style={{ width: `${p.pct(s.run)}%`, background: color.blue }} />
+                    <div style={{ width: `${p.pct(s.flat)}%`, background: color.orange }} />
+                    <div style={{ width: `${p.pct(s.dump)}%`, background: color.red }} />
+                    <div style={{ width: `${p.pct(s.unknown)}%`, background: color.separator }} />
                   </div>
-                  <span style={{ color: color.textMuted, width: 150, flexShrink: 0 }}>
+                  <span style={{ color: color.labelTertiary, width: 150, flexShrink: 0 }}>
                     {s.run}/{s.flat}/{s.dump}/{s.unknown}
-                    {!p.ok && <span style={{ color: color.attention }}> ≠{s.n}</span>}
+                    {!p.ok && <span style={{ color: color.orange }}> ≠{s.n}</span>}
                   </span>
                 </div>
               );
             })}
           </div>
 
-          <div style={{ display: 'flex', gap: space[12], fontSize: fontSize[10], color: color.textMuted, marginBottom: space[20] }}>
-            {[['run', color.accent], ['flat', color.warn], ['dump', color.negative], ['unknown', color.border]].map(([l, c]) => (
+          <div style={{ display: 'flex', gap: space[12], fontSize: fontSize[11], color: color.labelTertiary, marginBottom: space[20] }}>
+            {[['run', color.blue], ['flat', color.orange], ['dump', color.red], ['unknown', color.separator]].map(([l, c]) => (
               <span key={l as string} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ width: space[10], height: space[10], background: c as string, borderRadius: radius[4], display: 'inline-block' }} />
+                <span style={{ width: space[8], height: space[8], background: c as string, borderRadius: radius[8], display: 'inline-block' }} />
                 {l as string}
               </span>
             ))}
           </div>
 
-          <h4 style={{ color: color.text, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
+          <h4 style={{ color: color.labelPrimary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
             Top catches ({(board.catches || []).length})
           </h4>
           <div style={{ overflowX: 'auto' }}>
             <Table style={{ fontSize: fontSize[11] }}>
               <THead>
-                <tr style={{ color: color.textMuted, textAlign: 'left', borderBottom: `1px solid ${color.border}` }}>
+                <tr style={{ color: color.labelTertiary, textAlign: 'left', borderBottom: `1px solid ${color.separator}` }}>
                   {['day', 'symbol', 'mint', 'score', 'decision', 'peak24', 'x24h'].map(h => (
-                    <th key={h} style={{ padding: `${space[6]}px ${space[8]}px`, fontWeight: fontWeight.medium, whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} style={{ padding: `${space[8]}px ${space[8]}px`, fontWeight: fontWeight.medium, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </THead>
               <TBody>
                 {(board.catches || []).map((c, i) => (
-                  <tr key={`${c.mint}-${c.day}-${i}`} style={{ borderBottom: `1px solid ${alpha(color.border, 0.4)}` }}>
-                    <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.textMuted, whiteSpace: 'nowrap' }}>{c.day}</td>
-                    <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.text, fontWeight: fontWeight.bold, whiteSpace: 'nowrap' }}>{c.symbol || '?'}</td>
-                    <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.textMuted }}>
+                  <tr key={`${c.mint}-${c.day}-${i}`} style={{ borderBottom: `1px solid ${alpha(color.separator, 0.4)}` }}>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary, whiteSpace: 'nowrap' }}>{c.day}</td>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary, fontWeight: fontWeight.bold, whiteSpace: 'nowrap' }}>{c.symbol || '?'}</td>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>
                       {c.mint.length > 14 ? `${c.mint.slice(0, 6)}…${c.mint.slice(-4)}` : c.mint}
                     </td>
-                    <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.accent }}>{c.score?.toFixed(1) ?? '—'}</td>
-                    <td style={{ padding: `${space[6]}px ${space[8]}px`, color: DECISION_COLOR[c.decision] || color.textMuted }}>{c.decision || '—'}</td>
-                    <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.text }}>{typeof c.peak24 === 'number' ? `${c.peak24.toFixed(2)}×` : '—'}</td>
-                    <td style={{ padding: `${space[6]}px ${space[8]}px`, color: color.text }}>{typeof c.x24h === 'number' ? `${c.x24h.toFixed(2)}×` : '—'}</td>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.blue }}>{c.score?.toFixed(1) ?? '—'}</td>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: DECISION_COLOR[c.decision] || color.labelTertiary }}>{c.decision || '—'}</td>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof c.peak24 === 'number' ? `${c.peak24.toFixed(2)}×` : '—'}</td>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof c.x24h === 'number' ? `${c.x24h.toFixed(2)}×` : '—'}</td>
                   </tr>
                 ))}
               </TBody>
             </Table>
             {(board.catches || []).length === 0 && (
-              <p style={{ color: color.textMuted, fontSize: fontSize[12] }}>no catches in this cohort window</p>
+              <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>no catches in this cohort window</p>
             )}
           </div>
         </>

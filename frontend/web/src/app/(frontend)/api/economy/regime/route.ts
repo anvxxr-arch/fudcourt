@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { COUNTRY_BY_ISO3, countryByAnyCode, indicatorsForCountry, policyRateSlug } from '@/features/economy/registry';
+import { COUNTRY_BY_ISO3, countryByAnyCode, indicatorsForCountry, policyRateSlug } from '@/features/economy/model';
 import { readObservations } from '@/app/(frontend)/api/economy/_lib/adapters';
 import { mapPool } from '@/app/(frontend)/api/economy/_lib/rows';
-import { DIMENSION_LABEL, LOOKBACK_BY_FREQUENCY, buildRegime, type DimensionId, type SeriesInput } from '@/features/economy/regime';
+import { DIMENSION_LABEL, LOOKBACK_BY_FREQUENCY, buildRegime, type DimensionId, type SeriesInput } from '@/features/economy/model';
 import type { EconomicIndicator, EconomicObservation } from '@/features/economy/model';
 
 export const dynamic = 'force-dynamic';

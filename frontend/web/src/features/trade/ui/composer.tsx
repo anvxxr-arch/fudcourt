@@ -32,18 +32,18 @@ import {
   type TradeAccountLite,
   type TradePreviewResponse,
 } from '@/features/trade/client';
-import { VENUE_MARKET_TYPES, VENUE_BY_ID, type MarketType, type VenueId } from '@/features/trade/taxonomy';
-import { BASIS_SIZING, buildTradeRequest, missingRequired, type ComposerState } from '@/features/trade/intent';
+import { VENUE_MARKET_TYPES, VENUE_BY_ID, type MarketType, type VenueId } from '@/features/trade/model';
+import { BASIS_SIZING, buildTradeRequest, missingRequired, type ComposerState } from '@/features/trade/model';
 import { Card, Notice } from '@/features/trade/ui/parts';
-import type { BalanceBasis, PreviewResult, SizingMode } from '@/platform/executor/types';
+import type { BalanceBasis, PreviewResult, SizingMode } from '@/lib/executor';
 
 const inputStyle: CSSProperties = {
   width: '100%',
-  background: color.bg,
-  color: color.text,
-  border: `1px solid ${color.border}`,
-  borderRadius: radius[6],
-  padding: `${space[6]}px ${space[8]}px`,
+  background: color.bgBase,
+  color: color.labelPrimary,
+  border: `1px solid ${color.separator}`,
+  borderRadius: radius[8],
+  padding: `${space[8]}px ${space[8]}px`,
   fontSize: fontSize[12],
   boxSizing: 'border-box',
 };
@@ -51,9 +51,9 @@ const inputStyle: CSSProperties = {
 const pairStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: space[8] };
 
 const h3Style: CSSProperties = {
-  color: color.accent,
+  color: color.blue,
   fontSize: fontSize[12],
-  fontWeight: fontWeight.heavy,
+  fontWeight: fontWeight.bold,
   margin: `0 0 ${space[8]}px`,
   letterSpacing: letterSpacing.sm,
 };
@@ -61,7 +61,7 @@ const h3Style: CSSProperties = {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <span style={{ display: 'block', fontSize: fontSize[10], color: color.textMuted, marginBottom: 2 }}>{label}</span>
+      <span style={{ display: 'block', fontSize: fontSize[11], color: color.labelTertiary, marginBottom: 2 }}>{label}</span>
       {children}
     </div>
   );
@@ -111,11 +111,11 @@ function Button({ onClick, children, disabled, primary }: { onClick: () => void;
       onClick={onClick}
       disabled={disabled}
       style={{
-        background: primary ? color.accent : color.surface,
-        color: primary ? color.textOnAccent : color.text,
-        border: `1px solid ${primary ? color.accent : color.border}`,
-        padding: `${space[6]}px ${space[12]}px`,
-        borderRadius: radius[6],
+        background: primary ? color.blue : color.bgSecondary,
+        color: primary ? color.labelOnAccent : color.labelPrimary,
+        border: `1px solid ${primary ? color.blue : color.separator}`,
+        padding: `${space[8]}px ${space[12]}px`,
+        borderRadius: radius[8],
         fontSize: fontSize[11],
         fontWeight: primary ? fontWeight.bold : fontWeight.regular,
         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -131,13 +131,13 @@ function Err({ text }: { text: string }) {
   if (text === '') return null;
   return (
     <p style={{
-      color: color.negative,
+      color: color.red,
       fontSize: fontSize[11],
       fontWeight: fontWeight.bold,
-      background: alpha(color.negative, 0.08),
-      border: `1px solid ${alpha(color.negative, 0.35)}`,
-      padding: `${space[8]}px ${space[10]}px`,
-      borderRadius: radius[6],
+      background: alpha(color.red, 0.08),
+      border: `1px solid ${alpha(color.red, 0.35)}`,
+      padding: `${space[8]}px ${space[8]}px`,
+      borderRadius: radius[8],
       margin: `0 0 ${space[8]}px`,
       whiteSpace: 'pre-wrap',
     }}>
@@ -147,10 +147,10 @@ function Err({ text }: { text: string }) {
 }
 
 function Line({ label, value, tone }: { label: string; value: string; tone?: 'good' | 'bad' }) {
-  const toneColor = tone === 'good' ? color.positive : tone === 'bad' ? color.negative : color.text;
+  const toneColor = tone === 'good' ? color.green : tone === 'bad' ? color.red : color.labelPrimary;
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: space[10], padding: '3px 0', borderBottom: `1px solid ${color.border}` }}>
-      <span style={{ color: color.textMuted, fontSize: fontSize[11] }}>{label}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: space[8], padding: '3px 0', borderBottom: `1px solid ${color.separator}` }}>
+      <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{label}</span>
       <span style={{ color: toneColor, fontSize: fontSize[11], fontWeight: fontWeight.bold, textAlign: 'right' }}>{value}</span>
     </div>
   );
@@ -182,7 +182,7 @@ function PreviewPanel({ shown }: { shown: TradePreviewResponse | null }) {
   if (shown === null) {
     return (
       <Card title="Risk preview" subtitle="nothing is sized, priced or sent until the engine answers for this exact request">
-        <p style={{ margin: 0, fontSize: fontSize[11], color: color.textMuted }}>
+        <p style={{ margin: 0, fontSize: fontSize[11], color: color.labelTertiary }}>
           Press Preview — the executor&apos;s risk engine returns the size, the risk figures and any conflicts, and persists nothing (PRD §98).
         </p>
       </Card>
@@ -210,18 +210,18 @@ function PreviewPanel({ shown }: { shown: TradePreviewResponse | null }) {
       <Line label="Risk / Reward" value={preview.riskReward === null ? NO_VALUE : preview.riskReward.toFixed(2)} />
       <Line label="Liquidation Price" value={formatPrice(plan.liquidation.priceApprox)} />
       {preview.conflicts.length > 0 && (
-        <div style={{ marginTop: space[8], borderTop: `1px solid ${color.negative}`, paddingTop: space[6] }}>
+        <div style={{ marginTop: space[8], borderTop: `1px solid ${color.red}`, paddingTop: space[8] }}>
           {preview.conflicts.map((c) => (
-            <p key={c.code} style={{ margin: `0 0 ${space[4]}px`, fontSize: fontSize[11], color: color.text }}>
-              <span style={{ color: color.negative, fontWeight: fontWeight.bold }}>{c.code}</span> — {c.message}
+            <p key={c.code} style={{ margin: `0 0 ${space[4]}px`, fontSize: fontSize[11], color: color.labelPrimary }}>
+              <span style={{ color: color.red, fontWeight: fontWeight.bold }}>{c.code}</span> — {c.message}
             </p>
           ))}
         </div>
       )}
       {preview.warnings.length > 0 && (
-        <div style={{ marginTop: space[8], borderTop: `1px solid ${color.border}`, paddingTop: space[6] }}>
+        <div style={{ marginTop: space[8], borderTop: `1px solid ${color.separator}`, paddingTop: space[8] }}>
           {preview.warnings.map((w) => (
-            <p key={w} style={{ margin: '0 0 3px', fontSize: fontSize[10], color: color.textMuted }}>· {w}</p>
+            <p key={w} style={{ margin: '0 0 3px', fontSize: fontSize[11], color: color.labelTertiary }}>· {w}</p>
           ))}
         </div>
       )}
@@ -334,7 +334,7 @@ export function TradeComposer({ marketType, defaultBase, defaultQuote }: {
   }, [request, blocking]);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(300px, 400px)', gap: space[14], alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(300px, 400px)', gap: space[12], alignItems: 'start' }}>
       <Card>
         <h3 style={h3Style}>COMPOSE A TRADE · {marketType.toUpperCase()}</h3>
         <Err text={accountsError} />
@@ -367,7 +367,7 @@ export function TradeComposer({ marketType, defaultBase, defaultQuote }: {
             <Input value={state.quote} onChange={(quote) => patch({ quote })} placeholder="USDT" />
           </Field>
         </div>
-        <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[10], color: color.textMuted }}>
+        <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary }}>
           venue symbol: {venueSymbol === null ? 'resolved from the venue token list at call time (not derivable from base+quote)' : venueSymbol}
         </p>
 
@@ -388,7 +388,7 @@ export function TradeComposer({ marketType, defaultBase, defaultQuote }: {
           </Field>
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.border}`, marginTop: space[10], paddingTop: space[10] }}>
+        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
           <div style={pairStyle}>
             <Field label="Entry type">
               <Select
@@ -411,7 +411,7 @@ export function TradeComposer({ marketType, defaultBase, defaultQuote }: {
           </div>
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.border}`, marginTop: space[10], paddingTop: space[10] }}>
+        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
           <div style={pairStyle}>
             <Field label="Sizing mode">
               <Select value={state.sizingMode} onChange={(sizingMode) => patch({ sizingMode })} options={SIZING_OPTIONS} />
@@ -453,7 +453,7 @@ export function TradeComposer({ marketType, defaultBase, defaultQuote }: {
           )}
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.border}`, marginTop: space[10], paddingTop: space[10] }}>
+        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
           <div style={pairStyle}>
             <Field label="Execution mode">
               <Select
@@ -463,21 +463,21 @@ export function TradeComposer({ marketType, defaultBase, defaultQuote }: {
               />
             </Field>
             <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: space[4] }}>
-              <span style={{ fontSize: fontSize[10], color: state.mode === 'live' ? color.negative : color.textMuted }}>
+              <span style={{ fontSize: fontSize[11], color: state.mode === 'live' ? color.red : color.labelTertiary }}>
                 {state.mode === 'live'
                   ? `live is ${liveEnabled ? 'enabled' : 'BLOCKED by the server kill switch'}`
                   : 'paper — the venue adapter simulates the fills'}
               </span>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: space[8], marginTop: space[10], flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: space[8], marginTop: space[8], flexWrap: 'wrap' }}>
             <Button onClick={runPreview} disabled={busy || blocking.length > 0} primary>Preview</Button>
             <Button onClick={place} disabled={busy || conflictCount > 0 || blocking.length > 0} primary={state.mode !== 'live'}>
               {state.mode === 'live' ? 'Place LIVE order' : 'Place paper order'}
             </Button>
           </div>
           {blocking.length > 0 && (
-            <ul style={{ color: color.textMuted, fontSize: fontSize[10], margin: `${space[8]}px 0 0`, paddingLeft: space[16] }}>
+            <ul style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `${space[8]}px 0 0`, paddingLeft: space[16] }}>
               {blocking.map((item) => <li key={item}>{item}</li>)}
             </ul>
           )}
@@ -489,8 +489,8 @@ export function TradeComposer({ marketType, defaultBase, defaultQuote }: {
         <Err text={submitError} />
         {createdId !== '' && (
           <Card>
-            <p style={{ margin: `0 0 ${space[8]}px`, fontSize: fontSize[11], color: color.text }}>
-              execution <span style={{ color: color.accent }}>{createdId}</span> created and ready — start it from the executor.
+            <p style={{ margin: `0 0 ${space[8]}px`, fontSize: fontSize[11], color: color.labelPrimary }}>
+              execution <span style={{ color: color.blue }}>{createdId}</span> created and ready — start it from the executor.
             </p>
           </Card>
         )}

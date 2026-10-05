@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import TradeDashboard from '@/features/trade/ui/dashboard';
-import { MARKET_TYPE_BY_ID, isMarketType } from '@/features/trade/taxonomy';
+import { MARKET_TYPE_BY_ID, isMarketType } from '@/features/trade/model';
 
 /**
  * A market type is a route parameter, so the title is per-type. It is built from

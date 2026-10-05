@@ -1,4 +1,4 @@
-import { requireTier } from '@/platform/auth/guard';
+import { requireTier } from '@/server/auth';
 import { ExecutorComposer, ExecutorFrame } from '@/features/executor/ui';
 
 export const dynamic = 'force-dynamic';

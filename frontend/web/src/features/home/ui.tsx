@@ -3,11 +3,12 @@
 import { Fragment, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { alpha, color, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
-import { Badge } from '@/components/ui/badge';
-import { Banner } from '@/components/ui/banner';
-import { Loading } from '@/components/ui/feedback';
-import { Stat } from '@/components/ui/stat';
-import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
+import { Badge } from '@/ui/badge';
+import { Banner } from '@/ui/banner';
+import { Loading } from '@/ui/feedback';
+import { Stat } from '@/ui/stat';
+import { imgSrc } from '@/lib/img';
+import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import {
   COMMODITY_URL,
   CR_HOME_URL,
@@ -41,6 +42,7 @@ import {
   fmtX,
   fmtYear,
   fmtYield,
+  fetchJson,
   toneOf,
   type CrHome,
   type CrMovers,
@@ -67,7 +69,7 @@ import {
  *
  * Read-only: it composes the public families the boards already serve and links
  * into the routed surfaces. It is NOT a second shell — the nav lives in
- * `components/layout/store-shell.tsx`; this page only answers "what is FUDCOURT,
+ * `features/overview/store-shell.tsx`; this page only answers "what is FUDCOURT,
  * and what is the market doing right now".
  *
  * Every section is an independent fetch. A family that fails renders a loud
@@ -107,29 +109,29 @@ const DESTINATIONS: { href: string; label: string; blurb: string }[] = [
 // ---- shared styles (token-only; the design gate forbids literals here) ------
 
 const cardStyle: React.CSSProperties = {
-  background: color.surface,
-  border: `1px solid ${color.border}`,
+  background: color.bgSecondary,
+  border: `1px solid ${color.separator}`,
   borderRadius: radius[8],
-  padding: space[14],
+  padding: space[12],
 };
 const h2Style: React.CSSProperties = {
-  margin: `0 0 ${space[10]}px`,
-  color: color.accent,
-  fontSize: fontSize[14],
+  margin: `0 0 ${space[8]}px`,
+  color: color.blue,
+  fontSize: fontSize[15],
   fontWeight: fontWeight.bold,
   letterSpacing: letterSpacing.wide,
 };
 const h3Style: React.CSSProperties = {
-  margin: `0 0 ${space[10]}px`,
-  color: color.accent,
+  margin: `0 0 ${space[8]}px`,
+  color: color.blue,
   fontSize: fontSize[12],
   fontWeight: fontWeight.bold,
   letterSpacing: letterSpacing.wide,
 };
 /** Sub-heading inside a card, for a block that sits under the card's own h3. */
 const h4Style: React.CSSProperties = {
-  margin: `${space[14]}px 0 ${space[6]}px`,
-  color: color.text,
+  margin: `${space[12]}px 0 ${space[8]}px`,
+  color: color.labelPrimary,
   fontSize: fontSize[11],
   fontWeight: fontWeight.bold,
   letterSpacing: letterSpacing.wide,
@@ -137,7 +139,7 @@ const h4Style: React.CSSProperties = {
 /** A `<summary>` that reads as a control, not as body copy. */
 const summaryStyle: React.CSSProperties = {
   cursor: 'pointer',
-  color: color.accent,
+  color: color.blue,
   fontSize: fontSize[11],
   fontWeight: fontWeight.bold,
   letterSpacing: letterSpacing.wide,
@@ -145,8 +147,8 @@ const summaryStyle: React.CSSProperties = {
 };
 const noteStyle: React.CSSProperties = {
   margin: `${space[8]}px 0 0`,
-  color: color.textMuted,
-  fontSize: fontSize[10],
+  color: color.labelTertiary,
+  fontSize: fontSize[11],
 };
 const listRowStyle: React.CSSProperties = {
   display: 'flex',
@@ -156,11 +158,11 @@ const listRowStyle: React.CSSProperties = {
   fontSize: fontSize[11],
 };
 const theadRowStyle: React.CSSProperties = {
-  color: color.textMuted,
+  color: color.labelTertiary,
   textAlign: 'left',
-  borderBottom: `1px solid ${color.border}`,
+  borderBottom: `1px solid ${color.separator}`,
 };
-const rowStyle: React.CSSProperties = { borderBottom: `1px solid ${alpha(color.border, 0.4)}` };
+const rowStyle: React.CSSProperties = { borderBottom: `1px solid ${alpha(color.separator, 0.4)}` };
 
 // ---- primitives -------------------------------------------------------------
 
@@ -173,11 +175,7 @@ function useJson<T>(url: string) {
     let alive = true;
     setLoading(true);
     setError('');
-    fetch(url, { cache: 'no-store' })
-      .then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json() as Promise<T>;
-      })
+    fetchJson<T>(url)
       .then(j => { if (alive) { setData(j); setLoading(false); } })
       .catch(e => { if (alive) { setError(e instanceof Error ? e.message : String(e)); setLoading(false); } });
     return () => { alive = false; };
@@ -215,7 +213,7 @@ function Panel<T>({
 /** A signed percent, coloured by sign; absent -> `—` in the muted tone. */
 function Change({ v, digits = 2 }: { v: number | null | undefined; digits?: number }) {
   const t = toneOf(v);
-  const c = t === 'negative' ? color.negative : t === 'positive' ? color.positive : color.textMuted;
+  const c = t === 'negative' ? color.red : t === 'positive' ? color.green : color.labelTertiary;
   return <span style={{ color: c }}>{fmtPct(v, digits)}</span>;
 }
 
@@ -231,12 +229,12 @@ function CoinCell({ image, symbol, name }: { image: string | null; symbol: strin
   const label = symbol || name || DASH;
   const sub = symbol && name ? name : null;
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[6] }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8] }}>
       {image
-        ? <img src={image} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
-        : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.border, display: 'inline-block' }} />}
-      <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{label}</span>
-      {sub ? <span style={{ color: color.textMuted }}>{sub}</span> : null}
+        ? <img src={imgSrc(image)} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
+        : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.separator, display: 'inline-block' }} />}
+      <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{label}</span>
+      {sub ? <span style={{ color: color.labelTertiary }}>{sub}</span> : null}
     </span>
   );
 }
@@ -252,11 +250,11 @@ function MoversColumn({ title, url }: { title: string; url: string }) {
       {error && <Banner variant="error">{error}</Banner>}
       {loading && !error && <Loading label={`reading ${title.toLowerCase()}…`} />}
       {!error && data && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
           {data.rows.slice(0, 6).map((r, i) => (
             <div key={`${r.key ?? r.symbol ?? 'row'}-${i}`} style={listRowStyle}>
               <CoinCell image={r.image} symbol={r.symbol} />
-              <span style={{ color: color.text, whiteSpace: 'nowrap' }}>{fmtPrice(r.priceUsd)}</span>
+              <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(r.priceUsd)}</span>
               <Change v={r.change24h} />
             </div>
           ))}
@@ -276,11 +274,11 @@ function FxColumn() {
       {error && <Banner variant="error">{error}</Banner>}
       {loading && !error && <Loading label="reading FX majors…" />}
       {!error && data && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
           {data.pairs.slice(0, 5).map(p => (
             <div key={p.pair} style={listRowStyle}>
-              <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{p.pair}</span>
-              <span style={{ color: color.text }}>{fmtRate(p.rate)}</span>
+              <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{p.pair}</span>
+              <span style={{ color: color.labelPrimary }}>{fmtRate(p.rate)}</span>
             </div>
           ))}
         </div>
@@ -299,11 +297,11 @@ function QuoteColumn({ title, url }: { title: string; url: string }) {
       {error && <Banner variant="error">{error}</Banner>}
       {loading && !error && <Loading label={`reading ${title.toLowerCase()}…`} />}
       {!error && data && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
           {data.quotes.slice(0, 5).map(q => (
             <div key={q.symbol} style={listRowStyle}>
-              <span style={{ color: color.text, fontWeight: fontWeight.bold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.name}</span>
-              <span style={{ color: color.text, whiteSpace: 'nowrap' }}>{fmtPrice(q.price)}</span>
+              <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.name}</span>
+              <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(q.price)}</span>
               <Change v={q.changePercent} />
             </div>
           ))}
@@ -321,7 +319,7 @@ function QuoteColumn({ title, url }: { title: string; url: string }) {
 /** A yield delta rendered in basis points, coloured by sign; absent -> `—`. */
 function Bp({ v }: { v: number | null | undefined }) {
   const t = toneOf(v);
-  const c = t === 'negative' ? color.negative : t === 'positive' ? color.positive : color.textMuted;
+  const c = t === 'negative' ? color.red : t === 'positive' ? color.green : color.labelTertiary;
   return <span style={{ color: c }}>{fmtBp(v)}</span>;
 }
 
@@ -330,11 +328,11 @@ const POLICY_REGIONS = ['Americas', 'Europe', 'Asia-Pacific', 'Africa & Middle E
 
 /** Shared style for a table's group-divider row. */
 const groupRowStyle: React.CSSProperties = {
-  color: color.accent,
+  color: color.blue,
   fontWeight: fontWeight.bold,
-  fontSize: fontSize[10],
+  fontSize: fontSize[11],
   letterSpacing: letterSpacing.wider,
-  paddingTop: space[10],
+  paddingTop: space[8],
 };
 
 /**
@@ -364,11 +362,11 @@ function PolicyRateTable({ rows }: { rows: PolicyRateRow[] }) {
               </TR>
               {rows.filter(r => r.region === region).map(r => (
                 <TR key={r.area} style={rowStyle}>
-                  <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>
+                  <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
                     <span title={r.note}>{r.bank}</span>
                   </TD>
-                  <TD align="right" style={{ color: color.text }}>{fmtPolicyRate(r.rate)}</TD>
-                  <TD align="right" style={{ color: color.textMuted }}>{r.date || DASH}</TD>
+                  <TD align="right" style={{ color: color.labelPrimary }}>{fmtPolicyRate(r.rate)}</TD>
+                  <TD align="right" style={{ color: color.labelTertiary }}>{r.date || DASH}</TD>
                 </TR>
               ))}
             </Fragment>
@@ -406,11 +404,11 @@ function IndicatorTable({ rows }: { rows: IndicatorRow[] }) {
               </TR>
               {rows.filter(r => r.group === group).map(r => (
                 <TR key={r.id} style={rowStyle}>
-                  <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>
+                  <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
                     <span title={r.note}>{r.name}</span>
                   </TD>
-                  <TD align="right" style={{ color: color.text }}>{fmtIndicator(r.value, r.unit, r.decimals)}</TD>
-                  <TD align="right" style={{ color: color.textMuted }}>{fmtDate(r.date)}</TD>
+                  <TD align="right" style={{ color: color.labelPrimary }}>{fmtIndicator(r.value, r.unit, r.decimals)}</TD>
+                  <TD align="right" style={{ color: color.labelTertiary }}>{fmtDate(r.date)}</TD>
                 </TR>
               ))}
             </Fragment>
@@ -446,14 +444,14 @@ const WORLD_THEME_ORDER = [
 
 /** The theme band that spans a column block's headings. */
 const themeHeadStyle: React.CSSProperties = {
-  color: color.accent,
-  fontSize: fontSize[10],
+  color: color.blue,
+  fontSize: fontSize[11],
   fontWeight: fontWeight.semibold,
   letterSpacing: letterSpacing.wider,
   textTransform: 'uppercase',
   paddingTop: space[8],
-  paddingBottom: space[6],
-  borderBottom: `1px solid ${color.border}`,
+  paddingBottom: space[8],
+  borderBottom: `1px solid ${color.separator}`,
 };
 
 /**
@@ -463,13 +461,13 @@ const themeHeadStyle: React.CSSProperties = {
  * numeric columns run together into one unreadable band.
  */
 const worldHeadStyle: React.CSSProperties = {
-  padding: `${space[4]}px ${space[6]}px`,
+  padding: `${space[4]}px ${space[8]}px`,
   whiteSpace: 'nowrap',
 };
 
 /** A numeric cell: value over its change, top-aligned so the two lines stay in their column. */
 const worldCellStyle: React.CSSProperties = {
-  padding: `${space[4]}px ${space[6]}px`,
+  padding: `${space[4]}px ${space[8]}px`,
   whiteSpace: 'nowrap',
   verticalAlign: 'top',
 };
@@ -479,11 +477,11 @@ const worldCellStyle: React.CSSProperties = {
  * reader loses which values belong together; one hairline at each block boundary
  * carries the grouping the theme band announces.
  */
-const worldBlockStyle: React.CSSProperties = { borderLeft: `1px solid ${color.border}` };
+const worldBlockStyle: React.CSSProperties = { borderLeft: `1px solid ${color.separator}` };
 
 /** Colour a change by DIRECTION — a rising debt and a rising lifespan both print `+`. */
 function dirColor(dir: -1 | 0 | 1): string {
-  return dir > 0 ? color.positive : dir < 0 ? color.negative : color.textMuted;
+  return dir > 0 ? color.green : dir < 0 ? color.red : color.labelTertiary;
 }
 
 /**
@@ -563,7 +561,7 @@ function WorldTable({
                   <TR key={r.code} style={rowStyle}>
                     <TD
                       style={{
-                        color: color.text,
+                        color: color.labelPrimary,
                         fontWeight: fontWeight.bold,
                         padding: `${space[4]}px ${space[12]}px ${space[4]}px 0`,
                         whiteSpace: 'nowrap',
@@ -582,12 +580,12 @@ function WorldTable({
                           align="right"
                           style={blockStart.has(c.id) ? { ...worldCellStyle, ...worldBlockStyle } : worldCellStyle}
                         >
-                          <div style={{ color: color.text }}>
+                          <div style={{ color: color.labelPrimary }}>
                             {fmtEconomy(value, c.kind, c.decimals)}{' '}
-                            <span style={{ color: color.textMuted }}>{fmtYear(cell?.year)}</span>
+                            <span style={{ color: color.labelTertiary }}>{fmtYear(cell?.year)}</span>
                           </div>
                           <div
-                            style={{ color: dirColor(dir), fontSize: fontSize[10] }}
+                            style={{ color: dirColor(dir), fontSize: fontSize[11] }}
                             title={prior ? `vs ${prior.year}: ${fmtEconomy(prior.value, c.kind, c.decimals)}` : 'no earlier observation to compare'}
                           >
                             {fmtDelta(value, prior, c.kind, c.decimals)}
@@ -636,10 +634,10 @@ function MacroBoard() {
               <TBody>
                 {rates.map(q => (
                   <TR key={q.symbol} style={rowStyle}>
-                    <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>
+                    <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
                       <span title={q.note}>{q.name}</span>
                     </TD>
-                    <TD align="right" style={{ color: color.text }}>{fmtYield(q.price)}</TD>
+                    <TD align="right" style={{ color: color.labelPrimary }}>{fmtYield(q.price)}</TD>
                     <TD align="right"><Bp v={q.change} /></TD>
                   </TR>
                 ))}
@@ -647,11 +645,11 @@ function MacroBoard() {
             </Table>
           </div>
           {data.spreads.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[14], marginTop: space[8] }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[12], marginTop: space[8] }}>
               {data.spreads.map(s => (
-                <span key={s.label} style={{ fontSize: fontSize[11], color: color.textMuted }} title={s.note}>
+                <span key={s.label} style={{ fontSize: fontSize[11], color: color.labelTertiary }} title={s.note}>
                   {s.label}{' '}
-                  <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{fmtBpRaw(s.bp)}</span>
+                  <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{fmtBpRaw(s.bp)}</span>
                 </span>
               ))}
             </div>
@@ -668,10 +666,10 @@ function MacroBoard() {
               <TBody>
                 {idx.map(q => (
                   <TR key={q.symbol} style={rowStyle}>
-                    <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>
+                    <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
                       <span title={q.note}>{q.name}</span>
                     </TD>
-                    <TD align="right" style={{ color: color.text }}>{fmtNum(q.price, 2)}</TD>
+                    <TD align="right" style={{ color: color.labelPrimary }}>{fmtNum(q.price, 2)}</TD>
                     <TD align="right"><Change v={q.changePercent} /></TD>
                   </TR>
                 ))}
@@ -731,10 +729,10 @@ function IndonesiaLive({ quotes }: { quotes: IndonesiaQuote[] }) {
               </TR>
               {quotes.filter(q => q.group === g).map(q => (
                 <TR key={q.symbol} style={rowStyle}>
-                  <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>
+                  <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
                     <span title={q.note}>{q.name}</span>
                   </TD>
-                  <TD align="right" style={{ color: color.text }}>{fmtNum(q.price, 2)}</TD>
+                  <TD align="right" style={{ color: color.labelPrimary }}>{fmtNum(q.price, 2)}</TD>
                   <TD align="right"><Change v={q.changePercent} /></TD>
                 </TR>
               ))}
@@ -768,7 +766,7 @@ function IndonesiaBoard() {
           {data.quotes.length > 0 && <IndonesiaLive quotes={data.quotes} />}
           <p style={{ ...noteStyle, marginTop: space[12] }} title={data.policy.note}>
             {data.policy.label}{' '}
-            <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{fmtPolicyRate(data.policy.rate)}</span>
+            <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{fmtPolicyRate(data.policy.rate)}</span>
             {data.policy.date ? <span> · as of {data.policy.date}</span> : null}
           </p>
           {economyGroups.length > 0 && (
@@ -789,11 +787,11 @@ function IndonesiaBoard() {
                       </TR>
                       {data.economy.filter(e => e.group === g).map(e => (
                         <TR key={e.id} style={rowStyle}>
-                          <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>
+                          <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
                             <span title={e.note}>{e.name}</span>
                           </TD>
-                          <TD align="right" style={{ color: color.text }}>{fmtEconomy(e.value, e.kind, e.decimals)}</TD>
-                          <TD align="right" style={{ color: color.textMuted }}>{fmtYear(e.year)}</TD>
+                          <TD align="right" style={{ color: color.labelPrimary }}>{fmtEconomy(e.value, e.kind, e.decimals)}</TD>
+                          <TD align="right" style={{ color: color.labelTertiary }}>{fmtYear(e.year)}</TD>
                         </TR>
                       ))}
                     </Fragment>
@@ -857,13 +855,13 @@ function SignalQuality() {
                   const b = c.latest as ScoreboardBucket;
                   return (
                     <TR key={chain} style={rowStyle}>
-                      <TD style={{ color: color.text, fontWeight: fontWeight.bold }}>{chain}</TD>
-                      <TD style={{ color: color.textMuted }}>{b.day}</TD>
-                      <TD align="right" style={{ color: color.text }}>{fmtNum(b.n)}</TD>
-                      <TD align="right" style={{ color: color.positive }}>{fmtNum(b.run)}</TD>
-                      <TD align="right" style={{ color: color.textMuted }}>{fmtNum(b.flat)}</TD>
-                      <TD align="right" style={{ color: color.negative }}>{fmtNum(b.dump)}</TD>
-                      <TD align="right" style={{ color: color.textMuted }}>{fmtNum(b.unknown)}</TD>
+                      <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{chain}</TD>
+                      <TD style={{ color: color.labelTertiary }}>{b.day}</TD>
+                      <TD align="right" style={{ color: color.labelPrimary }}>{fmtNum(b.n)}</TD>
+                      <TD align="right" style={{ color: color.green }}>{fmtNum(b.run)}</TD>
+                      <TD align="right" style={{ color: color.labelTertiary }}>{fmtNum(b.flat)}</TD>
+                      <TD align="right" style={{ color: color.red }}>{fmtNum(b.dump)}</TD>
+                      <TD align="right" style={{ color: color.labelTertiary }}>{fmtNum(b.unknown)}</TD>
                     </TR>
                   );
                 })}
@@ -873,8 +871,8 @@ function SignalQuality() {
           {best && (
             <p style={noteStyle}>
               best cohort catch:{' '}
-              <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{best.symbol || DASH}</span>{' '}
-              <span style={{ color: color.accent }}>{fmtX(best.x24h)}</span> peak 24h · score{' '}
+              <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{best.symbol || DASH}</span>{' '}
+              <span style={{ color: color.blue }}>{fmtX(best.x24h)}</span> peak 24h · score{' '}
               {fmtNum(best.score, 1)} · {best.decision || DASH} · {best.day}
             </p>
           )}
@@ -895,35 +893,35 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
   const live = !!cr.data;
 
   return (
-    <div style={{ background: color.bg, minHeight: '100vh', color: color.text, fontFamily: fontFamily.mono, padding: space[20] }}>
+    <div style={{ background: color.bgBase, minHeight: '100vh', color: color.labelPrimary, fontFamily: fontFamily.mono, padding: space[20] }}>
       <main style={{ maxWidth: 1080, margin: '0 auto' }}>
         {/* ---- hero ---------------------------------------------------------- */}
-        <header style={{ borderBottom: `1px solid ${color.border}`, paddingBottom: space[20], marginBottom: space[20] }}>
+        <header style={{ borderBottom: `1px solid ${color.separator}`, paddingBottom: space[20], marginBottom: space[20] }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: space[12], flexWrap: 'wrap' }}>
-            <h1 style={{ margin: 0, color: color.accent, fontSize: fontSize[32], fontWeight: fontWeight.heavy, letterSpacing: letterSpacing.wider }}>
+            <h1 style={{ margin: 0, color: color.blue, fontSize: fontSize[28], fontWeight: fontWeight.bold, letterSpacing: letterSpacing.wider }}>
               FUDCOURT
             </h1>
             <Badge variant={live ? 'accent' : 'muted'}>{live ? 'live' : cr.loading ? 'connecting' : 'offline'}</Badge>
           </div>
-          <p style={{ margin: `${space[8]}px 0 0`, color: color.textMuted, fontSize: fontSize[13], letterSpacing: letterSpacing.wide }}>
+          <p style={{ margin: `${space[8]}px 0 0`, color: color.labelTertiary, fontSize: fontSize[13], letterSpacing: letterSpacing.wide }}>
             Community · Terminal · Management
           </p>
-          <p style={{ margin: `${space[10]}px 0 0`, color: color.text, fontSize: fontSize[14], lineHeight: lineHeight.normal, maxWidth: 720 }}>
+          <p style={{ margin: `${space[8]}px 0 0`, color: color.labelPrimary, fontSize: fontSize[15], lineHeight: lineHeight.normal, maxWidth: 720 }}>
             Verified market intelligence boards for everyone, a cross-chain treasury terminal for the team,
             and an admin control panel for management. Every figure below is read live through the same
             proxies the boards use — a metric the upstream did not publish renders{' '}
-            <span style={{ color: color.textMuted }}>{DASH}</span>, never <span style={{ color: color.textMuted }}>0</span>.
+            <span style={{ color: color.labelTertiary }}>{DASH}</span>, never <span style={{ color: color.labelTertiary }}>0</span>.
           </p>
-          <div style={{ display: 'flex', gap: space[10], flexWrap: 'wrap', marginTop: space[16] }}>
+          <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap', marginTop: space[16] }}>
             <Link
               href="/market"
-              style={{ background: color.accent, color: color.textOnAccent, borderRadius: radius[6], padding: `${space[8]}px ${space[18]}px`, fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none' }}
+              style={{ background: color.blue, color: color.labelOnAccent, borderRadius: radius[8], padding: `${space[8]}px ${space[16]}px`, fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none' }}
             >
               Open the market hub →
             </Link>
             <Link
               href={isTeam ? '/team/balance' : '/login'}
-              style={{ background: color.surface, color: color.text, border: `1px solid ${color.border}`, borderRadius: radius[6], padding: `${space[8]}px ${space[18]}px`, fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none' }}
+              style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[16]}px`, fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none' }}
             >
               {isTeam ? 'Treasury terminal →' : 'Sign in →'}
             </Link>
@@ -941,7 +939,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
           {cr.loading && !cr.error && <Loading label="reading the market header…" />}
           {g && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: space[10] }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: space[8] }}>
                 <Stat label="Total market cap" value={fmtUsdCompact(g.totalMarketCap)} hint={fmtPct(g.totalMarketCapChangePercent)} tone={toneOf(g.totalMarketCapChangePercent)} valueSize={fontSize[20]} />
                 <Stat label="24h volume" value={fmtUsdCompact(g.totalVolume24h)} hint={fmtPct(g.totalVolume24hChangePercent)} tone={toneOf(g.totalVolume24hChangePercent)} valueSize={fontSize[20]} />
                 <Stat label="BTC dominance" value={g.btcDominance == null ? DASH : `${g.btcDominance.toFixed(2)}%`} hint={fmtPct(g.btcDominanceChangePercent)} tone={toneOf(g.btcDominanceChangePercent)} valueSize={fontSize[20]} />
@@ -977,11 +975,11 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
                   <TBody>
                     {d.coins.slice(0, TOP_LIMIT).map(c => (
                       <TR key={c.symbol} style={rowStyle}>
-                        <TD align="right" style={{ color: color.textMuted }}>{fmtNum(c.rank)}</TD>
+                        <TD align="right" style={{ color: color.labelTertiary }}>{fmtNum(c.rank)}</TD>
                         <TD><CoinCell image={c.image} symbol={c.symbol} name={c.name} /></TD>
-                        <TD align="right" style={{ color: color.text }}>{fmtPrice(c.lastPrice)}</TD>
+                        <TD align="right" style={{ color: color.labelPrimary }}>{fmtPrice(c.lastPrice)}</TD>
                         <TD align="right"><Change v={c.priceChangePercent} /></TD>
-                        <TD align="right" style={{ color: color.text }}>{fmtUsdCompact(c.marketCap)}</TD>
+                        <TD align="right" style={{ color: color.labelPrimary }}>{fmtUsdCompact(c.marketCap)}</TD>
                       </TR>
                     ))}
                   </TBody>
@@ -1012,11 +1010,11 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
                   <TBody>
                     {d.rows.slice(0, 8).map(r => (
                       <TR key={`${r.key ?? r.symbol ?? 'row'}`} style={rowStyle}>
-                        <TD align="right" style={{ color: color.textMuted }}>{fmtNum(r.rank)}</TD>
+                        <TD align="right" style={{ color: color.labelTertiary }}>{fmtNum(r.rank)}</TD>
                         <TD><CoinCell image={r.image} symbol={r.symbol} name={r.name} /></TD>
-                        <TD align="right" style={{ color: color.text }}>{fmtPrice(r.priceUsd)}</TD>
+                        <TD align="right" style={{ color: color.labelPrimary }}>{fmtPrice(r.priceUsd)}</TD>
                         <TD align="right"><Change v={r.change24h} /></TD>
-                        <TD align="right" style={{ color: color.text }}>{fmtUsdCompact(r.volume24hUsd)}</TD>
+                        <TD align="right" style={{ color: color.labelPrimary }}>{fmtUsdCompact(r.volume24hUsd)}</TD>
                       </TR>
                     ))}
                   </TBody>
@@ -1032,7 +1030,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
         {/* ---- 4. gainers / losers ------------------------------------------- */}
         <section style={{ marginBottom: space[24] }}>
           <h2 style={h2Style}>24h movers</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: space[14] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: space[12] }}>
             <MoversColumn title="Top gainers" url={GAINERS_URL} />
             <MoversColumn title="Top losers" url={LOSERS_URL} />
           </div>
@@ -1059,17 +1057,17 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
                   <TBody>
                     {d.rows.slice(0, 8).map((p, i) => (
                       <TR key={p.slug} style={rowStyle}>
-                        <TD align="right" style={{ color: color.textMuted }}>{fmtNum(i + 1)}</TD>
+                        <TD align="right" style={{ color: color.labelTertiary }}>{fmtNum(i + 1)}</TD>
                         <TD>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[6] }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8] }}>
                             {p.logo
-                              ? <img src={p.logo} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
+                              ? <img src={imgSrc(p.logo)} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
                               : null}
-                            <span style={{ color: color.text, fontWeight: fontWeight.bold }}>{p.name}</span>
+                            <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{p.name}</span>
                           </span>
                         </TD>
-                        <TD style={{ color: color.textMuted }}>{p.category || DASH}</TD>
-                        <TD align="right" style={{ color: color.text }}>{fmtUsdCompact(p.tvl)}</TD>
+                        <TD style={{ color: color.labelTertiary }}>{p.category || DASH}</TD>
+                        <TD align="right" style={{ color: color.labelPrimary }}>{fmtUsdCompact(p.tvl)}</TD>
                         <TD align="right"><Change v={p.change_1d} /></TD>
                         <TD align="right"><Change v={p.change_7d} /></TD>
                       </TR>
@@ -1085,7 +1083,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
         {/* ---- 6. beyond crypto ---------------------------------------------- */}
         <section style={{ marginBottom: space[24] }}>
           <h2 style={h2Style}>Beyond crypto</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: space[14] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: space[12] }}>
             <FxColumn />
             <QuoteColumn title="Commodities" url={COMMODITY_URL} />
             <QuoteColumn title="US indices" url={STOCK_US_URL} />
@@ -1108,33 +1106,33 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
         {cr.data && (cr.data.fundingRounds.length > 0 || cr.data.upcomingIco.length > 0) && (
           <section style={{ marginBottom: space[24] }}>
             <h2 style={h2Style}>Primary market</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: space[14] }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: space[12] }}>
               <div style={cardStyle}>
                 <h3 style={h3Style}>Recent funding</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
                   {cr.data.fundingRounds.slice(0, 6).map((r, i) => (
                     <div key={`${r.coinKey || 'unnamed'}-${i}`} style={listRowStyle}>
-                      <span style={{ color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: color.labelPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {r.coinName || DASH}
-                        {r.type ? <span style={{ color: color.textMuted }}> · {r.type}</span> : null}
+                        {r.type ? <span style={{ color: color.labelTertiary }}> · {r.type}</span> : null}
                       </span>
-                      <span style={{ color: color.accent, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.raiseUsd)}</span>
-                      <span style={{ color: color.textMuted, whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</span>
+                      <span style={{ color: color.blue, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.raiseUsd)}</span>
+                      <span style={{ color: color.labelTertiary, whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</span>
                     </div>
                   ))}
                 </div>
               </div>
               <div style={cardStyle}>
                 <h3 style={h3Style}>Upcoming launches</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: space[6] }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
                   {cr.data.upcomingIco.slice(0, 6).map((r, i) => (
                     <div key={`${r.key || 'unnamed'}-${i}`} style={listRowStyle}>
-                      <span style={{ color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: color.labelPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {r.name || DASH}
-                        {r.symbol ? <span style={{ color: color.textMuted }}> · {r.symbol}</span> : null}
+                        {r.symbol ? <span style={{ color: color.labelTertiary }}> · {r.symbol}</span> : null}
                       </span>
-                      <span style={{ color: color.accent, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.raiseUsd)}</span>
-                      <span style={{ color: color.textMuted, whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</span>
+                      <span style={{ color: color.blue, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.raiseUsd)}</span>
+                      <span style={{ color: color.labelTertiary, whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</span>
                     </div>
                   ))}
                 </div>
@@ -1149,14 +1147,14 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
           url={NEWS_URL}
           render={d => (
             <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: space[10] }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
                 {d.items.slice(0, 6).map(it => (
-                  <a key={it.link} href={it.link} target="_blank" rel="noreferrer" style={{ ...cardStyle, padding: space[12], textDecoration: 'none', display: 'block' }}>
-                    <div style={{ color: color.text, fontSize: fontSize[13], fontWeight: fontWeight.bold, lineHeight: lineHeight.normal }}>{it.title}</div>
-                    <div style={{ color: color.textMuted, fontSize: fontSize[10], marginTop: space[6] }}>
+                  <Link key={it.link} href="/news" style={{ ...cardStyle, padding: space[12], textDecoration: 'none', display: 'block' }}>
+                    <div style={{ color: color.labelPrimary, fontSize: fontSize[13], fontWeight: fontWeight.bold, lineHeight: lineHeight.normal }}>{it.title}</div>
+                    <div style={{ color: color.labelTertiary, fontSize: fontSize[11], marginTop: space[8] }}>
                       {it.source || DASH} · {fmtDate(it.pubDate)}
                     </div>
-                  </a>
+                  </Link>
                 ))}
               </div>
               <p style={noteStyle}>{d.total} in the feed · {d.upstream}</p>
@@ -1173,15 +1171,15 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: space[12] }}>
             {DESTINATIONS.map(d => (
               <Link key={d.href} href={d.href} style={{ ...cardStyle, textDecoration: 'none', display: 'block' }}>
-                <div style={{ color: color.text, fontSize: fontSize[13], fontWeight: fontWeight.bold }}>{d.label} →</div>
-                <div style={{ color: color.textMuted, fontSize: fontSize[11], marginTop: space[6], lineHeight: lineHeight.normal }}>{d.blurb}</div>
+                <div style={{ color: color.labelPrimary, fontSize: fontSize[13], fontWeight: fontWeight.bold }}>{d.label} →</div>
+                <div style={{ color: color.labelTertiary, fontSize: fontSize[11], marginTop: space[8], lineHeight: lineHeight.normal }}>{d.blurb}</div>
               </Link>
             ))}
           </div>
         </section>
 
-        <footer style={{ borderTop: `1px solid ${color.border}`, marginTop: space[24], paddingTop: space[12] }}>
-          <p style={{ margin: 0, color: color.textMuted, fontSize: fontSize[10], lineHeight: lineHeight.normal }}>
+        <footer style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[24], paddingTop: space[12] }}>
+          <p style={{ margin: 0, color: color.labelTertiary, fontSize: fontSize[11], lineHeight: lineHeight.normal }}>
             Read-only market data, no investment advice. Treasury and admin surfaces require a session.
           </p>
         </footer>
