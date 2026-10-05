@@ -48,13 +48,13 @@ The sidecar is also the home of the **`llama`** family (DeFiLlama TVL, 3 modes,
 strict `top`/`days`), the **`news`** family (Cointelegraph RSS: strict
 `source`/`limit`, the RSS parse, cached on the feed URL), the **`chainrank`**
 family (chainrank.fyi reads, pagination relayed verbatim) and `backend/sync` holds
-the Rust port of the 5-minute balance sync. The same sidecar is the home of the **`khala`** family — research reports from
-**khala.io** (Framer SSR, keyless), three modes (`reports`/`report`/`latest`), one Go
-package with a plain `net/http` client; the TS side (`frontend/web/src/features/khala/client.ts`) is a typing-only
-mirror and the route only proxies — the Go side does every validation. It is **served**:
-`/api/khala` is registered on the sidecar and `/khala` renders on :3100 and on the public
-hostname ([DR-006](docs/records/DECISIONS.md); harness `verify-khala.py` 136/0) · design record
-`/home/dwizzy/khala-probe/DESIGN.md`.
+the Rust port of the 5-minute balance sync. The same sidecar is the home of the **`khala`**
+family — research reports from **khala.io** (Framer SSR, keyless), three modes
+(`reports`/`report`/`latest`), one Go package with a plain `net/http` client; the Go side
+does every validation. `khala` and `chainrank` are **API-only**: their web boards and TS
+clients were removed ([DR-041](docs/records/DECISIONS.md)), so `/api/khala` and
+`/api/chainrank` answer on `:3101` with no web proxy (harness `verify-khala.py` 136/0) ·
+design record `/home/dwizzy/khala-probe/DESIGN.md`.
 
 Secrets live only in git-ignored `.env` files — see [docs/operations/SECRETS.md](docs/operations/SECRETS.md)
 for the inventory and rotation steps (never print a value).
