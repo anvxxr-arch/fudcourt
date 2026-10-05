@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// releaseLua is RELEASE_LUA verbatim from frontend/web/src/platform/executor/lock.ts:
+// releaseLua is RELEASE_LUA verbatim from the retired TS lock module:
 // compare-and-act (GET-then-DEL would race another owner's acquisition).
 const releaseLua = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end"
 

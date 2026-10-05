@@ -170,7 +170,7 @@ type Token struct {
 
 // Chain is the contract of shared/contracts/schemas/assets/chain.json, field for
 // field. `name` is the lowercase canonical label
-// backend/api/internal/accounts/wallets/wallets.go keys its address rules on.
+// the retired accounts/wallets package keys its address rules on.
 type Chain struct {
 	ChainID        string       `json:"chain_id"`
 	Name           string       `json:"name"`

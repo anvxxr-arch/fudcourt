@@ -9,7 +9,7 @@ import (
 )
 
 // Classify maps a Go error to the normalized taxonomy, mirroring
-// frontend/web/src/platform/executor/exchange.ts mapError exactly in precedence
+// the retired TS exchange module's mapError exactly in precedence
 // and outcome:
 //
 //	RateLimitExceeded      → rate_limited      (retryable)

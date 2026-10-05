@@ -60,7 +60,7 @@ type seedVenue struct {
 //
 // Provenance:
 //
-//   - name/kind: backend/api/internal/accounts/wallets/wallets.go chainRules
+//   - name/kind: the retired accounts/wallets package chainRules
 //     (ethereum, bsc, polygon, arbitrum, optimism, base, solana) plus the sync's
 //     own labels for the two that wallets.go does not model
 //     (backend/sync/src/streams/sync.rs: "Hyperliquid (spot)" / "Hyperliquid
@@ -71,7 +71,7 @@ type seedVenue struct {
 //     backend/sync/src/streams/sync.rs native-SOL row.
 //
 //   - offchain: "is not a chain" in the strict sense, but
-//     backend/api/internal/finance/transactions/transactions.go defaults
+//     the retired finance/transactions package defaults
 //     Transaction.Chain to "Offchain", so it is modelled rather than dropped -
 //     a consumer must be able to resolve the label the writer actually writes.
 //

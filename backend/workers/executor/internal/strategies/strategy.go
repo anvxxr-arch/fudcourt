@@ -1,7 +1,7 @@
 // Package strategies holds the deterministic execution strategies (objective
 // §8.15): given an ExecutionRecord and a tick context, each strategy emits
 // child-order actions (submit/cancel/complete). This is the Go port of
-// frontend/web/src/platform/executor/engine.ts — the parity oracle — minus any
+// the retired TS engine — the parity oracle — minus any
 // exchange-specific detail: no venue names, no adapter types, nothing but the
 // canonical domain types (objective §8.16).
 //

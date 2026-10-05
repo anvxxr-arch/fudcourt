@@ -6,23 +6,17 @@
 -- `public` directly and the Turso->Postgres mirror that used to do it is
 -- retired); the executor writes live data and must never share that blast
 -- radius. Everything here lives in `executor` and nothing in
--- `platform/db/pg.ts` or `platform/db/client.ts` touches it.
+-- `frontend/web/src/server/db.ts` touches it.
 --
--- Applied at STARTUP by two runtimes, both idempotent and both one statement at
--- a time (the extended query protocol refuses multi-statement strings):
---   * TypeScript — `ensureExecutorSchema()` in src/platform/executor/store.ts,
---     from `EXECUTOR_DDL`, which READS THIS FILE (comment lines dropped) at
---     module load. There is no longer an embedded copy to keep in step.
+-- Applied at STARTUP by the Go runtime, idempotent and one statement at a time
+-- (the extended query protocol refuses multi-statement strings):
 --   * Go — `repository.EnsureSchema()` at `cmd/executor` startup
 --     (backend/workers/executor/internal/repository/schema.go, commit
 --     `8d87df1`), run BEFORE the worker loop and either HTTP surface can serve;
 --     a failure is fatal (objective §34).
 -- There is still no separate migration runner. This tracked file is the SOLE
--- OWNER of the DDL; each runtime keeps a copy and each copy has its own drift
--- guard against this file:
---   * TS copy — executor-store-tests.ts compares after normalizing away blank
---     lines and `--` comment lines (so pure reformatting cannot mask a change,
---     and a real statement change cannot hide behind it).
+-- OWNER of the DDL; the Go copy is the one remaining mirror, guarded by a
+-- drift test against this file:
 --   * Go copy (backend/workers/executor/internal/repository/schema/executor-schema.sql)
 --     — TestEmbeddedSchemaMatchesTracked requires BYTE IDENTITY, strictly
 --     stronger (it also guards a comment-only edit; recopy after editing this
@@ -34,7 +28,8 @@
 --     number ms) — never timestamptz, so a JS number round-trips exactly
 --   * money/quantity columns are double precision (wire values are numbers;
 --     calculation happens in decimal.js upstream, never in SQL)
---   * status/name/enum columns are text — the type unions live in types.ts
+--   * status/name/enum columns are text — the type unions live in the web wire
+--     contract (frontend/web/src/lib/executor.ts)
 --
 -- Runs on Postgres >= 13 (gen_random_uuid() is built-in from 13).
 CREATE SCHEMA IF NOT EXISTS executor;

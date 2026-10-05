@@ -1,7 +1,7 @@
 // Package lock implements the execution lease (PRD §65): one worker owns one
 // execution at a time, so a worker race can never double-submit orders.
 //
-// The semantics mirror frontend/web/src/platform/executor/lock.ts exactly (the
+// The semantics mirror the retired TS lock module exactly (the
 // parity oracle): the key is `execution:{executionId}:lock`, the value is an
 // owner token `owner:random` minted fresh per Acquire so a delayed worker can
 // never act on a lease it already lost, acquisition is `SET key token PX ttl

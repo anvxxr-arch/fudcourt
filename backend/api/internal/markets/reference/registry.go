@@ -550,7 +550,7 @@ func (r *Reference) Chain(id string) (Chain, error) {
 }
 
 // ChainByName returns the chain with this canonical name (lowercase form of the
-// label backend/api/internal/accounts/wallets/wallets.go stores).
+// label the retired accounts/wallets package stores).
 func (r *Reference) ChainByName(name string) (Chain, error) {
 	if r == nil || r.index == nil {
 		return Chain{}, fmt.Errorf("%w: nil registry", ErrUnknownEntity)

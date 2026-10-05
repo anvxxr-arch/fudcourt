@@ -5,6 +5,7 @@ import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { Loading } from '@/ui/feedback';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import { Toolbar } from '@/ui/toolbar';
+import { Sparkline } from '@/ui/sparkline';
 import { dash, fmtCurrency, fmtPct, fmtPrice, fmtVolume, tone } from '@/lib/format';
 import { fetchQuotes, type MarketQuote } from '@/features/market/clients';
 
@@ -100,6 +101,7 @@ export default function QuoteBoard({
           <THead>
             <TR>
               <TH style={thStyle}>Instrument</TH>
+              <TH align="right" style={thStyle}>Trend</TH>
               <TH align="right" style={thStyle}>Last</TH>
               <TH align="right" style={thStyle}>Chg</TH>
               <TH align="right" style={thStyle}>Chg %</TH>
@@ -116,6 +118,11 @@ export default function QuoteBoard({
                     {q.name}
                     {q.exchange ? ` · ${q.exchange}` : ''}
                   </div>
+                </TD>
+                <TD align="right" style={tdStyle}>
+                  <span style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                    <Sparkline points={q.trend} width={72} height={18} />
+                  </span>
                 </TD>
                 <TD align="right" style={{ ...tdStyle, color: color.blue }}>
                   {fmtPrice(q.price)}

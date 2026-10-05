@@ -12,7 +12,7 @@ import (
 )
 
 // Session cookie signing/verification — the port of the HMAC spine in
-// frontend/web/src/platform/auth/session.ts. Wire format, byte for byte:
+// frontend/web/src/server/auth.ts. Wire format, byte for byte:
 //
 //	token = base64url(payload) "." base64url(HMAC-SHA256(secret, payload))
 //	payload = JSON of {id, username, globalName, avatar, tier, roles, exp}

@@ -4,6 +4,7 @@ import { color, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight, rad
 import { Badge } from '@/ui/badge';
 import { Banner } from '@/ui/banner';
 import { Loading } from '@/ui/feedback';
+import { Meter } from '@/ui/meter';
 import { Stat } from '@/ui/stat';
 import { imgSrc } from '@/lib/img';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
@@ -186,31 +187,20 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
           label="loading live figures…"
           render={d => (
             <>
-              <div style={{ overflowX: 'auto' }}>
-                <Table style={{ fontSize: fontSize[11] }}>
-                  <THead>
-                    <TR style={theadRowStyle}>
-                      <TH align="right">#</TH>
-                      <TH>Coin</TH>
-                      <TH align="right">Price</TH>
-                      <TH align="right">24h</TH>
-                      <TH align="right">Market cap</TH>
-                    </TR>
-                  </THead>
-                  <TBody>
-                    {d.coins.slice(0, TOP_LIMIT).map(c => (
-                      <TR key={c.symbol} style={rowStyle}>
-                        <TD align="right" style={{ color: color.labelTertiary }}>{fmtNum(c.rank)}</TD>
-                        <TD><CoinCell image={c.image} symbol={c.symbol} name={c.name} /></TD>
-                        <TD align="right" style={{ color: color.labelPrimary }}>{fmtPrice(c.lastPrice)}</TD>
-                        <TD align="right"><Change v={c.priceChangePercent} /></TD>
-                        <TD align="right" style={{ color: color.labelPrimary }}>{fmtUsdCompact(c.marketCap)}</TD>
-                      </TR>
-                    ))}
-                  </TBody>
-                </Table>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
+                {d.coins.slice(0, 5).map(c => (
+                  <div key={c.symbol} style={listRowStyle}>
+                    <CoinCell image={c.image} symbol={c.symbol} name={c.name} />
+                    <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(c.lastPrice)}</span>
+                    <Change v={c.priceChangePercent} />
+                    <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtUsdCompact(c.marketCap)}</span>
+                  </div>
+                ))}
               </div>
-              <p style={noteStyle}>{d.derived} · pool {d.pool} · {d.upstream}</p>
+              <p style={noteStyle}>
+                {d.derived} · pool {d.pool} · {d.upstream} ·{' '}
+                <Link href="/market" style={{ color: color.blue }}>full board →</Link>
+              </p>
             </>
           )}
         />
@@ -221,32 +211,19 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
           url={TRENDING_URL}
           render={d => (
             <>
-              <div style={{ overflowX: 'auto' }}>
-                <Table style={{ fontSize: fontSize[11] }}>
-                  <THead>
-                    <TR style={theadRowStyle}>
-                      <TH align="right">#</TH>
-                      <TH>Coin</TH>
-                      <TH align="right">Price</TH>
-                      <TH align="right">24h</TH>
-                      <TH align="right">Volume 24h</TH>
-                    </TR>
-                  </THead>
-                  <TBody>
-                    {d.rows.slice(0, 8).map(r => (
-                      <TR key={`${r.key ?? r.symbol ?? 'row'}`} style={rowStyle}>
-                        <TD align="right" style={{ color: color.labelTertiary }}>{fmtNum(r.rank)}</TD>
-                        <TD><CoinCell image={r.image} symbol={r.symbol} name={r.name} /></TD>
-                        <TD align="right" style={{ color: color.labelPrimary }}>{fmtPrice(r.priceUsd)}</TD>
-                        <TD align="right"><Change v={r.change24h} /></TD>
-                        <TD align="right" style={{ color: color.labelPrimary }}>{fmtUsdCompact(r.volume24hUsd)}</TD>
-                      </TR>
-                    ))}
-                  </TBody>
-                </Table>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
+                {d.rows.slice(0, 6).map(r => (
+                  <div key={`${r.key ?? r.symbol ?? 'row'}`} style={listRowStyle}>
+                    <CoinCell image={r.image} symbol={r.symbol} name={r.name} />
+                    <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(r.priceUsd)}</span>
+                    <Change v={r.change24h} />
+                    <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.volume24hUsd)}</span>
+                  </div>
+                ))}
               </div>
               <p style={noteStyle}>
-                {d.changeSource} change source · rows the venue publishes without a price render {DASH} · {d.upstream}
+                {d.changeSource} change source · rows the venue publishes without a price render {DASH} · {d.upstream} ·{' '}
+                <Link href="/market" style={{ color: color.blue }}>full board →</Link>
               </p>
             </>
           )}
@@ -267,40 +244,28 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
           url={DEFI_PROTOCOLS_URL}
           render={d => (
             <>
-              <div style={{ overflowX: 'auto' }}>
-                <Table style={{ fontSize: fontSize[11] }}>
-                  <THead>
-                    <TR style={theadRowStyle}>
-                      <TH align="right">#</TH>
-                      <TH>Protocol</TH>
-                      <TH>Category</TH>
-                      <TH align="right">TVL</TH>
-                      <TH align="right">1d</TH>
-                      <TH align="right">7d</TH>
-                    </TR>
-                  </THead>
-                  <TBody>
-                    {d.rows.slice(0, 8).map((p, i) => (
-                      <TR key={p.slug} style={rowStyle}>
-                        <TD align="right" style={{ color: color.labelTertiary }}>{fmtNum(i + 1)}</TD>
-                        <TD>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8] }}>
-                            {p.logo
-                              ? <img src={imgSrc(p.logo)} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
-                              : null}
-                            <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{p.name}</span>
-                          </span>
-                        </TD>
-                        <TD style={{ color: color.labelTertiary }}>{p.category || DASH}</TD>
-                        <TD align="right" style={{ color: color.labelPrimary }}>{fmtUsdCompact(p.tvl)}</TD>
-                        <TD align="right"><Change v={p.change_1d} /></TD>
-                        <TD align="right"><Change v={p.change_7d} /></TD>
-                      </TR>
-                    ))}
-                  </TBody>
-                </Table>
+              <Meter
+                parts={d.rows.slice(0, 6).map(p => ({ label: p.name, value: Math.abs(p.tvl ?? 0) }))}
+                style={{ marginBottom: space[12] }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
+                {d.rows.slice(0, 6).map(p => (
+                  <div key={p.slug} style={listRowStyle}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8], minWidth: 0 }}>
+                      {p.logo
+                        ? <img src={imgSrc(p.logo)} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
+                        : null}
+                      <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                    </span>
+                    <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtUsdCompact(p.tvl)}</span>
+                    <Change v={p.change_1d} />
+                  </div>
+                ))}
               </div>
-              <p style={noteStyle}>{d.derived} · {d.upstream}</p>
+              <p style={noteStyle}>
+                {d.derived} · {d.upstream} ·{' '}
+                <Link href="/market" style={{ color: color.blue }}>full board →</Link>
+              </p>
             </>
           )}
         />

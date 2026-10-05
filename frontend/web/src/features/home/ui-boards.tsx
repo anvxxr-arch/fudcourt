@@ -4,6 +4,7 @@ import { Fragment } from 'react';
 import Link from 'next/link';
 import { color, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
 import { Banner } from '@/ui/banner';
+import { Meter } from '@/ui/meter';
 import { Loading } from '@/ui/feedback';
 import { TBody, TD, TH, THead, TR, Table } from '@/ui/table';
 import {
@@ -564,37 +565,23 @@ export function SignalQuality() {
       {loading && !error && <Loading label="loading live figures…" />}
       {!error && data && (
         <>
-          <div style={{ overflowX: 'auto' }}>
-            <Table style={{ fontSize: fontSize[11] }}>
-              <THead>
-                <TR style={theadRowStyle}>
-                  <TH>Chain</TH>
-                  <TH>Cohort day</TH>
-                  <TH align="right">Tracked</TH>
-                  <TH align="right">Ran</TH>
-                  <TH align="right">Flat</TH>
-                  <TH align="right">Dumped</TH>
-                  <TH align="right">Unknown</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {entries.map(([chain, c]) => {
-                  const b = c.latest as ScoreboardBucket;
-                  return (
-                    <TR key={chain} style={rowStyle}>
-                      <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{chain}</TD>
-                      <TD style={{ color: color.labelTertiary }}>{b.day}</TD>
-                      <TD align="right" style={{ color: color.labelPrimary }}>{fmtNum(b.n)}</TD>
-                      <TD align="right" style={{ color: color.green }}>{fmtNum(b.run)}</TD>
-                      <TD align="right" style={{ color: color.labelTertiary }}>{fmtNum(b.flat)}</TD>
-                      <TD align="right" style={{ color: color.red }}>{fmtNum(b.dump)}</TD>
-                      <TD align="right" style={{ color: color.labelTertiary }}>{fmtNum(b.unknown)}</TD>
-                    </TR>
-                  );
-                })}
-              </TBody>
-            </Table>
-          </div>
+          {entries.map(([chain, c]) => {
+            const b = c.latest as ScoreboardBucket;
+            return (
+              <div key={`meter-${chain}`} style={{ marginBottom: space[12] }}>
+                <h4 style={{ ...h4Style, marginTop: 0 }}>{chain} — {b.day}</h4>
+                <Meter
+                  parts={[
+                    { label: 'ran', value: b.run, color: color.green },
+                    { label: 'flat', value: b.flat, color: color.labelTertiary },
+                    { label: 'dumped', value: b.dump, color: color.red },
+                    { label: 'unknown', value: b.unknown, color: color.separator },
+                  ]}
+                />
+              </div>
+            );
+          })}
+          {entries.length === 0 && <p style={noteStyle}>no cohort read for this window</p>}
           {best && (
             <p style={noteStyle}>
               best cohort catch:{' '}

@@ -74,7 +74,7 @@ func VenueKey(venueID string) string {
 //
 // The classification is by the STRING'S OWN SHAPE, never by an assumption about
 // the chain: guessing a chain from an address shape is the silent invention
-// backend/api/internal/accounts/wallets/wallets.go explicitly refuses to make.
+// the retired accounts/wallets package explicitly refuses to make.
 func AddressKind(address string) (string, error) {
 	addr := strings.TrimSpace(address)
 	if addr == "" {

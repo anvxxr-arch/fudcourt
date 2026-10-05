@@ -1,7 +1,7 @@
 // Package credentials is the executor-side key custody boundary (objective
 // §8.4: the executor uses a credential_id, never plaintext spread through the
 // system). It is the Go port of the envelope crypto the web API writes with
-// (frontend/web/src/platform/executor/store.ts `sealSecret`/`openSecret`,
+// (the retired TS executor store's `sealSecret`/`openSecret`,
 // PRD §44): AES-256-GCM, one 12-byte IV and 16-byte tag PER secret, all
 // ciphertexts concatenated in column order (api_key, api_secret,
 // [passphrase]) in executor.exchange_accounts (iv and auth_tag are the

@@ -9,7 +9,7 @@
   // live in frontend/web/tests, the cross-system shaper source modules live in
   // frontend/web/src/features/* and platform/* (the TS executor runtime was
   // retired 2026-10-05 by DR-043; the only surviving file is the wire contract
-  // `src/platform/executor/types.ts`, kept in `files` because trade/client.ts and
+  // `src/lib/executor.ts`, kept in `files` because trade/client.ts and
   // features/executor/ui.tsx (also listed) import it). They are listed
   // in `files`, NOT `include`: tsc silently drops `../` entries from an include
   // glob. No explicit rootDir is set, so tsc infers the repo root as the

@@ -27,8 +27,8 @@ func TestLockKey(t *testing.T) {
 	}
 }
 
-// The Lua scripts must stay byte-identical to frontend/web/src/platform/executor/
-// lock.ts (the parity oracle): they are the atomic compare-and-act that stops a
+// The Lua scripts must stay byte-identical to the retired TS lock
+// module (the parity oracle): they are the atomic compare-and-act that stops a
 // delayed worker from unlocking a lease it lost. The literals below are copied
 // from lock.ts and must never be regenerated from the Go constants.
 func TestScriptsMatchTypeScriptOracle(t *testing.T) {

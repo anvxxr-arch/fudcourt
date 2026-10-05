@@ -49,7 +49,7 @@ const (
 )
 
 // MarketType names a venue market family. It mirrors the web executor's
-// MarketType (frontend/web/src/platform/executor/types.ts: 'spot' | 'linear_perp'),
+// MarketType (frontend/web/src/lib/executor.ts: 'spot' | 'linear_perp'),
 // including the linear_perp spelling.
 type MarketType string
 
@@ -78,7 +78,7 @@ const (
 )
 
 // Permissions mirrors the venue-reported key restrictions
-// (frontend/web/src/platform/executor/types.ts AccountPermissions). Every
+// (frontend/web/src/lib/executor.ts AccountPermissions). Every
 // venue-reported flag is *bool: nil means the venue does not report it and is
 // NEVER inferred as false (house rule: honest absence over fabricated zero).
 type Permissions struct {

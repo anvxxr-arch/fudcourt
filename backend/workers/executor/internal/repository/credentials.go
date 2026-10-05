@@ -5,7 +5,7 @@
 // exchanges.Exchange) — the composition root does.
 //
 // The envelope shape is exactly what the web API writes with
-// frontend/web/src/platform/executor/store.ts sealCredentials: iv and auth_tag are
+// the retired TS executor store's sealCredentials: iv and auth_tag are
 // per-secret 12-byte / 16-byte concatenations in column order (api_key,
 // api_secret, [passphrase]); internal/platform/credentials reverses that layout.
 package repository

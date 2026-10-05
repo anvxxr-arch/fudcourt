@@ -9,16 +9,17 @@ the source and fails loudly on the six drifts that actually happened.
 
 THE MODEL (src/<layer>/<thing>/…), in one screen:
     src/app/        routes ONLY. A page may render a feature and nothing else; a
-                    route handler may call platform/feature code and nothing else.
+                    route handler may call lib/ or server code and nothing else.
     src/features/   one directory per DATA FAMILY. A feature owns its client, its
                     shaper/types and its panel. Cross-feature imports are forbidden:
                     a family that needs another family's data goes through its API.
-    src/platform/   cross-cutting infrastructure (auth, db, http, routing). It may
-                    not import a feature — infrastructure that depends on a family
-                    is not infrastructure.
-    src/components/ presentational code: ui/ primitives (leaf: `components/ui/*`
-                    imports nothing but styles) and the layout/ SPA state
-                    container that composes features.
+    src/lib/        shared infrastructure (http, rate-limit, the executor wire
+                    contract, formatting). It may not import a feature, the route
+                    tree, or server-only code.
+    src/server/     server-only infrastructure (auth, db, cache, routing, ticker).
+                    It may not import a feature or the route tree.
+    src/ui/         presentational primitives, a leaf: imports only ui/ and styles/
+                    (site-nav.ts is the one client-safe nav module).
     src/styles/     design tokens + shared view types. Leaf.
     src/cms/        Payload config/collections (a Next/Payload convention keeps
                     `@payload-config`, so the file itself is the contract).
@@ -26,8 +27,8 @@ THE MODEL (src/<layer>/<thing>/…), in one screen:
 Rules enforced (each one is a class of drift that has actually occurred):
   1. no file may live in the old flat locations (lib/, app/<x>.ts logic, components/)
   2. imports use the single `@/…` alias — no `../` chains escaping a layer
-  3. platform/ never imports features/ or app/
-  4. components/ui/ and styles/ never import a feature, platform, or app code
+  3. lib/ never imports features/, app/, or server/ code
+  4. ui/ and styles/ never import a feature, server, or app code
   5. features/<a> never imports features/<b>'s internals (cross-feature coupling)
   6. every `features/<x>` directory actually contains a module (no empty slices)
 
@@ -82,10 +83,10 @@ for dead in ("store",):
     if (SRC / dead).exists():
         violations.append(
             f"src/{dead}/ exists — it was retired by DR-018; "
-            f"family code belongs in src/features/<family>/, shared code in src/platform/"
+            f"family code belongs in src/features/<family>/, shared code in src/lib/ or src/server/"
         )
 if (ROOT / "lib").exists():
-    violations.append("frontend/web/lib/ exists — the flat lib bag was retired by DR-018 (src/platform, src/features)")
+    violations.append("frontend/web/lib/ exists — the flat lib bag was retired by DR-018 (src/lib, src/server, src/features)")
 COMPONENT_SHELVES = {"ui", "layout", "navigation", "data-display", "feedback"}
 comp_root = SRC / "components"
 if comp_root.exists():
@@ -208,7 +209,7 @@ for f in sources():
             if tname != own and str(rel) not in SHELL_ROOTS:
                 violations.append(
                     f"src/{rel}:{line_no} feature '{own}' imports feature '{tname}' — "
-                    f"families are independent; share through platform/ or an API"
+                    f"families are independent; share through lib/ or an API"
                 )
 
 # --- rule 6: a feature directory must contain a module -----------------------

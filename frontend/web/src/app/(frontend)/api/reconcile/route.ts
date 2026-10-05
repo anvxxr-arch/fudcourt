@@ -19,7 +19,7 @@ import { NextResponse } from 'next/server';
  * Everything the service returns is forwarded VERBATIM apart from the body's
  * `source` field, which names the implementation that produced the numbers.
  *
- * Auth is UNCHANGED and still owned by middleware + `src/platform/auth/guard.ts`
+ * Auth is UNCHANGED and still owned by middleware + `src/server/auth.ts`
  * (`/api/reconcile` is a team-tier read); this route adds no gate of its own.
  */
 export const dynamic = 'force-dynamic';

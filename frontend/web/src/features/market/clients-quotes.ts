@@ -41,7 +41,7 @@ export const QUOTE_TTL_MS = 60_000;
 
 /** The chart URL for one symbol (a 1-day range is all a quote row needs). */
 export function chartUrl(symbol: string): string {
-  const p = new URLSearchParams({ range: '1d', interval: '1d' });
+  const p = new URLSearchParams({ range: '1d', interval: '5m' });
   return `${YAHOO_CHART}/${encodeURIComponent(symbol)}?${p}`;
 }
 
@@ -62,6 +62,8 @@ export type MarketQuote = {
   week52High: number | null;
   week52Low: number | null;
   marketTime: number | null;
+  /** Intraday closes (5m) for the sparkline trend; nulls filtered by the atom. */
+  trend: (number | null)[];
 };
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
@@ -70,7 +72,7 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 
 /** Yahoo chart payload -> one quote, or null when it carries no price. */
 export function parseChart(json: unknown, symbol: string): MarketQuote | null {
   const result = (json as { chart?: { result?: unknown[] } } | null)?.chart?.result?.[0] as
-    | { meta?: Record<string, unknown> }
+    | { meta?: Record<string, unknown>; indicators?: { quote?: { close?: (number | null)[] }[] } }
     | undefined;
   const m = result?.meta;
   if (!m) return null;
@@ -93,6 +95,7 @@ export function parseChart(json: unknown, symbol: string): MarketQuote | null {
     week52High: num(m.fiftyTwoWeekHigh),
     week52Low: num(m.fiftyTwoWeekLow),
     marketTime: num(m.regularMarketTime),
+    trend: result?.indicators?.quote?.[0]?.close ?? [],
   };
 }
 

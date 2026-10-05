@@ -1,6 +1,6 @@
 // Package risk is the ONE canonical owner of the position-risk formulas
 // (objective §8.12; PRD §102/§103). It is the Go port of
-// frontend/web/src/platform/executor/risk.ts — pure math, no HTTP, no DB, no
+// the retired TS risk module — pure math, no HTTP, no DB, no
 // exchange API. Money and quantity are decimal strings computed with
 // internal/platform/decimal (never float64); every exposure quantity is rounded DOWN to
 // the step grid so a rounded position can never exceed the unrounded budget

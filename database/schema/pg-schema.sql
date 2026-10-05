@@ -2,7 +2,7 @@
 --
 -- Postgres+TimescaleDB is the SINGLE system of record. Every writer — the Python
 -- sync (tests/oracle/sync-live.py), the Rust crate (backend/sync) and the web
--- (frontend/web/src/platform/db/client.ts) — reads and writes HERE. There is no
+-- (frontend/web/src/server/db.ts) — reads and writes HERE. There is no
 -- remote mirror and no second store; the DR-019 Turso/libSQL split is retired.
 --
 -- Types: TEXT -> text (the datetime columns stay 'YYYY-MM-DD HH:MM:SS' UTC

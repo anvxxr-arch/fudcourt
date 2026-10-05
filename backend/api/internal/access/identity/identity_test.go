@@ -179,7 +179,7 @@ func TestSessionIsValid(t *testing.T) {
 	}
 }
 
-// TestMaskKey ports maskApiKey from frontend/web/src/platform/executor/types.ts
+// TestMaskKey ports maskApiKey from frontend/web/src/lib/executor.ts
 // (PRD §109) including the exact length boundary.
 func TestMaskKey(t *testing.T) {
 	cases := []struct {

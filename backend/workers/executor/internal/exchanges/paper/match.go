@@ -8,7 +8,7 @@ import (
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/decimal"
 )
 
-// This file mirrors frontend/web/src/platform/executor/exchange.ts matchOrder and
+// This file mirrors the retired TS exchange module's matchOrder and
 // settle: market orders fill immediately in FillRate chunks at mark ±
 // slippage; limit orders fill at their limit price once the mark crosses
 // (buy: mark <= price, sell: mark >= price); settlement moves spot balances

@@ -2,7 +2,7 @@ package repository
 
 // The Postgres implementation of the executor API's persistence port
 // (port.go). Every statement mirrors the corresponding one in
-// frontend/web/src/platform/executor/store.ts so the two writers agree on the
+// the retired TS executor store so the two writers agree on the
 // `executor.*` schema (DR-020) while both exist. Ownership is enforced in SQL
 // wherever it belongs (PRD §108): `user_id = $1 AND id = $2` for credential and
 // execution reads, so a handler bug cannot cross users.

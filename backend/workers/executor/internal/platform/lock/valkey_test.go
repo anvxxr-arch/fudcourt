@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Script literals copied verbatim from frontend/web/src/platform/executor/lock.ts.
+// Script literals copied verbatim from the retired TS lock module.
 // The wire tests build their expectations from these literals (not from the
 // package constants), so script drift is caught independently.
 const (

@@ -17,7 +17,7 @@ var ErrMarketSource = errors.New("paper: market source unavailable")
 // reads its prices from. It mirrors the TS PaperExchangeAdapter, which wraps a
 // live adapter's market-data surface (`getMarkets`/`getTicker`) and does its
 // OWN simulated matching and settlement on top of the live tape
-// (frontend/web/src/platform/executor/exchange.ts: `marketData` is the live
+// (the retired TS exchange module: `marketData` is the live
 // adapter, `PaperExchangeAdapter` owns `placeOrder`/`match`).
 //
 // SEMANTICS:

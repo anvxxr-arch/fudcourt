@@ -283,7 +283,7 @@ func parseExecutions(result json.RawMessage) ([]executionRow, error) {
 //
 // The table is the documented bybit→contract status bridge; names outside it
 // are never guessed into a lifecycle state (parity with mapOrderStatus's
-// UNKNOWN default in frontend/web/src/platform/executor/exchange.ts).
+// UNKNOWN default in the retired TS exchange module's mapOrderStatus).
 func mapOrderStatus(status string) execution.ChildOrderStatus {
 	switch status {
 	case "New":

@@ -13,7 +13,7 @@ import (
 	"github.com/anvxxr-arch/fudcourt/backend/api/internal/access/identity"
 )
 
-// Discord REST client — the port of frontend/web/src/platform/auth/discord.ts plus
+// Discord REST client — the port of the retired frontend Discord client plus
 // the OAuth helpers inside api/auth/callback/route.ts. The bot token never
 // leaves this process: every helper returns normalised data or an empty/typed
 // result, never a raw Discord payload, so no handler can accidentally
