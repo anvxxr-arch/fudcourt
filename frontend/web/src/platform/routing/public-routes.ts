@@ -100,6 +100,17 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 0.8,
   },
   {
+    // The connected-account surface (plan Phase 17): the masked venue keys, the
+    // permission each venue reports, and a capability summary read from the same
+    // matrix the boards render. Public like /trade itself — an unauthenticated
+    // visitor sees the connect prompt, never another user's account.
+    path: '/trade/accounts',
+    title: 'Trade accounts — Connected venues | FUDCOURT',
+    description:
+      'Every venue your trading connects to: the masked API key, the permission the venue reports, and the order types each venue supports — with a withdrawal-capable key warned, never hidden.',
+    priority: 0.5,
+  },
+  {
     // The macro module's front door (plan Phase 4). Its six sub-boards are
     // listed below; the dynamic profiles (/economy/nation/<cc>,
     // /economy/indicator/<slug>, /economy/central-bank/<slug>) are enumerated

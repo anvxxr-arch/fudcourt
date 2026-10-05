@@ -16,7 +16,8 @@
  * compile against the new shape, which is the point.
  */
 import type { MarketRow, PortfolioSummary } from '@/features/trade/model';
-import { MARKET_TYPE_BY_ID, type MarketType, type TickerType } from '@/features/trade/taxonomy';
+import { MARKET_TYPE_BY_ID, VENUE_BY_ID, type MarketType, type TickerType, type VenueId } from '@/features/trade/taxonomy';
+import type { ExecutionPlan, ExecutionRecord, ExecutionRequest, PreviewResult } from '@/platform/executor/types';
 
 /** The one em dash the module prints for "the source did not report this". */
 export const NO_VALUE = '—';
@@ -203,6 +204,131 @@ export function isLiveExecution(status: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// The executor composition — preview, place, and the connected accounts
+//
+// The trade domain does NOT place orders: it COMPOSES the executor's own routes
+// (`/api/executor/preview`, `/api/executor/executions`, `/api/executor/accounts`).
+// Feature families are independent (DR-018), so this is a local contract over
+// those endpoints, typed against the frozen `@/platform/executor/types` — the
+// same contract the executor's own client speaks, so a field rename fails to
+// compile here.
+// ---------------------------------------------------------------------------
+
+/**
+ * The executor's market vocabulary is narrower than the trade taxonomy: it can
+ * work a spot book or a linear perpetual, and nothing else. A trade market type
+ * with no executor counterpart returns `null`, and the composer renders that as
+ * a stated gap rather than sending a request the planner would reject.
+ */
+export function executorMarketTypeFor(marketType: MarketType): 'spot' | 'linear_perp' | null {
+  switch (marketType) {
+    case 'spot':
+    case 'margin':
+      return 'spot';
+    case 'perpetual':
+    case 'futures':
+      return 'linear_perp';
+    case 'options':
+    case 'swap':
+      return null;
+  }
+}
+
+/** The trade venue an executor account belongs to, or `null` when it is not a routable venue. */
+export function venueOfExchange(exchange: string): VenueId | null {
+  return exchange in VENUE_BY_ID ? (exchange as VenueId) : null;
+}
+
+/** The handful of account fields the trade strip reads — a local contract, not the whole record. */
+export type TradeAccountLite = {
+  id: string;
+  exchange: string;
+  label: string;
+  /** Masked `abc...xyz` only — the API never returns a key (PRD §109). */
+  apiKeyMasked: string;
+  health: string;
+  revokedAt: number | null;
+  permissions: {
+    read: boolean | null;
+    spotTrade: boolean | null;
+    futuresTrade: boolean | null;
+    /** True when the key was granted withdrawal rights — the strip warns, never hides. */
+    withdraw: boolean | null;
+  };
+};
+
+/** POST /api/executor/preview — a dry run: nothing is created, nothing is sent (§98). */
+export interface TradePreviewResponse {
+  preview: PreviewResult;
+  /** Server-side kill switch (`FUDCOURT_EXECUTOR_LIVE === '1'`). Never trusted from the client. */
+  liveEnabled: boolean;
+}
+
+/** POST /api/executor/executions — the created record plus its immutable plan. */
+export interface TradeCreateResponse {
+  execution: ExecutionRecord;
+  plan: ExecutionPlan;
+}
+
+/** The server's own error text, flattened into one message — never a substituted one. */
+function apiError(body: Record<string, unknown>, status: number): string {
+  const parts: string[] = [typeof body.error === 'string' ? body.error : `HTTP ${status}`];
+  if (Array.isArray(body.errors)) {
+    const listed = body.errors.filter((e): e is string => typeof e === 'string');
+    if (listed.length > 0) parts.push(listed.join('; '));
+  }
+  if (typeof body.detail === 'string' && body.detail !== '') parts.push(body.detail);
+  if (Array.isArray(body.conflicts)) {
+    for (const conflict of body.conflicts) {
+      if (conflict !== null && typeof conflict === 'object' && 'message' in conflict && typeof conflict.message === 'string') {
+        parts.push(conflict.message);
+      }
+    }
+  }
+  return parts.join(' — ');
+}
+
+async function postJson<T>(url: string, payload: unknown, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal: bounded(signal),
+    cache: 'no-store',
+  });
+  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) throw new Error(apiError(body, res.status));
+  return body as T;
+}
+
+/**
+ * A dry run of a trade intent through the executor's risk engine. Persists
+ * nothing and places nothing (PRD §98) — the composer shows the returned
+ * figures and the user decides whether to create the execution.
+ */
+export function previewTradeIntent(request: ExecutionRequest, signal?: AbortSignal): Promise<TradePreviewResponse> {
+  return postJson<TradePreviewResponse>('/api/executor/preview', request, signal);
+}
+
+/** Create the execution from the intent that was just previewed. */
+export function createTradeExecution(request: ExecutionRequest, signal?: AbortSignal): Promise<TradeCreateResponse> {
+  return postJson<TradeCreateResponse>('/api/executor/executions', request, signal);
+}
+
+/**
+ * The session user's connected venue accounts. A 401/403 is the ordinary
+ * "not connected" state, not an error; every other failure is surfaced, because
+ * a 500 on a funded account must never look like an empty one.
+ */
+export async function fetchTradeAccounts(signal?: AbortSignal): Promise<TradeAccountLite[]> {
+  const res = await fetch('/api/executor/accounts', { signal: bounded(signal), cache: 'no-store' });
+  if (res.status === 401 || res.status === 403) return [];
+  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) throw new Error(apiError(body, res.status));
+  return Array.isArray(body.accounts) ? (body.accounts as TradeAccountLite[]) : [];
+}
+
+// ---------------------------------------------------------------------------
 // Formatters — the module's single spelling of every rendered number
 // ---------------------------------------------------------------------------
 
@@ -274,4 +400,5 @@ export const TRADE_NAV = [
   { href: '/trade/futures', label: 'Futures' },
   { href: '/trade/options', label: 'Options' },
   { href: '/trade/swap', label: 'Swap' },
+  { href: '/trade/accounts', label: 'Accounts' },
 ] as const;

@@ -45,6 +45,9 @@ import {
   type MarketType,
 } from '@/features/trade/taxonomy';
 import { Card, ChangeChip, DataTable, ErrorState, Loading, Notice, PageHeader, Value } from '@/features/trade/ui/parts';
+import { CapabilityBoard } from '@/features/trade/ui/capability-board';
+import { ConnectedAccountsStrip, TradeAccountsView } from '@/features/trade/ui/accounts';
+import { TradeComposer } from '@/features/trade/ui/composer';
 
 /** The pipeline the domain is built around (plan: market data → … → portfolio). */
 const PIPELINE = [
@@ -96,6 +99,7 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
 
   const entry = marketType ? MARKET_TYPE_BY_ID[marketType] : null;
   const connected = portfolio.value?.connected === true;
+  const isMargin = marketType === 'margin';
 
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
@@ -142,7 +146,17 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
         )}
       </Card>
 
-      {/* Market board — live, from the ticker family. */}
+      {/* Market board — live, from the ticker family. Margin is an account-level
+          market with no quotable instrument of its own, so the margin route shows
+          the account view below rather than a deliberately-empty board. */}
+      {isMargin ? (
+        <div style={{ marginTop: space[14] }}>
+          <TradeAccountsView
+            showPortfolio={false}
+            note="Margin is an account-level market: it has no quotable instrument of its own, so there is no separate board. It trades the spot pairs on the spot board against borrowed collateral — this route shows the connected accounts and their margin-capable venues instead."
+          />
+        </div>
+      ) : (
       <div style={{ marginTop: space[14] }}>
         <Card
           title={entry ? `${entry.label} markets` : 'Markets'}
@@ -180,8 +194,28 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
           )}
         </Card>
       </div>
+      )}
+
+      {!isMargin && marketType !== undefined && (
+        <div style={{ marginTop: space[14] }}>
+          <TradeComposer marketType={marketType} />
+        </div>
+      )}
+
+      {!isMargin && (
+        <div style={{ marginTop: space[14] }}>
+          <ConnectedAccountsStrip />
+        </div>
+      )}
+
+      {!isMargin && (
+        <div style={{ marginTop: space[14] }}>
+          <CapabilityBoard marketType={marketType} />
+        </div>
+      )}
 
       {/* Account panels: positions, orders, risk — honest empty states. */}
+      {!isMargin && (
       <div style={{ display: 'grid', gap: space[14], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', marginTop: space[14] }}>
         <Card title="Open positions" subtitle="normalized across CEX and DEX">
           {executions.error ? (
@@ -224,6 +258,7 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
           </p>
         </Card>
       </div>
+      )}
 
       {/* Venue + execution-strategy reference: the domain's vocabulary. */}
       <div style={{ display: 'grid', gap: space[14], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', marginTop: space[14] }}>

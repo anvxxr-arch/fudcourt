@@ -42,15 +42,30 @@ import type { MarketType, OrderType, VenueId } from '@/features/trade/taxonomy';
 import type { Instrument, MarketRow, TradingAccount, VenueCapability } from '@/features/trade/model';
 import {
   NO_VALUE,
+  createTradeExecution,
+  executorMarketTypeFor,
   fetchExecutions,
   fetchMarketRows,
   fetchPortfolioSummary,
+  fetchTradeAccounts,
   formatChange,
   formatPrice,
   formatUsd,
   marketTypeHref,
+  previewTradeIntent,
   tickerTypeFor,
+  venueOfExchange,
 } from '@/features/trade/client';
+import {
+  CAPABILITY_COLUMNS,
+  CAPABILITY_MATRIX,
+  capabilityBoard,
+  capabilityFor,
+  capabilityOrderTypeSplit,
+  capabilitiesForVenue,
+} from '@/features/trade/capabilities';
+import { VENUE_BINDINGS, VENUE_BINDING_LIST, bindingFor } from '@/features/trade/adapters';
+import { buildTradeRequest, missingRequired, num, type ComposerState } from '@/features/trade/intent';
 
 // ---------------------------------------------------------------------------
 // A fetch stub: the client is the only thing that touches the network, and it
@@ -431,6 +446,313 @@ test('trade: the formatters render null as the em dash and a real 0 as a value',
 
 test('trade: the em dash is the one spelling of "no value"', () => {
   assert.equal(NO_VALUE, '—');
+});
+
+// ---------------------------------------------------------------------------
+// Phase 3 — the capability matrix (the board offers only what the taxonomy serves)
+// ---------------------------------------------------------------------------
+
+test('trade: the capability matrix carries exactly one row per venue × market type', () => {
+  const expected: string[] = [];
+  for (const v of VENUES) for (const m of VENUE_MARKET_TYPES[v.id]) expected.push(`${v.id}:${m}`);
+  const actual = CAPABILITY_MATRIX.map((c) => `${c.venue}:${c.marketType}`);
+  assert.deepEqual(actual.slice().sort(), expected.slice().sort(), 'the board offers no pairing the taxonomy does not serve');
+  assert.equal(new Set(actual).size, actual.length, 'a pairing is listed twice');
+});
+
+test('trade: every capability row states all seven order types as booleans', () => {
+  for (const cap of CAPABILITY_MATRIX) {
+    assert.deepEqual(
+      Object.keys(cap.orderTypes).sort(),
+      ORDER_TYPES.map((o) => o.id).sort(),
+      `${cap.venue}:${cap.marketType} omits an order type`,
+    );
+    for (const o of ORDER_TYPES) {
+      assert.equal(typeof cap.orderTypes[o.id], 'boolean', `${cap.venue}:${cap.marketType} ${o.id} must be a stated boolean`);
+    }
+  }
+});
+
+test('trade: the board columns are every order type, in taxonomy order, and rows are the matrix', () => {
+  const { columns, rows } = capabilityBoard();
+  assert.deepEqual(columns.map((c) => c.id), ORDER_TYPES.map((o) => o.id), 'a column per order type, none dropped');
+  assert.equal(rows.length, CAPABILITY_MATRIX.length);
+  assert.deepEqual(CAPABILITY_COLUMNS.map((c) => c.id), ORDER_TYPES.map((o) => o.id));
+});
+
+test('trade: a venue lookup returns only that venue, and the split is exhaustive', () => {
+  for (const v of VENUES) {
+    const rows = capabilitiesForVenue(v.id);
+    assert.ok(rows.length > 0, `${v.id} has at least one capability row`);
+    for (const row of rows) assert.equal(row.venue, v.id);
+    const { supports, missing } = capabilityOrderTypeSplit(rows[0]);
+    assert.equal(supports.length + missing.length, ORDER_TYPES.length, 'every order type is either supported or missing');
+  }
+  const binanceSpot = capabilityFor('binance', 'spot');
+  assert.ok(binanceSpot !== undefined, 'binance serves spot');
+  assert.equal(binanceSpot.venue, 'binance');
+  assert.equal(binanceSpot.marketType, 'spot');
+});
+
+test('trade: a spot row has no margin mode, and a leverage row states its margin modes', () => {
+  // The two invariants that make the matrix more than a grid of booleans: spot
+  // has no margin setting, and leverage without a margin mode is meaningless.
+  for (const cap of CAPABILITY_MATRIX) {
+    if (cap.marketType === 'spot') assert.equal(cap.marginModes, null, `${cap.venue} spot has no margin mode`);
+    if (cap.leverage) assert.notEqual(cap.marginModes, null, `${cap.venue}:${cap.marketType} has leverage but no margin mode`);
+    if (cap.marketType === 'swap') {
+      assert.equal(cap.orderTypes.limit, false, `${cap.venue} swap is an AMM route — market only`);
+      assert.equal(cap.leverage, false, `${cap.venue} swap has no venue leverage`);
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Phase 5 — the per-venue adapter bindings
+// ---------------------------------------------------------------------------
+
+test('trade: every venue has a binding, and its market types mirror the taxonomy', () => {
+  assert.deepEqual(Object.keys(VENUE_BINDINGS).sort(), VENUES.map((v) => v.id).sort(), 'the registry is total over the venues');
+  assert.equal(VENUE_BINDING_LIST.length, VENUES.length);
+  for (const v of VENUES) {
+    const binding = bindingFor(v.id);
+    assert.equal(binding.venue, v.id);
+    assert.deepEqual([...binding.marketTypes], [...VENUE_MARKET_TYPES[v.id]], `${v.id} binding disagrees with the taxonomy`);
+    assert.equal(binding.venueType, v.type);
+  }
+});
+
+test('trade: the binding resolves the venue symbol, and a DEX that cannot derive it says so', () => {
+  assert.equal(bindingFor('binance').venueSymbol('btc', 'usdt', 'spot'), 'BTCUSDT');
+  assert.equal(bindingFor('bybit').venueSymbol('eth', 'usdt', 'perpetual'), 'ETHUSDT');
+  assert.equal(bindingFor('mexc').venueSymbol('sol', 'usdt', 'spot'), 'SOLUSDT');
+  assert.equal(bindingFor('okx').venueSymbol('btc', 'usdt', 'spot'), 'BTC-USDT', 'OKX separates base and quote');
+  assert.equal(bindingFor('hyperliquid').venueSymbol('btc', 'usdc', 'perpetual'), 'BTC', 'a perp is addressed by the coin name');
+  assert.equal(bindingFor('uniswap').venueSymbol('eth', 'usdc', 'swap'), null, 'an AMM pool needs contract addresses, not a ticker');
+  assert.equal(bindingFor('jupiter').venueSymbol('sol', 'usdc', 'swap'), null);
+  for (const v of VENUES) {
+    assert.equal(bindingFor(v.id).kind, v.type === 'cex' ? 'api-key' : 'wallet', `${v.id} binds the wrong credential kind`);
+  }
+});
+
+test('trade: the read channels name the executor account route and declare the unserved reads', () => {
+  const binding = bindingFor('binance');
+  assert.equal(binding.reads.account.path, '/api/executor/accounts');
+  assert.equal(binding.reads.account.live, true, 'the account read is the executor route that exists');
+  assert.equal(binding.reads.positions.live, false, 'a read with no route is declared, not faked');
+  assert.equal(binding.reads.balances.live, false);
+});
+
+// ---------------------------------------------------------------------------
+// Phase 4 — the composer's request builder (pure, no router, no DOM)
+// ---------------------------------------------------------------------------
+
+const baseIntent: ComposerState = {
+  accountId: 'acct-1',
+  venue: 'binance',
+  base: 'btc',
+  quote: 'usdt',
+  side: 'buy',
+  intent: 'open',
+  entryType: 'market',
+  entryPrice: '',
+  postOnly: false,
+  stopLoss: '98000',
+  takeProfit: '',
+  sizingMode: 'risk_percent',
+  sizingValue: '1',
+  basis: 'spot_equity',
+  leverageMode: 'auto_safe',
+  manualLeverage: '5',
+  marginMode: '',
+  mode: 'paper',
+};
+
+test('trade: a market type the executor cannot work yields no request, not a rejected one', () => {
+  assert.equal(buildTradeRequest(baseIntent, 'options'), null);
+  assert.equal(buildTradeRequest(baseIntent, 'swap'), null);
+  assert.equal(missingRequired(baseIntent, 'options').length, 0, 'an unworkable type is not a "missing field"');
+});
+
+test('trade: the composer maps the trade market type to the executor vocabulary', () => {
+  assert.equal(executorMarketTypeFor('spot'), 'spot');
+  assert.equal(executorMarketTypeFor('margin'), 'spot');
+  assert.equal(executorMarketTypeFor('perpetual'), 'linear_perp');
+  assert.equal(executorMarketTypeFor('futures'), 'linear_perp');
+  assert.equal(executorMarketTypeFor('options'), null);
+  assert.equal(executorMarketTypeFor('swap'), null);
+});
+
+test('trade: the request carries the canonical symbol, the side and the intent', () => {
+  const request = buildTradeRequest(baseIntent, 'spot');
+  assert.ok(request !== null);
+  assert.equal(request.symbol, 'BTC/USDT', 'the executor speaks a slash symbol, uppercased');
+  assert.equal(request.marketType, 'spot');
+  assert.equal(request.side, 'buy');
+  assert.equal(request.intent, 'open');
+  assert.equal(request.entry.type, 'market');
+  assert.equal(request.mode, 'paper');
+  assert.deepEqual(request.stopLoss, { price: 98000 });
+  assert.equal(request.takeProfits, undefined, 'an empty TP is absent, never a fabricated price');
+});
+
+test('trade: a limit entry carries its price, and a market entry carries none', () => {
+  const limit = buildTradeRequest({ ...baseIntent, entryType: 'limit', entryPrice: '100000' }, 'spot');
+  assert.ok(limit !== null);
+  assert.equal(limit.entry.type, 'limit');
+  assert.equal(limit.entry.type === 'limit' ? limit.entry.price : null, 100000);
+  assert.equal(limit.execution.type, 'limit', 'the execution method follows the entry for a direct order');
+});
+
+test('trade: leverage and margin mode are sent only for a linear perpetual', () => {
+  const spot = buildTradeRequest({ ...baseIntent, leverageMode: 'manual', manualLeverage: '10', marginMode: 'isolated' }, 'spot');
+  assert.ok(spot !== null);
+  assert.equal(spot.leverage, undefined, 'a spot order carries no leverage');
+  assert.equal(spot.marginMode, undefined);
+
+  const perp = buildTradeRequest(
+    { ...baseIntent, leverageMode: 'manual', manualLeverage: '10', marginMode: 'isolated', basis: 'futures_equity' },
+    'perpetual',
+  );
+  assert.ok(perp !== null);
+  assert.equal(perp.marketType, 'linear_perp');
+  assert.deepEqual(perp.leverage, { mode: 'manual', leverage: 10 });
+  assert.equal(perp.marginMode, 'isolated');
+});
+
+test('trade: an empty numeric field stays absent, never a silent zero', () => {
+  assert.equal(num(''), undefined);
+  assert.equal(num('   '), undefined);
+  assert.equal(num('abc'), undefined);
+  assert.equal(num('0'), 0, 'a real zero is a value');
+  const request = buildTradeRequest({ ...baseIntent, stopLoss: '', takeProfit: '' }, 'spot');
+  assert.ok(request !== null);
+  assert.equal(request.stopLoss, undefined, 'no stop entered means no stop sent');
+});
+
+test('trade: the gate names what is missing before anything reaches the wire', () => {
+  assert.ok(missingRequired({ ...baseIntent, accountId: '' }, 'spot').some((m) => m.startsWith('accountId')));
+  assert.ok(missingRequired({ ...baseIntent, base: '  ' }, 'spot').some((m) => m.startsWith('symbol')));
+  assert.ok(missingRequired({ ...baseIntent, sizingValue: '0' }, 'spot').some((m) => m.startsWith('sizing.value')));
+  assert.ok(
+    missingRequired({ ...baseIntent, sizingMode: 'risk_percent', stopLoss: '' }, 'spot').some((m) => m.startsWith('stopLoss')),
+    'risk sizing without a stop is unbounded — the gate refuses it',
+  );
+  assert.ok(
+    missingRequired({ ...baseIntent, entryType: 'limit', entryPrice: '' }, 'spot').some((m) => m.startsWith('entry.price')),
+  );
+  assert.equal(missingRequired({ ...baseIntent, entryType: 'limit', entryPrice: '100000' }, 'spot').length, 0, 'a complete intent passes');
+});
+
+// ---------------------------------------------------------------------------
+// Phase 4/17 — the client composes the executor's real routes
+// ---------------------------------------------------------------------------
+
+type Captured = { url: string; method: string; body: unknown };
+let captured: Captured[] = [];
+
+function stubCapture(handler: (url: string, init?: RequestInit) => Stub): () => void {
+  const original = globalThis.fetch;
+  captured = [];
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    captured.push({
+      url,
+      method: init?.method ?? 'GET',
+      body: init?.body === undefined ? undefined : JSON.parse(String(init.body)),
+    });
+    const { status = 200, body } = handler(url, init);
+    return { ok: status >= 200 && status < 300, status, json: async () => body };
+  }) as typeof fetch;
+  return () => {
+    globalThis.fetch = original;
+  };
+}
+
+test('trade: the composer previews through /api/executor/preview, posting the request verbatim', async () => {
+  const restore = stubCapture(() => ({ body: { preview: { plan: {}, conflicts: [], warnings: [] }, liveEnabled: false } }));
+  try {
+    const request = buildTradeRequest(baseIntent, 'spot');
+    assert.ok(request !== null);
+    await previewTradeIntent(request);
+    assert.equal(captured.length, 1);
+    assert.equal(captured[0].url, '/api/executor/preview', 'the preview composes the executor route, not a private one');
+    assert.equal(captured[0].method, 'POST');
+    assert.deepEqual(captured[0].body, request, 'the body is the request, unchanged');
+  } finally {
+    restore();
+  }
+});
+
+test('trade: placing composes /api/executor/executions', async () => {
+  const restore = stubCapture(() => ({ body: { execution: { id: 'exec-1' }, plan: {} } }));
+  try {
+    const request = buildTradeRequest(baseIntent, 'spot');
+    assert.ok(request !== null);
+    const created = await createTradeExecution(request);
+    assert.equal(captured[0].url, '/api/executor/executions');
+    assert.equal(captured[0].method, 'POST');
+    assert.equal(created.execution.id, 'exec-1');
+  } finally {
+    restore();
+  }
+});
+
+test('trade: a failed preview surfaces the server error text, never a substituted one', async () => {
+  const restore = stubCapture(() => ({ status: 422, body: { error: 'sizing rejected', errors: ['risk above policy'] } }));
+  try {
+    const request = buildTradeRequest(baseIntent, 'spot');
+    assert.ok(request !== null);
+    await assert.rejects(() => previewTradeIntent(request), /sizing rejected — risk above policy/);
+  } finally {
+    restore();
+  }
+});
+
+test('trade: the accounts strip reads /api/executor/accounts, and 401 is empty, not an error', async () => {
+  const restore = stubCapture(() => ({ status: 401, body: {} }));
+  try {
+    assert.deepEqual(await fetchTradeAccounts(), []);
+    assert.equal(captured[0].url, '/api/executor/accounts');
+  } finally {
+    restore();
+  }
+});
+
+test('trade: a connected account is returned with its masked key and permission flags', async () => {
+  const account = {
+    id: 'acct-1',
+    exchange: 'binance',
+    label: 'Main',
+    apiKeyMasked: 'abc...xyz',
+    health: 'healthy',
+    revokedAt: null,
+    permissions: { read: true, spotTrade: true, futuresTrade: false, withdraw: true },
+  };
+  const restore = stubCapture(() => ({ body: { accounts: [account] } }));
+  try {
+    const rows = await fetchTradeAccounts();
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].apiKeyMasked, 'abc...xyz', 'only the masked key is read');
+    assert.equal(rows[0].permissions.withdraw, true, 'a withdrawal-capable key is reported, so the view can warn');
+  } finally {
+    restore();
+  }
+});
+
+test('trade: a 500 on the accounts route is an error, not an empty list', async () => {
+  const restore = stubCapture(() => ({ status: 500, body: { error: 'boom' } }));
+  try {
+    await assert.rejects(() => fetchTradeAccounts(), /boom/, 'a failed account read must never look like "no accounts"');
+  } finally {
+    restore();
+  }
+});
+
+test('trade: an executor exchange maps to a venue only when it is one we route to', () => {
+  assert.equal(venueOfExchange('binance'), 'binance');
+  assert.equal(venueOfExchange('hyperliquid'), 'hyperliquid');
+  assert.equal(venueOfExchange('kraken'), null, 'a venue we do not route to has no trade venue');
 });
 
 // Type-only references so the unused-locals pass does not elide the compile-time
