@@ -92,3 +92,6 @@ body {
   font-family: var(--fc-font-sans);
   font-variant-numeric: tabular-nums;
 }
+@keyframes fc-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.fc-fade-in { animation: fc-fade-in var(--fc-motion-deliberate) var(--fc-motion-ease); }
+.fc-fade-in-slow { animation: fc-fade-in var(--fc-motion-slow) var(--fc-motion-ease); }

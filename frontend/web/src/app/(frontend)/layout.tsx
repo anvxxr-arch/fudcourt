@@ -46,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             crawler receives. */}
         <Navbar />
         <Breadcrumb origin={ORIGIN} />
-        {children}
+        <div className="fc-fade-in">{children}</div>
       </body>
     </html>
   );

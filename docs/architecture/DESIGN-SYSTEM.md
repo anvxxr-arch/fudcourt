@@ -46,7 +46,7 @@ frontend/web/src/styles/tokens.ts          ← SSOT: the only place a design val
 Guidelines: semantic backgrounds/labels/separators with a `.dark` flip, HIG accent ramps, the SF
 stack, the HIG type scale, an 8pt spacing grid, continuous-corner radii, a 44pt touch target, HIG
 motion, and `prefers-reduced-motion` support. The gate reports
-`DESIGN_TOKENS_OK (files=232 exemptions=6)` with zero offender lines and zero dead tokens.
+`DESIGN_TOKENS_OK (files=257 exemptions=6)` with zero offender lines and zero dead tokens.
 `shared.ts` remains the home of the domain palettes and the shared view types/helpers; `styles/`
 is still a leaf layer. The pixel change this generation is INTENTIONAL (green accent -> blue,
 dark-green chrome -> system backgrounds) — the first generation's value-for-value proof served its
@@ -282,7 +282,7 @@ stays visible, and are deliberately NOT a build failure.
 Scale rules are exempted in `src/styles/tokens.ts` only. The gate fails if an exempted exact path
 disappears OR if a glob entry matches nothing, so neither the list nor a convention can rot silently.
 
-**The gate is GREEN.** Current verdict: `DESIGN_TOKENS_OK (files=232 exemptions=6)` — zero
+**The gate is GREEN.** Current verdict: `DESIGN_TOKENS_OK (files=257 exemptions=6)` — zero
 offender lines, zero dead tokens. While the migration was in flight it printed
 `DESIGN_FAIL: files=… colors=… scales=… deadtokens=…` counting the remaining work; a green run
 *before* the migration would have meant the gate was broken, not that the tree was clean, and it
@@ -328,11 +328,29 @@ Shelf rules, enforced by the DR-018 layer gate
   literal is exactly what the migration gate exists to catch;
 - new atoms go on a named shelf; a file dropped directly at `src/components/` fails the structure gate.
 
+Entrance motion: the shelf consumes two hand-written classes from
+`frontend/web/src/app/(frontend)/globals.css` — `.fc-fade-in` / `.fc-fade-in-slow` — whose durations
+and easing are read from the emitted motion tokens via
+`var(--fc-motion-deliberate)` / `var(--fc-motion-slow)` / `var(--fc-motion-ease)`, so the classes
+stay in step with `tokens.ts` rather than repeating the values. `src/app/(frontend)/layout.tsx`
+wraps `{children}` in `.fc-fade-in`; `Card` (`ui/card.tsx`) eases in with `.fc-fade-in`; `Stat`
+(`ui/stat.tsx`) and `Meter` (`ui/meter.tsx`) use the slower `.fc-fade-in-slow`. The
+`@media (prefers-reduced-motion: reduce)` guard emitted at the bottom of the token block already
+collapses both to `0.01ms`, so the classes need no separate reduced-motion handling.
+
 Two shelf members landed with the shell/admin pass: `ui/meter.tsx` (`Meter` — a part-to-whole
 composition bar: one stacked flex track of token-hued segments plus a legend; the caller supplies
 raw parts and zero-magnitude values are skipped, so an empty bucket never paints a sliver) and
 `ui/page-chrome.tsx` (`PagePanel` / `PagePanelLink` — the one chrome shared by the app router's
 route-level `loading.tsx` / `error.tsx` / `not-found.tsx` slots).
+
+**Adoption pass (deferred-list round).** The executor overview (`/executor` reads `ExecutorOverview`,
+`/executor/history` keeps the full table), the public market board (`MarketHub` no longer carries its
+own `SectionNav` — the `StoreShell` tab strip is the one tab strip), `/economy` snapshots label themselves
+differently from the detail pages, and the home surface re-renders summary rows + `Meter` + `Sparkline`
+with links to the live boards rather than restating the detail tables. Executor fill is a `Meter`
+(filled/remaining), and the quote boards now carry a `Trend` column from the same Yahoo chart payload
+(`MarketQuote.trend`), so `Sparkline` reads the already-served data instead of a second fetch.
 
 **Decision: there is NO page-chrome atom.** A shared page shell was attempted for the three page
 surfaces (member, admin, login) and then **deleted rather than kept as indirection**: each needed

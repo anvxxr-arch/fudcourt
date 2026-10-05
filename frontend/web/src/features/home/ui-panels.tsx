@@ -12,6 +12,7 @@ import {
   type QuotesEnvelope,
 } from './client';
 import { Change, CoinCell, cardStyle, h3Style, listRowStyle, noteStyle, useJson } from './ui-shared';
+import { Sparkline } from '@/ui/sparkline';
 
 // ---- sections that need more than a single fetch ----------------------------
 
@@ -75,6 +76,7 @@ export function QuoteColumn({ title, url }: { title: string; url: string }) {
           {data.quotes.slice(0, 5).map(q => (
             <div key={q.symbol} style={listRowStyle}>
               <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.name}</span>
+              <Sparkline points={q.trend ?? []} width={64} height={16} />
               <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(q.price)}</span>
               <Change v={q.changePercent} />
             </div>

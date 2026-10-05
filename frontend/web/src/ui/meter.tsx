@@ -19,7 +19,7 @@ export function Meter({ parts, style }: MeterProps) {
   const total = live.reduce((s, p) => s + Math.abs(p.value), 0);
   if (total <= 0) return null;
   return (
-    <div style={style}>
+    <div className="fc-fade-in-slow" style={style}>
       <div
         role="img"
         aria-label={live.map((p) => `${p.label} ${Math.round((Math.abs(p.value) / total) * 100)}%`).join(', ')}

@@ -36,6 +36,7 @@ type StatProps = {
 export function Stat({ label, value, hint, tone = 'neutral', valueSize = fontSize[22], style }: StatProps) {
   return (
     <div
+      className="fc-fade-in-slow"
       style={{
         background: color.bgSecondary,
         border: `1px solid ${color.separator}`,

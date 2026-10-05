@@ -10,6 +10,7 @@ import { color, fontSize, fontWeight, letterSpacing, radius, space } from '@/sty
 export function Card({ title, subtitle, right, children }: { title?: string; subtitle?: string; right?: ReactNode; children: ReactNode }) {
   return (
     <section
+      className="fc-fade-in"
       style={{
         background: color.bgSecondary,
         border: `1px solid ${color.separator}`,

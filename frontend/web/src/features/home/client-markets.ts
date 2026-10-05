@@ -198,6 +198,8 @@ export type Quote = {
   volume: number | null;
   week52High: number | null;
   week52Low: number | null;
+  /** Intraday closes (5m) for the sparkline trend — present when the route serves them. */
+  trend?: (number | null)[];
 };
 
 export type QuotesEnvelope = {
