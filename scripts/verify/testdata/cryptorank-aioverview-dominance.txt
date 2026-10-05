@@ -1,0 +1,39 @@
+check:        aioverview: digest dominance coherent with home (<=1%)
+previously matched: 'dominance ... <n>'   (anchor: dominance[^0-9]{0,40}(-?\d+(?:\.\d+)?))
+
+Why the anchor is a pattern and not a literal phrase
+----------------------------------------------------
+The digest is upstream's own prose ("their words", labelled as theirs). The
+connective between the word "dominance" and the figure rotates with the
+template, so the harness anchors on the noun and tolerates any 0-40 non-digit
+run after it, rather than grepping one fixed phrase. Every observed form
+matches the first anchor; two fallbacks cover the shapes that moved the figure
+behind another word or a percent sign.
+
+Recorded capture 2026-09-28
+  source: tests/fixtures/aioverview.json.gz
+          (sha256 6dd93dae26c72c53579323acea87b017e85032d4d619832db593f0b8f3bb7b84)
+          upstream https://cryptorank.io/ai-market-overview  (cr_fetch.py --path /ai-market-overview)
+  sentence: "... Bitcoin dominance slipped to 56.645237 (down 0.42%), while Ethereum's share rose to 11.06 ..."
+  anchor match: 'dominance slipped to 56.645237'
+
+Live capture 2026-10-05
+  source: GET http://127.0.0.1:3101/api/cryptorank?mode=aioverview
+  sentence: "... Bitcoin dominance eased to 57.19% and Ethereum's to 11.02%, ..."
+  anchor match: 'dominance eased to 57.19'
+
+Other observed forms the same anchor already covers
+  'dominance stands at <n>'      -> non-digit run " stands at " (11 chars) < 40
+  'dominance is at <n>%'         -> non-digit run " is at " (7 chars) < 40
+  'Bitcoin maintains a dominant <n> share ...'
+                                 -> fallback anchor: dominant\s+(-?\d+(?:\.\d+)?)\s*share
+  'BTC dominance ... <n>%'       -> fallback anchor: BTC dominance[^%\n]{0,80}?(\d+(?:\.\d+)?)\s*%
+
+Contracted 2026-09-29 rotation (documented in the harness block)
+  old form:  'dominance ... <n>'        (first digit within 40 chars of the noun)
+  rotated:   'dominance are essentially flat ... Bitcoin maintains a dominant 56.73955 share'
+             (first digit sat 44 chars after 'dominance'; the value moved behind 'dominant ... share')
+
+Rule that holds here: the fix is the MEASUREMENT, never a widened tolerance.
+Only when the prose yields a number is the unchanged <=1% coherence bound
+asserted; a rotation that yields none is reported as INFO, never failed.

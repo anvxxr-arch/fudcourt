@@ -983,13 +983,16 @@ def main() -> int:
     if check("news: HTTP 200", st == 200, f"got {st}"):
         rows = body.get("newsRows") or []
         check("news: full page of rows", len(rows) >= 8, f"n={len(rows)}")
-        # Upstream ships a PINNED PROMO row with url:null AND date:null (measured
-        # 2026-09-29; present in both the recorded fixture and the live feed).
-        # Requiring a URL on EVERY row therefore tested upstream's CMS, not our
-        # shaping -- it hard-failed on a legitimate spacer row. url:null is the
-        # documented promo marker (src/features/cryptorank/client.ts: "null upstream = pinned
-        # promo slot"). The honest invariant: titles always intact; every REAL
-        # url is non-empty http; a null url only on a pinned promo slot.
+        # previously matched: 'news: titles + publisher URLs intact' -- retired.
+        # It asserted every newsRows[i].url is a non-empty string and hard-failed
+        # upstream's PINNED PROMO slot (measured 2026-09-29: url:null AND
+        # date:null). Requiring a URL on EVERY row tested upstream's CMS, not our
+        # shaping. url:null is the documented promo marker
+        # (src/features/cryptorank/client.ts: "null upstream = pinned promo
+        # slot"). The honest invariant kept here: titles always intact; every
+        # REAL url is non-empty http; a null url only on a pinned promo slot.
+        # Captured upstream rows (promo + real; recorded + live):
+        #   scripts/verify/testdata/cryptorank-news-rows.json
         _news_bad: list[str] = []
         _news_pinned: list[str] = []
         for _i, _r in enumerate(rows):
@@ -1542,6 +1545,11 @@ def main() -> int:
         # unchanged <=1% coherence bound; a rotation that yields none is
         # informational, and coherence is still measured from the digest's
         # market-cap/volume figures (the neighbouring checks above).
+        # previously matched: 'dominance ... <n>' -- the pre-rotation anchor,
+        # still tried first. The connective rotates ('slipped to' / 'eased to' /
+        # 'stands at' / 'is at'); the anchor tolerates any 0-40 non-digit run
+        # between the noun and the figure. Captured upstream prose, every
+        # observed form: scripts/verify/testdata/cryptorank-aioverview-dominance.txt
         md = re.search(r"dominance[^0-9]{0,40}(-?\d+(?:\.\d+)?)", txt)
         if not md:
             md = re.search(r"dominant\s+(-?\d+(?:\.\d+)?)\s*share", txt)

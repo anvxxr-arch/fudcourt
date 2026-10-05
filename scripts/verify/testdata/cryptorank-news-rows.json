@@ -1,0 +1,41 @@
+{
+  "_what": "Citation artifact for the news-feed predicate in scripts/verify/verify-cryptorank.py. One upstream capture per arm of the check.",
+  "check": "news: titles intact + every real URL is http",
+  "previously_matched": "news: titles + publisher URLs intact",
+  "why_the_old_predicate_was_retired": "The retired predicate asserted every newsRows[i].url is a non-empty string. Upstream's feed carries a PINNED PROMO slot whose row is not a publisher article: its date is null and its url may be null (client.ts CrNewsRow: 'null upstream = pinned promo slot -> em-dash'). Asserting a URL on every row therefore tested upstream's CMS, not our shaping, and hard-failed on a legitimate spacer row. The honest invariant kept in the harness: titles always intact; every REAL url is non-empty http; a null url only on a pinned promo slot (date also null).",
+  "upstream": "https://cryptorank.io/news",
+  "route": "tests/oracle/cr_fetch.py --path /news",
+  "capture_2026_09_28": {
+    "source": "tests/fixtures/news.json.gz (raw HelperOut stdout; sha256 39fc02d2c9ad64a6cc949fd886f5c5162d4512661e5f286cc99f763505853ac4) -> frozen envelope tests/fixtures/expected/news.json",
+    "row0_pinned_promo": {
+      "id": 85193827,
+      "date": null,
+      "url": "https://tickets.token2049.com/token2049-singapore-2026/?promo=CRYPTORANK",
+      "title": "TOKEN2049 Singapore Returns as the Largest Industry Gathering of the Year"
+    },
+    "row1_real": {
+      "id": 85200140,
+      "date": "2026-09-28T12:13:09.000Z",
+      "url": "https://www.coindesk.com/tech/2026/09/28/thorchain-rejects-bitget-request-to-block-hacker-as-usd6-million-moves-to-bitcoin",
+      "title": "THORChain rejects Bitget request to block hacker as $6 million moves to bitcoin"
+    }
+  },
+  "capture_2026_10_05": {
+    "source": "GET http://127.0.0.1:3101/api/cryptorank?mode=news (live, sidecar base)",
+    "rows": 10,
+    "pinned_promo_url_null": 0,
+    "row0_pinned_promo": {
+      "id": 85193827,
+      "date": null,
+      "url": "https://tickets.token2049.com/token2049-singapore-2026/?promo=CRYPTORANK",
+      "title": "TOKEN2049 Singapore Returns as the Largest Industry Gathering of the Year"
+    },
+    "row1_real": {
+      "id": 85203894,
+      "date": "2026-10-05T07:55:47.000Z",
+      "url": "https://cryptoslate.com/us-expands-hamas-sanctions-after-tracing-crypto-transfers-from-france/",
+      "title": "US expands Hamas sanctions after tracing crypto transfers from France"
+    }
+  },
+  "note": "The pinned promo slot is the same id (85193827) in both captures: upstream keeps one promo row pinned at the head. It is NOT a url:null row in either capture (url present, date null); the url:null arm is retained because the shaper contract documents it as the promo marker and it is what the retired predicate hard-failed on when measured 2026-09-29."
+}

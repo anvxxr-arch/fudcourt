@@ -207,12 +207,42 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3100/portfolio       #
 curl -s -o /dev/null -w '%{http_code}\n' 'http://127.0.0.1:3100/blog/cms/api/posts?limit=1&depth=0'  # 200 -> Neon live
 curl -s -o /dev/null -w '%{http_code}\n' 'http://127.0.0.1:3100/api/transactions'           # 200, rows -> Postgres live
 curl -s -o /dev/null -X DELETE -w '%{http_code}\n' 'http://127.0.0.1:3100/api/transactions/1'  # 401 -> fail-closed (NO token used here)
+grep -c '^FUDCOURT_SESSION_SECRET=' frontend/web/.env.local   # 1 (existence only -- never print the value)
+python3 frontend/web/tests/verify_all_routes.py               # "# session: signed admin cookie accepted"; ZERO "[ENV: ...]" groups
 cd ../.. && (cd frontend/web && python3 scripts/checks/check-structure.py) && python3 scripts/verify/check-contract.py && (cd frontend/web && bun run test:shapers)   # offline gates
 ```
+
+The `verify_all_routes.py` line is the parity check for the tier split: the sweep
+discovers the key from the listening process's own `/proc/<pid>/environ`, mints an
+admin `fud_session` and expects the groups `mut` (7) and `gate-auth` (3) to be
+PRESENT. If either group is missing, or any row carries
+`[ENV: no FUDCOURT_SESSION_SECRET discoverable …]`, the secret is not in the
+running unit's environment — fix with §5 R3, not by weakening a guard. (Rows that
+fail against *upstreams* — `cryptorank`, `news`, coinank's dark 502 — are
+external drift, not this checklist's subject.)
 
 A var that is set in the §1 home file but missing at runtime shows up as one of
 these checks failing loudly — fix with the matching §5 step (rebuild for every
 `NEXT_PUBLIC_*`).
+
+### Change log
+
+| Date | Change | Evidence (no value recorded) |
+|------|--------|------------------------------|
+| 2026-10-05 | **K-11** — `FUDCOURT_SESSION_SECRET` set in `frontend/web/.env.local` (§5 R3 step 3): `openssl rand -hex 32`, append-only edit, `systemctl --user restart fudcourt-web`. | `grep -c '^FUDCOURT_SESSION_SECRET='` → 1; listening pid environ shows the name at len 64; sweep now prints `# session: signed admin cookie accepted (secret from listening pid <pid> environ)` and runs the 7 `mut` + 3 `gate-auth` probes (10/10 pass); the fail-closed controls still answer 401. File stays git-ignored (`.gitignore` `.env*`), 0600. |
+
+**Open gap this change does NOT close (tracked as K-12).** `/api/auth/login`
+still answers **500 `auth_unconfigured`**, and it is *not* a session-secret
+symptom: the Go api (`backend/api`, `fudcourt-api.service`, `:3103`) refuses
+because `FUDCOURT_CLIENT_ID` and `DISCORD_REDIRECT_URI` are absent from its own
+`EnvironmentFile` (repo-root `.env`, which currently holds only `ALCHEMY_KEY`,
+`FUDCOURT_DATA_VALKEY_PASSWORD`, `FUDCOURT_PG_URL`). Two couplings to note when
+K-12 is picked up: the route is **GET-only** (`POST` → 405; the `Set-Cookie` is
+minted by `/api/auth/callback` after the Discord round-trip, never by `/login`
+itself), and the Go api also reads `FUDCOURT_SESSION_SECRET` from that same
+`EnvironmentFile`, so it needs a second home for a key §1 currently records as
+`frontend/web/.env.local`-only — decide that home explicitly in K-12 rather than
+letting two silent copies drift.
 
 ## 7. Standing rules
 
