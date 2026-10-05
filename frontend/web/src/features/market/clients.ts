@@ -1,4 +1,19 @@
 import { getJSON } from '@/lib/fetch';
+
+/**
+ * Shared JSON-envelope transport for market providers.
+ *
+ * Thin wrapper over shared `@/lib/fetch` getJSON: fetches `url` with `init`
+ * and optionally maps the decoded JSON through `parse`. Providers that fetch
+ * CSV/text or use their own pool keep their own transport; JSON-envelope
+ * call sites go through here so URLs, cache/no-store inits, error paths and
+ * response shapes stay in one place.
+ */
+export function fetchProviderEnvelope<T>(url: string, init?: RequestInit, parse?: (json: unknown) => T): Promise<T> {
+  if (parse) return getJSON<unknown>(url, init).then(parse);
+  return getJSON<T>(url, init);
+}
+
 /**
  * Yahoo Finance chart family (keyless, public) -- the shared quote contract
  * behind the stock and commodity sections of the market hub.
@@ -93,7 +108,7 @@ export type QuotesBoardEnvelope = {
 
 /** Transport for one Yahoo-quote board. The endpoint varies per section, so it stays a parameter. */
 export function fetchQuotes(endpoint: string): Promise<QuotesBoardEnvelope> {
-  return getJSON<QuotesBoardEnvelope>(endpoint, { cache: 'no-store' });
+  return fetchProviderEnvelope<QuotesBoardEnvelope>(endpoint, { cache: 'no-store' });
 }
 
 /**

@@ -3,8 +3,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
-import { fetchCountries, type CountriesEnvelope, type CountrySummary, fetchCountry, formatDate, formatDelta, formatValue, type CountryEnvelope } from '@/features/economy/model';
-import { Card, ECONOMY_NAV, ErrorState, Loading, PageHeader, DataTable, ImportanceDots, Value } from '@/features/economy/ui/parts';
+import { fetchCountries, type CountriesEnvelope, type CountrySummary, fetchCountry, formatDate, formatDelta, formatValue, NO_VALUE, type CountryEnvelope } from '@/features/economy/model';
+import { Card } from '@/ui/card';
+import { DataTable } from '@/ui/data-table';
+import { ErrorState, Loading } from '@/ui/feedback';
+import { PageHeader } from '@/ui/page-header';
+import { Value } from '@/ui/value';
+import { ImportanceDots } from '@/features/economy/ui/importance-dots';
+import { ECONOMY_NAV } from '@/features/economy/nav';
 import RegimeBoard from '@/features/economy/ui/regime';
 
 /**
@@ -174,7 +180,7 @@ export function NationProfile({ code }: { code: string }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: space[12] }}>
           {data.keyMetrics.map((m) => (
             <Link key={m.slug} href={`/economy/indicator/${m.slug}`} style={{ textDecoration: 'none' }}>
-              <Value label={m.label.replace(`${c.name} `, '')} value={m.value} decimals={m.decimals} unit={m.unit} hint={`${m.date ?? 'no observation'} · ${m.source}`} />
+              <Value label={m.label.replace(`${c.name} `, '')} value={m.value === null ? NO_VALUE : formatValue(m.value, m.decimals)} tone={m.value === null ? 'muted' : 'default'} unit={m.value === null ? undefined : m.unit} hint={`${m.date ?? 'no observation'} · ${m.source}`} />
             </Link>
           ))}
         </div>

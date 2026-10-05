@@ -11,7 +11,12 @@
 import { useEffect, useState } from 'react';
 import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { fetchLiquidity, formatCompact, formatDate, formatValue, type LiquidityEnvelope } from '@/features/economy/model';
-import { Card, DataTable, ECONOMY_NAV, ErrorState, Loading, PageHeader } from '@/features/economy/ui/parts';
+import { Card } from '@/ui/card';
+import { DataTable } from '@/ui/data-table';
+import { ECONOMY_NAV } from '@/features/economy/nav';
+import { ErrorState } from '@/ui/feedback';
+import { Loading } from '@/ui/feedback';
+import { PageHeader } from '@/ui/page-header';
 
 export default function LiquidityBoard() {
   const [data, setData] = useState<LiquidityEnvelope | null>(null);

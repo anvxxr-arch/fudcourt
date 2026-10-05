@@ -13,7 +13,12 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { color, fontSize, radius, space } from '@/styles/tokens';
 import { fetchCompare, formatDate, formatValue, type CompareEnvelope } from '@/features/economy/model';
-import { Card, ECONOMY_NAV, ErrorState, Loading, PageHeader, Sparkline } from '@/features/economy/ui/parts';
+import { Card } from '@/ui/card';
+import { ECONOMY_NAV } from '@/features/economy/nav';
+import { ErrorState } from '@/ui/feedback';
+import { Loading } from '@/ui/feedback';
+import { PageHeader } from '@/ui/page-header';
+import { Sparkline } from '@/ui/sparkline';
 
 const COUNTRIES = ['us', 'cn', 'de', 'jp', 'gb', 'in', 'id', 'br', 'fr', 'kr'] as const;
 const SERIES = [

@@ -5,12 +5,12 @@ import { isSafeNext } from '@/server/auth';
 // `searchParams` and renders it. The body below is the route's original render,
 // moved verbatim — same copy, same styling, same redirect-safety predicate.
 const ERRORS: Record<string, string> = {
-  discord_denied: 'Login dibatalkan di Discord.',
-  bad_state: 'Sesi login tidak valid atau sudah kedaluwarsa. Coba lagi.',
-  auth_unconfigured: 'Konfigurasi OAuth server belum lengkap.',
-  token_exchange_failed: 'Discord menolak tukar kode OAuth. Coba lagi.',
-  discord_api_failed: 'Gagal memprofilkan akun Discord. Coba lagi.',
-  session_secret_missing: 'FUDCOURT_SESSION_SECRET belum diatur di server.',
+  discord_denied: 'Sign-in cancelled in Discord.',
+  bad_state: 'Login session invalid or expired. Try again.',
+  auth_unconfigured: 'Server OAuth is not fully configured.',
+  token_exchange_failed: 'Discord refused the OAuth code exchange. Try again.',
+  discord_api_failed: 'Could not read your Discord profile. Try again.',
+  session_secret_missing: 'FUDCOURT_SESSION_SECRET is not set on the server.',
 };
 export default function LoginPanel({ error, next }: { error?: string; next?: string }) {
   // The same predicate the login route and the callback use: this value becomes
@@ -18,7 +18,8 @@ export default function LoginPanel({ error, next }: { error?: string; next?: str
   // redirect.
   const target = isSafeNext(next) ? next : '/';
   const loginHref = `/api/auth/login?next=${encodeURIComponent(target)}`;
-  const message = error ? ERRORS[error] ?? 'Login gagal. Coba lagi.' : null;
+  const message = error ? ERRORS[error] ?? 'Sign-in failed. Try again.' : null;
+  const isTeamTarget = target === '/team' || target.startsWith('/team/');
   return (
     <main
       style={{
@@ -44,9 +45,21 @@ export default function LoginPanel({ error, next }: { error?: string; next?: str
       >
         <h1 style={{ margin: 0, fontSize: fontSize[20], letterSpacing: letterSpacing.wide }}>FUDCOURT ACCESS</h1>
         <p style={{ color: color.labelTertiary, fontSize: fontSize[13], lineHeight: lineHeight.normal }}>
-          Masuk dengan Discord untuk membuka member, terminal, dan management. Level akses mengikuti role
-          Discord kamu di guild FUDCOURT.
+          Sign in with Discord to unlock member, terminal, and management. Your access level follows your
+          Discord role in the FUDCOURT guild.
         </p>
+        <ul style={{ color: color.labelTertiary, fontSize: fontSize[12], lineHeight: lineHeight.normal, margin: `0 0 ${space[16]}px`, paddingLeft: space[20] }}>
+          <li>Browsing stays free — boards, signals, and news are open without sign-in.</li>
+          <li>Sign-in only unlocks your private terminal: your balances, positions, and venue risk.</li>
+          <li>No exchange key needed to look — connecting a venue is optional, anytime.</li>
+        </ul>
+        {isTeamTarget && (
+          <p style={{ color: color.labelTertiary, fontSize: fontSize[12], margin: `0 0 ${space[16]}px` }}>
+            The /team terminal is your private room: cross-chain treasury, wallet + address + hash
+            reconciliation, and boards that passed all three gating checks. Sign in once via Discord,
+            land back here automatically.
+          </p>
+        )}
         {message && (
           <p
             style={{
@@ -63,7 +76,7 @@ export default function LoginPanel({ error, next }: { error?: string; next?: str
         )}
         {target !== '/' && (
           <p style={{ color: color.labelTertiary, fontSize: fontSize[12], margin: `0 0 ${space[16]}px` }}>
-            Setelah login kamu kembali ke <span style={{ color: color.blue }}>{target}</span>
+            After sign-in you return to <span style={{ color: color.blue }}>{target}</span>
           </p>
         )}
         <a
@@ -84,7 +97,10 @@ export default function LoginPanel({ error, next }: { error?: string; next?: str
           CONTINUE WITH DISCORD
         </a>
         <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `${space[16]}px 0 0` }}>
-          Scopes: <code>identify guilds</code>. Bot hanya membaca role id kamu di guild FUDCOURT.
+          Scopes: <code>identify guilds</code>. The bot only reads your role id in the FUDCOURT guild.
+        </p>
+        <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `${space[8]}px 0 0` }}>
+          <a href="/market" style={{ color: color.blue, textDecoration: 'none' }}>Browse the boards first →</a>
         </p>
       </div>
     </main>

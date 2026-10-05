@@ -68,7 +68,6 @@ Every event is the envelope defined in
 
 ## Code generation
 
-`shared/sdk/typescript` derives its event types and runtime catalog from
-`catalog.json` (`bun run generate`); `shared/contracts/scripts/check-contract.mjs`
+`shared/contracts/scripts/check-contract.mjs`
 fails if the catalog stops covering every TS `ExecutionEventName` value or if
 `event.schema.json`'s `event_type` enum drifts from the catalog ids.

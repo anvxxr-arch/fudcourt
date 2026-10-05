@@ -45,7 +45,14 @@ import {
   VENUE_MARKET_TYPES,
   type MarketType,
 } from '@/features/trade/model';
-import { Card, ChangeChip, DataTable, ErrorState, Loading, Notice, PageHeader, Value } from '@/features/trade/ui/parts';
+import { Card } from '@/ui/card';
+import { ChangeChip } from '@/ui/change-chip';
+import { DataTable } from '@/ui/data-table';
+import { ErrorState } from '@/ui/feedback';
+import { Loading } from '@/ui/feedback';
+import { Notice } from '@/ui/notice';
+import { PageHeader } from '@/ui/page-header';
+import { Value } from '@/ui/value';
 import { CapabilityBoard } from '@/features/trade/ui/capability-board';
 import { ConnectedAccountsStrip, TradeAccountsView } from '@/features/trade/ui/accounts';
 import { TradeComposer } from '@/features/trade/ui/composer';

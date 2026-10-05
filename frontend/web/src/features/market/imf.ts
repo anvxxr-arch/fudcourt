@@ -44,7 +44,8 @@
  * and `droppedProjections` so they can say so out loud.
  */
 import { memo } from './bis';
-import { getJSON, getText } from '@/lib/fetch';
+import { getText } from '@/lib/fetch';
+import { fetchProviderEnvelope } from './clients';
 import { SOURCE_UA } from './bis';
 
 /** IMF SDMX 2.1 data endpoint (the host that actually serves the vintages). */
@@ -190,7 +191,7 @@ export function parseImfFiscal(xml: string, only?: readonly string[]): ImfFiscal
 /** Fetch the newest vintage id + version, memoised. Falls back to a pinned one. */
 async function latestVintage(): Promise<{ id: string; version: string }> {
   return memo('imf:vintages', IMF_TTL_MS, async () => {
-    const picked = pickLatestVintage(await getJSON<unknown>(IMF_DATAFLOW_CATALOGUE, {
+    const picked = pickLatestVintage(await fetchProviderEnvelope<unknown>(IMF_DATAFLOW_CATALOGUE, {
       headers: { Accept: 'application/vnd.sdmx.structure+json;version=1.0.0', 'User-Agent': SOURCE_UA },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     }));

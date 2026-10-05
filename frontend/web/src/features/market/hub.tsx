@@ -4,7 +4,7 @@ import { useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { color, fontSize, radius, space } from '@/styles/tokens';
 import TickerPage from '@/features/ticker/ui';
-import { TrackerPage } from '@/features/overview/ui';
+import TrackerPage from '@/features/overview/tracker';
 import DexPage from '@/features/dex/ui';
 import TrenchPage from '@/features/dex/trench';
 import ForexBoard from '@/features/market/forex';

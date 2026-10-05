@@ -19,7 +19,12 @@
 import { useEffect, useState } from 'react';
 import { color, fontSize, fontWeight, lineHeight, radius, space } from '@/styles/tokens';
 import { fetchRegime, formatDate, formatValue, type RegimeEnvelope } from '@/features/economy/model';
-import { Card, DataTable, ECONOMY_NAV, ErrorState, Loading, PageHeader } from '@/features/economy/ui/parts';
+import { Card } from '@/ui/card';
+import { DataTable } from '@/ui/data-table';
+import { ECONOMY_NAV } from '@/features/economy/nav';
+import { ErrorState } from '@/ui/feedback';
+import { Loading } from '@/ui/feedback';
+import { PageHeader } from '@/ui/page-header';
 
 const ARROW: Record<string, string> = { up: '↑', down: '↓', flat: '→' };
 const ARROW_COLOR: Record<string, string> = { up: color.blue, down: color.orange, flat: color.labelTertiary };

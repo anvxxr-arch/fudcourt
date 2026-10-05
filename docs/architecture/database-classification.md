@@ -17,7 +17,7 @@ transcript is `history://source-inventory`.
 
 Connection facts (names only, no values):
 `backend/sync/src/persistence/db.rs` reads the DSN from `FUDCOURT_PG_URL` (`tokio-postgres`);
-`frontend/web/src/platform/db/client.ts` Postgres client from `FUDCOURT_PG_URL` (`platform/db/pg.ts`);
+`frontend/web/src/server/db.ts` Postgres client from `FUDCOURT_PG_URL` (`platform/db/pg.ts`);
 `tests/oracle/sync-live.py` (psycopg2) reads `FUDCOURT_PG_URL` from the repo-root `.env`;
 executor Go worker from `FUDCOURT_EXECUTOR_PG_URL` (`backend/workers/executor/cmd/executor/main.go:95`);
 Payload from `DATABASE_URL` (`frontend/web/src/cms/payload.config.ts:44-46`).
@@ -39,7 +39,7 @@ Writers: the Python oracle `tests/oracle/sync-live.py` (psycopg2, the deployed s
 and `backend/sync` (Rust `tokio-postgres`, built but **not deployed** —
 `fudcourt-sync-rust.service` is the uninstalled replacement) for `assets`; the Next
 `(frontend)` API routes for `transactions`/`wallets`. Readers:
-`frontend/web/src/platform/db/pg.ts`, `platform/db/client.ts` `getAll()`, and the
+`frontend/web/src/server/db.ts`, `platform/db/client.ts` `getAll()`, and the
 routes below. Every writer writes Postgres directly (DR-040).
 
 ### `assets` — synced balances (latest state)
@@ -50,7 +50,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 | storage | Postgres `public.assets` (system of record, DR-040) |
 | classification | **snapshot** (rewritten wholesale each sync: `DELETE FROM assets` then INSERTs — `db.rs:117,133`) |
 | owning service | `backend/sync` Rust `fudcourt-sync` (`streams/sync.rs`), legacy `sync-live.py` |
-| readers | `frontend/web/src/platform/db/pg.ts:52,79,82`; `api/coins/route.ts` (`SELECT asset, SUM(value_usd) … FROM assets GROUP BY asset`); `api/all/route.ts` via `getAll()`; `backend/sync/src/reconciliation/reconcile.rs:207` |
+| readers | `frontend/web/src/server/db.ts,79,82`; `api/coins/route.ts` (`SELECT asset, SUM(value_usd) … FROM assets GROUP BY asset`); `api/all/route.ts` via `getAll()`; `backend/sync/src/reconciliation/reconcile.rs:207` |
 | canonical entity | **Balance** (account ≈ wallet address × chain, asset by symbol) + derived valuation |
 | durability | SNAPSHOT (live table keeps only the newest run; history lands in Postgres `asset_history`) |
 | sensitivity | INTERNAL (wallet-level holdings; no secrets) |
@@ -287,7 +287,7 @@ Enumerated, not implied:
    each TABLE, never on the noun:** `venues`'s table is unwritten while the venue *entity* is live
    (12 `venue_id`s in `reference.json`; slug validated at `accounts/exchange/account.go:122`;
    resolved by the executor's venue boundary), and `Account`/`LedgerEntry`/`Fill` are live entities
-   in `backend/api/internal/accounts/**`, `finance/ledger` and `executor.fills`; only `journal` is
+   in `backend/api/internal/accounts/**`, `[removed: finance/ledger]` and `executor.fills`; only `journal` is
    table-only (no code-side entity beyond the dashboard read).
 2. **`price_history` has a schema, an index, a retention DELETE, and no writer.** **Dead by
    the same evidence (DR-036): the table is empty and has never been written, and `grep -rniI "INSERT INTO price_history"` over the **source** tree → 0 hits** (run it with source globs; a bare whole-tree grep is non-zero by construction, because the phrase occurs in the prose that records it, e.g. `canonical-model.md:856`) —

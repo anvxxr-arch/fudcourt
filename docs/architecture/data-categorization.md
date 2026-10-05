@@ -203,9 +203,9 @@ exist.
 | id | name | category | layer | auth | freshness | durability | sensitivity | status | path |
 |---|---|---|---|---|---|---|---|---|---|
 | ccxt-venue-vocabulary | ccxt venue vocabulary — static canonical reference registry of 11 CEX venue ids (binance, bybit, mexc, okx, bitget, phemex, bingx, bitfinex, htx, coinbase, kraken) | MARKET_DATA | CANONICAL | keyless | STATIC | CANONICAL | PUBLIC | scaffolded | `backend/api/internal/markets/reference/seed.go` |
-| ccxt-exchange-ticker | CCXT direct exchange ticker feed — 10 keyless CEX venues (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) over spot/swap/future/option | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `frontend/web/src/features/ticker/venues.ts` |
+| ccxt-exchange-ticker | CCXT direct exchange ticker feed — 10 keyless CEX venues (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) over spot/swap/future/option | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `frontend/web/src/features/ticker/client.ts` |
 | dexscreener-api | DexScreener public DEX API — token-profiles, token-boosts, boosts-top, search, tokens, token-pairs, orders | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `frontend/web/src/features/dex/client.ts` |
-| coingecko-markets | CoinGecko /coins/markets top-250 pool (keyless public API) | MARKET_DATA | RAW | keyless | FREQUENT | EPHEMERAL | PUBLIC | active | `frontend/web/src/features/markets/client.ts` |
+| coingecko-markets | CoinGecko /coins/markets top-250 pool (keyless public API) | MARKET_DATA | RAW | keyless | FREQUENT | EPHEMERAL | PUBLIC | active | `frontend/web/src/features/market-data/markets.ts` |
 | alchemy-evm-rpc | Alchemy EVM JSON-RPC — eth_getBalance / eth_call across Ethereum, BSC, Polygon, Arbitrum, Optimism, Base | ONCHAIN | RAW | ALCHEMY_KEY | PERIODIC | SNAPSHOT | PUBLIC | active | `backend/sync/src/streams/sync.rs` |
 | solana-rpc | Solana mainnet-beta JSON-RPC — getBalance, getTokenAccountsByOwner (SPL) | ONCHAIN | RAW | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `backend/sync/src/chains.rs` |
 | hyperliquid-info | Hyperliquid info API — spotClearinghouseState, clearinghouseState, userFills (positions + realized PnL) | PORTFOLIO | RAW | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `backend/sync/src/chains.rs` |
@@ -250,7 +250,7 @@ not installed. The Alchemy / Solana / Hyperliquid feeds are active **through the
 
 **F7 — the dead tables are confirmed writer-less from the tree.** No `INSERT` targets `accounts`,
 `journal`, `ledger`, `trades`, `venues` or `price_history` anywhere in source — only `SELECT`s in
-`frontend/web/src/platform/db/pg.ts` and one 90-day retention `DELETE FROM price_history`
+`frontend/web/src/server/db.ts` and one 90-day retention `DELETE FROM price_history`
 (`pg.ts:208`). `status=dead` is therefore verified independently, not copied from DR-036.
 
 **F8 — defense-in-depth note, NOT a vulnerability.** `requiredTierForPath('/api/admin/members')`

@@ -5,7 +5,7 @@
  * Asserts (no network, no deps, node/bun runnable):
  *   (a) every enum value of ExecutionStatus / ChildOrderStatus /
  *       ExecutionEventName in shared/contracts/openapi/fudcourt.yaml matches
- *       the literal union parsed from frontend/web/src/platform/executor/types.ts;
+ *       the literal union parsed from frontend/web/src/lib/executor.ts;
  *   (b) every path documented in the OpenAPI exists as a route handler
  *       (route.ts under the Next.js app api tree) exporting every documented
  *       method, and no executor route handler is undocumented;
@@ -25,7 +25,9 @@ import { fileURLToPath } from 'node:url';
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..', '..', '..');
 
-const TYPES_TS = path.join(repoRoot, 'frontend/web/src/platform/executor/types.ts');
+// The executor type surface moved in the frontend refactor:
+// frontend/web/src/platform/executor/types.ts -> frontend/web/src/lib/executor.ts.
+const TYPES_TS = path.join(repoRoot, 'frontend/web/src/lib/executor.ts');
 const OPENAPI_YAML = path.join(repoRoot, 'shared/contracts/openapi/fudcourt.yaml');
 const CATALOG_JSON = path.join(repoRoot, 'shared/contracts/events/catalog.json');
 const EVENT_SCHEMA_JSON = path.join(repoRoot, 'shared/contracts/events/event.schema.json');
@@ -118,6 +120,17 @@ try {
 }
 
 // ---------------------------------------------------------------------------
+// (a0) OpenAPI structural parseability: this gate is dependency-free (no YAML
+// parser), so it hand-parses the pieces it consumes. Assert the document at
+// least parses to the top-level shape every check below assumes — a malformed
+// or truncated fudcourt.yaml would otherwise degrade into "0 paths, 0 enums"
+// non-failures rather than a red gate.
+if (!/^openapi:\s*\S+\s*$/m.test(openapiYaml)) {
+  failures.push('openapi: no top-level `openapi:` version key — not a parseable OpenAPI document');
+}
+if (!/^paths:\s*$/m.test(openapiYaml)) {
+  failures.push('openapi: no top-level `paths:` block — not a parseable OpenAPI document');
+}
 // (a) enums: OpenAPI components vs types.ts literal unions
 // ---------------------------------------------------------------------------
 let enumChecks = 0;

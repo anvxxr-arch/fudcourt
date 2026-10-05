@@ -27,7 +27,14 @@ import {
 } from '@/features/trade/client';
 import { instrumentById, instrumentLabel } from '@/features/trade/model';
 import { MARKET_TYPE_BY_ID, type MarketType } from '@/features/trade/model';
-import { Card, ChangeChip, DataTable, ErrorState, Loading, Notice, PageHeader, Value } from '@/features/trade/ui/parts';
+import { Card } from '@/ui/card';
+import { ChangeChip } from '@/ui/change-chip';
+import { DataTable } from '@/ui/data-table';
+import { ErrorState } from '@/ui/feedback';
+import { Loading } from '@/ui/feedback';
+import { Notice } from '@/ui/notice';
+import { PageHeader } from '@/ui/page-header';
+import { Value } from '@/ui/value';
 import { TradeComposer } from '@/features/trade/ui/composer';
 
 type Panel<T> = { value: T; error: string | null; loading: boolean };

@@ -33,7 +33,13 @@ import {
 } from '@/features/trade/client';
 import type { VenueCapability } from '@/features/trade/model';
 import { MARKET_TYPE_BY_ID, VENUE_BY_ID } from '@/features/trade/model';
-import { Card, DataTable, ErrorState, Loading, Notice, PageHeader, Value } from '@/features/trade/ui/parts';
+import { Card } from '@/ui/card';
+import { DataTable } from '@/ui/data-table';
+import { ErrorState } from '@/ui/feedback';
+import { Loading } from '@/ui/feedback';
+import { Notice } from '@/ui/notice';
+import { PageHeader } from '@/ui/page-header';
+import { Value } from '@/ui/value';
 
 type Panel = { accounts: TradeAccountLite[]; error: string | null; loading: boolean };
 

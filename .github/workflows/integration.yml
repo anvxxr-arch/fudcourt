@@ -3,8 +3,8 @@ name: integration
 # one service, because a per-surface workflow cannot see both sides.
 #
 #   1. the OFFLINE aggregate (`scripts/verify/verify-all.sh`) — every fast gate
-#      in one pass: structure, web contract, deploy units, contracts drift +
-#      SDK drift, the three Go modules, the Rust crate, hook syntax, web
+#      in one pass: structure, web contract, deploy units, contracts drift,
+#      the three Go modules, the Rust crate, hook syntax, web
 #      typecheck + shaper fixtures.
 #   2. the LIVE reconcile contract: starts a Postgres+TimescaleDB service,
 #      applies the schema, seeds a row set, builds the Rust service from this
@@ -45,9 +45,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Install frontend/web deps (structure/contract gates read the tree; shaper tests need deps)
         working-directory: frontend/web
-        run: bun install --frozen-lockfile
-      - name: Install shared/sdk/typescript deps (drift gate regenerates the SDK)
-        working-directory: shared/sdk/typescript
         run: bun install --frozen-lockfile
       - name: "Every offline gate (bash scripts/verify/verify-all.sh)"
         run: bash scripts/verify/verify-all.sh

@@ -13,7 +13,13 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { color, fontSize, radius, space } from '@/styles/tokens';
 import { fetchCalendar, formatDate, formatValue, type CalendarEnvelope } from '@/features/economy/model';
-import { Card, DataTable, ECONOMY_NAV, ErrorState, ImportanceDots, Loading, PageHeader } from '@/features/economy/ui/parts';
+import { Card } from '@/ui/card';
+import { DataTable } from '@/ui/data-table';
+import { ECONOMY_NAV } from '@/features/economy/nav';
+import { ErrorState } from '@/ui/feedback';
+import { ImportanceDots } from '@/features/economy/ui/importance-dots';
+import { Loading } from '@/ui/feedback';
+import { PageHeader } from '@/ui/page-header';
 
 const FIELD = {
   padding: `${space[8]}px ${space[8]}px`,

@@ -4,7 +4,7 @@ The **canonical contracts** of FUDCourt: the executor HTTP surface (OpenAPI),
 the cross-service event contract (catalog + JSON Schemas), and the shared error
 model. Everything here is documentation of REAL current behavior — fields and
 endpoints are never invented; when the frozen TS contract in
-`frontend/web/src/platform/executor/types.ts` says a value may be unknown, the
+`frontend/web/src/lib/executor.ts` says a value may be unknown, the
 schemas say `nullable`, not `0`.
 
 ## What this package is
@@ -13,15 +13,13 @@ schemas say `nullable`, not `0`.
   `backend/api` and `backend/workers/executor` MUST preserve the methods, paths, and
   response envelopes in [`openapi/fudcourt.yaml`](openapi/fudcourt.yaml); the
   migration may add endpoints but must not change or drop these.
-* **The compatibility contract** consumed by `shared/sdk/typescript`, whose types are
-  generated from this package.
 * **The event contract** for anything that emits domain events (Go services,
   workers, projections).
 
 The OpenAPI document covers the CURRENT TS-owned surface during the Go
 migration: the endpoint list mirrors the header of
 `frontend/web/src/features/executor/client.ts`, the schemas mirror the frozen types
-in `frontend/web/src/platform/executor/types.ts` exactly, and the response
+in `frontend/web/src/lib/executor.ts` exactly, and the response
 envelopes mirror the route handlers under the Next.js app api tree
 (`frontend/web/src/app/(frontend)/api/executor/*/route.ts`).
 
@@ -50,33 +48,17 @@ envelopes mirror the route handlers under the Next.js app api tree
   in `events/catalog.json`.
 * **HTTP surface**: consumers MUST NOT add unknown fields to request bodies —
   the request schemas are closed (`additionalProperties: false`). New fields go
-  into this document first, then the SDK is regenerated. Response objects may
-  gain fields additively; consumers must ignore what they do not know.
+  into this document first. Response objects may gain fields additively;
+  consumers must ignore what they do not know.
 * **Events never carry credentials or secrets** — not in payloads, not ever.
   Credential material is write-only through `POST /api/executor/accounts` and
   is only ever echoed back as a masked key (`abc...xyz`).
 
-## How `shared/sdk/typescript` is generated
-
-`shared/sdk/typescript` is a thin typed fetch client over this contract:
-
-1. `bun run generate` runs `openapi-typescript` over
-   [`openapi/fudcourt.yaml`](openapi/fudcourt.yaml), emitting
-   `shared/sdk/typescript/src/generated/schema.d.ts`.
-2. The same generate step renders `shared/sdk/typescript/src/generated/events.ts`
-   from `events/catalog.json` (single source — no hand-synced copies).
-3. `shared/sdk/typescript/src/client.ts` types every endpoint against the generated
-   schema (no duplicated field definitions), and `src/events.ts` re-exports the
-   generated catalog types.
-4. `bun run check:contracts` runs `shared/contracts/scripts/check-contract.mjs`, which fails the
-   build if the OpenAPI enums drift from `types.ts`, if a documented path loses
-   its route handler (or an executor handler is undocumented), or if the event
-   catalog stops covering the TS `ExecutionEventName` values.
 
 ## Drift gate
 
 ```sh
-node shared/contracts/scripts/check-contract.mjs   # or: bun run check:contracts (in shared/sdk/typescript)
+node shared/contracts/scripts/check-contract.mjs
 ```
 
 Prints `CONTRACTS_OK` with counts on success; lists every `CONTRACT_FAIL` line

@@ -5,7 +5,7 @@
 #   bash scripts/verify/verify-all.sh        # from anywhere in the repo
 #
 # Covers: structure gate (DR-018), web contract gate, deploy-unit guard,
-# shared/contracts drift gate + generated-SDK drift + sdk typecheck, the three
+# shared/contracts drift gate, the three
 # Go modules (build/vet/test), the Rust crate (build/test), the sync oracle gate
 # (Python vs Rust byte-identical replay, tests/oracle/fixtures — offline), the
 # cross-service API conformance check, the hook syntax check, and frontend/web
@@ -71,11 +71,6 @@ node shared/contracts/scripts/check-table-shape.mjs || fail table-shape
 
 step "canonical reference artifact drift (reference.json is generated)"
 go run ./backend/api/internal/markets/reference/cmd/emit -check || fail reference
-step "sdk-ts generated-SDK drift + typecheck"
-quiet_step sdk-ts bash -c 'cd shared/sdk/typescript \
-  && tmp=$(mktemp -d) && cp -r src/generated "$tmp/generated" \
-  && bun run generate >/dev/null && diff -r "$tmp/generated" src/generated \
-  && bun run typecheck >/dev/null' || fail sdk-ts
 
 step "go build/vet/test (backend/api)"
 go build ./backend/api/... && go vet ./backend/api/... && go test ./backend/api/... || fail go-api

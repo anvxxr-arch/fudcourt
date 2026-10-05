@@ -141,11 +141,11 @@ are now closed — two adopted, three deleted:
 
 | atom | shelf | disposition |
 |---|---|---|
-| `Badge` | `frontend/web/src/components/ui/badge.tsx` | **adopted** — `src/features/home/ui.tsx` |
-| `Stat` | `frontend/web/src/components/ui/stat.tsx` | **adopted** — `src/features/home/ui.tsx` (6 uses) |
-| `Dash` | `frontend/web/src/components/ui/feedback.tsx` | **deleted** — the house `—` literal lives at the call sites |
-| `TextArea` | `frontend/web/src/components/ui/primitives.tsx` | **deleted** — no caller; `transactions`/`wallets` write a raw `<textarea>` where needed |
-| `TFoot` | `frontend/web/src/components/ui/table.tsx` | **deleted** — no caller |
+| `Badge` | `frontend/web/src/ui/badge.tsx` | **adopted** — `src/features/home/ui.tsx` |
+| `Stat` | `frontend/web/src/ui/stat.tsx` | **adopted** — `src/features/home/ui.tsx` (6 uses) |
+| `Dash` | `frontend/web/src/ui/feedback.tsx` | **deleted** — the house `—` literal lives at the call sites |
+| `TextArea` | `frontend/web/src/ui/primitives.tsx` | **deleted** — no caller; `transactions`/`wallets` write a raw `<textarea>` where needed |
+| `TFoot` | `frontend/web/src/ui/table.tsx` | **deleted** — no caller |
 
 `Stat` was the sharpest case because it was **actively re-implemented** rather than adopted:
 
@@ -153,7 +153,7 @@ are now closed — two adopted, three deleted:
 cd frontend/web && grep -rnE "^(export )?function Stat\b" src
 ```
 
-- `frontend/web/src/components/ui/stat.tsx` — the shelf atom, now adopted by the `home` surface.
+- `frontend/web/src/ui/stat.tsx` — the shelf atom, now adopted by the `home` surface.
 - `frontend/web/src/features/ticker/detail.tsx:417` — a local `Stat` (`tone`), used 7 times.
 
 The shelf atom now has a caller. The local one in `ticker/detail.tsx` remains (it carries a `tone`
@@ -166,7 +166,7 @@ the shelf atom does not) and is the remaining adoption candidate if the two are 
 The fingerprint harness only covers the routes in its own `ROUTES` list, and it cannot render a
 session-gated page at all: it has **no cookie/session mechanism**, and `frontend/web/src/middleware.ts`
 redirects an anonymous request for those prefixes to `/login` (the policy table is `TIER_PAGES` in
-`frontend/web/src/platform/auth/guard.ts`). Those routes therefore have **no pixel-level guarantee**
+`frontend/web/src/server/auth.ts`). Those routes therefore have **no pixel-level guarantee**
 from a token change. The harness names each as an explicit, reasoned exclusion in
 `EXCLUDED_ROUTES` and fails if a new one appears unlisted:
 
@@ -229,10 +229,10 @@ Result (verbatim):
 
 | raw element | count | files | the atom that covers it |
 |---|---:|---:|---|
-| `<button` | 33 | 19 | `Button` (`frontend/web/src/components/ui/primitives.tsx:11`) |
-| `<input` | 20 | 11 | `Input` (`frontend/web/src/components/ui/primitives.tsx:46`) |
-| `<table` | 16 | 12 | `Table` (`frontend/web/src/components/ui/table.tsx:42`) |
-| `<select` | 15 | 8 | `Select` (`frontend/web/src/components/ui/primitives.tsx:64`) |
+| `<button` | 33 | 19 | `Button` (`frontend/web/src/ui/primitives.tsx`) |
+| `<input` | 20 | 11 | `Input` (`frontend/web/src/ui/primitives.tsx`) |
+| `<table` | 16 | 12 | `Table` (`frontend/web/src/ui/table.tsx`) |
+| `<select` | 15 | 8 | `Select` (`frontend/web/src/ui/primitives.tsx`) |
 | `<textarea` | 2 | 2 | **no atom** — `TextArea` was removed 2026-10-05; the two sites write a raw `<textarea>` |
 
 > **Re-measured 2026-10-05** (`HEAD` = `be6fec4`). The counts moved with the `home` surface landing
@@ -244,10 +244,10 @@ covers — the shell itself:
 
 | `file:line` | what it hand-rolls |
 |---|---|
-| `frontend/web/src/components/layout/store-shell.tsx:162` | a full `<button>` (padding, radius, accent background) — the primary nav/tab chrome |
-| `frontend/web/src/components/layout/market-hub.tsx:130` | hub tab `<button>` |
-| `frontend/web/src/components/layout/market-hub.tsx:146` | hub tab `<button>` |
-| `frontend/web/src/components/layout/market-hub.tsx:162` | hub tab `<button>` |
+| `frontend/web/src/features/overview/store-shell.tsx` | a full `<button>` (padding, radius, accent background) — the primary nav/tab chrome |
+| `frontend/web/src/features/market/hub.tsx` | hub tab `<button>` |
+| `frontend/web/src/features/market/hub.tsx` | hub tab `<button>` |
+| `frontend/web/src/features/market/hub.tsx` | hub tab `<button>` |
 | `frontend/web/src/app/(frontend)/(admin)/admin/page.tsx:81` | a raw `<table>` |
 | `frontend/web/src/features/admin/members-table.tsx:82` | a raw `<table>` (and `frontend/web/src/features/admin/members-table.tsx:128`, a raw `<button>`) |
 
@@ -260,16 +260,16 @@ element still appears both ways:
 | `frontend/web/src/features/executor/ui.tsx:118` | 1 `<select>`, 1 `<input>`, 5 `<table>` | yes (`Card`, `Label`) |
 | `frontend/web/src/features/ticker/detail.tsx:270` | 1 `<button>`, 3 `<select>`, 1 `<table>` | yes (`Loading`) and a local `Stat` |
 | `frontend/web/src/features/ticker/ui.tsx:207` | 3 `<button>`, 1 `<table>` | yes (`Loading`) |
-| `frontend/web/src/features/tracker/ui.tsx:55` | 1 `<button>`, 1 `<table>` | yes (`Loading`) |
-| `frontend/web/src/features/transactions/ui.tsx:142` | 1 `<table>`, 3 `<input>`, 1 `<textarea>` | yes (`Button` ×8, `Input` ×4, `Select` ×4, `Modal`, `Label` ×7) |
-| `frontend/web/src/features/wallets/ui.tsx:57` | 2 `<input>`, 2 `<button>`, 1 `<textarea>` | yes (`Button` ×3, `Modal`, `Label` ×4, `Card`) |
-| `frontend/web/src/features/dashboard/ui.tsx:51` | 1 `<table>` | yes (`Card`) |
+| `frontend/web/src/features/overview/tracker.tsx` | 1 `<button>`, 1 `<table>` | yes (`Loading`) |
+| `frontend/web/src/features/overview/transactions.tsx` | 1 `<table>`, 3 `<input>`, 1 `<textarea>` | yes (`Button` ×8, `Input` ×4, `Select` ×4, `Modal`, `Label` ×7) |
+| `frontend/web/src/features/overview/wallets.tsx` | 2 `<input>`, 2 `<button>`, 1 `<textarea>` | yes (`Button` ×3, `Modal`, `Label` ×4, `Card`) |
+| `frontend/web/src/features/overview/dashboard.tsx` | 1 `<table>` | yes (`Card`) |
 | `frontend/web/src/features/dex/trench.tsx:42` | 1 `<button>` | no (bespoke state) |
 | `frontend/web/src/features/news/ui.tsx:47` | 1 `<button>` | yes (`EmptyState`, `Loading`, `Toolbar`) |
 | `frontend/web/src/features/scoreboard/ui.tsx:97` | 1 `<button>` | yes (`Loading`, `Table`, `Toolbar`) |
 | `frontend/web/src/features/signals/ui.tsx:190` | 1 `<button>` | yes (`Loading`, `Table`, `Toolbar`) |
 | `frontend/web/src/features/llama/ui.tsx:122` | 1 `<button>` | yes (`Banner`, `Table`) |
-| `frontend/web/src/features/treasury/reconciliation.tsx:113` | 1 `<table>` | yes (`EmptyState`, `Card`) |
+| `frontend/web/src/features/overview/reconciliation.tsx` | 1 `<table>` | yes (`EmptyState`, `Card`) |
 
 Note: several of these files (`ticker/*`, `tracker/*`, `llama/*`, `dex/*`) belong to families the
 market-IA rework absorbs into the `/market` hub; the counts above are the state of the live worktree

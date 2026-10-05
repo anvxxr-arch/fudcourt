@@ -31,7 +31,13 @@ import {
   type LiquidityEnvelope,
   type RegimeEnvelope,
 } from '@/features/economy/model';
-import { Card, ECONOMY_NAV, ErrorState, ImportanceDots, Loading, PageHeader, Sparkline, Value } from '@/features/economy/ui/parts';
+import { Card } from '@/ui/card';
+import { ECONOMY_NAV } from '@/features/economy/nav';
+import { ErrorState } from '@/ui/feedback';
+import { ImportanceDots } from '@/features/economy/ui/importance-dots';
+import { Loading } from '@/ui/feedback';
+import { PageHeader } from '@/ui/page-header';
+import { Sparkline } from '@/ui/sparkline';
 
 /** The pulse is a curated cross-country basket, not "every indicator". */
 const PULSE = ['us-gdp', 'us-cpi', 'us-core-cpi', 'us-unemployment', 'us-m2', 'us-policy-rate', 'xm-policy-rate'] as const;

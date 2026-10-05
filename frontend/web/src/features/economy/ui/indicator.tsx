@@ -3,8 +3,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { color, fontSize, radius, space, fontWeight } from '@/styles/tokens';
-import { fetchIndicators, type IndicatorsEnvelope, type IndicatorMeta, fetchIndicator, formatDate, formatDelta, formatValue, type IndicatorEnvelope } from '@/features/economy/model';
-import { Card, ECONOMY_NAV, ErrorState, ImportanceDots, Loading, PageHeader, DataTable, Value } from '@/features/economy/ui/parts';
+import { fetchIndicators, type IndicatorsEnvelope, type IndicatorMeta, fetchIndicator, formatDate, formatDelta, formatValue, NO_VALUE, type IndicatorEnvelope } from '@/features/economy/model';
+import { Card } from '@/ui/card';
+import { DataTable } from '@/ui/data-table';
+import { ErrorState, Loading } from '@/ui/feedback';
+import { PageHeader } from '@/ui/page-header';
+import { Value } from '@/ui/value';
+import { ImportanceDots } from '@/features/economy/ui/importance-dots';
+import { ECONOMY_NAV } from '@/features/economy/nav';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 
 /**
@@ -209,8 +215,8 @@ export function IndicatorDetail({ slug }: { slug: string }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: space[12] }}>
         <Card>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: space[12] }}>
-            <Value label="Latest" value={latest?.value ?? null} decimals={i.decimals} unit={i.unit} />
-            <Value label="Change" value={change} decimals={i.decimals} hint="vs previous observation" />
+            <Value label="Latest" value={latest?.value == null ? NO_VALUE : formatValue(latest.value, i.decimals)} tone={latest?.value == null ? 'muted' : 'default'} unit={latest?.value == null ? undefined : i.unit} />
+            <Value label="Change" value={change === null ? NO_VALUE : formatValue(change, i.decimals)} tone={change === null ? 'muted' : 'default'} hint="vs previous observation" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[4] }}>
               <span style={{ fontSize: fontSize[11], color: color.labelTertiary, textTransform: 'uppercase' }}>Period</span>
               <span style={{ fontSize: fontSize[15], color: color.labelPrimary }}>{formatDate(latest?.date)}</span>

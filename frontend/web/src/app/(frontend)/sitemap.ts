@@ -5,6 +5,15 @@ import { COUNTRY_LIST, INDICATORS, CENTRAL_BANKS } from '@/features/economy/mode
 import { MARKET_TYPES } from '@/features/trade/model';
 import { INSTRUMENTS } from '@/features/trade/model';
 
+// Published blog posts. Same rule as the rest: a bounded, known set —
+// enumerated here, never crawled. A slug not in this list has no page
+// (the route 404s), so it must not appear here.
+const BLOG_POST_SLUGS = [
+  'never-fake-rules',
+  'the-decoy-that-passed-parity',
+  'how-a-board-is-gated',
+];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = PUBLIC_ROUTES.map((route) => ({
     url: `https://fc.dwirijal.my.id${route.path === '/' ? '' : route.path}`,
@@ -73,8 +82,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
   );
 
+  const blogPostPages = BLOG_POST_SLUGS.map((slug) => ({
+    url: `https://fc.dwirijal.my.id/blog/${slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }));
+
   return [
     ...staticRoutes,
+    ...blogPostPages,
     ...tickerCoins.map((coin) => ({
       url: `https://fc.dwirijal.my.id/market/ticker/${coin}`,
       lastModified: new Date(),

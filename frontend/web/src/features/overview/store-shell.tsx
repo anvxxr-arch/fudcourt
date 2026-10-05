@@ -7,7 +7,10 @@ import { Banner } from '@/ui/banner';
 import { Loading } from '@/ui/feedback';
 import { viewPath } from '@/lib/view-routes';
 import { loadOverviewBundle, saveWallet, type OverviewCoin, type OverviewReconRow, type OverviewTransaction } from './client';
-import { DashboardPage, PortfolioPage, TransactionPage, WalletPage } from '@/features/overview/ui';
+import DashboardPage from '@/features/overview/dashboard';
+import PortfolioPage from '@/features/overview/portfolio';
+import WalletPage from '@/features/overview/wallets';
+import TransactionPage from '@/features/overview/transactions';
 import ReconciliationPage from '@/features/overview/reconciliation';
 import SignalsPage from '@/features/signals/ui';
 import ScoreboardPage from '@/features/scoreboard/ui';
@@ -114,14 +117,37 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
   // Public/member shells show boards only — never wallet addresses,
   // transaction rows, or reconciliation rows.
   const tabs = isTeam ? [...TEAM_TABS, ...BOARD_TABS] : BOARD_TABS;
+  // Per-board benefit headlines for the public shells. The team shell keeps
+  // the FUDCOURT wordmark (treasury context, not a marketing surface).
+  // All market-* sub-routes share the market headline.
+  const BOARD_HEADERS: Record<string, { title: string; sub: string }> = {
+    market: {
+      title: 'Every market on one board — cross-checked before it prints',
+      sub: 'CEX instruments cross-checked across venues, on-chain pairs gated by parity — dashes, never zeros.',
+    },
+    signals: {
+      title: 'Screening output, not tips — every read parity-checked',
+      sub: 'Read-only screening over a 168h window; dual-source parity or it does not publish.',
+    },
+    scoreboard: {
+      title: 'Ranked by realized fills — no paper claims',
+      sub: 'Tracked traders and wallets ranked on verified fills; vanity stats rejected.',
+    },
+    news: {
+      title: 'News that survived gating — no fabricated items',
+      sub: 'Aggregated feeds, decoy-rejected and freshness-bounded.',
+    },
+  };
+  const boardKey = page.startsWith('market') ? 'market' : page;
+  const boardHeader = !isTeam ? BOARD_HEADERS[boardKey] : undefined;
 
   return (
     <div style={{ background: color.bgBase, minHeight: '100vh', color: color.labelPrimary, padding: space[20], fontFamily: fontFamily.mono }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h1 style={{ margin: 0, color: color.blue, letterSpacing: letterSpacing.wider }}>FUDCOURT</h1>
+          <h1 style={{ margin: 0, color: color.blue, letterSpacing: letterSpacing.wider }}>{boardHeader ? boardHeader.title : 'FUDCOURT'}</h1>
           <p style={{ margin: `${space[4]}px 0 0`, color: color.labelTertiary, fontSize: fontSize[12] }}>
-            Community · Terminal · Management
+            {boardHeader ? boardHeader.sub : 'Community · Terminal · Management'}
             {/* Treasury fetch state (period / sync / spinner) only exists on a
                 team shell — a public board never requests it, so showing it
                 there would advertise a sync that does not happen. */}

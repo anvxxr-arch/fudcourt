@@ -129,6 +129,7 @@ for f in sources():
         continue
     checked += 1
 
+    ftext = f.read_text(encoding="utf-8")
     for line_no, spec in imports_of(f):
         # --- rule 2: one alias, no escaping relative chains -------------------
         if spec.startswith(".."):
@@ -176,6 +177,27 @@ for f in sources():
             violations.append(
                 f"src/{rel}:{line_no} styles/ imports {tlayer}/{tname} — "
                 f"styles/ is presentational and must stay dependency-free"
+            )
+        # --- rule 4b: src/ui/ is a leaf (live layer) ---------------------------
+        # src/ui/* may import only @/ui (incl. the client-safe ui/site-nav nav
+        # module) and @/styles, and nothing further.
+        if layer == "ui" and tlayer not in ("ui", "styles"):
+            violations.append(
+                f"src/{rel}:{line_no} ui/ imports {tlayer}/{tname} — "
+                f"ui/ is presentational and must stay dependency-free"
+            )
+        # --- rule 4c: src/lib/ is shared infra --------------------------------
+        # lib/ may not reach for a family, the route tree, or server-only code.
+        if layer == "lib" and tlayer in ("features", "app", "server"):
+            violations.append(
+                f"src/{rel}:{line_no} lib/ imports {tlayer}/{tname} — "
+                f"lib/ is shared infra and may not depend on features, app, or server"
+            )
+        # --- rule 4d: server/ never flows into client components ---------------
+        if tlayer == "server" and "use client" in ftext:
+            violations.append(
+                f"src/{rel}:{line_no} imports server/{tname} from a use-client file — "
+                f"server/ modules must stay server-only"
             )
         # --- rule 5: no cross-feature coupling -------------------------------
         # Shell composition roots (market/hub.tsx composes boards, overview/store-shell.tsx

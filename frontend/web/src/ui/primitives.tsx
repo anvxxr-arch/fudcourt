@@ -41,6 +41,9 @@ type InputProps = {
   placeholder?: string;
   type?: string;
   style?: React.CSSProperties;
+  disabled?: boolean;
+  autoComplete?: string;
+  spellCheck?: boolean;
 };
 
 export function Input({ value, onChange, placeholder, type = 'text', style }: InputProps) {

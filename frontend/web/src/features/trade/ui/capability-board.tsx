@@ -17,7 +17,9 @@ import { color, fontSize, fontWeight } from '@/styles/tokens';
 import { NO_VALUE } from '@/features/trade/client';
 import { capabilityBoard } from '@/features/trade/model';
 import { MARKET_TYPE_BY_ID, VENUE_BY_ID, type MarketType, type VenueId } from '@/features/trade/model';
-import { Card, DataTable, Notice } from '@/features/trade/ui/parts';
+import { Card } from '@/ui/card';
+import { DataTable } from '@/ui/data-table';
+import { Notice } from '@/ui/notice';
 
 /** A stated boolean capability: `✓` when present, a muted `✕` when the venue lacks it. */
 function Flag({ on }: { on: boolean }) {

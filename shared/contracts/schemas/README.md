@@ -74,35 +74,35 @@ it is computed.
 
 | File | Layer | Owner today (package) | Canonical id? |
 |---|---|---|---|
-| [`accounts/wallet.json`](accounts/wallet.json) | CANONICAL | `backend/api accounts/wallets` | address is the key in SQL today |
+| [`accounts/wallet.json`](accounts/wallet.json) | CANONICAL | `backend/api [removed: accounts/wallets]` | address is the key in SQL today |
 | [`accounts/exchange-account.json`](accounts/exchange-account.json) | CANONICAL | `backend/api accounts/exchange` (+ executor store) | minted uuid |
-| [`accounts/balance.json`](accounts/balance.json) | CANONICAL | `backend/workers/executor` / `backend/api finance/ledger` | via account+asset |
+| [`accounts/balance.json`](accounts/balance.json) | CANONICAL | `backend/workers/executor` / `backend/api [removed: finance/ledger]` | via account+asset |
 | [`accounts/account-equity.json`](accounts/account-equity.json) | CANONICAL | `backend/workers/executor` | via account |
 | [`assets/asset.json`](assets/asset.json) | **CANONICAL** | **`backend/api/internal/markets/reference`** (new) | `asset_id` minted; instance in `shared/contracts/data/reference.json` |
 | [`assets/token.json`](assets/token.json) | **CANONICAL** | **`backend/api/internal/markets/reference`** (new) | `token_id` minted over `chain/address`; instance in `reference.json` |
 | [`assets/chain.json`](assets/chain.json) | **CANONICAL** | **`backend/api/internal/markets/reference`** (new) | `chain_id` minted; instance in `reference.json`; `backend/sync/src/chains.rs` is still a separate private table |
 | [`markets/venue.json`](markets/venue.json) | **CANONICAL** | **`backend/api/internal/markets/reference`** (new) | `venue_id` minted; instance in `reference.json`; the three inline allowlists are now redundant |
-| [`markets/instrument.json`](markets/instrument.json) | CANONICAL | `backend/api markets/instruments` | **`instrument_id`, no minter** |
-| [`markets/ticker.json`](markets/ticker.json) | CANONICAL | `backend/api markets/overview` | via instrument+venue |
+| [`markets/instrument.json`](markets/instrument.json) | CANONICAL | `backend/api [removed: markets/instruments]` | **`instrument_id`, no minter** |
+| [`markets/ticker.json`](markets/ticker.json) | CANONICAL | `backend/api [removed: markets/overview]` | via instrument+venue |
 | [`markets/price.json`](markets/price.json) | CANONICAL | **absent** | schema only |
-| [`markets/candle.json`](markets/candle.json) | CANONICAL | `backend/api markets/overview` | via instrument+interval+open_time |
+| [`markets/candle.json`](markets/candle.json) | CANONICAL | `backend/api [removed: markets/overview]` | via instrument+interval+open_time |
 | [`trading/execution.json`](trading/execution.json) | CANONICAL | `backend/workers/executor` | minted uuid |
 | [`trading/order.json`](trading/order.json) | CANONICAL | `backend/workers/executor` | minted `fud_…` |
 | [`trading/fill.json`](trading/fill.json) | CANONICAL | `backend/workers/executor` | dedup key `(account, trade)` |
-| [`trading/position.json`](trading/position.json) | CANONICAL | `backend/workers/executor` (+ derived in `finance/portfolio`) | key `(instrument, side)` |
+| [`trading/position.json`](trading/position.json) | CANONICAL | `backend/workers/executor` (+ derived in `[removed: finance/portfolio]`) | key `(instrument, side)` |
 | [`trading/execution-plan.json`](trading/execution-plan.json) | CANONICAL | `backend/workers/executor` | via execution |
 | [`trading/order-request.json`](trading/order-request.json) | CANONICAL | `backend/workers/executor` | via `fud_…` |
 | [`trading/sizing-definition.json`](trading/sizing-definition.json) | CANONICAL | `backend/workers/executor` | n/a |
 | [`trading/execution-event.json`](trading/execution-event.json) | DERIVED | `backend/workers/executor` | `evt_…` / bigserial |
 | [`trading/risk-profile.json`](trading/risk-profile.json) | CANONICAL | `backend/workers/executor` | `user_id` |
-| [`finance/ledger-entry.json`](finance/ledger-entry.json) | CANONICAL | `backend/api finance/ledger` | natural key |
+| [`finance/ledger-entry.json`](finance/ledger-entry.json) | CANONICAL | `backend/api [removed: finance/ledger]` | natural key |
 | [`finance/ledger-account.json`](finance/ledger-account.json) | CANONICAL | **absent** (SQL only) | `code` |
-| [`finance/treasury-account.json`](finance/treasury-account.json) | CANONICAL | `backend/api finance/treasury` | `account_id` |
-| [`finance/allocation.json`](finance/allocation.json) | CANONICAL | `backend/api finance/treasury` | via account |
-| [`finance/movement.json`](finance/movement.json) | CANONICAL | `backend/api finance/treasury` | `id` |
-| [`finance/transaction.json`](finance/transaction.json) | PRODUCT VIEW | `backend/api finance/transactions` | SQL surrogate |
-| [`finance/valuation.json`](finance/valuation.json) | **DERIVED** | `backend/api finance/portfolio` | n/a |
-| [`finance/exposure.json`](finance/exposure.json) | **DERIVED** | `backend/api finance/portfolio` | n/a |
+| [`finance/treasury-account.json`](finance/treasury-account.json) | CANONICAL | `backend/api [removed: finance/treasury]` | `account_id` |
+| [`finance/allocation.json`](finance/allocation.json) | CANONICAL | `backend/api [removed: finance/treasury]` | via account |
+| [`finance/movement.json`](finance/movement.json) | CANONICAL | `backend/api [removed: finance/treasury]` | `id` |
+| [`finance/transaction.json`](finance/transaction.json) | PRODUCT VIEW | `backend/api [removed: finance/transactions]` | SQL surrogate |
+| [`finance/valuation.json`](finance/valuation.json) | **DERIVED** | `backend/api [removed: finance/portfolio]` | n/a |
+| [`finance/exposure.json`](finance/exposure.json) | **DERIVED** | `backend/api [removed: finance/portfolio]` | n/a |
 | [`defi/protocol.json`](defi/protocol.json) | NORMALIZED | `backend/data internal/research/llama` | provider slug |
 | [`defi/pool.json`](defi/pool.json) | NORMALIZED | **absent** (TS `DexPair`) | provider pair address |
 | [`research/coin.json`](research/coin.json) | NORMALIZED | `backend/data internal/research/cryptorank` | provider key |
@@ -126,7 +126,7 @@ it is computed.
 | Describes | something that **happened** | something that **is** |
 | Ids | 28 stable `event_type` ids (PascalCase) + SCREAMING_SNAKE aliases | entity ids (`*_id`) |
 | Versioning | `event_version` starts at 1; additive changes keep it, breaking bumps it | none — these are the current shape |
-| Drift gate | `shared/contracts/scripts/check-contract.mjs` (c) pins catalogue ↔ `event.schema.json`, and (a) pins `ExecutionStatus`/`ChildOrderStatus`/`ExecutionEventName` ↔ `frontend/web/src/platform/executor/types.ts` and the OpenAPI enums | **not** covered by a gate yet (see §5) |
+| Drift gate | `shared/contracts/scripts/check-contract.mjs` (c) pins catalogue ↔ `event.schema.json`, and (a) pins `ExecutionStatus`/`ChildOrderStatus`/`ExecutionEventName` ↔ `frontend/web/src/lib/executor.ts` and the OpenAPI enums | **not** covered by a gate yet (see §5) |
 | Extra keys | payload is free-form and additive by policy | objects are **closed** (`additionalProperties: false`) where the value set is closed, so an unknown key is a schema error, not an extension |
 
 Two deliberate refusals to duplicate:
@@ -165,7 +165,7 @@ Two deliberate refusals to duplicate:
 | **A `reference.json` schema** | The registry artifact (`shared/contracts/data/reference.json`) is generated and self-describing (`document_version`, `id_rule`, `salt`), but it is a **data** file, not a schema, and it lives under `data/` not `schemas/`. Describing it here would duplicate the entity schemas it instantiates. |
 | **An `instrument_id` producer** | `markets/instrument.json` remains the one CANONICAL schema whose id the registry does **not** mint. Recorded, not silently closed (`canonical-model.md` O4). |
 | **Payload schemas for events** | See §3 (2). |
-| **Credential / secret shapes** | Deliberately not published: the sealed envelope and the revealed secret are server-side-only by contract (`access/credentials/envelope.go` — "SERVER-SIDE ONLY: it must never be serialized to a client, written to a log or put in a URL"). `accounts/exchange-account.json` carries the masked handle only. |
+| **Credential / secret shapes** | Deliberately not published: the sealed envelope and the revealed secret are server-side-only by contract (`[removed: access/credentials/envelope.go]` — "SERVER-SIDE ONLY: it must never be serialized to a client, written to a log or put in a URL"). `accounts/exchange-account.json` carries the masked handle only. |
 | **Candle/price/pool *stores*** | No table exists for any of them (`price_history` has DDL but no writer). The schemas exist because the shapes are consumed; no schema claims persistence. |
 | **A `sizing_value` unit fix** | Recorded as an open question (`canonical-model.md` O5), not silently resolved by picking a unit. |
 

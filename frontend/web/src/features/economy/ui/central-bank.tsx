@@ -3,8 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { color, fontSize, space, fontWeight, radius } from '@/styles/tokens';
-import { fetchCentralBanks, formatDate, formatValue, type CentralBanksEnvelope, fetchCentralBank, type CentralBankEnvelope } from '@/features/economy/model';
-import { Card, DataTable, ECONOMY_NAV, ErrorState, Loading, PageHeader, Value } from '@/features/economy/ui/parts';
+import { fetchCentralBanks, formatDate, formatValue, NO_VALUE, type CentralBanksEnvelope, fetchCentralBank, type CentralBankEnvelope } from '@/features/economy/model';
+import { Card } from '@/ui/card';
+import { DataTable } from '@/ui/data-table';
+import { ErrorState, Loading } from '@/ui/feedback';
+import { PageHeader } from '@/ui/page-header';
+import { Value } from '@/ui/value';
+import { ECONOMY_NAV } from '@/features/economy/nav';
 
 /**
  * Every tracked central bank (plan Phase 7) — `/economy/central-bank`.
@@ -143,8 +148,8 @@ export function CentralBankDetail({ bank }: { bank: string }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: space[12] }}>
         <Card>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: space[12] }}>
-            <Value label="Policy rate" value={b.rate} decimals={2} unit="%" />
-            <Value label="Last change" value={delta} decimals={2} unit="pp" hint="vs the previous distinct level" />
+            <Value label="Policy rate" value={b.rate === null ? NO_VALUE : formatValue(b.rate, 2)} tone={b.rate === null ? 'muted' : 'default'} unit={b.rate === null ? undefined : '%'} />
+            <Value label="Last change" value={delta === null ? NO_VALUE : formatValue(delta, 2)} tone={delta === null ? 'muted' : 'default'} unit={delta === null ? undefined : 'pp'} hint="vs the previous distinct level" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[4] }}>
               <span style={{ fontSize: fontSize[11], color: color.labelTertiary, textTransform: 'uppercase' }}>As of</span>
               <span style={{ fontSize: fontSize[15], color: color.labelPrimary }}>{formatDate(b.date)}</span>

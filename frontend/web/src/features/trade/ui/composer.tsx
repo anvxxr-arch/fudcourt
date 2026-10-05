@@ -34,7 +34,8 @@ import {
 } from '@/features/trade/client';
 import { VENUE_MARKET_TYPES, VENUE_BY_ID, type MarketType, type VenueId } from '@/features/trade/model';
 import { BASIS_SIZING, buildTradeRequest, missingRequired, type ComposerState } from '@/features/trade/model';
-import { Card, Notice } from '@/features/trade/ui/parts';
+import { Card } from '@/ui/card';
+import { Notice } from '@/ui/notice';
 import type { BalanceBasis, PreviewResult, SizingMode } from '@/lib/executor';
 
 const inputStyle: CSSProperties = {

@@ -204,7 +204,7 @@ function Panel<T>({
           {title} unavailable — {error}. Section withheld rather than rendered empty.
         </Banner>
       )}
-      {loading && !error && <Loading label={label ?? `reading ${title.toLowerCase()}…`} />}
+      {loading && !error && <Loading label={label ?? `loading live figures…`} />}
       {!error && data != null && render(data)}
     </section>
   );
@@ -248,7 +248,7 @@ function MoversColumn({ title, url }: { title: string; url: string }) {
     <div style={cardStyle}>
       <h3 style={h3Style}>{title}</h3>
       {error && <Banner variant="error">{error}</Banner>}
-      {loading && !error && <Loading label={`reading ${title.toLowerCase()}…`} />}
+      {loading && !error && <Loading label={`loading live figures…`} />}
       {!error && data && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
           {data.rows.slice(0, 6).map((r, i) => (
@@ -272,7 +272,7 @@ function FxColumn() {
     <div style={cardStyle}>
       <h3 style={h3Style}>FX majors</h3>
       {error && <Banner variant="error">{error}</Banner>}
-      {loading && !error && <Loading label="reading FX majors…" />}
+      {loading && !error && <Loading label="loading live figures…" />}
       {!error && data && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
           {data.pairs.slice(0, 5).map(p => (
@@ -295,7 +295,7 @@ function QuoteColumn({ title, url }: { title: string; url: string }) {
     <div style={cardStyle}>
       <h3 style={h3Style}>{title}</h3>
       {error && <Banner variant="error">{error}</Banner>}
-      {loading && !error && <Loading label={`reading ${title.toLowerCase()}…`} />}
+      {loading && !error && <Loading label={`loading live figures…`} />}
       {!error && data && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
           {data.quotes.slice(0, 5).map(q => (
@@ -619,7 +619,7 @@ function MacroBoard() {
     <div style={cardStyle}>
       <h3 style={h3Style}>Rates · dollar · volatility</h3>
       {error && <Banner variant="error">{error}</Banner>}
-      {loading && !error && <Loading label="reading the macro board…" />}
+      {loading && !error && <Loading label="loading live figures…" />}
       {!error && data && (
         <>
           <div style={{ overflowX: 'auto' }}>
@@ -760,7 +760,7 @@ function IndonesiaBoard() {
     <div style={cardStyle}>
       <h3 style={h3Style}>Rupiah · BI-Rate · economy</h3>
       {error && <Banner variant="error">{error}</Banner>}
-      {loading && !error && <Loading label="reading the Indonesia board…" />}
+      {loading && !error && <Loading label="loading live figures…" />}
       {!error && data && (
         <>
           {data.quotes.length > 0 && <IndonesiaLive quotes={data.quotes} />}
@@ -834,7 +834,7 @@ function SignalQuality() {
           signal quality unavailable — {error}. Section withheld rather than rendered empty.
         </Banner>
       )}
-      {loading && !error && <Loading label="reading the signal cohort…" />}
+      {loading && !error && <Loading label="loading live figures…" />}
       {!error && data && (
         <>
           <div style={{ overflowX: 'auto' }}>
@@ -899,7 +899,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
         <header style={{ borderBottom: `1px solid ${color.separator}`, paddingBottom: space[20], marginBottom: space[20] }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: space[12], flexWrap: 'wrap' }}>
             <h1 style={{ margin: 0, color: color.blue, fontSize: fontSize[28], fontWeight: fontWeight.bold, letterSpacing: letterSpacing.wider }}>
-              FUDCOURT
+              Crypto market boards you can trust {'—'} every figure verified live
             </h1>
             <Badge variant={live ? 'accent' : 'muted'}>{live ? 'live' : cr.loading ? 'connecting' : 'offline'}</Badge>
           </div>
@@ -907,9 +907,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
             Community · Terminal · Management
           </p>
           <p style={{ margin: `${space[8]}px 0 0`, color: color.labelPrimary, fontSize: fontSize[15], lineHeight: lineHeight.normal, maxWidth: 720 }}>
-            Verified market intelligence boards for everyone, a cross-chain treasury terminal for the team,
-            and an admin control panel for management. Every figure below is read live through the same
-            proxies the boards use — a metric the upstream did not publish renders{' '}
+            FUDCOURT cross-checks every figure against a second source before it ships. Missing data shows as{' '}
             <span style={{ color: color.labelTertiary }}>{DASH}</span>, never <span style={{ color: color.labelTertiary }}>0</span>.
           </p>
           <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap', marginTop: space[16] }}>
@@ -921,11 +919,16 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
             </Link>
             <Link
               href={isTeam ? '/team/balance' : '/login'}
-              style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[16]}px`, fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none' }}
+              style={{ color: color.blue, fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none', alignSelf: 'center' }}
             >
               {isTeam ? 'Treasury terminal →' : 'Sign in →'}
             </Link>
           </div>
+          <ul style={{ display: 'flex', gap: space[16], flexWrap: 'wrap', listStyle: 'none', margin: `${space[16]}px 0 0`, padding: 0, color: color.labelTertiary, fontSize: fontSize[11] }}>
+            <li>Dual-source parity on every board</li>
+            <li>Known-decoy classes rejected, not hidden</li>
+            <li>Free to browse {'—'} sign-in only for private terminals</li>
+          </ul>
         </header>
 
         {/* ---- 1. global market header --------------------------------------- */}
@@ -936,7 +939,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
               market overview unavailable — {cr.error}. The tiles are withheld rather than shown as zeroes.
             </Banner>
           )}
-          {cr.loading && !cr.error && <Loading label="reading the market header…" />}
+          {cr.loading && !cr.error && <Loading label="loading live figures…" />}
           {g && (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: space[8] }}>
@@ -958,7 +961,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
         <Panel<MarketsEnvelope>
           title={`Top ${TOP_LIMIT} by market cap`}
           url={MARKETS_TOP_URL}
-          label="reading the top-coins pool…"
+          label="loading live figures…"
           render={d => (
             <>
               <div style={{ overflowX: 'auto' }}>

@@ -13,7 +13,6 @@ are the contract the later phases build on.
 | `capabilities.ts` | the declared venue × market-type capability matrix the board renders |
 | `intent.ts` | the composer's request builder — a pure `ComposerState` → `ExecutionRequest` |
 | `adapters/` | one read-binding per venue (symbol resolution + where to read positions/balance) |
-| `ui/parts.tsx` | the shared atoms (Card, DataTable, Value, ErrorState, …) |
 | `ui/dashboard.tsx` | `<TradeDashboard />` — the command-center shell, optional `marketType` prop |
 | `ui/composer.tsx` | `<TradeComposer />` — intent → preview → place |
 | `ui/capability-board.tsx` | `<CapabilityBoard />` — the "what does venue X support" table |

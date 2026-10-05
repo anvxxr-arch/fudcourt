@@ -12,7 +12,7 @@ The same design value used to live in three places that could diverge, and had:
 
 | Source | What it held | Failure it caused |
 |---|---|---|
-| `frontend/web/src/styles/shared.ts` (`C`) | the flat hex table the React tree styles itself from | the real rendered colour |
+| `frontend/web/src/styles/tokens.ts` (`C`) | the flat hex table the React tree styles itself from | the real rendered colour |
 | `frontend/web/src/app/(frontend)/globals.css` (`:root`) | a SEPARATE set of HSL intents | a second, silently different colour |
 | `frontend/web/tailwind.config.js` (`theme.extend`) | nothing — `{}` was empty | no utility class could reach a token at all |
 
@@ -274,7 +274,7 @@ stays visible, and are deliberately NOT a build failure.
 | Entry | Justification |
 |---|---|
 | `frontend/web/src/styles/tokens.ts` | the SSOT itself — where the raw values are written down |
-| `frontend/web/src/styles/shared.ts` | keeps the DOMAIN palettes `CHAIN_COLOR` and `COLOR_PRESETS`: brand/provider colours (chain identity) and the user's own wallet swatches. Data the user picks at runtime, not chrome. The legacy `C` table that also lived here was **deleted** at the cutover (see below) |
+| `frontend/web/src/styles/tokens.ts` | keeps the DOMAIN palettes `CHAIN_COLOR` and `COLOR_PRESETS`: brand/provider colours (chain identity) and the user's own wallet swatches. Data the user picks at runtime, not chrome. The legacy `C` table that also lived here was **deleted** at the cutover (see below) |
 | `frontend/web/src/features/*/palette.ts` | **new convention**, matched with `fnmatch` (NOT dict membership — a literal-key lookup would exempt only a file named `*`). When a family genuinely owns a provider/brand palette (chain badges, venue brand colours) it moves to a sibling `palette.ts` named for what it is, instead of being inlined into `ui.tsx`. One file per family; a family with no such palette must not create the file to dodge the gate. The gate FAILS if the glob matches no file, so the entry cannot go inert |
 | `frontend/web/src/cms/**` | the Payload CMS surface; `seed.ts` embeds an inline SVG placeholder uploaded as CMS media |
 | `frontend/web/src/app/blog/(payload)/**` | the Payload admin/login surface and its own stylesheets. **Not** the whole of `src/app/blog/**`: `blog/page.tsx` and `blog/[slug]/page.tsx` are product chrome and are NOT exempt |
