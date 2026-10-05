@@ -2,16 +2,17 @@
 /**
  * ui-composer.tsx — ExecutorComposer + composer state/builders (PRD §82, §83, §84, §80).
  * Split from ui.tsx; re-exported through ./ui.
+ * Section modules (single source, re-exported below):
+ * ./ui-composer-fields (option constants + LevelEditor), ./ui-composer-preview (PreviewBlock).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { color, fontSize, fontWeight, space } from '@/styles/tokens';
-import { Button, Card, Input, Label, Select } from '@/ui/primitives';
+import { Button, Card, Input, Select } from '@/ui/primitives';
 import { Banner } from '@/ui/banner';
 import { Field } from '@/ui/field';
 import { Checkbox } from '@/ui/checkbox';
-import { Row } from '@/ui/row';
 import type {
   BalanceBasis,
   CredentialRecord,
@@ -23,22 +24,10 @@ import type {
   ExecutionUrgency,
   LeverageDefinition,
   MarginMode,
-  PreviewResult,
   SizingDefinition,
   SizingMode,
   TakeProfitDefinition,
 } from '@/lib/executor';
-import {
-  DASH,
-  decimalsForStep,
-  formatBps,
-  formatDuration,
-  formatMoney,
-  formatPct,
-  formatPrice,
-  formatQty,
-  formatRiskReward,
-} from './shapers';
 import {
   createExecution,
   errorMessage,
@@ -47,12 +36,31 @@ import {
   type PreviewResponse,
 } from './client';
 import { h3Style, minutesToMs, noteStyle, num, pairStyle } from './ui-shared';
+import {
+  BASIS_OPTIONS,
+  BASIS_SIZING,
+  EMPTY_ROW,
+  ENTRY_OPTIONS,
+  INTENT_OPTIONS,
+  LEVERAGE_MODE_OPTIONS,
+  LevelEditor,
+  MARGIN_OPTIONS,
+  MARKET_OPTIONS,
+  MODE_OPTIONS,
+  POSITION_POLICY_OPTIONS,
+  RISK_POLICY_OPTIONS,
+  RISK_SIZING,
+  SIDE_OPTIONS,
+  SIZING_OPTIONS,
+  STRATEGY_OPTIONS,
+  URGENCY_OPTIONS,
+  type LevelRow,
+} from './ui-composer-fields';
+import { PreviewBlock } from './ui-composer-preview';
 
-// ---------------------------------------------------------------------------
 // composer state (PRD §82, §83)
 // ---------------------------------------------------------------------------
 
-type LevelRow = { price: string; fraction: string };
 export type ComposerState = {
   accountId: string;
   marketType: 'spot' | 'linear_perp';
@@ -93,8 +101,6 @@ export type ComposerState = {
   existingPositionPolicy: 'add' | 'reject';
   mode: ExecutionMode;
 };
-
-const EMPTY_ROW: LevelRow = { price: '', fraction: '' };
 
 const INITIAL: ComposerState = {
   accountId: '',
@@ -137,82 +143,6 @@ const INITIAL: ComposerState = {
   mode: 'paper',
 };
 
-const MARKET_OPTIONS = [{ value: 'linear_perp', label: 'USDT perpetual' }, { value: 'spot', label: 'Spot' }] as const;
-const SIDE_OPTIONS = [{ value: 'buy', label: 'Long / buy' }, { value: 'sell', label: 'Short / sell' }] as const;
-const INTENT_OPTIONS = [
-  { value: 'open', label: 'Open' },
-  { value: 'close', label: 'Close' },
-  { value: 'reduce', label: 'Reduce' },
-] as const;
-const ENTRY_OPTIONS = [{ value: 'market', label: 'Market' }, { value: 'limit', label: 'Limit' }] as const;
-const SIZING_OPTIONS: ReadonlyArray<{ value: SizingMode; label: string }> = [
-  { value: 'risk_percent', label: 'Risk % of basis' },
-  { value: 'risk_usd', label: 'Risk $' },
-  { value: 'allocation_percent', label: 'Allocation % of basis' },
-  { value: 'allocation_usd', label: 'Allocation $' },
-  { value: 'notional_usd', label: 'Notional $' },
-  { value: 'fixed_quantity', label: 'Fixed quantity' },
-  { value: 'fixed_margin', label: 'Fixed margin $' },
-  { value: 'target_profit_percent', label: 'Target profit % of basis' },
-  { value: 'target_profit_usd', label: 'Target profit $' },
-];
-const BASIS_OPTIONS: ReadonlyArray<{ value: BalanceBasis; label: string }> = [
-  { value: 'spot_available', label: 'Spot available' },
-  { value: 'spot_equity', label: 'Spot equity' },
-  { value: 'futures_available', label: 'Futures available' },
-  { value: 'futures_equity', label: 'Futures equity' },
-  { value: 'total_exchange_equity', label: 'Total exchange equity' },
-  { value: 'asset_equity', label: 'Asset equity' },
-  { value: 'custom', label: 'Custom' },
-];
-const STRATEGY_OPTIONS: ReadonlyArray<{ value: ExecutionStrategy; label: string }> = [
-  { value: 'market', label: 'Market' },
-  { value: 'limit', label: 'Limit' },
-  { value: 'twap', label: 'TWAP' },
-  { value: 'adaptive_twap', label: 'Adaptive TWAP' },
-  { value: 'iceberg', label: 'Iceberg' },
-  { value: 'chase_limit', label: 'Chase limit' },
-  { value: 'scale_in', label: 'Scale in' },
-  { value: 'scale_out', label: 'Scale out' },
-];
-export const URGENCY_OPTIONS: ReadonlyArray<{ value: ExecutionUrgency; label: string }> = [
-  { value: 'passive', label: 'Passive' },
-  { value: 'balanced', label: 'Balanced' },
-  { value: 'aggressive', label: 'Aggressive' },
-  { value: 'immediate', label: 'Immediate' },
-];
-const MARGIN_OPTIONS: ReadonlyArray<{ value: MarginMode | ''; label: string }> = [
-  { value: '', label: 'Risk profile default' },
-  { value: 'isolated', label: 'Isolated' },
-  { value: 'cross', label: 'Cross' },
-];
-const RISK_POLICY_OPTIONS = [
-  { value: 'resize_then_stop', label: 'Resize then stop' },
-  { value: 'pause', label: 'Pause' },
-  { value: 'stop', label: 'Stop' },
-] as const;
-const POSITION_POLICY_OPTIONS = [
-  { value: 'reject', label: 'Reject if a position exists' },
-  { value: 'add', label: 'Add to the position' },
-] as const;
-const MODE_OPTIONS: ReadonlyArray<{ value: ExecutionMode; label: string }> = [
-  { value: 'paper', label: 'Paper (simulated)' },
-  { value: 'live', label: 'LIVE (real order)' },
-];
-const LEVERAGE_MODE_OPTIONS = [
-  { value: 'auto_safe', label: 'Auto safe' },
-  { value: 'manual', label: 'Manual' },
-] as const;
-
-/** Sizing modes that must name their balance basis (PRD §10). */
-const BASIS_SIZING: ReadonlySet<SizingMode> = new Set<SizingMode>([
-  'risk_percent',
-  'allocation_percent',
-  'target_profit_percent',
-]);
-
-/** Risk-based sizing needs a stop; a stop needs a price (§38). */
-const RISK_SIZING: ReadonlySet<SizingMode> = new Set<SizingMode>(['risk_usd', 'risk_percent']);
 
 /** A required numeric field's value. The gate below blocks the request before it could reach the wire. */
 function required(text: string): number {
@@ -413,156 +343,9 @@ function missingRequired(state: ComposerState): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// risk preview block (PRD §84, §80, §23)
-// ---------------------------------------------------------------------------
 
-function PreviewBlock({ shown, stale }: { shown: PreviewResponse | null; stale: boolean }) {
-  const preview: PreviewResult | null = shown === null ? null : shown.preview;
-  const plan = preview === null ? null : preview.plan;
-  const balances = plan?.balanceSnapshot ?? null;
-  const stepDecimals = plan === null ? null : decimalsForStep(plan.instrument.stepSize);
-  const tickSize = plan === null ? null : plan.instrument.tickSize;
-  const equity = balances === null || plan === null
-    ? null
-    : plan.marketType === 'spot' ? balances.spotEquity : balances.futuresEquity;
-  const conflictCount = preview?.conflicts.length ?? 0;
-  return (
-    <Card style={{ borderColor: conflictCount > 0 ? color.red : color.separator }}>
-      <h3 style={h3Style}>RISK PREVIEW · §84</h3>
-      {preview === null && (
-        <p style={noteStyle}>
-          {stale
-            ? 'the form changed since this preview — the figures were cleared because they no longer describe this request; press Preview again'
-            : 'no preview yet — nothing is sized, priced or sent until the engine answers for this exact request'}
-        </p>
-      )}
-      {plan !== null && (
-        <>
-          <p style={{ color: color.labelPrimary, fontSize: fontSize[13], fontWeight: fontWeight.bold, margin: '0 0 2px' }}>
-            {plan.symbol} · {plan.side.toUpperCase()} · {plan.venueKey}
-          </p>
-          <p style={noteStyle}>
-            {plan.sizingMode} {plan.sizingValue}
-            {plan.riskBasis === null ? '' : ` of ${plan.riskBasis}`}
-            {' · '}{plan.execution.strategy}
-            {plan.execution.durationMs === null ? '' : ` over ${formatDuration(plan.execution.durationMs)}`}
-            {plan.execution.estimatedSlices === null ? '' : ` · ${plan.execution.estimatedSlices} slices`}
-            {plan.execution.urgency === null ? '' : ` · ${plan.execution.urgency}`}
-          </p>
-          <div style={{ marginTop: space[8] }}>
-            <Row label="Account Equity" value={formatMoney(equity)} />
-            <Row label="Risk Budget" value={formatMoney(plan.risk.budget)} />
-            <Row label="Sizing Reference Balance" value={formatMoney(plan.balanceReference)} />
-            <Row label="Quantity" value={formatQty(plan.quantity, stepDecimals)} />
-            <Row label="Notional" value={formatMoney(plan.notional)} />
-            <Row label="Margin Required" value={formatMoney(plan.margin.estimatedInitial)} />
-            <Row
-              label="Leverage"
-              value={plan.leverage.selected === null
-                ? DASH
-                : `${plan.leverage.selected}x · ${plan.leverage.mode === 'auto_safe' ? 'AUTO SAFE' : 'MANUAL'}`}
-            />
-            <Row label="Margin Mode" value={plan.margin.mode ?? DASH} />
-            <Row label="Entry Estimate" value={formatPrice(plan.estimatedEntry, tickSize)} />
-            <Row label="Stop" value={formatPrice(plan.stopLoss, tickSize)} />
-            <Row
-              label="Take Profit(s)"
-              value={plan.takeProfits.length === 0
-                ? DASH
-                : plan.takeProfits
-                  .map((tp) => `${formatPrice(tp.price, tickSize)}${tp.fraction === undefined ? '' : ` (${formatPct(tp.fraction)})`}`)
-                  .join(' · ')}
-            />
-            <Row label="Estimated Fees" value={formatMoney(plan.risk.estimatedFees)} />
-            <Row label="Estimated Slippage" value={`${formatMoney(plan.risk.slippageBudget)} · ${formatBps(plan.slippageModel.slippageBps)}`} />
-            <Row label="Price Risk" value={formatMoney(plan.risk.priceRisk)} />
-            <Row label="Safety Reserve" value={formatMoney(plan.risk.safetyReserve)} />
-            <Row label="Total Planned Risk" value={formatMoney(plan.risk.estimatedTotalRisk)} />
-            <Row label="Loss @ SL" value={formatMoney(preview?.expectedLossAtStop, { signed: true })} tone="bad" />
-            <Row label="Profit @ TP" value={formatMoney(preview?.expectedProfitAtTarget, { signed: true })} tone="good" />
-            <Row label="Risk / Reward" value={formatRiskReward(preview?.riskReward)} />
-            <Row label="Liquidation Price" value={formatPrice(plan.liquidation.priceApprox, tickSize)} />
-            <Row
-              label="SL → Liquidation Buffer"
-              value={plan.liquidation.stopToLiquidationBuffer === null
-                ? DASH
-                : `${formatMoney(plan.liquidation.stopToLiquidationBuffer)}${plan.liquidation.safe === false ? ' · UNSAFE' : plan.liquidation.safe === true ? ' · safe' : ''}`}
-              tone={plan.liquidation.safe === false ? 'bad' : undefined}
-            />
-          </div>
-        </>
-      )}
-      {preview !== null && conflictCount > 0 && (
-        <div style={{ marginTop: space[8], borderTop: `1px solid ${color.red}`, paddingTop: space[8] }}>
-          <p style={{ color: color.red, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[4]}px` }}>
-            {conflictCount} CONFLICT{conflictCount === 1 ? '' : 'S'} — creation is blocked (PRD §117)
-          </p>
-          {preview.conflicts.map((conflict) => (
-            <p key={conflict.code} style={{ color: color.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[4]}px` }}>
-              <span style={{ color: color.red, fontWeight: fontWeight.bold }}>{conflict.code}</span> — {conflict.message}
-              {conflict.detail !== undefined && (
-                <span style={{ color: color.labelTertiary }}>{' '}({Object.entries(conflict.detail).map(([key, value]) => `${key}=${value}`).join(', ')})</span>
-              )}
-            </p>
-          ))}
-        </div>
-      )}
-      {preview !== null && preview.warnings.length > 0 && (
-        <div style={{ marginTop: space[8], borderTop: `1px solid ${color.separator}`, paddingTop: space[8] }}>
-          <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[4]}px` }}>
-            {preview.warnings.length} WARNING{preview.warnings.length === 1 ? '' : 'S'} — shown, not blocking
-          </p>
-          {preview.warnings.map((warning) => (
-            <p key={warning} style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: '0 0 3px' }}>· {warning}</p>
-          ))}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // ExecutorComposer — §82, §83, §84, §80
 // ---------------------------------------------------------------------------
-
-function LevelEditor({ title, rows, onChange }: { title: string; rows: LevelRow[]; onChange: (rows: LevelRow[]) => void }) {
-  return (
-    <div style={{ marginTop: space[8] }}>
-      <Label>{title}</Label>
-      {rows.map((row, index) => (
-        <div key={index} style={{ ...pairStyle, marginBottom: space[8] }}>
-          <Input
-            value={row.price}
-            onChange={(price) => {
-              const next = rows.slice();
-              next[index] = { ...row, price };
-              onChange(next);
-            }}
-            placeholder="price"
-            type="number"
-          />
-          <div style={{ display: 'flex', gap: space[8] }}>
-            <Input
-              value={row.fraction}
-              onChange={(fraction) => {
-                const next = rows.slice();
-                next[index] = { ...row, fraction };
-                onChange(next);
-              }}
-              placeholder="fraction 0..1"
-              type="number"
-            />
-            <Button onClick={() => onChange(rows.filter((_, i) => i !== index))} variant="danger" disabled={rows.length === 1}>
-              ✕
-</Button>
-          </div>
-        </div>
-      ))}
-      <Button onClick={() => onChange([...rows, { ...EMPTY_ROW }])}>+ level</Button>
-    </div>
-  );
-}
-
 export function ExecutorComposer() {
   const router = useRouter();
   const [state, setState] = useState<ComposerState>(INITIAL);
@@ -943,3 +726,28 @@ export function ExecutorComposer() {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// re-exports — section modules split from this file; import from here (or ./ui)
+// ---------------------------------------------------------------------------
+export type { LevelRow } from './ui-composer-fields';
+export {
+  BASIS_OPTIONS,
+  BASIS_SIZING,
+  EMPTY_ROW,
+  ENTRY_OPTIONS,
+  INTENT_OPTIONS,
+  LEVERAGE_MODE_OPTIONS,
+  LevelEditor,
+  MARGIN_OPTIONS,
+  MARKET_OPTIONS,
+  MODE_OPTIONS,
+  POSITION_POLICY_OPTIONS,
+  RISK_POLICY_OPTIONS,
+  RISK_SIZING,
+  SIDE_OPTIONS,
+  SIZING_OPTIONS,
+  STRATEGY_OPTIONS,
+  URGENCY_OPTIONS,
+} from './ui-composer-fields';
+export { PreviewBlock } from './ui-composer-preview';
