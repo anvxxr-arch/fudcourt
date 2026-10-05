@@ -1,107 +1,16 @@
 'use client';
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { alpha, color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { Loading } from '@/ui/feedback';
-import { chainColor } from '@/lib/format';
-import { Table, TBody, THead } from '@/ui/table';
 import { Toolbar } from '@/ui/toolbar';
-import { imgSrc } from '@/lib/img';
 import { fetchSignals } from './client';
+import { CHAINS, MERGED, MODES, n2 } from './model';
+import type { ChainKey, Mode, Payload } from './model';
+import { SignalsTable } from './signals-table';
 
-type Sighting = { n: number; spanH: number; sources: number; surfaced: number };
-type Social = { type: string; url: string };
-
-type SignalRow = {
-  id: number;
-  ts: number;
-  kind: string;
-  chain: string;
-  mint: string;
-  symbol: string;
-  name: string;
-  url: string;
-  mcap: number;
-  liq?: number;
-  price?: number;
-  ageMin?: number;
-  score?: number;
-  decision?: string;
-  source?: string;
-  image?: string;
-  holdersCount?: number;
-  vetoes?: string[];
-  volTrend?: number;
-  topHolderPct?: number;
-  nameReuse?: number;
-  persistCount?: number;
-  registryReuse?: number;
-  sightings?: Sighting;
-  socials?: Social[];
-};
-
-type Counts = { rows?: number; rh?: number; sol?: number; surfaced?: number; runs?: number; revivals?: number };
-type Payload = {
-  rows: SignalRow[];
-  counts: Counts;
-  generatedAt: number;
-  pages?: number;
-  page?: number;
-  windowH?: number;
-  solDelayMin?: number;
-  upstream?: string;
-  error?: string;
-};
-
-const CHAINS = [
-  { key: 'solana', label: '◎ Solana', color: chainColor('solana') },
-  { key: 'robinhood', label: '🪶 Robinhood Chain', color: chainColor('robinhood') },
-  { key: 'all', label: '⧉ Both', color: color.orange },
-] as const;
-type ChainKey = (typeof CHAINS)[number]['key'];
-
-// chain=all is a merged view, so its per-row breakdown comes from the row's
-// own `chain` field -- the header counts (rh/sol) are the reliable totals.
-const MERGED: ChainKey[] = ['all'];
-
-const MODES = [
-  { key: 'index', label: '168h index', hint: 'full 168h screening window. Carries only mcap/liq/score/decision — holders, top-holder % and sightings are absent on every row. chain=all is not offered upstream for this mode.', chains: ['solana', 'robinhood'] as ChainKey[] },
-  { key: 'feed', label: '24h feed', hint: 'last 24h, 500 newest rows. Richer per row, but still sparse: measured 213/500 carry holders + top-holder %, 483/500 carry sightings/price/ageMin.', chains: ['solana', 'robinhood', 'all'] as ChainKey[] },
-  { key: 'page', label: 'paged', hint: 'same data as the feed, paged 500 rows at a time. Upstream serves pages 2..10 only — page 1 is the feed.', chains: ['solana', 'robinhood', 'all'] as ChainKey[] },
-] as const;
-type Mode = (typeof MODES)[number]['key'];
-
-const DECISION_COLOR: Record<string, string> = {
-  surfaced: color.blue,
-  watching: color.orange,
-  'low score': color.labelTertiary,
-  vetoed: color.red,
-  blocked: color.red,
-  bundle: color.orange,
-};
-
-// A missing metric is NOT zero. Upstream omits fields per row (e.g. liq on
-// 23 of 7730 solana rows), so every formatter renders an em-dash for
-// undefined rather than coercing to 0.
-const n2 = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 2 });
-
-function usd(v: number) {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
-  return `$${v.toFixed(2)}`;
-}
-
-function ago(ts: number) {
-  const m = Math.max(0, Math.floor((Date.now() / 1000 - ts) / 60));
-  if (m < 1) return 'now';
-  if (m < 60) return `${m}m`;
-  if (m < 1440) return `${Math.floor(m / 60)}h`;
-  return `${Math.floor(m / 1440)}d`;
-}
-
-function shortAddr(a: string) {
-  return a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
-}
+export type { ChainKey, Counts, Mode, Payload, SignalRow, Sighting, Social } from './model';
+export { CHAINS, DECISION_COLOR, MERGED, MODES, ago, n2, shortAddr, usd } from './model';
+export { SignalsTable };
 
 export default function SignalsPage() {
   const [chain, setChain] = useState<ChainKey>('solana');
@@ -336,69 +245,7 @@ export default function SignalsPage() {
       ) : null}
 
       {!loading && data && (
-        <div style={{ overflowX: 'auto' }}>
-          <Table style={{ fontSize: fontSize[11] }}>
-            <THead>
-              <tr style={{ color: color.labelTertiary, textAlign: 'left', borderBottom: `1px solid ${color.separator}` }}>
-                {['age', ...(MERGED.includes(chain) ? ['chain'] : []), 'token', 'decision', 'score', 'mcap', 'liq', 'price', 'holders', 'top%', 'sight', 'src', 'kind'].map(h => (
-                  <th key={h} style={{ padding: `${space[8]}px ${space[8]}px`, fontWeight: fontWeight.medium, whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
-              </tr>
-            </THead>
-            <TBody>
-              {rows.slice(0, 300).map(r => (
-                <tr
-                  key={`${r.id}-${r.mint}`}
-                  style={{ borderBottom: `1px solid ${alpha(color.separator, 0.4)}` }}
-                  onMouseOver={e => { e.currentTarget.style.background = alpha(color.blue, 0.05); }}
-                  onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary, whiteSpace: 'nowrap' }}>{ago(r.ts)}</td>
-                  {MERGED.includes(chain) && (
-                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: r.chain === 'robinhood' ? chainColor('robinhood') : chainColor('solana'), whiteSpace: 'nowrap' }}>
-                      {r.chain === 'robinhood' ? '🪶 rh' : r.chain === 'solana' ? '◎ sol' : r.chain || '—'}
-                    </td>
-                  )}
-                  <td style={{ padding: `${space[8]}px ${space[8]}px`, whiteSpace: 'nowrap' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8] }}>
-                      {r.image
-                        ? <img src={imgSrc(r.image)} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
-                        : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.separator, display: 'inline-block' }} />}
-                      <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{r.symbol || '?'}</span>
-                      <span style={{ color: color.labelTertiary }}>{shortAddr(r.mint)}</span>
-                    </span>
-                  </td>
-                  <td style={{ padding: `${space[8]}px ${space[8]}px`, whiteSpace: 'nowrap' }}>
-                    {r.decision
-                      ? <span style={{ color: DECISION_COLOR[r.decision] || color.labelTertiary }}>{r.decision}</span>
-                      : <span style={{ color: color.labelTertiary }}>—</span>}
-                  </td>
-                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.blue }}>{typeof r.score === 'number' ? r.score.toFixed(1) : '—'}</td>
-                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{usd(r.mcap)}</td>
-                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof r.liq === 'number' ? usd(r.liq) : '—'}</td>
-                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof r.price === 'number' ? `$${r.price.toPrecision(4)}` : '—'}</td>
-                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof r.holdersCount === 'number' ? n2(r.holdersCount) : '—'}</td>
-                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof r.topHolderPct === 'number' ? `${r.topHolderPct.toFixed(1)}%` : '—'}</td>
-                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>
-                    {r.sightings ? `${r.sightings.n}×/${r.sightings.spanH}h` : typeof r.persistCount === 'number' ? `×${r.persistCount}` : '—'}
-                  </td>
-                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>{r.source || '—'}</td>
-                  <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>{r.kind}</td>
-                </tr>
-              ))}
-            </TBody>
-          </Table>
-          {rows.length === 0 && !loading && (
-            <p style={{ color: color.labelTertiary, fontSize: fontSize[12], marginTop: space[8] }}>
-              {error ? 'upstream failed — row list withheld, not empty' : 'no rows match filter'}
-            </p>
-          )}
-          {rows.length > 300 && (
-            <p style={{ color: color.labelTertiary, fontSize: fontSize[11], marginTop: space[8] }}>
-              showing first 300 of {n2(rows.length)} — narrow the filter to see more
-            </p>
-          )}
-        </div>
+        <SignalsTable rows={rows} chain={chain} loading={loading} data={data} error={error} />
       )}
     </div>
   );

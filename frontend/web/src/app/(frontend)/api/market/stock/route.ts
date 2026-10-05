@@ -6,7 +6,7 @@ import {
   STOCK_SYMBOLS,
   STOCK_TTL_MS,
   isStockRegion,
-} from '@/features/market/stock';
+} from '@/features/market/stock-regions';
 import {
   YAHOO_CHART,
   YAHOO_UA,
