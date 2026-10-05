@@ -25,7 +25,23 @@ Checks:
      The probe hits the service DIRECTLY rather than through :3100 because
      /api/reconcile is team-gated: an unauthenticated probe would get a 401 that
      says nothing about whether the service behind it is alive.
-Override target with MONITOR_BASE (used by the failure-path self-test).
+
+  9. fudcourt-data unit active, AND its own /healthz direct on :3101 (R-4). The
+     sidecar is covered TRANSITIVELY by checks 3-7 (they fail when it is down),
+     but a dead unit + a warm cache = a green monitor over a cold cache = a
+     silent outage. So the unit is asserted BY NAME and the :3101/healthz payload
+     must report ok:true AND name every expected family (build, chainrank,
+     coinank, coinglass, coinmarketcap, khala, llama, news). The probe is DIRECT
+     (loopback :3101) so a stale/wrong process on the port cannot masquerade.
+
+  10. CF-mitigated challenge (DR-005): a /api/cryptorank response carrying a
+     `cf-mitigated: challenge` header -- or the sidecar's own 403 whose body
+     error names it -- is its own failure class, NOT "upstream 200 with empty".
+     It is the tell that the pinned Chrome-131 TLS/h2 fingerprint was rotated
+     upstream and the sidecar needs a refresh; the FAIL line says exactly that.
+
+Override target with MONITOR_BASE (used by the failure-path self-test). The two
+direct probes are overridable too: SIDECAR_HEALTH / RECONCILE_HEALTH.
 """
 import json
 import os
@@ -39,13 +55,33 @@ from concurrent.futures import ThreadPoolExecutor
 BASE = os.environ.get("MONITOR_BASE", "http://127.0.0.1:3100")
 # The Rust reconcile service's own liveness endpoint (loopback, direct).
 RECONCILE_HEALTH = os.environ.get("RECONCILE_HEALTH", "http://127.0.0.1:3102/healthz")
+# The Go data sidecar's own liveness endpoint (loopback, direct, :3101).
+SIDECAR_HEALTH = os.environ.get("SIDECAR_HEALTH", "http://127.0.0.1:3101/healthz")
 # Every fudcourt unit whose death changes what this board serves. `fudcourt-web`
 # answers the pages; `fudcourt-reconciled` is the only backend unit a proxy route
-# depends on and would otherwise fail silently (502 with no monitor signal).
-UNITS = ("fudcourt-web", "fudcourt-reconciled")
+# depends on and would otherwise fail silently (502 with no monitor signal);
+# `fudcourt-data` (:3101) serves every /api/<family> route behind the web BFF.
+UNITS = ("fudcourt-web", "fudcourt-reconciled", "fudcourt-data")
+# Human-readable reason per unit, so a dead sidecar reads as "fudcourt-data is
+# down" and not as a generic /api/cryptorank empty-table alarm (R-4).
+UNIT_REASON = {
+    "fudcourt-web": "fudcourt-web unit is down (the board cannot render)",
+    "fudcourt-reconciled": "fudcourt-reconciled unit is down (/api/reconcile -> 502)",
+    "fudcourt-data": "fudcourt-data is down (the /api/* data sidecar :3101 is not serving)",
+}
+# Families the :3101 healthz payload must name (each with a non-empty value). A
+# 200 that lacks one is a stale or half-registered build answering on the port.
+SIDECAR_FAMILIES = (
+    "build", "chainrank", "coinank", "coinglass",
+    "coinmarketcap", "khala", "llama", "news",
+)
 PER_CHECK_TIMEOUT = 25
 RETRY_PAUSE = 5
 TRANSIENT = {429, 500, 502, 503, 504}
+
+# The DR-005 tell: Cloudflare answered with a challenge (the pinned Chrome-131
+# TLS/h2 fingerprint was rotated upstream). A failure class of its own.
+CF_CHALLENGE = "cf-mitigated: challenge"
 
 # (name, path, want_status, nonempty) — fixed order = deterministic output
 CHECKS = [
@@ -55,37 +91,67 @@ CHECKS = [
     ("mode=converter", "/api/cryptorank?mode=converter", 200, False),
     ("mode=newstag&key=defi", "/api/cryptorank?mode=newstag&key=defi", 200, False),
     ("mode=funding (decoy refusal)", "/api/cryptorank?mode=funding", 503, False),
-    ("markets (coingecko)", "/api/markets?search=btc&limit=5", 200, True),
+    ("markets (coingecko)", "/api/markets?seartc&limit=5", 200, True),
     ("news (cointelegraph rss)", "/api/news?limit=5", 200, True),
 ]
 
 
+def _headers(msg):
+    """Lower-cased header map from a response/HTTPError message (never raises)."""
+    try:
+        return {k.lower(): v for k, v in msg.items()}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def fetch(path):
-    """-> (status:int, body:dict|None, neterr:str|None)"""
+    """-> (status:int, body:dict|None, neterr:str|None, headers:dict)
+
+    The error body is parsed too: the sidecar surfaces a CF challenge as a 403
+    whose JSON `error` names the tell, and check() must be able to see it.
+    """
     try:
         req = urllib.request.Request(BASE + path)
         with urllib.request.urlopen(req, timeout=PER_CHECK_TIMEOUT) as r:
             raw = r.read()
+            hdrs = _headers(r.headers)
             try:
-                return r.status, json.loads(raw), None
+                return r.status, json.loads(raw), None, hdrs
             except Exception:
-                return r.status, None, None
+                return r.status, None, None, hdrs
     except urllib.error.HTTPError as e:
+        raw = b""
         try:
-            e.read()
+            raw = e.read()
         except Exception:
             pass
-        return e.code, None, None
+        try:
+            body = json.loads(raw)
+        except Exception:
+            body = None
+        return e.code, body, None, _headers(e.headers)
     except Exception as e:  # noqa: BLE001
-        return 0, None, f"{type(e).__name__}"
+        return 0, None, f"{type(e).__name__}", {}
 
 
 def check(args):
     name, path, want, nonempty = args
-    st, body, neterr = fetch(path)
+    st, body, neterr, hdrs = fetch(path)
     if (neterr or st in TRANSIENT or st == 0) and st != want:
         time.sleep(RETRY_PAUSE)
-        st, body, neterr = fetch(path)
+        st, body, neterr, hdrs = fetch(path)
+    # DR-005: a Cloudflare challenge is a DISTINCT failure class, checked BEFORE
+    # the status test so it never degrades into "status 403 (want 200)" or, worse,
+    # "upstream 200 with empty rows". Detect it from the response header (the
+    # upstream's own reply) or from the sidecar's 403 body, which names the same
+    # tell. Either way the message points at the rotation, not at empty data.
+    body_err = str(body.get("error") or body.get("detail") or "") if isinstance(body, dict) else ""
+    if hdrs.get("cf-mitigated", "").lower() == "challenge" or CF_CHALLENGE in body_err:
+        return name, [
+            f"FAIL {name}: Cloudflare profile rotation ({CF_CHALLENGE}) -- the "
+            "pinned Chrome-131 TLS/h2 fingerprint was rejected upstream; refresh "
+            "the fudcourt-data sidecar (DR-005)"
+        ]
     problems = []
     if st != want:
         problems.append(f"FAIL {name}: status {st} (want {want})" + (f" [{neterr}]" if neterr else ""))
@@ -113,7 +179,8 @@ def check(args):
 
 fails = []
 
-# 1. units active (fast, local). Fixed order -> deterministic output.
+# 1. units active (fast, local). Fixed order -> deterministic output. The reason
+# string is per-unit so a dead sidecar reads as "fudcourt-data is down".
 for _unit_name in UNITS:
     try:
         _unit = subprocess.run(
@@ -123,7 +190,8 @@ for _unit_name in UNITS:
     except Exception as e:  # noqa: BLE001
         _unit = f"error:{e}"
     if _unit != "active":
-        fails.append(f"FAIL unit {_unit_name}: {_unit or 'unknown'}")
+        _reason = UNIT_REASON.get(_unit_name, f"{_unit_name} unit is down")
+        fails.append(f"FAIL unit {_unit_name}: {_unit or 'unknown'} -- {_reason}")
 
 # 1b. the Rust service's own health (direct, loopback). A 200 that is not THIS
 # service's envelope is a failure too: something else answering on the port would
@@ -135,6 +203,24 @@ try:
         fails.append(f"FAIL reconcile health: unexpected envelope {str(hb)[:80]}")
 except Exception as e:  # noqa: BLE001
     fails.append(f"FAIL reconcile health: {type(e).__name__} {e}".strip())
+
+# 1c. the Go data sidecar's own health (direct, loopback :3101). R-4: checks 3-7
+# cover it only transitively, so a dead unit over a warm cache reads green.
+# Assert ok:true AND every expected family (non-empty). A 200 that is not this
+# sidecar's payload -- a stale/wrong process on the port -- is a failure too.
+try:
+    with urllib.request.urlopen(SIDECAR_HEALTH, timeout=PER_CHECK_TIMEOUT) as r:
+        shb = json.loads(r.read())
+    if not isinstance(shb, dict):
+        fails.append(f"FAIL sidecar health: non-object envelope {str(shb)[:80]}")
+    elif shb.get("ok") is not True:
+        fails.append(f"FAIL sidecar health: ok != true ({str(shb)[:80]})")
+    else:
+        _missing = [fam for fam in SIDECAR_FAMILIES if not shb.get(fam)]
+        if _missing:
+            fails.append(f"FAIL sidecar health: missing families {_missing}")
+except Exception as e:  # noqa: BLE001
+    fails.append(f"FAIL sidecar health: {type(e).__name__} {e}".strip())
 
 # 2..7 concurrently; results re-ordered by CHECKS order for determinism
 with ThreadPoolExecutor(max_workers=len(CHECKS)) as pool:
