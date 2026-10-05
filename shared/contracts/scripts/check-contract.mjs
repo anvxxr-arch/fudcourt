@@ -25,8 +25,8 @@ import { repoRoot as discoverRepoRoot, parseOpenApiEnums } from './lib.mjs';
 const repoRoot = discoverRepoRoot();
 
 // The executor type surface moved in the frontend refactor:
-// frontend/web/src/platform/executor/types.ts -> frontend/web/src/lib/executor.ts.
-const TYPES_TS = path.join(repoRoot, 'frontend/web/src/lib/executor.ts');
+// frontend/web/src/platform/executor/types.ts -> frontend/web/src/lib/executor-request.ts (barrel at lib/executor.ts re-exports).
+const TYPES_TS = path.join(repoRoot, 'frontend/web/src/lib/executor-request.ts');
 const OPENAPI_YAML = path.join(repoRoot, 'shared/contracts/openapi/fudcourt.yaml');
 const CATALOG_JSON = path.join(repoRoot, 'shared/contracts/events/catalog.json');
 const EVENT_SCHEMA_JSON = path.join(repoRoot, 'shared/contracts/events/event.schema.json');
