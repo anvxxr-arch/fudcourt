@@ -109,52 +109,55 @@ Result (verbatim, condensed file lists):
 
 | atom | shelf | call sites (files) | `<Atom` uses | files |
 |---|---|---:|---:|---|
-| `Badge` | `badge.tsx` | **0** | 0 | — ZERO — |
-| `Banner` | `banner.tsx` | 3 | 3 | `src/features/dex/ui.tsx`, `src/features/llama/ui.tsx`, `src/features/market/stock/ui.tsx` |
+| `Badge` | `badge.tsx` | 1 | 1 | `src/features/home/ui.tsx` |
+| `Banner` | `banner.tsx` | 4 | 11 | `src/features/dex/ui.tsx`, `src/features/home/ui.tsx`, `src/features/llama/ui.tsx`, `src/features/market/stock/ui.tsx` |
 | `EmptyState` | `feedback.tsx` | 2 | 2 | `src/features/news/ui.tsx`, `src/features/treasury/reconciliation.tsx` |
-| `Loading` | `feedback.tsx` | 9 | 9 | `src/features/dex/ui.tsx`, `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx`, `src/features/news/ui.tsx`, `src/features/scoreboard/ui.tsx`, `src/features/signals/ui.tsx`, `src/features/ticker/detail.tsx`, `src/features/ticker/ui.tsx`, `src/features/tracker/ui.tsx` |
-| `Dash` | `feedback.tsx` | **0** | 0 | — ZERO — |
+| `Loading` | `feedback.tsx` | 10 | 17 | `src/features/dex/ui.tsx`, `src/features/home/ui.tsx`, `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx`, `src/features/news/ui.tsx`, `src/features/scoreboard/ui.tsx`, `src/features/signals/ui.tsx`, `src/features/ticker/detail.tsx`, `src/features/ticker/ui.tsx`, `src/features/tracker/ui.tsx` |
 | `Button` | `primitives.tsx` | 2 | 11 | `src/features/transactions/ui.tsx`, `src/features/wallets/ui.tsx` |
 | `Input` | `primitives.tsx` | 1 | 4 | `src/features/transactions/ui.tsx` |
 | `Select` | `primitives.tsx` | 1 | 4 | `src/features/transactions/ui.tsx` |
-| `TextArea` | `primitives.tsx` | **0** | 0 | — ZERO — |
 | `Modal` | `primitives.tsx` | 2 | 2 | `src/features/transactions/ui.tsx`, `src/features/wallets/ui.tsx` |
 | `Label` | `primitives.tsx` | 3 | 13 | `src/features/executor/ui.tsx`, `src/features/transactions/ui.tsx`, `src/features/wallets/ui.tsx` |
 | `Card` | `primitives.tsx` | 5 | 21 | `src/features/dashboard/ui.tsx`, `src/features/executor/ui.tsx`, `src/features/portfolio/ui.tsx`, `src/features/treasury/reconciliation.tsx`, `src/features/wallets/ui.tsx` |
-| `Stat` | `stat.tsx` | **0** | 0 | — ZERO — |
-| `Table` | `table.tsx` | 6 | 9 | `src/features/dex/ui.tsx`, `src/features/llama/ui.tsx`, `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx`, `src/features/scoreboard/ui.tsx`, `src/features/signals/ui.tsx` |
-| `THead` | `table.tsx` | 6 | 9 | same 6 as `Table` |
-| `TBody` | `table.tsx` | 6 | 9 | same 6 as `Table` |
-| `TFoot` | `table.tsx` | **0** | 0 | — ZERO — |
-| `TR` | `table.tsx` | 3 | 8 | `src/features/llama/ui.tsx`, `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx` |
-| `TH` | `table.tsx` | 3 | 17 | same 3 as `TR` |
-| `TD` | `table.tsx` | 3 | 17 | same 3 as `TR` |
+| `Stat` | `stat.tsx` | 1 | 6 | `src/features/home/ui.tsx` |
+| `Table` | `table.tsx` | 7 | 20 | `src/features/dex/ui.tsx`, `src/features/home/ui.tsx`, `src/features/llama/ui.tsx`, `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx`, `src/features/scoreboard/ui.tsx`, `src/features/signals/ui.tsx` |
+| `THead` | `table.tsx` | 7 | 20 | same 7 as `Table` |
+| `TBody` | `table.tsx` | 7 | 20 | same 7 as `Table` |
+| `TR` | `table.tsx` | 4 | 36 | `src/features/home/ui.tsx`, `src/features/llama/ui.tsx`, `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx` |
+| `TH` | `table.tsx` | 4 | 61 | same 4 as `TR` |
+| `TD` | `table.tsx` | 4 | 65 | same 4 as `TR` |
 | `Toolbar` | `toolbar.tsx` | 5 | 5 | `src/features/market/forex/ui.tsx`, `src/features/market/quote-board.tsx`, `src/features/news/ui.tsx`, `src/features/scoreboard/ui.tsx`, `src/features/signals/ui.tsx` |
 
-### Zero call sites — "delete or adopt"
+> **Re-measured 2026-10-05** (`git rev-parse HEAD` = `be6fec4`). Since the 2026-10-02 baseline the
+> `home` surface landed and adopted `Badge`, `Stat`, `Banner`, `Loading` and the table atoms, while
+> three exports that measured **0** call sites were **removed** (the "delete or adopt" branch, below):
+> `Dash` (`feedback.tsx`), `TextArea` (`primitives.tsx`) and `TFoot` (`table.tsx`). The shelf is now
+> 7 files; every exported atom has at least one call site.
 
-Five exports have **no call site anywhere in the tree** (the measurement above is the evidence):
+### Zero call sites — resolved (2026-10-05)
 
-| atom | shelf | measurement |
+The 2026-10-02 baseline listed five exports with **no call site anywhere in the tree**. All five
+are now closed — two adopted, three deleted:
+
+| atom | shelf | disposition |
 |---|---|---|
-| `Badge` | `frontend/web/src/components/ui/badge.tsx` | 0 importing files, 0 `<Badge` uses |
-| `Dash` | `frontend/web/src/components/ui/feedback.tsx` | 0 importing files, 0 `<Dash` uses |
-| `TextArea` | `frontend/web/src/components/ui/primitives.tsx` | 0 importing files, 0 `<TextArea` uses |
-| `Stat` | `frontend/web/src/components/ui/stat.tsx` | 0 importing files, 0 `<Stat` uses — the whole shelf file is unreferenced |
-| `TFoot` | `frontend/web/src/components/ui/table.tsx` | 0 importing files, 0 `<TFoot` uses |
+| `Badge` | `frontend/web/src/components/ui/badge.tsx` | **adopted** — `src/features/home/ui.tsx` |
+| `Stat` | `frontend/web/src/components/ui/stat.tsx` | **adopted** — `src/features/home/ui.tsx` (6 uses) |
+| `Dash` | `frontend/web/src/components/ui/feedback.tsx` | **deleted** — the house `—` literal lives at the call sites |
+| `TextArea` | `frontend/web/src/components/ui/primitives.tsx` | **deleted** — no caller; `transactions`/`wallets` write a raw `<textarea>` where needed |
+| `TFoot` | `frontend/web/src/components/ui/table.tsx` | **deleted** — no caller |
 
-One of these is worth naming because it is **actively re-implemented** instead of adopted, which
-is the stronger form of the same debt:
+`Stat` was the sharpest case because it was **actively re-implemented** rather than adopted:
 
 ```bash
 cd frontend/web && grep -rnE "^(export )?function Stat\b" src
 ```
 
-- `frontend/web/src/components/ui/stat.tsx:36` — the unused atom.
+- `frontend/web/src/components/ui/stat.tsx` — the shelf atom, now adopted by the `home` surface.
 - `frontend/web/src/features/ticker/detail.tsx:417` — a local `Stat` (`tone`), used 7 times.
 
-So the shelf's `Stat` has zero callers while one surface hand-rolls its own — either adopt the
-atom (and fold that call site onto it) or delete it (`frontend/web/src/components/ui/stat.tsx`).
+The shelf atom now has a caller. The local one in `ticker/detail.tsx` remains (it carries a `tone`
+the shelf atom does not) and is the remaining adoption candidate if the two are ever folded.
 
 ---
 
@@ -226,11 +229,15 @@ Result (verbatim):
 
 | raw element | count | files | the atom that covers it |
 |---|---:|---:|---|
-| `<button` | 47 | 20 | `Button` (`frontend/web/src/components/ui/primitives.tsx:11`) |
-| `<input` | 15 | 8 | `Input` (`frontend/web/src/components/ui/primitives.tsx:46`) |
-| `<table` | 13 | 9 | `Table` (`frontend/web/src/components/ui/table.tsx:42`) |
-| `<select` | 13 | 5 | `Select` (`frontend/web/src/components/ui/primitives.tsx:64`) |
-| `<textarea` | 2 | 2 | `TextArea` (`frontend/web/src/components/ui/primitives.tsx:83`) |
+| `<button` | 33 | 19 | `Button` (`frontend/web/src/components/ui/primitives.tsx:11`) |
+| `<input` | 20 | 11 | `Input` (`frontend/web/src/components/ui/primitives.tsx:46`) |
+| `<table` | 16 | 12 | `Table` (`frontend/web/src/components/ui/table.tsx:42`) |
+| `<select` | 15 | 8 | `Select` (`frontend/web/src/components/ui/primitives.tsx:64`) |
+| `<textarea` | 2 | 2 | **no atom** — `TextArea` was removed 2026-10-05; the two sites write a raw `<textarea>` |
+
+> **Re-measured 2026-10-05** (`HEAD` = `be6fec4`). The counts moved with the `home` surface landing
+> (which adopts the atoms rather than hand-rolling) and the removal of `Dash`/`TextArea`/`TFoot`;
+> `TextArea` no longer has a shelf entry, so its row names no covering atom.
 
 The sharpest cases are surfaces that import **no** atom at all while hand-rolling chrome the shelf
 covers — the shell itself:

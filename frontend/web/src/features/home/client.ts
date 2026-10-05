@@ -35,7 +35,7 @@ export const CR_HOME_URL = '/api/cryptorank?mode=home';
 export const TOP_LIMIT = 10;
 export const MARKETS_TOP_URL = `/api/markets?limit=${TOP_LIMIT}&sort=mcap&order=desc`;
 
-/** The placeholder for an absent value — mirrors `Dash` in `components/ui/feedback`. */
+/** The placeholder for an absent value — the house `—` (see `features/executor/shapers.ts`). */
 export const DASH = '—';
 
 export type CrGlobal = {

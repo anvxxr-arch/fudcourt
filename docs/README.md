@@ -21,6 +21,7 @@ their web boards were removed (DR-041) — [DR-006](records/DECISIONS.md), desig
 ```
 docs/
   product/       what it is and who it is for
+  prd/           the CEX executor product requirements (deep spec)
   architecture/  how it is built
   operations/    how it runs and what changed
   records/       why each decision was made (append-only)
@@ -54,6 +55,19 @@ docs/
 | architecture | [coinglass-source-recon.md](architecture/coinglass-source-recon.md) | CoinGlass recon **and the shipped Go implementation**: official V4 (key-gated) vs the keyless `capi` surface, the AES-128-ECB×2 + gzip decryptor, the full `v` table, the endpoints the live probe dropped, and the `CgEnvelope` provenance contract |
 | architecture | [coinank-data-types.md](architecture/coinank-data-types.md) | CoinAnk data-type inventory: 78 endpoints / 20 categories, VIP1–VIP4 gating on the official host, and the **keyless** `api.coinank.com` client-computed signature — reconstructed and verified live; constants kept in code, not prose |
 | architecture | [coinmarketcap-data-types.md](architecture/coinmarketcap-data-types.md) | CoinMarketCap recon **and the shipped Go implementation**: the documented `pro-api` (key-gated, NOT wired) vs the keyless `data-api/v3` dashboard backend (no credential at all — the third keyless mechanism, after CoinGlass's decryption and CoinAnk's signature), the live probe matrix, and the quiet failure modes (`error_code != "0"` on a 200 → 502; `limit=0` is a success envelope with an empty list, hence LOCAL bounds) |
+
+| prd | [cex-executor.md](prd/cex-executor.md) | The CEX Executor PRD: planner, risk, sizing, strategies (market/limit/TWAP/adaptive-TWAP/iceberg/chase-limit/scale), Binance/Bybit/MEXC adapters, worker and state machine |
+| architecture | [executor.md](architecture/executor.md) | CEX executor architecture: the domain map, module boundaries and the Go port table (reality-first — when it and the code disagree, the code wins) |
+| architecture | [events.md](architecture/events.md) | Canonical event contracts read off `shared/contracts/` and the executor enums: the envelope and the event catalog (PRD §63) |
+| architecture | [security.md](architecture/security.md) | Security model: Discord session auth, the tier guard, the executor store/lock and audit — every claim names a file |
+| architecture | [parity-matrix.md](architecture/parity-matrix.md) | The TS→Go executor cutover gate: no TS module is deleted until its row is `DONE` and `verify:executor` passes against the Go worker |
+| architecture | [canonical-placement.md](architecture/canonical-placement.md) | The placement companion to `canonical-model.md`: where each node lands today, the frozen envelope behind it, and its migration phase |
+| architecture | [domain-map.md](architecture/domain-map.md) | Phase-0 audit: today's owner → target owner per node, with the `backend/api` bounded-context regroup |
+| architecture | [migration-plan.md](architecture/migration-plan.md) | The phased restructure plan: phases 0–4/6/8–10 landed; 5 (delete the TS executor) + 7 (frontend cleanup) deliberately gated on the money-path cutover |
+| architecture | [target.md](architecture/target.md) | The intended end-state for the domain restructure: per-section **landed / pending** markers, reconciled against the tree 2026-10-01 |
+| architecture | [current.md](architecture/current.md) | Phase-0 audit snapshot (2026-10-01): the tree right after the Phase-1/2 moves — **historical, pinned at capture, not a living document** |
+| architecture | [final-review.md](architecture/final-review.md) | Independent current-state review of the `refactor/domain-architecture` branch, each incomplete phase's blocker named |
+| operations | [BASELINE.md](operations/BASELINE.md) | Pre-move baseline (2026-10-01): every command run on the old `apps/{web,apicalls,sync}` tree — the regression reference a phase may not worsen |
 
 ## One-line map of the repo
 

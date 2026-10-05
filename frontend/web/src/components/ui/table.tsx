@@ -55,10 +55,6 @@ export function TBody({ children }: { children: React.ReactNode }) {
   return <tbody>{children}</tbody>;
 }
 
-export function TFoot({ children }: { children: React.ReactNode }) {
-  return <tfoot>{children}</tfoot>;
-}
-
 type TRProps = { children: React.ReactNode; style?: React.CSSProperties };
 
 export function TR({ children, style }: TRProps) {
