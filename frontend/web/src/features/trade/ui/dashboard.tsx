@@ -36,6 +36,7 @@ import {
   type ExecutionLite,
 } from '@/features/trade/client';
 import type { MarketRow, PortfolioSummary } from '@/features/trade/model';
+import { instrumentHref, isInstrumentId } from '@/features/trade/instrument';
 import {
   EXECUTION_STRATEGIES,
   MARKET_TYPES,
@@ -181,6 +182,10 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
             <DataTable
               head={['Instrument', 'Type', 'Price', '24h', 'Spread', 'Venues']}
               rows={rows.value.slice(0, 12).map((r) => ({
+                // A row links to its canonical instrument page only when the id is
+                // in the registry, so a drift between the board's source and the
+                // registry yields a non-link, never a broken link.
+                href: isInstrumentId(r.instrumentId) ? instrumentHref(r.marketType, r.instrumentId) : undefined,
                 cells: [
                   `${r.base} / ${r.quote}`,
                   MARKET_TYPE_BY_ID[r.marketType].label,

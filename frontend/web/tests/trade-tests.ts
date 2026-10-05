@@ -66,6 +66,14 @@ import {
 } from '@/features/trade/capabilities';
 import { VENUE_BINDINGS, VENUE_BINDING_LIST, bindingFor } from '@/features/trade/adapters';
 import { buildTradeRequest, missingRequired, num, type ComposerState } from '@/features/trade/intent';
+import {
+  INSTRUMENTS,
+  canonicalInstrumentId,
+  instrumentById,
+  instrumentHref,
+  instrumentLabel,
+  isInstrumentId,
+} from '@/features/trade/instrument';
 
 // ---------------------------------------------------------------------------
 // A fetch stub: the client is the only thing that touches the network, and it
@@ -753,6 +761,76 @@ test('trade: an executor exchange maps to a venue only when it is one we route t
   assert.equal(venueOfExchange('binance'), 'binance');
   assert.equal(venueOfExchange('hyperliquid'), 'hyperliquid');
   assert.equal(venueOfExchange('kraken'), null, 'a venue we do not route to has no trade venue');
+});
+
+// ---------------------------------------------------------------------------
+// The instrument registry (plan Phase 3) — the canonical id space a route
+// resolves. The invariants here are what let `/trade/<marketType>/<instrument>`
+// 404 an id it cannot address rather than serving an indexable empty page.
+// ---------------------------------------------------------------------------
+
+test('instrument: every registry id is canonical `<base>-<quote>`, lowercased', () => {
+  assert.ok(INSTRUMENTS.length > 0, 'the registry is not empty');
+  for (const i of INSTRUMENTS) {
+    assert.equal(i.id, `${i.base.toLowerCase()}-${i.quote.toLowerCase()}`, `${i.id} is the canonical spelling`);
+    assert.match(i.id, /^[a-z0-9]+-[a-z0-9]+$/, `${i.id} is well-formed`);
+    assert.equal(i.base, i.base.toUpperCase(), `${i.id}: base is upper-cased`);
+    assert.equal(i.quote, i.quote.toUpperCase(), `${i.id}: quote is upper-cased`);
+  }
+});
+
+test('instrument: the id is DERIVED from base/quote, so the two cannot disagree', () => {
+  for (const i of INSTRUMENTS) {
+    assert.equal(i.id, canonicalInstrumentId(i.base, i.quote), `${i.base}/${i.quote} derives its own id`);
+  }
+});
+
+test('instrument: ids are unique', () => {
+  const ids = INSTRUMENTS.map((i) => i.id);
+  assert.equal(new Set(ids).size, ids.length, 'no duplicate instrument id');
+});
+
+test('instrument: isInstrumentId accepts a registry id and rejects everything else', () => {
+  const first = INSTRUMENTS[0].id;
+  assert.equal(isInstrumentId(first), true, 'a registry id is addressable');
+  assert.equal(isInstrumentId(first.toUpperCase()), false, 'the URL space is lowercase — BTC-USDT is not btc-usdt');
+  assert.equal(isInstrumentId('foo-bar'), false, 'an id we do not quote is not addressable');
+  assert.equal(isInstrumentId('btcusdt'), false, 'the venue spelling is not the canonical id');
+  assert.equal(isInstrumentId('btc_usdt'), false, 'underscores are not the canonical separator');
+  assert.equal(isInstrumentId(''), false, 'empty is not an instrument');
+});
+
+test('instrument: instrumentById resolves a registry id and yields undefined otherwise', () => {
+  const entry = instrumentById('btc-usdt');
+  assert.ok(entry, 'btc-usdt is in the registry');
+  assert.equal(entry.base, 'BTC');
+  assert.equal(entry.quote, 'USDT');
+  assert.equal(instrumentById('foo-bar'), undefined, 'an unknown id resolves to nothing');
+});
+
+test('instrument: instrumentLabel renders the pair from the registry, not from the raw string', () => {
+  assert.equal(instrumentLabel('btc-usdt'), 'BTC / USDT');
+  assert.equal(instrumentLabel('eth-usdt'), 'ETH / USDT');
+  assert.equal(instrumentLabel('zzz-usdt'), 'ZZZ-USDT', 'an unknown id falls back to its own upper-cased form');
+});
+
+test('instrument: instrumentHref is the plan route `/trade/<marketType>/<instrument>`', () => {
+  assert.equal(instrumentHref('spot', 'btc-usdt'), '/trade/spot/btc-usdt');
+  assert.equal(instrumentHref('perpetual', 'eth-usdt'), '/trade/perpetual/eth-usdt');
+});
+
+test('instrument: canonicalInstrumentId normalises case and surrounding space', () => {
+  assert.equal(canonicalInstrumentId(' BTC ', 'usdt'), 'btc-usdt');
+  assert.equal(canonicalInstrumentId('eth', 'USDT'), 'eth-usdt');
+});
+
+test('instrument: a market type with no tickerType (margin) has no instrument page', () => {
+  // The route checks the market type too; a type the ticker cannot quote must not
+  // grow a per-instrument page, and the sitemap must not enumerate one.
+  assert.equal(MARKET_TYPE_BY_ID.margin.tickerType, null, 'margin has no quotable instrument');
+  for (const market of MARKET_TYPES) {
+    if (market.tickerType === null) assert.equal(market.id, 'margin', `${market.id} is the only quote-less type`);
+  }
 });
 
 // Type-only references so the unused-locals pass does not elide the compile-time

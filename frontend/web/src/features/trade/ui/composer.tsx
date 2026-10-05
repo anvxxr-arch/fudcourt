@@ -229,14 +229,20 @@ function PreviewPanel({ shown }: { shown: TradePreviewResponse | null }) {
   );
 }
 
-export function TradeComposer({ marketType }: { marketType: MarketType }) {
+export function TradeComposer({ marketType, defaultBase, defaultQuote }: {
+  marketType: MarketType;
+  /** Pre-filled base, for the instrument page (`/trade/spot/btc-usdt` → BTC). */
+  defaultBase?: string;
+  /** Pre-filled quote, for the instrument page. */
+  defaultQuote?: string;
+}) {
   const venues = useMemo<readonly VenueId[]>(() => VENUES_FOR(marketType), [marketType]);
   const execMT = executorMarketTypeFor(marketType);
   const [state, setState] = useState<ComposerState>({
     accountId: '',
     venue: venues[0] ?? 'binance',
-    base: 'BTC',
-    quote: 'USDT',
+    base: defaultBase ?? 'BTC',
+    quote: defaultQuote ?? 'USDT',
     side: 'buy',
     intent: 'open',
     entryType: 'market',

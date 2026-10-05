@@ -3,6 +3,7 @@ import { PUBLIC_ROUTES } from '@/platform/routing/public-routes';
 import { TICKER_SYMBOLS } from '@/features/ticker/client';
 import { COUNTRY_LIST, INDICATORS, CENTRAL_BANKS } from '@/features/economy/registry';
 import { MARKET_TYPES } from '@/features/trade/taxonomy';
+import { INSTRUMENTS } from '@/features/trade/instrument';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = PUBLIC_ROUTES.map((route) => ({
@@ -58,6 +59,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
+  // Per-instrument trading pages: the market-type boards crossed with the
+  // instrument registry. A bounded, known set — enumerated from the two
+  // allowlists rather than crawled. A market type the ticker cannot quote
+  // (margin, `tickerType: null`) has no instrument page, so it is excluded;
+  // including it would put a URL in the sitemap that the route 404s.
+  const tradeInstrumentPages = MARKET_TYPES.filter((market) => market.tickerType !== null).flatMap((market) =>
+    INSTRUMENTS.map((instrument) => ({
+      url: `https://fc.dwirijal.my.id/trade/${market.id}/${instrument.id}`,
+      lastModified: new Date(),
+      changeFrequency: 'hourly' as const,
+      priority: 0.5,
+    })),
+  );
+
   return [
     ...staticRoutes,
     ...tickerCoins.map((coin) => ({
@@ -70,5 +85,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...indicatorPages,
     ...centralBankPages,
     ...tradeBoardPages,
+    ...tradeInstrumentPages,
   ];
 }

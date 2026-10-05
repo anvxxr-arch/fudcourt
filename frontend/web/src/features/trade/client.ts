@@ -145,6 +145,78 @@ export async function fetchMarketRows(
 }
 
 /**
+ * One venue's answer for ONE instrument, as `/api/ticker/instrument` reports it.
+ * A `last` of null with an `error` is a MISS, never a price (the null-vs-0 rule).
+ */
+export type InstrumentQuote = {
+  exchange: string;
+  /** The venue's OWN symbol for this instrument (e.g. `BTC/USDT`). Read, not built. */
+  symbol: string;
+  /** The unit this venue's number is in, or null when it has no price. */
+  settle: string | null;
+  last: number | null;
+  bid: number | null;
+  ask: number | null;
+  high24h: number | null;
+  low24h: number | null;
+  quoteVolume: number | null;
+  change24h: number | null;
+  fundingRate: number | null;
+  openInterest: number | null;
+  /** Unix ms the venue's quote is stamped, or null when it did not report one. */
+  at: number | null;
+  error: string | null;
+};
+
+/** The per-instrument detail response — the fields this module actually reads. */
+export type InstrumentDetail = {
+  base: string;
+  type: TickerType;
+  quotes: InstrumentQuote[];
+  /** How many venues priced it. */
+  priced: number;
+  /** Median of the venues that priced it, or null when none did. */
+  price: number | null;
+  /** Venues that list no such instrument — a fact about the market, not a failure. */
+  notListed: string[];
+  /** Venues that should have answered and did not. */
+  failed: string[];
+  timestamp: number;
+};
+
+/**
+ * Cross-venue quotes for ONE instrument, from the ticker family's own endpoint
+ * (`/api/ticker/instrument`). The trade domain COMPOSES it (DR-018) rather than
+ * reading exchange APIs itself, so there is one source of truth for a price.
+ *
+ * A base no venue quotes is NOT an error: the endpoint answers with an empty
+ * `quotes` list and `price: null`, and this module reports that as-is — the page
+ * renders "no venue quotes this", never a fabricated zero.
+ */
+export async function fetchInstrumentDetail(
+  base: string,
+  tickerType: TickerType,
+  signal?: AbortSignal,
+): Promise<InstrumentDetail> {
+  const params = new URLSearchParams({ base, type: tickerType });
+  const res = await fetch(`/api/ticker/instrument?${params.toString()}`, { signal: bounded(signal), cache: 'no-store' });
+  const body = (await res.json().catch(() => ({}))) as Partial<InstrumentDetail> & { error?: string; detail?: string };
+  if (!res.ok) {
+    throw new Error(body.detail ? `${body.error ?? `HTTP ${res.status}`} — ${body.detail}` : (body.error ?? `HTTP ${res.status}`));
+  }
+  return {
+    base: typeof body.base === 'string' ? body.base : base,
+    type: (body.type ?? tickerType) as TickerType,
+    quotes: Array.isArray(body.quotes) ? (body.quotes as InstrumentQuote[]) : [],
+    priced: typeof body.priced === 'number' ? body.priced : 0,
+    price: typeof body.price === 'number' ? body.price : null,
+    notListed: Array.isArray(body.notListed) ? (body.notListed as string[]) : [],
+    failed: Array.isArray(body.failed) ? (body.failed as string[]) : [],
+    timestamp: typeof body.timestamp === 'number' ? body.timestamp : Date.now(),
+  };
+}
+
+/**
  * The account headline, composed from the executor's own endpoints.
  *
  * A 401 (no session) is NOT an error here — it is the ordinary "not connected"
