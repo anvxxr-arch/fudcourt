@@ -73,24 +73,6 @@ export function Select({ value, onChange, options, style }: SelectProps) {
   );
 }
 
-type TextAreaProps = {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  minHeight?: number;
-};
-
-export function TextArea({ value, onChange, placeholder, minHeight = 50 }: TextAreaProps) {
-  return (
-    <textarea value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
-      style={{
-        width: '100%', background: color.bg, color: color.text,
-        border: `1px solid ${color.border}`, borderRadius: radius[6],
-        padding: `${space[6]}px ${space[8]}px`, fontSize: fontSize[12], minHeight, resize: 'vertical', boxSizing: 'border-box',
-      }} />
-  );
-}
-
 type ModalProps = {
   title: string;
   onClose: () => void;

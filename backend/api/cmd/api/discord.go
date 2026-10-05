@@ -48,9 +48,9 @@ type discordUser struct {
 	Avatar     *string // raw CDN hash, resolved to a URL by the caller
 }
 
-// discordMember is DiscordMember in discord.ts. Avatar is the raw hash (or
-// null) exactly as listGuildMembers reports it — the wire shape is pinned to
-// the TS row.
+// discordMember is the members-row wire shape (see listGuildMembers in the
+// OpenAPI contract). Avatar is the raw CDN hash (or null) exactly as the
+// listing reports it.
 type discordMember struct {
 	ID         string
 	Username   string
@@ -202,8 +202,8 @@ func (d *discordClient) fetchGuildRoleIDs(ctx context.Context, userID string) []
 	return roles
 }
 
-// listGuildMembers lists the configured guild (listGuildMembers in discord.ts)
-// or reports unavailable (false) exactly where the TS helper returns null.
+// listGuildMembers lists the configured guild (listGuildMembers in the OpenAPI
+// contract) or reports unavailable (false) when the guild/bot env is unset.
 func (d *discordClient) listGuildMembers(ctx context.Context, limit int) ([]discordMember, bool) {
 	if d.env.GuildID == "" || d.env.BotToken == "" {
 		return nil, false
@@ -263,9 +263,9 @@ func (d *discordClient) listGuildMembers(ctx context.Context, limit int) ([]disc
 	return members, true
 }
 
-// setMemberRole adds or removes one role on a member (setMemberRole in
-// discord.ts). Discord failures are reported as an error string rather than an
-// exception, so the panel can render the reason.
+// setMemberRole adds or removes one role on a member (setMemberRole in the
+// OpenAPI contract). Discord failures are reported as an error string rather
+// than an exception, so the panel can render the reason.
 func (d *discordClient) setMemberRole(ctx context.Context, userID, roleID, action string) (bool, string) {
 	if d.env.GuildID == "" || d.env.BotToken == "" {
 		return false, "Discord is not configured"

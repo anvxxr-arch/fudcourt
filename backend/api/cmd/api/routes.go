@@ -237,10 +237,10 @@ func (s *server) handleAdminMembers(w http.ResponseWriter, r *http.Request) {
 	s.adminMembersMutate(w, r)
 }
 
-// memberRow is one row of the TS response map (id, username, globalName,
+// memberRow is one row of the members response map (id, username, globalName,
 // avatar, tier — that key order). globalName/avatar are nullable, never
-// omitted: listGuildMembers normalizes them to string|null exactly as discord.ts
-// does, and the TS response writes the nulls through.
+// omitted: listGuildMembers normalizes them to string|null and the response
+// writes the nulls through (see listGuildMembers in the OpenAPI contract).
 type memberRow struct {
 	ID         string        `json:"id"`
 	Username   string        `json:"username"`
