@@ -28,12 +28,6 @@ export function formatCompact(value: number | null | undefined, decimals = 2): s
   return value.toFixed(decimals);
 }
 
-/** Whether a change reads as up, down or flat — the sign a tint keys off. */
-export function changeSign(change: number | null | undefined): -1 | 0 | 1 {
-  if (change === null || change === undefined || !Number.isFinite(change) || change === 0) return 0;
-  return change > 0 ? 1 : -1;
-}
-
 /** A signed delta with the series' own decimals, for a "vs prior" cell. */
 export function formatDelta(change: number | null | undefined, decimals: number): string {
   if (change === null || change === undefined || !Number.isFinite(change)) return NO_VALUE;
@@ -49,15 +43,3 @@ export function formatDate(iso: string | null | undefined): string {
   return iso.length <= 10 ? iso : iso.slice(0, 10);
 }
 
-/** A relative "how stale is this" label for a release or a rate. */
-export function formatRelative(iso: string | null | undefined, now = Date.now()): string {
-  if (!iso) return NO_VALUE;
-  const t = Date.parse(iso.length === 7 ? `${iso}-01` : iso.length === 4 ? `${iso}-01-01` : iso);
-  if (!Number.isFinite(t)) return NO_VALUE;
-  const days = Math.round((t - now) / 86_400_000);
-  if (days === 0) return 'today';
-  if (days === 1) return 'tomorrow';
-  if (days === -1) return 'yesterday';
-  if (days > 0) return `in ${days}d`;
-  return `${-days}d ago`;
-}

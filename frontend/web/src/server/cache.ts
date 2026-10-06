@@ -53,11 +53,6 @@ function conn(): RedisClient | null {
   return client;
 }
 
-/** Whether an L2 is configured and constructible. */
-export function l2Enabled(): boolean {
-  return conn() !== null;
-}
-
 /** Read and parse a cached JSON value. Any failure is a miss (null). */
 export async function l2GetJson<T>(key: string): Promise<T | null> {
   const c = conn();

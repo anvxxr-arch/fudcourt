@@ -35,7 +35,6 @@ export function fmtPct(p: number | null): string {
   return `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`;
 }
 
-
 /**
  * Compact volume: 12.34M / 4.50B; null -> '—'.
  *

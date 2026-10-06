@@ -62,15 +62,6 @@ export function isMint(v: string) {
   return MINT_RE.test(s) || HEX_RE.test(s) || NAME_RE.test(s);
 }
 
-/** Which address family this is, or null. Used to report honestly. */
-export function addressKind(v: string): 'base58' | 'hex' | 'name' | null {
-  const s = v.trim();
-  if (HEX_RE.test(s)) return 'hex';
-  if (MINT_RE.test(s)) return 'base58';
-  if (NAME_RE.test(s)) return 'name';
-  return null;
-}
-
 export type DexToken = { address: string; name: string; symbol: string };
 
 export type DexPair = {

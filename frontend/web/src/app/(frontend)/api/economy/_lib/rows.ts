@@ -10,7 +10,7 @@ import { CATEGORY_BY_ID, SUBCATEGORY_LABELS } from '@/features/economy/model';
 import { COUNTRY_BY_ISO3 } from '@/features/economy/model';
 import type { EconomicIndicator, EconomicObservation } from '@/features/economy/model';
 import type { IndicatorMeta, IndicatorRow, Metric, ReleaseRow } from '@/features/economy/model';
-import { latestOf, nextExpected } from './adapters';
+import { latestOf } from './adapters';
 
 /** The headline cell for one indicator. */
 export function toMetric(ind: EconomicIndicator, obs: readonly EconomicObservation[]): Metric {
@@ -82,15 +82,6 @@ export function toMeta(ind: EconomicIndicator): IndicatorMeta {
     decimals: ind.decimals,
     note: ind.note,
   };
-}
-
-/**
- * A derived "next expected" date, or null. Labelled `derived` everywhere it is
- * shown: it is the series' cadence applied to its last period, not an agency's
- * published schedule.
- */
-export function expectedNext(ind: EconomicIndicator, obs: readonly EconomicObservation[]): string | null {
-  return nextExpected(ind, latestOf(obs)?.date ?? null);
 }
 
 /**

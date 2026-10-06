@@ -166,9 +166,3 @@ export function memo<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promi
   if (pending) return pending as Promise<T>;
   return refresh(key, fn);
 }
-
-/** Test seam: drop every memoised value. */
-export function __resetMemo() {
-  store.clear();
-  inflight.clear();
-}

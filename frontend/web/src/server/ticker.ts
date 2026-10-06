@@ -1,5 +1,5 @@
 import { l2GetJson, l2SetJson } from '@/server/cache';
-import { TICKER_EXCHANGES, TICKER_TTL_MS, isQuotableSettlement, venueServes } from '@/features/ticker/client';
+import { TICKER_EXCHANGES, TICKER_TTL_MS, isQuotableSettlement } from '@/features/ticker/client';
 import type { TickerExchange, TickerInstrument, TickerRow, TickerType } from '@/features/ticker/client';
 let sweepCache: { at: number; rows: TickerRow[] } | null = null;
 const SWEEP_KEY = 'fudcourt:web:ticker:sweep';
@@ -62,15 +62,6 @@ export async function runSweep(run: () => Promise<TickerRow[]>): Promise<TickerR
   sweepCache = { at: Date.now(), rows };
   await l2SetJson(SWEEP_KEY, sweepCache, SWEEP_STALE_MS).catch(() => {});
   return rows;
-}
-
-/** Rejections are never cached: a venue outage is retried, not pinned. */
-export async function memoSweep(
-  _ttlMs: number,
-  run: () => Promise<TickerRow[]>
-): Promise<TickerRow[]> {
-  if (sweepCache && Date.now() - sweepCache.at < SWEEP_FRESH_MS) return sweepCache.rows;
-  return runSweep(run);
 }
 
 /**
@@ -381,12 +372,4 @@ export function strikesFor(instruments: TickerInstrument[], expiryIso: string): 
     seen.add(i.strike);
   }
   return [...seen].sort((a, b) => a - b);
-}
-
-/** Venues that list at least one instrument for this base + type. */
-export function venuesWithInstruments(
-  perVenue: Map<TickerExchange, TickerInstrument[]>,
-  type: TickerType,
-): TickerExchange[] {
-  return TICKER_EXCHANGES.filter(v => venueServes(v, type) && (perVenue.get(v)?.length ?? 0) > 0);
 }

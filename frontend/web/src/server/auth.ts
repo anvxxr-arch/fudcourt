@@ -30,10 +30,6 @@ export type SessionUser = {
 
 export const SESSION_COOKIE = 'fud_session';
 
-export function sessionCookieName(): string {
-  return SESSION_COOKIE;
-}
-
 export const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days, matches the cookie maxAge
 
 // Shared by login/callback/logout so all three emit byte-identical attributes.
