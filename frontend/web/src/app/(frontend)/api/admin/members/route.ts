@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { publicOrigin } from '../../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -39,8 +40,9 @@ async function proxy(request: Request): Promise<Response> {
   }
   // The Go listener only sees the loopback hop, so the public scheme/host ride
   // along.
-  headers.set('x-forwarded-proto', request.headers.get('x-forwarded-proto') ?? url.protocol.slice(0, -1));
-  headers.set('x-forwarded-host', request.headers.get('x-forwarded-host') ?? url.host);
+  const { scheme, host } = publicOrigin(url);
+  headers.set('x-forwarded-proto', scheme);
+  headers.set('x-forwarded-host', host);
   const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text();
   let upstream: Response;
   try {
