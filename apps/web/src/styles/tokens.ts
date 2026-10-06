@@ -291,8 +291,6 @@ export const darkSemantic: { [K in keyof typeof lightSemantic]: string } = {
   selection: 'orange-950',
   scrim: 'neutral-1000',
 };
-/** Both themes, keyed for iteration. The parity test asserts the key sets are identical. */
-export const semanticTokens = { light: lightSemantic, dark: darkSemantic } as const;
 // ---------------------------------------------------------------------------
 // Spacing / radius / elevation / density / motion / grid (plan §11–§16)
 // ---------------------------------------------------------------------------
@@ -346,14 +344,12 @@ export const density = {
 } as const;
 /** Minimal utility motion. Never `transition-all` as a design-system default. */
 export const fcMotion = {
-  'motion-instant': 80,
   'motion-fast': 120,
   'motion-base': 160,
   'motion-slow': 220,
   'motion-panel': 280,
   'ease-standard': 'cubic-bezier(0.2, 0, 0, 1)',
   'ease-enter': 'cubic-bezier(0, 0, 0.2, 1)',
-  'ease-exit': 'cubic-bezier(0.4, 0, 1, 1)',
   'realtime-flash': 200,
 } as const;
 /** Breakpoints are layout pressure, not device names. */
@@ -408,13 +404,7 @@ export const fcType = {
 } as const;
 /** Icon sizes (plan §18). 16–20px is the default application size. */
 export const iconSize = {
-  'icon-xs': 12,
-  'icon-sm': 14,
   'icon-md': 16,
-  'icon-lg': 18,
-  'icon-xl': 20,
-  'icon-2xl': 24,
-  'icon-3xl': 32,
 } as const;
 /**
  * Component tokens (plan §2, layer 3). Per-component dimensions so an atom reads a named
