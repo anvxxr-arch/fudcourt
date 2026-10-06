@@ -371,7 +371,9 @@ export const Scrim = forwardRef<HTMLDivElement, ScrimProps>(function Scrim(
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 40,
+        // The app's modal layer, not a local stacking context: a scrim sits above every
+        // surface and below nothing but a toast.
+        zIndex: 'var(--fc-z-index-modal)',
         ...style,
       }}
       {...rest}

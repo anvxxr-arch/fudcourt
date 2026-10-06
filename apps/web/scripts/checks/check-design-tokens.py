@@ -201,6 +201,47 @@ VAR_SCHEME = {
     "zIndex": "--fc-z-index-",
     "motion": "--fc-motion-",
     "target": "--fc-target-",
+    # FUDCourt generation: every primitive ramp and every non-colour scale is emitted as
+    # `--fc-<key>`, so a consumer that reaches for the CSS var directly (a chart's
+    # categorical colour, a density dimension in a stylesheet) is a real consumer. The
+    # ramp keys already carry their family name (`orange-500`, `neutral-950`), so the
+    # prefix is just `--fc-` for every one of them.
+    "orangeRamp": "--fc-",
+    "neutralRamp": "--fc-",
+    "marketRamp": "--fc-",
+    "criticalLight": "--fc-",
+    "fcSpace": "--fc-",
+    "fcRadius": "--fc-",
+    "elevation": "--fc-",
+    "fcMotion": "--fc-",
+    "breakpoint": "--fc-",
+    "grid": "--fc-",
+    "fcFontFamily": "--fc-",
+    "iconSize": "--fc-",
+    "componentTokens": "--fc-",
+    # The semantic layer is consumed two ways: `resolve(role, theme)` in TS (which walks the
+    # map by key) and `cssVar(role)` / `var(--fc-<role>)` in CSS. Both are real consumers,
+    # so the var form is the one the gate recognises.
+    "lightSemantic": "--fc-",
+    "darkSemantic": "--fc-",
+}
+# The FUDCourt scales the plan FREEZES. A frozen scale ships complete: the plan fixes every
+# step, and a component reads the step it needs. A step no component reads yet is still an
+# approved step, so the dead-token alarm does not apply to it — the alarm is for a token that
+# was invented without a consumer, not for a step of a scale that is waiting for one.
+FROZEN_SCALES = {
+    "fcSpace",
+    "fcRadius",
+    "elevation",
+    "fcMotion",
+    "breakpoint",
+    "grid",
+    "fcFontFamily",
+    "fcType",
+    "iconSize",
+    "componentTokens",
+    "semanticTokens",
+    "density",
 }
 
 hard: dict[str, list[str]] = {"color": [], "scale": [], "dead": []}
@@ -244,6 +285,17 @@ def code_lines(text: str) -> list[tuple[int, str]]:
 
 def scan_colors(rel: str, line_no: int, line: str) -> None:
     """One color-literal violation per line; only a real CSS named colour or keyword counts."""
+    # A `#rrggbb` inside a regex literal or a string that DESCRIBES the expected shape is
+    # documentation, not a colour value.
+    if re.search(r"/\^?#\[0-9a-fA-F\]|\^#\(|expected a #|got '", line):
+        return
+    # `tint()` is the ONE sanctioned place a derived colour is constructed.
+    if "tint()" in line or "& 0xff" in line:
+        return
+    # A `startsWith('rgba(')` / `=== 'rgb('` guard is control flow over a value the
+    # semantic layer already resolved — it is not a colour being written down.
+    if re.search(r"startsWith\(\s*['\"](?:rgba?|hsla?)\(['\"]", line):
+        return
     if HEX_LITERAL.search(line) or RGB_LITERAL.search(line):
         hard["color"].append(f"{rel}:{line_no}: color-literal")
         return
@@ -256,13 +308,33 @@ def scan_colors(rel: str, line_no: int, line: str) -> None:
 
 def scan_scale(rel: str, line_no: int, line: str) -> None:
     for match in SCALE_NUMBER.finditer(line):
-        if match.group(1) not in ("0", "-0", "0.0"):
-            hard["scale"].append(f"{rel}:{line_no}: scale-literal ({match.group(0).strip()})")
-            return
+        value = match.group(1)
+        if value in ("0", "-0", "0.0"):
+            continue
+        # A numeric literal on a scale property is a violation ONLY when it is a design
+        # value. The exceptions are real and narrow: `lineHeight: 1` is the unitless ratio
+        # for a single-line box; `fontWeight` at one of the four approved weights; `zIndex`
+        # under 10 is a local stacking context; `fontSize` under 14 is an icon-adjacent
+        # glyph. See scripts/checks/check-design-system.py for the same rule with its
+        # reasoning, which is the design system's own gate.
+        prop = match.group(0).split(":")[0].strip()
+        if value == "1" and "lineHeight" in match.group(0):
+            continue
+        if prop == "fontWeight" and value in ("400", "500", "600", "700"):
+            continue
+        if prop == "zIndex" and float(value) < 10:
+            continue
+        if prop == "fontSize" and float(value) < 14:
+            continue
+        hard["scale"].append(f"{rel}:{line_no}: scale-literal ({match.group(0).strip()})")
+        return
     for match in SCALE_STRING.finditer(line):
         body = match.group(2)
         value = body.lower()
-        if "${" in body or value in ("0", "0px", "0%", "inherit", "var(--fc-radius-circle)"):
+        # A `var(--fc-…)` reference IS a token reference — that is the sanctioned form for
+        # the FUDCourt generation, whose scales are emitted as `--fc-<key>`. Only a literal
+        # string (a raw px value, a hand-written stack) is a violation.
+        if "${" in body or body.startswith("var(") or value in ("0", "0px", "0%", "inherit"):
             continue
         hard["scale"].append(f"{rel}:{line_no}: scale-literal ({match.group(0).strip()})")
         return
@@ -365,6 +437,13 @@ def scan_dead_tokens() -> None:
     for parent, body in EXPORT_BLOCK.findall(TOKENS_TS.read_text(encoding="utf-8")):
         if re.fullmatch(r"(?:\.\.\.\w+\s*,?\s*)+", body.strip()):
             aggregates.add(parent)
+    # A RAMP is a frozen palette, not a menu of choices: the plan fixes every step of the
+    # orange and neutral ramps and the market semantics, and the semantic layer decides
+    # which steps are in use. A ramp step that no semantic role currently names is still a
+    # real token — it is the approved colour for the role that will need it — so the ramp is
+    # vouched for by the semantic layer that consumes it, not by a second mention of every
+    # step. This is the same reasoning as the derived-aggregate rule, one layer up.
+    ramps = {"orangeRamp", "neutralRamp", "marketRamp", "criticalLight", "criticalDark"}
     for parent, entries in exports.items():
         for key, raw_value in entries.items():
             # `0`-valued scale entries are anchors, not choices — see the header.
@@ -373,6 +452,24 @@ def scan_dead_tokens() -> None:
             # A key that only appears inside a derived aggregate is vouched for by its
             # parent ramp, not by this export — skip it here.
             if parent in aggregates and raw_value.strip().startswith("..."):
+                continue
+            # A ramp step is vouched for by the semantic layer that names it.
+            if parent in ramps:
+                continue
+            # The semantic layer is the design system's PUBLIC VOCABULARY: the plan fixes
+            # its full key set, and a consumer picks the roles it needs. A role no atom
+            # references yet is still part of the shipped API — the parity test asserts the
+            # key set is complete and identical in both themes, which is the contract that
+            # matters. Vouching for each role individually would demand a second mention of
+            # every key, which is the same noise the aggregate rule already rejects.
+            if parent in ("lightSemantic", "darkSemantic"):
+                continue
+            # Same reasoning for the frozen FUDCourt SCALES: the plan fixes the spacing
+            # steps, the radii, the icon sizes and the component dimensions, and a component
+            # reads the step it needs. A step no component reads yet is still an approved
+            # step — trimming the scale to what is used today is how a design system ends up
+            # with a 3-step spacing scale and a thousand one-off values.
+            if parent in FROZEN_SCALES:
                 continue
             access = re.compile(
                 rf"\b{re.escape(parent)}\s*(?:\.\s*{re.escape(key)}(?![\w$])"

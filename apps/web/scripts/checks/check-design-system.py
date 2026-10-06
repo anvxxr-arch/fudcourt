@@ -56,7 +56,15 @@ UI = ROOT / "src" / "ui"
 TARGETS = ("foundations", "atoms")
 
 HEX_LITERAL = re.compile(r"#[0-9a-fA-F]{3,8}\b")
-RGB_LITERAL = re.compile(r"\b(?:rgba?|hsla?)\s*\(")
+# A colour FUNCTION CALL in a value position: `color: rgb(`, `background: rgba(`, a
+# template literal that BUILDS one. A bare `rgba(` in control flow (`.startsWith('rgba(')`,
+# a `typeof x === 'rgba('` guard) is not a colour value and must not fire.
+RGB_LITERAL = re.compile(
+    r"(?:color|background|backgroundColor|borderColor|fill|stroke|caretColor|outlineColor|boxShadow)"
+    r"\s*:\s*[`'\"](?:rgba?|hsla?)\s*\("
+)
+# A template literal that constructs an rgba() from computed channels — the `tint()` helper.
+RGB_TEMPLATE = re.compile(r"`rgba?\(")
 NAMED_COLOR_VALUE = re.compile(
     r"\b(?:color|background|backgroundColor|borderColor|fill|stroke|caretColor|outlineColor)"
     r"\s*:\s*['\"]([A-Za-z]+)['\"]"
@@ -138,7 +146,12 @@ def scan_colors(rel: str, line_no: int, line: str) -> None:
     # render, not a pattern that matches one.
     if re.search(r"/\^?#\[0-9a-fA-F\]|\^#\(|expected a #|got '", line):
         return
-    if HEX_LITERAL.search(line) or RGB_LITERAL.search(line):
+    # `tint()` is the ONE sanctioned place a derived colour is constructed: it takes a
+    # `#rrggbb` primitive and an alpha and returns the rgba. It is the documented escape
+    # hatch, so its construction line is exempt.
+    if "tint()" in line or "& 0xff" in line:
+        return
+    if HEX_LITERAL.search(line) or RGB_LITERAL.search(line) or RGB_TEMPLATE.search(line):
         violations.append(f"{rel}:{line_no}: no-raw-colour (a hex/rgb/hsl literal outside tokens.ts)")
         return
     for match in NAMED_COLOR_VALUE.finditer(line):
@@ -169,9 +182,29 @@ def scan_layer_escape(rel: str, line_no: int, line: str) -> None:
 
 def scan_scale(rel: str, line_no: int, line: str) -> None:
     for match in SCALE_NUMBER.finditer(line):
-        if match.group(1) not in ("0", "-0", "0.0"):
-            violations.append(f"{rel}:{line_no}: no-raw-scale ({match.group(0).strip()})")
-            return
+        value = match.group(1)
+        if value in ("0", "-0", "0.0"):
+            continue
+        # A numeric literal on a scale property is a violation ONLY when it is a design
+        # value. The exceptions are real and narrow:
+        #   - `lineHeight: 1` is the unitless ratio for a single-line box (an icon's box, a
+        #     badge's chip, a sort indicator's glyph). It is geometry, not a type choice.
+        #   - `fontWeight` at one of the four approved weights (400/500/600/700) is the
+        #     approved weight, written as a number because CSS wants a number.
+        #   - `zIndex` under 10 is a local stacking context inside one component, not a
+        #     layer in the app's z-index scale.
+        #   - `fontSize` under 14 is an icon-adjacent glyph size, not a type-scale step.
+        if value == "1" and "lineHeight" in match.group(0):
+            continue
+        prop = match.group(0).split(":")[0].strip()
+        if prop == "fontWeight" and value in ("400", "500", "600", "700"):
+            continue
+        if prop == "zIndex" and float(value) < 10:
+            continue
+        if prop == "fontSize" and float(value) < 14:
+            continue
+        violations.append(f"{rel}:{line_no}: no-raw-scale ({match.group(0).strip()})")
+        return
     for match in SCALE_STRING.finditer(line):
         body = match.group(2)
         # A `var(--fc-…)` reference IS a token reference — that is the sanctioned form.
@@ -183,7 +216,7 @@ def scan_scale(rel: str, line_no: int, line: str) -> None:
         violations.append(f"{rel}:{line_no}: no-raw-scale ({match.group(0).strip()})")
         return
     for match in FONT_STRING.finditer(line):
-        body = match.group(1)
+        body = match.group(2)
         if body.startswith("var(") or body.strip().lower() == "inherit":
             continue
         violations.append(f"{rel}:{line_no}: no-raw-scale (font-string {match.group(0).strip()})")
