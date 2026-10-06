@@ -79,6 +79,11 @@ func TestIsSafeNext(t *testing.T) {
 		{"/a%2Fb", "ambiguous once decoded"},
 		{"", "empty"},
 		{"team/balance", "not rooted"},
+		{`/\evil.example.com`, "backslash normalizes to protocol-relative"},
+		{`/\\evil.example.com`, "double backslash"},
+		{`/\/evil.example.com`, "escaped backslash then slash"},
+		{"%2F%2Fevil.example.com", "percent-encoded leading slashes"},
+		{"/%5Cevil.example.com", "percent-encoded backslash"},
 	}
 	for _, c := range bad {
 		if IsSafeNext(c.in) {

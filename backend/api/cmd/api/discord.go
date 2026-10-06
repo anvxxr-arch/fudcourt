@@ -164,7 +164,9 @@ func (d *discordClient) fetchCurrentUser(ctx context.Context, token string) (*di
 // fetchGuildRoleIDs reads the member's role ids with the bot token
 // (fetchGuildRoles in callback/route.ts). Missing guild/bot env, a non-member
 // user, or an API error all yield an empty list — the caller tiers down rather
-// than escalating.
+// than escalating. Role entries are accepted as either the snowflake strings
+// Discord actually sends ({"roles":["123"]}) or legacy {"id":"123"} objects;
+// anything else is skipped so the tier resolution stays fail-closed.
 func (d *discordClient) fetchGuildRoleIDs(ctx context.Context, userID string) []string {
 	if d.env.GuildID == "" || d.env.BotToken == "" {
 		return []string{}
@@ -193,8 +195,13 @@ func (d *discordClient) fetchGuildRoleIDs(ctx context.Context, userID string) []
 	}
 	roles := []string{}
 	for _, entry := range list {
-		if m, ok := entry.(map[string]any); ok {
-			if id, ok := m["id"].(string); ok {
+		switch e := entry.(type) {
+		case string:
+			if e != "" {
+				roles = append(roles, e)
+			}
+		case map[string]any:
+			if id, ok := e["id"].(string); ok && id != "" {
 				roles = append(roles, id)
 			}
 		}

@@ -60,6 +60,7 @@ func fakeDiscord(t *testing.T) (*discordClient, *httptest.Server) {
 
 func newTestServer(t *testing.T) *server {
 	t.Helper()
+	t.Setenv("FUDCOURT_PUBLIC_ORIGIN", "fudcourt.example")
 	dc, _ := fakeDiscord(t)
 	return &server{health: health.NewRegistry(), discord: dc, secret: routeTestSecret}
 }
@@ -175,13 +176,13 @@ func TestAuthCallbackMintsSession(t *testing.T) {
 		*claims.Avatar != "https://cdn.discordapp.com/avatars/42/hash.png" {
 		t.Fatalf("session claims drifted: %+v", claims)
 	}
-	// Guild/role env is configured and the real Discord role payload is a
-	// string list; the {id}-object parser yields no roles, so the resolved tier
-	// floors at member ("a successful OAuth identity is at least a member") —
-	// never admin, from any role set. Pinned because it is fail-closed (a bug
-	// cannot escalate) — see the divergence report for the escalation side.
-	if claims.Tier != identity.TierMember {
-		t.Fatalf("tier = %q, want member (role ids never resolve from string roles)", claims.Tier)
+	// Guild/role env is configured and the member payload carries the admin
+	// role id as a Discord snowflake string; fetchGuildRoleIDs must now keep
+	// it, so the resolved tier is admin — the parser accepts both snowflake
+	// strings and legacy {"id":..} objects. Fail-closed is preserved: an
+	// unresolvable role set still floors at member, never escalates.
+	if claims.Tier != identity.TierAdmin {
+		t.Fatalf("tier = %q, want admin (admin role id resolves from string roles)", claims.Tier)
 	}
 }
 
@@ -211,6 +212,24 @@ func TestAuthCallbackRefusals(t *testing.T) {
 		if !strings.HasPrefix(sc, stateCookieName+"=;") {
 			t.Fatalf("%s: state cookie must be retired: %q", tc.name, sc)
 		}
+	}
+}
+
+func TestRequestOriginRejectsHostileForwardedHost(t *testing.T) {
+	t.Setenv("FUDCOURT_PUBLIC_ORIGIN", "fudcourt.example")
+	dc, _ := fakeDiscord(t)
+	srv := &server{health: health.NewRegistry(), discord: dc, secret: routeTestSecret}
+	req := httptest.NewRequest("GET", "/api/auth/logout", nil)
+	req.Header.Set("X-Forwarded-Proto", "https")
+	req.Header.Set("X-Forwarded-Host", "evil.example")
+	recorder := httptest.NewRecorder()
+	srv.handler().ServeHTTP(recorder, req)
+	loc := recorder.Header().Get("Location")
+	if strings.Contains(loc, "evil.example") {
+		t.Fatalf("hostile X-Forwarded-Host reached Location: %q", loc)
+	}
+	if loc != "https://"+req.Host+"/" {
+		t.Fatalf("Location = %q, want loopback fallback %q", loc, "https://"+req.Host+"/")
 	}
 }
 

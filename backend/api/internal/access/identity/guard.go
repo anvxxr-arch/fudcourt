@@ -2,6 +2,7 @@ package identity
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"github.com/anvxxr-arch/fudcourt/backend/api/internal/platform/errs"
 )
@@ -64,10 +65,13 @@ func (p RoutePolicy) RequiredTier(pathname string) *Tier {
 // attacker-supplied, so only a site-relative path is accepted. Invariant:
 // a leading "/" and NEVER a second one (which would make the value
 // protocol-relative, i.e. another host), no ".." (which would climb out of the
-// intended prefix once a browser normalises the path), and no '?', '#' or '%'
+// intended prefix once a browser normalises the path), no '?', '#' or '%'
 // (which would smuggle in a second target or make the value ambiguous across
-// the cookie + query round-trip). Plain paths also need no encode/decode on
-// the way through the state cookie.
+// the cookie + query round-trip), and NO backslash: browsers treat '\\' as '/'
+// during URL parsing, so a value like "/\\evil.example" would otherwise
+// normalize to the protocol-relative "//evil.example". The same refusal
+// covers any value that, once percent-decoded and backslash-normalized,
+// begins with "//" — that is the exact predicate the TS port mirrors.
 func IsSafeNext(value string) bool {
 	if value == "" || !strings.HasPrefix(value, "/") || strings.HasPrefix(value, "//") {
 		return false
@@ -75,5 +79,18 @@ func IsSafeNext(value string) bool {
 	if strings.Contains(value, "..") {
 		return false
 	}
-	return !strings.ContainsAny(value, "?#%")
+	if strings.ContainsAny(value, "?#%") {
+		return false
+	}
+	if strings.ContainsRune(value, '\\') {
+		return false
+	}
+	decoded := value
+	if d, err := url.PathUnescape(decoded); err == nil {
+		decoded = d
+	}
+	if strings.HasPrefix(strings.ReplaceAll(decoded, "\\", "/"), "//") {
+		return false
+	}
+	return true
 }

@@ -3,9 +3,11 @@ package main
 import (
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // Cookie and URL serialization — byte-compatible with Next's own serializers
@@ -138,16 +140,68 @@ func readCookieValue(r *http.Request, name string) string {
 // original scheme/host arrive as X-Forwarded-Proto / X-Forwarded-Host (set by
 // the thin proxy). These are routing/redirect inputs ONLY — identity comes
 // exclusively from the signed cookie.
+// The forwarded host is attacker-controlled, so it is checked against the
+// server-side allowlist in FUDCOURT_PUBLIC_ORIGIN (comma/space-separated); a
+// host that is not on the allowlist falls back to r.Host, which is the
+// loopback hop and can never redirect a browser off-site. The proto is
+// restricted to http|https (default https) so a forged header cannot emit a
+// `javascript:` or `data:` Location.
 func requestOrigin(r *http.Request) string {
-	proto := r.Header.Get("X-Forwarded-Proto")
-	if proto == "" {
-		proto = "http"
+	proto := strings.ToLower(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")))
+	if proto != "http" && proto != "https" {
+		proto = "https"
 	}
-	host := r.Header.Get("X-Forwarded-Host")
-	if host == "" {
-		host = r.Host
+	host := r.Host
+	if fwd := strings.TrimSpace(r.Header.Get("X-Forwarded-Host")); fwd != "" {
+		if allow, ok := publicOriginHosts()[normalizeHost(fwd)]; ok {
+			host = allow
+		}
 	}
 	return proto + "://" + host
+}
+
+// publicOriginHosts parses FUDCOURT_PUBLIC_ORIGIN into a host allowlist.
+// Entries may carry a scheme or port ("https://app.example.com:8443",
+// "app.example.com"); they are indexed by their normalized host portion.
+// When the env is unset or empty the allowlist is empty and requestOrigin
+// always falls back to r.Host — fail-closed, never attacker-hostile.
+func publicOriginHosts() map[string]string {
+	raw := strings.TrimSpace(os.Getenv("FUDCOURT_PUBLIC_ORIGIN"))
+	if raw == "" {
+		return nil
+	}
+	allow := map[string]string{}
+	for _, entry := range strings.FieldsFunc(raw, func(r rune) bool { return r == ',' || unicode.IsSpace(r) }) {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		if i := strings.Index(entry, "://"); i >= 0 {
+			entry = entry[i+3:]
+		}
+		if valid := hostPort(entry); valid != "" {
+			allow[normalizeHost(valid)] = valid
+		}
+	}
+	return allow
+}
+
+// normalizeHost lowercases and strips any port from a host or host:port.
+func normalizeHost(h string) string {
+	h = strings.ToLower(strings.TrimSpace(h))
+	if i := strings.LastIndex(h, ":"); i > -1 && !strings.Contains(h[:i], "]") && !strings.Contains(h[i+1:], ":") {
+		h = h[:i]
+	}
+	return strings.TrimSuffix(h, ".")
+}
+
+// hostPort validates that the entry is a plausible host[:port] and returns
+// it canonicalized; anything with userinfo, a path, or whitespace is dropped.
+func hostPort(h string) string {
+	if h == "" || strings.ContainsAny(h, "/@?#\\") || strings.ContainsAny(h, " \t\r\n") {
+		return ""
+	}
+	return h
 }
 
 // methodGuard answers the methods a TS route handler exported and 405s the
