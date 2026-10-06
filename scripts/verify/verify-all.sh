@@ -54,6 +54,8 @@ step "design-token gate (raw literals, magic style values, dead tokens)"
 (cd apps/web && python3 scripts/checks/check-design-tokens.py) || fail design-tokens
 step "design-token artifact drift (globals.css block + tailwind.tokens.json are generated)"
 (cd apps/web && unset NODE_ENV && bun scripts/design/emit-tokens.ts --check) || fail design-tokens-artifacts
+step "design-system gate (atom layer rules, plan §25)"
+(cd apps/web && python3 scripts/checks/check-design-system.py) || fail design-system
 
 step "web contract gate (CR_MODES + mutation-auth guards)"
 python3 scripts/verify/check-contract.py || fail web-contract

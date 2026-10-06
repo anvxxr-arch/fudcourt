@@ -77,6 +77,8 @@ jobs:
         run: python3 scripts/checks/check-design-tokens.py
       - name: "Design-token artifact drift (generated globals.css block + tailwind.tokens.json)"
         run: bun scripts/design/emit-tokens.ts --check
+      - name: "Design-system gate (atom layer rules, plan §25)"
+        run: python3 scripts/checks/check-design-system.py
       - name: Typecheck
         run: bunx tsc --noEmit
       - name: "Shaper fixture tests (offline, recorded upstream payloads)"
