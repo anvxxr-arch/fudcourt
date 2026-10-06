@@ -5,18 +5,15 @@ import {
   FOREX_UPSTREAM,
   buildPair,
   type ForexPair,
-} from '@/features/market/forex';
+} from '@/features/market/forex-pairs';
 import { limitedFetch } from '@/lib/rate-limit';
+import { fail } from '../../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
 
 const TIMEOUT_MS = 20_000;
-
-function fail(message: string, status: number, detail?: string) {
-  return NextResponse.json({ error: message, ...(detail ? { detail } : {}) }, { status });
-}
 
 /**
  * Read-only proxy to open.er-api.com (public, keyless) serving the forex board.

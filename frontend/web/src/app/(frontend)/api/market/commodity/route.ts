@@ -4,7 +4,7 @@ import {
   COMMODITY_LABELS,
   COMMODITY_SYMBOLS,
   COMMODITY_TTL_MS,
-} from '@/features/market/commodity';
+} from '@/features/market/commodity-symbols';
 import {
   YAHOO_CHART,
   YAHOO_UA,

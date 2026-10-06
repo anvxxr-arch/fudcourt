@@ -25,6 +25,10 @@ import type {
   ExecutionRequest,
   SizingMode,
 } from '@/lib/executor';
+// `num` lives in `@/lib/num` — shared with the executor panels. Re-exported so
+// the `@/features/trade/model` barrel keeps its public name.
+import { num } from '@/lib/num';
+export { num };
 
 /** Every field the composer form collects. */
 export type ComposerState = {
@@ -57,14 +61,6 @@ export const BASIS_SIZING: ReadonlySet<SizingMode> = new Set<SizingMode>([
 
 /** Sizing modes that are meaningless without a stop — the risk bound IS the stop distance. */
 export const RISK_SIZING: ReadonlySet<SizingMode> = new Set<SizingMode>(['risk_usd', 'risk_percent']);
-
-/** A numeric field as text: empty stays absent, never a silent 0. */
-export function num(text: string): number | undefined {
-  const trimmed = text.trim();
-  if (trimmed === '') return undefined;
-  const value = Number(trimmed);
-  return Number.isFinite(value) ? value : undefined;
-}
 
 /**
  * The composer's `ExecutionRequest`, or `null` when the market type has no
