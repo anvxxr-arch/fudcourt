@@ -10,7 +10,7 @@
 > ownership — "who owns the data, who makes the decision, which service do I
 > touch" — and this file records how far that holds today.
 
-Scope note: the objective is a multi-phase restructure (`docs/architecture/migration-plan.md`,
+Scope note: the objective is a multi-phase restructure (`docs/records/archive/migration-plan.md`,
 `.ai/restructure-fudcourt.md`). This review covers **Phases 0–12 as they stand** and is
 explicit about the two phases that are gated on a money-path cutover and therefore
 deliberately not executed (Phase 5 deletion, Phase 7 cleanup).

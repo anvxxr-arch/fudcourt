@@ -117,7 +117,7 @@ catalog, payloads must not contain key material):
 `CredentialCreated`, `CredentialRevoked`, `ExchangeAccountConnected`,
 `ReconciliationStarted`, `ReconciliationCompleted` — 28 catalog entries total
 (`contracts/events/events.json`; 24 as recorded in the
-`docs/architecture/migration-plan.md` Phase 3 amendment, before the four
+`docs/records/archive/migration-plan.md` Phase 3 amendment, before the four
 2026-10-01 additions).
 
 ## 4. Secrets rule

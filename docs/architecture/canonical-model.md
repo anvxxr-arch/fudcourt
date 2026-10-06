@@ -314,7 +314,7 @@ Conventions for every row: **Identity** gives the internal canonical id and the 
 
 ### 2.3 Cross-service sharing mechanism
 
-**The rule (`docs/architecture/target.md` §3.2, `migration-plan.md`): services share ONLY contracts
+**The rule (`docs/records/archive/target.md` §3.2, `migration-plan.md`): services share ONLY contracts
 and MUST NOT import each other's Go/Rust/TS implementations.** So an entity is shared through four
 separate artifacts, and they must be listed separately or "shared" is meaningless:
 

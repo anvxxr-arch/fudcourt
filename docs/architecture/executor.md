@@ -4,8 +4,8 @@
 > concurrently, so the §3 port table carries its check time. When this file and
 > the code disagree, the code wins.
 > Sources: `docs/prd/cex-executor.md` (PRD §NN), the executor module map
-> (objective §8.9–§8.16, §22, §23), `docs/architecture/target.md` §2,
-> `docs/architecture/migration-plan.md` Phase 5, `docs/architecture/domain-map.md`.
+> (objective §8.9–§8.16, §22, §23), `docs/records/archive/target.md` §2,
+> `docs/records/archive/migration-plan.md` Phase 5, `docs/architecture/domain-map.md`.
 
 ## 1. Domain map — what the executor is made of
 The execution lifecycle (PRD §57) is one table, owned today by

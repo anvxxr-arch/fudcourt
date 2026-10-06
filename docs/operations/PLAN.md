@@ -9,8 +9,8 @@ Baseline: remote head `957836d` (2026-09-27). Status legend: ✅ done · 🔄 in
 > `deploy/systemd/` by the Phase 1–10 restructure) — so a path or count in a closed row
 > (e.g. `frontend/web/lib/…`, `frontend/web/db/…`, `frontend/web/scripts/{verify,tests,fixtures}`,
 > `apps/blog`, `services/*`, `.github/workflows/ci.yml`) is historical, even where it carries no
-> per-line marker. For the tree today use `docs/architecture/final-review.md` §1 and
-> `docs/architecture/target.md` §1; for the dated Phase-0 picture use `docs/architecture/current.md`.
+> per-line marker. For the tree today use `docs/records/archive/final-review.md` §1 and
+> `docs/records/archive/target.md` §1; for the dated Phase-0 picture use `docs/records/archive/current.md`.
 
 ---
 

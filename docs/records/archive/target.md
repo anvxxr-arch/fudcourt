@@ -29,7 +29,7 @@ scripts/{dev,verify,database,release}  scripts/{verify,database,githooks}  PARTI
 The rule that produced this shape: one directory per service, a domain name per service, and
 exactly one shared artifact tree. Where the tree deviates from the sketch, the deviation is a
 **deliberate omission of something that does not exist** (see the `NOT LANDED / NOT CREATED`
-rows), not unfinished work. As-built tree: `docs/architecture/final-review.md` §1,
+rows), not unfinished work. As-built tree: `docs/records/archive/final-review.md` §1,
 `docs/README.md` "One-line map of the repo".
 ## 2. Domain → service — LANDED
 | Domain | Owns | Service |

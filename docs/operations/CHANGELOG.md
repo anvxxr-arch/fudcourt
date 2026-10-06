@@ -8,7 +8,7 @@ measured on this host, never estimated.
 > `frontend/web/scripts/{verify,tests,fixtures}`) are the tree *then* — e.g. the unit files
 > `frontend/web/infrastructure/…` and `apps/blog/infrastructure/…` now live in
 > `deploy/systemd/`, `frontend/web/db/*.sql` is now `database/schema/*.sql`, and the
-> single `ci.yml` is now five path-filtered workflows. Use `docs/architecture/final-review.md` §1
+> single `ci.yml` is now five path-filtered workflows. Use `docs/records/archive/final-review.md` §1
 > for the tree today.
 
 ## 2026-10-06

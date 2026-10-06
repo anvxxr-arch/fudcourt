@@ -7,8 +7,8 @@
 > **HISTORICAL SNAPSHOT — pinned at capture, not current state.** Every path, count and command
 > in §1–§9 below describes the tree at/just after the Phase-1/2 moves (`6184d84` + `4e8ba91`; see
 > §0's timeline amendment). It was accurate then; it is not a living document. Changes that landed
-> afterwards on this branch are described in `docs/architecture/final-review.md` §1–§3 and
-> `docs/architecture/target.md`: `backend/api` + `backend/workers/executor` landed (root `go.work`,
+> afterwards on this branch are described in `docs/records/archive/final-review.md` §1–§3 and
+> `docs/records/archive/target.md`: `backend/api` + `backend/workers/executor` landed (root `go.work`,
 > the `api`/`executor` CI jobs and units exist), `shared/contracts` + `shared/sdk/typescript`
 > landed, the single `.github/workflows/ci.yml` was split into **five** path-filtered workflows
 > (§9 below is pinned to the pre-split single 4-job file), `tests/{e2e,integration}` grew the
