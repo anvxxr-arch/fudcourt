@@ -91,7 +91,7 @@ runs on push in CI. Nothing remains open in this phase.
 ## Phase 3 — `shared/contracts`
 > **Amended 2026-10-01 (executor surface EXECUTED, verified):** `shared/contracts`
 > (OpenAPI 3.0.3 of the executor surface — 15 paths / 19 operations mirroring
-> `types.ts` + `client.ts` + the route handlers; `events/catalog.json` 24 stable ids
+> `types.ts` + `client.ts` + the route handlers; `events/events.json` 24 stable ids
 > with the 19 TS aliases; event/error JSON Schemas) and `shared/sdk/typescript` (thin typed
 > fetch client generated from the contract) exist. Verified: `check-contract.mjs` →
 > `CONTRACTS_OK enums=3 openapi_paths=15 route_handlers=39 events=24`, `tsc --noEmit`

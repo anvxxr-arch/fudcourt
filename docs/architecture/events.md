@@ -2,8 +2,8 @@
 > Reality-first: everything here is read off `contracts/` (landed),
 > `apps/web/src/platform/executor/types.ts` and
 > `apps/executor/internal/execution/enums.go`. Written 2026-10-01.
-> Sources: `contracts/events/catalog.json`,
-> `contracts/events/event.schema.json`,
+> Sources: `contracts/events/events.json`,
+> `contracts/events/events.json`,
 > `contracts/schemas/event-envelope.json`,
 > `contracts/events/README.md`, PRD §63.
 
@@ -14,7 +14,7 @@ Every domain event is the envelope of
 | Field | Type | Meaning |
 |---|---|---|
 | `event_id` | uuid | Unique id of this event instance. |
-| `event_type` | string | Stable **PascalCase** id from `events/catalog.json` (e.g. `ExecutionCreated`); legacy SCREAMING_SNAKE names are accepted aliases (§3). |
+| `event_type` | string | Stable **PascalCase** id from `events/events.json` (e.g. `ExecutionCreated`); legacy SCREAMING_SNAKE names are accepted aliases (§3). |
 | `event_version` | integer ≥ 1 | Shape version; starts at 1. |
 | `occurred_at` | integer | Unix **milliseconds**. |
 | `request_id` | string \| null | Correlation id of the originating request, when known. |
@@ -78,7 +78,7 @@ product here"); the row shape is `ExecutionEventRecord` (`types.ts`:
 `id`, `executionId`, `name`, `payload`, `createdAt`).
 
 ## 3. Alias map ↔ objective catalog names
-`contracts/events/catalog.json` is the single source of truth for
+`contracts/events/events.json` is the single source of truth for
 stable `event_type` ids. Canonical ids are **PascalCase** (the objective
 catalog names); the legacy TS SCREAMING_SNAKE names are accepted aliases of the
 same stable id at `event_version` 1 (emitters SHOULD emit the canonical id;
@@ -116,7 +116,7 @@ Five further canonical ids exist with **no** legacy alias (they are new to the
 catalog, payloads must not contain key material):
 `CredentialCreated`, `CredentialRevoked`, `ExchangeAccountConnected`,
 `ReconciliationStarted`, `ReconciliationCompleted` — 28 catalog entries total
-(`contracts/events/catalog.json`; 24 as recorded in the
+(`contracts/events/events.json`; 24 as recorded in the
 `docs/architecture/migration-plan.md` Phase 3 amendment, before the four
 2026-10-01 additions).
 
@@ -127,7 +127,7 @@ enforced by redaction on the audit side:
 
 - `contracts/schemas/event-envelope.json`: payload "Never contains
   credentials or secrets."
-- `contracts/events/catalog.json` `payload_policy`: "Events MUST NOT
+- `contracts/events/events.json` `payload_policy`: "Events MUST NOT
   carry credentials or secrets of any kind." (and `CredentialCreated`: "Payload
   MUST NOT contain key material.")
 - Audit-side enforcement: the `Redact` rule in

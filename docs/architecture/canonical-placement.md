@@ -101,8 +101,8 @@ families have no Next proxy — their boards were removed (DR-041) and they answ
 ### 1.3 The 28-id event catalog
 | item | artifact | pinned today by | unchanged |
 |---|---|---|---|
-| 28 stable `event_type` ids + aliases, `event_version: 1` | `contracts/events/catalog.json` | `contracts/scripts/check-contract.mjs` check (c) — `CONTRACTS_OK … events=28` | yes |
-| Event id enum + envelope | `contracts/events/event.schema.json`, `contracts/schemas/event-envelope.json` | `check-contract.mjs` (c) pins catalogue ↔ `event.schema.json` | yes — `event-envelope.json` is pre-existing and untouched (`contracts/schemas/README.md` §1) |
+| 28 stable `event_type` ids + aliases, `event_version: 1` | `contracts/events/events.json` | `contracts/scripts/check-contract.mjs` check (c) — `CONTRACTS_OK … events=28` | yes |
+| Event id enum + envelope | `contracts/events/events.json`, `contracts/schemas/event-envelope.json` | `check-contract.mjs` (c) pins catalogue ↔ `event.schema.json` | yes — `event-envelope.json` is pre-existing and untouched (`contracts/schemas/README.md` §1) |
 
 `events/` remains the event source of truth (`canonical-model.md` §9.1, "7–8 — contracts/SDK").
 

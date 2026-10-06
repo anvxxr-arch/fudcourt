@@ -2,7 +2,7 @@ package execution
 
 // ExecutionEventName is the immutable append-only event vocabulary
 // (types.ts; PRD §63). The canonical alias map lives in
-// packages/contracts/events/catalog.json.
+// contracts/events/events.json.
 type ExecutionEventName string
 
 const (

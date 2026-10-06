@@ -31,8 +31,7 @@ TS implementation.
 | Path | What it is |
 | --- | --- |
 | `openapi/fudcourt.yaml` | OpenAPI 3.0.3 of the executor HTTP surface (15 paths / 19 operations): preview, executions + lifecycle + child orders/fills/events, BYOK accounts (masked-only), settings, emergency stop. Component schemas mirror `frontend/web/src/lib/executor.ts` 1:1, including the enums (`ExecutionStatus` 15 values, `ExecutionEventName` 19 values, the 9 sizing modes, …). |
-| `events/catalog.json` | **Single source of truth** for stable `event_type` ids and their aliases (legacy TS `ExecutionEventName` names ↔ canonical PascalCase names). |
-| `events/event.schema.json` | JSON Schema (draft 2020-12) for one canonical event. |
+| `events/events.json` | **Single source of truth** for stable `event_type` ids and their aliases (legacy TS `ExecutionEventName` names ↔ canonical PascalCase names). |
 | `events/README.md` | Envelope field table, naming/alias rules, no-secrets rule, evolution rules. |
 | `schemas/event-envelope.json` | The shared event envelope (`event_id`, `event_type`, `event_version`, `occurred_at`, `request_id`, `actor_id`, `resource_id`, `payload`). |
 | `schemas/error-envelope.json` | The normalized error model (`code`, `message`, `request_id`) with the 12 error codes (`validation`, `authorization`, `credential`, `exchange`, `insufficient_balance`, `risk_limit`, `rate_limit`, `timeout`, `network`, `conflict`, `not_found`, `internal`). |
@@ -48,7 +47,7 @@ TS implementation.
 * **Stable ids never change meaning and are never reused.** PascalCase names
   (`ExecutionCreated`) are canonical; the legacy TS names
   (`EXECUTION_CREATED`) are accepted aliases of the same id, listed per entry
-  in `events/catalog.json`.
+  in `events/events.json`.
 * **HTTP surface**: consumers MUST NOT add unknown fields to request bodies —
   the request schemas are closed (`additionalProperties: false`). New fields go
   into this document first. Response objects may gain fields additively;

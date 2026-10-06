@@ -132,7 +132,7 @@ it is computed.
 Two deliberate refusals to duplicate:
 
 1. **No event enum is re-listed here.** `trading/execution.json#/$defs/event_name` is a
-   `string` that *points at* `events/catalog.json`; re-enumerating 28 ids in a second file would
+   `string` that *points at* `events/events.json`; re-enumerating 28 ids in a second file would
    create exactly the drift surface the existing gate exists to prevent.
 2. **No payload schemas.** Per-event payload keys are documented as **observed evidence** in the
    catalogue (`payload_policy`), not as a closed contract — so a schema here would be stricter than

@@ -9,8 +9,8 @@
  *   (b) every path documented in the OpenAPI exists as a route handler
  *       (route.ts under the Next.js app api tree) exporting every documented
  *       method, and no executor route handler is undocumented;
- *   (c) events/catalog.json covers every ExecutionEventName value (as a stable
- *       id, alias, or objective name), and events/event.schema.json's
+ *   (c) events/events.json covers every ExecutionEventName value (as a stable
+ *       id, alias, or objective name), and events/events.json's
  *       event_type enum matches the catalog's stable ids;
  *   (d) every endpoint listed in the header comment of
  *       apps/web/src/features/executor/client.ts is documented in the OpenAPI
@@ -33,8 +33,8 @@ const TYPES_TS = [
   'apps/web/src/lib/executor-request-defs.ts',
 ].map((p) => path.join(repoRoot, p));
 const OPENAPI_YAML = path.join(repoRoot, 'contracts/openapi/fudcourt.yaml');
-const CATALOG_JSON = path.join(repoRoot, 'contracts/events/catalog.json');
-const EVENT_SCHEMA_JSON = path.join(repoRoot, 'contracts/events/event.schema.json');
+const CATALOG_JSON = path.join(repoRoot, 'contracts/events/events.json');
+const EVENT_SCHEMA_JSON = path.join(repoRoot, 'contracts/events/events.json');
 const CLIENT_TS = path.join(repoRoot, 'apps/web/src/features/executor/client.ts');
 const APP_DIR = path.join(repoRoot, 'apps/web/src/app');
 
@@ -194,7 +194,7 @@ for (const name of eventNames) {
     failures.push(`events catalog: ExecutionEventName '${name}' is not mapped (id, alias or objective name)`);
   }
 }
-const schemaEnum = eventSchema?.allOf?.[1]?.properties?.event_type?.enum ?? [];
+const schemaEnum = eventSchema?.$defs?.Event?.allOf?.[1]?.properties?.event_type?.enum ?? [];
 const schemaSet = new Set(schemaEnum);
 for (const id of catalogIds) {
   if (!schemaSet.has(id)) failures.push(`event.schema.json: event_type enum missing catalog id '${id}'`);

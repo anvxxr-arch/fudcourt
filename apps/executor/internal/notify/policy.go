@@ -44,7 +44,7 @@ var notifiable = map[execution.ExecutionEventName]string{
 // as a covered one.
 //
 // Closing a gap means a contract change to the append-only event vocabulary
-// (contracts/events/catalog.json is drift-gated), not a change here.
+// (contracts/events/events.json is drift-gated), not a change here.
 var Gaps = []string{
 	"credential invalid — no execution event; credential health is not an event (PRD §120)",
 	"exchange disconnected — no execution event; adapter connectivity is not an event (PRD §120)",
