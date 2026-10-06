@@ -246,7 +246,7 @@ export const ChartTooltip = forwardRef<HTMLDivElement, ChartTooltipProps>(functi
         ...style,
       }}
     >
-      <div style={{ fontFamily: 'var(--fc-font-sans)', fontSize: 'var(--fc-type-label-sm-size)', fontWeight: 600, color: cssVar('text-muted'), marginBottom: 'var(--fc-space-1)' }}>{title}</div>
+      <div style={{ fontFamily: 'var(--fc-font-sans)', fontSize: 'var(--fc-type-label-sm-size)', fontWeight: 'var(--fc-font-weight-semibold)', color: cssVar('text-muted'), marginBottom: 'var(--fc-space-1)' }}>{title}</div>
       {rows.map((r, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 'var(--fc-space-3)' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--fc-space-1)', fontFamily: 'var(--fc-font-sans)', fontSize: 'var(--fc-type-label-sm-size)', color: cssVar('text-secondary') }}>
@@ -354,7 +354,7 @@ export const ChartLabel = forwardRef<HTMLDivElement, ChartLabelProps>(function C
         transform: anchor === 'middle' ? 'translate(-50%, -50%)' : anchor === 'end' ? 'translate(-100%, -50%)' : 'translate(0, -50%)',
         fontFamily: 'var(--fc-font-sans)',
         fontSize: 'var(--fc-type-label-sm-size)',
-        fontWeight: 600,
+        fontWeight: 'var(--fc-font-weight-semibold)',
         color: cssVar('text-secondary'),
         whiteSpace: 'nowrap',
         pointerEvents: 'none',
@@ -456,7 +456,7 @@ export const ChartReferenceLine = forwardRef<HTMLDivElement, ChartReferenceLineP
             ...(orientation === 'horizontal' ? { left: 0, top: `calc(${at * 100}% - 14px)` } : { top: 0, left: `calc(${at * 100}% + 4px)` }),
             fontFamily: 'var(--fc-font-sans)',
             fontSize: 'var(--fc-type-label-sm-size)',
-            fontWeight: 600,
+            fontWeight: 'var(--fc-font-weight-semibold)',
             color: cssVar(color),
             whiteSpace: 'nowrap',
           }}

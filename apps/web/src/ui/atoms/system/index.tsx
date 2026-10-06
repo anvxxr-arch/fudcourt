@@ -244,8 +244,8 @@ export const HealthStatus = forwardRef<HTMLSpanElement, HealthStatusProps>(funct
       title={subject ? `${subject}: ${h.label.toLowerCase()}` : undefined}
     >
       <StatusDot state={h.dot} label={subject ? `${subject}: ${label ?? h.label}` : (label ?? h.label)} />
-      <span style={{ fontFamily: 'var(--fc-font-sans)', fontSize: 'var(--fc-type-label-sm-size)', fontWeight: 600, color: cssVar('text-secondary') }}>
-        {subject ? <span style={{ color: cssVar('text-muted'), fontWeight: 400 }}>{subject}: </span> : null}
+      <span style={{ fontFamily: 'var(--fc-font-sans)', fontSize: 'var(--fc-type-label-sm-size)', fontWeight: 'var(--fc-font-weight-semibold)', color: cssVar('text-secondary') }}>
+        {subject ? <span style={{ color: cssVar('text-muted'), fontWeight: 'var(--fc-font-weight-regular)' }}>{subject}: </span> : null}
         {label ?? h.label}
       </span>
     </span>

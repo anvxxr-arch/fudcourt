@@ -163,7 +163,7 @@ export const Tag = forwardRef<HTMLSpanElement, TagProps>(function Tag(
             background: 'transparent',
             color: 'inherit',
             cursor: 'pointer',
-            fontSize: 11,
+            fontSize: 'var(--fc-font-size-11)',
             lineHeight: 1,
           }}
         >

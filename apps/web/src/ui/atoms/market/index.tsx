@@ -88,7 +88,7 @@ export const AssetPair = forwardRef<HTMLSpanElement, AssetPairProps>(function As
     >
       <span style={{ fontFamily: 'var(--fc-font-mono)', fontSize: fs, fontWeight: 'var(--fc-type-label-md-weight)', color: cssVar('text-primary'), whiteSpace: 'nowrap' }}>
         {base}
-        <span style={{ color: cssVar('text-muted'), fontWeight: 400 }}>{' / '}</span>
+        <span style={{ color: cssVar('text-muted'), fontWeight: 'var(--fc-font-weight-regular)' }}>{' / '}</span>
         {quote}
       </span>
       {venue ? <Badge tone="neutral" size="sm">{venue}</Badge> : null}
@@ -171,7 +171,7 @@ export const Timeframe = forwardRef<HTMLSpanElement, TimeframeProps>(function Ti
         border: `1px solid ${cssVar('border-subtle')}`,
         fontFamily: 'var(--fc-font-mono)',
         fontSize: size === 'sm' ? 'var(--fc-type-data-xs-size)' : 'var(--fc-type-data-sm-size)',
-        fontWeight: 500,
+        fontWeight: 'var(--fc-font-weight-medium)',
         fontVariantNumeric: 'tabular-nums',
         color: cssVar('text-secondary'),
         ...style,

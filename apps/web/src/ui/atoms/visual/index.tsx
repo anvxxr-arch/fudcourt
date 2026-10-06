@@ -121,7 +121,7 @@ export const AssetIcon = forwardRef<HTMLSpanElement, AssetIconProps>(function As
         background: cssVar('surface-secondary'),
         border: `1px solid ${cssVar('border-subtle')}`,
         fontSize: Math.max(10, Math.round(size * 0.44)),
-        fontWeight: 600,
+        fontWeight: 'var(--fc-font-weight-semibold)',
         color: cssVar('text-secondary'),
         ...style,
       }}
@@ -175,7 +175,7 @@ export const ChainIcon = forwardRef<HTMLSpanElement, ChainIconProps>(function Ch
         background: cssVar('surface-secondary'),
         border: `1px solid ${cssVar('border-subtle')}`,
         fontSize: Math.max(9, Math.round(size * 0.46)),
-        fontWeight: 600,
+        fontWeight: 'var(--fc-font-weight-semibold)',
         color: cssVar('text-secondary'),
         ...style,
       }}
@@ -228,7 +228,7 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
         background: cssVar('surface-secondary'),
         border: `1px solid ${cssVar('border-subtle')}`,
         fontSize: Math.max(10, Math.round(size * 0.42)),
-        fontWeight: 600,
+        fontWeight: 'var(--fc-font-weight-semibold)',
         color: cssVar('text-secondary'),
         ...style,
       }}

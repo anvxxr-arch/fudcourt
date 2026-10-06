@@ -277,7 +277,7 @@ export const ColumnHeader = forwardRef<HTMLTableCellElement, ColumnHeaderProps>(
         width,
         fontFamily: isMono ? 'var(--fc-font-mono)' : 'var(--fc-font-sans)',
         fontSize: 'var(--fc-type-label-sm-size)',
-        fontWeight: 600,
+        fontWeight: 'var(--fc-font-weight-semibold)',
         color: cssVar('text-muted'),
         whiteSpace: 'nowrap',
         ...style,
