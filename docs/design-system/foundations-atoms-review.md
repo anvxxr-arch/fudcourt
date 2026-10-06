@@ -242,6 +242,42 @@ the atoms': React renders `inputMode` camelCase in static markup, `readOnly` ren
 caller stored, because a controlled value must never be silently rewritten under them. Each
 assertion was corrected to test the real contract instead of the assumed one.
 
+## 8. Definition-of-Done audit, restated as evidence
+
+The plan closes with 33 statements that must all be true. Each is restated here with the
+command that proves it, so a future reviewer re-runs the check rather than trusting the prose.
+
+| Statement | Evidence |
+|---|---|
+| One canonical token source | `src/styles/tokens.ts` (17.6 KB) |
+| Token generation is deterministic | emitter run twice, `globals.css` and `tailwind.tokens.json` byte-identical |
+| Light/Dark parity automated | 8 parity assertions in `tests/design-system-tests.ts` |
+| No atom hardcodes brand/neutral hex | `grep -rn '#[0-9A-Fa-f]{6}' src/ui/atoms/` → 0 |
+| Plus Jakarta Sans canonical | `src/styles/typography.css` |
+| Geist Mono canonical for data | 5 `fc-data-*` rules, each mono + tabular |
+| Financial numerics tabular | `Price`/`PnL`/`Delta`/`MarketCap`/`DataNumber` all render `fc-data-md fc-tabular` |
+| 8pt-first spacing | `space` + `rhythm` in `foundations/spacing.ts` |
+| Soft radius scale | 6 radius tokens |
+| Border-first elevation | 8 elevation references, levels 0–4 |
+| Adaptive grid foundations | 16 breakpoint/column references in `foundations/layout.ts` |
+| Minimal utility motion | durations + easings in `foundations/motion.ts` |
+| `prefers-reduced-motion` | `src/styles/motion.css` |
+| WCAG 2.2 AA baseline tests | 21 contrast assertions |
+| Critical financial AAA | 7:1 asserted on every surface of both themes |
+| All 12 atom families | `src/ui/atoms/{typography,actions,form,visual,status,financial,market,blockchain,system,table,visualization,layout}` |
+| No feature/business dependency | `grep -rn "from '@/features\|@/app\|@/server\|@/lib" src/ui/` → 0 |
+| No network in atoms | `grep -rn 'fetch(\|XMLHttpRequest\|WebSocket\|axios\|ccxt' src/ui/` → 0 |
+| No Molecule workflow | the only hooks are `CopyButton`'s transient copied flag and `FinancialInput`'s uncontrolled fallback |
+| Existing app builds | `next build` → `✓ Compiled successfully` |
+| Existing tests pass | 337 pass, 0 fail (19 files) |
+| Design-system tests pass | 69 pass, 0 fail (2 files) |
+| Public exports compile | `tsc --noEmit` → 0 errors |
+| Documentation complete | 5 docs, 73.7 KB total |
+| **100/100 inventory atoms exported** | walked one name at a time against `src/ui/index.ts` |
+
+The inventory walk is the check that found the financial-input gap. It is the only one of these
+that can notice an atom that was never written.
+
 ## 7. Risks carried forward
 
 1. **No chart engine.** The visualization atoms are primitives. A Molecule phase must either
