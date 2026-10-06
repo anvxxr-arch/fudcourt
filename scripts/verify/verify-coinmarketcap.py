@@ -61,7 +61,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from verifylib import (as_dict, as_list, check_counted as check, hget, info,
+from verifylib import (as_dict, as_list, check, hget, info,
                        skip)
 
 PASS = 0
@@ -164,12 +164,12 @@ def check_oracle(base: str) -> None:
             # object payload (global): the adapter must also carry no count.
             got = r["body"].get("upstreamCount", None)
             check(f"oracle:{mode}", got is None,
-                  f"object payload: adapter upstreamCount={got!r}, want absent")
+                  f"object payload: adapter upstreamCount={got!r}, want absent", counted=True)
             continue
         got = r["body"].get("upstreamCount")
         # A live market moves between the two calls; a small band is honest.
         ok = isinstance(got, int) and abs(got - want) <= max(2, want // 50)
-        check(f"oracle:{mode}", ok, f"adapter={got} direct={want}")
+        check(f"oracle:{mode}", ok, f"adapter={got} direct={want}", counted=True)
 
 
 def check_envelope(base: str) -> None:
@@ -182,42 +182,42 @@ def check_envelope(base: str) -> None:
             skip(f"envelope:{mode}", f"status={r['status']} body={r['raw'][:120]}")
             continue
         b = r["body"]
-        check(f"envelope:{mode}:kind", b.get("kind") == mode, f"kind={b.get('kind')!r}")
-        check(f"envelope:{mode}:auth", b.get("auth") == AUTH_NOTE, f"auth={b.get('auth')!r}")
+        check(f"envelope:{mode}:kind", b.get("kind") == mode, f"kind={b.get('kind')!r}", counted=True)
+        check(f"envelope:{mode}:auth", b.get("auth") == AUTH_NOTE, f"auth={b.get('auth')!r}", counted=True)
         check(f"envelope:{mode}:upstream-host",
               as_dict(b).get("upstream", "").startswith(UPSTREAM + "/"),
-              f"upstream={b.get('upstream')!r}")
-        check(f"envelope:{mode}:data-present", b.get("data") is not None, "data present")
+              f"upstream={b.get('upstream')!r}", counted=True)
+        check(f"envelope:{mode}:data-present", b.get("data") is not None, "data present", counted=True)
         check(f"envelope:{mode}:fetchedAt", isinstance(b.get("fetchedAt"), int),
-              f"fetchedAt={b.get('fetchedAt')!r}")
+              f"fetchedAt={b.get('fetchedAt')!r}", counted=True)
         check(f"envelope:{mode}:derived-verbatim", "verbatim" in as_dict(b).get("derived", ""),
-              f"derived={b.get('derived')!r}")
+              f"derived={b.get('derived')!r}", counted=True)
         # count presence rules
         array = MODE_SHAPE[mode][1]
         if array is None:
             check(f"envelope:{mode}:no-count", "upstreamCount" not in b,
-                  "object payload must carry no upstreamCount")
+                  "object payload must carry no upstreamCount", counted=True)
         else:
             check(f"envelope:{mode}:count", isinstance(b.get("upstreamCount"), int)
-                  and b["upstreamCount"] > 0, f"upstreamCount={b.get('upstreamCount')!r}")
+                  and b["upstreamCount"] > 0, f"upstreamCount={b.get('upstreamCount')!r}", counted=True)
         # pagination echo rules
         if mode in PAGINATED:
             check(f"envelope:{mode}:pagination-echo",
                   isinstance(b.get("start"), int) and isinstance(b.get("limit"), int),
-                  f"start={b.get('start')!r} limit={b.get('limit')!r}")
+                  f"start={b.get('start')!r} limit={b.get('limit')!r}", counted=True)
         else:
             check(f"envelope:{mode}:no-pagination",
                   "start" not in b and "limit" not in b,
-                  "global must not echo pagination")
+                  "global must not echo pagination", counted=True)
         # slug echo rule
         if mode == "marketPairs":
             check(f"envelope:{mode}:slug-echo", b.get("slug") == "bitcoin",
-                  f"slug={b.get('slug')!r}")
+                  f"slug={b.get('slug')!r}", counted=True)
         else:
-            check(f"envelope:{mode}:no-slug", "slug" not in b, "slug is marketPairs-only")
+            check(f"envelope:{mode}:no-slug", "slug" not in b, "slug is marketPairs-only", counted=True)
         # cache is header-only, never a body key
         check(f"envelope:{mode}:cache-header-only", "cache" not in b,
-              "cache must not be a body key")
+              "cache must not be a body key", counted=True)
 
 
 def check_local_400(base: str) -> None:
@@ -242,7 +242,7 @@ def check_local_400(base: str) -> None:
         r = api(base, qs)
         b = as_dict(r["body"])
         ok = r["status"] == 400 and b.get("error") == want_err
-        check(f"400:{label}", ok, f"status={r['status']} error={b.get('error')!r} want {want_err!r}")
+        check(f"400:{label}", ok, f"status={r['status']} error={b.get('error')!r} want {want_err!r}", counted=True)
 
 
 def check_upstream_502(base: str) -> None:
@@ -250,10 +250,10 @@ def check_upstream_502(base: str) -> None:
     print("\n== 4. upstream refusal -> 502 ==")
     r = api(base, "mode=marketPairs&slug=zzz-not-a-real-coin-xyz&limit=2")
     b = as_dict(r["body"])
-    check("502:bogus-slug-status", r["status"] == 502, f"status={r['status']}")
-    check("502:bogus-slug-error", b.get("error") == "upstream refused", f"error={b.get('error')!r}")
+    check("502:bogus-slug-status", r["status"] == 502, f"status={r['status']}", counted=True)
+    check("502:bogus-slug-error", b.get("error") == "upstream refused", f"error={b.get('error')!r}", counted=True)
     check("502:bogus-slug-code", b.get("code") not in (None, "", "0"),
-          f"upstream code={b.get('code')!r} (must carry upstream's own code)")
+          f"upstream code={b.get('code')!r} (must carry upstream's own code)", counted=True)
 
 
 def check_cache(base: str) -> None:
@@ -262,23 +262,23 @@ def check_cache(base: str) -> None:
     qs = "mode=exchanges&limit=7"
     r1 = api(base, qs)
     check("cache:cold-MISS", hget(r1["hdr"], "X-CMC-Cache") == "MISS",
-          f"X-CMC-Cache={hget(r1['hdr'], 'X-CMC-Cache')!r}")
+          f"X-CMC-Cache={hget(r1['hdr'], 'X-CMC-Cache')!r}", counted=True)
     r2 = api(base, qs)
     check("cache:warm-HIT", hget(r2["hdr"], "X-CMC-Cache") == "HIT",
-          f"X-CMC-Cache={hget(r2['hdr'], 'X-CMC-Cache')!r}")
+          f"X-CMC-Cache={hget(r2['hdr'], 'X-CMC-Cache')!r}", counted=True)
     r3 = api(base, qs + "&fresh=1")
     check("cache:fresh-MISS", hget(r3["hdr"], "X-CMC-Cache") == "MISS",
-          f"X-CMC-Cache={hget(r3['hdr'], 'X-CMC-Cache')!r}")
+          f"X-CMC-Cache={hget(r3['hdr'], 'X-CMC-Cache')!r}", counted=True)
     # header/body agreement
     if isinstance(r2["body"], dict):
         check("cache:header-body-agreement",
               hget(r2["hdr"], "X-CMC-Upstream") == r2["body"].get("upstream"),
-              "X-CMC-Upstream must equal body upstream")
+              "X-CMC-Upstream must equal body upstream", counted=True)
         check("cache:cache-control",
               (hget(r2["hdr"], "Cache-Control") or "").startswith("public, max-age="),
-              f"Cache-Control={hget(r2['hdr'], 'Cache-Control')!r}")
+              f"Cache-Control={hget(r2['hdr'], 'Cache-Control')!r}", counted=True)
         check("cache:limit-honored", r2["body"].get("limit") == 7,
-              f"body limit={r2['body'].get('limit')!r} (requested 7)")
+              f"body limit={r2['body'].get('limit')!r} (requested 7)", counted=True)
 
 
 def check_healthz(base: str) -> None:
@@ -291,13 +291,13 @@ def check_healthz(base: str) -> None:
         h = {}
     fams = h.get("families", h if isinstance(h, dict) else {})
     val = as_dict(fams).get("coinmarketcap", "")
-    check("healthz:family-present", bool(val), f"coinmarketcap={val!r}")
+    check("healthz:family-present", bool(val), f"coinmarketcap={val!r}", counted=True)
     check("healthz:keyless-no-credential", "keyless" in str(val) and "no credential" in str(val),
-          f"value={val!r}")
+          f"value={val!r}", counted=True)
     # the three keyless schemes must read differently
     check("healthz:scheme-distinct",
           "decryption" not in str(val) and "signature" not in str(val),
-          "coinmarketcap must not claim decryption (coinglass) or a signature (coinank)")
+          "coinmarketcap must not claim decryption (coinglass) or a signature (coinank)", counted=True)
 
 
 def check_method_guard(base: str) -> None:
@@ -310,7 +310,7 @@ def check_method_guard(base: str) -> None:
             st = r.status
     except urllib.error.HTTPError as e:
         st = e.code
-    check("405:POST", st == 405, f"POST -> {st}")
+    check("405:POST", st == 405, f"POST -> {st}", counted=True)
 
 
 def main() -> int:

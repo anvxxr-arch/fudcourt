@@ -43,7 +43,7 @@ CR_KEYS = {"BTC": "bitcoin", "ETH": "ethereum"}
 GATE_BAND = 0.03  # 3%: measured CR-vs-llama drift <= 1.33% (harness n=6)
 
 from functools import partial
-from verifylib import call_get as call, check_tuple as check, hdr, jload
+from verifylib import call_get as call, check, hdr, jload
 from verifylib import note_join, section
 from verifylib import GREEN, RED, DIM, RESET
 note = partial(note_join, maxlen=150)

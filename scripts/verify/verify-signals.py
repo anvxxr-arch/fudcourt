@@ -49,7 +49,7 @@ PAGE_REJECTED = {0: 400, 1: 400, -1: 400, 11: 404, 12: 404}
 # "not present", never be coerced to 0. Recorded as expected-null, not a count.
 SPARSE_METRICS = ("liq", "score", "holdersCount", "topHolderPct", "sightings", "price")
 
-from verifylib import as_dict_loud as as_dict, check_mark as check
+from verifylib import as_dict_loud as as_dict, check
 from verifylib import section_yellow as section
 from verifylib import GREEN, RED, DIM, RESET
 

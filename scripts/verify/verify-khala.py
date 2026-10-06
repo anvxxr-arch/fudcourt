@@ -83,7 +83,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from verifylib import (as_dict, as_list, as_str, check_counted as check, hget,
+from verifylib import (as_dict, as_list, as_str, check, hget,
                        info, note_msg as note, skip)
 
 PASS = 0
@@ -323,33 +323,33 @@ def main() -> int:
     sm = site_get("/sitemap.xml")
     ok_sm = check("oracle: sitemap.xml 200", sm["status"] == 200,
                   f"status {sm['status']} bytes {sm['bytes']}"
-                  + (f" [{sm['error']}]" if sm["error"] else ""))
+                  + (f" [{sm['error']}]" if sm["error"] else ""), counted=True)
     check("oracle: sitemap.xml content-type is XML",
           bool(sm["ctype"]) and "xml" in str(sm["ctype"]).lower(),
-          f"content-type {sm['ctype']}")
+          f"content-type {sm['ctype']}", counted=True)
     locs = [u.strip() for u in re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", sm["text"])]
     oracle_paths = [urllib.parse.urlparse(u).path or "/" for u in locs]
     oracle_slugs = [p.strip("/") for p in oracle_paths
                     if ("/" + p.strip("/")) not in STATIC_LOCS]
     check("oracle: sitemap has exactly 11 <loc> (3 static + 8 reports)",
-          len(locs) == 11, f"got {len(locs)}")
+          len(locs) == 11, f"got {len(locs)}", counted=True)
     check("oracle: sitemap static entries are exactly / /about /disclaimer",
           sorted(set(oracle_paths) & STATIC_LOCS) == ["/", "/about", "/disclaimer"],
-          f"got {sorted(set(oracle_paths) & STATIC_LOCS)}")
+          f"got {sorted(set(oracle_paths) & STATIC_LOCS)}", counted=True)
     check("oracle: sitemap report-slug count == 8", len(oracle_slugs) == 8,
-          f"got {len(oracle_slugs)}: {oracle_slugs}")
+          f"got {len(oracle_slugs)}: {oracle_slugs}", counted=True)
     longest = max(oracle_slugs, key=len) if oracle_slugs else EMPTY_STRING
     check("oracle: longest sitemap slug is the documented 94-char walrus slug",
           len(longest) == LONGEST_SLUG and longest == DOC_REPORTS[0][0],
-          f"longest={len(longest)} chars {longest[:60]}")
+          f"longest={len(longest)} chars {longest[:60]}", counted=True)
     check("oracle: every sitemap slug matches the documented set",
           set(oracle_slugs) == set(DOC_ORDER),
           f"only-oracle={sorted(set(oracle_slugs) - set(DOC_ORDER))} "
-          f"only-doc={sorted(set(DOC_ORDER) - set(oracle_slugs))}")
+          f"only-doc={sorted(set(DOC_ORDER) - set(oracle_slugs))}", counted=True)
 
     home = site_get("/")
     check("oracle: homepage 200", home["status"] == 200,
-          f"status {home['status']} bytes {home['bytes']}")
+          f"status {home['status']} bytes {home['bytes']}", counted=True)
     time.sleep(SITE_DELAY)
     oracle_order: list[str] = []
     for m in re.finditer(r'href="\./([a-z0-9][a-z0-9-]*)"', home["text"]):
@@ -367,7 +367,7 @@ def main() -> int:
         oracle_cards[s] = {"title": clean[0] if clean else EMPTY_STRING,
                            "summary": clean[1] if len(clean) > 1 else EMPTY_STRING}
     check("oracle: homepage order == documented newest-first order (8 cards)",
-          oracle_order == DOC_ORDER, f"got {oracle_order}")
+          oracle_order == DOC_ORDER, f"got {oracle_order}", counted=True)
 
     pages: dict[str, dict] = {}
     for s in oracle_slugs:
@@ -380,7 +380,7 @@ def main() -> int:
     check("oracle: all 8 report pages 200 (direct fetch)",
           all(pages[s]["http"] == 200 for s in oracle_slugs),
           str({s[:22]: pages[s]["http"] for s in oracle_slugs if pages[s]["http"] != 200}
-              or "all 200"))
+              or "all 200"), counted=True)
     date_ok, date_bad = [], []
     for slug, _t, literal, iso in DOC_REPORTS:
         f = pages[slug]["facts"]
@@ -391,23 +391,23 @@ def main() -> int:
             date_bad.append(f"{slug[:28]}: byline={by} want={literal!r}/{iso}")
     check("oracle: page bylines == RESULTS.md literals (and ISO derivable)",
           not date_bad, "; ".join(date_bad) if date_bad
-          else f"{len(date_ok)}/8 bylines match, ISO = Mon D, YYYY -> YYYY-MM-DD")
+          else f"{len(date_ok)}/8 bylines match, ISO = Mon D, YYYY -> YYYY-MM-DD", counted=True)
     kt_bad = [s[:28] for s in oracle_slugs
               if len(pages[s]["kt"]) < 40 and len(pages[s]["region"]) < 5000]
     check("oracle: every page carries a real key-takeaways prose body",
           not kt_bad, f"thin: {kt_bad}" if kt_bad
-          else "kt prose 623-3343 chars, article region 30k-68k chars")
+          else "kt prose 623-3343 chars, article region 30k-68k chars", counted=True)
     bad = site_get("/no-such-report-xyz")
     time.sleep(SITE_DELAY)
     check("oracle: upstream 404 for a bad slug is REAL (404 + Framer title)",
           bad["status"] == 404 and "<title>Page Not Found | Framer</title>"
           in bad["text"],
           f"status {bad['status']} bytes {bad['bytes']} "
-          f"title={'Page Not Found | Framer' if 'Page Not Found | Framer' in bad['text'] else 'ABSENT'}")
+          f"title={'Page Not Found | Framer' if 'Page Not Found | Framer' in bad['text'] else 'ABSENT'}", counted=True)
     check("oracle: no chrome sentinel is part of the article region on any report page",
           not sentinel_in_article(pages),
           sentinel_in_article(pages) or
-          "chrome blocks (TOC, newsletter, footer) all sit after the article on 8/8 pages")
+          "chrome blocks (TOC, newsletter, footer) all sit after the article on 8/8 pages", counted=True)
 
     # ============================================== 2. mode=reports
     note("adapter: mode=reports")
@@ -849,7 +849,7 @@ def main() -> int:
     # ------------------------------------------------------------- flush
     if endpoint_ok:
         for n, ok, d in _PENDING:
-            check(n, ok, d)
+            check(n, ok, d, counted=True)
     else:
         for n, _ok, _d in _PENDING:
             skip(n, endpoint_reason)

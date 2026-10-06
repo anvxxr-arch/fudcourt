@@ -39,7 +39,7 @@ TITLE_XML = re.compile(r"<title>(?:<!\[CDATA\[(.*?)\]\]>|(.*?))</title>", re.S)
 LINK_XML = re.compile(r"<link>(?:<!\[CDATA\[(.*?)\]\]>|(.*?))</link>", re.S)
 
 from functools import partial
-from verifylib import call_get as call, check_tuple as check, hdr, jload
+from verifylib import call_get as call, check, hdr, jload
 from verifylib import note_join, section
 from verifylib import GREEN, RED, DIM, RESET
 note = partial(note_join, maxlen=150)

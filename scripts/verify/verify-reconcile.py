@@ -41,7 +41,7 @@ import urllib.request
 
 DEFAULT_BASE = "http://127.0.0.1:3102"
 from functools import partial
-from verifylib import call_plain as call, check_tuple as check, jload
+from verifylib import call_plain as call, check, jload
 from verifylib import note_join
 from verifylib import GREEN, RED, DIM, RESET
 note = partial(note_join, maxlen=200)

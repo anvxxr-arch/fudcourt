@@ -64,7 +64,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from verifylib import (as_dict, as_list, as_str, check_counted as check, hget,
+from verifylib import (as_dict, as_list, as_str, check, hget,
                        info, skip)
 
 PASS = 0
@@ -227,12 +227,12 @@ def main() -> int:
     for m in MODES:
         n, det = oracle_rows(m)
         oracle[m] = n
-        check(f"oracle: {m} reachable and success:true ({det})", n is not None, det)
+        check(f"oracle: {m} reachable and success:true ({det})", n is not None, det, counted=True)
     # the signature itself: a wrong key answers success:false "system error!"
     sig_probe = upstream_get("/api/etf/etfInflow")
     check("oracle: the independently derived signature is ACCEPTED by upstream",
           as_dict(sig_probe["body"]).get("success") is True,
-          f"status={sig_probe['status']} success={as_dict(sig_probe['body']).get('success')!r}")
+          f"status={sig_probe['status']} success={as_dict(sig_probe['body']).get('success')!r}", counted=True)
     # the all-zero trap, proven live: 1h real, 8h zero
     o1 = upstream_get(UPSTREAM_PATH["liquidation"], "interval=1h")
     o8 = upstream_get(UPSTREAM_PATH["liquidation"], "interval=8h")
@@ -240,12 +240,12 @@ def main() -> int:
     tt8 = (as_list(as_dict(o8["body"]).get("data")) or [{}])[0]
     check("oracle: interval=1h returns REAL turnover (the allowlist is not pedantry)",
           isinstance(tt1, dict) and (tt1.get("totalTurnover") or 0) > 0,
-          f"totalTurnover={as_dict(tt1).get('totalTurnover')!r}")
+          f"totalTurnover={as_dict(tt1).get('totalTurnover')!r}", counted=True)
     check("oracle: interval=8h returns the ALL-ZERO table upstream answers for an unsupported value",
           isinstance(tt8, dict) and (tt8.get("totalTurnover") or 0) == 0
           and as_dict(o8["body"]).get("success") is True,
           f"totalTurnover={as_dict(tt8).get('totalTurnover')!r} success={as_dict(o8['body']).get('success')!r} "
-          f"(a pass-through route would render this as a confident zero table)")
+          f"(a pass-through route would render this as a confident zero table)", counted=True)
 
     # ============================================== 2. the 5 modes
     print("--- adapter: the 5 modes")
@@ -255,64 +255,64 @@ def main() -> int:
         r = api(base, qs)
         b = as_dict(r["body"])
         bodies[m] = {"r": r, "b": b}
-        check(f"{m}: HTTP 200", r["status"] == 200, f"got {r['status']} {r['raw'][:120]}")
+        check(f"{m}: HTTP 200", r["status"] == 200, f"got {r['status']} {r['raw'][:120]}", counted=True)
         if r["status"] != 200:
             continue
-        check(f"{m}: kind == {m!r}", b.get("kind") == m, f"{b.get('kind')!r}")
+        check(f"{m}: kind == {m!r}", b.get("kind") == m, f"{b.get('kind')!r}", counted=True)
         check(f"{m}: auth == the keyless-signature note", b.get("auth") == AUTH_NOTE,
-              f"{b.get('auth')!r}")
+              f"{b.get('auth')!r}", counted=True)
         check(f"{m}: upstream is on the KEYLESS host {UPSTREAM}",
               as_str(b.get("upstream")).startswith(UPSTREAM + "/api/"),
-              f"{b.get('upstream')!r}")
+              f"{b.get('upstream')!r}", counted=True)
         check(f"{m}: upstream path is the documented one",
               as_str(b.get("upstream")).startswith(UPSTREAM + UPSTREAM_PATH[m]),
-              f"{b.get('upstream')!r} vs {UPSTREAM + UPSTREAM_PATH[m]!r}")
+              f"{b.get('upstream')!r} vs {UPSTREAM + UPSTREAM_PATH[m]!r}", counted=True)
         check(f"{m}: X-CA-Upstream header == body upstream",
               hget(r["hdr"], "X-CA-Upstream") == b.get("upstream"),
-              f"header={hget(r['hdr'], 'X-CA-Upstream')!r} body={b.get('upstream')!r}")
+              f"header={hget(r['hdr'], 'X-CA-Upstream')!r} body={b.get('upstream')!r}", counted=True)
         check(f"{m}: X-CA-Cache header is MISS|HIT",
               hget(r["hdr"], "X-CA-Cache") in ("MISS", "HIT"),
-              f"{hget(r['hdr'], 'X-CA-Cache')!r}")
+              f"{hget(r['hdr'], 'X-CA-Cache')!r}", counted=True)
         check(f"{m}: Cache-Control == public, max-age=30",
               (hget(r["hdr"], "Cache-Control") or "").replace(" ", "") == "public,max-age=30",
-              f"{hget(r['hdr'], 'Cache-Control')!r}")
+              f"{hget(r['hdr'], 'Cache-Control')!r}", counted=True)
         check(f"{m}: fetchedAt is a plausible unix timestamp",
               isinstance(b.get("fetchedAt"), int) and b["fetchedAt"] > 1_600_000_000,
-              f"{b.get('fetchedAt')!r}")
+              f"{b.get('fetchedAt')!r}", counted=True)
 
         if m == OBJECT_MODE:
             check(f"{m}: upstreamCount key ABSENT on an object payload (never 0)",
-                  "upstreamCount" not in b, f"upstreamCount={b.get('upstreamCount')!r}")
+                  "upstreamCount" not in b, f"upstreamCount={b.get('upstreamCount')!r}", counted=True)
             check(f"{m}: interval key ABSENT (mode takes none)",
-                  "interval" not in b, f"interval={b.get('interval')!r}")
+                  "interval" not in b, f"interval={b.get('interval')!r}", counted=True)
             d = as_dict(b.get("data"))
             check(f"{m}: data is the upstream object with a non-empty `list`",
-                  bool(as_list(d.get("list"))), f"keys={sorted(d.keys())[:6]}")
+                  bool(as_list(d.get("list"))), f"keys={sorted(d.keys())[:6]}", counted=True)
             first = (as_list(d.get("list")) or [{}])[0]
             check(f"{m}: first list element carries 'address'",
                   isinstance(first, dict) and "address" in first,
-                  f"keys={sorted(as_dict(first).keys())[:8]}")
+                  f"keys={sorted(as_dict(first).keys())[:8]}", counted=True)
             check(f"{m}: derived says the payload is an object",
-                  "object" in as_str(b.get("derived")), f"{as_str(b.get('derived'))[:120]!r}")
+                  "object" in as_str(b.get("derived")), f"{as_str(b.get('derived'))[:120]!r}", counted=True)
         else:
             cnt = b.get("upstreamCount")
             check(f"{m}: upstreamCount is a positive int",
-                  isinstance(cnt, int) and cnt > 0, f"upstreamCount={cnt!r}")
+                  isinstance(cnt, int) and cnt > 0, f"upstreamCount={cnt!r}", counted=True)
             rows = as_list(b.get("data"))
             check(f"{m}: data is an array whose length == upstreamCount",
-                  bool(rows) and len(rows) == cnt, f"len(data)={len(rows)} upstreamCount={cnt}")
+                  bool(rows) and len(rows) == cnt, f"len(data)={len(rows)} upstreamCount={cnt}", counted=True)
             first = rows[0] if rows else {}
             check(f"{m}: first row carries {FIRST_KEY[m]!r}",
                   isinstance(first, dict) and FIRST_KEY[m] in first,
-                  f"keys={sorted(as_dict(first).keys())[:8]}")
+                  f"keys={sorted(as_dict(first).keys())[:8]}", counted=True)
             check(f"{m}: derived states the row count",
-                  str(cnt) in as_str(b.get("derived")), f"{as_str(b.get('derived'))[:120]!r}")
+                  str(cnt) in as_str(b.get("derived")), f"{as_str(b.get('derived'))[:120]!r}", counted=True)
 
     # liquidation echoes its effective interval
     lb = bodies["liquidation"]["b"]
     check("liquidation: interval echoed as '1h' and present in the upstream URL",
           lb.get("interval") == "1h" and "interval=1h" in as_str(lb.get("upstream")),
-          f"interval={lb.get('interval')!r} upstream={lb.get('upstream')!r}")
+          f"interval={lb.get('interval')!r} upstream={lb.get('upstream')!r}", counted=True)
 
     # ============================ 3. ADAPTER vs ORACLE (never self-confirming)
     print("--- adapter row counts vs the DIRECT oracle fetch")
@@ -328,7 +328,7 @@ def main() -> int:
         ok = isinstance(got, int) and isinstance(want, int) and (
             got == want or abs(got - want) <= max(2, int(0.02 * max(want, 1))))
         check(f"{m}: adapter count {got!r} ~= direct oracle count {want!r}", ok,
-              f"adapter={got!r} oracle={want!r}")
+              f"adapter={got!r} oracle={want!r}", counted=True)
 
     # ============================================== 4. interval allowlist
     print("--- adapter: interval allowlist")
@@ -340,20 +340,20 @@ def main() -> int:
               r["status"] == 200 and b.get("interval") == iv
               and isinstance(tt, dict) and (tt.get("totalTurnover") or 0) > 0,
               f"status={r['status']} echo={b.get('interval')!r} "
-              f"totalTurnover={as_dict(tt).get('totalTurnover')!r}")
+              f"totalTurnover={as_dict(tt).get('totalTurnover')!r}", counted=True)
     for iv in ZERO_TRAP:
         r = api(base, f"mode=liquidation&interval={urllib.parse.quote(iv)}")
         b = as_dict(r["body"])
         check(f"liquidation: interval={iv!r} -> 400 invalid param (the all-zero trap is refused)",
               r["status"] == 400 and b.get("error") == "invalid param",
-              f"got {r['status']} error={b.get('error')!r}")
+              f"got {r['status']} error={b.get('error')!r}", counted=True)
     d = as_str(as_dict(api(base, "mode=liquidation&interval=8h")["body"]).get("detail"))
     check("liquidation: the interval refusal names the accepted values and the reason",
-          all(x in d for x in ("1h", "1d", "all-zero")), f"detail={d[:200]!r}")
+          all(x in d for x in ("1h", "1d", "all-zero")), f"detail={d[:200]!r}", counted=True)
     r = api(base, "mode=liquidation")
     check("liquidation: an OMITTED interval defaults to an explicit 1h",
           r["status"] == 200 and as_dict(r["body"]).get("interval") == "1h",
-          f"status={r['status']} interval={as_dict(r['body']).get('interval')!r}")
+          f"status={r['status']} interval={as_dict(r['body']).get('interval')!r}", counted=True)
 
     # ============================================== 5. 400 / 405 matrix
     print("--- adapter: refusals")
@@ -372,11 +372,11 @@ def main() -> int:
         r = api(base, qs)
         b = as_dict(r["body"])
         check(f"400: {why} -> {want_err!r}", r["status"] == 400 and b.get("error") == want_err,
-              f"got {r['status']} error={b.get('error')!r}")
+              f"got {r['status']} error={b.get('error')!r}", counted=True)
     r = api(base, "mode=bogus")
     check("400: the unknown-mode body ships the whole mode table",
           len(as_list(as_dict(r["body"]).get("modes"))) == len(MODES),
-          f"modes={as_dict(r['body']).get('modes')!r}")
+          f"modes={as_dict(r['body']).get('modes')!r}", counted=True)
     try:
         req = urllib.request.Request(f"{base}/api/coinank?mode=etf", data=b"{}",
                                      headers={"User-Agent": UA}, method="POST")
@@ -386,21 +386,21 @@ def main() -> int:
         pst = e.code
     except Exception:  # noqa: BLE001
         pst = 0
-    check("405: POST is refused (the family is read-only)", pst == 405, f"got {pst}")
+    check("405: POST is refused (the family is read-only)", pst == 405, f"got {pst}", counted=True)
 
     # ============================================== 6. cache + healthz
     print("--- adapter: cache observability + healthz")
     fresh = api(base, "mode=etf&fresh=1")
     repeat = api(base, "mode=etf")
     check("cache: fresh=1 -> MISS", hget(fresh["hdr"], "X-CA-Cache") == "MISS",
-          f"{hget(fresh['hdr'], 'X-CA-Cache')!r}")
+          f"{hget(fresh['hdr'], 'X-CA-Cache')!r}", counted=True)
     check("cache: a repeat -> HIT", hget(repeat["hdr"], "X-CA-Cache") == "HIT",
-          f"{hget(repeat['hdr'], 'X-CA-Cache')!r}")
+          f"{hget(repeat['hdr'], 'X-CA-Cache')!r}", counted=True)
     # House style (coinglass sibling): cache is TRANSPORT state, header-only.
     # A body `cache` key would be a second, disagreeing spelling.
     check("cache: body carries NO `cache` key (header-only, like coinglass)",
           "cache" not in as_dict(repeat["body"]),
-          f"body cache={as_dict(repeat['body']).get('cache')!r}")
+          f"body cache={as_dict(repeat['body']).get('cache')!r}", counted=True)
 
     try:
         st, raw, _ = _open(f"{base}/healthz", 30.0, {"User-Agent": UA})
@@ -409,12 +409,12 @@ def main() -> int:
         hz = {}
         info("healthz", f"unreadable: {type(e).__name__}: {e}")
     got = as_str(hz.get("coinank"))
-    check("healthz: names the coinank family", bool(got), f"coinank={got!r}")
-    check("healthz: labels it keyless", "keyless" in got, f"coinank={got!r}")
+    check("healthz: names the coinank family", bool(got), f"coinank={got!r}", counted=True)
+    check("healthz: labels it keyless", "keyless" in got, f"coinank={got!r}", counted=True)
     check("healthz: distinguishes the scheme from coinglass's decryption",
-          "client signature" in got, f"coinank={got!r}")
+          "client signature" in got, f"coinank={got!r}", counted=True)
     check("healthz: the cryptorank `build` key is untouched",
-          "modes" in as_str(hz.get("build")), f"build={hz.get('build')!r}")
+          "modes" in as_str(hz.get("build")), f"build={hz.get('build')!r}", counted=True)
 
     # ============================================== 7. upstream refusal path
     print("--- adapter: an upstream refusal is a 502, never an empty 200")
@@ -429,7 +429,7 @@ def main() -> int:
         if r["status"] == 200 and as_dict(r["body"]).get("data") is None:
             null_bad.append(m)
     check("no wired mode ever answers 200 with data:null (a refusal must be a 502)",
-          not null_bad, f"offenders={null_bad}" if null_bad else "5/5 modes carry real data")
+          not null_bad, f"offenders={null_bad}" if null_bad else "5/5 modes carry real data", counted=True)
 
     # ------------------------------------------------------------- flush
     dur = round(time.time() - started, 1)

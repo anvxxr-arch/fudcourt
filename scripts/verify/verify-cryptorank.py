@@ -53,9 +53,9 @@ from difflib import SequenceMatcher
 import requests
 from functools import partial
 
-from verifylib import check_counted, info, note_msg as note
+from verifylib import check as _check, info, note_msg as note
 
-check = partial(check_counted, coerce_bool=False)
+check = partial(_check, counted=True, coerce_bool=False)
 
 PASS = 0
 FAIL = 0
