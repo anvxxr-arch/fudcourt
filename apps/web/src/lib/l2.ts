@@ -4,8 +4,9 @@
  * Split out of `server/cache.ts` so a feature module (the ticker sweep cache)
  * can reach the L2 without depending on `server/` — the structure gate forbids
  * features -> server, and `lib/` is the shared-infra layer both may import.
- * `server/cache.ts` re-exports these two so its existing importers are
- * unchanged.
+ * This module is now the ONLY copy: `server/cache.ts` held a second, identical
+ * implementation (and a second Valkey connection pool) with zero importers, and
+ * was deleted 2026-10-06 rather than left as a trap for the next caller.
  *
  * Fail-open by construction: a miss, a connection error, or unparseable JSON
  * all resolve to null / no-op. The caller then does the work it would have

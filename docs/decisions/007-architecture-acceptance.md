@@ -206,6 +206,56 @@ delete the gate's subject, not reduce the documentation.
 so Go's visibility rule still keeps every app's private packages private.
 Zero cross-app imports, re-measured at acceptance.
 
+### 13. Duplicate-concept sweep (Phase 15 Check 4, re-run 2026-10-06)
+
+Re-run as part of the acceptance audit rather than trusted from the
+Phase 15 pass. Method: hash every exported function body across
+`apps/web/src` and compare same-named definitions, then read each hit.
+
+**Two real duplicates found and removed:**
+
+| Duplicate | Resolution |
+|---|---|
+| `l2GetJson`/`l2SetJson` in `src/server/cache.ts` | the file was a byte-identical second copy of `src/lib/l2.ts` — including its own Valkey connection pool — with **zero importers**. `lib/l2.ts`'s header claimed "`server/cache.ts` re-exports these two", which was never true: it held a full copy and re-exported nothing. Deleted; `lib/l2.ts` is the only copy. |
+| `isSafeNext` in `src/server/auth.ts` | a byte-identical second spelling of the open-redirect guard, exported and called by **nothing**. A security predicate is the worst thing to leave duplicated, because the copy that drifts is the one that gets exploited. Deleted and replaced with `export { isSafeNext } from '@/lib/safe-next'` so the module's import surface is unchanged. |
+
+**Checked and deliberately NOT merged** — each pair is behaviorally
+different, so unifying them would change rendered output or add dead
+code, which the zero-behavior-change constraint forbids:
+
+- `lib/format.ts` vs `features/trade/client-format.ts` vs
+  `features/home/client-*.ts` vs `features/executor/shapers.ts` — same
+  names, different precision bands. `fmtPrice` is `>=1→2, >=0.01→4,
+  else 8` in `lib/` but `>=1000→2, >=1→2, >=0.01→4, >=0.0001→6, else 8`
+  in trade, and the home version adds a `$` prefix and
+  `toPrecision(4)` below a cent. `formatUsd` (compact `$1.24M`) has no
+  counterpart in `lib/`.
+- `errorMessage` in `features/trade/client-fetch-transport.ts` vs
+  `features/executor/client.ts` — the trade version must translate
+  `TimeoutError`/`AbortError` because its own `bounded()` transport
+  produces them; the executor fetches through `lib/fetch.ts`, which has
+  no timeout, so that branch would be dead code there.
+- `RiskProfile` in `executor/internal/api/wire.go` vs
+  `executor/internal/execution/records.go` — the frozen wire contract
+  (all-`string`) and the domain model (typed `MarginMode` /
+  `ExecutionUrgency`), joined by two explicit converters
+  (`toWireProfile` / `profileFromWire`) in `api/convert.go`. The
+  canonical owner is unambiguous.
+- `http.Client{...}` at nine sites — per-purpose timeouts (4s probe,
+  10s Telegram, 15s Discord, 30s Telegram client), not copies.
+- One `Exchange` interface (`executor/internal/exchanges/interface.go`),
+  one `Instrument` (`exchanges/market.go`), one `PriceDefinition`
+  (`execution/enums.go`).
+- Three `.sql` files: `db/schema/{pg,executor}-schema.sql` are the
+  canonical owners; `apps/executor/internal/repository/schema/
+  executor-schema.sql` is the `go:embed` copy that cannot be removed
+  (`go:embed` refuses parent-directory patterns) and is byte-pinned by
+  `TestEmbeddedSchemaMatchesTracked`.
+
+The remaining same-named exports are framework-required (`GET`, `POST`,
+`DELETE`, `generateMetadata` per route) or unrelated functions that
+happen to share a name.
+
 ## Deviations, recorded
 
 | Plan target | Outcome | Record |
