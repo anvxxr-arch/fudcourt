@@ -53,7 +53,7 @@ func (s *Server) getSettings(w http.ResponseWriter, r *http.Request, userID stri
 	if profile.DefaultRiskMode == "" {
 		profile = planner.DefaultRiskProfile
 	}
-	writeJSON(w, http.StatusOK, SettingsResponse{Profile: toWireProfile(profile)})
+	WriteJSON(w, http.StatusOK, SettingsResponse{Profile: toWireProfile(profile)})
 }
 
 // putSettings validates a partial update, merges it over the defaults (exactly
@@ -128,7 +128,7 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request, userID stri
 		writeDetail(w, http.StatusInternalServerError, "internal", "internal error")
 		return
 	}
-	writeJSON(w, http.StatusOK, SettingsResponse{Profile: toWireProfile(stored)})
+	WriteJSON(w, http.StatusOK, SettingsResponse{Profile: toWireProfile(stored)})
 }
 
 // isPositiveNumber reports whether a decimal string parses and is > 0.

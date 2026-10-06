@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/api"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/lock"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/repository"
 )
@@ -67,7 +67,7 @@ func (h *healthServer) handler(owner string, probeTimeout time.Duration) http.Ha
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]string{"service": "executor", "owner": owner})
+		api.WriteJSON(w, http.StatusOK, map[string]string{"service": "executor", "owner": owner})
 	})
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -79,7 +79,7 @@ func (h *healthServer) handler(owner string, probeTimeout time.Duration) http.Ha
 		if !st.Ready {
 			code = http.StatusServiceUnavailable
 		}
-		writeJSON(w, code, st)
+		api.WriteJSON(w, code, st)
 	})
 	return mux
 }
@@ -143,14 +143,6 @@ const (
 
 // isOK reports whether a dependency label means usable.
 func isOK(label string) bool { return label == ok }
-
-// writeJSON encodes v as the response body. Encoding cannot fail for these
-// value types, and a health endpoint must not be able to hang on its writer.
-func writeJSON(w http.ResponseWriter, code int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(v)
-}
 
 // parseProbeTimeout reads the /readyz bound from env. Absent selects the
 // default; unparseable or non-positive values are a startup failure (never a

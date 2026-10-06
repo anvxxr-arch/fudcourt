@@ -21,10 +21,15 @@ import type { RedisClient } from 'bun';
  * looked up at call time; the type comes from the erased type-only import.
  */
 type BunWithRedis = { RedisClient?: new (url: string) => RedisClient };
-function bunGlobal(): BunWithRedis | undefined {
-  const candidate: unknown = (globalThis as { Bun?: unknown }).Bun;
-  if (typeof candidate !== 'object' || candidate === null) return undefined;
-  return candidate as BunWithRedis;
+// Bun's own type declarations describe a richer global than the one member
+// this module reads, and the two runtimes (bun --bun, Next's Node worker)
+// disagree about whether `Bun` is declared at all — so the shape is asserted
+// once, into a named const, rather than inline at the point of use.
+const bunGlobal: unknown = (globalThis as { Bun?: unknown }).Bun;
+function redisCtor(): (new (url: string) => RedisClient) | undefined {
+  if (typeof bunGlobal !== 'object' || bunGlobal === null) return undefined;
+  const ctor = (bunGlobal as BunWithRedis).RedisClient;
+  return typeof ctor === 'function' ? ctor : undefined;
 }
 const URL = process.env.FUDCOURT_VALKEY_URL || '';
 let client: RedisClient | null = null;
@@ -32,7 +37,7 @@ let disabled = false;
 function conn(): RedisClient | null {
   if (disabled || !URL) return null;
   if (!client) {
-    const RedisCtor = bunGlobal()?.RedisClient;
+    const RedisCtor = redisCtor();
     if (!RedisCtor) {
       disabled = true;
       return null;

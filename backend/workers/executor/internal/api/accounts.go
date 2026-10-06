@@ -46,7 +46,7 @@ func (s *Server) listAccounts(w http.ResponseWriter, r *http.Request, userID str
 	for _, rec := range records {
 		accounts = append(accounts, toWireCredential(rec))
 	}
-	writeJSON(w, http.StatusOK, ListAccountsResponse{Accounts: accounts})
+	WriteJSON(w, http.StatusOK, ListAccountsResponse{Accounts: accounts})
 }
 
 // connectAccount ports connectAccount in runtime.ts: validate the body, probe
@@ -145,7 +145,7 @@ func (s *Server) connectAccount(w http.ResponseWriter, r *http.Request, userID s
 		"exchange": string(exchange), "label": label, "health": string(metadata.Health),
 	})
 	masked := created.APIKeyMasked
-	writeJSON(w, http.StatusOK, AccountResponse{
+	WriteJSON(w, http.StatusOK, AccountResponse{
 		Account:  toWireCredential(created),
 		Metadata: toWireMetadata(metadata, &masked, label),
 	})
@@ -199,7 +199,7 @@ func (s *Server) getAccount(w http.ResponseWriter, r *http.Request, userID, id s
 		notFound(w, "account")
 		return
 	}
-	writeJSON(w, http.StatusOK, AccountEnvelope{Account: toWireCredential(*rec)})
+	WriteJSON(w, http.StatusOK, AccountEnvelope{Account: toWireCredential(*rec)})
 }
 
 // deleteAccount revokes the credential and answers `{ ok: true }`. A missing or
@@ -225,7 +225,7 @@ func (s *Server) deleteAccount(w http.ResponseWriter, r *http.Request, userID, i
 		return
 	}
 	s.audit(r.Context(), userID, "credential_revoked", &id, map[string]any{"exchange": string(existing.Exchange)})
-	writeJSON(w, http.StatusOK, DeleteAccountResponse{OK: true})
+	WriteJSON(w, http.StatusOK, DeleteAccountResponse{OK: true})
 }
 
 // testAccount ports testAccount in runtime.ts: re-probe the sealed credential
@@ -272,7 +272,7 @@ func (s *Server) testAccount(w http.ResponseWriter, r *http.Request, userID, id 
 		fresh = rec
 	}
 	masked := fresh.APIKeyMasked
-	writeJSON(w, http.StatusOK, AccountResponse{
+	WriteJSON(w, http.StatusOK, AccountResponse{
 		Account:  toWireCredential(*fresh),
 		Metadata: toWireMetadata(metadata, &masked, fresh.Label),
 	})

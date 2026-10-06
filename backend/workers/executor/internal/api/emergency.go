@@ -45,7 +45,7 @@ func (s *Server) handleEmergency(w http.ResponseWriter, r *http.Request) {
 	s.audit(r.Context(), userID, "emergency_stop", target, map[string]any{
 		"stopped": result.Stopped, "cancelledOrders": result.CancelledOrders,
 	})
-	writeJSON(w, http.StatusOK, result)
+	WriteJSON(w, http.StatusOK, result)
 }
 
 // emergencyStop is emergencyStop in worker.ts: stop the caller's managed

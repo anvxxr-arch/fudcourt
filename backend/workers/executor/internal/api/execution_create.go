@@ -57,7 +57,7 @@ func (s *Server) handlePreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = s.store.TouchCredential(r.Context(), userID, req.AccountID, s.now())
-	writeJSON(w, http.StatusOK, PreviewResponse{
+	WriteJSON(w, http.StatusOK, PreviewResponse{
 		Preview:     mustJSON(planningPreviewValue(outcome, ctx, req, "preview")),
 		LiveEnabled: s.live,
 	})
@@ -110,7 +110,7 @@ func (s *Server) createExecution(w http.ResponseWriter, r *http.Request, userID 
 		return
 	}
 	if len(outcome.Conflicts) > 0 {
-		writeJSON(w, http.StatusConflict, PlanConflictError{
+		WriteJSON(w, http.StatusConflict, PlanConflictError{
 			Error:     "conflict",
 			Conflicts: mustJSON(outcome.Conflicts),
 			Preview:   mustJSON(planningPreviewValue(outcome, planCtx, req, mode)),
@@ -170,7 +170,7 @@ func (s *Server) createExecution(w http.ResponseWriter, r *http.Request, userID 
 	s.audit(r.Context(), userID, "execution_created", &rec.ID, map[string]any{
 		"symbol": req.Symbol, "mode": string(mode), "strategy": string(rec.ExecutionStrategy),
 	})
-	writeJSON(w, http.StatusOK, CreateExecutionResponse{
+	WriteJSON(w, http.StatusOK, CreateExecutionResponse{
 		Execution: toWireExecution(rec),
 		Plan:      planJSON,
 	})
@@ -360,7 +360,7 @@ type refusal struct {
 	body   any
 }
 
-func (r refusal) write(w http.ResponseWriter) { writeJSON(w, r.status, r.body) }
+func (r refusal) write(w http.ResponseWriter) { WriteJSON(w, r.status, r.body) }
 
 func refusalBasic(status int, errToken string) refusal {
 	return refusal{status: status, body: ErrorBasic{Error: errToken}}

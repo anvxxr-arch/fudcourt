@@ -48,7 +48,7 @@ func (s *Server) listExecutions(w http.ResponseWriter, r *http.Request, userID s
 	for _, rec := range records {
 		out = append(out, toWireExecution(rec))
 	}
-	writeJSON(w, http.StatusOK, ListExecutionsResponse{Executions: out})
+	WriteJSON(w, http.StatusOK, ListExecutionsResponse{Executions: out})
 }
 
 // handleExecutionByID ports /api/executor/executions/{id} and its sub-routes
@@ -117,7 +117,7 @@ func (s *Server) getExecution(w http.ResponseWriter, r *http.Request, userID, id
 		writeDetail(w, http.StatusInternalServerError, "internal", "internal error")
 		return
 	}
-	writeJSON(w, http.StatusOK, ExecutionDetailResponse{Execution: toWireExecution(*rec), Plan: plan})
+	WriteJSON(w, http.StatusOK, ExecutionDetailResponse{Execution: toWireExecution(*rec), Plan: plan})
 }
 
 // listChildOrders is `{ childOrders }`.
@@ -140,7 +140,7 @@ func (s *Server) listChildOrders(w http.ResponseWriter, r *http.Request, userID,
 	for _, c := range children {
 		out = append(out, toWireChild(c))
 	}
-	writeJSON(w, http.StatusOK, ListOrdersResponse{ChildOrders: out})
+	WriteJSON(w, http.StatusOK, ListOrdersResponse{ChildOrders: out})
 }
 
 // listFills is `{ fills }` (deduped by the store/venue).
@@ -163,7 +163,7 @@ func (s *Server) listFills(w http.ResponseWriter, r *http.Request, userID, id st
 	for _, f := range fills {
 		out = append(out, toWireFill(f))
 	}
-	writeJSON(w, http.StatusOK, ListFillsResponse{Fills: out})
+	WriteJSON(w, http.StatusOK, ListFillsResponse{Fills: out})
 }
 
 // listEvents is `{ events }` (the append-only log, oldest first).
@@ -190,7 +190,7 @@ func (s *Server) listEvents(w http.ResponseWriter, r *http.Request, userID, id s
 		}
 		out = append(out, ExecutionEventRecord{ID: e.ID, ExecutionID: e.ExecutionID, Name: e.Name, Payload: payload, CreatedAt: e.CreatedAt})
 	}
-	writeJSON(w, http.StatusOK, ListEventsResponse{Events: out})
+	WriteJSON(w, http.StatusOK, ListEventsResponse{Events: out})
 }
 
 // lifecycle ports the start/pause/resume/cancel lifecycle intents (runtime.ts
@@ -241,7 +241,7 @@ func (s *Server) lifecycle(w http.ResponseWriter, r *http.Request, userID, id, o
 		updated.Status = to
 		fresh = &updated
 	}
-	writeJSON(w, http.StatusOK, LifecycleResponse{Execution: toWireExecution(*fresh)})
+	WriteJSON(w, http.StatusOK, LifecycleResponse{Execution: toWireExecution(*fresh)})
 }
 
 // targetStatus is the op → target-status map from runtime.ts lifecycle

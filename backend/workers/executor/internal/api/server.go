@@ -150,7 +150,7 @@ func recoverMiddleware(next http.Handler) http.Handler {
 					"panic", rec,
 					"stack", string(debug.Stack()),
 				)
-				writeJSON(w, http.StatusInternalServerError, ErrorEnvelope{
+				WriteJSON(w, http.StatusInternalServerError, ErrorEnvelope{
 					Error: ErrorEnvelopeBody{
 						Code:    "internal",
 						Message: "internal error",
@@ -197,8 +197,10 @@ func readCookie(r *http.Request, name string) string {
 
 // --- response helpers ------------------------------------------------------
 
-// writeJSON emits v with JSON.stringify-compatible framing.
-func writeJSON(w http.ResponseWriter, code int, v any) {
+// WriteJSON emits v with JSON.stringify-compatible framing. Exported so the
+// composition root's health endpoints share one encoder rather than keeping a
+// second copy of these five lines.
+func WriteJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	enc := json.NewEncoder(w)
@@ -209,14 +211,14 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 // notFound answers `{ error: '<what> not found' }` with 404 — the TS refusal
 // for a wrong-owner or missing row (existence is never leaked as 403).
 func notFound(w http.ResponseWriter, what string) {
-	writeJSON(w, http.StatusNotFound, ErrorBasic{Error: what + " not found"})
+	WriteJSON(w, http.StatusNotFound, ErrorBasic{Error: what + " not found"})
 }
 
 // invalidJSON answers the bare `{ error: 'invalid JSON body' }` 400 — the exact
 // body every TS route handler returns from its req.json() catch block (no
 // `detail` key: the TS literal carries none).
 func invalidJSON(w http.ResponseWriter) {
-	writeJSON(w, http.StatusBadRequest, ErrorBasic{Error: "invalid JSON body"})
+	WriteJSON(w, http.StatusBadRequest, ErrorBasic{Error: "invalid JSON body"})
 }
 
 // validationError answers `{ error: 'validation', errors }` with 400.
@@ -224,17 +226,17 @@ func validationError(w http.ResponseWriter, errs []string) {
 	if errs == nil {
 		errs = []string{}
 	}
-	writeJSON(w, http.StatusBadRequest, ValidationError{Error: "validation", Errors: errs})
+	WriteJSON(w, http.StatusBadRequest, ValidationError{Error: "validation", Errors: errs})
 }
 
 // writeDetail answers `{ error, detail }` at the given status.
 func writeDetail(w http.ResponseWriter, status int, errToken, detail string) {
-	writeJSON(w, status, ErrorDetail{Error: errToken, Detail: detail})
+	WriteJSON(w, status, ErrorDetail{Error: errToken, Detail: detail})
 }
 
 // writeCategorized answers `{ error, detail, category }` at the given status.
 func writeCategorized(w http.ResponseWriter, status int, errToken, detail string, category execution.ErrorCategory) {
-	writeJSON(w, status, CategorizedError{Error: errToken, Detail: detail, Category: category})
+	WriteJSON(w, status, CategorizedError{Error: errToken, Detail: detail, Category: category})
 }
 
 // methodGuard answers the methods a handler exported and 405s the rest, with an
