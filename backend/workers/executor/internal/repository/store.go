@@ -58,6 +58,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/core/execution"
@@ -65,10 +66,46 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// EventObserver is notified after an event row is durably appended. It is
+// called with the STORED record (id assigned), on the appending goroutine, so
+// an implementation must return promptly — an outbound notification belongs on
+// its own goroutine (see internal/notify.Observer).
+//
+// The observer is a courtesy, never a dependency: it cannot fail an append and
+// is never consulted for the row's content. The durable write is the truth.
+type EventObserver func(execution.ExecutionEventRecord)
+
 // Store is a Postgres-backed worker.Store. One Store owns one connection
 // pool; create one per worker process and Close it when the process exits.
 type Store struct {
 	pool *pgxpool.Pool
+
+	// observerMu guards observer: SetEventObserver is documented as a
+	// startup-time call, but the worker, the API surface and the health probe
+	// share this Store, so the read is guarded rather than assumed race-free.
+	observerMu sync.RWMutex
+	observer   EventObserver
+}
+
+// SetEventObserver installs the append-event observer (nil clears it). Call it
+// once during composition, before the worker loop and the HTTP surfaces start.
+func (s *Store) SetEventObserver(fn EventObserver) {
+	s.observerMu.Lock()
+	s.observer = fn
+	s.observerMu.Unlock()
+}
+
+// notifyEvent hands one stored event to the observer, if any. It is called
+// after the INSERT has returned, so an observer panic would still lose nothing
+// durable — but a panic would take the appending goroutine down with it, so the
+// callback is invoked inline and is expected to be non-blocking.
+func (s *Store) notifyEvent(ev execution.ExecutionEventRecord) {
+	s.observerMu.RLock()
+	fn := s.observer
+	s.observerMu.RUnlock()
+	if fn != nil {
+		fn(ev)
+	}
 }
 
 // The Store must satisfy the worker persistence contract at compile time.
@@ -770,5 +807,9 @@ func (s *Store) appendEvent(ctx context.Context, ev execution.ExecutionEventReco
 		return execution.ExecutionEventRecord{}, fmt.Errorf("repository: append event: %w", err)
 	}
 	ev.ID = EventID(ev.ExecutionID, seq)
+	// The INSERT has returned, so the row is durable: only now is the observer
+	// consulted. An observer therefore can never see an event that was not
+	// stored, and its failure can never roll one back.
+	s.notifyEvent(ev)
 	return ev, nil
 }

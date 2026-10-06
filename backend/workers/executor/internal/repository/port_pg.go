@@ -270,7 +270,7 @@ func (s *Store) CreateExecution(ctx context.Context, rec execution.ExecutionReco
 		return execution.ExecutionRecord{}, fmt.Errorf("repository: create execution plan: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `INSERT INTO executor.execution_events (execution_id, name, payload, created_at)
-		VALUES ($1, 'EXECUTION_CREATED', '{}'::jsonb, $3), ($1, 'PLAN_CREATED', '{}'::jsonb, $3)`, created.ID, at); err != nil {
+		VALUES ($1, 'EXECUTION_CREATED', '{}'::jsonb, $2), ($1, 'PLAN_CREATED', '{}'::jsonb, $2)`, created.ID, at); err != nil {
 		return execution.ExecutionRecord{}, fmt.Errorf("repository: create execution events: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {

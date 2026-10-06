@@ -47,6 +47,7 @@ import (
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchanges/bybit"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchanges/mexc"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/exchanges/paper"
+	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/notify"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/credentials"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/lock"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/repository"
@@ -300,6 +301,24 @@ func main() {
 		os.Exit(1)
 	}
 	slog.Info("executor: schema bootstrap complete", "source", repository.SchemaSQLPath)
+
+	// Notification channel (PRD §120). Deliberately NOT fail-closed, the one
+	// exception to objective §40 in this process: a missing channel is a
+	// DISABLED channel, never a refused start. Trading must not depend on a
+	// chat bot, and the observer it installs cannot fail or delay an append
+	// (see internal/notify.Observer). A channel that is configured but broken
+	// is not silent — every failed delivery is logged as a warning.
+	if tg, on, err := notify.FromEnv(os.Getenv); err != nil {
+		slog.Warn("executor: notification channel ignored (incomplete config)",
+			"error", err, "need", notify.EnvBotToken+" and "+notify.EnvChatID)
+	} else if on {
+		store.SetEventObserver(notify.Observer(tg, slog.Default(), 0))
+		slog.Info("executor: notification channel enabled",
+			"channel", "telegram", "chat_id", tg.ChatID(), "events", len(notify.NotifiableEvents()))
+	} else {
+		slog.Info("executor: notification channel disabled",
+			"reason", notify.EnvBotToken+" / "+notify.EnvChatID+" not set")
+	}
 
 	var lease lock.ExecutionLock
 	if cfg.valkeyAddr != "" {
