@@ -50,6 +50,9 @@ export async function readSweepL2(): Promise<{ at: number; rows: TickerRow[] } |
   return v?.rows?.length ? v : null;
 }
 
+/** Single-flight gate: concurrent cold/stale sweep callers share one sweep. */
+let sweepInFlight: Promise<TickerRow[]> | null = null;
+
 /**
  * Run one sweep and record it in memory and in the L2.
  *
@@ -58,11 +61,22 @@ export async function readSweepL2(): Promise<{ at: number; rows: TickerRow[] } |
  * every post-restart request pay the full sweep.
  */
 export async function runSweep(run: () => Promise<TickerRow[]>): Promise<TickerRow[]> {
-  const rows = await run();
-  if (!rows.length) return rows;
-  sweepCache = { at: Date.now(), rows };
-  await l2SetJson(SWEEP_KEY, sweepCache, SWEEP_STALE_MS).catch(() => {});
-  return rows;
+  if (sweepInFlight) return sweepInFlight;
+  const task = (async (): Promise<TickerRow[]> => {
+    const rows = await run();
+    if (!rows.length) return rows;
+    sweepCache = { at: Date.now(), rows };
+    await l2SetJson(SWEEP_KEY, sweepCache, SWEEP_STALE_MS).catch(() => {});
+    return rows;
+  })();
+  sweepInFlight = task;
+  try {
+    return await task;
+  } finally {
+    // Always release the gate: a resolved sweep must not pin future callers
+    // to its rows, and a failure must retry upstream on the next call.
+    if (sweepInFlight === task) sweepInFlight = null;
+  }
 }
 
 /**

@@ -13,10 +13,9 @@ const path = require('node:path');
 const Module = require('node:module');
 
 // tsc runs with the repo root as rootDir (web-only suites live in
-// frontend/web/tests, the executor suites in the repo-root tests/), so the
-// compiled layout mirrors the repo from <.shaper-tests>/:
-// `@/x` -> <.shaper-tests>/frontend/web/src/x.
-const OUT = path.join(__dirname, '..', '.shaper-tests', 'frontend', 'web');
+// apps/web/tests), so the compiled layout mirrors the repo from
+// <.shaper-tests>/: `@/x` -> <.shaper-tests>/apps/web/src/x.
+const OUT = path.join(__dirname, '..', '.shaper-tests', 'apps', 'web');
 const original = Module._resolveFilename;
 
 Module._resolveFilename = function (request, parent, isMain, options) {

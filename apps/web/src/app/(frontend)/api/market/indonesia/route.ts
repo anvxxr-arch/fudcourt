@@ -77,6 +77,11 @@ type EconomyRow = {
  */
 export async function GET() {
   const failed: Failed[] = [];
+  // Per-symbol upstream freshness marks from the Yahoo fan-out below,
+  // aggregated into a single X-Cache header on the 200 path (HIT only if
+  // all HIT). The BIS/World Bank/IMF helpers return parsed data, not
+  // Responses, so they contribute no freshness mark.
+  const cacheMarks: string[] = [];
 
   // ---- 1. live quotes (Yahoo) ----------------------------------------------
   const quotes: IdrQuote[] = [];
@@ -89,8 +94,11 @@ export async function GET() {
         { ttlMs: IDR_QUOTE_TTL_MS }
       );
     } catch (e) {
+      cacheMarks.push('MISS');
       return { ok: false, failure: { symbol: spec.symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` } };
     }
+    const mark = res.headers.get('X-Cache');
+    cacheMarks.push(mark === 'HIT' || mark === 'COALESCED' ? mark : 'MISS');
     if (!res.ok) {
       return { ok: false, failure: { symbol: spec.symbol, reason: `upstream ${res.status}` } };
     }
@@ -214,16 +222,27 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({
-    quotes,
-    policy,
-    economy,
-    apbn,
-    count: quotes.length,
-    failed,
-    upstream: [YAHOO_CHART, 'stats.bis.org WS_CBPOL', 'api.worldbank.org v2', 'api.imf.org SDMX 2.1 (IMF.FAD Fiscal Monitor)'],
-    userAgent: SOURCE_UA,
-    asOf: Math.floor(Date.now() / 1000),
-    derived: `quotes: one Yahoo chart call per symbol (live); policy: BIS WS_CBPOL; economy: World Bank annual, newest non-null year per indicator; government finance: IMF Fiscal Monitor vintage${apbn ? ` ${apbn.vintage} (published ${apbn.published.slice(0, 10)}, actuals through ${apbn.actualThrough}, ${apbn.droppedProjections} projection year(s) withheld)` : ' unavailable'}; ${failed.length} upstream item(s) failed`,
-  });
+  // HIT only if EVERY upstream call was a HIT; COALESCED if any coalesced
+  // and none missed; otherwise MISS.
+  const cache =
+    cacheMarks.length > 0 && cacheMarks.every((m) => m === 'HIT')
+      ? 'HIT'
+      : cacheMarks.some((m) => m === 'MISS') || cacheMarks.length === 0
+        ? 'MISS'
+        : 'COALESCED';
+  return NextResponse.json(
+    {
+      quotes,
+      policy,
+      economy,
+      apbn,
+      count: quotes.length,
+      failed,
+      upstream: [YAHOO_CHART, 'stats.bis.org WS_CBPOL', 'api.worldbank.org v2', 'api.imf.org SDMX 2.1 (IMF.FAD Fiscal Monitor)'],
+      userAgent: SOURCE_UA,
+      asOf: Math.floor(Date.now() / 1000),
+      derived: `quotes: one Yahoo chart call per symbol (live); policy: BIS WS_CBPOL; economy: World Bank annual, newest non-null year per indicator; government finance: IMF Fiscal Monitor vintage${apbn ? ` ${apbn.vintage} (published ${apbn.published.slice(0, 10)}, actuals through ${apbn.actualThrough}, ${apbn.droppedProjections} projection year(s) withheld)` : ' unavailable'}; ${failed.length} upstream item(s) failed`,
+    },
+    { status: 200, headers: { 'X-Cache': cache } }
+  );
 }

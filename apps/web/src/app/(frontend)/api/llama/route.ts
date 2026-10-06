@@ -67,5 +67,10 @@ export async function GET(req: NextRequest) {
     const v = res.headers.get(h);
     if (v !== null) headers.set(h, v);
   }
+  // The sidecar owns a 15s TTL but sends no Cache-Control of its own, so a
+  // 200 without one gets the mirror value. Non-200s stay untouched.
+  if (res.status === 200 && !headers.has('Cache-Control')) {
+    headers.set('Cache-Control', 'public, max-age=15');
+  }
   return new NextResponse(body, { status: res.status, headers });
 }

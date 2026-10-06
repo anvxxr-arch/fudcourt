@@ -121,6 +121,11 @@ function isBalanceLeg(id: string): id is (typeof BALANCE_LEGS)[number] {
  */
 export async function GET() {
   const failed: Failed[] = [];
+  // Per-symbol upstream freshness marks from the Yahoo fan-out below,
+  // aggregated into a single X-Cache header on the 200 path (HIT only if
+  // all HIT). The BIS/FRED/World Bank helpers return parsed data, not
+  // Responses, so they contribute no freshness mark.
+  const cacheMarks: string[] = [];
 
   // ---- 1. live quotes (Yahoo) ----------------------------------------------
   const quotes: MacroQuote[] = [];
@@ -133,8 +138,11 @@ export async function GET() {
         { ttlMs: MACRO_TTL_MS }
       );
     } catch (e) {
+      cacheMarks.push('MISS');
       return { ok: false, failure: { symbol: spec.symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` } };
     }
+    const mark = res.headers.get('X-Cache');
+    cacheMarks.push(mark === 'HIT' || mark === 'COALESCED' ? mark : 'MISS');
     if (!res.ok) {
       return { ok: false, failure: { symbol: spec.symbol, reason: `upstream ${res.status}` } };
     }
@@ -324,19 +332,30 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({
-    quotes,
-    spreads,
-    policyRates,
-    indicators,
-    worldIndicators,
-    aggregates,
-    economies,
-    count: quotes.length,
-    failed,
-    upstream: [YAHOO_CHART, 'stats.bis.org WS_CBPOL', 'fred.stlouisfed.org CSV', 'api.worldbank.org v2'],
-    userAgent: SOURCE_UA,
-    asOf: Math.floor(Date.now() / 1000),
-    derived: `quotes: one Yahoo chart call per symbol; policy rates: BIS WS_CBPOL (daily, 60-day window); indicators: FRED CSV with the transform applied server-side; worldwide board: World Bank annual, ${WORLD_COUNTRIES.length} countries + ${WORLD_AGGREGATES.length} aggregates across ${ECONOMY_INDICATORS.length} series, newest non-null year per cell, each cell compared against its observation ~10 years earlier where the window holds one; budget balance (${BALANCE_ID}) derived here as revenue − expense for a year BOTH legs observe, never across two reference years; ${failed.length} upstream item(s) failed`,
-  });
+  // HIT only if EVERY upstream call was a HIT; COALESCED if any coalesced
+  // and none missed; otherwise MISS.
+  const cache =
+    cacheMarks.length > 0 && cacheMarks.every((m) => m === 'HIT')
+      ? 'HIT'
+      : cacheMarks.some((m) => m === 'MISS') || cacheMarks.length === 0
+        ? 'MISS'
+        : 'COALESCED';
+  return NextResponse.json(
+    {
+      quotes,
+      spreads,
+      policyRates,
+      indicators,
+      worldIndicators,
+      aggregates,
+      economies,
+      count: quotes.length,
+      failed,
+      upstream: [YAHOO_CHART, 'stats.bis.org WS_CBPOL', 'fred.stlouisfed.org CSV', 'api.worldbank.org v2'],
+      userAgent: SOURCE_UA,
+      asOf: Math.floor(Date.now() / 1000),
+      derived: `quotes: one Yahoo chart call per symbol; policy rates: BIS WS_CBPOL (daily, 60-day window); indicators: FRED CSV with the transform applied server-side; worldwide board: World Bank annual, ${WORLD_COUNTRIES.length} countries + ${WORLD_AGGREGATES.length} aggregates across ${ECONOMY_INDICATORS.length} series, newest non-null year per cell, each cell compared against its observation ~10 years earlier where the window holds one; budget balance (${BALANCE_ID}) derived here as revenue − expense for a year BOTH legs observe, never across two reference years; ${failed.length} upstream item(s) failed`,
+    },
+    { status: 200, headers: { 'X-Cache': cache } }
+  );
 }

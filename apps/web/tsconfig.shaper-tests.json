@@ -6,17 +6,17 @@
   // `paths`, which is exactly why the suites broke when the tree moved).
   //
   // Phase 7 relocation: this one project spans two roots — the web-only suites
-  // live in frontend/web/tests, the cross-system shaper source modules live in
-  // frontend/web/src/features/* and platform/* (the TS executor runtime was
+  // live in apps/web/tests, the cross-system shaper source modules live in
+  // apps/web/src/features/* and platform/* (the TS executor runtime was
   // retired 2026-10-05 by DR-043; the only surviving file is the wire contract
   // `src/lib/executor.ts`, kept in `files` because trade/client.ts and
   // features/executor/ui.tsx (also listed) import it). They are listed
   // in `files`, NOT `include`: tsc silently drops `../` entries from an include
   // glob. No explicit rootDir is set, so tsc infers the repo root as the
   // common source directory and the compiled tree mirrors the repo —
-  // test:shapers therefore runs .shaper-tests/frontend/web/tests/*.js and
-  // .shaper-tests/frontend/web/src/**/*.js, and alias-resolver.cjs maps `@/x`
-  // to .shaper-tests/frontend/web/src/x.
+  // test:shapers therefore runs .shaper-tests/apps/web/tests/*.js and
+  // .shaper-tests/apps/web/src/**/*.js, and alias-resolver.cjs maps `@/x`
+  // to .shaper-tests/apps/web/src/x.
   //
   // `scripts/verify/parity-reconcile.ts` (repo-wide, moved out of frontend/web) is not
   // a bun-run ESM script (top-level await) and never goes through this compiler.
@@ -61,6 +61,7 @@
     "tests/mappool-tests.ts",
     "tests/market-route-tests.ts",
     "tests/signals-validation-tests.ts",
+    "tests/ticker-cache-tests.ts",
     "tests/median-tests.ts",
     "tests/economy-tests.ts",
     "tests/regime-tests.ts",

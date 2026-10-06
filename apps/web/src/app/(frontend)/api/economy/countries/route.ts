@@ -32,5 +32,5 @@ export async function GET() {
     regions,
     total: countries.length,
     asOf: Math.floor(Date.now() / 1000),
-  });
+  }, { headers: { 'Cache-Control': 'public, max-age=3600' } });
 }

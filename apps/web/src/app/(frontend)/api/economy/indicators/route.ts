@@ -84,5 +84,5 @@ export async function GET(req: Request) {
       sources: [...bySource.entries()].map(([id, count]) => ({ id, count })).sort((a, b) => b.count - a.count),
     },
     asOf: Math.floor(Date.now() / 1000),
-  });
+  }, { headers: { 'Cache-Control': 'public, max-age=3600' } });
 }

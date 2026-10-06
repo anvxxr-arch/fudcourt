@@ -51,6 +51,9 @@ export async function GET(req: Request) {
 
   const quotes: MarketQuote[] = [];
   const failed: Failed[] = [];
+  // Per-symbol upstream freshness marks from the fan-out below, aggregated
+  // into a single X-Cache header on the 200 path (HIT only if all HIT).
+  const cacheMarks: string[] = [];
 
   const outcomes = await mapPool(symbols, 6, async (symbol: string): Promise<QuoteOutcome> => {
     let res: Response;
@@ -61,8 +64,11 @@ export async function GET(req: Request) {
         { ttlMs: STOCK_TTL_MS }
       );
     } catch (e) {
+      cacheMarks.push('MISS');
       return { ok: false, failure: { symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` } };
     }
+    const mark = res.headers.get('X-Cache');
+    cacheMarks.push(mark === 'HIT' || mark === 'COALESCED' ? mark : 'MISS');
     if (!res.ok) {
       return { ok: false, failure: { symbol, reason: `upstream ${res.status}` } };
     }
@@ -95,13 +101,24 @@ export async function GET(req: Request) {
     );
   }
 
-  return NextResponse.json({
-    region,
-    quotes,
-    count: quotes.length,
-    failed,
-    upstream: YAHOO_CHART,
-    asOf: Math.floor(Date.now() / 1000),
-    derived: `region=${region}; one Yahoo chart call per symbol; ${failed.length} of ${symbols.length} failed`,
-  });
+  // HIT only if EVERY upstream call was a HIT; COALESCED if any coalesced
+  // and none missed; otherwise MISS.
+  const cache =
+    cacheMarks.length > 0 && cacheMarks.every((m) => m === 'HIT')
+      ? 'HIT'
+      : cacheMarks.some((m) => m === 'MISS') || cacheMarks.length === 0
+        ? 'MISS'
+        : 'COALESCED';
+  return NextResponse.json(
+    {
+      region,
+      quotes,
+      count: quotes.length,
+      failed,
+      upstream: YAHOO_CHART,
+      asOf: Math.floor(Date.now() / 1000),
+      derived: `region=${region}; one Yahoo chart call per symbol; ${failed.length} of ${symbols.length} failed`,
+    },
+    { status: 200, headers: { 'X-Cache': cache } }
+  );
 }

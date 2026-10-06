@@ -37,6 +37,9 @@ type QuoteOutcome = { ok: true; quote: MarketQuote } | { ok: false; failure: Fai
 export async function GET() {
   const quotes: MarketQuote[] = [];
   const failed: Failed[] = [];
+  // Per-symbol upstream freshness marks from the fan-out below, aggregated
+  // into a single X-Cache header on the 200 path (HIT only if all HIT).
+  const cacheMarks: string[] = [];
 
   const outcomes = await mapPool(COMMODITIES, 6, async (spec): Promise<QuoteOutcome> => {
     let res: Response;
@@ -47,8 +50,11 @@ export async function GET() {
         { ttlMs: COMMODITY_TTL_MS }
       );
     } catch (e) {
+      cacheMarks.push('MISS');
       return { ok: false, failure: { symbol: spec.symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` } };
     }
+    const mark = res.headers.get('X-Cache');
+    cacheMarks.push(mark === 'HIT' || mark === 'COALESCED' ? mark : 'MISS');
     if (!res.ok) {
       return { ok: false, failure: { symbol: spec.symbol, reason: `upstream ${res.status}` } };
     }
@@ -81,12 +87,23 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({
-    quotes,
-    count: quotes.length,
-    failed,
-    upstream: YAHOO_CHART,
-    asOf: Math.floor(Date.now() / 1000),
-    derived: `front-month futures; one Yahoo chart call per symbol; ${failed.length} of ${COMMODITY_SYMBOLS.length} failed`,
-  });
+  // HIT only if EVERY upstream call was a HIT; COALESCED if any coalesced
+  // and none missed; otherwise MISS.
+  const cache =
+    cacheMarks.length > 0 && cacheMarks.every((m) => m === 'HIT')
+      ? 'HIT'
+      : cacheMarks.some((m) => m === 'MISS') || cacheMarks.length === 0
+        ? 'MISS'
+        : 'COALESCED';
+  return NextResponse.json(
+    {
+      quotes,
+      count: quotes.length,
+      failed,
+      upstream: YAHOO_CHART,
+      asOf: Math.floor(Date.now() / 1000),
+      derived: `front-month futures; one Yahoo chart call per symbol; ${failed.length} of ${COMMODITY_SYMBOLS.length} failed`,
+    },
+    { status: 200, headers: { 'X-Cache': cache } }
+  );
 }

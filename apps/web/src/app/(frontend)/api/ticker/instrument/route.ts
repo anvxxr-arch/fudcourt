@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   TICKER_EXCHANGES,
   TICKER_SEARCH_MAX,
+  TICKER_TTL_MS,
   TICKER_TYPE_LABELS,
   TICKER_TYPES,
   venuesForType,
@@ -21,6 +22,56 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
 
+
+// Route-local validated-payload cache with single-flight. Map keyed by
+// normalized query string, TTL from the TICKER_TTL_MS family contract, LRU
+// cap 100 (the instrument key space — base x type x expiry x strike x kind —
+// is unbounded). Only bodies that pass isValidInstrumentBody are admitted;
+// 400s and 502s stay uncached and retry upstream on every request.
+// Route-local (not shared) so a bad instrument payload can never poison
+// another family's cache entry. No CCXT call logic is changed.
+const VALID_MAX_ENTRIES = 100;
+type ValidEntry = { at: number; body: unknown };
+const validated = new Map<string, ValidEntry>();
+const validInflight = new Map<string, Promise<{ status: number; body: unknown }>>();
+
+function takeValid(key: string): ValidEntry | undefined {
+  const hit = validated.get(key);
+  if (!hit) return undefined;
+  if (Date.now() - hit.at >= TICKER_TTL_MS) {
+    validated.delete(key);
+    return undefined;
+  }
+  validated.delete(key);
+  validated.set(key, hit);
+  return hit;
+}
+
+function storeValid(key: string, entry: ValidEntry) {
+  validated.delete(key);
+  validated.set(key, entry);
+  while (validated.size > VALID_MAX_ENTRIES) {
+    const oldest = validated.keys().next();
+    if (oldest.done) break;
+    validated.delete(oldest.value);
+  }
+}
+
+// Fail-loud shape gate: runs BEFORE cache admission. A body that is not a
+// priced instrument payload must 502 loud, never be stored, and never be
+// served as an authoritative quote set. Strengthened: requires priced > 0
+// with at least one finite-last quote, so an all-venue outage is never cached.
+function isValidInstrumentBody(data: unknown): boolean {
+  if (typeof data !== 'object' || data === null) return false;
+  const b = data as Record<string, unknown>;
+  if (typeof b.base !== 'string' || typeof b.type !== 'string' || !Array.isArray(b.quotes)) return false;
+  if (typeof b.priced !== 'number' || !Number.isFinite(b.priced) || b.priced <= 0) return false;
+  return (b.quotes as unknown[]).some((q) => {
+    if (typeof q !== 'object' || q === null) return false;
+    const last = (q as Record<string, unknown>).last;
+    return typeof last === 'number' && Number.isFinite(last);
+  });
+}
 /** A venue's answer for one instrument. `last: null` with an `error` is a miss, never a price. */
 type Quote = {
   exchange: TickerExchange;
@@ -112,134 +163,171 @@ export async function GET(req: Request) {
   const wantKind = kindRaw === 'call' || kindRaw === 'put' ? kindRaw : null;
   const explicit = wantExpiry !== null || wantStrike !== null || wantKind !== null;
 
-  const clients = tickerClients();
-  const wanted = venuesForType(type);
-  await Promise.all(
-    TICKER_EXCHANGES.filter(v => wanted.includes(v)).map(v => ensureMarkets(v, c => c.loadMarkets()))
-  );
-
-  const quotes: Quote[] = [];
-  const notListed: TickerExchange[] = [];
-  const failed: TickerExchange[] = [];
-  const resolved: TickerInstrument[] = [];
-
-  for (const venue of wanted) {
-    const client = clients.get(venue);
-    const markets = client?.markets;
-    if (!client || !markets) {
-      notListed.push(venue);
-      continue;
-    }
-
-    // Settlement is not pinned: each venue's own quote currency is the correct
-    // one for it, and instrumentsFor already restricts the set to USD and
-    // USD-pegged, so a coin-margined or fiat contract cannot be selected.
-    const candidates = instrumentsFor(markets, base, type).filter((i) => {
-      if (wantExpiry !== null) {
-        if (i.expiry === null) return false;
-        // Expiries are timestamps at market open, so compare calendar days.
-        if (new Date(i.expiry).toISOString().slice(0, 10) !== wantExpiry) return false;
-      }
-      if (wantStrike !== null && i.strike !== wantStrike) return false;
-      if (wantKind !== null && i.optionKind !== wantKind) return false;
-      return true;
+  const key = `base=${base}&type=${type}&expiry=${wantExpiry ?? ''}&strike=${wantStrike ?? ''}&kind=${wantKind ?? ''}`;
+  const cached = takeValid(key);
+  if (cached) {
+    return NextResponse.json(cached.body, { headers: { 'X-Cache': 'HIT' } });
+  }
+  const pending = validInflight.get(key);
+  if (pending) {
+    const shared = await pending;
+    return NextResponse.json(shared.body, {
+      status: shared.status,
+      headers: { 'X-Cache': 'COALESCED' },
     });
-
-    if (candidates.length === 0) {
-      notListed.push(venue);
-      continue;
-    }
-
-    /**
-     * A venue can offer several contracts matching the same (expiry, strike,
-     * kind) — OKX lists each option twice, once coin-margined and once
-     * dollar-settled — and only one of the twins actually carries a price.
-     * Committing to the first match would select a dead symbol and report "no
-     * price", which is honest but useless. Candidates are tried in preference
-     * order and the first that prices wins; a venue counts as failed only when
-     * none of its candidates could be priced.
-     */
-    const ordered = explicit ? candidates : [...candidates].sort(byPreference);
-    let picked: TickerInstrument | null = null;
-    let quote: Quote | null = null;
-
-    for (const candidate of ordered) {
-      let fetched: Awaited<ReturnType<typeof client.fetchTicker>>;
-      try {
-        fetched = await client.fetchTicker(candidate.symbol);
-      } catch {
-        continue; // an unpriceable candidate is not yet a venue failure
-      }
-      // ccxt lists instruments it cannot price and returns last: undefined.
-      // That is a silent miss and is never rendered as a price.
-      const last = num(fetched?.last);
-      if (last === null) continue;
-
-      const raw = fetched as unknown as Record<string, unknown>;
-      quote = {
-        exchange: venue,
-        symbol: candidate.symbol,
-        // The unit this venue's number is in. Coin-margined and USD-settled
-        // twins are different contracts, so each quote carries its own.
-        settle: candidate.settle,
-        last,
-        bid: num(fetched.bid),
-        ask: num(fetched.ask),
-        high24h: num(fetched.high),
-        low24h: num(fetched.low),
-        baseVolume: num(fetched.baseVolume),
-        quoteVolume: num(fetched.quoteVolume),
-        change24h: num(fetched.percentage),
-        openInterest: num(raw.openInterest),
-        fundingRate: num(raw.fundingRate),
-        at: num(fetched.timestamp),
-        error: null,
-      };
-      picked = candidate;
-      break;
-    }
-
-    if (!picked || !quote) {
-      failed.push(venue);
-      quotes.push(emptyQuote(venue, candidates[0].symbol, 'no price returned'));
-      continue;
-    }
-
-    resolved.push(picked);
-
-    // Funding is a perpetual concept; open interest exists on swaps, dated
-    // futures and options. Both are best-effort: ccxt needs separate calls for
-    // them, and an absent value stays null and is shown as "—".
-    if (type === 'swap' && quote.fundingRate === null) {
-      quote.fundingRate = await client.fetchFundingRate(picked.symbol).then(f => num(f?.fundingRate)).catch(() => null);
-    }
-    if (type !== 'spot' && quote.openInterest === null) {
-      quote.openInterest = await client.fetchOpenInterest(picked.symbol)
-        .then(oi => num(oi?.openInterestAmount ?? (oi as unknown as Record<string, unknown> | undefined)?.openInterest))
-        .catch(() => null);
-    }
-    quotes.push(quote);
   }
 
-  const priced = quotes.filter(q => q.last !== null);
+  const run = (async (): Promise<{ status: number; body: unknown }> => {
+    const clients = tickerClients();
+    const wanted = venuesForType(type);
+    await Promise.all(
+      TICKER_EXCHANGES.filter(v => wanted.includes(v)).map(v => ensureMarkets(v, c => c.loadMarkets()))
+    );
 
-  return NextResponse.json({
-    base,
-    type,
-    typeLabel: TICKER_TYPE_LABELS[type],
-    request: { expiry: wantExpiry, strike: wantStrike, kind: wantKind },
-    instruments: resolved,
-    // The settlements actually quoted. These are expected to differ between
-    // venues, so their prices are comparable only up to the basis between them.
-    settlements: [...new Set(resolved.map(i => i.settle).filter((s): s is string => typeof s === 'string'))],
-    quotes,
-    priced: priced.length,
-    // Median of the venues that priced it; null when none did.
-    price: priced.length ? median(priced.map(q => q.last as number)) : null,
-    notListed,
-    failed,
-    timestamp: Date.now(),
-  });
+    const quotes: Quote[] = [];
+    const notListed: TickerExchange[] = [];
+    const failed: TickerExchange[] = [];
+    const resolved: TickerInstrument[] = [];
+
+    for (const venue of wanted) {
+      const client = clients.get(venue);
+      const markets = client?.markets;
+      if (!client || !markets) {
+        notListed.push(venue);
+        continue;
+      }
+
+      // Settlement is not pinned: each venue's own quote currency is the correct
+      // one for it, and instrumentsFor already restricts the set to USD and
+      // USD-pegged, so a coin-margined or fiat contract cannot be selected.
+      const candidates = instrumentsFor(markets, base, type).filter((i) => {
+        if (wantExpiry !== null) {
+          if (i.expiry === null) return false;
+          // Expiries are timestamps at market open, so compare calendar days.
+          if (new Date(i.expiry).toISOString().slice(0, 10) !== wantExpiry) return false;
+        }
+        if (wantStrike !== null && i.strike !== wantStrike) return false;
+        if (wantKind !== null && i.optionKind !== wantKind) return false;
+        return true;
+      });
+
+      if (candidates.length === 0) {
+        notListed.push(venue);
+        continue;
+      }
+
+      /**
+       * A venue can offer several contracts matching the same (expiry, strike,
+       * kind) — OKX lists each option twice, once coin-margined and once
+       * dollar-settled — and only one of the twins actually carries a price.
+       * Committing to the first match would select a dead symbol and report "no
+       * price", which is honest but useless. Candidates are tried in preference
+       * order and the first that prices wins; a venue counts as failed only when
+       * none of its candidates could be priced.
+       */
+      const ordered = explicit ? candidates : [...candidates].sort(byPreference);
+      let picked: TickerInstrument | null = null;
+      let quote: Quote | null = null;
+
+      for (const candidate of ordered) {
+        let fetched: Awaited<ReturnType<typeof client.fetchTicker>>;
+        try {
+          fetched = await client.fetchTicker(candidate.symbol);
+        } catch {
+          continue; // an unpriceable candidate is not yet a venue failure
+        }
+        // ccxt lists instruments it cannot price and returns last: undefined.
+        // That is a silent miss and is never rendered as a price.
+        const last = num(fetched?.last);
+        if (last === null) continue;
+
+        const raw = fetched as unknown as Record<string, unknown>;
+        quote = {
+          exchange: venue,
+          symbol: candidate.symbol,
+          // The unit this venue's number is in. Coin-margined and USD-settled
+          // twins are different contracts, so each quote carries its own.
+          settle: candidate.settle,
+          last,
+          bid: num(fetched.bid),
+          ask: num(fetched.ask),
+          high24h: num(fetched.high),
+          low24h: num(fetched.low),
+          baseVolume: num(fetched.baseVolume),
+          quoteVolume: num(fetched.quoteVolume),
+          change24h: num(fetched.percentage),
+          openInterest: num(raw.openInterest),
+          fundingRate: num(raw.fundingRate),
+          at: num(fetched.timestamp),
+          error: null,
+        };
+        picked = candidate;
+        break;
+      }
+
+      if (!picked || !quote) {
+        failed.push(venue);
+        quotes.push(emptyQuote(venue, candidates[0].symbol, 'no price returned'));
+        continue;
+      }
+
+      resolved.push(picked);
+
+      // Funding is a perpetual concept; open interest exists on swaps, dated
+      // futures and options. Both are best-effort: ccxt needs separate calls for
+      // them, and an absent value stays null and is shown as "—".
+      if (type === 'swap' && quote.fundingRate === null) {
+        quote.fundingRate = await client.fetchFundingRate(picked.symbol).then(f => num(f?.fundingRate)).catch(() => null);
+      }
+      if (type !== 'spot' && quote.openInterest === null) {
+        quote.openInterest = await client.fetchOpenInterest(picked.symbol)
+          .then(oi => num(oi?.openInterestAmount ?? (oi as unknown as Record<string, unknown> | undefined)?.openInterest))
+          .catch(() => null);
+      }
+      quotes.push(quote);
+    }
+
+    const priced = quotes.filter(q => q.last !== null);
+
+    const body = {
+      base,
+      type,
+      typeLabel: TICKER_TYPE_LABELS[type],
+      request: { expiry: wantExpiry, strike: wantStrike, kind: wantKind },
+      instruments: resolved,
+      // The settlements actually quoted. These are expected to differ between
+      // venues, so their prices are comparable only up to the basis between them.
+      settlements: [...new Set(resolved.map(i => i.settle).filter((s): s is string => typeof s === 'string'))],
+      quotes,
+      priced: priced.length,
+      // Median of the venues that priced it; null when none did.
+      price: priced.length ? median(priced.map(q => q.last as number)) : null,
+      notListed,
+      failed,
+      timestamp: Date.now(),
+    };
+
+    // Discriminator BEFORE cache admission: an unpriced body (all-venue
+    // outage) never enters the cache and 502s loud instead.
+    if (!isValidInstrumentBody(body)) {
+      return { status: 502, body: { error: 'instrument malformed: body failed shape check' } };
+    }
+    return { status: 200, body };
+  })();
+
+  validInflight.set(key, run);
+  try {
+    const winner = await run;
+    // Only validated 200s are admitted. Non-200s are shared with coalesced
+    // waiters but never stored, so the next request retries upstream instead
+    // of replaying the failure.
+    if (winner.status === 200) {
+      storeValid(key, { at: Date.now(), body: winner.body });
+    }
+    return NextResponse.json(winner.body, { status: winner.status, headers: { 'X-Cache': 'MISS' } });
+  } finally {
+    validInflight.delete(key);
+  }
 }
 
 /**
