@@ -166,3 +166,9 @@ export function memo<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promi
   if (pending) return pending as Promise<T>;
   return refresh(key, fn);
 }
+
+/** Test seam: drop memoised macro-feed values and in-flight memo runs. */
+export function __resetMemo() {
+  store.clear();
+  inflight.clear();
+}

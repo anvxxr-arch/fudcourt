@@ -62,6 +62,7 @@
     "tests/market-route-tests.ts",
     "tests/signals-validation-tests.ts",
     "tests/ticker-cache-tests.ts",
+    "tests/cache-control-tests.ts",
     "tests/median-tests.ts",
     "tests/economy-tests.ts",
     "tests/regime-tests.ts",
