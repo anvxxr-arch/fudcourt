@@ -129,8 +129,8 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
 ### 3.5 Dual-implementation debt (same domain in two languages, both live)
 
 - Balance sync: `apps/reconciler/src/main.rs` + `apps/reconciler/src/streams/sync.rs` **and** `tests/oracle/sync-live.py`,
-  each with its own systemd unit (`infrastructure/systemd/fudcourt-sync-rust.service` vs
-  `infrastructure/systemd/fudcourt-sync.service`). Phase 6 collapses to Rust after oracle parity.
+  each with its own systemd unit (`deploy/systemd/fudcourt-sync-rust.service` vs
+  `deploy/systemd/fudcourt-sync.service`). Phase 6 collapses to Rust after oracle parity.
 - Reconcile: `apps/reconciler/src/reconciliation/reconcile.rs` **and** `apps/web/…/api/reconcile/route.ts`
   (route proxies the Rust service, verified byte-parity in CI `verify/verify-reconcile.py`).
 
@@ -143,7 +143,7 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
   `internal/{identity,credentials,authorization,platform/{errs,health,httpx}}`),
   `backend/workers/executor/` (Go: `internal/{decimal,exchange,executor}` — `records.go`/`types.go`
   already pin `db/schema/executor-schema.sql` as their reference), `packages/`, `go.work`,
-  and the `infrastructure/systemd/` consolidation (units moved from per-app `infrastructure/` folders into one
+  and the `deploy/systemd/` consolidation (units moved from per-app `infrastructure/` folders into one
   repo-level folder; the Python-vs-Rust `fudcourt-sync` name collision resolved as
   `fudcourt-sync.service` (Python) vs `fudcourt-sync-rust.service` (Rust)). Those paths are now
   `shared/` (not `packages/`) and `backend/workers/executor` is committed.

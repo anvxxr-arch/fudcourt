@@ -22,7 +22,7 @@ packages/config/         —                                   NOT LANDED (DR-01
 database/{schema}        database/schema/                    LANDED (pg-schema.sql, executor-schema.sql)
 database/{migrations,seeds,fixtures}  —                       NOT CREATED (empty; migrations/ deliberately not created, DR-020)
 tests/{integration,e2e,fixtures,oracle}  tests/{integration,e2e,fixtures,oracle}  LANDED
-infrastructure/systemd/  infrastructure/systemd/             LANDED (14 files: 12 live units + 2 retired tombstones)
+deploy/systemd/  deploy/systemd/             LANDED (14 files: 12 live units + 2 retired tombstones)
 infrastructure/{docker,compose}  —                          NOT LANDED (no container config exists — DR-002 self-hosted systemd + Cloudflare Tunnel)
 scripts/{dev,verify,database,release}  scripts/{verify,database,githooks}  PARTIAL (no dev/ or release/; a githooks/ dir was added instead)
 ```
@@ -96,7 +96,7 @@ Postgres is the single system of record for balances (DR-040, superseding DR-019
 SQLite/Turso source-of-truth + Postgres read-model split; Postgres as durable truth for the
 executor is DR-023). The restructure changed only the code owning each write path.
 ## 6. Deploy target — LANDED
-- `infrastructure/systemd/` — one unit set per service (`fudcourt-api`, `fudcourt-executor`,
+- `deploy/systemd/` — one unit set per service (`fudcourt-api`, `fudcourt-executor`,
   `fudcourt-executor-worker`, `fudcourt-data`, `fudcourt-sync`, `fudcourt-sync-rust`,
   `fudcourt-reconciled`, `fudcourt-web`) plus the `pgload`/`sync` timers; 12 live units and
   2 `RETIRED-*.service.txt` tombstones.

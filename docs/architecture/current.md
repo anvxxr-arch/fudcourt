@@ -12,7 +12,7 @@
 > the `api`/`executor` CI jobs and units exist), `shared/contracts` + `shared/sdk/typescript`
 > landed, the single `.github/workflows/ci.yml` was split into **five** path-filtered workflows
 > (§9 below is pinned to the pre-split single 4-job file), `tests/{e2e,integration}` grew the
-> executor suites, and `infrastructure/systemd/` gained the api/executor units. The app-local gates
+> executor suites, and `deploy/systemd/` gained the api/executor units. The app-local gates
 > this file names as `apps/web/scripts/checks/*` were later split: `check-contract.py` and
 > `check-deploy.py` moved to `scripts/verify/`, `check-structure.py` stayed app-side. Read a number
 > here as "as of 2026-10-01 (Phase 0/1)", never as today's.
@@ -184,7 +184,7 @@ $ systemctl list-unit-files 'fudcourt-*' --no-pager --no-legend          # syste
 ```
 Verdict per live claim: **"units reinstalled" — CONFIRMED** (7 user-scope units installed;
 web/data/reconciled `active running`, both timers `active waiting`; caveat: the
-`fudcourt-sync-rust.*` and `fudcourt-executor-worker.service` names from `infrastructure/systemd/`
+`fudcourt-sync-rust.*` and `fudcourt-executor-worker.service` names from `deploy/systemd/`
 are NOT installed in this user scope, and the Python `fudcourt-sync.service` is installed but
 `disabled`); **"healthz green :3101/:3102" — CONFIRMED** (both returned `{"ok":true,…}`,
 curl exit 0). Every command above exited 0 on the observed tree; nothing failed under
@@ -374,19 +374,19 @@ module has moved into it):
 - Tests: `backend/sync/tests/reconcile.rs` + inline tests (17 total, all passing).
 
 Note: the Python original (`tests/oracle/sync-live.py`) and the web `api/reconcile` still exist
-and are still wired to the **web** `fudcourt-sync.service`/`.timer` in `infrastructure/systemd/`; the Rust
-variants in `infrastructure/systemd/` (`fudcourt-sync-rust.*`) are the parallel "Rust" pair. Both are live in the tree.
+and are still wired to the **web** `fudcourt-sync.service`/`.timer` in `deploy/systemd/`; the Rust
+variants in `deploy/systemd/` (`fudcourt-sync-rust.*`) are the parallel "Rust" pair. Both are live in the tree.
 
 ## 8. Systemd units (WorkingDirectory / ExecStart)
 
 | Unit | WorkingDirectory | ExecStart | Purpose |
 |---|---|---|---|
-| `infrastructure/systemd/fudcourt-web.service` | `/home/dwizzy/fudcourt/frontend/web` | `bun --bun …/next start -p 3100` | Next.js web :3100 |
-| `infrastructure/systemd/fudcourt-executor-worker.service` | `…/frontend/web` | `bun …/frontend/web/scripts/executor/worker.ts` | in-frontend executor worker |
-| `infrastructure/systemd/fudcourt-sync.service` (+ `.timer`, 5 min) | `…/frontend/web` | `python3 …/tests/oracle/sync-live.py` | **Python** balance sync → Postgres (the deployed sync) |
-| `infrastructure/systemd/fudcourt-data.service` | `…/backend/data` | `…/backend/data/bin/fudcourt-data` | Go acquisition sidecar :3101 |
-| `infrastructure/systemd/fudcourt-sync-rust.service` (+ `.timer`, 5 min) | `…/backend/sync` | `…/backend/sync/target/release/fudcourt-sync` | **Rust** balance sync → Postgres (**uninstalled replacement** for the Python sync) |
-| `infrastructure/systemd/fudcourt-reconciled.service` | `…/backend/sync` | `…/backend/sync/target/release/fudcourt-reconciled` | Rust reconcile service :3102 |
+| `deploy/systemd/fudcourt-web.service` | `/home/dwizzy/fudcourt/frontend/web` | `bun --bun …/next start -p 3100` | Next.js web :3100 |
+| `deploy/systemd/fudcourt-executor-worker.service` | `…/frontend/web` | `bun …/frontend/web/scripts/executor/worker.ts` | in-frontend executor worker |
+| `deploy/systemd/fudcourt-sync.service` (+ `.timer`, 5 min) | `…/frontend/web` | `python3 …/tests/oracle/sync-live.py` | **Python** balance sync → Postgres (the deployed sync) |
+| `deploy/systemd/fudcourt-data.service` | `…/backend/data` | `…/backend/data/bin/fudcourt-data` | Go acquisition sidecar :3101 |
+| `deploy/systemd/fudcourt-sync-rust.service` (+ `.timer`, 5 min) | `…/backend/sync` | `…/backend/sync/target/release/fudcourt-sync` | **Rust** balance sync → Postgres (**uninstalled replacement** for the Python sync) |
+| `deploy/systemd/fudcourt-reconciled.service` | `…/backend/sync` | `…/backend/sync/target/release/fudcourt-reconciled` | Rust reconcile service :3102 |
 
 Ingress: `fc.dwirijal.my.id` via Cloudflare Tunnel to the loopback origin (DR-002, fail-closed).
 

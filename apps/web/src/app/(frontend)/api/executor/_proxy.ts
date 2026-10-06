@@ -38,7 +38,7 @@ import { NextResponse } from 'next/server';
  * Loopback address of the Go executor surface. Mirrors the Go side's own
  * default (`backend/workers/executor/cmd/executor/api.go`:
  * FUDCOURT_EXECUTOR_API_ADDR, default 127.0.0.1:3105) and the
- * `Environment=` pin in `infrastructure/systemd/fudcourt-executor.service`.
+ * `Environment=` pin in `deploy/systemd/fudcourt-executor.service`.
  * Resolved ONCE at module load (env is immutable after
  * `fudcourt-web.service` start), so a per-request `process.env` parse is
  * avoided.

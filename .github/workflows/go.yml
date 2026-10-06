@@ -32,10 +32,10 @@ jobs:
         with:
           filters: |
             modules:
-              - 'backend/api/**'
-              - 'backend/bot/**'
-              - 'backend/workers/executor/**'
-              - 'backend/data/**'
+              - 'apps/api/**'
+              - 'apps/bot/**'
+              - 'apps/executor/**'
+              - 'apps/data/**'
               - 'go.work'
               - 'go.work.sum'
               - '.github/workflows/go.yml'

@@ -39,7 +39,7 @@ systemd units, `docs/` everything written down.
 ```bash
 # from the repo root
 cd apps/data && go build -o bin/fudcourt-data . && ./bin/fudcourt-data
-                                         # CryptoRank sidecar -> :3101 (unit: infrastructure/systemd/fudcourt-data.service)
+                                         # CryptoRank sidecar -> :3101 (unit: deploy/systemd/fudcourt-data.service)
 cd ../web && bun install && bun run dev # dashboard + blog + proxy -> :3000
                                           # (prod unit: :3100, served by Bun — DR-008/DR-017)
                                           # blog: /blog (public), /blog/cms/admin (Payload)

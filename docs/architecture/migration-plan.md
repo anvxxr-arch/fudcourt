@@ -2,7 +2,7 @@
 
 > **Status (re-read 2026-10-05, DR-043).** This is the execution plan. **Every phase has now landed,
 > including Phase 5 and Phase 7.** Phases **0–4, 6, 8, 9, 10** landed earlier (under the as-built names
-> `backend/…`, `shared/…`, `infrastructure/systemd/`, `tests/…`, `scripts/verify/` — see `final-review.md`
+> `backend/…`, `shared/…`, `deploy/systemd/`, `tests/…`, `scripts/verify/` — see `final-review.md`
 > §1–§3 and `target.md` §1); **Phase 5 (delete the TS executor) CLOSED 2026-10-05 (DR-043)** and
 > **Phase 7 (frontend cleanup) CLOSED 2026-10-05 (DR-043)** as the final deliverable of the same pass:
 > the money-path cutover completed in two steps — DR-042 (web re-point + live Go proof, 2026-10-05) and
@@ -33,12 +33,12 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
 - `backend/data/go.mod` module: `github.com/anvxxr-arch/fudcourt/apps/apicalls` →
   `github.com/anvxxr-arch/fudcourt/backend/data` (all internal import paths updated;
   `go build/vet/test ./...` PASS at the new path — re-verified).
-- `infrastructure/systemd/fudcourt-apicalls.service` + `infrastructure/systemd/fudcourt-sync-rust.*`:
+- `deploy/systemd/fudcourt-apicalls.service` + `deploy/systemd/fudcourt-sync-rust.*`:
   `WorkingDirectory`/`ExecStart` now point at `services/...` (check-deploy.py PASS).
   **Corrected 2026-10-01 (docs-reality pass):** that path text was a stale intermediate — today
   there is no `fudcourt-apicalls.service` at all: the unit was retired as
-  `infrastructure/systemd/RETIRED-fudcourt-apicalls.service.txt` when the binary was renamed
-  `fudcourt-data` (DR-033), and the live unit is `infrastructure/systemd/fudcourt-data.service`
+  `deploy/systemd/RETIRED-fudcourt-apicalls.service.txt` when the binary was renamed
+  `fudcourt-data` (DR-033), and the live unit is `deploy/systemd/fudcourt-data.service`
   with `WorkingDirectory`/`ExecStart` on `backend/data/**` (there is no `services/` directory).
 - `.github/workflows/ci.yml`: Go job `working-directory: backend/data`, Rust job
   `working-directory: backend/sync`; the web job's live-reconcile step builds
@@ -169,7 +169,7 @@ re-derive with `node shared/contracts/scripts/check-contract.mjs` rather than tr
 > (10 files, 8,024 LOC → 0), `apps/web/scripts/executor/worker.ts` (preserved as a 5-line tombstone),
 > the 9 TS-runtime test files (`tests/e2e/executor/*`, `tests/integration/executor/*`,
 > `apps/web/tests/executor-proxy-tests.ts`), and the `fudcourt-executor-worker.service`
-> systemd unit (retired to `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt`).
+> systemd unit (retired to `deploy/systemd/RETIRED-fudcourt-executor-worker.service.txt`).
 > The 15 `/api/executor/*` route handlers are now 4-line forwarders through
 > `src/app/(frontend)/api/executor/_proxy.ts`. The wire contract
 > `apps/web/src/platform/executor/types.ts` is the only TS-side survivor (consumer-facing —
@@ -207,7 +207,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
   with this phase.
 - **Rollback:** if a regression is found, revert the DR-043 commit — `git revert` restores the TS tree,
   the systemd unit, the test files and the route-handler bodies; the systemd unit history is preserved
-  in `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt`, the worker entry in
+  in `deploy/systemd/RETIRED-fudcourt-executor-worker.service.txt`, the worker entry in
   `apps/web/scripts/executor/worker.ts` (5-line tombstone). The `executor.*` schema is unchanged,
   so state survives a rollback. Note: the Go runtime on `:3104` + `:3105` has been the sole live path
   since 2026-10-05, so a rollback also needs `FUDCOURT_EXECUTOR_PROXY` behaviour understood (the TS
@@ -219,8 +219,8 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 - Promote `fudcourt-sync` (Rust) over the Python twin `tests/oracle/sync-live.py`:
   CI already has the byte-parity harness pattern (`verify/verify-reconcile.py`); add the same
   oracle gate for sync (`scripts/verify` + `tests/oracle`) comparing `assets` rows.
-- Switch `infrastructure/systemd/fudcourt-sync.service`/`.timer` to the Rust binary (or retire them in
-  favor of `infrastructure/systemd/fudcourt-sync-rust.*`), delete the Python original after one clean sync cycle.
+- Switch `deploy/systemd/fudcourt-sync.service`/`.timer` to the Rust binary (or retire them in
+  favor of `deploy/systemd/fudcourt-sync-rust.*`), delete the Python original after one clean sync cycle.
 - Extend to websocket streams + event normalization (target.md §1).
 - **Risks:** `pyfmt.rs`/`db.rs` exist precisely to preserve byte-identical output — any
   divergence corrupts the Postgres journal; the honesty rule (failed RPC ≠ zero balance) MUST hold.
@@ -278,7 +278,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 
 ## Phase 10 — deploy normalization
 > **Amended 2026-10-01 (started in the working tree):** unit files have been `git mv`-ed into
-> `infrastructure/systemd/` (e.g. `fudcourt-web.service`, `fudcourt-apicalls.service`,
+> `deploy/systemd/` (e.g. `fudcourt-web.service`, `fudcourt-apicalls.service`,
 > `fudcourt-sync-rust.*`, `RETIRED-fudcourt-blog.service.txt`), and the Python-vs-Rust
 > `fudcourt-sync` name collision is resolved as `fudcourt-sync.service` (Python) vs
 > `fudcourt-sync-rust.service` (Rust) — the collision risk noted below is retired.
@@ -286,14 +286,14 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 > folder). Remaining: retire the `fudcourt-apicalls` name in favor of `fudcourt-data`, add
 > `infrastructure/docker|compose/`, and re-pointing/reloading the host units.
 > **Re-read 2026-10-01 (docs-reality pass):** the `fudcourt-apicalls` retirement **has since
-> landed** — `infrastructure/systemd/` now has no `fudcourt-apicalls.service` at all, only the
+> landed** — `deploy/systemd/` now has no `fudcourt-apicalls.service` at all, only the
 > tombstone `RETIRED-fudcourt-apicalls.service.txt`, and the live unit is
-> `infrastructure/systemd/fudcourt-data.service` (DR-033). The folder now holds **14 files**
+> `deploy/systemd/fudcourt-data.service` (DR-033). The folder now holds **14 files**
 > (12 live units + 2 tombstones), not the "10 unit files" this block records — the api/executor
 > units were added after the move. `docker|compose/` remains deliberately absent (DR-002).
 
 **Status: core move EXECUTED (2026-10-01), verified green.**
-- All 10 unit files consolidated into `infrastructure/systemd/` via `git mv` (was
+- All 10 unit files consolidated into `deploy/systemd/` via `git mv` (was
   `apps/web/infrastructure/`, `backend/data/infrastructure/`, `backend/sync/infrastructure/`), including
   the `RETIRED-fudcourt-blog.service.txt` tombstone. `ExecStart`/`WorkingDirectory`
   targets are code paths and needed no changes.
@@ -302,7 +302,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
   file names and declared `Unit=` targets are now unique. The Python pair stays
   `fudcourt-sync.{service,timer}` (installed today); swap instructions live in the
   service file header.
-- `check-deploy.py` re-pointed at `infrastructure/systemd/*`; `check-deploy` + `check-structure`
+- `check-deploy.py` re-pointed at `deploy/systemd/*`; `check-deploy` + `check-structure`
   + `check-contract` all PASS after the move. Live docs (README, TECH-STACK,
   ARCHITECTURE, current.md §8, domain-map, BASELINE, SECRETS, migration-plan) repointed;
   dated records (PLAN/CHANGELOG/DECISIONS) left untouched by design.

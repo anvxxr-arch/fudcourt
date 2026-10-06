@@ -400,7 +400,7 @@ running it (e.g. statuses of `served` tables with no in-app writer).
 
 ## 10. systemd units → which feed each one runs
 
-`infrastructure/systemd/*.service|*.timer` (`grep -E "^(Description|ExecStart|EnvironmentFile|Environment|OnCalendar|Unit)="`).
+`deploy/systemd/*.service|*.timer` (`grep -E "^(Description|ExecStart|EnvironmentFile|Environment|OnCalendar|Unit)="`).
 Environment files are named only; **no secret values are reproduced anywhere in this
 document**.
 
@@ -422,7 +422,7 @@ worker (`backend/workers/executor`; unit `fudcourt-executor.service`) **is the p
 executor**; the TypeScript worker (`backend/workers/executor`; unit
 `fudcourt-executor-worker.service`) is retained **only as a fallback** until the cutover row
 `verify:executor` proves green, and is **not** the effective default. Parity rows 1–9 of
-`docs/architecture/parity-matrix.md` are `DONE`. `infrastructure/systemd/fudcourt-executor.service`
+`docs/architecture/parity-matrix.md` are `DONE`. `deploy/systemd/fudcourt-executor.service`
 also carries a **PROVISIONING GATE** — the Go unit stays masked until
 `FUDCOURT_EXECUTOR_MASTER_KEY`, `FUDCOURT_EXECUTOR_PG_URL` and `VALKEY_ADDR` exist (§40 fail-closed
 startup; all three live in `apps/web/.env.local`). Evidence: the two unit headers cited in
@@ -446,7 +446,7 @@ Counted mechanically from the tables above (`grep -c`/script over this file):
 | **Total registry rows** | **108** |
 | §8 Absent-in-repo rows | **14** |
 | §9 Frontend route rows | **16** |
-| §10 systemd unit rows | **11** (the 14 files in `infrastructure/systemd/` reduce to 11 table rows: the three `.service`+`.timer` pairs `fudcourt-sync`, `fudcourt-sync-rust` and `fudcourt-pgload` each collapse into one row — 6 single-unit rows plus 3 pair rows covering 6 files — and the two `RETIRED-*.service.txt` tombstones appear as their own rows: 6 + 3 + 2 = 11 rows / 6 + 6 + 2 = 14 files) |
+| §10 systemd unit rows | **11** (the 14 files in `deploy/systemd/` reduce to 11 table rows: the three `.service`+`.timer` pairs `fudcourt-sync`, `fudcourt-sync-rust` and `fudcourt-pgload` each collapse into one row — 6 single-unit rows plus 3 pair rows covering 6 files — and the two `RETIRED-*.service.txt` tombstones appear as their own rows: 6 + 3 + 2 = 11 rows / 6 + 6 + 2 = 14 files) |
 
 Facts behind the counts: CryptoRank declares **28** modes (`ModeCount = len(Modes)`; 26
 live-recorded in `MANIFEST.json.liveModes`, 2 refused-by-design); 10 ccxt venues × the

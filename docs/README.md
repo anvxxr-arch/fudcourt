@@ -100,7 +100,7 @@ shared/contracts/      OpenAPI + event catalog + JSON schemas — the one shared
 shared/sdk/typescript/ generated TS client over the contract
 database/schema/       pg-schema.sql (treasury system of record) ·
                        executor-schema.sql (execution ledger)
-infrastructure/systemd/ 10 unit files + 3 retired tombstones (web, api, data, executor,
+deploy/systemd/ 10 unit files + 3 retired tombstones (web, api, data, executor,
                        executor-worker, sync, sync-rust, reconciled)
 tests/           integration/ · e2e/ · fixtures/ · oracle/ — cross-system suites
 scripts/         verify/ · database/ · githooks/ — repo-wide gates, tooling, hook

@@ -95,7 +95,7 @@ families have no Next proxy — their boards were removed (DR-041) and they answ
 | item | artifact | pinned today by | unchanged |
 |---|---|---|---|
 | Response body `{rows, wallets, walletSummary, source}` | `apps/reconciler/src/reconciliation/reconcile.rs:237` (`pub fn body`), rows `:37` (`ReconRow`), `:49` (`WalletSummary`); HTTP shell `apps/reconciler/src/reconciliation/server.rs:24` (`Request`), `:90` (`reason`) | `scripts/verify/verify-reconcile.py` (the 28/28 live harness recorded in `docs/records/DECISIONS.md` DR-019/§reconcile) and the TS oracle twin `apps/web/src/features/overview/reconcile.ts` | yes |
-| Unit/port | `infrastructure/systemd/fudcourt-reconciled.service:20` (`RECONCILE_ADDR=127.0.0.1:3102`) | `scripts/verify/check-deploy.py` (ExecStart-path guard, `scripts/verify/verify-all.sh` step "deploy-unit guard") | yes |
+| Unit/port | `deploy/systemd/fudcourt-reconciled.service:20` (`RECONCILE_ADDR=127.0.0.1:3102`) | `scripts/verify/check-deploy.py` (ExecStart-path guard, `scripts/verify/verify-all.sh` step "deploy-unit guard") | yes |
 | Next proxy adds `source: "rust"` and answers 502-with-the-real-reason, never a fallback board | `apps/web/src/app/(frontend)/api/reconcile/route.ts` | `SCHEMA.md` §3.3 `/api/reconcile` row | yes |
 
 ### 1.3 The 28-id event catalog

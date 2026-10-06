@@ -12,7 +12,7 @@
 > only treasury schema. The Turso→Postgres projection
 > (`frontend/web/scripts/tools/pg-load.ts`) and its `fudcourt-pgload.{service,timer}`
 > are removed (retirement note:
-> `infrastructure/systemd/RETIRED-fudcourt-pgload.service.txt`), and the web data
+> `deploy/systemd/RETIRED-fudcourt-pgload.service.txt`), and the web data
 > module moved from `platform/db/mirror.ts` to `platform/db/pg.ts`.
 >
 > Moved here from `apps/web/db/` (Phase 2 of the domain restructure); DDL semantics

@@ -1,8 +1,8 @@
 # FUD Court sync timer — drives fudcourt-sync.service every 5 min.
 #
 # DEPLOYED as `~/.config/systemd/user/fudcourt-sync.timer`. Pairs with
-# infrastructure/systemd/fudcourt-sync.service (Python oracle). The Rust variant has its own
-# pair, infrastructure/systemd/fudcourt-sync-rust.{service,timer}, because the two units now
+# deploy/systemd/fudcourt-sync.service (Python oracle). The Rust variant has its own
+# pair, deploy/systemd/fudcourt-reconciler.{service,timer}, because the two units now
 # have distinct names — install exactly one pair (see the service file's swap note).
 #
 # A copy lives in-repo so the treasury cadence is reviewable in a diff, not only on

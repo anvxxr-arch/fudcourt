@@ -326,9 +326,9 @@ implies team implies member.
 
 - **Production = this homeserver.** Units: `fudcourt-web` (`127.0.0.1:3100`),
   `fudcourt-data` (Go acquisition sidecar, `127.0.0.1:3101`, unit versioned
-  at `infrastructure/systemd/fudcourt-data.service`),
+  at `deploy/systemd/fudcourt-data.service`),
   `fudcourt-reconciled` (**Rust** `/api/reconcile` service, `127.0.0.1:3102`, unit
-  versioned at `infrastructure/systemd/fudcourt-reconciled.service`; DR-014),
+  versioned at `deploy/systemd/fudcourt-reconciled.service`; DR-014),
   `fudcourt-sync.timer` (5 min). **`fudcourt-blog` is retired (DR-017)**: the blog
   is served by `fudcourt-web` at `/blog`, so there is no second Next process.
 - Origin binds loopback; the **only** path in is the tunnel ingress
@@ -408,7 +408,7 @@ USDT linear perps) and the funds never leave the exchange. Records:
 | Piece | Where | Why |
 |---|---|---|
 | Web app + API | `frontend/web`, `:3100`, `src/app/(frontend)/api/executor/**` → `forwardExecutor` in `src/app/(frontend)/api/executor/_proxy.ts` | one origin, one session, one tier gate (`/executor` and `/api/executor` are `team` — the same tier as the treasury surface it sits beside) |
-| Executor runtime | `backend/workers/executor` (Go), unit `infrastructure/systemd/fudcourt-executor.service`, `:3104` health + `:3105` executor API | **independent of `fudcourt-web`**: closing the browser or restarting the web unit never stops an execution |
+| Executor runtime | `backend/workers/executor` (Go), unit `deploy/systemd/fudcourt-executor.service`, `:3104` health + `:3105` executor API | **independent of `fudcourt-web`**: closing the browser or restarting the web unit never stops an execution |
 | Valkey lease | `apps/executor/internal/platform/lock` | one worker owns one execution; **FAIL-CLOSED** — a lock that fails open means duplicate orders, so any Valkey error makes the lease unusable and the worker does not trade (the inverse of the JSON cache in `src/server/cache.ts`, which fails open) |
 | Postgres store | `apps/executor/internal/repository` → `executor` schema | its own schema, never `public`: the executor owns its writes and the treasury tables belong to the sync, so neither prunes the other's rows. No migration runner — the embedded DDL is asserted byte-identical to `db/schema/executor-schema.sql` by `repository.EnsureSchema` (fatal on failure) with drift guard `TestEmbeddedSchemaMatchesTracked` (byte-exact) |
 | Adapters | `apps/executor/internal/exchanges` | one translation layer per venue; paper and live implement the SAME interface, so the worker has a single code path; paper's `MarketSource` seam delegates marks/fees to the live adapter (DR-042) |

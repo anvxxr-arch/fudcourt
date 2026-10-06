@@ -45,7 +45,7 @@ Module map (objective §8.9–§8.16; TS owner today → Go target package):
 | §8.15 strategy | deterministic strategies (TWAP, adaptive TWAP, iceberg, chase limit, scale in/out): tick context → submit/cancel/complete actions; seeded PRNG in state; zero submits on reconcile-only passes | `apps/web/src/platform/executor/engine.ts` (PRD §25–§35) | `internal/strategies` | landed |
 | §8.16 exchange adapters | canonical `Exchange` interface + normalized models/capabilities/errors/symbol mapping; per-venue adapters absorb every venue difference | `apps/web/src/platform/executor/exchange.ts` (`CcxtLike`, `mapError`, `SECRET_PATTERNS`) | `internal/exchanges` (+ `binance/`, `mexc/`, `paper/`; `bybit/` in flight) | landed |
 | idempotency (objective §23) | `fud_<executionID>_<sequence>` client order ids, fill dedup keys; pure, parse-strict | `types.ts` `clientOrderId` (PRD §66), `store.ts` `fillDedupKey` | `internal/runtime/idempotency` | landed |
-| worker/runtime | scheduler, locks, reconciliation, recovery, placement clamps | `apps/web/src/platform/executor/worker.ts` + `apps/web/scripts/executor/worker.ts` (unit `infrastructure/systemd/fudcourt-executor-worker.service`) | `internal/runtime/worker` | **in flight** |
+| worker/runtime | scheduler, locks, reconciliation, recovery, placement clamps | `apps/web/src/platform/executor/worker.ts` + `apps/web/scripts/executor/worker.ts` (unit `deploy/systemd/fudcourt-executor-worker.service`) | `internal/runtime/worker` | **in flight** |
 | lock | one worker owns one execution (PRD §65) | `apps/web/src/platform/executor/lock.ts` | `internal/platform/lock` (`lock.go`, `memory.go`, `valkey.go`) | landed |
 | persistence | `executor.*` schema writes, credential envelope | `apps/web/src/platform/executor/store.ts` (`EXECUTOR_DDL`) | repository layer | **in flight** (DDL tracked at `db/schema/executor-schema.sql`) |
 
@@ -119,7 +119,7 @@ are gone; their assertions are covered by the named Go counterparts in `parity-m
 rows 1–9 (253+ test funcs across 19 internal packages). `verify:executor` is
 `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` (12 hermetic
 tests, <1 s, no PG/Valkey/creds/network). The Linux TS worker systemd unit is retired to
-`infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt`; the entry script is
+`deploy/systemd/RETIRED-fudcourt-executor-worker.service.txt`; the entry script is
 preserved as a 5-line tombstone at `apps/web/scripts/executor/worker.ts`.
 
 What that means in practice (history — kept for the audit trail):

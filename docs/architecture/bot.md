@@ -86,7 +86,7 @@ configuration, not credentials.
 
 ## 5. The unit, and what `/status` checks
 
-Versioned at `infrastructure/systemd/fudcourt-bot.service`, installed as a
+Versioned at `deploy/systemd/fudcourt-bot.service`, installed as a
 `systemd --user` unit. `EnvironmentFile` is the repo-root `.env` — the same file the
 executor reads, which is why the token has one home instead of two.
 

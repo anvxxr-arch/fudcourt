@@ -5,6 +5,6 @@ OnBootSec=2min
 OnUnitActiveSec=5min
 AccuracySec=30s
 Persistent=true
-Unit=fudcourt-sync-rust.service
+Unit=fudcourt-reconciler.service
 [Install]
 WantedBy=timers.target

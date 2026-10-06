@@ -12,16 +12,16 @@
 # nothing; install it before the first run on a new host.
 #
 # ============================ READ THIS BEFORE SWAPPING ============================
-# Both sync variants live in infrastructure/systemd/ with distinct file names (systemd
+# Both sync variants live in deploy/systemd/ with distinct file names (systemd
 # resolves by the unit NAME inside the file, so only one pair can ever be installed):
 #
-#   infrastructure/systemd/fudcourt-sync.service + .timer        <-- installed now (Python oracle)
-#   infrastructure/systemd/fudcourt-sync-rust.service + .timer   <-- the Rust replacement (not installed)
+#   deploy/systemd/fudcourt-sync.service + .timer        <-- installed now (Python oracle)
+#   deploy/systemd/fudcourt-reconciler.service + .timer  <-- the Rust replacement (not installed)
 #
 # Swapping is therefore an uninstall + install + reload, never "both":
-#     cp infrastructure/systemd/fudcourt-sync-rust.{service,timer} ~/.config/systemd/user/
+#     cp deploy/systemd/fudcourt-reconciler.{service,timer} ~/.config/systemd/user/
 #     rm ~/.config/systemd/user/fudcourt-sync.{service,timer}
-#     systemctl --user daemon-reload && systemctl --user restart fudcourt-sync-rust.timer
+#     systemctl --user daemon-reload && systemctl --user restart fudcourt-reconciler.timer
 # Column the diff changes: ExecStart, WorkingDirectory, Documentation, and the
 # Description suffix `(Rust)`.
 # ==================================================================================

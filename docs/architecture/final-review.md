@@ -48,7 +48,7 @@ fudcourt/
 │                               executor-schema.sql (execution ledger)
 ├── tests/{e2e,integration,fixtures,oracle}/   # only `tests/{integration/api,fixtures,oracle/fixtures}` are populated;
 │                               # the executor subdirs under e2e/ + integration/ were retired by DR-043
-├── infrastructure/systemd/     10 files: 7 live units (web, api, data, executor,
+├── deploy/systemd/     10 files: 7 live units (web, api, data, executor,
 │                               sync, sync.timer, reconciled) + 3 retired .txt
 │                               tombstones (apicalls, blog, executor-worker)
 ├── scripts/{database,githooks,verify}/  schema drift alarm · pre-push hook ·
@@ -82,7 +82,7 @@ Already moved in earlier commits on this branch (verified via `git log`):
 | `apps/apicalls/` | `backend/data/` | `4e8ba91` (Phase 1) |
 | `apps/sync/` | `backend/sync/` | `4e8ba91` (Phase 1) |
 | `apps/web/db/*.sql` | `db/schema/*.sql` | `4e8ba91` (Phase 2) |
-| `apps/web/infrastructure/*`, `apps/apicalls/infrastructure/*`, `apps/sync/infrastructure/*` (`*.service`, `*.timer`) | `infrastructure/systemd/` | `94a2ee1` (Phase 10) |
+| `apps/web/infrastructure/*`, `apps/apicalls/infrastructure/*`, `apps/sync/infrastructure/*` (`*.service`, `*.timer`) | `deploy/systemd/` | `94a2ee1` (Phase 10) |
 
 ## 3. Files created
 
@@ -93,14 +93,14 @@ Already moved in earlier commits on this branch (verified via `git log`):
   funcs, no behavior/route/export change.
 - **Phase 5 (executor):** `backend/workers/executor/**` — 19 internal packages, **253** test funcs (committed `4ef371a`).
 - **Phase 9 (CI):** the five path-filtered workflows (§2) + `scripts/verify/verify-all.sh` (one-command offline gate).
-- **Phase 10 (deploy):** `infrastructure/systemd/{fudcourt-api,fudcourt-data,fudcourt-executor}.service` (+ existing units).
+- **Phase 10 (deploy):** `deploy/systemd/{fudcourt-api,fudcourt-data,fudcourt-executor}.service` (+ existing units).
 - **Phase 8 (tests):** `tests/integration/api/check-api-contract.py` — a cross-service gate that did not exist before (§6).
 - **Docs:** `docs/architecture/{current,target,domain-map,migration-plan,executor,events,security,parity-matrix,final-review}.md`.
 
 ## 4. Files removed
 
 - `.github/workflows/ci.yml` — superseded by the five domain workflows (this session).
-- `apps/web/infrastructure/*` (7 units), `backend/data/infrastructure/*`, `backend/sync/infrastructure/*` — consolidated into `infrastructure/systemd/` (commit `94a2ee1`).
+- `apps/web/infrastructure/*` (7 units), `backend/data/infrastructure/*`, `backend/sync/infrastructure/*` — consolidated into `deploy/systemd/` (commit `94a2ee1`).
 - `apps/blog/**`, the flat `apps/web/app/**` layout — removed in the earlier "repurpose" commit `5e68576`.
 
 **Removed in this session (2026-10-05, DR-043):** `apps/web/src/platform/executor/**` (8,024 LOC → 0), `apps/web/scripts/executor/worker.ts` (preserved as a 5-line tombstone in the still-present `scripts/executor/` directory), the 9 TS-runtime test files (`tests/{e2e,integration}/executor/**`, `apps/web/tests/executor-proxy-tests.ts`), and the `fudcourt-executor-worker.service` systemd unit (renamed to `RETIRED-fudcourt-executor-worker.service.txt`). The 15 `/api/executor/*` route handlers are now one-line forwarders through `src/app/(frontend)/api/executor/_proxy.ts`. The wire contract `src/platform/executor/types.ts` is the only TS-side survivor (consumer-facing). The matrix's `TS modules deleted` row closes to **DONE 2026-10-05 (DR-043)**, and §6 rows 1–3 flip to RESOLVED (same date).
@@ -126,7 +126,7 @@ ledger; portfolio is derived; append-only events). Current-state highlights:
 
 | # | Item | Evidence | Blocked on |
 | --- | --- | --- | --- |
-| 1 | ~~**TS executor still in `frontend/web`** — 8,024 LOC, 10 modules~~ **RESOLVED 2026-10-05 (DR-043)** | `find frontend/web/src/platform/executor -type f` → exactly one file: `types.ts` (the wire contract); the 9 runtime modules + the worker entry + 9 TS-runtime test files are deleted; `apps/web/scripts/executor/worker.ts` is preserved as a tombstone; the systemd unit renamed to `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt` (3-line header). | none — DR-043 closed this. Web↔Go route parity proven (`diff <(curl :3100/api/executor/executions) <(curl :3105/api/executor/executions)` empty for a minted team session); `fudcourt-executor.service` active on :3104+:3105; `bun run verify:executor` is `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` (12 tests, hermetic, <1 s). |
+| 1 | ~~**TS executor still in `frontend/web`** — 8,024 LOC, 10 modules~~ **RESOLVED 2026-10-05 (DR-043)** | `find frontend/web/src/platform/executor -type f` → exactly one file: `types.ts` (the wire contract); the 9 runtime modules + the worker entry + 9 TS-runtime test files are deleted; `apps/web/scripts/executor/worker.ts` is preserved as a tombstone; the systemd unit renamed to `deploy/systemd/RETIRED-fudcourt-executor-worker.service.txt` (3-line header). | none — DR-043 closed this. Web↔Go route parity proven (`diff <(curl :3100/api/executor/executions) <(curl :3105/api/executor/executions)` empty for a minted team session); `fudcourt-executor.service` active on :3104+:3105; `bun run verify:executor` is `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` (12 tests, hermetic, <1 s). |
 | 2 | ~~**15 web route handlers still import `platform/executor`**~~ **RESOLVED 2026-10-05 (DR-043)** | the 15 handlers are now 4-line shells forwarding to `src/app/(frontend)/api/executor/_proxy.ts`; the only `@/platform/executor` imports in `apps/web/src` are the 5 consumer-side type imports of the wire contract (`trade/{client,intent,ui/composer}.ts` + `features/executor/{client,ui}.tsx`). The single mention of the old path left in the tree is a doc comment inside `src/platform/executor/types.ts` (the renamed home) that explains the move — it is text, not an import. | none |
 | 3 | ~~**EXECUTOR DDL still embedded in `store.ts`**~~ **RESOLVED 2026-10-05 (DR-043)** | the TS `store.ts` is gone (see row 1). The Go runtime applies the tracked DDL at startup (`apps/executor/internal/repository.EnsureSchema`, `internal/repository/schema.go`), and its `embed` copy is pinned BYTE-EXACT by `TestEmbeddedSchemaMatchesTracked`. The test that previously pinned the TS half is gone with the file. | none |
 | 4 | **Phase 8 move of `apps/web/scripts/verify/*` — ~~not executed~~ EXECUTED** | the relocation landed in one commit: repo-wide gates → `scripts/verify/`, executor E2E → `tests/e2e/executor/` (later retired by DR-043), fixtures → `tests/fixtures/`, oracle → `tests/oracle/`, database tooling → `scripts/database/`, web-only suites → `apps/web/tests/`. Every invoker repointed (verify-all, pre-push, integration.yml, check-contract, root README, package.json); `test:shapers` is now **213/213** across 11 shaper files (was 20 files / 240 tests pre-DR-043; the 9 deleted TS-runtime suites' assertions are covered by the named Go counterparts in `parity-matrix.md` rows 1–9). The `verify-*.py` harnesses remain repo tools (their UI-wiring checks read `apps/web/src/**`), not web-app-only — `git ls-files`; `scripts/verify/{verify-*,monitor}.py`; `tests/{oracle,integration/api,fixtures}/` (the executor subdirs under `tests/e2e/` and `tests/integration/` are gone); `bun run test:shapers` | none |
@@ -152,7 +152,7 @@ Items 1–4 are now RESOLVED. The executor cutover is closed (DR-043, 2026-10-05
 | 9 | Valkey only ephemeral coordination | MET | `internal/platform/lock/{valkey,memory}.go`; durable state is Postgres |
 | 10 | API contracts centralized | MET | `contracts/{openapi,events,schemas}`; `CONTRACTS_OK` gate |
 | 11 | cross-service tests outside `frontend/web` | MET | `tests/integration/api/check-api-contract.py`, `tests/oracle/fixtures/` |
-| 12 | each deployable has clear ownership | MET | `infrastructure/systemd/` 12 units; `check-deploy` OK |
+| 12 | each deployable has clear ownership | MET | `deploy/systemd/` 12 units; `check-deploy` OK |
 | 13 | CI is domain-aware | MET | `.github/workflows/{web,go,rust,contracts,integration}.yml` |
 | 14 | services do not import each other's impl | MET | each Go module imports only its own path (§5) |
 | 15 | existing product behavior compatible | MET | `verify-all.sh` green; host units active |
@@ -177,7 +177,7 @@ the only vestige.
 | canonical exchange abstraction | 1 | `apps/executor/internal/exchanges/{interface,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package (85 test funcs) |
 | contract source of truth | 1 | `contracts/`: `openapi/fudcourt.yaml`, `events/{catalog,event.schema}.json`, `schemas/{error,event}-envelope.json`, gated by `CONTRACTS_OK` |
 | core executor logic inside `frontend/web` | 0 | **MET (DR-043, 2026-10-05)** — `find frontend/web/src/platform/executor -type f` → 1 (only `types.ts`; the wire contract has no runtime path: types only, no imports, no executables, no DB, no HTTP). The 9 deleted TS-runtime test files' assertions are covered by the named Go counterparts per `parity-matrix.md` rows 1–9 (253+ test funcs across 19 internal packages). |
-| independently deployable: web / api / data / executor / sync | 5 | `infrastructure/systemd/fudcourt-{web,api,data,executor,sync}.service` all present; `check-deploy` OK; `/api` independently built (`go build ./...` OK) |
+| independently deployable: web / api / data / executor / sync | 5 | `deploy/systemd/fudcourt-{web,api,data,executor,sync}.service` all present; `check-deploy` OK; `/api` independently built (`go build ./...` OK) |
 | ownership discoverable | — | gate `check-structure.py` OK (DR-018 layers), i.e. a stray cross-boundary file fails CI |
 
 Cross-checked gates for the block above (all green this session): `check-structure` OK,
@@ -394,7 +394,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    paragraph says must be built first **now exists**: `apps/executor/internal/api/**`
    serves all **15** `/api/executor/*` contract routes, mounted by `cmd/executor` on its own
    loopback listener `FUDCOURT_EXECUTOR_API_ADDR` (default `127.0.0.1:3105`, pinned by
-   `infrastructure/systemd/fudcourt-executor.service`), with TS-handler envelope fidelity pinned by
+   `deploy/systemd/fudcourt-executor.service`), with TS-handler envelope fidelity pinned by
    **29 hermetic tests** (`internal/api/{routes,harness}_test.go`; memory store + in-repo paper venue
    + pinned clock, no PG/Valkey/network). What remains is **not** a code-surface task — it is the
    three-item checklist: **(a)** thin-proxy the web `/api/executor/*` handlers to
@@ -440,7 +440,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
 
 **Clean.** The large uncommitted wave described earlier in the session — the earlier actor's
 `backend/workers/executor` refactor across ~20 Go files, the `backend/sync` Rust changes, the
-auth/transactions/wallets web-route rewrites, the `infrastructure/systemd` consolidation, and doc updates —
+auth/transactions/wallets web-route rewrites, the `deploy/systemd` consolidation, and doc updates —
 has since been **committed** by both actors' turns (this session's commits also carried a few of
 those pre-staged files in; see the commit-scope note below). `git status` is empty and
 `bash scripts/verify/verify-all.sh` returns `VERIFY_ALL_OK`.

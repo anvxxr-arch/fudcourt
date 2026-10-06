@@ -31,7 +31,7 @@
 | 6 | `bunx tsc --noEmit` | `frontend/web` | **PASS** — 0 errors |
 | 7 | `bun run test:shapers` | `frontend/web` | **PASS** — **240 tests / 0 fail** (shapers + auth + rate-limit + db + executor risk/engine/exchange/store/plan/worker/ui/runtime) |
 | 8 | `bun run build` | `frontend/web` | **PASS** — Next 16.3.6 Turbopack build, compiled in 59 s, 9 static pages, proxy (middleware) wired |
-Counts in rows 1, 4 and 5 are as-of-2026-10-01 measurements: `infrastructure/systemd/` held 10
+Counts in rows 1, 4 and 5 are as-of-2026-10-01 measurements: `deploy/systemd/` held 10
 units then and holds **10 live units + 3 tombstones** now (DR-040 retired
 `fudcourt-pgload` + `fudcourt-pgload.timer`), and `go test ./...` in `backend/data`
 is 179 `func Test` today (was 111 when `ARCHITECTURE.md` was written). The command paths in the
@@ -54,7 +54,7 @@ backend/sync       Rust crate: fudcourt-sync (balance sync) + fudcourt-reconcile
 backend/workers/executor   Go execution worker; loopback health only (/healthz + /readyz) :3104
 ```
 
-Deploy units versioned in-repo: 10 unit files under `infrastructure/systemd/`
+Deploy units versioned in-repo: 10 unit files under `deploy/systemd/`
 (`fudcourt-web`, `fudcourt-api`, `fudcourt-executor`, `fudcourt-executor-worker`,
 `fudcourt-data`, `fudcourt-reconciled`, `fudcourt-sync` + `fudcourt-sync.timer`
 (the Python oracle), `fudcourt-sync-rust` + `fudcourt-sync-rust.timer` — the

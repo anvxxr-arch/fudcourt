@@ -30,7 +30,7 @@ jobs:
         with:
           filters: |
             contracts:
-              - 'shared/**'
+              - 'contracts/**'
               - '.github/workflows/contracts.yml'
   check:
     name: "contracts - drift gate + generated SDK"

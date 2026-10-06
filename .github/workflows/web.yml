@@ -38,8 +38,8 @@ jobs:
           filters: |
             web:
               - 'apps/web/**'
-              - 'shared/**'
-              - 'infrastructure/**'
+              - 'contracts/**'
+              - 'deploy/**'
               - '.github/workflows/web.yml'
   web:
     name: "web - contract, typecheck, build"
@@ -62,7 +62,7 @@ jobs:
       - name: "Offline contract gate (CR_MODES consistency + mutation-auth guards)"
         run: python3 ../../scripts/verify/check-contract.py
       # NO deploy-unit guard here, on purpose. Its subject is the whole repo's
-      # infrastructure/systemd/ units and the cross-service binaries their ExecStart
+      # deploy/systemd/ units and the cross-service binaries their ExecStart
       # lines name (apps/reconciler/target/release/* exists only after `cargo build` and
       # is gitignored), so on a web-only runner with no Rust toolchain it fails for
       # reasons that have nothing to do with this surface. integration.yml's `offline`
