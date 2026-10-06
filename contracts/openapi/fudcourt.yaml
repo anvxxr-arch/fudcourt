@@ -5,15 +5,11 @@ info:
   description: |
     The **executor HTTP surface** of FUDCourt as it exists TODAY.
 
-    This contract documents the CURRENT TS-owned surface during the Go
-    migration: the ground truth is the frozen contract in
-    `frontend/web/src/platform/executor/types.ts` and the route handlers under
-    `frontend/web/src/app/**/api/executor/**` (endpoint list mirrored from the
-    header of `frontend/web/src/features/executor/client.ts`). It is **the
-    compatibility contract for `backend/api` + `backend/workers/executor` +
-    `shared/sdk/typescript`**: the Go services being built MUST preserve these
-    methods, paths, and response envelopes, and `shared/sdk/typescript` generates its
-    types from this file.
+    The ground truth is the route handlers under
+    `apps/web/src/app/(frontend)/api/executor/**` (endpoint list mirrored
+    from the header of `apps/web/src/features/executor/client.ts`). The Go
+    services that implement these routes MUST preserve these methods,
+    paths, and response envelopes.
 
     House rules encoded here (PRD §108, §109, house style):
 
@@ -308,7 +304,7 @@ paths:
       description: |
         Event names are the frozen `ExecutionEventName` enum; the canonical
         cross-service event catalog (stable ids + aliases) lives in
-        `shared/contracts/events/catalog.json`.
+        `contracts/events/events.json`.
       parameters:
         - $ref: '#/components/parameters/ExecutionId'
       responses:
@@ -516,7 +512,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
   # ==========================================================================
-  # Treasury read model + CRUD (frontend/web/src/app/(frontend)/api/**)
+  # Treasury read model + CRUD (apps/web/src/app/(frontend)/api/**)
   # ==========================================================================
   /api/all:
     get:
@@ -897,7 +893,7 @@ paths:
       operationId: listGuildMembers
       summary: Guild members with their resolved tier
       description: |
-        Thin proxy to the Go api (backend/api, `FUDCOURT_API_URL`, default
+        Thin proxy to the Go api (apps/api, `FUDCOURT_API_URL`, default
         127.0.0.1:3103), which owns the admin tier check from the signed
         session cookie, the guild member listing and the role grant/revoke;
         the response (status, body, headers) is replayed verbatim. The bodies
@@ -989,7 +985,7 @@ paths:
           description: 'Post-login destination. Unsafe values (absolute URLs, `//`, `..`, `?`/`#`/`%`) are replaced with `/`.'
       responses:
         '307':
-          description: Temporary redirect to `https://discord.com/oauth2/authorize?...`; sets the `fud_oauth_state` cookie. (The Go api answers 307 Temporary Redirect — `writeRedirect` in `backend/api/cmd/api/routes.go` — and the Next BFF forwards the upstream status verbatim.)
+          description: Temporary redirect to `https://discord.com/oauth2/authorize?...`; sets the `fud_oauth_state` cookie. (The Go api answers 307 Temporary Redirect — `writeRedirect` in `apps/api/routes.go` — and the Next BFF forwards the upstream status verbatim.)
           headers:
             Location:
               schema: { type: string }
@@ -1592,8 +1588,8 @@ paths:
                 $ref: '#/components/schemas/FailError'
   # ==========================================================================
   # Research read proxies — THIN, HONEST PROXIES to the Go `fudcourt-data` sidecar
-  # (backend/data, 127.0.0.1:3101) and the Rust `fudcourt-reconciled` service
-  # (backend/sync, 127.0.0.1:3102). The sidecars own ALL validation (mode/key
+  # (apps/data, 127.0.0.1:3101) and the Rust `fudcourt-reconciled` service
+  # (apps/reconciler, 127.0.0.1:3102). The sidecars own ALL validation (mode/key
   # tables, limit ranges, refusals); the web routes forward status, body and
   # cache headers VERBATIM and only answer 502 `{error: "<family> unreachable:
   # <reason>", upstream}` when the sidecar itself cannot be reached.
@@ -1676,7 +1672,7 @@ paths:
             NOT emitted by the sidecar for an upstream throttle: an upstream
             429 is retried three times and then reported as a **502** with
             `"upstreamStatus": 429` (`fetchWithRetry` → `writeFetchError` in
-            `backend/data/cmd/data/main.go`). A client that only
+            `apps/data/main.go`). A client that only
             special-cases 429 for backoff will never see one — branch on the
             502 body's `upstreamStatus` instead.
           content:
@@ -1820,9 +1816,9 @@ paths:
       description: |
         Verbatim pass-through of the Rust service's JSON — only the body's
         `source` field names the implementation that produced the numbers. NO
-        silent fallback to the TS oracle (`frontend/web/src/features/treasury/reconcile.ts` is a test
+        silent fallback to the TS oracle (`apps/web/src/features/overview/reconcile.ts` is a test
         artifact): service down ⇒ 502 with the real reason. Team-tier read
-        (middleware + `frontend/web/src/platform/auth/guard.ts`). Headers `X-Reconcile-Upstream`,
+        (middleware + `apps/web/src/server/auth.ts`). Headers `X-Reconcile-Upstream`,
         `Cache-Control: no-store`.
       responses:
         '200':
@@ -1896,7 +1892,7 @@ components:
             $ref: '#/components/schemas/ErrorDetail'
     MutationUnauthorized:
       description: |
-        `requireMutationAuth` refusal (`frontend/web/src/platform/auth/mutation.ts`):
+        `requireMutationAuth` refusal (`apps/web/src/server/auth.ts`):
         the signed session cookie is missing or below the `team` tier, so a write
         method is refused server-side before any handler runs. The body is the
         same `{error, detail}` pair a read that fails the middleware gate gets.
@@ -1906,7 +1902,7 @@ components:
             $ref: '#/components/schemas/ErrorDetail'
     RateLimited:
       description: |
-        The inbound limiter refused the request (`frontend/web/src/middleware.ts` +
+        The inbound limiter refused the request (`apps/web/src/middleware.ts` +
         `platform/http/rate-limit-inbound.ts`). Carries the `X-RateLimit-*`
         header set and `Retry-After`; the limiter fails OPEN (a counter failure
         serves the request), so a 429 here is always a measured spend, never a
@@ -1917,7 +1913,7 @@ components:
             $ref: '#/components/schemas/RateLimitedError'
   schemas:
     # ------------------------------------------------------------------
-    # Enumerations — frozen in frontend/web/src/platform/executor/types.ts.
+    # Enumerations — frozen in apps/web/src/lib/executor-request-defs.ts.
     # ------------------------------------------------------------------
     MarketType:
       type: string
@@ -2066,7 +2062,7 @@ components:
         - hybrid
     ExecutionEventName:
       type: string
-      description: 'Immutable event names (PRD §63). Canonical cross-service ids + aliases: shared/contracts/events/catalog.json.'
+      description: 'Immutable event names (PRD §63). Canonical cross-service ids + aliases: contracts/events/events.json.'
       enum:
         - EXECUTION_CREATED
         - RISK_CALCULATED
@@ -3282,7 +3278,7 @@ components:
     # ------------------------------------------------------------------
     # Error shapes — the routes answer with these verbatim bodies.
     # The normalized cross-service error model (code/message/request_id) is
-    # shared/contracts/schemas/error-envelope.json.
+    # contracts/schemas/error-envelope.json.
     # ------------------------------------------------------------------
     ErrorBasic:
       type: object
@@ -3335,7 +3331,7 @@ components:
           $ref: '#/components/schemas/PreviewResult'
     # ------------------------------------------------------------------
     # App-surface error shapes (real route bodies, not the normalized model;
-    # that lives in shared/contracts/schemas/error-envelope.json).
+    # that lives in contracts/schemas/error-envelope.json).
     # ------------------------------------------------------------------
     FailError:
       type: object
@@ -3378,7 +3374,7 @@ components:
           nullable: true
     # ------------------------------------------------------------------
     # Research read proxies — verbatim sidecar wire shapes
-    # (backend/data/internal/{cryptorank,khala,llama,chainrank,news}).
+    # (apps/data/internal/research/{cryptorank,khala,llama,chainrank,news}).
     # Every *float64 pointer emits JSON null when unknown (honest nulls,
     # never 0); every `omitempty` key is simply absent when unset.
     # ------------------------------------------------------------------
@@ -4197,7 +4193,7 @@ components:
     # ==================================================================
     # Treasury read model (Postgres read-side, DR-019) — the row shapes the
     # `/api/{all,coins,wallets,transactions}` handlers return verbatim.
-    # Columns mirror `database/schema/pg-schema.sql` exactly; rows are
+    # Columns mirror `db/schema/pg-schema.sql` exactly; rows are
     # UNVALIDATED at the
     # boundary, so a nullable column is `nullable: true` here, never omitted
     # and never coerced to 0.
@@ -4274,7 +4270,7 @@ components:
       required: [id, date, chain, event]
       description: |
         One `transactions` row (`SELECT *`, column order of
-        `database/schema/pg-schema.sql`). `asset`/`amount_usd`/`direction`/
+        `db/schema/pg-schema.sql`). `asset`/`amount_usd`/`direction`/
         `hash`/`url`/`source`/`memo`/`wallet_to`/`venue_id`/`trade_id` are
         nullable; the write paths keep writing SQL NULL (never `0`/`''`).
       properties:
@@ -4535,7 +4531,7 @@ components:
         id: { type: integer }
         row: { $ref: '#/components/schemas/TransactionRow' }
     # ==================================================================
-    # Admin control plane (proxied to backend/api, which owns the logic)
+    # Admin control plane (proxied to apps/api, which owns the logic)
     # ==================================================================
     MemberRow:
       type: object

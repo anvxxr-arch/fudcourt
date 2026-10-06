@@ -15,7 +15,7 @@
  *  - the vintage is DISCOVERED from the catalogue, and the undated `FM` flow —
  *    which answers no data at all (measured) — is never selected.
  *
- * Usage: cd apps/web && npm run test:shapers
+ * Usage: cd apps/web && bun run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

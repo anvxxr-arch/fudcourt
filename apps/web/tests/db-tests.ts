@@ -13,7 +13,7 @@
  *    order; Postgres leaves ties unspecified, which returned a different row order
  *    for the transactions list until a tiebreaker was added.
  *
- * Usage: cd apps/web && npm run test:shapers
+ * Usage: cd apps/web && bun run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

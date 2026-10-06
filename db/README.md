@@ -10,10 +10,8 @@
 > `schema/schema.sql`, its generator `scripts/database/dump-schema.mjs` and the
 > whole `scripts/database/` directory are deleted; `schema/pg-schema.sql` is the
 > only treasury schema. The Turso→Postgres projection
-> (`frontend/web/scripts/tools/pg-load.ts`) and its `fudcourt-pgload.{service,timer}`
-> are removed (retirement note:
-> `deploy/systemd/RETIRED-fudcourt-pgload.service.txt`), and the web data
-> module moved from `platform/db/mirror.ts` to `platform/db/pg.ts`.
+> (`pg-load.ts`) and its `fudcourt-pgload.{service,timer}` are removed, and the
+> web data module moved from `platform/db/mirror.ts` to `platform/db/pg.ts`.
 >
 > Moved here from `apps/web/db/` (Phase 2 of the domain restructure); DDL semantics
 > were not changed by the move. Column-level documentation stays in

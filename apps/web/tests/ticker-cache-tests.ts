@@ -30,7 +30,7 @@
  * Each test uses its own base/symbol so the route-local caches shared across
  * tests in this file never turn one test's MISS into another's HIT.
  *
- * Usage: cd apps/web && npm run test:shapers
+ * Usage: cd apps/web && bun run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

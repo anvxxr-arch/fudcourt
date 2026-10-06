@@ -12,8 +12,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=home' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=home' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-coins",
@@ -28,8 +28,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/all-coins-list; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=coins' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/all-coins-list; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=coins' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-trending",
@@ -44,8 +44,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/trending; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=trending' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/trending; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=trending' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-gainers",
@@ -60,8 +60,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/gainers; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=gainers' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/gainers; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=gainers' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-losers",
@@ -76,8 +76,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/losers; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=losers' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/losers; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=losers' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-funding",
@@ -92,7 +92,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "dead",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
     "evidence": "upstream=https://cryptorank.io/funding-rounds (Next.js data-route, DISABLED); curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=funding' -> 503; modes.go:125 Disabled={funding,unlocks}, modes.go:129 DisabledReason (synthetic decoy); main.go:261 IsDisabled -> 503"
   },
   {
@@ -108,7 +108,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "dead",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
     "evidence": "upstream=https://cryptorank.io/token-unlock (Next.js data-route, DISABLED); curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=unlocks' -> 503; modes.go:125 Disabled={funding,unlocks}, modes.go:129 DisabledReason (synthetic decoy); main.go:261 IsDisabled -> 503"
   },
   {
@@ -124,8 +124,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/categories/<key>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=categories' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/categories/<key>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=categories' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-exchanges",
@@ -140,8 +140,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/exchanges/<list>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=exchanges' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/exchanges/<list>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=exchanges' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-coin",
@@ -156,8 +156,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/price/<slug>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=coin' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/price/<slug>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=coin' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-listings",
@@ -172,8 +172,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/listings; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=listings' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/listings; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=listings' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-blockchains",
@@ -188,8 +188,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/blockchains; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=blockchains' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/blockchains; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=blockchains' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-chain",
@@ -204,8 +204,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/blockchains/<key>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=chain' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/blockchains/<key>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=chain' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-launchpool",
@@ -220,8 +220,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/{past|active|upcoming}-launchpool; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=launchpool' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/{past|active|upcoming}-launchpool; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=launchpool' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-nodesale",
@@ -236,8 +236,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/{past|active|upcoming}-nodesale; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=nodesale' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/{past|active|upcoming}-nodesale; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=nodesale' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-news",
@@ -252,8 +252,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/news; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=news' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/news; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=news' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-tags",
@@ -268,8 +268,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/tags; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=tags' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/tags; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=tags' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-tag",
@@ -284,8 +284,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/tags/<key>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=tag' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/tags/<key>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=tag' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-ecosystems",
@@ -300,8 +300,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/ecosystems; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=ecosystems' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/ecosystems; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=ecosystems' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-ecosystem",
@@ -316,8 +316,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/ecosystems/<key>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=ecosystem' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/ecosystems/<key>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=ecosystem' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-rwa",
@@ -332,8 +332,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/rwa; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=rwa' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/rwa; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=rwa' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-rwaasset",
@@ -348,8 +348,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/rwa/<type>/<slug>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=rwaasset' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/rwa/<type>/<slug>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=rwaasset' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-quarterly",
@@ -364,8 +364,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/charts/quarterly-returns; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=quarterly' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/charts/quarterly-returns; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=quarterly' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-prediction",
@@ -380,8 +380,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/prediction-markets; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=prediction' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/prediction-markets; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=prediction' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-converter",
@@ -396,8 +396,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/converter; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=converter' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/converter; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=converter' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-media",
@@ -412,8 +412,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/media; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=media' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/media; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=media' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-newstag",
@@ -428,8 +428,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/news/tag/<slug>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=newstag' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/news/tag/<slug>; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=newstag' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-cryptorank-aioverview",
@@ -444,8 +444,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:ModeUpstream",
-    "evidence": "upstream=https://cryptorank.io/ai-market-overview; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=aioverview' -> 200; backend/data/internal/research/cryptorank/modes.go:ModeUpstream"
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:ModeUpstream",
+    "evidence": "upstream=https://cryptorank.io/ai-market-overview; curl -s -m 25 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/cryptorank?mode=aioverview' -> 200; apps/data/internal/research/cryptorank/modes.go:ModeUpstream"
   },
   {
     "id": "acq-family-cryptorank",
@@ -460,7 +460,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/cryptorank/modes.go:Modes",
+    "code_path": "apps/data/internal/research/cryptorank/modes.go:Modes",
     "evidence": "curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}; cryptorank.ModeCount=28 (modes.go:41); 26/28 modes 200, funding+unlocks 503; needs tls-client chrome_131 + HTTP/2 (fetch.go:6-15)"
   },
   {
@@ -476,8 +476,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/khala/modes.go:UpstreamURL",
-    "evidence": "upstream=https://www.khala.io/ (homepage rows); curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/khala?mode=reports' -> 200; backend/data/internal/research/khala/modes.go:UpstreamURL; modes.go:62 Modes"
+    "code_path": "apps/data/internal/research/khala/modes.go:UpstreamURL",
+    "evidence": "upstream=https://www.khala.io/ (homepage rows); curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/khala?mode=reports' -> 200; apps/data/internal/research/khala/modes.go:UpstreamURL; modes.go:62 Modes"
   },
   {
     "id": "acq-khala-report",
@@ -492,8 +492,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/khala/modes.go:UpstreamURL",
-    "evidence": "upstream=https://www.khala.io/<slug>; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/khala?mode=report' -> 200; backend/data/internal/research/khala/modes.go:UpstreamURL; modes.go:62 Modes; curl ...'?mode=report&key=x402-completing-the-internets-missing-payment-layer-for-agentic-commerce' -> 200"
+    "code_path": "apps/data/internal/research/khala/modes.go:UpstreamURL",
+    "evidence": "upstream=https://www.khala.io/<slug>; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/khala?mode=report' -> 200; apps/data/internal/research/khala/modes.go:UpstreamURL; modes.go:62 Modes; curl ...'?mode=report&key=x402-completing-the-internets-missing-payment-layer-for-agentic-commerce' -> 200"
   },
   {
     "id": "acq-khala-latest",
@@ -508,8 +508,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/khala/modes.go:UpstreamURL",
-    "evidence": "upstream=https://www.khala.io/ (newest N with per-report dates); curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/khala?mode=latest' -> 200; backend/data/internal/research/khala/modes.go:UpstreamURL; modes.go:62 Modes"
+    "code_path": "apps/data/internal/research/khala/modes.go:UpstreamURL",
+    "evidence": "upstream=https://www.khala.io/ (newest N with per-report dates); curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/khala?mode=latest' -> 200; apps/data/internal/research/khala/modes.go:UpstreamURL; modes.go:62 Modes"
   },
   {
     "id": "acq-family-khala",
@@ -524,7 +524,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/khala/modes.go:Modes",
+    "code_path": "apps/data/internal/research/khala/modes.go:Modes",
     "evidence": "curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}; khala.ModeCount=3 (modes.go:65); all 3 modes 200; plain net/http (modes.go:15-24); TTL 900s (fetch.go:40)"
   },
   {
@@ -540,8 +540,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/llama/modes.go:UpstreamURL",
-    "evidence": "upstream=https://api.llama.fi/v2/chains; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/llama?mode=chains' -> 200; backend/data/internal/research/llama/modes.go:UpstreamURL; modes.go:66 Modes"
+    "code_path": "apps/data/internal/research/llama/modes.go:UpstreamURL",
+    "evidence": "upstream=https://api.llama.fi/v2/chains; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/llama?mode=chains' -> 200; apps/data/internal/research/llama/modes.go:UpstreamURL; modes.go:66 Modes"
   },
   {
     "id": "acq-llama-protocols",
@@ -556,8 +556,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/llama/modes.go:UpstreamURL",
-    "evidence": "upstream=https://api.llama.fi/protocols; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/llama?mode=protocols' -> 200; backend/data/internal/research/llama/modes.go:UpstreamURL; modes.go:66 Modes"
+    "code_path": "apps/data/internal/research/llama/modes.go:UpstreamURL",
+    "evidence": "upstream=https://api.llama.fi/protocols; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/llama?mode=protocols' -> 200; apps/data/internal/research/llama/modes.go:UpstreamURL; modes.go:66 Modes"
   },
   {
     "id": "acq-llama-historical",
@@ -572,8 +572,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/llama/modes.go:UpstreamURL",
-    "evidence": "upstream=https://api.llama.fi/v2/historicalChainTvl; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/llama?mode=historical' -> 200; backend/data/internal/research/llama/modes.go:UpstreamURL; modes.go:66 Modes"
+    "code_path": "apps/data/internal/research/llama/modes.go:UpstreamURL",
+    "evidence": "upstream=https://api.llama.fi/v2/historicalChainTvl; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/llama?mode=historical' -> 200; apps/data/internal/research/llama/modes.go:UpstreamURL; modes.go:66 Modes"
   },
   {
     "id": "acq-family-llama",
@@ -588,7 +588,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/llama/modes.go:Modes",
+    "code_path": "apps/data/internal/research/llama/modes.go:Modes",
     "evidence": "curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}; llama.ModeCount=3 (modes.go:69); all 3 modes 200; TTL 15s (fetch.go:26); Base modes.go:57"
   },
   {
@@ -604,7 +604,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/news/modes.go:Sources",
+    "code_path": "apps/data/internal/research/news/modes.go:Sources",
     "evidence": "curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/news?source=cointelegraph' -> 200; modes.go:76 Sources=[{Name:cointelegraph,URL:https://cointelegraph.com/rss}]; TTL 15s (fetch.go:25)"
   },
   {
@@ -620,7 +620,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/news/modes.go:Modes",
+    "code_path": "apps/data/internal/research/news/modes.go:Modes",
     "evidence": "curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}; news.SourceCount=1 (modes.go:81); feed 200; Base modes.go:54; PathRSS modes.go:57"
   },
   {
@@ -636,8 +636,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/chainrank/modes.go:UpstreamURL",
-    "evidence": "upstream=https://www.chainrank.fyi/api/stats; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/chainrank?mode=stats' -> 200; backend/data/internal/research/chainrank/modes.go:UpstreamURL; modes.go:60 Modes"
+    "code_path": "apps/data/internal/research/chainrank/modes.go:UpstreamURL",
+    "evidence": "upstream=https://www.chainrank.fyi/api/stats; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/chainrank?mode=stats' -> 200; apps/data/internal/research/chainrank/modes.go:UpstreamURL; modes.go:60 Modes"
   },
   {
     "id": "acq-chainrank-listings",
@@ -652,8 +652,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/chainrank/modes.go:UpstreamURL",
-    "evidence": "upstream=https://www.chainrank.fyi/api/listings?page&pageSize; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/chainrank?mode=listings' -> 200; backend/data/internal/research/chainrank/modes.go:UpstreamURL; modes.go:60 Modes"
+    "code_path": "apps/data/internal/research/chainrank/modes.go:UpstreamURL",
+    "evidence": "upstream=https://www.chainrank.fyi/api/listings?page&pageSize; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/chainrank?mode=listings' -> 200; apps/data/internal/research/chainrank/modes.go:UpstreamURL; modes.go:60 Modes"
   },
   {
     "id": "acq-family-chainrank",
@@ -668,7 +668,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/chainrank/modes.go:Modes",
+    "code_path": "apps/data/internal/research/chainrank/modes.go:Modes",
     "evidence": "curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}; chainrank.ModeCount=2 (modes.go:63); both modes 200; Base modes.go:52; TTL 15s (fetch.go:25)"
   },
   {
@@ -684,8 +684,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/coinglass/modes.go:UpstreamURL",
-    "evidence": "upstream=https://capi.coinglass.com/api/futures/home/statistics; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=statistics' -> 200; backend/data/internal/research/coinglass/modes.go:UpstreamURL; modes.go:16 Modes; keyless: CapiBase fetch.go:48, payload AES-128-ECB x2+gzip decrypt.go; header Encryption:true fetch.go:270"
+    "code_path": "apps/data/internal/research/coinglass/modes.go:UpstreamURL",
+    "evidence": "upstream=https://capi.coinglass.com/api/futures/home/statistics; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=statistics' -> 200; apps/data/internal/research/coinglass/modes.go:UpstreamURL; modes.go:16 Modes; keyless: CapiBase fetch.go:48, payload AES-128-ECB x2+gzip decrypt.go; header Encryption:true fetch.go:270"
   },
   {
     "id": "acq-coinglass-openInterest",
@@ -700,8 +700,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/coinglass/modes.go:UpstreamURL",
-    "evidence": "upstream=https://capi.coinglass.com/api/openInterest/info?symbol=<SYM>; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=openInterest&symbol=BTC' -> 200; backend/data/internal/research/coinglass/modes.go:UpstreamURL; modes.go:16 Modes; keyless: CapiBase fetch.go:48, payload AES-128-ECB x2+gzip decrypt.go; header Encryption:true fetch.go:270"
+    "code_path": "apps/data/internal/research/coinglass/modes.go:UpstreamURL",
+    "evidence": "upstream=https://capi.coinglass.com/api/openInterest/info?symbol=<SYM>; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=openInterest&symbol=BTC' -> 200; apps/data/internal/research/coinglass/modes.go:UpstreamURL; modes.go:16 Modes; keyless: CapiBase fetch.go:48, payload AES-128-ECB x2+gzip decrypt.go; header Encryption:true fetch.go:270"
   },
   {
     "id": "acq-coinglass-fundingRate",
@@ -716,8 +716,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/coinglass/modes.go:UpstreamURL",
-    "evidence": "upstream=https://capi.coinglass.com/api/fundingRate/rank; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=fundingRate' -> 200; backend/data/internal/research/coinglass/modes.go:UpstreamURL; modes.go:16 Modes; keyless: CapiBase fetch.go:48, payload AES-128-ECB x2+gzip decrypt.go; header Encryption:true fetch.go:270"
+    "code_path": "apps/data/internal/research/coinglass/modes.go:UpstreamURL",
+    "evidence": "upstream=https://capi.coinglass.com/api/fundingRate/rank; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=fundingRate' -> 200; apps/data/internal/research/coinglass/modes.go:UpstreamURL; modes.go:16 Modes; keyless: CapiBase fetch.go:48, payload AES-128-ECB x2+gzip decrypt.go; header Encryption:true fetch.go:270"
   },
   {
     "id": "acq-coinglass-markets",
@@ -732,8 +732,8 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/coinglass/modes.go:UpstreamURL",
-    "evidence": "upstream=https://capi.coinglass.com/api/futures/v2/coins/markets; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=markets' -> 200; backend/data/internal/research/coinglass/modes.go:UpstreamURL; modes.go:16 Modes; keyless: CapiBase fetch.go:48, payload AES-128-ECB x2+gzip decrypt.go; header Encryption:true fetch.go:270"
+    "code_path": "apps/data/internal/research/coinglass/modes.go:UpstreamURL",
+    "evidence": "upstream=https://capi.coinglass.com/api/futures/v2/coins/markets; curl -s -m 20 -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=markets' -> 200; apps/data/internal/research/coinglass/modes.go:UpstreamURL; modes.go:16 Modes; keyless: CapiBase fetch.go:48, payload AES-128-ECB x2+gzip decrypt.go; header Encryption:true fetch.go:270"
   },
   {
     "id": "acq-family-coinglass",
@@ -748,7 +748,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/coinglass/modes.go:Modes",
+    "code_path": "apps/data/internal/research/coinglass/modes.go:Modes",
     "evidence": "curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}; coinglass.ModeCount=4 (modes.go:19); all 4 modes 200; CapiBase fetch.go:48; TTL 60s (fetch.go:36)"
   },
   {
@@ -764,7 +764,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "dark",
-    "code_path": "backend/data/internal/research/coinank/modes.go:UpstreamURL",
+    "code_path": "apps/data/internal/research/coinank/modes.go:UpstreamURL",
     "evidence": "upstream=https://api.coinank.com/api/fundingRate/current; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=fundingRate' -> 502 {\"code\":\"403\",\"detail\":\"CoinAnk refused the request: please sub api to get data\",\"error\":\"upstream refused\",\"mode\":\"fundingRate\"}; modes.go:25 Modes; keyless client signature sign.go:63-75"
   },
   {
@@ -780,7 +780,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "dark",
-    "code_path": "backend/data/internal/research/coinank/modes.go:UpstreamURL",
+    "code_path": "apps/data/internal/research/coinank/modes.go:UpstreamURL",
     "evidence": "upstream=https://api.coinank.com/api/liquidation/allExchange?interval=<1h|2h|4h|6h|12h|1d>; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=liquidation' -> 502 {\"code\":\"403\",\"detail\":\"CoinAnk refused the request: please sub api to get data\",\"error\":\"upstream refused\",\"mode\":\"liquidation\"}; modes.go:25 Modes; keyless client signature sign.go:63-75"
   },
   {
@@ -796,7 +796,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "dark",
-    "code_path": "backend/data/internal/research/coinank/modes.go:UpstreamURL",
+    "code_path": "apps/data/internal/research/coinank/modes.go:UpstreamURL",
     "evidence": "upstream=https://api.coinank.com/api/longshort/all; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=longShort' -> 502 {\"code\":\"403\",\"detail\":\"CoinAnk refused the request: please sub api to get data\",\"error\":\"upstream refused\",\"mode\":\"longShort\"}; modes.go:25 Modes; keyless client signature sign.go:63-75"
   },
   {
@@ -812,7 +812,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "dark",
-    "code_path": "backend/data/internal/research/coinank/modes.go:UpstreamURL",
+    "code_path": "apps/data/internal/research/coinank/modes.go:UpstreamURL",
     "evidence": "upstream=https://api.coinank.com/api/etf/etfInflow; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=etf' -> 502 {\"code\":\"403\",\"detail\":\"CoinAnk refused the request: please sub api to get data\",\"error\":\"upstream refused\",\"mode\":\"etf\"}; modes.go:25 Modes; keyless client signature sign.go:63-75"
   },
   {
@@ -828,7 +828,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "dark",
-    "code_path": "backend/data/internal/research/coinank/modes.go:UpstreamURL",
+    "code_path": "apps/data/internal/research/coinank/modes.go:UpstreamURL",
     "evidence": "upstream=https://api.coinank.com/api/hyper/topPosition; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=whales' -> 502 {\"code\":\"403\",\"detail\":\"CoinAnk refused the request: please sub api to get data\",\"error\":\"upstream refused\",\"mode\":\"whales\"}; modes.go:25 Modes; keyless client signature sign.go:63-75"
   },
   {
@@ -844,7 +844,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "dark",
-    "code_path": "backend/data/internal/research/coinank/modes.go:Modes",
+    "code_path": "apps/data/internal/research/coinank/modes.go:Modes",
     "evidence": "curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}; coinank.ModeCount=5 (modes.go:28); ALL 5 modes 502 'please sub api to get data'; Base fetch.go:54; TTL 60s (fetch.go:42)"
   },
   {
@@ -860,7 +860,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/coinmarketcap/modes.go:UpstreamURL",
+    "code_path": "apps/data/internal/research/coinmarketcap/modes.go:UpstreamURL",
     "evidence": "upstream=https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?start=1&limit=100; curl -s -m 40 \"http://127.0.0.1:3101/api/coinmarketcap?mode=listing\" -> 200 upstreamCount=101 rows at data.cryptoCurrencyList; limit=0 -> 400 invalid param (local; upstream answers limit=0 with a SUCCESS envelope carrying an EMPTY list); curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"coinmarketcap\":\"4 modes (keyless, no credential)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}"
   },
   {
@@ -876,7 +876,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/coinmarketcap/modes.go:UpstreamURL",
+    "code_path": "apps/data/internal/research/coinmarketcap/modes.go:UpstreamURL",
     "evidence": "upstream=https://api.coinmarketcap.com/data-api/v3/global-metrics/quotes/latest; curl -s -m 40 \"http://127.0.0.1:3101/api/coinmarketcap?mode=global\" -> 200 OBJECT payload (upstreamCount ABSENT by design); limit/start refused 400 unexpected param (mode takes no pagination); curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"coinmarketcap\":\"4 modes (keyless, no credential)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}"
   },
   {
@@ -892,7 +892,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/coinmarketcap/modes.go:UpstreamURL",
+    "code_path": "apps/data/internal/research/coinmarketcap/modes.go:UpstreamURL",
     "evidence": "upstream=https://api.coinmarketcap.com/data-api/v3/cryptocurrency/market-pairs/latest?slug=bitcoin&start=1&limit=100; curl -s -m 40 \"http://127.0.0.1:3101/api/coinmarketcap?mode=marketPairs&slug=bitcoin\" -> 200 upstreamCount=100 rows at data.marketPairs; missing/bad slug -> 400 invalid param (local); unknown slug -> 502 upstream refused code=500 (HTTP200 envelope error_code!=0, never an empty table); curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"coinmarketcap\":\"4 modes (keyless, no credential)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}"
   },
   {
@@ -908,7 +908,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/coinmarketcap/modes.go:UpstreamURL",
+    "code_path": "apps/data/internal/research/coinmarketcap/modes.go:UpstreamURL",
     "evidence": "upstream=https://api.coinmarketcap.com/data-api/v3/exchange/listing?start=1&limit=100; curl -s -m 40 \"http://127.0.0.1:3101/api/coinmarketcap?mode=exchanges\" -> 200 upstreamCount=100 rows at data.exchanges; cache MISS->HIT, fresh=1->MISS; curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"coinmarketcap\":\"4 modes (keyless, no credential)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}"
   },
   {
@@ -924,7 +924,7 @@
     "durability": "NONE",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/data/internal/research/coinmarketcap/modes.go:Modes",
+    "code_path": "apps/data/internal/research/coinmarketcap/modes.go:Modes",
     "evidence": "curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"coinmarketcap\":\"4 modes (keyless, no credential)\"}; coinmarketcap.ModeCount=4 (modes.go:28); all 4 modes 200; Base fetch.go:54; TTL 60s (fetch.go:42); auth note shape.go:195; python3 scripts/verify/verify-coinmarketcap.py -> 70 pass / 0 fail / 0 skip"
   },
   {
@@ -940,8 +940,8 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/blog/(payload)/cms/api/graphql-playground/route.ts:6",
-    "evidence": "`find frontend/web/src/app -name 'route.ts' -o -name 'route.tsx' | wc -l` -> 42; file read: route.ts:6 `export const GET = GRAPHQL_PLAYGROUND_GET(config)`; middleware.ts:82-84: Payload CMS API not tier-gated (Payload enforces own auth)",
+    "code_path": "apps/web/src/app/blog/(payload)/cms/api/graphql-playground/route.ts:6",
+    "evidence": "`find apps/web/src/app -name 'route.ts' -o -name 'route.tsx' | wc -l` -> 42; file read: route.ts:6 `export const GET = GRAPHQL_PLAYGROUND_GET(config)`; middleware.ts:82-84: Payload CMS API not tier-gated (Payload enforces own auth)",
     "path": "/blog/cms/api/graphql-playground",
     "methods": [
       "GET"
@@ -961,8 +961,8 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/blog/(payload)/cms/api/graphql/route.ts:6-7",
-    "evidence": "`find frontend/web/src/app -name 'route.ts' -o -name 'route.tsx' | wc -l` -> 42; file read: route.ts:6-7 `export const POST = GRAPHQL_POST(config)`, `export const OPTIONS = REST_OPTIONS(config)`; middleware.ts:82-84 not tier-gated",
+    "code_path": "apps/web/src/app/blog/(payload)/cms/api/graphql/route.ts:6-7",
+    "evidence": "`find apps/web/src/app -name 'route.ts' -o -name 'route.tsx' | wc -l` -> 42; file read: route.ts:6-7 `export const POST = GRAPHQL_POST(config)`, `export const OPTIONS = REST_OPTIONS(config)`; middleware.ts:82-84 not tier-gated",
     "path": "/blog/cms/api/graphql",
     "methods": [
       "POST",
@@ -983,8 +983,8 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/blog/(payload)/cms/api/[...slug]/route.ts:14-19",
-    "evidence": "`find frontend/web/src/app -name 'route.ts' -o -name 'route.tsx' | wc -l` -> 42; file read: route.ts:14-19 REST_GET/POST/DELETE/PATCH/PUT/OPTIONS; writes gated by Payload users collection, reads public (middleware.ts:82-84)",
+    "code_path": "apps/web/src/app/blog/(payload)/cms/api/[...slug]/route.ts:14-19",
+    "evidence": "`find apps/web/src/app -name 'route.ts' -o -name 'route.tsx' | wc -l` -> 42; file read: route.ts:14-19 REST_GET/POST/DELETE/PATCH/PUT/OPTIONS; writes gated by Payload users collection, reads public (middleware.ts:82-84)",
     "path": "/blog/cms/api/[...slug]",
     "methods": [
       "GET",
@@ -1009,7 +1009,7 @@
     "durability": "NONE",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/admin/members/route.ts:19-22",
+    "code_path": "apps/web/src/app/(frontend)/api/admin/members/route.ts:19-22",
     "evidence": "route.ts:19 `const FUDCOURT_API = process.env.FUDCOURT_API_URL ?? 'http://127.0.0.1:3103'`; route.ts:6-13 header: Go does the admin tier check; NOTE guard.ts does NOT gate this path (requiredTierForPath('/api/admin/members')=null) — admin enforced upstream only (Go handleAdminMembers)",
     "path": "/api/admin/members",
     "methods": [
@@ -1031,7 +1031,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/all/route.ts:7-13",
+    "code_path": "apps/web/src/app/(frontend)/api/all/route.ts:7-13",
     "evidence": "guard.ts:23-40 TEAM_API_ROUTES / /executor -> team; requiredTierForPath()  (/api/all); route.ts:2,9 `import { getAll } from '@/platform/db/client'` self-contained, no upstream fetch",
     "path": "/api/all",
     "methods": [
@@ -1052,7 +1052,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/coins/route.ts:8-26",
+    "code_path": "apps/web/src/app/(frontend)/api/coins/route.ts:8-26",
     "evidence": "guard.ts:23-40 TEAM_API_ROUTES / /executor -> team; requiredTierForPath()  (/api/coins); route.ts:10-19 `query('SELECT asset, SUM(value_usd) ... FROM assets GROUP BY asset')` self-contained",
     "path": "/api/coins",
     "methods": [
@@ -1073,7 +1073,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/wallets/route.ts:8-40",
+    "code_path": "apps/web/src/app/(frontend)/api/wallets/route.ts:8-40",
     "evidence": "guard.ts:23-40 TEAM_API_ROUTES / /executor -> team; requiredTierForPath()  (/api/wallets); route.ts:3,18 `requireMutationAuth(req)` (default tier 'team', mutation.ts:21)",
     "path": "/api/wallets",
     "methods": [
@@ -1095,7 +1095,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/transactions/route.ts:8-202",
+    "code_path": "apps/web/src/app/(frontend)/api/transactions/route.ts:8-202",
     "evidence": "guard.ts:23-40 TEAM_API_ROUTES / /executor -> team; requiredTierForPath()  (/api/transactions); route.ts:66,144,164 `requireMutationAuth(req)` on POST/DELETE/PUT",
     "path": "/api/transactions",
     "methods": [
@@ -1119,7 +1119,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/transactions/[id]/route.ts:8-97",
+    "code_path": "apps/web/src/app/(frontend)/api/transactions/[id]/route.ts:8-97",
     "evidence": "guard.ts:23-40 TEAM_API_ROUTES / /executor -> team; requiredTierForPath()  (/api/transactions); route.ts:9,46,83 `requireMutationAuth(req)`",
     "path": "/api/transactions/[id]",
     "methods": [
@@ -1142,7 +1142,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/reconcile/route.ts:28-67",
+    "code_path": "apps/web/src/app/(frontend)/api/reconcile/route.ts:28-67",
     "evidence": "route.ts:28 `const RECONCILE = process.env.RECONCILE_URL ?? 'http://127.0.0.1:3102'`; route.ts:22-23 'Auth is UNCHANGED ... /api/reconcile is a team-tier read'; guard.ts:23-40 TEAM_API_ROUTES / /executor -> team; requiredTierForPath() ",
     "path": "/api/reconcile",
     "methods": [
@@ -1163,7 +1163,7 @@
     "durability": "NONE",
     "sensitivity": "SECRET",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/auth/login/route.ts:18-20",
+    "code_path": "apps/web/src/app/(frontend)/api/auth/login/route.ts:18-20",
     "evidence": "route.ts:18 `FUDCOURT_API_URL ?? 'http://127.0.0.1:3103'`; route.ts:20 `export const GET = proxy`; guard.ts requiredTierForPath('/api/auth/login')=null",
     "path": "/api/auth/login",
     "methods": [
@@ -1184,7 +1184,7 @@
     "durability": "NONE",
     "sensitivity": "SECRET",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/auth/callback/route.ts:17-19",
+    "code_path": "apps/web/src/app/(frontend)/api/auth/callback/route.ts:17-19",
     "evidence": "route.ts:17 `FUDCOURT_API_URL ?? 'http://127.0.0.1:3103'`; route.ts:19 `export const GET = proxy`; route.ts:5-9 header: Go does state compare + tier resolution + signed session cookie",
     "path": "/api/auth/callback",
     "methods": [
@@ -1205,7 +1205,7 @@
     "durability": "NONE",
     "sensitivity": "SECRET",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/auth/logout/route.ts:13-16",
+    "code_path": "apps/web/src/app/(frontend)/api/auth/logout/route.ts:13-16",
     "evidence": "route.ts:13 `FUDCOURT_API_URL ?? 'http://127.0.0.1:3103'`; route.ts:15-16 `export const GET = proxy; export const POST = proxy`",
     "path": "/api/auth/logout",
     "methods": [
@@ -1227,8 +1227,8 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/coinglass/route.ts:34-72",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CG-Upstream/X-CG-Cache/X-CG-Cipher. backend/data/cmd/data/main.go `mux.HandleFunc(\"/api/coinglass\")`; modes statistics|openInterest|fundingRate|markets, keyless by decryption",
+    "code_path": "apps/web/src/app/(frontend)/api/coinglass/route.ts:34-72",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CG-Upstream/X-CG-Cache/X-CG-Cipher. apps/data/cmd/data/main.go `mux.HandleFunc(\"/api/coinglass\")`; modes statistics|openInterest|fundingRate|markets, keyless by decryption",
     "path": "/api/coinglass",
     "methods": [
       "GET"
@@ -1248,8 +1248,8 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "dark",
-    "code_path": "frontend/web/src/app/(frontend)/api/coinank/route.ts:34-70",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CA-Upstream/X-CA-Cache. backend/data/cmd/data/main.go `mux.HandleFunc(\"/api/coinank\")`; modes fundingRate|liquidation|longShort|etf|whales, keyless by client signature. Route is live but every mode is upstream's 502 `403` (DR-038) -- status dark mirrors the family",
+    "code_path": "apps/web/src/app/(frontend)/api/coinank/route.ts:34-70",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CA-Upstream/X-CA-Cache. apps/data/cmd/data/main.go `mux.HandleFunc(\"/api/coinank\")`; modes fundingRate|liquidation|longShort|etf|whales, keyless by client signature. Route is live but every mode is upstream's 502 `403` (DR-038) -- status dark mirrors the family",
     "path": "/api/coinank",
     "methods": [
       "GET"
@@ -1269,8 +1269,8 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/coinmarketcap/route.ts:37-74",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CMC-Upstream/X-CMC-Cache. backend/data/cmd/data/main.go `mux.HandleFunc(\"/api/coinmarketcap\")`; modes listing|global|marketPairs|exchanges, keyless with no credential; start/limit bounds are the sidecar's, validated before any fetch (DR-039)",
+    "code_path": "apps/web/src/app/(frontend)/api/coinmarketcap/route.ts:37-74",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CMC-Upstream/X-CMC-Cache. apps/data/cmd/data/main.go `mux.HandleFunc(\"/api/coinmarketcap\")`; modes listing|global|marketPairs|exchanges, keyless with no credential; start/limit bounds are the sidecar's, validated before any fetch (DR-039)",
     "path": "/api/coinmarketcap",
     "methods": [
       "GET"
@@ -1290,8 +1290,8 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/cryptorank/route.ts:43-49",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. backend/data/cmd/data/main.go:216; route.ts:26-28 note modes funding/unlocks refused upstream (disabled)",
+    "code_path": "apps/web/src/app/(frontend)/api/cryptorank/route.ts:43-49",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. apps/data/cmd/data/main.go:216; route.ts:26-28 note modes funding/unlocks refused upstream (disabled)",
     "path": "/api/cryptorank",
     "methods": [
       "GET"
@@ -1311,8 +1311,8 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/llama/route.ts:27-35",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. backend/data/cmd/data/main.go:222; modes chains|protocols|historical",
+    "code_path": "apps/web/src/app/(frontend)/api/llama/route.ts:27-35",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. apps/data/cmd/data/main.go:222; modes chains|protocols|historical",
     "path": "/api/llama",
     "methods": [
       "GET"
@@ -1332,8 +1332,8 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/news/route.ts:34-41",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. backend/data/cmd/data/main.go:225; strict source/limit, 15s TTL",
+    "code_path": "apps/web/src/app/(frontend)/api/news/route.ts:34-41",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. apps/data/cmd/data/main.go:225; strict source/limit, 15s TTL",
     "path": "/api/news",
     "methods": [
       "GET"
@@ -1353,7 +1353,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/dex/route.ts:44-105",
+    "code_path": "apps/web/src/app/(frontend)/api/dex/route.ts:44-105",
     "evidence": "route.ts:2 imports DEX from '@/features/dex/client'; features/dex/client.ts:10 `export const DEX = 'https://api.dexscreener.com'`; direct fetch via limitedFetch",
     "path": "/api/dex",
     "methods": [
@@ -1374,7 +1374,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/markets/route.ts:60-100",
+    "code_path": "apps/web/src/app/(frontend)/api/markets/route.ts:60-100",
     "evidence": "route.ts:100 `limitedFetch(marketsUpstreamUrl(),...)`; features/markets/client.ts:13 `MARKETS_UPSTREAM='https://api.coingecko.com/api/v3/coins/markets'`",
     "path": "/api/markets",
     "methods": [
@@ -1395,7 +1395,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/market/stock/route.ts:42-102",
+    "code_path": "apps/web/src/app/(frontend)/api/market/stock/route.ts:42-102",
     "evidence": "route.ts:56 `limitedFetch(chartUrl(symbol),...)`; features/market/quotes.ts:18 `YAHOO_CHART='https://query1.finance.yahoo.com/v8/finance/chart'`; region OUR param strict 400",
     "path": "/api/market/stock",
     "methods": [
@@ -1416,7 +1416,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/market/commodity/route.ts:33-85",
+    "code_path": "apps/web/src/app/(frontend)/api/market/commodity/route.ts:33-85",
     "evidence": "route.ts:40-44 `limitedFetch(chartUrl(spec.symbol),...)`; features/market/quotes.ts:18 YAHOO_CHART",
     "path": "/api/market/commodity",
     "methods": [
@@ -1437,7 +1437,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/market/forex/route.ts:32-76",
+    "code_path": "apps/web/src/app/(frontend)/api/market/forex/route.ts:32-76",
     "evidence": "route.ts:35 `limitedFetch(FOREX_UPSTREAM,...)`; features/market/forex/client.ts:18 `FOREX_UPSTREAM='https://open.er-api.com/v6/latest/USD'`; daily feed",
     "path": "/api/market/forex",
     "methods": [
@@ -1458,7 +1458,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/market/macro/route.ts:62-218",
+    "code_path": "apps/web/src/app/(frontend)/api/market/macro/route.ts:62-218",
     "evidence": "route.ts `limitedFetch(chartUrl(spec.symbol))` one call per symbol; features/market/sources/bis.ts `BIS_CBPOL='https://stats.bis.org/api/v1/data/WS_CBPOL'` (answers 406 without the SDMX Accept header, measured); sources/fred.ts `FRED_CSV='https://fred.stlouisfed.org/graph/fredgraph.csv'` (yoy/change/level transform applied server-side); sources/worldbank.ts `WORLDBANK_API='https://api.worldbank.org/v2'` (ONE indicator per call — a `;`-separated list is rejected with Invalid value, measured); curve spreads computed locally from the quotes, never read from upstream",
     "path": "/api/market/macro",
     "methods": [
@@ -1479,7 +1479,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/market/indonesia/route.ts:58-182",
+    "code_path": "apps/web/src/app/(frontend)/api/market/indonesia/route.ts:58-182",
     "evidence": "route.ts `limitedFetch(chartUrl(spec.symbol))` one call per symbol for IDR=X / EURIDR=X / JPYIDR=X / CNYIDR=X / ^JKSE / ^JKLQ45; `fetchPolicyRates(['ID'])` -> BI-Rate 5.75 @ 2026-09-28 (measured); `fetchWorldBank(id,['IDN'],2015)` one call per indicator — 19/19 resolved live, each row carrying its own reference year; specs in features/market/indonesia/client.ts",
     "path": "/api/market/indonesia",
     "methods": [
@@ -1500,7 +1500,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/signals/route.ts:7-215",
+    "code_path": "apps/web/src/app/(frontend)/api/signals/route.ts:7-215",
     "evidence": "route.ts:7 `const UPSTREAM = 'https://data-public.vercel.app'`; direct fetch of /api/{index|feed|page|scoreboard}; no sidecar",
     "path": "/api/signals",
     "methods": [
@@ -1521,7 +1521,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/ticker/route.ts:72-198",
+    "code_path": "apps/web/src/app/(frontend)/api/ticker/route.ts:72-198",
     "evidence": "route.ts:36 `tickerClients()` from '@/features/ticker/venues'; route.ts:240-373 sweep over OKX+Bybit via ccxt; one sweep cached (L1/L2)",
     "path": "/api/ticker",
     "methods": [
@@ -1542,7 +1542,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/ticker/instruments/route.ts:41-166",
+    "code_path": "apps/web/src/app/(frontend)/api/ticker/instruments/route.ts:41-166",
     "evidence": "route.ts:70 `ensureMarkets(v, c=>c.loadMarkets())` over TICKER_EXCHANGES; instruments from venue market lists",
     "path": "/api/ticker/instruments",
     "methods": [
@@ -1563,7 +1563,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/ticker/instrument/route.ts:69-241",
+    "code_path": "apps/web/src/app/(frontend)/api/ticker/instrument/route.ts:69-241",
     "evidence": "route.ts:168 `client.fetchTicker(candidate.symbol)`; venue symbol built from venue market list, not string",
     "path": "/api/ticker/instrument",
     "methods": [
@@ -1584,7 +1584,7 @@
     "durability": "CANONICAL",
     "sensitivity": "SECRET",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/accounts/route.ts:10-35",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/accounts/route.ts:10-35",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/accounts",
     "methods": [
@@ -1606,7 +1606,7 @@
     "durability": "CANONICAL",
     "sensitivity": "SECRET",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/accounts/[id]/route.ts:12-29",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/accounts/[id]/route.ts:12-29",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/accounts/[id]",
     "methods": [
@@ -1628,7 +1628,7 @@
     "durability": "NONE",
     "sensitivity": "SECRET",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/accounts/[id]/test/route.ts:10-16",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/accounts/[id]/test/route.ts:10-16",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/accounts/[id]/test",
     "methods": [
@@ -1649,7 +1649,7 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/emergency/route.ts:14-25",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/emergency/route.ts:14-25",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/emergency",
     "methods": [
@@ -1670,7 +1670,7 @@
     "durability": "CANONICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/executions/route.ts:12-42",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/route.ts:12-42",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions",
     "methods": [
@@ -1692,7 +1692,7 @@
     "durability": "CANONICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/executions/[id]/route.ts:10-18",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/route.ts:10-18",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]",
     "methods": [
@@ -1713,7 +1713,7 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/executions/[id]/cancel/route.ts:15-21",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/cancel/route.ts:15-21",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/cancel",
     "methods": [
@@ -1734,7 +1734,7 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/executions/[id]/pause/route.ts:10-16",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/pause/route.ts:10-16",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/pause",
     "methods": [
@@ -1755,7 +1755,7 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/executions/[id]/resume/route.ts:10-16",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/resume/route.ts:10-16",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/resume",
     "methods": [
@@ -1776,7 +1776,7 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/executions/[id]/start/route.ts:10-16",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/start/route.ts:10-16",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/start",
     "methods": [
@@ -1797,7 +1797,7 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/executions/[id]/events/route.ts:10-17",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/events/route.ts:10-17",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/events",
     "methods": [
@@ -1818,7 +1818,7 @@
     "durability": "HISTORICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/executions/[id]/fills/route.ts:10-17",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/fills/route.ts:10-17",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/fills",
     "methods": [
@@ -1839,7 +1839,7 @@
     "durability": "CANONICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/executions/[id]/orders/route.ts:10-17",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/orders/route.ts:10-17",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/orders",
     "methods": [
@@ -1860,7 +1860,7 @@
     "durability": "NONE",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/preview/route.ts:14-25",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/preview/route.ts:14-25",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/preview",
     "methods": [
@@ -1881,7 +1881,7 @@
     "durability": "CANONICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/executor/settings/route.ts:10-29",
+    "code_path": "apps/web/src/app/(frontend)/api/executor/settings/route.ts:10-29",
     "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/settings",
     "methods": [
@@ -1902,8 +1902,8 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "dead",
-    "code_path": "database/schema/pg-schema.sql:20",
-    "evidence": "DDL pg-schema.sql:20; writer frontend/web/src/platform/db/pg.ts:75 (SELECT * FROM accounts) + loadFromMirror upsert/prune; table dead (DR-036)",
+    "code_path": "db/schema/pg-schema.sql:20",
+    "evidence": "DDL pg-schema.sql:20; writer apps/web/src/platform/db/pg.ts:75 (SELECT * FROM accounts) + loadFromMirror upsert/prune; table dead (DR-036)",
     "slice": "db"
   },
   {
@@ -1918,8 +1918,8 @@
     "durability": "SNAPSHOT",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "database/schema/pg-schema.sql:27",
-    "evidence": "DDL pg-schema.sql:27; written directly by the sync (tests/oracle/sync-live.py / backend/sync); asset_history is appended by the assets_snapshot trigger",
+    "code_path": "db/schema/pg-schema.sql:27",
+    "evidence": "DDL pg-schema.sql:27; written directly by the sync (tests/oracle/sync-live.py / apps/reconciler); asset_history is appended by the assets_snapshot trigger",
     "slice": "db"
   },
   {
@@ -1934,7 +1934,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "dead",
-    "code_path": "database/schema/pg-schema.sql:38",
+    "code_path": "db/schema/pg-schema.sql:38",
     "evidence": "DDL pg-schema.sql:38; pg.ts:77 SELECT; table dead (DR-036), frozen at the 2026-09-15 import",
     "slice": "db"
   },
@@ -1950,7 +1950,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "dead",
-    "code_path": "database/schema/pg-schema.sql:50",
+    "code_path": "db/schema/pg-schema.sql:50",
     "evidence": "DDL pg-schema.sql:50; pg.ts:78 SELECT; table dead (DR-036)",
     "slice": "db"
   },
@@ -1966,7 +1966,7 @@
     "durability": "EVENT",
     "sensitivity": "INTERNAL",
     "status": "dead",
-    "code_path": "database/schema/pg-schema.sql:59",
+    "code_path": "db/schema/pg-schema.sql:59",
     "evidence": "DDL pg-schema.sql:59; pg.ts:81 SELECT; table dead/empty (DR-036)",
     "slice": "db"
   },
@@ -1982,7 +1982,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "database/schema/pg-schema.sql:71",
+    "code_path": "db/schema/pg-schema.sql:71",
     "evidence": "DDL pg-schema.sql:71; pg.ts:76 SELECT + upsert; written by api/transactions/route.ts:78",
     "slice": "db"
   },
@@ -1998,7 +1998,7 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "dead",
-    "code_path": "database/schema/pg-schema.sql:89",
+    "code_path": "db/schema/pg-schema.sql:89",
     "evidence": "DDL pg-schema.sql:89; read by pg.ts:57 but not in DASHBOARD_READS; table dead (DR-036); text PK so pg.ts skips sequence advance",
     "slice": "db"
   },
@@ -2014,7 +2014,7 @@
     "durability": "CANONICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "database/schema/pg-schema.sql:95",
+    "code_path": "db/schema/pg-schema.sql:95",
     "evidence": "DDL pg-schema.sql:95; pg.ts:80 SELECT; written by api/wallets/route.ts:34",
     "slice": "db"
   },
@@ -2030,7 +2030,7 @@
     "durability": "HISTORICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "database/schema/pg-schema.sql:112",
+    "code_path": "db/schema/pg-schema.sql:112",
     "evidence": "DDL pg-schema.sql:112 + create_hypertable :122 + unique asset_history_snapshot :127; appended by the assets_snapshot trigger on every assets INSERT (pg-schema.sql:131-146); 90-day DELETE in tests/oracle/sync-live.py; no in-app reader",
     "slice": "db"
   },
@@ -2046,8 +2046,8 @@
     "durability": "HISTORICAL",
     "sensitivity": "PUBLIC",
     "status": "dead",
-    "code_path": "database/schema/pg-schema.sql:132",
-    "evidence": "DDL pg-schema.sql:132 + hypertable :139 + unique price_history_symbol_ts_source :140; grep -rn 'INSERT INTO price_history' over source globs -> 0 hits; only retention DELETE at frontend/web/src/platform/db/pg.ts:208; DR-036: 0 rows; DDL comment :131 names a 'price sampler' that does not exist",
+    "code_path": "db/schema/pg-schema.sql:132",
+    "evidence": "DDL pg-schema.sql:132 + hypertable :139 + unique price_history_symbol_ts_source :140; grep -rn 'INSERT INTO price_history' over source globs -> 0 hits; only retention DELETE at apps/web/src/platform/db/pg.ts:208; DR-036: 0 rows; DDL comment :131 names a 'price sampler' that does not exist",
     "slice": "db"
   },
   {
@@ -2062,8 +2062,8 @@
     "durability": "SNAPSHOT",
     "sensitivity": "INTERNAL",
     "status": "scaffolded",
-    "code_path": "database/schema/pg-schema.sql:168",
-    "evidence": "DDL pg-schema.sql:168 (+ CHECK canonical_reference_kind_prefix :193, guarded DO block :195-205); loader backend/api/internal/markets/reference/loader.go LoadReferenceRows/RenderSQL; DR-036 'additive and UNWIRED — nothing loads it and nothing joins through it yet'",
+    "code_path": "db/schema/pg-schema.sql:168",
+    "evidence": "DDL pg-schema.sql:168 (+ CHECK canonical_reference_kind_prefix :193, guarded DO block :195-205); loader apps/api/internal/markets/reference/loader.go LoadReferenceRows/RenderSQL; DR-036 'additive and UNWIRED — nothing loads it and nothing joins through it yet'",
     "slice": "db"
   },
   {
@@ -2078,8 +2078,8 @@
     "durability": "SNAPSHOT",
     "sensitivity": "INTERNAL",
     "status": "scaffolded",
-    "code_path": "database/schema/pg-schema.sql:224",
-    "evidence": "DDL pg-schema.sql:224; loaded from reference.json by backend/api/internal/markets/reference/loader.go; unwired (DR-036)",
+    "code_path": "db/schema/pg-schema.sql:224",
+    "evidence": "DDL pg-schema.sql:224; loaded from reference.json by apps/api/internal/markets/reference/loader.go; unwired (DR-036)",
     "slice": "db"
   },
   {
@@ -2094,8 +2094,8 @@
     "durability": "NONE",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "database/schema/executor-schema.sql:38",
-    "evidence": "DDL executor-schema.sql:38 `CREATE SCHEMA IF NOT EXISTS executor;`; applied at startup by TS ensureExecutorSchema() (frontend/web/src/platform/executor/store.ts) and Go repository.EnsureSchema() (backend/workers/executor/internal/repository/schema.go:124)",
+    "code_path": "db/schema/executor-schema.sql:38",
+    "evidence": "DDL executor-schema.sql:38 `CREATE SCHEMA IF NOT EXISTS executor;`; applied at startup by TS ensureExecutorSchema() (apps/web/src/platform/executor/store.ts) and Go repository.EnsureSchema() (apps/executor/internal/repository/schema.go:124)",
     "slice": "db"
   },
   {
@@ -2110,7 +2110,7 @@
     "durability": "CANONICAL",
     "sensitivity": "SECRET",
     "status": "active",
-    "code_path": "database/schema/executor-schema.sql:46",
+    "code_path": "db/schema/executor-schema.sql:46",
     "evidence": "DDL executor-schema.sql:46; writers TS store.ts:453 (INSERT, api_key_encrypted/api_secret_encrypted/passphrase_encrypted bytea + iv/auth_tag) and Go repository/credentials.go:82 (UPDATE last_used_at); no plaintext key column",
     "slice": "db"
   },
@@ -2126,7 +2126,7 @@
     "durability": "CANONICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "database/schema/executor-schema.sql:72",
+    "code_path": "db/schema/executor-schema.sql:72",
     "evidence": "DDL executor-schema.sql:72; writers TS store.ts:528-530 (INSERT) and Go repository/port_pg.go:255 (INSERT) / :381 (UPDATE); readers port_pg.go:163,187,217",
     "slice": "db"
   },
@@ -2142,7 +2142,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "database/schema/executor-schema.sql:114",
+    "code_path": "db/schema/executor-schema.sql:114",
     "evidence": "DDL executor-schema.sql:114; writers TS store.ts:548 and Go port_pg.go:268; reader port_pg.go:413 (SELECT plan)",
     "slice": "db"
   },
@@ -2158,7 +2158,7 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "database/schema/executor-schema.sql:120",
+    "code_path": "db/schema/executor-schema.sql:120",
     "evidence": "DDL executor-schema.sql:120; writers TS store.ts:355 (INSERT) / Go store.go:338; reader port_pg.go:429; UNIQUE (execution_id, client_order_id)",
     "slice": "db"
   },
@@ -2174,7 +2174,7 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "database/schema/executor-schema.sql:143",
+    "code_path": "db/schema/executor-schema.sql:143",
     "evidence": "DDL executor-schema.sql:143; writer TS store.ts:361-362 INSERT ... ON CONFLICT (account_id, exchange_trade_id) DO NOTHING; reader port_pg.go:441; the canonical trade/fill store the dead `trades` table duplicates",
     "slice": "db"
   },
@@ -2190,7 +2190,7 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "database/schema/executor-schema.sql:161",
+    "code_path": "db/schema/executor-schema.sql:161",
     "evidence": "DDL executor-schema.sql:161 + comment :159-160 'no UPDATE/DELETE path exists in the store and none may be added'; writers TS store.ts:367 and Go store.go:389; reader port_pg.go:493",
     "slice": "db"
   },
@@ -2206,7 +2206,7 @@
     "durability": "HISTORICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "database/schema/executor-schema.sql:171",
+    "code_path": "db/schema/executor-schema.sql:171",
     "evidence": "DDL executor-schema.sql:171 (PRD §41/§59 reconciliation history); writer TS store.ts:375 insertBalanceSnapshot",
     "slice": "db"
   },
@@ -2222,7 +2222,7 @@
     "durability": "HISTORICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "database/schema/executor-schema.sql:179",
+    "code_path": "db/schema/executor-schema.sql:179",
     "evidence": "DDL executor-schema.sql:179; writer TS store.ts:376 insertPositionSnapshot",
     "slice": "db"
   },
@@ -2238,7 +2238,7 @@
     "durability": "CANONICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "database/schema/executor-schema.sql:187",
+    "code_path": "db/schema/executor-schema.sql:187",
     "evidence": "DDL executor-schema.sql:187; writers TS store.ts:372 (UPSERT) and Go port_pg.go:554; reader port_pg.go:531",
     "slice": "db"
   },
@@ -2254,7 +2254,7 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "database/schema/executor-schema.sql:193",
+    "code_path": "db/schema/executor-schema.sql:193",
     "evidence": "DDL executor-schema.sql:193; writers TS store.ts:377 and Go port_pg.go:578; no retention policy stated",
     "slice": "db"
   },
@@ -2270,8 +2270,8 @@
     "durability": "CANONICAL",
     "sensitivity": "SECRET",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:15",
-    "evidence": "DDL migration:15-27 (salt/hash/reset_password_token columns); collection frontend/web/src/cms/collections/Users.ts (auth:true); writer Payload /blog/cms/api/*; not the platform identity store",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:15",
+    "evidence": "DDL migration:15-27 (salt/hash/reset_password_token columns); collection apps/web/src/cms/collections/Users.ts (auth:true); writer Payload /blog/cms/api/*; not the platform identity store",
     "slice": "db"
   },
   {
@@ -2286,7 +2286,7 @@
     "durability": "EPHEMERAL",
     "sensitivity": "SECRET",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:7",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:7",
     "evidence": "DDL migration:7-13; FK users_sessions_parent_id_fk :168; Payload-managed",
     "slice": "db"
   },
@@ -2302,8 +2302,8 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:35",
-    "evidence": "DDL migration:35-49 + unique posts_slug_idx :194; collection frontend/web/src/cms/collections/Posts.ts (versions.drafts); writer Payload + src/cms/seed.ts:131; reader src/app/blog/[slug]/page.tsx",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:35",
+    "evidence": "DDL migration:35-49 + unique posts_slug_idx :194; collection apps/web/src/cms/collections/Posts.ts (versions.drafts); writer Payload + src/cms/seed.ts:131; reader src/app/blog/[slug]/page.tsx",
     "slice": "db"
   },
   {
@@ -2318,7 +2318,7 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:28",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:28",
     "evidence": "DDL migration:28-33; FK posts_tags_parent_id_fk :169; Payload-managed child array",
     "slice": "db"
   },
@@ -2334,7 +2334,7 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:51",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:51",
     "evidence": "DDL migration:51-57; FK posts_rels_categories_fk :173; only categories_id populated",
     "slice": "db"
   },
@@ -2350,7 +2350,7 @@
     "durability": "HISTORICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:67",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:67",
     "evidence": "DDL migration:67-85 (latest boolean :84, index _posts_v_latest_idx :215); Payload versions.drafts",
     "slice": "db"
   },
@@ -2366,7 +2366,7 @@
     "durability": "HISTORICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:59",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:59",
     "evidence": "DDL migration:59-65; FK _posts_v_version_tags_parent_id_fk :174",
     "slice": "db"
   },
@@ -2382,13 +2382,13 @@
     "durability": "HISTORICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:87",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:87",
     "evidence": "DDL migration:87-93; FK _posts_v_rels_parent_fk :178",
     "slice": "db"
   },
   {
     "id": "neon-media",
-    "name": "media — upload asset metadata (bytes live on disk frontend/web/media)",
+    "name": "media — upload asset metadata (bytes live on disk apps/web/media)",
     "category": "NEWS",
     "domain": "cms/editorial",
     "provider": "Neon Postgres (Payload CMS)",
@@ -2398,8 +2398,8 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:95",
-    "evidence": "DDL migration:95-109 + unique media_filename_idx :222; collection frontend/web/src/cms/collections/Media.ts (staticDir:'media')",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:95",
+    "evidence": "DDL migration:95-109 + unique media_filename_idx :222; collection apps/web/src/cms/collections/Media.ts (staticDir:'media')",
     "slice": "db"
   },
   {
@@ -2414,7 +2414,7 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:111",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:111",
     "evidence": "DDL migration:111-118 + unique categories_slug_idx :223; collection Categories.ts; seed src/cms/seed.ts:90",
     "slice": "db"
   },
@@ -2430,7 +2430,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:120",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:120",
     "evidence": "DDL migration:120-124 + unique payload_kv_key_idx :226; Payload framework-managed",
     "slice": "db"
   },
@@ -2446,7 +2446,7 @@
     "durability": "EPHEMERAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:126",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:126",
     "evidence": "DDL migration:126-131; Payload framework-managed",
     "slice": "db"
   },
@@ -2462,7 +2462,7 @@
     "durability": "EPHEMERAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:133",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:133",
     "evidence": "DDL migration:133-142; Payload framework-managed",
     "slice": "db"
   },
@@ -2478,7 +2478,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:144",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:144",
     "evidence": "DDL migration:144-150; Payload framework-managed",
     "slice": "db"
   },
@@ -2494,7 +2494,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:152",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:152",
     "evidence": "DDL migration:152-158; Payload framework-managed",
     "slice": "db"
   },
@@ -2510,8 +2510,8 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:160",
-    "evidence": "DDL migration:160-166; manifest frontend/web/src/cms/migrations/index.ts; Payload runner",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:160",
+    "evidence": "DDL migration:160-166; manifest apps/web/src/cms/migrations/index.ts; Payload runner",
     "slice": "db"
   },
   {
@@ -2526,7 +2526,7 @@
     "durability": "NONE",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:5",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:5",
     "evidence": "DDL migration:5 `CREATE TYPE \"public\".\"enum_posts_status\" AS ENUM('draft','published');`",
     "slice": "db"
   },
@@ -2542,7 +2542,7 @@
     "durability": "NONE",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "frontend/web/src/cms/migrations/20260917_194354.ts:6",
+    "code_path": "apps/web/src/cms/migrations/20260917_194354.ts:6",
     "evidence": "DDL migration:6 `CREATE TYPE \"public\".\"enum__posts_v_version_status\" AS ENUM(...)`",
     "slice": "db"
   },
@@ -2559,8 +2559,8 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "scaffolded",
-    "code_path": "backend/api/internal/markets/reference/seed.go:seedVenues (seed.go:238-251); VenueIDInvariants seed.go:271-275; registry.go:330 (venueCCXT)",
-    "evidence": "grep -rn ccxt backend/api/internal/markets/ -> seed.go:238-251 lists binance/bybit/mexc/okx/bitget/phemex/bingx/bitfinex/htx/coinbase/kraken with ccxtID; grep for http/fetch in backend/api/internal/markets/** returns only types.go:194 (a struct URL field) -> NO live HTTP fetch in this package. UNWIRED: backend/api/cmd/api/main.go imports only access/identity+platform/{health,httpx} (main.go:26-33), so no route serves the registry; curl localhost:3103/api/markets -> 404; docs/architecture/canonical-acceptance.md:44 'no service serves the document over HTTP (no route), and no consumer has been re-pointed'. Emitted artifact shared/contracts/data/reference.json exists (19565 bytes, venues=12) gated by `go run ./backend/api/internal/markets/reference/cmd/emit -check`."
+    "code_path": "apps/api/internal/markets/reference/seed.go:seedVenues (seed.go:238-251); VenueIDInvariants seed.go:271-275; registry.go:330 (venueCCXT)",
+    "evidence": "grep -rn ccxt apps/api/internal/markets/ -> seed.go:238-251 lists binance/bybit/mexc/okx/bitget/phemex/bingx/bitfinex/htx/coinbase/kraken with ccxtID; grep for http/fetch in apps/api/internal/markets/** returns only types.go:194 (a struct URL field) -> NO live HTTP fetch in this package. UNWIRED: apps/api/cmd/api/main.go imports only access/identity+platform/{health,httpx} (main.go:26-33), so no route serves the registry; curl localhost:3103/api/markets -> 404; docs/architecture/canonical-acceptance.md:44 'no service serves the document over HTTP (no route), and no consumer has been re-pointed'. Emitted artifact contracts/data/reference.json exists (19565 bytes, venues=12) gated by `go run ./apps/api/internal/markets/reference/cmd/emit -check`."
   },
   {
     "id": "ccxt-exchange-ticker",
@@ -2575,7 +2575,7 @@
     "durability": "EPHEMERAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/features/ticker/venues.ts:loadVenue; frontend/web/src/features/ticker/client.ts:TICKER_EXCHANGES/TICKER_VENUES; frontend/web/src/app/(frontend)/api/ticker/route.ts",
+    "code_path": "apps/web/src/features/market/ticker/client.ts:loadVenue; apps/web/src/features/ticker/client.ts:TICKER_EXCHANGES/TICKER_VENUES; apps/web/src/app/(frontend)/api/ticker/route.ts",
     "evidence": "curl -s -m 20 -o /dev/null -w '%{http_code}' https://www.okx.com/api/v5/public/time -> 200; https://api.bybit.com/v5/market/time -> 200; curl -s -m 120 localhost:3100/api/ticker -> 200 (86.95s cold venue sweep, measured). ccxt is loaded per-venue from node_modules (venues.ts:findCcxtRoot/loadVenue), never via the barrel; binance/kucoin/gate excluded per client.ts:TICKER_VENUES comment (TLS-intercepted / connect timeout)."
   },
   {
@@ -2591,7 +2591,7 @@
     "durability": "EPHEMERAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/features/dex/client.ts:9 (DEX='https://api.dexscreener.com'); frontend/web/src/app/(frontend)/api/dex/route.ts",
+    "code_path": "apps/web/src/features/market/dex/client.ts:9 (DEX='https://api.dexscreener.com'); apps/web/src/app/(frontend)/api/dex/route.ts",
     "evidence": "curl -s -m 20 -o /dev/null -w '%{http_code}' https://api.dexscreener.com/token-profiles/latest/v1 -> 200; https://api.dexscreener.com/latest/dex/search?q=SOL -> 200; curl localhost:3100/api/dex?type=profiles&limit=1 -> 200. Upstream answers 429 (Cloudflare 1015) on bursts -> shared limiter/coalescer (platform/http/rate-limit); the route passes the real upstream status through."
   },
   {
@@ -2607,7 +2607,7 @@
     "durability": "EPHEMERAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/features/markets/client.ts:14 (MARKETS_UPSTREAM='https://api.coingecko.com/api/v3/coins/markets'); frontend/web/src/app/(frontend)/api/markets/route.ts",
+    "code_path": "apps/web/src/features/market/ticker/client.ts:14 (MARKETS_UPSTREAM='https://api.coingecko.com/api/v3/coins/markets'); apps/web/src/app/(frontend)/api/markets/route.ts",
     "evidence": "curl -s -m 20 -o /dev/null -w '%{http_code}' 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=1&page=1' -> 200; curl localhost:3100/api/markets?limit=1 -> 200. One 60s-TTL single-flight fetch serves all search/sort/page combos (MARKETS_TTL_MS=60000); an upstream 429 is passed through verbatim, never clamped to 200."
   },
   {
@@ -2623,8 +2623,8 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/sync/src/streams/sync.rs:219 (url=format!(\"https://{}/v2/{}\", chain.host, env.alchemy_key)); backend/sync/src/chains.rs:14-64 (EVM[] hosts)",
-    "evidence": "read backend/sync/src/chains.rs:14-64 (eth-mainnet/bnb-mainnet/polygon-mainnet/arb-mainnet/opt-mainnet/base-mainnet.g.alchemy.com) + streams/sync.rs:219 url format + main.rs:145 require_env(\"ALCHEMY_KEY\"). NOT probed — requires ALCHEMY_KEY and NO credential was sent anywhere. DRIFT: the deployed reader is the Python oracle, not this Rust code: systemctl --user status fudcourt-sync.service -> ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/tests/oracle/sync-live.py (active, exit 0, NET WORTH $149.46); fudcourt-sync-rust.service/.timer are NOT installed ('Unit fudcourt-sync-rust.timer could not be found')."
+    "code_path": "apps/reconciler/src/streams/sync.rs:219 (url=format!(\"https://{}/v2/{}\", chain.host, env.alchemy_key)); apps/reconciler/src/chains.rs:14-64 (EVM[] hosts)",
+    "evidence": "read apps/reconciler/src/chains.rs:14-64 (eth-mainnet/bnb-mainnet/polygon-mainnet/arb-mainnet/opt-mainnet/base-mainnet.g.alchemy.com) + streams/sync.rs:219 url format + main.rs:145 require_env(\"ALCHEMY_KEY\"). NOT probed — requires ALCHEMY_KEY and NO credential was sent anywhere. DRIFT: the deployed reader is the Python oracle, not this Rust code: systemctl --user status fudcourt-sync.service -> ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/tests/oracle/sync-live.py (active, exit 0, NET WORTH $149.46); fudcourt-sync-rust.service/.timer are NOT installed ('Unit fudcourt-sync-rust.timer could not be found')."
   },
   {
     "id": "solana-rpc",
@@ -2639,7 +2639,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/sync/src/chains.rs:107 (SOLANA_RPC='https://api.mainnet-beta.solana.com'); backend/sync/src/streams/sync.rs:156 (getBalance), :177 (getTokenAccountsByOwner)",
+    "code_path": "apps/reconciler/src/chains.rs:107 (SOLANA_RPC='https://api.mainnet-beta.solana.com'); apps/reconciler/src/streams/sync.rs:156 (getBalance), :177 (getTokenAccountsByOwner)",
     "evidence": "curl -s -m 20 -X POST https://api.mainnet-beta.solana.com -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getBalance\",\"params\":[\"7KMhEBFjmhhC1B2HqaJC7zvkyx9pJ9ryCXqUnGBThgFP\"]}' -o /dev/null -w '%{http_code}' -> 200. Deployed reader is tests/oracle/sync-live.py:279-286 (same host, keyless); Rust units not installed."
   },
   {
@@ -2655,7 +2655,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "backend/sync/src/chains.rs:108 (HYPERLIQUID_INFO='https://api.hyperliquid.xyz/info'); backend/sync/src/streams/sync.rs:hyperliquid_inner (POST body {type: spotClearinghouseState|clearinghouseState|userFills, user})",
+    "code_path": "apps/reconciler/src/chains.rs:108 (HYPERLIQUID_INFO='https://api.hyperliquid.xyz/info'); apps/reconciler/src/streams/sync.rs:hyperliquid_inner (POST body {type: spotClearinghouseState|clearinghouseState|userFills, user})",
     "evidence": "curl -s -m 20 -X POST https://api.hyperliquid.xyz/info -H 'Content-Type: application/json' -d '{\"type\":\"meta\"}' -o /dev/null -w '%{http_code}' -> 200. Read-only POST; the sync sends only the public wallet address WALLETS[0]=0x6816ba2cb2bc013a78225228a153586ca63b1548 (chains.rs), no key. Deployed reader is tests/oracle/sync-live.py (HL_URL, line 63)."
   },
   {
@@ -2671,7 +2671,7 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/cms/payload.config.ts:44-46 (postgresAdapter({pool:{connectionString: process.env.DATABASE_URL}})); frontend/web/src/cms/collections/{Posts,Categories,Media}.ts",
+    "code_path": "apps/web/src/cms/payload.config.ts:44-46 (postgresAdapter({pool:{connectionString: process.env.DATABASE_URL}})); apps/web/src/cms/collections/{Posts,Categories,Media}.ts",
     "evidence": "read payload.config.ts: postgresAdapter + connectionString DATABASE_URL. DATABASE_URL host (credentials stripped) = ep-blue-wildflower-b387o1og-pooler.c-4.ap-southeast-1.aws.neon.tech -> Neon confirmed. curl localhost:3100/blog/cms/api/posts?limit=1 -> 200; /blog/cms/api/categories?limit=1 -> 200. Posts access.read public for status=published, drafts require auth (Posts.ts)."
   },
   {
@@ -2687,12 +2687,12 @@
     "durability": "CANONICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "frontend/web/src/cms/collections/Users.ts (slug 'users', auth: true); frontend/web/src/cms/payload.config.ts:admin",
+    "code_path": "apps/web/src/cms/collections/Users.ts: true); apps/web/src/cms/payload.config.ts:admin",
     "evidence": "read collections/Users.ts: auth:true, admin.useAsTitle='email'. Stored in the same Neon DB via DATABASE_URL (payload.config.ts:44-46); admin surface relocated to /blog/cms/admin (payload.config.ts:routes)."
   },
   {
     "id": "payload-cms-media-files",
-    "name": "Payload CMS media uploads on local disk (frontend/web/media)",
+    "name": "Payload CMS media uploads on local disk (apps/web/media)",
     "slice": "feeds",
     "category": "NEWS",
     "domain": "cms",
@@ -2703,8 +2703,8 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/cms/collections/Media.ts (upload.staticDir: 'media'); frontend/web/src/cms/payload.config.ts DR-017 comment",
-    "evidence": "read collections/Media.ts: upload.staticDir 'media' resolved against frontend/web (server root), mimeTypes ['image/*','application/pdf'], access.read=()=>true (public read; upload requires Payload admin session). Local filesystem, NOT the Neon store."
+    "code_path": "apps/web/src/cms/collections/Media.ts: 'media'); apps/web/src/cms/payload.config.ts DR-017 comment",
+    "evidence": "read collections/Media.ts: upload.staticDir 'media' resolved against apps/web (server root), mimeTypes ['image/*','application/pdf'], access.read=()=>true (public read; upload requires Payload admin session). Local filesystem, NOT the Neon store."
   },
   {
     "id": "signals-feed",
@@ -2719,7 +2719,7 @@
     "durability": "EPHEMERAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "frontend/web/src/app/(frontend)/api/signals/route.ts:7 (UPSTREAM='https://data-public.vercel.app')",
+    "code_path": "apps/web/src/app/(frontend)/api/signals/route.ts:7 (UPSTREAM='https://data-public.vercel.app')",
     "evidence": "curl -s -m 20 -o /dev/null -w '%{http_code}' https://data-public.vercel.app/api/index?chain=solana -> 200; /api/feed?chain=all -> 200; /api/page?chain=solana&n=2 -> 200; /api/scoreboard?chain=solana -> 200; curl localhost:3100/api/signals?chain=solana -> 200. Chain support is non-uniform: index/scoreboard = solana|robinhood only; feed/page also allow 'all' (route.ts CHAIN_BY_MODE)."
   }
 ]

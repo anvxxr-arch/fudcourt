@@ -24,7 +24,7 @@
  * the price of driving the real seam instead of a private one, and it keeps the
  * suite honest about the concurrency the route actually runs at.
  *
- * Usage: cd frontend/web && npm run test:shapers
+ * Usage: cd apps/web && bun run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

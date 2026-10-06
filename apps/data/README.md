@@ -1,8 +1,8 @@
 # fudcourt-data
 
 Standalone Go port of the CryptoRank read proxy that used to run as
-`tests/oracle/cr_fetch.py` (curl_cffi subprocess) + `frontend/web/lib/shapers.ts`
-(TypeScript shapers) + `frontend/web/app/api/cryptorank/route.ts` (HTTP surface).
+`tests/oracle/cr_fetch.py` (curl_cffi subprocess) + `apps/web/src/features/executor/shapers.ts`
+(TypeScript shapers) + `apps/web/src/app/(frontend)/api/cryptorank/route.ts` (HTTP surface).
 
 It is **field-for-field compatible** with the TypeScript route, so the two can be
 diffed against the same goldens and cut over without a client change. The precise
@@ -30,8 +30,8 @@ Next app; `fudcourt-data` is a sidecar, not an origin.
 ## Run
 
 ```sh
-cd backend/data
-go build -o bin/fudcourt-data ./cmd/data
+cd apps/data
+go build -o bin/fudcourt-data .
 FUDCOURT_DATA_ADDR=127.0.0.1:3101 ./bin/fudcourt-data
 ```
 
@@ -212,7 +212,7 @@ Other reliability work beyond the Python original:
 ## Verify
 
 ```sh
-cd backend/data
+cd apps/data
 
 # 1. build + vet + tests
 go build ./... && go vet ./... && go test ./...

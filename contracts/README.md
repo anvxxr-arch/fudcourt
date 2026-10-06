@@ -3,39 +3,39 @@
 The **canonical contracts** of FUDCourt: the executor HTTP surface (OpenAPI),
 the cross-service event contract (catalog + JSON Schemas), and the shared error
 model. Everything here is documentation of REAL current behavior — fields and
-endpoints are never invented; when the frozen TS contract in
-`frontend/web/src/lib/executor.ts` says a value may be unknown, the
+endpoints are never invented; when the wire types in
+`apps/web/src/lib/executor.ts` say a value may be unknown, the
 schemas say `nullable`, not `0`.
 
 ## What this package is
 
-* **The API contract source of truth for the Go services.** `backend/api` and
-  `backend/workers/executor` MUST preserve the methods, paths, and response
+* **The API contract source of truth for the Go services.** `apps/api` and
+  `apps/executor` MUST preserve the methods, paths, and response
   envelopes in [`openapi/fudcourt.yaml`](openapi/fudcourt.yaml); additions are
   allowed but these must not change or drop.
 * **The event contract** for anything that emits domain events (Go services,
   workers, projections).
 
 The OpenAPI document covers the **Go-owned** executor HTTP surface: the endpoint
-list mirrors the header of `frontend/web/src/features/executor/client.ts`, the
-schemas mirror the frozen wire types in `frontend/web/src/lib/executor.ts`
+list mirrors the header of `apps/web/src/features/executor/client.ts`, the
+schemas mirror the wire types in `apps/web/src/lib/executor.ts`
 exactly, and the response envelopes are the contract the Go runtime
-(`backend/workers/executor`) serves. Since DR-042 the executor runtime is the Go
-service and the Next.js route handlers under
-`frontend/web/src/app/(frontend)/api/executor/*/route.ts` are thin `_proxy.ts`
-shells that forward to it (DR-043); this document describes the Go surface, not a
-TS implementation.
+(`apps/executor`) serves. The executor runtime is the Go service and the
+Next.js route handlers under
+`apps/web/src/app/(frontend)/api/executor/**/route.ts` are thin `_proxy.ts`
+shells that forward to it; this document describes the Go surface, not a TS
+implementation.
 
 ## File map
 
 | Path | What it is |
 | --- | --- |
-| `openapi/fudcourt.yaml` | OpenAPI 3.0.3 of the executor HTTP surface (15 paths / 19 operations): preview, executions + lifecycle + child orders/fills/events, BYOK accounts (masked-only), settings, emergency stop. Component schemas mirror `frontend/web/src/lib/executor.ts` 1:1, including the enums (`ExecutionStatus` 15 values, `ExecutionEventName` 19 values, the 9 sizing modes, …). |
+| `openapi/fudcourt.yaml` | OpenAPI 3.0.3 of the executor HTTP surface (15 paths / 19 operations): preview, executions + lifecycle + child orders/fills/events, BYOK accounts (masked-only), settings, emergency stop. Component schemas mirror `apps/web/src/lib/executor.ts` 1:1, including the enums (`ExecutionStatus` 15 values, `ExecutionEventName` 19 values, the 9 sizing modes, …). |
 | `events/events.json` | **Single source of truth** for stable `event_type` ids and their aliases (legacy TS `ExecutionEventName` names ↔ canonical PascalCase names). |
 | `events/README.md` | Envelope field table, naming/alias rules, no-secrets rule, evolution rules. |
 | `schemas/event-envelope.json` | The shared event envelope (`event_id`, `event_type`, `event_version`, `occurred_at`, `request_id`, `actor_id`, `resource_id`, `payload`). |
 | `schemas/error-envelope.json` | The normalized error model (`code`, `message`, `request_id`) with the 12 error codes (`validation`, `authorization`, `credential`, `exchange`, `insufficient_balance`, `risk_limit`, `rate_limit`, `timeout`, `network`, `conflict`, `not_found`, `internal`). |
-| `scripts/check-contract.mjs` | Offline drift gate (see below; run it as `node shared/contracts/scripts/check-contract.mjs`). |
+| `scripts/check-contract.mjs` | Offline drift gate (see below; run it as `node contracts/scripts/check-contract.mjs`). |
 
 ## Versioning and evolution
 
@@ -60,7 +60,7 @@ TS implementation.
 ## Drift gate
 
 ```sh
-node shared/contracts/scripts/check-contract.mjs
+node contracts/scripts/check-contract.mjs
 ```
 
 Prints `CONTRACTS_OK` with counts on success; lists every `CONTRACT_FAIL` line

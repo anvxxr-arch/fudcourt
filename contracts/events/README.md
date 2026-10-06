@@ -1,9 +1,9 @@
 # FUDCourt event contracts
 
 Canonical, transport-agnostic contract for every domain event FUDCourt emits.
-The executor's own event log (`ExecutionEventRecord`, names from the frozen
-`frontend/web/src/platform/executor/types.ts`) is the legacy producer whose names are
-mapped into this catalog — see [events.json](events.json).
+The executor's own event log (`ExecutionEventRecord`, names from
+`apps/web/src/lib/executor-request-defs.ts`) is the legacy producer whose names
+are mapped into this catalog — see [events.json](events.json).
 
 ## Files
 

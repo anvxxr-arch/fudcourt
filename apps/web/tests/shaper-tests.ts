@@ -10,7 +10,7 @@
  *  - every fixture is pinned by sha256 in MANIFEST.json: a hand-edited fixture
  *    fails the tamper check, so a green suite cannot be bought by editing data.
  *
- * Usage: cd apps/web && npm run test:shapers
+ * Usage: cd apps/web && bun run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

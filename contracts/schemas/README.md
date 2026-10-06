@@ -1,4 +1,4 @@
-# shared/contracts/schemas — canonical JSON Schemas
+# contracts/schemas — canonical JSON Schemas
 
 Draft 2020-12 schemas for the concepts this repository **already has or already consumes**. Nothing
 here is invented: every file names the code it describes, and a concept with no implementation gets
@@ -74,18 +74,18 @@ it is computed.
 
 | File | Layer | Owner today (package) | Canonical id? |
 |---|---|---|---|
-| [`accounts/wallet.json`](accounts/wallet.json) | CANONICAL | `backend/api [removed: accounts/wallets]` | address is the key in SQL today |
-| [`accounts/exchange-account.json`](accounts/exchange-account.json) | CANONICAL | `backend/api accounts/exchange` (+ executor store) | minted uuid |
-| [`accounts/balance.json`](accounts/balance.json) | CANONICAL | `apps/executor` / `backend/api [removed: finance/ledger]` | via account+asset |
+| [`accounts/wallet.json`](accounts/wallet.json) | CANONICAL | `apps/api [removed: accounts/wallets]` | address is the key in SQL today |
+| [`accounts/exchange-account.json`](accounts/exchange-account.json) | CANONICAL | `apps/api accounts/exchange` (+ executor store) | minted uuid |
+| [`accounts/balance.json`](accounts/balance.json) | CANONICAL | `apps/executor` / `apps/api [removed: finance/ledger]` | via account+asset |
 | [`accounts/account-equity.json`](accounts/account-equity.json) | CANONICAL | `apps/executor` | via account |
 | [`assets/asset.json`](assets/asset.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `asset_id` minted; instance in `contracts/data/reference.json` |
 | [`assets/token.json`](assets/token.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `token_id` minted over `chain/address`; instance in `reference.json` |
 | [`assets/chain.json`](assets/chain.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `chain_id` minted; instance in `reference.json`; `apps/reconciler/src/chains.rs` is still a separate private table |
 | [`markets/venue.json`](markets/venue.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `venue_id` minted; instance in `reference.json`; the three inline allowlists are now redundant |
-| [`markets/instrument.json`](markets/instrument.json) | CANONICAL | `backend/api [removed: markets/instruments]` | **`instrument_id`, no minter** |
-| [`markets/ticker.json`](markets/ticker.json) | CANONICAL | `backend/api [removed: markets/overview]` | via instrument+venue |
+| [`markets/instrument.json`](markets/instrument.json) | CANONICAL | `apps/api [removed: markets/instruments]` | **`instrument_id`, no minter** |
+| [`markets/ticker.json`](markets/ticker.json) | CANONICAL | `apps/api [removed: markets/overview]` | via instrument+venue |
 | [`markets/price.json`](markets/price.json) | CANONICAL | **absent** | schema only |
-| [`markets/candle.json`](markets/candle.json) | CANONICAL | `backend/api [removed: markets/overview]` | via instrument+interval+open_time |
+| [`markets/candle.json`](markets/candle.json) | CANONICAL | `apps/api [removed: markets/overview]` | via instrument+interval+open_time |
 | [`trading/execution.json`](trading/execution.json) | CANONICAL | `apps/executor` | minted uuid |
 | [`trading/order.json`](trading/order.json) | CANONICAL | `apps/executor` | minted `fud_…` |
 | [`trading/fill.json`](trading/fill.json) | CANONICAL | `apps/executor` | dedup key `(account, trade)` |
@@ -95,25 +95,25 @@ it is computed.
 | [`trading/sizing-definition.json`](trading/sizing-definition.json) | CANONICAL | `apps/executor` | n/a |
 | [`trading/execution-event.json`](trading/execution-event.json) | DERIVED | `apps/executor` | `evt_…` / bigserial |
 | [`trading/risk-profile.json`](trading/risk-profile.json) | CANONICAL | `apps/executor` | `user_id` |
-| [`finance/ledger-entry.json`](finance/ledger-entry.json) | CANONICAL | `backend/api [removed: finance/ledger]` | natural key |
+| [`finance/ledger-entry.json`](finance/ledger-entry.json) | CANONICAL | `apps/api [removed: finance/ledger]` | natural key |
 | [`finance/ledger-account.json`](finance/ledger-account.json) | CANONICAL | **absent** (SQL only) | `code` |
-| [`finance/treasury-account.json`](finance/treasury-account.json) | CANONICAL | `backend/api [removed: finance/treasury]` | `account_id` |
-| [`finance/allocation.json`](finance/allocation.json) | CANONICAL | `backend/api [removed: finance/treasury]` | via account |
-| [`finance/movement.json`](finance/movement.json) | CANONICAL | `backend/api [removed: finance/treasury]` | `id` |
-| [`finance/transaction.json`](finance/transaction.json) | PRODUCT VIEW | `backend/api [removed: finance/transactions]` | SQL surrogate |
-| [`finance/valuation.json`](finance/valuation.json) | **DERIVED** | `backend/api [removed: finance/portfolio]` | n/a |
-| [`finance/exposure.json`](finance/exposure.json) | **DERIVED** | `backend/api [removed: finance/portfolio]` | n/a |
-| [`defi/protocol.json`](defi/protocol.json) | NORMALIZED | `backend/data internal/research/llama` | provider slug |
+| [`finance/treasury-account.json`](finance/treasury-account.json) | CANONICAL | `apps/api [removed: finance/treasury]` | `account_id` |
+| [`finance/allocation.json`](finance/allocation.json) | CANONICAL | `apps/api [removed: finance/treasury]` | via account |
+| [`finance/movement.json`](finance/movement.json) | CANONICAL | `apps/api [removed: finance/treasury]` | `id` |
+| [`finance/transaction.json`](finance/transaction.json) | PRODUCT VIEW | `apps/api [removed: finance/transactions]` | SQL surrogate |
+| [`finance/valuation.json`](finance/valuation.json) | **DERIVED** | `apps/api [removed: finance/portfolio]` | n/a |
+| [`finance/exposure.json`](finance/exposure.json) | **DERIVED** | `apps/api [removed: finance/portfolio]` | n/a |
+| [`defi/protocol.json`](defi/protocol.json) | NORMALIZED | `apps/data/internal/research/llama` | provider slug |
 | [`defi/pool.json`](defi/pool.json) | NORMALIZED | **absent** (TS `DexPair`) | provider pair address |
-| [`research/coin.json`](research/coin.json) | NORMALIZED | `backend/data internal/research/cryptorank` | provider key |
+| [`research/coin.json`](research/coin.json) | NORMALIZED | `apps/data/internal/research/cryptorank` | provider key |
 | [`research/global-stats.json`](research/global-stats.json) | NORMALIZED | same | n/a |
 | [`research/chain-stats.json`](research/chain-stats.json) | NORMALIZED | same | provider slug |
 | [`research/exchange-row.json`](research/exchange-row.json) | NORMALIZED(+DERIVED rank) | same | provider key |
 | [`research/category.json`](research/category.json) | NORMALIZED | same | provider slug |
-| [`research/chainrank-listing.json`](research/chainrank-listing.json) | NORMALIZED | `backend/data internal/research/chainrank` | provider id |
-| [`research/news-article.json`](research/news-article.json) | NORMALIZED | `backend/data internal/research/{news,khala}` (+cryptorank) | **none** |
-| [`research/report-body.json`](research/report-body.json) | NORMALIZED | `backend/data internal/research/khala` | report slug |
-| [`research/prediction-market.json`](research/prediction-market.json) | ENRICHED (in-payload join) | `backend/data internal/research/cryptorank` | provider id |
+| [`research/chainrank-listing.json`](research/chainrank-listing.json) | NORMALIZED | `apps/data/internal/research/chainrank` | provider id |
+| [`research/news-article.json`](research/news-article.json) | NORMALIZED | `apps/data/internal/research/{news,khala}` (+cryptorank) | **none** |
+| [`research/report-body.json`](research/report-body.json) | NORMALIZED | `apps/data/internal/research/khala` | report slug |
+| [`research/prediction-market.json`](research/prediction-market.json) | ENRICHED (in-payload join) | `apps/data/internal/research/cryptorank` | provider id |
 | [`signals/signal.json`](signals/signal.json) | PRODUCT VIEW | **absent** (Next route only) | provider `(id, mint)` |
 | [`signals/scoreboard.json`](signals/scoreboard.json) | **DERIVED** (provider/browser) | **absent** | n/a |
 
@@ -173,9 +173,9 @@ Two deliberate refusals to duplicate:
 
 ```sh
 # contract drift gate (must still print CONTRACTS_OK)
-node shared/contracts/scripts/check-contract.mjs
+node contracts/scripts/check-contract.mjs
 # every file is valid JSON
-python3 -c "import json,glob;[json.load(open(f)) for f in glob.glob('shared/contracts/schemas/**/*.json',recursive=True)]"
+python3 -c "import json,glob;[json.load(open(f)) for f in glob.glob('contracts/schemas/**/*.json',recursive=True)]"
 ```
 
 These schemas are **not** wired into a generator or a route yet: `events/` remains the event source

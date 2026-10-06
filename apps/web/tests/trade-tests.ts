@@ -23,7 +23,7 @@
  * `VENUE_MARKET_TYPES` capability matrix, and the rule that a ROUTE is a market
  * type — no venue id is a market type, so `/trade/<venue>` cannot be a route.
  *
- * Usage: cd apps/web && npm run test:shapers
+ * Usage: cd apps/web && bun run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

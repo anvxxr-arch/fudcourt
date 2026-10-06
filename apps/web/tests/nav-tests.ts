@@ -18,7 +18,7 @@
  *    current page, a query string or hash never becomes a crumb, and a label map
  *    overrides the fallback by the crumb's href.
  *
- * Usage: cd apps/web && npm run test:shapers
+ * Usage: cd apps/web && bun run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

@@ -24,7 +24,7 @@ data family, `src/lib/` + `src/server/` shared infrastructure, `src/ui/` and
 **Repository layout:** `apps/` holds every deployable (`api`, `bot`, `data`,
 `executor`, `web`, `reconciler`), `contracts/` the cross-service schemas and their
 gates, `db/` the DDL, `tests/` the shared fixtures and oracles, `tools/` the one
-command surface, `scripts/` the verification harnesses, `infrastructure/` the
+command surface, `scripts/` the verification harnesses, `deploy/` the
 systemd units, `docs/` everything written down.
 
 > **Hosting:** self-hosted on the homeserver — production = the systemd units

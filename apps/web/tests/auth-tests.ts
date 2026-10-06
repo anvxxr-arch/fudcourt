@@ -9,7 +9,7 @@
  *  - the post-login `next` target is attacker-supplied: it must accept only a
  *    site-relative path, never a protocol-relative or traversing one.
  *
- * Usage: cd apps/web && npm run test:shapers
+ * Usage: cd apps/web && bun run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

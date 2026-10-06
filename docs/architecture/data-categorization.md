@@ -17,16 +17,16 @@ exist.
 | slice | rows | enumerates |
 |---|---|---|
 | `acq` | 58 | Go data sidecar acquisition surface — every family and every mode |
-| `routes` | 43 | HTTP route handlers under `apps/web/src/app/**` — method, domain, auth tier, proxy target |
+| `routes` | 45 | HTTP route handlers under `apps/web/src/app/**` — method, domain, auth tier, proxy target |
 | `db` | 41 | Persistence objects across the three stores (Postgres+TimescaleDB, `executor` schema, Payload/Neon) |
 | `feeds` | 11 | Non-sidecar upstream feeds the app reads directly (ccxt venues, chain RPCs, DexScreener, CoinGecko, CMS, signals) |
-| **total** | **153** | |
+| **total** | **155** | |
 
 ## 2. Status and category roll-up
 
 | status | rows |  | category | rows |
 |---|---|---|---|---|
-| `active` | 135 | | `MARKET_DATA` | 37 |
+| `active` | 137 | | `MARKET_DATA` | 39 |
 | `dead` | 8 | | `TRADING` | 26 |
 | `dark` | 7 | | `PORTFOLIO` | 14 |
 | `scaffolded` | 3 | | `RESEARCH` | 16 |
@@ -264,7 +264,7 @@ recorded because the middleware table not covering the path is a real (non-explo
 ## 5. Verification
 
 ```
-python3 -c "import json;print(len(json.load(open('docs/architecture/data-categorization.json'))))"  # 153
+python3 -c "import json;print(len(json.load(open('docs/architecture/data-categorization.json'))))"  # 155
 curl -s http://127.0.0.1:3101/healthz                                  # 8 families, 28 cryptorank modes
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinglass?mode=statistics'   # 200 (web proxy)
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinank?mode=fundingRate'     # 502 dark (web proxy)

@@ -17,7 +17,7 @@
  * stubbed global drives every path without touching the routes. The stub
  * answers a real `Response` because the routes read status, headers and text.
  *
- * Usage: cd apps/web && npm run test:shapers
+ * Usage: cd apps/web && bun run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
