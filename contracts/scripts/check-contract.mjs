@@ -24,10 +24,12 @@ import { repoRoot as discoverRepoRoot, parseOpenApiEnums } from './lib.mjs';
 
 const repoRoot = discoverRepoRoot();
 
-// The executor type surface moved in the frontend refactor:
-// apps/web/src/platform/executor/types.ts -> executor-request-defs.ts (+ lifecycle split);
-// barrel at lib/executor.ts re-exports. parseLiteralUnion does not follow `export *`,
-// so read the defining slices directly and check the unions against their concat.
+// The executor type surface moved in the frontend refactor and now lives in
+// apps/web/src/lib/executor-lifecycle.ts and
+// apps/web/src/lib/executor-request-defs.ts; the retired
+// apps/web/src/lib/executor.ts barrel re-exports both. parseLiteralUnion does
+// not follow `export *`, so read the defining slices directly and check the
+// unions against their concat.
 const TYPES_TS = [
   'apps/web/src/lib/executor-lifecycle.ts',
   'apps/web/src/lib/executor-request-defs.ts',

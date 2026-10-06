@@ -209,7 +209,7 @@ def verify_ui_wiring(base: str) -> None:
     ]:
         check(frag in route, label, "")
     # The route is a VERBATIM PROXY to the Go sidecar (PLAN G9 SG-9.3): mode
-    # validation moved to apps/data/internal/llama, so the pre-cutover
+    # validation moved to apps/data/internal/research/llama, so the pre-cutover
     # `LLAMA_MODES.includes(mode)` assertion is replaced by the proxy contract —
     # the route must reach the sidecar and must not re-implement the mode table.
     go_llama = root.parent.parent / "backend" / "data" / "internal" / "research" / "llama" / "modes.go"

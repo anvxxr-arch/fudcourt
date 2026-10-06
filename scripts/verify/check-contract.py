@@ -36,7 +36,7 @@ WEB = REPO / "apps" / "web"
 # route tree is at SRC/app; a `lib/` no longer exists — putting one back would
 # make the feature lookups below fail loudly, which is the intended behaviour.
 SRC = WEB / "src"
-# Normally apps/data/internal/cryptorank/modes.go; overridable so the parity
+# Normally apps/data/internal/research/cryptorank/modes.go; overridable so the parity
 # gate can be exercised (and so CI survives a different checkout layout).
 GO_TABLE = Path(os.environ.get(
     "FUDCOURT_DATA_MODES_GO", REPO / "apps" / "data" / "internal" / "research" / "cryptorank" / "modes.go"))

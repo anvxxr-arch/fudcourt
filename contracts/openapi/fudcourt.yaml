@@ -521,8 +521,8 @@ paths:
       summary: Everything the dashboard reads, in one call
       description: |
         Runs the eight `DASHBOARD_READS` queries in parallel via
-        `platform/db/client.ts` `getAll()` against the local Postgres read model
-        (DR-019) and returns their row arrays plus the board constants.
+        `apps/web/src/server/db.ts` `getAll()` against the local Postgres read
+        model (DR-019) and returns their row arrays plus the board constants.
         Requires the `team` tier (middleware).
       responses:
         '200':
