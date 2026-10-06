@@ -91,7 +91,7 @@ install.
                     └────────────────┬────────────────────────────────┘
                                      ▼
    ┌──────────────────── apps/web (Next 16, fudcourt-web) ────────────────────┐
-   │  src/app/(frontend)/page.tsx = SPA shell (initialPage state + tab nav + db)│
+   │  src/app/(frontend)/page.tsx = SPA shell (initialPage state + tab nav)   │
    │  src/app/(frontend)/<view>/page.tsx = deep-link wrapper → <StoreShell …> │
    │  src/app/(frontend)/api/* = 53: 3 auth + 50 data (families §4 + admin §5)│
    └──────┬────────────────────────────────────────────┬──────────────────────┘
