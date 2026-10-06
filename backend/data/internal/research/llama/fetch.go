@@ -152,11 +152,17 @@ func IsHardError(err error) (*HardError, bool) {
 // (same call as the khala fetcher's). A browser fingerprint would buy nothing
 // and cost a dependency.
 
-// entry is one cached body.
+// entry is one cached body. The raw bytes are kept, but so are the shaped
+// projections the Service actually serves: a HIT must not re-decode and re-sort
+// the 8.9MB /protocols body for every request. The projections are computed
+// ONCE, at the time the body is first stored, and re-used by every HIT and
+// coalesced flight below.
 type entry struct {
 	body          string
 	upstreamTotal int
 	fetchedAt     int64
+	rows          []json.RawMessage // decoded rows (nil when not yet computed)
+	sorted        []json.RawMessage // rows sorted by tvl desc, for chains/protocols
 }
 
 // flight is an in-flight fetch other callers wait on.
@@ -242,6 +248,21 @@ func (f *Fetcher) Stats() Stats {
 	return Stats{Entries: len(f.entries), Flights: len(f.flights)}
 }
 
+// ShapedByURL returns the decoded/sorted projections computed when the url's
+// entry was first stored. It is the HIT-path twin of Fetch: the Service pairs
+// Fetch (which proves the bytes are cached) with ShapedByURL (which returns
+// the memoized projections without re-decoding). ok is false when no fresh
+// entry exists, in which case the caller falls back to decoding the raw body.
+func (f *Fetcher) ShapedByURL(url string) (rows, sorted []json.RawMessage, ok bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	e, ok := f.entries[url]
+	if !ok || time.Since(time.Unix(e.fetchedAt, 0)) >= f.ttl {
+		return nil, nil, false
+	}
+	return e.rows, e.sorted, true
+}
+
 // Fetch retrieves url, honouring the in-process TTL cache and single-flight.
 //
 // It returns the body, the FULL upstream array length, and the cache info. The
@@ -275,14 +296,29 @@ func (f *Fetcher) Fetch(ctx context.Context, url string) (body string, upstreamT
 	// stored count travels with the bytes, because only the JSON parse knew it.
 	key := cache.Key("llama", url)
 	if body, total, fetchedAt, ok := f.l2Get(ctx, key); ok {
-		f.mu.Lock()
-		f.entries[url] = &entry{body: body, upstreamTotal: total, fetchedAt: fetchedAt}
-		delete(f.flights, url)
-		fl.body, fl.upstreamTotal = body, total
-		fl.info = CacheInfo{Status: 200, Cache: "HIT", FetchedAt: fetchedAt, UpstreamTotal: total}
-		close(fl.done)
-		f.mu.Unlock()
-		return body, total, fl.info, nil
+		rows, sorted, projErr := shapeRows(body)
+		if projErr != nil {
+			// The L2 body is valid JSON (l2Get only returns what Encode
+			// stored, which fetch already validated); shapeRows failing
+			// would mean a schema drift mid-process, which must not pin a
+			// broken projection into L1. Fall through to a live fetch.
+			f.mu.Lock()
+			delete(f.flights, url)
+			fl.err = projErr
+			close(fl.done)
+			f.mu.Unlock()
+			return "", 0, CacheInfo{}, projErr
+		} else {
+			f.mu.Lock()
+			f.entries[url] = &entry{body: body, upstreamTotal: total, fetchedAt: fetchedAt,
+				rows: rows, sorted: sorted}
+			delete(f.flights, url)
+			fl.body, fl.upstreamTotal = body, total
+			fl.info = CacheInfo{Status: 200, Cache: "HIT", FetchedAt: fetchedAt, UpstreamTotal: total}
+			close(fl.done)
+			f.mu.Unlock()
+			return body, total, fl.info, nil
+		}
 	}
 
 	b, n, i, e := f.fetch(ctx, url)
@@ -290,7 +326,16 @@ func (f *Fetcher) Fetch(ctx context.Context, url string) (body string, upstreamT
 	// Only a success is cached; the shared flight carries either way.
 	f.mu.Lock()
 	if e == nil {
-		f.entries[url] = &entry{body: b, upstreamTotal: n, fetchedAt: i.FetchedAt}
+		rows, sorted, projErr := shapeRows(b)
+		if projErr != nil {
+			// Unreachable via fetch (fetch already proved the body is a JSON
+			// array); kept so a second BodyFetcher implementation cannot ship a
+			// half-parsed projection.
+			f.entries[url] = &entry{body: b, upstreamTotal: n, fetchedAt: i.FetchedAt}
+		} else {
+			f.entries[url] = &entry{body: b, upstreamTotal: n, fetchedAt: i.FetchedAt,
+				rows: rows, sorted: sorted}
+		}
 	}
 	delete(f.flights, url)
 	fl.body, fl.upstreamTotal, fl.info, fl.err = b, n, i, e
@@ -326,7 +371,28 @@ func (f *Fetcher) l2Set(ctx context.Context, key, body string, total int, fetche
 	if !cache.Enabled() {
 		return
 	}
-	cache.Set(ctx, key, cache.Encode(body, int64(total), fetchedAt), f.ttl)
+	// Detach from the request ctx: a client abort must not skip the L2 write,
+	// which primes Valkey for the next deploy/restart. Short timeout so a hung
+	// Valkey cannot leak the goroutine past the response.
+	setCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cache.Set(setCtx, key, cache.Encode(body, int64(total), fetchedAt), f.ttl)
+}
+
+// shapeRows decodes a validated JSON-array body into the projections the
+// Service serves. It runs ONCE per body (at the moment the body is stored in
+// L1 or primed from L2) so a HIT pays no decode and no sort; the 8.9MB
+// /protocols body is the case that forced this (see the entry comment).
+func shapeRows(body string) ([]json.RawMessage, []json.RawMessage, error) {
+	var rows []json.RawMessage
+	if err := json.Unmarshal([]byte(body), &rows); err != nil {
+		return nil, nil, err
+	}
+	if rows == nil {
+		rows = []json.RawMessage{}
+	}
+	sorted := SortByTVLDesc(rows)
+	return rows, sorted, nil
 }
 
 // fetch performs one unconditional upstream read and validates it into a JSON
@@ -337,7 +403,7 @@ func (f *Fetcher) fetch(ctx context.Context, url string) (string, int, CacheInfo
 		return "", 0, CacheInfo{}, err
 	}
 	if status != http.StatusOK {
-		he := &HardError{Kind: "status", Status: status, URL: url, Body: sliceBody(raw), HasBody: raw != ""}
+		he := &HardError{Kind: "status", Status: status, URL: url, Body: research.SliceBody(raw, detailBytes), HasBody: raw != ""}
 		if status == http.StatusTooManyRequests {
 			he.Kind = "rate-limit"
 			he.Detail = fmt.Sprintf("upstream 429 with body: %s", he.Body)
@@ -353,7 +419,7 @@ func (f *Fetcher) fetch(ctx context.Context, url string) (string, int, CacheInfo
 	// application/json for every measured read.
 	var arr []json.RawMessage
 	if err := json.Unmarshal([]byte(raw), &arr); err != nil || !strings.HasPrefix(strings.TrimSpace(raw), "[") {
-		he := &HardError{Status: status, URL: url, Body: sliceBody(raw), HasBody: raw != ""}
+		he := &HardError{Status: 0, URL: url, Body: research.SliceBody(raw, detailBytes), HasBody: raw != ""}
 		if json.Valid([]byte(raw)) {
 			// "null" unmarshals into a slice without error, so the bracket test
 			// above is what makes a JSON null/object/string a shape refusal
@@ -405,24 +471,6 @@ func (f *Fetcher) do(ctx context.Context, url string) (int, string, error) {
 	}
 	return r.StatusCode, string(b), nil
 }
-
-// sliceBody is the error body's `detail`: the first 200 BYTES of the upstream
-// body, the TS route's body.slice(0, 200). Truncating mid-rune would emit
-// invalid UTF-8 into JSON, so the cut is pushed back to the last rune
-// boundary — an honest prefix, never a lossy one.
-func sliceBody(s string) string {
-	if len(s) <= detailBytes {
-		return s
-	}
-	cut := detailBytes
-	for cut > 0 && !utf8Start(s[cut]) {
-		cut--
-	}
-	return s[:cut]
-}
-
-// utf8Start reports whether b can start a UTF-8 rune.
-func utf8Start(b byte) bool { return b&0xC0 != 0x80 }
 
 // AllowedURL is the URL allowlist. The mode table only ever builds three URLs,
 // so this is a fence around them, not a router: anything else (a path, a query,

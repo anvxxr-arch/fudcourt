@@ -324,7 +324,7 @@ func (f *Fetcher) fetch(ctx context.Context, url string, ttl int) (string, Cache
 		// 403, NOT 404. Never empty data.
 		return "", CacheInfo{}, &HardError{
 			Kind: "xml-403", Status: status, URL: url,
-			Detail: fmt.Sprintf("upstream 403 with an XML body (missing CMS resource; S3-style AccessDenied): %s", truncate(raw, 120)),
+			Detail: fmt.Sprintf("upstream 403 with an XML body (missing CMS resource; S3-style AccessDenied): %s", research.SliceBodyEllipsis(strings.Join(strings.Fields(raw), " "), 120, "...")),
 		}
 	case status != http.StatusOK:
 		return "", CacheInfo{}, &HardError{
@@ -376,14 +376,6 @@ func (f *Fetcher) do(ctx context.Context, url, etag string) (int, http.Header, s
 
 func isXML(h http.Header) bool {
 	return strings.Contains(strings.ToLower(h.Get("Content-Type")), "xml")
-}
-
-func truncate(s string, n int) string {
-	s = strings.Join(strings.Fields(s), " ")
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "..."
 }
 
 func readEntry(cf string) (*Entry, error) {

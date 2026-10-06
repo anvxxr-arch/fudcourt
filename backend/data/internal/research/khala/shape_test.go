@@ -6,6 +6,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research"
 )
 
 // fixtureFetcher serves the recorded fixtures by URL; it is the Service-level
@@ -107,7 +109,7 @@ func TestReportsRowsOmitDateKeys(t *testing.T) {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(raw), `"published"`) || strings.Contains(string(raw), `"publishedISO"`) {
-		t.Errorf("mode=reports must omit the date keys entirely (an absent key says 'this mode has no dates'; a null would claim a lookup happened):\n%s", truncate(string(raw), 400))
+		t.Errorf("mode=reports must omit the date keys entirely (an absent key says 'this mode has no dates'; a null would claim a lookup happened):\n%s", research.SliceBodyEllipsis(string(raw), 400, "..."))
 	}
 	// And the report payload key is absent too.
 	if strings.Contains(string(raw), `"report"`) {
@@ -243,7 +245,7 @@ func TestReportAuthorsNullWhenNoneFound(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(raw), `"authors":[]`) {
-		t.Errorf("no-authors report must render authors as [] not a fabrication: %s", truncate(string(raw), 200))
+		t.Errorf("no-authors report must render authors as [] not a fabrication: %s", research.SliceBodyEllipsis(string(raw), 200, "..."))
 	}
 }
 

@@ -893,12 +893,20 @@ func writeLlamaError(w http.ResponseWriter, mode string, err error) {
 	if he.HasBody {
 		body["detail"] = he.Body
 	}
-	if he.Status != 0 && he.Status != 429 {
-		writeJSON(w, he.Status, body)
-		return
-	}
 	if he.Status == 429 {
 		writeJSON(w, 429, body)
+		return
+	}
+	// Status 0, or any other 2xx, is NOT a real upstream failure status: the
+	// refusal bodies built in llama/fetch.go carry "not-a-list"/"non-json" with
+	// Status 200 (the upstream HTTP status, not an error status), and relaying
+	// it would serve a fake 200 error page. Coerce those to a 502.
+	if he.Status > 0 && he.Status < 300 {
+		writeJSON(w, 502, body)
+		return
+	}
+	if he.Status >= 300 {
+		writeJSON(w, he.Status, body)
 		return
 	}
 	writeJSON(w, 502, body)
@@ -1237,7 +1245,8 @@ func (s *server) handleChainrank(w http.ResponseWriter, r *http.Request) {
 // the real status is kept (405 and 429 keep their own meaning), the real body is
 // quoted, and a shape refusal is a 502 -- never a fake 200 with empty data.
 func writeChainrankError(w http.ResponseWriter, mode, upstream string, err error) {
-	if se, ok := err.(*chainrank.ShapeError); ok {
+	var se *chainrank.ShapeError
+	if errors.As(err, &se) {
 		writeJSON(w, 502, map[string]interface{}{"error": se.Detail})
 		return
 	}

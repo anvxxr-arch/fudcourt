@@ -117,7 +117,7 @@ func (s *Service) Envelope(ctx context.Context, mode, slug string, start, limit 
 	env := CmcEnvelope{
 		Kind:         mode,
 		Upstream:     url,
-		FetchedAt:    Now(),
+		FetchedAt:    info.FetchedAt,
 		Auth:         AuthNote,
 		UpstreamCode: res.Envelope.Status.ErrorCode,
 		Data:         res.Envelope.Data,

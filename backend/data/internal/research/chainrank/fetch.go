@@ -274,7 +274,11 @@ func (f *Fetcher) Fetch(ctx context.Context, mode, url string) (string, CacheInf
 	close(fl.done)
 	f.mu.Unlock()
 	if e == nil {
-		cache.Set(ctx, key, cache.Encode(b, i.FetchedAt), f.ttl)
+		// Detach from the request ctx: a client abort must not skip the L2
+		// write, which primes Valkey for the next deploy/restart.
+		setCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		cache.Set(setCtx, key, cache.Encode(b, i.FetchedAt), f.ttl)
 	}
 	return b, i, e
 }
@@ -356,7 +360,7 @@ func (f *Fetcher) fetch(ctx context.Context, mode, url string) (string, CacheInf
 		he := &HardError{
 			Kind: "status", Status: res.StatusCode, URL: url, Mode: mode,
 			Detail: "upstream HTTP " + strconv.Itoa(res.StatusCode),
-			Body:   truncate(body, detailBytes), HasBody: body != "",
+			Body:   research.SliceBodyEllipsis(body, detailBytes, "…"), HasBody: body != "",
 		}
 		switch res.StatusCode {
 		case http.StatusTooManyRequests:
@@ -371,18 +375,10 @@ func (f *Fetcher) fetch(ctx context.Context, mode, url string) (string, CacheInf
 		return "", CacheInfo{}, &HardError{
 			Kind: "non-json", Status: res.StatusCode, URL: url, Mode: mode,
 			Detail: "upstream returned a non-JSON body",
-			Body:   truncate(body, detailBytes), HasBody: body != "",
+			Body:   research.SliceBodyEllipsis(body, detailBytes, "…"), HasBody: body != "",
 		}
 	}
 	return body, CacheInfo{
 		Status: res.StatusCode, Cache: "MISS", FetchedAt: Now(), Upstream: url,
 	}, nil
-}
-
-// truncate cuts s to n bytes, appending "…" when it actually cut.
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "…"
 }

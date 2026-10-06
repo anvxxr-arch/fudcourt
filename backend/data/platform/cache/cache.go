@@ -67,8 +67,11 @@ func Init() {
 			InitAddress: []string{addr},
 			Password:    os.Getenv("FUDCOURT_DATA_VALKEY_PASSWORD"),
 			// A request must never wait on the cache longer than it would have
-			// waited on the upstream call the cache exists to avoid.
-			ConnWriteTimeout: 2 * time.Second,
+			// waited on the upstream call the cache exists to avoid. 5s, not 2s:
+			// the multi-MB /protocols body (~9MB) cannot be written to Valkey in
+			// 2s on a loaded loopback, and a timed-out L2 write silently loses the
+			// body the fetch just paid for.
+			ConnWriteTimeout: 5 * time.Second,
 		})
 		if err != nil {
 			log.Printf("cache: L2 unavailable (%v) - continuing with in-process caches only", err)

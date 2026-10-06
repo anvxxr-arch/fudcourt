@@ -139,9 +139,9 @@ func Accepts(mode, p string) bool { return accepts[mode][p] }
 
 // Error strings that are part of the wire contract (tests assert them verbatim).
 const (
-	ErrUnknownMode   = "unknown mode"
-	ErrInvalidParam  = "invalid param"
-	ErrUnexpected    = "unexpected param"
+	ErrUnknownMode  = "unknown mode"
+	ErrInvalidParam = "invalid param"
+	ErrUnexpected   = "unexpected param"
 	// ErrUpstream is returned when CoinAnk answers with its own refusal envelope
 	// (success:false). It is 502, not 200-with-nothing: the caller gets
 	// upstream's message, and no table is invented.

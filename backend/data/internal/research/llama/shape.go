@@ -115,15 +115,24 @@ func (s *Service) Envelope(ctx context.Context, mode string, top, days int) (Lla
 	if err != nil {
 		return LlamaEnvelope{}, err
 	}
-	var rows []json.RawMessage
-	if err := json.Unmarshal([]byte(raw), &rows); err != nil {
-		// Unreachable via Fetcher (fetch already proved the body is a JSON
-		// array); kept so a second BodyFetcher implementation cannot ship a
-		// half-parsed payload.
-		return LlamaEnvelope{}, &HardError{Kind: "non-json", URL: url, Detail: "cached body is not a JSON array: " + err.Error()}
-	}
-	if rows == nil {
-		rows = []json.RawMessage{}
+	// Rows and the sorted projection come from the Fetcher's memoized entry
+	// when the body is warm (the HIT path): decoding and re-sorting the 8.9MB
+	// /protocols body on every request is the cost the entry exists to avoid.
+	// On a MISS (or when the fetcher does not memoize), decode and sort once
+	// here — the result is the same shape served either way.
+	rows, sorted, ok := s.F.ShapedByURL(url)
+	if !ok {
+		rows = nil
+		if err := json.Unmarshal([]byte(raw), &rows); err != nil {
+			// Unreachable via Fetcher (fetch already proved the body is a JSON
+			// array); kept so a second BodyFetcher implementation cannot ship a
+			// half-parsed payload.
+			return LlamaEnvelope{}, &HardError{Kind: "non-json", URL: url, Detail: "cached body is not a JSON array: " + err.Error()}
+		}
+		if rows == nil {
+			rows = []json.RawMessage{}
+		}
+		sorted = SortByTVLDesc(rows)
 	}
 	env := LlamaEnvelope{
 		Kind:          mode,
@@ -134,10 +143,10 @@ func (s *Service) Envelope(ctx context.Context, mode string, top, days int) (Lla
 	}
 	switch mode {
 	case "chains":
-		env.Rows = SortByTVLDesc(rows)
+		env.Rows = sorted
 		env.Derived = DerivedChains
 	case "protocols":
-		env.Rows = projectProtocols(Take(SortByTVLDesc(rows), top))
+		env.Rows = projectProtocols(Take(sorted, top))
 		env.Derived = DerivedProtocols(top, total)
 	default:
 		env.Rows = projectHistorical(Tail(rows, days))

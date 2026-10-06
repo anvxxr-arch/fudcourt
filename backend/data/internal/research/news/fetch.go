@@ -286,7 +286,11 @@ func (f *Fetcher) Fetch(ctx context.Context, url string) (body string, items []I
 	close(fl.done)
 	f.mu.Unlock()
 	if e == nil {
-		cache.Set(ctx, key, cache.Encode(b, i.FetchedAt), f.ttl)
+		// Detach from the request ctx: a client abort must not skip the L2
+		// write, which primes Valkey for the next deploy/restart.
+		setCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		cache.Set(setCtx, key, cache.Encode(b, i.FetchedAt), f.ttl)
 	}
 	return b, items, i, e
 }
@@ -338,7 +342,7 @@ func (f *Fetcher) fetch(ctx context.Context, url string) (string, []Item, CacheI
 		he := &HardError{
 			Kind: "status", Status: res.StatusCode, URL: url,
 			Detail: "upstream HTTP " + strconv.Itoa(res.StatusCode),
-			Body:   truncate(body, detailBytes), HasBody: body != "",
+			Body:   research.SliceBodyEllipsis(body, detailBytes, "…"), HasBody: body != "",
 		}
 		if res.StatusCode == http.StatusTooManyRequests {
 			he.Kind = "rate-limit"
@@ -352,20 +356,11 @@ func (f *Fetcher) fetch(ctx context.Context, url string) (string, []Item, CacheI
 		return "", nil, CacheInfo{}, &HardError{
 			Kind: "empty", Status: 200, URL: url,
 			Detail: "upstream returned an empty feed",
-			Body:   truncate(body, detailBytes), HasBody: body != "",
+			Body:   research.SliceBodyEllipsis(body, detailBytes, "…"), HasBody: body != "",
 		}
 	}
 	fetchedAt := Now()
 	return body, items, CacheInfo{
 		Status: 200, Cache: "MISS", FetchedAt: fetchedAt, ItemCount: len(items), Upstream: url,
 	}, nil
-}
-
-// truncate cuts s to n bytes, appending "…" when it actually cut (the TS
-// route's `body.slice(0, 200)` reported the same way).
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "…"
 }

@@ -114,7 +114,7 @@ func (s *Service) Envelope(ctx context.Context, mode, interval string, fresh boo
 	env := CnEnvelope{
 		Kind:         mode,
 		Upstream:     url,
-		FetchedAt:    Now(),
+		FetchedAt:    info.FetchedAt,
 		Auth:         AuthNote,
 		UpstreamCode: res.Envelope.Code,
 		Data:         res.Envelope.Data,

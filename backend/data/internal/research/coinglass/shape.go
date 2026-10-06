@@ -123,7 +123,7 @@ func (s *Service) Envelope(ctx context.Context, mode, symbol string, fresh bool)
 	env := CgEnvelope{
 		Kind:         mode,
 		Upstream:     url,
-		FetchedAt:    Now(),
+		FetchedAt:    info.FetchedAt,
 		Cipher:       res.V,
 		Encrypted:    res.Encrypted,
 		UpstreamCode: res.Code,

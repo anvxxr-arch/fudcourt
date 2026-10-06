@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -89,6 +90,11 @@ type Entry struct {
 type CacheInfo struct {
 	Status int
 	Cache  string // "MISS" or "HIT"
+	// FetchedAt is when the served body was downloaded from upstream. It is
+	// set from the cache Entry on a HIT and from the fetch on a MISS, so the
+	// envelope's fetchedAt mirrors llama/news/chainrank instead of stamping
+	// shape time on a warm read.
+	FetchedAt int64
 }
 
 // Fetcher is the coinglass HTTP client + disk cache.
@@ -212,6 +218,7 @@ func (f *Fetcher) fetch(ctx context.Context, rawURL string, useCache bool) (Resu
 			if err == nil && !res.Refused() {
 				info.Cache = "HIT"
 				info.Status = entry.Status
+				info.FetchedAt = entry.FetchedAt
 				return res, info, nil
 			}
 		}
@@ -236,6 +243,7 @@ func (f *Fetcher) fetch(ctx context.Context, rawURL string, useCache bool) (Resu
 		return Result{}, info, fmt.Errorf("coinglass: read body: %w", err)
 	}
 	info.Status = resp.StatusCode
+	info.FetchedAt = time.Now().Unix()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return Result{}, info, fmt.Errorf("coinglass: HTTP %d from %s", resp.StatusCode, rawURL)
 	}
@@ -307,4 +315,51 @@ func (f *Fetcher) writeCache(e Entry) {
 	defer f.mu.Unlock()
 	// Best-effort: a cache write failure must never fail the request.
 	_ = os.WriteFile(f.pathFor(e.URL), b, 0o644)
+	f.pruneCache()
+}
+
+// maxCacheEntries bounds the on-disk cache. The chainrank family caps its
+// in-memory cache at 32; this family's disk cache had NO bound and grew once
+// per distinct URL forever. 64 entries is ~2x the URLs the board actually
+// requests (each mode a handful of intervals/symbols) and keeps the directory
+// listable.
+const maxCacheEntries = 64
+
+// pruneCache evicts the oldest entries (by Entry.FetchedAt, falling back to
+// file mtime when an entry cannot be decoded) so at most maxCacheEntries
+// remain. Best-effort: a read/remove failure never fails the request. Called
+// under f.mu, after the write.
+func (f *Fetcher) pruneCache() {
+	dirs, err := os.ReadDir(f.cacheDir)
+	if err != nil || len(dirs) <= maxCacheEntries {
+		return
+	}
+	type cand struct {
+		name      string
+		fetchedAt int64
+	}
+	cands := make([]cand, 0, len(dirs))
+	for _, d := range dirs {
+		if d.IsDir() || !strings.HasSuffix(d.Name(), ".json") {
+			continue
+		}
+		v, err := os.ReadFile(filepath.Join(f.cacheDir, d.Name()))
+		if err == nil {
+			var e Entry
+			if json.Unmarshal(v, &e) == nil && e.FetchedAt > 0 {
+				cands = append(cands, cand{name: d.Name(), fetchedAt: e.FetchedAt})
+				continue
+			}
+		}
+		if info, err := d.Info(); err == nil {
+			cands = append(cands, cand{name: d.Name(), fetchedAt: info.ModTime().Unix()})
+		}
+	}
+	if len(cands) <= maxCacheEntries {
+		return
+	}
+	sort.Slice(cands, func(i, j int) bool { return cands[i].fetchedAt < cands[j].fetchedAt })
+	for i := 0; i < len(cands)-maxCacheEntries; i++ {
+		_ = os.Remove(filepath.Join(f.cacheDir, cands[i].name))
+	}
 }
