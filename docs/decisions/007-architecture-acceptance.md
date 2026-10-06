@@ -348,4 +348,14 @@ gate's own header, but its numeric carve-outs
 (fontWeight/zIndex/fontSize/lineHeight:1) and FROZEN_SCALES/ramp
 dead-token exemptions widen the rules past the header's documented
 exemptions, so some previously-detectable violations now pass.
+**Resolved same day (`0589380`)**: `check-design-tokens.py` was restored
+to its header contract — the numeric carve-outs and ramp/semantic/FROZEN_SCALES
+class exemptions removed, reference detection corrected for
+`cssVar()`/`Object.keys()`/test fixture tables plus a depth-0 export
+parser fix — and the source made to pass rather than the gate made to
+accept: `53f99a2` deleted 10 provably unreferenced tokens, `2494a7b` +
+`6979de6` replaced the remaining magic values with value-equal tokens
+(rendered output byte-identical), and `8606624` wired
+`check-design-system.py` into `verify-all.sh` + web.yml. The header was
+never loosened; everything ends `VERIFY_ALL_OK` (exit 0).
 
