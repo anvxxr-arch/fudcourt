@@ -41,18 +41,6 @@ export function formatUsd(value: number | null | undefined): string {
   return `${sign}$${abs.toFixed(2)}`;
 }
 
-/** A signed quote-currency delta: `+$142.00`. */
-export function formatSignedUsd(value: number | null | undefined): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return NO_VALUE;
-  return `${value > 0 ? '+' : value < 0 ? '-' : ''}$${Math.abs(value).toFixed(2)}`;
-}
-
-/** A percentage that is ALREADY in percent (`4.2` → `4.20%`). */
-export function formatPercent(value: number | null | undefined, decimals = 2): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return NO_VALUE;
-  return `${value.toFixed(decimals)}%`;
-}
-
 /** The trade module's entry nav, rendered by every board's header. */
 export const TRADE_NAV = [
   { href: '/trade', label: 'Command center' },
