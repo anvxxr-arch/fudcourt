@@ -20,7 +20,7 @@ with their reasoning rather than silently changed.
 | Foundations | `src/ui/foundations/{color,typography,spacing,layout,motion,accessibility}.ts` | `check-design-system.py` |
 | Atoms | `src/ui/atoms/{typography,actions,form,visual,status,financial,market,blockchain,system,table,visualization,layout}` | `check-design-system.py` |
 | Public API | `src/ui/index.ts` — one entry point | boundary test |
-| Tests | `tests/design-system-tests.ts` (22), `tests/design-system-atom-tests.ts` (47) | `bun run test:shapers` |
+| Tests | `tests/design-system-tests.ts` (22), `tests/design-system-atom-tests.ts` (48) | `bun run test:shapers` |
 | Guardrail | `scripts/checks/check-design-system.py` | `check:design` |
 | Docs | `docs/design-system/{current-ui-audit,fudcourt-foundations-atoms-spec,atoms}.md` | — |
 
@@ -270,7 +270,7 @@ command that proves it, so a future reviewer re-runs the check rather than trust
 | No Molecule workflow | the only hooks are `CopyButton`'s transient copied flag and `FinancialInput`'s uncontrolled fallback |
 | Existing app builds | `next build` → `✓ Compiled successfully` |
 | Existing tests pass | 337 pass, 0 fail (19 files) |
-| Design-system tests pass | 69 pass, 0 fail (2 files) |
+| Design-system tests pass | 70 pass, 0 fail (2 files) |
 | Public exports compile | `tsc --noEmit` → 0 errors |
 | Documentation complete | 5 docs, 73.7 KB total |
 | **100/100 inventory atoms exported** | walked one name at a time against `src/ui/index.ts` |
