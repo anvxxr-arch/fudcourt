@@ -163,7 +163,7 @@ Explicit checks:
 | 1 | `npm run verify` | **FAIL** (exit 1) | Runs the whole offline suite. Two gates fail: `structure` and `design-tokens`. Every other gate in the suite is OK. Ends `VERIFY_ALL_FAILED` / `!! FAILED: offline verification suite`. |
 | 2 | `npm run contracts` | **PASS** (exit 0) | `DOCS_OK`, `MDTABLES_OK`, contract schema/doc gates clean. |
 | 3 | `npm run deploy` | **PASS** (exit 0) | `check-deploy: OK (10 unit files: paths exist, ExecStart absolute, timer pairs present)`. |
-| 4 | `npm run structure` | **FAIL** (exit 1) | `STRUCTURE_FAIL`: `src/ui/atoms/system/index.tsx:31 ui/ imports lib/executor-lifecycle`; `src/ui/atoms/system/index.tsx:32 ui/ imports lib/executor-request-defs` — DR-018 boundary (`ui/` must stay dependency-free). |
+| 4 | `npm run structure` | **FAIL** (exit 1) | `STRUCTURE_FAIL`: `src/ui/atoms/system/index.tsx:31 ui/ imports lib/executor-lifecycle`; `src/ui/atoms/system/index.tsx:32 ui/ imports lib/executor-request-defs` — DR-018 boundary (`ui/` must stay dependency-free). **Resolved since** by `1d6960e`; the gate is `STRUCTURE_OK` at current HEAD. |
 | 5 | `npm run test:go` | **PASS** (exit 0) | 43 packages `ok`, 0 FAIL (`go test ./...`). |
 | 6 | `npm run test:web` | **PASS** (exit 0) | `323 pass / 0 fail`, 19 files, 45.66s. |
 | 7 | `npm run test:sync` | **PASS** (exit 0) | Rust reconciler: 5 + 12 tests pass (17 total), 0 fail. |
@@ -185,6 +185,21 @@ not fixed.
    Both the file and the atoms tree are **untracked at this commit** — the
    violations come from the in-flight design-system work, not the committed
    tree. `npm run verify` and `npm run structure` both fail on this alone.
+   **Resolved since** by `1d6960e` — "refactor(web): declare the execution
+   lifecycle vocabulary in the atom layer, proven by test". The atom now imports
+   the two unions from a new sibling, `apps/web/src/ui/atoms/system/lifecycle.ts`,
+   and `fud.ts structure` returns `STRUCTURE_OK` at current HEAD. The fix is a
+   **type-only mirror**, not a re-export: the new module declares its own copy of
+   `ExecutionStatus` and `ChildOrderStatus` and adds two `readonly` arrays
+   (`EXECUTION_STATUSES`, `CHILD_ORDER_STATUSES`) that exist only in the `ui/`
+   layer, while `EXECUTION_TRANSITIONS`, `canTransition` and
+   `isTerminalExecution` stay only in `lib/executor-lifecycle.ts`, which remains
+   canonical for all runtime behaviour. The duplication is deliberate and is
+   pinned by `apps/web/tests/design-system-atom-tests.ts` — a compile-time
+   mutual-assignability assertion over the engine and mirror unions, plus runtime
+   cross-checks against the engine's `EXECUTION_TRANSITIONS` table and the frozen
+   contract schema's `execution_status` / `child_order_status` enums. It is a
+   recorded duplicate-source-of-truth trade, not an oversight.
 2. **`design-tokens` gate.** `DESIGN_FAIL: files=363 colors=2 scales=76
    deadtokens=159` (plus a `DESIGN_SOFT` advisory block). The 2 color literals
    are `src/ui/foundations/color.ts:63,116`; the scale literals and the ~159
@@ -290,3 +305,119 @@ in ADR-007 that was re-measured still holds with the same numbers.
 - The working tree changed during capture (one new untracked file); no command
   was re-run to "confirm" earlier results. A failing baseline is data.
 - No fixes, no formatting, no `git add`, no commit were performed.
+
+---
+
+# Final gate 2026-10-06 (Phase 16 close-out)
+
+Re-run of the whole suite after the mid-refactor work landed. The two gates
+that failed during the initial re-audit (`structure`, `design-tokens`) now
+pass; the aggregate is green.
+
+- **Certified HEAD:** `f9b7086` (`refactor(web): record the ui/ lifecycle
+  mirror as a deliberate, proven trade`) — the suite below was re-run here.
+- **First run HEAD:** `bad41af` (`feat(ui): add the nine atomic financial
+  input shells`) — HEAD advanced mid-run (`f9b7086` ← `7e9d2a3` ← `d446e91`);
+  the full suite was re-executed at `f9b7086` so the gate certifies the
+  revision actually at HEAD.
+- **Branch:** `main`
+- **Requested commits present since the baseline:** `b5e7542`, `1d6960e`,
+  `cea116c`, `a69b0dd` — all landed (baseline was `633ffeb`; there are now
+  more than 8 commits, so they sit beyond the `-8` window below).
+- **Tree:** dirty — **9 modified, 0 untracked, 0 staged** at `f9b7086`. Not
+  touched.
+
+### `git log --oneline -8` (at `f9b7086`)
+```
+f9b7086 refactor(web): record the ui/ lifecycle mirror as a deliberate, proven trade
+7e9d2a3 docs(design-system): correct the test counts to the measured values
+d446e91 docs(design-system): restate the Definition of Done as reproducible evidence
+bad41af feat(ui): add the nine atomic financial input shells
+a69b0dd docs(adr): re-measure ADR-007 acceptance claims after 2026-10-06 re-audit
+bad554a docs(decisions): correct the baseline re-audit's transient-failure account
+836817f docs(design-system): Section 02 report — Foundations & Atoms
+1d6960e refactor(web): declare the execution lifecycle vocabulary in the atom layer, proven by test
+```
+Requested commits in the window: `a69b0dd` (yes); `b5e7542`, `1d6960e`,
+`cea116c` are just below it (confirmed present via `git log`).
+
+### Dirty paths (9 modified at `f9b7086`; other authors' in-flight work — untouched)
+```
+contracts/schemas/defi/pool.json
+contracts/schemas/event-envelope.json
+contracts/schemas/finance/movement.json
+contracts/schemas/research/category.json
+contracts/schemas/trading/order-request.json
+contracts/scripts/check-doc-citations.mjs
+docs/architecture.md
+docs/decisions/009-final-acceptance-audit.md
+docs/decisions/refactor-baseline-2026-10-06-reaudit.md
+```
+(At the first run's HEAD `bad41af` there were 12 modified; three
+design-system docs were committed in `7e9d2a3` before the re-run.)
+
+### Full suite (measured at `f9b7086`)
+
+| # | Command | Exit | Aggregate line |
+|---|---|---|---|
+| 1 | `npm run verify` | **0** | `VERIFY_ALL_OK` (59.80s) |
+| 2 | `npm run test:go` | **0** | 43 packages `ok`, 0 `FAIL` |
+| 3 | `npm run test:web` | **0** | `338 pass / 0 fail`, 19 files (45.66s) |
+| 4 | `npm run test:sync` | **0** | Rust reconciler: 5 + 12 = 17 tests pass, 0 fail |
+| 5 | `npm run contracts` | **0** | `DOCS_OK docs=17 citations=1162 …`; `MDTABLES_OK files=73 rows=3026` |
+| 6 | `npm run deploy` | **0** | `check-deploy: OK (10 unit files: paths exist, ExecStart absolute, timer pairs present)` |
+| 7 | `npm run structure` | **0** | `STRUCTURE_OK (360 files across (src root)(1), app(112), cms(9), features(161), lib(25), server(3), styles(1), ui(49))` |
+| 8 | `go build ./... && go vet ./...` | **0** | no output (clean; ~50s cold) |
+
+Other gates recorded inside `npm run verify`: `DESIGN_TOKENS_OK (files=365
+exemptions=6)`, `TOKENS_OK (14 colors, 9 space, 9 font-size, 284 vars total)`,
+`CONTRACT_OK`, `CONTRACTS_OK enums=3 openapi_paths=37 route_handlers=56
+events=28 client_endpoints=17`, `SCHEMAS_OK files=56 refs=344 enums=148`,
+`REFERENCE_OK 19558 bytes`, `API_CONTRACT_OK go_paths=4 documented=37
+web_proxies=4`.
+
+### Tracked-artifact re-scan
+
+```
+apps/reconciler/src/bin/fudcourt-reconciled.rs
+```
+
+Only match, as expected — the Rust `src/bin` source directory, not a build
+output directory. No `target/`, `.next/`, `dist/`, `coverage/` or
+`.shaper-tests/` tracked.
+
+### Stale-path re-scan (code files only)
+
+Scanned **773** tracked files matching `*.go *.ts *.tsx *.rs *.py *.sh *.json
+*.yaml *.yml *.service *.example .gitignore`, excluding `docs/decisions/` and
+`docs/records/`. Result — **exactly one hit**, a historical comment:
+
+```
+.gitignore:24:# payload (the CMS merged into frontend/web in DR-017; uploads land in
+```
+
+No live code path references `frontend/web`, `backend/api`,
+`backend/workers/executor`, `backend/data`, `backend/sync`,
+`shared/contracts`, `database/schema` or `infrastructure/systemd`. (Hits
+inside `docs/decisions/` — `007`, `009` — are the allowed historical record,
+excluded by this scan's scope.)
+
+### Delta vs the initial re-audit above
+
+| Item | Re-audit (633ffeb, dirty) | Final gate (f9b7086, dirty) |
+|---|---|---|
+| `npm run verify` | FAIL | **PASS** (`VERIFY_ALL_OK`) |
+| `npm run structure` | FAIL | **PASS** (`STRUCTURE_OK`) |
+| `design-tokens` gate | FAIL | **PASS** (`DESIGN_TOKENS_OK`) |
+| `npm run test:web` | 323 pass | **338 pass** |
+| `DOCS_OK` citations | 1161 | **1162** |
+| `MDTABLES_OK` files/rows | 67 / 2724 | **73 / 3026** |
+| Go / Rust / contracts / deploy / build | PASS | PASS (unchanged) |
+
+No fixes were made by this gate run. Nothing was committed.
+
+**Transient note.** The first suite pass ran at `bad41af` (verify PASS, 337
+web tests, rows 2986). HEAD then advanced to `f9b7086` while the run was in
+flight, so the suite was re-executed at `f9b7086` and the numbers above are
+that revision. Both are green; the deltas between them (337→338 tests,
+2986→3026 rows) are the two commits `7e9d2a3` and `d446e91` landing.
