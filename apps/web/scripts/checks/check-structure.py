@@ -106,8 +106,6 @@ if comp_root.exists():
 # --- walk the tree ----------------------------------------------------------
 by_layer: dict[str, list[Path]] = {}
 for f in sources():
-    if ".shaper-tests" in f.parts:
-        continue
     by_layer.setdefault(layer_of(f), []).append(f)
 
 known_layers = {"app", "components", "ui", "lib", "server", "features", "platform", "styles", "cms"}
@@ -116,8 +114,6 @@ for top in sorted(by_layer):
         violations.append(f"src/{top}/ is not a layer — the layers are {sorted(known_layers)}")
 
 for f in sources():
-    if ".shaper-tests" in f.parts:
-        continue
     rel = f.relative_to(SRC)
     layer = layer_of(f)
     if layer == "(src root)":

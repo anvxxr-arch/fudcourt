@@ -233,8 +233,6 @@ def sources(*suffixes: str) -> list[Path]:
     for path in SRC.rglob("*"):
         if not path.is_file() or path.suffix not in suffixes:
             continue
-        if ".shaper-tests" in path.relative_to(SRC).parts:
-            continue
         found.append(path)
     return sorted(found)
 
