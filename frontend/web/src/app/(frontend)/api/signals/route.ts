@@ -131,6 +131,63 @@ function validatePage(n: number) {
   return { ok: true as const };
 }
 
+// Fail-loud shape gate: runs BEFORE cache admission. A 200 whose body is not
+// the payload family this mode serves must 502 loud, never be stored, and
+// never be normalized into a plausible-looking "no signals" answer. The
+// normalizer below defaults missing rows to [] and missing counts to {} --
+// without this gate, `{}` from a broken upstream would cache for the full TTL
+// as an authoritative empty board.
+function isValidUpstream(mode: string, data: unknown): boolean {
+  if (typeof data !== 'object' || data === null) return false;
+  const d = data as Record<string, unknown>;
+  if (mode === 'scoreboard') {
+    // Scoreboard family: buckets + catches under `chains`, no `rows`.
+    const chains = d.chains;
+    return typeof chains === 'object' && chains !== null && Object.keys(chains).length > 0;
+  }
+  // Row family (index/feed/page): needs a rows array AND a counts object,
+  // with at least one of them non-empty. Real payloads always carry counts
+  // (at minimum counts.rows), so `{rows: [], counts: {}}` is an empty
+  // envelope, not a quiet day -- reject it rather than cache the lie.
+  if (!Array.isArray(d.rows)) return false;
+  if (typeof d.counts !== 'object' || d.counts === null) return false;
+  return d.rows.length > 0 || Object.keys(d.counts).length > 0;
+}
+
+// Route-local validated-payload cache with single-flight. Only bodies that
+// pass isValidUpstream are admitted; malformed-200s and empty envelopes stay
+// loud (502, uncached) on every request. Keyed by full target URL
+// (mode + chain + n). Route-local (not the shared limiter) so a bad signals
+// payload can never poison another family's cache entry, and so this gate
+// stays reviewable next to the normalizer it protects.
+const VALID_TTL_MS = 30_000;
+const VALID_MAX_ENTRIES = 100;
+type ValidEntry = { at: number; body: unknown };
+const validated = new Map<string, ValidEntry>();
+const validInflight = new Map<string, Promise<{ status: number; body: unknown }>>();
+
+function takeValid(key: string): ValidEntry | undefined {
+  const hit = validated.get(key);
+  if (!hit) return undefined;
+  if (Date.now() - hit.at >= VALID_TTL_MS) {
+    validated.delete(key);
+    return undefined;
+  }
+  validated.delete(key);
+  validated.set(key, hit);
+  return hit;
+}
+
+function storeValid(key: string, entry: ValidEntry) {
+  validated.delete(key);
+  validated.set(key, entry);
+  while (validated.size > VALID_MAX_ENTRIES) {
+    const oldest = validated.keys().next();
+    if (oldest.done) break;
+    validated.delete(oldest.value);
+  }
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const chain = (url.searchParams.get('chain') || 'solana').toLowerCase();
@@ -166,23 +223,58 @@ export async function GET(req: Request) {
     target.searchParams.set('n', String(n));
   }
 
-  try {
-    const res = await fetch(target, {
-      cache: 'no-store',
-      headers: { 'User-Agent': 'fudcourt-web/1.0', Accept: 'application/json' },
-      signal: AbortSignal.timeout(25_000),
+  const key = target.toString();
+  const cached = takeValid(key);
+  if (cached) {
+    return NextResponse.json(cached.body, { headers: { 'X-Cache': 'HIT' } });
+  }
+  const pending = validInflight.get(key);
+  if (pending) {
+    const shared = await pending;
+    return NextResponse.json(shared.body, {
+      status: shared.status,
+      headers: { 'X-Cache': 'COALESCED' },
     });
+  }
+
+  const run = (async (): Promise<{ status: number; body: unknown }> => {
+    let res: Response;
+    try {
+      res = await fetch(target, {
+        cache: 'no-store',
+        headers: { 'User-Agent': 'fudcourt-web/1.0', Accept: 'application/json' },
+        signal: AbortSignal.timeout(25_000),
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { status: 502, body: { error: `upstream unreachable: ${msg}` } };
+    }
 
     if (!res.ok) {
       // Loud failure: a dead upstream must not surface as "0 signals found".
       const body = await res.text().catch(() => '');
-      return NextResponse.json(
-        { error: `upstream ${target.pathname} HTTP ${res.status}`, detail: body.slice(0, 200) },
-        { status: 502 }
-      );
+      return {
+        status: 502,
+        body: { error: `upstream ${target.pathname} HTTP ${res.status}`, detail: body.slice(0, 200) },
+      };
     }
 
-    const data = (await res.json()) as SignalPayload | ScoreboardPayload;
+    let data: unknown;
+    try {
+      data = await res.json();
+    } catch {
+      // A 200 that is not JSON is malformed, not empty: 502 loud, uncached.
+      return { status: 502, body: { error: `upstream ${target.pathname} malformed: non-JSON 200 body` } };
+    }
+
+    // Discriminator BEFORE cache admission: wrong-family or empty payloads
+    // never enter the cache and never reach the normalizer.
+    if (!isValidUpstream(mode, data)) {
+      return {
+        status: 502,
+        body: { error: `upstream ${target.pathname} malformed: 200 body failed ${mode} shape check` },
+      };
+    }
 
     // The scoreboard is a different payload family (buckets + catches, no
     // `rows`), so it gets its own branch. Feeding it through the row
@@ -190,27 +282,44 @@ export async function GET(req: Request) {
     // but entirely fabricated "no signals" answer.
     if (mode === 'scoreboard') {
       const sb = data as ScoreboardPayload;
-      return NextResponse.json({
-        ...sb,
-        kind: 'scoreboard',
-        ...(sb.generatedAt !== undefined ? { generatedAt: sb.generatedAt } : {}),
-        ...(sb.cohortDays !== undefined ? { cohortDays: sb.cohortDays } : {}),
-        chains: sb.chains && typeof sb.chains === 'object' ? sb.chains : {},
-        upstream: target.toString(),
-      });
+      return {
+        status: 200,
+        body: {
+          ...sb,
+          kind: 'scoreboard',
+          ...(sb.generatedAt !== undefined ? { generatedAt: sb.generatedAt } : {}),
+          ...(sb.cohortDays !== undefined ? { cohortDays: sb.cohortDays } : {}),
+          chains: sb.chains && typeof sb.chains === 'object' ? sb.chains : {},
+          upstream: target.toString(),
+        },
+      };
     }
 
     const sig = data as SignalPayload;
-    return NextResponse.json({
-      ...sig,
-      chain: sig.chain ?? chain,
-      generatedAt: sig.generatedAt ?? Math.floor(Date.now() / 1000),
-      counts: sig.counts ?? {},
-      rows: Array.isArray(sig.rows) ? sig.rows : [],
-      upstream: target.toString(),
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: `upstream unreachable: ${msg}` }, { status: 502 });
+    return {
+      status: 200,
+      body: {
+        ...sig,
+        chain: sig.chain ?? chain,
+        generatedAt: sig.generatedAt ?? Math.floor(Date.now() / 1000),
+        counts: sig.counts ?? {},
+        rows: Array.isArray(sig.rows) ? sig.rows : [],
+        upstream: target.toString(),
+      },
+    };
+  })();
+
+  validInflight.set(key, run);
+  try {
+    const winner = await run;
+    // Only validated 200s are admitted. 502s (dead upstream, malformed-200,
+    // empty envelope) are shared with coalesced waiters but never stored, so
+    // the next request retries upstream instead of replaying the failure.
+    if (winner.status === 200) {
+      storeValid(key, { at: Date.now(), body: winner.body });
+    }
+    return NextResponse.json(winner.body, { status: winner.status, headers: { 'X-Cache': 'MISS' } });
+  } finally {
+    validInflight.delete(key);
   }
 }

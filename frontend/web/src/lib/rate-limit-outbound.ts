@@ -11,6 +11,15 @@
  *  - a token bucket, so concurrent callers queue instead of all bursting;
  *  - a short TTL cache, so an identical repeat within the window costs nothing.
  *
+ * Pacing is per origin (scheme+host+port): a slow origin (or a hung one) must
+ * never head-of-line-block an unrelated fast origin -- including a second
+ * listener on the same hostname but a different port (e.g. Go :3101 vs Rust
+ * :3102 sidecars). A single global chain meant one stalled upstream stalled
+ * every family; per-origin chains isolate that blast radius while keeping the
+ * same ≤5 req/s guarantee toward each origin. The cache and the single-flight
+ * map stay keyed by full URL -- sharing is about identical bytes, pacing is
+ * about the origin being asked.
+ *
  * Scope note: this is per Node process, which is what a single `next start`
  * gives us. It protects the upstream from this app's own bursts, which is the
  * failure mode that actually occurs. It is not a distributed limiter -- if the
@@ -18,13 +27,13 @@
  * acceptable trade for a read-only public feed and is stated rather than
  * implied.
  */
-
-const MIN_GAP_MS = 200; // <= 5 upstream requests/sec
+const MIN_GAP_MS = 200; // <= 5 upstream requests/sec, per origin
 /** Deadline applied when a caller supplies no signal of its own. Without one, a
  *  fetch that never settles pins this limiter slot forever -- and because
- *  `enqueue` serialises every call through ONE chain, it stalls every later
- *  request too. The timeout is the backstop that keeps one hung upstream from
- *  becoming a whole-family outage. Matches the shortest per-route budget. */
+ *  `enqueue` serialises every call for one origin through that origin's chain,
+ *  it stalls every later request to the same origin too. The timeout is the
+ *  backstop that keeps one hung upstream from becoming a whole-family outage.
+ *  Matches the shortest per-route budget. */
 const DEFAULT_TIMEOUT_MS = 20_000;
 const CACHE_TTL_MS = 15_000;
 /** Hard cap on retained bodies. The TTL alone does NOT bound memory: an entry is
@@ -32,22 +41,35 @@ const CACHE_TTL_MS = 15_000;
  *  fresh distinct key per query. Steady-state growth would track DISTINCT
  *  QUERIES EVER MADE. This makes it bounded instead. */
 const CACHE_MAX_ENTRIES = 300;
-
 type Entry = { at: number; body: unknown };
 /** What a coalesced group shares: the body text plus enough of the response to
  *  rebuild an equivalent Response per caller. */
 type Shared = { text: string; status: number; contentType: string };
-
 /** Insertion-ordered, so the first key is the least recently used. */
 const cache = new Map<string, Entry>();
 /** In-flight upstream calls, keyed by URL, so identical concurrent requests
  *  share one round-trip. Without this, 10 simultaneous requests for the same
  *  URL are 10 distinct cache misses that all reach upstream. */
 const inflight = new Map<string, Promise<Shared>>();
-let chain: Promise<unknown> = Promise.resolve();
-let lastAt = 0;
-
+/** Per-origin pacing state, keyed by `paceKey(url)`. One slow or hung origin
+ *  pins only its own chain; every other origin keeps flowing. */
+const chains = new Map<string, Promise<unknown>>();
+const lastAts = new Map<string, number>();
+/** Fallback pacing key when the URL does not parse: a single shared bucket
+ *  rather than a throw inside the limiter. Unparseable input still fetches. */
+const GLOBAL_KEY = '';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** Pacing key for a URL: its origin (scheme+host+port). Two URLs on the same
+ *  origin share one gap budget; two origins never share one -- even when they
+ *  differ only by port. */
+function paceKey(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return GLOBAL_KEY;
+  }
+}
+
 
 /** Read a live entry, promoting it to most-recently-used. Returns undefined for
  *  a miss or a stale entry -- and drops the stale one on the way out, so an
@@ -76,21 +98,27 @@ function store(url: string, entry: Entry) {
   }
 }
 
-/** Serialise access so callers queue rather than bursting. */
-function enqueue<T>(fn: () => Promise<T>): Promise<T> {
-  const run = chain.then(async () => {
-    const wait = lastAt + MIN_GAP_MS - Date.now();
+/** Serialise access per origin so callers to one origin queue rather than
+ *  bursting, while callers to other origins are unaffected. */
+function enqueue<T>(url: string, fn: () => Promise<T>): Promise<T> {
+  const key = paceKey(url);
+  const head = chains.get(key) ?? Promise.resolve();
+  const run = head.then(async () => {
+    const wait = (lastAts.get(key) ?? 0) + MIN_GAP_MS - Date.now();
     if (wait > 0) await sleep(wait);
     try {
       return await fn();
     } finally {
-      lastAt = Date.now();
+      lastAts.set(key, Date.now());
     }
   });
   // keep the chain alive even when a link rejects
-  chain = run.then(
-    () => undefined,
-    () => undefined
+  chains.set(
+    key,
+    run.then(
+      () => undefined,
+      () => undefined
+    )
   );
   return run;
 }
@@ -134,10 +162,10 @@ export async function limitedFetch(
     });
   }
 
-  const run = enqueue(async () => {
+  const run = enqueue(url, async () => {
     // Compose the caller's signal (if any) with a default deadline. Every call
     // site passes AbortSignal.timeout today, but the limiter must not DEPEND on
-    // that: a future caller that forgets one would hang the single serialised
+    // that: a future caller that forgets one would hang its origin's serialised
     // chain and take the whole family down, not just its own request.
     const ctl = new AbortController();
     const timer = setTimeout(
@@ -181,12 +209,12 @@ export async function limitedFetch(
   }
 }
 
-/** Test seam: drop cached bodies, in-flight calls and the bucket. */
+/** Test seam: drop cached bodies, in-flight calls and every per-origin bucket. */
 export function __resetLimiter() {
   cache.clear();
   inflight.clear();
-  lastAt = 0;
-  chain = Promise.resolve();
+  chains.clear();
+  lastAts.clear();
 }
 
 /** Test seam: what the cache currently retains. Exists so the LRU bound is
