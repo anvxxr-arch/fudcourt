@@ -54,11 +54,20 @@
  * enforce by itself. Nothing here is persisted or touches the treasury DB.
  */
 
-/** One price unit = 50 KB of worst-case response body. */
-export const PAGE_BYTES = 50 * 1024;
+// Pricing lives in `./rate-limit-cost` (single-sourced); re-exported here so
+// existing importers keep working unchanged.
+import { costForRequest, DEFAULT_COST, HEAVY_ALLOWANCE, LIGHT_ALLOWANCE } from "./rate-limit-cost";
+export {
+  PAGE_BYTES,
+  CR_MODE_COST,
+  ROUTE_COST,
+  DEFAULT_COST,
+  HEAVY_ALLOWANCE,
+  LIGHT_ALLOWANCE,
+  costForRequest,
+} from "./rate-limit-cost";
 
 export type RateScope = 'public' | 'local';
-
 export type RateDecision = {
   allowed: boolean;
   /** Allowance for this window, in units. */
@@ -73,108 +82,14 @@ export type RateDecision = {
   retryAfterSeconds: number;
   scope: RateScope;
 };
-
-/**
- * Worst-case response bytes per cryptorank mode, measured on the origin
- * (`127.0.0.1:3100`, 2026-09-29) with the fattest documented key. Listed modes
- * are the ones above one unit; everything else — including the refused
- * funding/unlocks modes — is `DEFAULT_COST`.
- *
- * The anchors: chain 1,190,228 · converter 921,588 · tag 110,248 · tags 71,986 ·
- * gainers 57,001 · losers 56,630 · blockchains 55,834 · coins 35,878 ·
- * categories 35,953 · listings 19,285 · exchanges 14,467 · home 2,956 ·
- * coin 835.
- */
-export const CR_MODE_COST: Readonly<Record<string, number>> = {
-  chain: 20,
-  converter: 20,
-  tag: 3,
-  tags: 2,
-  gainers: 2,
-  losers: 2,
-  blockchains: 2,
-};
-
-/**
- * Worst-case bytes per other route family (measured the same way): llama
- * `mode=chains` 64,245 (protocols 20,842, historical 7,031 stay default) ·
- * ticker 69,445 for the full board, and its 64.5 s cold upstream makes it the
- * most expensive call per second as well · markets = CoinGecko top-250 pool ·
- * news 18,473 · dex profiles×50 17,766 · signals scoreboard 5,851. Families
- * absent from this table (`/api/all`, `/api/wallets`, `/api/coins`,
- * `/api/reconcile`, `/api/transactions`, the auth routes) serve empty envelopes
- * and refusals of tens of bytes.
- *
- * chainrank (692 B) and khala (mode=report worst case 84,315 B, from a 579,989 B
- * report page the sidecar reads) are NOT priced here any more: their web surfaces
- * were removed (DR-041) — the /chainrank and /khala boards and their /api/*
- * proxies are gone, so no inbound route reaches this limiter for them. The
- * sidecar families stay on :3101 as API-only surfaces.
- */
-export const ROUTE_COST: Readonly<Record<string, number>> = {
-  ticker: 2,
-  markets: 2,
-  // The market hub's asset-class boards. `stock` and `commodity` each fan out
-  // one Yahoo chart call PER SYMBOL (16 and 12), so a cold board has the same
-  // shape as `ticker` -- many upstream calls behind one page -- and is priced
-  // the same 2. `forex` is a single call, but the family rule prices the first
-  // path segment, and a sub-path must not be a cheaper way into the family.
-  market: 2,
-  // The executor is a money-moving surface (PRD §108 rate limiting, §77 adapter
-  // rate limits). `POST /api/executor/executions` plans, sizes and persists an
-  // order, and `preview` does the same pricing without persisting — both are far
-  // more expensive than a ticker read, so leaving them at DEFAULT_COST (1) made
-  // creating a live execution the cheapest way into the backend. Priced per the
-  // same family rule: every executor sub-path inherits the price, so
-  // `/api/executor/executions/:id/cancel` is not a cheaper way to trade.
-  executor: 8,
-};
-
-/** Unit cost of anything not priced above. */
-export const DEFAULT_COST = 1;
-
-/**
- * Units per window. Measured against real page loads, not intuition: a full
- * `/cryptorank` mount fires 9 mode fetches totalling 32 units (home 1 + coin 1 +
- * exchanges 1 + listings 1 + blockchains 2 + chain 20 + news 1 + tags 2 + tag 3),
- * so the heavy allowance admits two full mounts a minute plus browsing. The
- * light allowance is the same ceiling expressed for routes whose worst payload
- * is one unit.
- */
-export const HEAVY_ALLOWANCE = 80;
-export const LIGHT_ALLOWANCE = 120;
-
-/** How a route is classified as heavy: it can cost more than one unit. */
-export function costForRequest(pathname: string, params: URLSearchParams): number {
-  // Payload's API lives under the blog prefix (`/blog/cms/api/...`, DR-017), so
-  // the `/api/<family>` indexing below does not apply to it. Several of its
-  // endpoints are list/query-shaped and can return far more than a scalar (the
-  // posts collection with `depth=2` pulls related documents, and Payload's
-  // GraphQL endpoint answers arbitrary queries), so it is priced as a heavy
-  // family rather than a unit — the same reasoning that makes `ticker` a 2.
-  // Without this branch every Payload call would fall through to DEFAULT_COST
-  // and be the cheapest way into a data-heavy backend.
-  if (pathname.startsWith('/blog/cms/api/')) return 2;
-  const seg = pathname.split('/')[2] ?? '';
-  if (seg === 'cryptorank') return CR_MODE_COST[params.get('mode') ?? ''] ?? DEFAULT_COST;
-  if (seg === 'llama') return params.get('mode') === 'chains' ? 2 : DEFAULT_COST;
-  // Sub-paths inherit the family price: /api/ticker/instrument is the same data
-  // family as /api/ticker and must not be a cheaper way into it.
-  return ROUTE_COST[seg] ?? DEFAULT_COST;
-}
-
 /** Fixed window length. */
 export const WINDOW_MS = 60_000;
-
 /** A signed-in caller is doing real work — more room, never unlimited. */
 export const AUTHED_MULTIPLIER = 3;
-
 /** Traffic the origin accepted from its own address space; keep it out of the way. */
 export const LOCAL_MULTIPLIER = 100;
-
 /** Hard cap on retained client buckets (LRU beyond it). */
 export const MAX_CLIENTS = 10_000;
-
 /**
  * Addresses the origin treats as its own: loopback, RFC1918, link-local (v4 and
  * v6) and IPv6 unique-local. Written out rather than imported — this module
@@ -240,12 +155,9 @@ export function clientKey(headers: Headers): { key: string; scope: RateScope } {
   }
   return { key: 'local', scope: 'local' };
 }
-
 type Bucket = { windowStart: number; units: number; seenAt: number };
-
 /** Insertion-ordered, and re-inserted on every use, so the first key is LRU. */
 const buckets = new Map<string, Bucket>();
-
 /**
  * Charge one request against its client's window.
  *
@@ -304,7 +216,6 @@ export function checkInbound(
     return { allowed: true, limit, remaining: 0, cost, resetSeconds: 0, retryAfterSeconds: 0, scope };
   }
 }
-
 /** Response headers for a decision — emitted on a pass and on the 429 alike. */
 export function rateHeaders(d: RateDecision): Record<string, string> {
   return {
@@ -315,12 +226,10 @@ export function rateHeaders(d: RateDecision): Record<string, string> {
     'X-RateLimit-Scope': d.scope,
   };
 }
-
 /** Retained buckets / clear them — the LRU bound is asserted, not trusted. */
 export function __bucketCount(): number {
   return buckets.size;
 }
-
 export function __resetRateLimit(): void {
   buckets.clear();
 }
