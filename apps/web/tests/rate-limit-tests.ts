@@ -107,7 +107,7 @@ test('cost: the widened route table prices the fan-out families as measured', ()
 });
 test('budget: a real cryptorank board mount still fits one window', () => {
   __resetRateLimit();
-  // Measured mount (src/features/market-data/cryptorank.ts §useEffect):
+  // Measured mount (src/features/cryptorank/ §useEffect):
   // home + coin + exchanges + listings + blockchains + chain + news + tags + tag
   // = 1 + 1 + 1 + 1 + 2 + 20 + 1 + 2 + 3 = 32 units. Tuning the heavy allowance
   // below two mounts would break the board on the fix meant to protect it.

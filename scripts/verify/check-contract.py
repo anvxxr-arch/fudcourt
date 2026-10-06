@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Offline contract checks — no network, no DB (PLAN T-2.2.2, R-2).
-1. CR_MODES in src/features/market-data/cryptorank/cryptorank-modes.ts must match the cryptorank query list in
+1. CR_MODES in src/features/cryptorank/cryptorank-modes.ts must match the cryptorank query list in
    verify_all_routes.py and the mode spot-list in verify-cryptorank.py.
 2. Every mutating handler in app/api/{transactions,transactions/[id],wallets}
    must `await requireMutationAuth(req)` (R-6 fail-closed session-tier auth —
@@ -9,7 +9,7 @@
    bundle).
 3. ONE CONTRACT, TWO IMPLEMENTATIONS: the Go sidecar (backend/data) owns the
    CryptoRank mode/key tables at runtime, so its table in
-   internal/research/cryptorank/modes.go must EQUAL the TS table in src/features/market-data/cryptorank/cryptorank-modes.ts --
+   internal/research/cryptorank/modes.go must EQUAL the TS table in src/features/cryptorank/cryptorank-modes.ts --
    mode list, disabled list, the exchange/launchpool/nodesale/RWA whitelists
    and the two keyed tables. Drift here means the Go service accepts or serves
    something the rest of this repo does not document (or vice versa), which is
@@ -42,10 +42,10 @@ GO_TABLE = Path(os.environ.get(
     "FUDCOURT_DATA_MODES_GO", REPO / "apps" / "data" / "internal" / "research" / "cryptorank" / "modes.go"))
 fails = []
 def modes_from_lib() -> set:
-    src = (SRC / "features" / "market-data" / "cryptorank" / "cryptorank-modes.ts").read_text()
+    src = (SRC / "features" / "cryptorank" / "cryptorank-modes.ts").read_text()
     m = re.search(r"export const CR_MODES = \[([^\]]*)\]", src, re.S)
     if not m:
-        fails.append("src/features/market-data/cryptorank/cryptorank-modes.ts: CR_MODES not found")
+        fails.append("src/features/cryptorank/cryptorank-modes.ts: CR_MODES not found")
         return set()
     return set(re.findall(r"'([a-z0-9-]+)'", m.group(1)))
 def sweep_modes_from(src: str) -> set:
@@ -127,7 +127,7 @@ def check_go_table() -> bool:
         fails.append(f"backend/data mode table not found at {GO_TABLE} — the TS<->Go parity "
                      "rows cannot run (tracked source missing?)")
         return False
-    ts = (SRC / "features" / "market-data" / "cryptorank" / "cryptorank-modes.ts").read_text()
+    ts = (SRC / "features" / "cryptorank" / "cryptorank-modes.ts").read_text()
     go = GO_TABLE.read_text()
     # (label, TS declaration, Go declaration, kind) -- kind: list | map
     pairs = [
@@ -149,7 +149,7 @@ def check_go_table() -> bool:
             want = keys_of(block_after(ts, f"export const {ts_name}", "{", "}"), quote=None)
             got = keys_of(block_after(go, f"var {go_name} = map[", "{", "}"))
         if want is None:
-            fails.append(f"src/features/market-data/cryptorank/cryptorank-modes.ts: {label} not found (parse drift?)")
+            fails.append(f"src/features/cryptorank/cryptorank-modes.ts: {label} not found (parse drift?)")
         elif got is None:
             fails.append(f"internal/cryptorank/modes.go: {go_name} not found (parse drift?)")
         elif want != got:
@@ -199,9 +199,9 @@ check_route_is_proxy()
 # parity this block asserted no longer has a second side.
 kh_parity = "khala web surface removed (sidecar-only, DR-041)"
 # llama: the THIRD sidecar-resident family (PLAN G9 SG-9.3). Same convention as
-# khala -- src/features/llama/client.ts carries the TS mode list, backend/data/internal/research/llama/
+# khala -- src/features/market/defi-tvl-client.ts carries the TS mode list, backend/data/internal/research/llama/
 # modes.go the Go one, and the route must be the verbatim proxy.
-LL_TS = SRC / "features" / "llama" / "client.ts"
+LL_TS = SRC / "features" / "market" / "defi-tvl-client.ts"
 LL_GO = Path(os.environ.get("FUDCOURT_DATA_LLAMA_GO",
                             REPO / "apps" / "data" / "internal" / "research" / "llama" / "modes.go"))
 ll_parity = "llama absent"
@@ -211,7 +211,7 @@ if LL_TS.exists() and LL_GO.exists():
     ll_go_modes = set(re.findall(
         r'"([a-z0-9-]+)"', block_after(LL_GO.read_text(), "var Modes = []string", "{", "}") or ""))
     if not ll_ts_modes:
-        fails.append("src/features/llama/client.ts: LLAMA_MODES not found (parse drift?)")
+        fails.append("src/features/market/defi-tvl-client.ts: LLAMA_MODES not found (parse drift?)")
     elif not ll_go_modes:
         fails.append("internal/llama/modes.go: Modes not found (parse drift?)")
     elif ll_ts_modes != ll_go_modes:
@@ -230,7 +230,7 @@ if check_route_is_proxy("llama", ("execFile", "child_process", "limitedFetch",
 # whose upstream is a DOCUMENT rather than a JSON API. Same convention as
 # llama -- src/features/news/client.ts carries the TS feed list, backend/data/internal/research/news/
 # modes.go the Go one, and the route must be the verbatim proxy. The RSS parser
-# itself must not come back: src/features/llama/client.ts-style mirror has no parse code, and a
+# itself must not come back: src/features/market/defi-tvl-client.ts-style mirror has no parse code, and a
 # route that regrows one is the drift this row exists to catch.
 NW_TS = SRC / "features" / "news" / "client.ts"
 NW_GO = Path(os.environ.get("FUDCOURT_DATA_NEWS_GO",

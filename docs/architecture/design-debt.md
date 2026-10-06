@@ -154,7 +154,7 @@ cd frontend/web && grep -rnE "^(export )?function Stat\b" src
 ```
 
 - `apps/web/src/ui/stat.tsx` — the shelf atom, now adopted by the `home` surface.
-- `apps/web/src/features/ticker/detail.tsx:417` — a local `Stat` (`tone`), used 7 times.
+- `apps/web/src/features/market/ticker/detail.tsx:417` — a local `Stat` (`tone`), used 7 times.
 
 The shelf atom now has a caller. The local one in `ticker/detail.tsx` remains (it carries a `tone`
 the shelf atom does not) and is the remaining adoption candidate if the two are ever folded.
@@ -256,19 +256,19 @@ element still appears both ways:
 
 | `file:line` (first raw element) | raw elements | imports atoms? |
 |---|---|---|
-| `apps/web/src/features/dex/ui.tsx:214` | 2 `<button>`, 4 `<input>`, 2 `<select>` | yes (`Banner`, `Loading`, `Table`) |
+| `apps/web/src/features/market/dex/ui.tsx:214` | 2 `<button>`, 4 `<input>`, 2 `<select>` | yes (`Banner`, `Loading`, `Table`) |
 | `apps/web/src/features/executor/ui.tsx:118` | 1 `<select>`, 1 `<input>`, 5 `<table>` | yes (`Card`, `Label`) |
-| `apps/web/src/features/ticker/detail.tsx:270` | 1 `<button>`, 3 `<select>`, 1 `<table>` | yes (`Loading`) and a local `Stat` |
-| `apps/web/src/features/ticker/ui.tsx:207` | 3 `<button>`, 1 `<table>` | yes (`Loading`) |
+| `apps/web/src/features/market/ticker/detail.tsx:270` | 1 `<button>`, 3 `<select>`, 1 `<table>` | yes (`Loading`) and a local `Stat` |
+| `apps/web/src/features/market/ticker/ui.tsx:207` | 3 `<button>`, 1 `<table>` | yes (`Loading`) |
 | `apps/web/src/features/overview/tracker.tsx` | 1 `<button>`, 1 `<table>` | yes (`Loading`) |
 | `apps/web/src/features/overview/transactions.tsx` | 1 `<table>`, 3 `<input>`, 1 `<textarea>` | yes (`Button` ×8, `Input` ×4, `Select` ×4, `Modal`, `Label` ×7) |
 | `apps/web/src/features/overview/wallets.tsx` | 2 `<input>`, 2 `<button>`, 1 `<textarea>` | yes (`Button` ×3, `Modal`, `Label` ×4, `Card`) |
 | `apps/web/src/features/overview/dashboard.tsx` | 1 `<table>` | yes (`Card`) |
-| `apps/web/src/features/dex/trench.tsx:42` | 1 `<button>` | no (bespoke state) |
+| `apps/web/src/features/market/dex/trench.tsx:42` | 1 `<button>` | no (bespoke state) |
 | `apps/web/src/features/news/ui.tsx:47` | 1 `<button>` | yes (`EmptyState`, `Loading`, `Toolbar`) |
 | `apps/web/src/features/scoreboard/ui.tsx:97` | 1 `<button>` | yes (`Loading`, `Table`, `Toolbar`) |
 | `apps/web/src/features/signals/ui.tsx:190` | 1 `<button>` | yes (`Loading`, `Table`, `Toolbar`) |
-| `apps/web/src/features/llama/ui.tsx:122` | 1 `<button>` | yes (`Banner`, `Table`) |
+| `apps/web/src/features/market/defi-tvl.tsx:122` | 1 `<button>` | yes (`Banner`, `Table`) |
 | `apps/web/src/features/overview/reconciliation.tsx` | 1 `<table>` | yes (`EmptyState`, `Card`) |
 
 Note: several of these files (`ticker/*`, `tracker/*`, `llama/*`, `dex/*`) belong to families the

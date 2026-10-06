@@ -4,7 +4,7 @@
  * Most families reach local Postgres or their own upstream cache; this exists for
  * the one thing that is neither: the exchange venue sweep, which costs ~64 s on a
  * cold process and is currently re-paid on every restart and deploy. That sweep
- * lives in module state (`sweepCache` in features/ticker/client.ts), so a restart
+ * lives in module state (`sweepCache` in features/market/ticker/client.ts), so a restart
  * throws it away — and 64 s of cold latency is the worst case in the whole app.
  *
  * It is a JSON blob cache, FAIL-OPEN, and off unless FUDCOURT_VALKEY_URL is set:

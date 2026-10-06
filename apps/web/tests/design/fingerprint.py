@@ -90,7 +90,7 @@ from playwright.sync_api import sync_playwright
 # the routes that IA serves which the migration-era list never named: `/blog`,
 # `/blog/[slug]`, and a concrete coin for the dynamic `/market/ticker/[ticker]`.
 # The last is the design system's own surface too — it is `TickerDetailPage`
-# (`src/features/ticker/detail`), the chrome the retired standalone `/ticker`
+# (`src/features/market/ticker/detail`), the chrome the retired standalone `/ticker`
 # page used, now mounted under the hub — so leaving it unprobed would have
 # exempted the largest surviving ticker surface from the fingerprint guarantee.
 # A concrete instrument is used because the route 404s on an unknown symbol

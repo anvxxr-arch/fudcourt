@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { PUBLIC_ROUTES } from '@/server/routes';
-import { TICKER_SYMBOLS } from '@/features/ticker/client';
+import { TICKER_SYMBOLS } from '@/features/market/ticker/client';
 import { COUNTRY_LIST, INDICATORS, CENTRAL_BANKS } from '@/features/economy/model';
 import { MARKET_TYPES } from '@/features/trade/model';
 import { INSTRUMENTS } from '@/features/trade/model';

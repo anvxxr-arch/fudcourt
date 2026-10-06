@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { alpha, color, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
 import { Banner } from '@/ui/banner';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
-import { fetchLlamaBoards, type LlamaChain, type LlamaProtocol, type LlamaHistoricalPoint } from './client';
+import { fetchLlamaBoards, type LlamaChain, type LlamaProtocol, type LlamaHistoricalPoint } from './defi-tvl-client';
 
 /** Big-number USD: $1.23T / $45.6B / $789M. null -> em-dash, never 0. */
 function usdBig(n: number | null | undefined, digits = 2) {

@@ -4,14 +4,14 @@ import { useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { color, fontSize, radius, space } from '@/styles/tokens';
 import dynamic from 'next/dynamic';
-const TickerPage = dynamic(() => import('@/features/ticker/ui'), { ssr: false });
+const TickerPage = dynamic(() => import('@/features/market/ticker/ui'), { ssr: false });
 const TrackerPage = dynamic(() => import('@/features/overview/tracker'), { ssr: false });
-const DexPage = dynamic(() => import('@/features/dex/ui'), { ssr: false });
-const TrenchPage = dynamic(() => import('@/features/dex/trench'), { ssr: false });
+const DexPage = dynamic(() => import('@/features/market/dex/ui'), { ssr: false });
+const TrenchPage = dynamic(() => import('@/features/market/dex/trench'), { ssr: false });
 const ForexBoard = dynamic(() => import('@/features/market/forex'), { ssr: false });
 const CommodityBoard = dynamic(() => import('@/features/market/commodity'), { ssr: false });
 const StockBoard = dynamic(() => import('@/features/market/stock'), { ssr: false });
-const LlamaPage = dynamic(() => import('@/features/llama/ui'), { ssr: false });
+const LlamaPage = dynamic(() => import('@/features/market/defi-tvl'), { ssr: false });
 import type { StockRegion } from '@/features/market/stock';
 
 // The Market hub — one surface over the market sections, keyed by asset class:

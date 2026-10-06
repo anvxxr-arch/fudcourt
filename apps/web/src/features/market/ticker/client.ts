@@ -201,7 +201,7 @@ export function medianPrice(prices: number[]): number | null {
   return medianOf(prices, true);
 }
 
-/** Board envelope mirrored by `features/ticker/ui.tsx`. */
+/** Board envelope mirrored by `features/market/ticker/ui.tsx`. */
 export type TickerBoardEnvelope<T> = {
   rows?: T[];
   exchanges?: string[];

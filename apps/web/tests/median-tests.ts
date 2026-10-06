@@ -1,7 +1,7 @@
 /**
  * medianOf tests: run OFFLINE, no network, no clock waiting.
  *
- * Contract under test (features/ticker/client.ts):
+ * Contract under test (features/market/ticker/client.ts):
  *  - nulls and non-finite values are dropped, never coerced to 0. A venue that
  *    did not report a price is an "unknown", and folding it into the median as
  *    a zero would print a real-looking number that is simply wrong;
@@ -17,7 +17,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { medianOf } from '@/features/ticker/client';
+import { medianOf } from '@/features/market/ticker/client';
 
 test('median: nulls and non-finite values are dropped, not folded in as zero', () => {
   assert.equal(medianOf([3, null, 1, Number.NaN, 2, Number.POSITIVE_INFINITY]), 2);

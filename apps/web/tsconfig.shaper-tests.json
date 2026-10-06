@@ -39,7 +39,7 @@
   // does not override an inherited `include`, it is merged with it.
   "include": [],
   "files": [
-    "src/features/market-data/cryptorank/cryptorank.ts",
+    "src/features/cryptorank/cryptorank.ts",
     "src/server/auth.ts",
     "src/lib/rate-limit.ts",
     "src/server/db.ts",

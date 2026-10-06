@@ -1,6 +1,6 @@
-import TickerDetailPage from '@/features/ticker/detail';
+import TickerDetailPage from '@/features/market/ticker/detail';
 import { notFound } from 'next/navigation';
-import { TICKER_COIN } from '@/features/ticker/client';
+import { TICKER_COIN } from '@/features/market/ticker/client';
 import type { Metadata } from 'next';
 
 /**

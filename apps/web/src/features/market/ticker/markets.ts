@@ -1,7 +1,7 @@
 /**
  * Ticker markets — settlements, venues and symbols.
  *
- * Extracted verbatim from features/ticker/client.ts; that module re-exports
+ * Extracted verbatim from features/market/ticker/client.ts; that module re-exports
  * everything here, so import from either path.
  */
 /**

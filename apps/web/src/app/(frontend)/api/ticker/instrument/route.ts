@@ -8,12 +8,12 @@ import {
   type TickerExchange,
   type TickerInstrument,
   type TickerType,
-} from '@/features/ticker/client';
+} from '@/features/market/ticker/client';
 import {
   ensureMarkets,
   instrumentsFor,
   tickerClients,
-} from '@/features/ticker/venues';
+} from '@/features/market/ticker/venues';
 
 import { num } from '../../_lib/num';
 

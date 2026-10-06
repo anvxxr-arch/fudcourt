@@ -12,7 +12,7 @@ import {
   type TickerExchange,
   type TickerType,
   type TickerInstrument,
-  } from '@/features/ticker/client';
+  } from '@/features/market/ticker/client';
 import {
   defaultInstrument,
   ensureMarkets,
@@ -21,7 +21,7 @@ import {
   strikesFor,
   tickerClients,
   type TypeInstrumentSummary,
-} from '@/features/ticker/venues';
+} from '@/features/market/ticker/venues';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

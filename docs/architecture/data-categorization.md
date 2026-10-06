@@ -203,9 +203,9 @@ exist.
 | id | name | category | layer | auth | freshness | durability | sensitivity | status | path |
 |---|---|---|---|---|---|---|---|---|---|
 | ccxt-venue-vocabulary | ccxt venue vocabulary — static canonical reference registry of 11 CEX venue ids (binance, bybit, mexc, okx, bitget, phemex, bingx, bitfinex, htx, coinbase, kraken) | MARKET_DATA | CANONICAL | keyless | STATIC | CANONICAL | PUBLIC | scaffolded | `apps/api/internal/markets/reference/seed.go` |
-| ccxt-exchange-ticker | CCXT direct exchange ticker feed — 10 keyless CEX venues (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) over spot/swap/future/option | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `apps/web/src/features/ticker/client.ts` |
-| dexscreener-api | DexScreener public DEX API — token-profiles, token-boosts, boosts-top, search, tokens, token-pairs, orders | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `apps/web/src/features/dex/client.ts` |
-| coingecko-markets | CoinGecko /coins/markets top-250 pool (keyless public API) | MARKET_DATA | RAW | keyless | FREQUENT | EPHEMERAL | PUBLIC | active | `apps/web/src/features/market-data/markets/markets.ts` |
+| ccxt-exchange-ticker | CCXT direct exchange ticker feed — 10 keyless CEX venues (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) over spot/swap/future/option | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `apps/web/src/features/market/ticker/client.ts` |
+| dexscreener-api | DexScreener public DEX API — token-profiles, token-boosts, boosts-top, search, tokens, token-pairs, orders | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `apps/web/src/features/market/dex/client.ts` |
+| coingecko-markets | CoinGecko /coins/markets top-250 pool (keyless public API) | MARKET_DATA | RAW | keyless | FREQUENT | EPHEMERAL | PUBLIC | active | `apps/web/src/features/market/coingecko-markets.ts` |
 | alchemy-evm-rpc | Alchemy EVM JSON-RPC — eth_getBalance / eth_call across Ethereum, BSC, Polygon, Arbitrum, Optimism, Base | ONCHAIN | RAW | ALCHEMY_KEY | PERIODIC | SNAPSHOT | PUBLIC | active | `apps/reconciler/src/streams/sync.rs` |
 | solana-rpc | Solana mainnet-beta JSON-RPC — getBalance, getTokenAccountsByOwner (SPL) | ONCHAIN | RAW | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `apps/reconciler/src/chains.rs` |
 | hyperliquid-info | Hyperliquid info API — spotClearinghouseState, clearinghouseState, userFills (positions + realized PnL) | PORTFOLIO | RAW | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `apps/reconciler/src/chains.rs` |
@@ -240,7 +240,7 @@ proxy-parity list now covers all six research families (CG/CN/CMC mode tables ke
 
 **F5 — the `markets` surface is unwired.** `apps/api/internal/markets/**` contributes vocabulary
 and types only: `apps/api/main.go` imports no markets package and `curl :3103/api/markets` →
-**404**. The only live ccxt feed is `apps/web/src/features/ticker/**` (`:3100/api/ticker` → 200).
+**404**. The only live ccxt feed is `apps/web/src/features/market/ticker/**` (`:3100/api/ticker` → 200).
 
 **F6 — the deployed balance sync is the Python oracle, not Rust.**
 `systemctl --user show fudcourt-sync.service -p ExecStart` →

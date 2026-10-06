@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { DEX, DEX_TYPES, DEX_CHAINS, type DexType, type DexChain, type DexPair, type DexProfile, isMint } from '@/features/dex/client';
+import { DEX, DEX_TYPES, DEX_CHAINS, type DexType, type DexChain, type DexPair, type DexProfile, isMint } from '@/features/market/dex/client';
 import { limitedFetch } from '@/lib/rate-limit';
 import { fail } from '../_lib/http';
 

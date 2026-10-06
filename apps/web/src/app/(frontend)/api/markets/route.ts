@@ -10,7 +10,7 @@ import {
   type MarketsCoin,
   type MarketsOrder,
   type MarketsSort,
-} from '@/features/market-data/markets';
+} from '@/features/market/coingecko-markets';
 import { limitedFetch } from '@/lib/rate-limit';
 import { fail } from '../_lib/http';
 

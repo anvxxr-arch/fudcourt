@@ -21,7 +21,7 @@ import {
   type TickerType,
   type VenueQuote,
   type TickerInstrument,
-} from '@/features/ticker/client';
+} from '@/features/market/ticker/client';
 import {
   SWEEP_FRESH_MS,
   SWEEP_STALE_MS,
@@ -33,7 +33,7 @@ import {
   defaultInstrument,
   instrumentsFor,
   tickerClients,
-} from '@/features/ticker/venues';
+} from '@/features/market/ticker/venues';
 import type { Exchange as CcxtExchange } from 'ccxt';
 import { num } from '../_lib/num';
 import { fail } from '../_lib/http';
