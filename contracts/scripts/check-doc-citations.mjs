@@ -178,8 +178,11 @@ const DOCS = [
   'docs/architecture/data-categorization.md',
   // Added 2026-10-06 with the Telegram bot; every repo path it names is now gated.
   'docs/architecture/bot.md',
-  // The canonical entry point. It is mostly links, but it also names every
-  // top-level home in a table, and an index that rots is worse than no index.
+  // The canonical entry point. Its markdown LINKS are gated here; the bare
+  // directory paths in its tables are NOT (the walk only picks up tokens that
+  // look like file citations, and `db/schema/` has no extension), so the table
+  // rows are verified by hand rather than by this gate. Adding the file keeps
+  // the links honest — it does not make the whole document drift-proof.
   'docs/architecture.md',
   'contracts/schemas/README.md',
 ];
