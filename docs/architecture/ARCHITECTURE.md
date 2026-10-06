@@ -10,7 +10,7 @@
 > market-hub section views in `src/features/overview/store-shell.tsx`; the §3 registry
 > enumerates the shell views plus the tier surfaces around them, so it carries **18** rows. **10** data families = the §4
 > table rows. Re-derived 2026-10-03 the app carries **40** `/api` route handlers under
-> `src/app/(frontend)/api/**` (3 auth + 37 data incl. the executor surface and the
+> `src/app/(frontend)/api/**` (3 auth + 50 data incl. the executor surface and the
 > keyless-proxy families) — the older **21** *(2026-09-29; 18 data + 3 auth)* and **36**
 > *(2026-10-01; 3 auth + 33 data)* counts are kept as the dated measurements they were.
 > `find "apps/web/src/app/(frontend)/api" -name route.ts` = **40** today, three of them
@@ -40,6 +40,48 @@ DR-017) on the homeserver:
 Public entry: **https://fc.dwirijal.my.id** (Cloudflare Tunnel → loopback
 origin; DR-002 — no third-party deploy target, ever).
 
+## 1a. Repository map — where to change what
+
+One Go module (`go.mod` at the root). `apps/` holds every deployable, `core/`
+does not exist (ADR 005: zero cross-app imports, so `internal/` is what keeps
+each app's packages private to it). Contracts, DDL, fixtures, tooling, deployment
+and docs each have exactly one home.
+
+| I want to change… | Go to | Notes |
+|---|---|---|
+| risk / sizing math | `apps/executor/internal/risk` · `apps/executor/internal/sizing` | pure functions: how big an order is, and whether it is allowed at all |
+| an exchange adapter | `apps/executor/internal/exchanges/` | one package per venue; paper and live implement the same interface |
+| a provider's ingestion | `apps/data/internal/research/<family>/` | the 8 providers — cryptorank, khala, llama, news, chainrank, coinank, coinglass, coinmarketcap (`paritytest/` beside them is the TS↔Go parity harness, not a provider) |
+| the executor runtime | `apps/executor/internal/{api,runtime,repository,notify}` | its own process, its own Postgres schema, its own systemd unit |
+| the HTTP API | `apps/api/` | Go; owns auth, admin, treasury reads |
+| the Telegram bot | `apps/bot/` | Go |
+| the 5-minute treasury sync | `apps/reconciler/` (Rust) · `tests/oracle/sync-live.py` (the deployed Python oracle, kept as rollback) | the two are verified row-for-row |
+| market / trade / portfolio UI | `apps/web/src/features/market` · `…/trade` · `…/overview` | feature slices, one per domain — never per vendor |
+| an API route | `apps/web/src/app/(frontend)/api/**` | 56 handlers: 3 auth + 50 data + 3 CMS |
+| the API / event contract | `contracts/` | `openapi/fudcourt.yaml`, `schemas/**`, `events/events.json` + the four drift gates in `contracts/scripts/` |
+| the database | `db/schema/` | `pg-schema.sql` (treasury, `public`) and `executor-schema.sql` (`executor` schema). No migration runner — see §8b |
+| shared test fixtures | `tests/fixtures/` · `tests/oracle/` | recorded upstream payloads + the replay oracle |
+| a verification script | `scripts/verify/` | reached through `tools/fud.ts`; do not add a second entrypoint |
+| a systemd unit | `deploy/systemd/` | 10 units |
+| the docs | `docs/architecture/` (this tree) · `docs/decisions/` (ADRs) | |
+
+**One verification entrypoint.** `tools/fud.ts` is a dispatcher, not a
+reimplementation — every subcommand shells out to the script that already owns
+the check:
+
+```
+node tools/fud.ts verify      # every offline gate — the canonical green check
+node tools/fud.ts contracts   # the four contract drift gates
+node tools/fud.ts deploy      # the systemd unit guard
+node tools/fud.ts structure   # the frontend structure gate
+node tools/fud.ts test        # the three test suites
+node tools/fud.ts live [fam]  # the 12 live/network harnesses (list, or run one)
+```
+
+It is plain ESM TypeScript importing only node builtins, so it runs under
+`node --experimental-strip-types` (what CI has) or `bun`, with no dependency
+install.
+
 ## 2. System picture
 
 ```
@@ -51,7 +93,7 @@ origin; DR-002 — no third-party deploy target, ever).
    ┌──────────────────── apps/web (Next 16, fudcourt-web) ────────────────────┐
    │  src/app/(frontend)/page.tsx = SPA shell (initialPage state + tab nav + db)│
    │  src/app/(frontend)/<view>/page.tsx = deep-link wrapper → <StoreShell …> │
-   │  src/app/(frontend)/api/* = 40: 37 data (families §4 + admin §5 + executor)│
+   │  src/app/(frontend)/api/* = 53: 3 auth + 50 data (families §4 + admin §5)│
    │                            + 3 auth                                     │
    └──────┬────────────────────────────────────────────┬──────────────────────┘
           │ Postgres (treasury, synced every 5 min     │ keyless upstreams:
@@ -217,12 +259,12 @@ plus its verifier only.
 | Family | Upstream | Route(s) | Contract | Verifier | Trust |
 |---|---|---|---|---|---|
 | **treasury** | Postgres `public` (own data, DR-040) | `/api/all`, `/coins`, `/wallets`, `/reconcile`, `/transactions(+/[id])` | `src/server/db.ts` (env-ref only); `/reconcile` is a proxy to the **Rust** `fudcourt-reconciled` `:3102` (DR-014) | `check-contract.py` (mutation-guard) + `sync-live.py` fail-loud + `verify-reconcile.py` (28 checks incl. live TS↔Rust parity) | INTERNAL |
-| **cryptorank** | cryptorank.io SSR (RE) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/cryptorank` (28 modes, thin proxy to `fudcourt-data`) | runtime: `apps/data/internal/research/cryptorank` · TS mirror `src/features/market-data/cryptorank.ts` + `src/features/market-data/cryptorank-shapers.ts` | `verify-cryptorank.py` 244 checks (oracle `tests/oracle/cr_fetch.py`) · 3-gate · shaper fixtures 56/56 | GATED |
+| **cryptorank** | cryptorank.io SSR (RE) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/cryptorank` (28 modes, thin proxy to `fudcourt-data`) | runtime: `apps/data/internal/research/cryptorank` · TS mirror `src/features/cryptorank/` (`cryptorank-modes.ts` + the `cryptorank-shapers-*` set) | `verify-cryptorank.py` 244 checks (oracle `tests/oracle/cr_fetch.py`) · 3-gate · shaper fixtures 56/56 | GATED |
 | **chainrank** | chainrank.fyi — fetched by the Go `fudcourt-data` sidecar :3101, not by the web app (web surface removed, DR-041) | sidecar `/api/chainrank` (2 modes; no web route) | runtime: **`apps/data/internal/research/chainrank`** (mode table, pagination relayed verbatim into the upstream URL and the cache key, explicit 32-entry cache ceiling, shape check) | `verify-chainrank.py` 50 checks (incl. the relay matrix vs real upstream) | GATED |
 | **llama** | api.llama.fi — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/llama` (3 modes, thin proxy to `fudcourt-data`) | runtime: **`apps/data/internal/research/llama`** (mode table, strict `top`/`days`, in-process 15 s TTL cache + single-flight, sort/trim); `src/features/llama/client.ts` is the typing/display mirror | `verify-llama.py` 51 checks (incl. anti-fake parity against a direct `/v2/chains`) | GATED |
 | **dex** | dexscreener | `/api/dex` | `src/features/dex/client.ts` | `verify-dex.py` | GATED |
 | **signals** | data-public.vercel.app (external dataset) | `/api/signals` | route-local | `verify-signals.py` | GATED |
-| **markets** | api.coingecko.com (`/coins/markets`, top-250 pool) | `/api/markets` | `src/features/market-data/markets.ts` | `verify-markets.py` 49 checks (GATE2 llama · GATE3 cryptorank, 3%) | GATED |
+| **markets** | api.coingecko.com (`/coins/markets`, top-250 pool) | `/api/markets` | `src/features/market/coingecko-markets.ts` | `verify-markets.py` 49 checks (GATE2 llama · GATE3 cryptorank, 3%) | GATED |
 | **market** (hub sections) | open.er-api.com (forex, ECB daily) + Yahoo Finance chart (commodity, stock, macro, indonesia) + stats.bis.org `WS_CBPOL` (policy rates) + fred.stlouisfed.org CSV (US indicators) + api.worldbank.org v2 (annual indicators) + api.imf.org SDMX 2.1 (Fiscal Monitor vintages, Indonesia + per-country government finance) — all keyless | `/api/market/forex`, `/api/market/commodity`, `/api/market/stock` (`?region=us\|asia\|europe`), `/api/market/macro`, `/api/market/indonesia`, `/api/economy/countries/[code]` | `src/features/market/{forex,commodity,stock}.tsx` + `src/features/market/clients*.ts`, `src/features/market/{imf,bis,fred,worldbank}.ts`, nation via `src/features/economy` | `verify-all.sh` (tsc + shapers); live: 5 boards 200, `?region=amer` → 400, `/api/economy/countries/{IDN,ID,US,MY}` → 200 and an unknown code → 404; deep verifier pending | **SMOKE** — deep verifier pending |
 | **ticker** | 10 CEX natives via CCXT (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) | `/api/ticker`, `/api/ticker/instruments`, `/api/ticker/instrument` | `src/features/ticker/client.ts` | route sweep (status/shape/400 contract); deep verifier pending | **SMOKE** — deep verifier pending |
 | **news** | cointelegraph.com/rss — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/news` (thin verbatim proxy to `fudcourt-data`) | runtime: **`apps/data/internal/research/news`** (feed table, strict `source`/`limit` 1..100, RSS parse into the six-key projection, in-process 15 s TTL cache + single-flight keyed on the FEED URL); `src/features/news/client.ts` is the typing/display mirror | `verify-news.py` 50 checks (incl. anti-fake parity against a direct feed fetch) | GATED |
@@ -318,7 +360,7 @@ implies team implies member.
 
 | Tier | What | Where it runs |
 |---|---|---|
-| Offline | `check-contract.py` (CR_MODES ↔ sweep consistency + **TS↔Go mode-table parity** + **news NEWS_SOURCES parity** + mutation-guard + proxy-shape; the **khala** and **chainrank** parity blocks became “web surface removed (sidecar-only)” rows at DR-041), `test:shapers` (`240 tests` as of 2026-10-01), `tsc`, both builds (Bun), `cargo build/test` (apps/reconciler), `go build/vet/test` (apps/data: cryptorank + khala + llama + news + chainrank packages — **179** `func Test` as of 2026-10-01, was 111 in the 2026-09-29 figure this row used to carry) | pre-push hook + CI on every push |
+| Offline | `check-contract.py` (CR_MODES ↔ sweep consistency + **TS↔Go mode-table parity** + **news NEWS_SOURCES parity** + mutation-guard + proxy-shape; the **khala** and **chainrank** parity blocks became “web surface removed (sidecar-only)” rows at DR-041), `test:shapers` (`268 tests` as of 2026-10-06), `tsc`, both builds (Bun), `cargo build/test` (apps/reconciler), `go build/vet/test` (apps/data: cryptorank + khala + llama + news + chainrank packages — **262** `func Test` as of 2026-10-06, was 179 in the 2026-10-01 figure this row used to carry) | pre-push hook + CI on every push |
 | Live | per-family verifiers (§4) — plus `verify-khala.py` **green against the served sidecar: 136 pass / 0 fail / 0 skip, 6.7 s** (`--base http://127.0.0.1:3101`; GATED met 2026-09-29, PLAN G8 ✅), cryptorank harness (244 checks; since DR-005 run it against the Go sidecar for a full pass — through :3100 the DR-004 inbound budget stops a ~55-call run, PLAN G7 SG-7.6), route sweep (the 2026-09-29 recorded run was **154/165**: 18 page checks = 13 HTML + `/robots.txt` + `/sitemap.xml` + 3 real-404 retired/unknown · 7 gate-307 · API incl. the whole ticker, llama and news families · mut no-session 401 · session-gated probes · 58 CR; 11 fails = 1 CoinGecko 403 passthrough + 10 session-gated probes unrunnable because no `FUDCOURT_SESSION_SECRET` exists on this host, ANALYSIS K-11 — a point-in-time measurement, not a live claim; DR-041 has since removed the chainrank probes and the khala group F from the sweep), DOM audit of the /tracker board (asserts /api/markets is proxied and the browser never calls CoinGecko) | on demand + this repo's loop |
 | Continuous | `monitor.py` — unit active + 8 endpoint checks (board page, 5 cryptorank modes incl. decoy-refusal 503, markets, news), deterministic output, parallel | cron `f191fe6df16c` every 15 min, silent when `HEALTHY` |
 
@@ -381,8 +423,8 @@ USDT linear perps) and the funds never leave the exchange. Records:
  │     strategy state; reconcile venue BEFORE acting; crash recovery =   │
  │     first tick with placement disabled                                │
  │ internal/platform/lock — Valkey lease, FAIL-CLOSED                    │
- │ internal/strategies · internal/core — sizing, fees, leverage,        │
- │     margin, liquidation + constraints ⇒ immutable PlanResult          │
+ │ internal/{risk,sizing,planner,orders,execution,strategies} — sizing, │
+ │     fees, leverage, margin, liquidation + constraints ⇒ PlanResult  │
  │ Live placement requires FUDCOURT_EXECUTOR_LIVE=1; off ⇒ live rows     │
  │ PAUSED at the placement boundary (deterministic kill switch);         │
  │ paper is the default posture (DR-042)                                 │
@@ -409,9 +451,10 @@ USDT linear perps) and the funds never leave the exchange. Records:
 |---|---|---|
 | Web app + API | `apps/web`, `:3100`, `src/app/(frontend)/api/executor/**` → `forwardExecutor` in `src/app/(frontend)/api/executor/_proxy.ts` | one origin, one session, one tier gate (`/executor` and `/api/executor` are `team` — the same tier as the treasury surface it sits beside) |
 | Executor runtime | `apps/executor` (Go), unit `deploy/systemd/fudcourt-executor.service`, `:3104` health + `:3105` executor API | **independent of `fudcourt-web`**: closing the browser or restarting the web unit never stops an execution |
-| Valkey lease | `apps/executor/internal/platform/lock` | one worker owns one execution; **FAIL-CLOSED** — a lock that fails open means duplicate orders, so any Valkey error makes the lease unusable and the worker does not trade (the inverse of the JSON cache in `src/server/cache.ts`, which fails open) |
+| Valkey lease | `apps/executor/internal/platform/lock` | one worker owns one execution; **FAIL-CLOSED** — a lock that fails open means duplicate orders, so any Valkey error makes the lease unusable and the worker does not trade (the inverse of the JSON cache in `src/lib/l2.ts`, which fails open) |
 | Postgres store | `apps/executor/internal/repository` → `executor` schema | its own schema, never `public`: the executor owns its writes and the treasury tables belong to the sync, so neither prunes the other's rows. No migration runner — the embedded DDL is asserted byte-identical to `db/schema/executor-schema.sql` by `repository.EnsureSchema` (fatal on failure) with drift guard `TestEmbeddedSchemaMatchesTracked` (byte-exact) |
 | Adapters | `apps/executor/internal/exchanges` | one translation layer per venue; paper and live implement the SAME interface, so the worker has a single code path; paper's `MarketSource` seam delegates marks/fees to the live adapter (DR-042) |
+| Risk + sizing math | `apps/executor/internal/risk` · `apps/executor/internal/sizing` | the pure functions that decide HOW BIG an order is and WHETHER it is allowed. No `core/` extraction (ADR 005: zero cross-app imports, and `internal/` is what keeps them private to the executor), so they sit one level below where the plan sketched them |
 
 **Determinism, ownership and the switch.** The worker drives one deterministic
 tick at a time from a strategy state seeded by a PRNG (Go `internal/strategies`,

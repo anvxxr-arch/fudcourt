@@ -256,6 +256,46 @@ The remaining same-named exports are framework-required (`GET`, `POST`,
 `DELETE`, `generateMetadata` per route) or unrelated functions that
 happen to share a name.
 
+### 14. Documentation comprehensibility (Phase 17, re-tested 2026-10-06)
+
+The criterion is "current architecture can be understood from
+`docs/architecture.md` without reading dozens of files". The literal path
+does not exist — the document is `docs/architecture/ARCHITECTURE.md`
+(see §10 for why the 4-file collapse was not performed). What was
+re-tested is the substance: can a newcomer answer the plan's own
+Definition-of-Done questions from that one document?
+
+Before this pass, **two of nine questions had no answer**, and four
+references were stale:
+
+| Question | Before | After |
+|---|---|---|
+| where do I fix risk calculation? | **no answer** — the doc never named the Go risk package | `§1a` → `apps/executor/internal/risk` · `…/sizing` |
+| where do I change the schema? | **no answer** — `contracts/` appeared only as a CI filename | `§1a` → `contracts/` |
+| where is the one verify command? | **no answer** — §7 listed individual scripts; `tools/fud.ts` was never mentioned | `§1a` → the `fud.ts` subcommand table |
+| the rest (Binance adapter, CryptoRank ingestion, executor runtime, market UI, DB, deployment) | answered | still answered |
+
+Stale references fixed in the same pass:
+
+- `src/server/cache.ts` (twice: the §8b diagram's Valkey-lease row and its
+  prose) — the file was deleted in `ae53a5c`; re-pointed to `src/lib/l2.ts`.
+- `internal/strategies · internal/core` in the §8b diagram — ADR 005
+  flattened `internal/core` away; the real packages are
+  `internal/{risk,sizing,planner,orders,execution,strategies}`.
+- `src/features/market-data/{cryptorank,cryptorank-shapers,markets}.ts`
+  (twice) — the directory does not exist; the TS mirror is
+  `src/features/cryptorank/` and the CoinGecko board is
+  `src/features/market/coingecko-markets.ts`.
+- Three counts: route handlers "3 auth + 37 data = 40" → 53 under
+  `(frontend)/api` + 3 CMS = 56 (matching `check-contract.mjs`);
+  `test:shapers` 240 → 268; `apps/data` Go `func Test` 179 → 262.
+
+`§1a Repository map — where to change what` is the new section: a
+15-row table from intent to path, plus the `tools/fud.ts` subcommand
+table. Every row's target was verified to exist before it was written,
+and the one subtlety (8 providers, with `paritytest/` called out as the
+harness rather than a ninth) is stated in the row.
+
 ## Deviations, recorded
 
 | Plan target | Outcome | Record |
