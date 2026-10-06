@@ -37,13 +37,16 @@ YELLOW = "\033[33m"
 DIM = "\033[2m"
 RESET = "\033[0m"
 
+DEFAULT_API_BASE = "http://127.0.0.1:3100"
+DEFAULT_SIDECAR_BASE = "http://127.0.0.1:3101"
+
 
 # ------------------------------------------------------------------ verdicts
 def _globals():
     """The caller's module globals: a harness aliases verifylib's helpers
     into its own namespace, so the frame one hop up is the helper's caller
     (the harness), whose counters/results we read and bump."""
-    return sys._getframe(1).f_globals
+    return sys._getframe(2).f_globals
 
 
 def check(name_or_ok, ok_or_label, detail="", *, counted=False, coerce_bool=True, record=True):

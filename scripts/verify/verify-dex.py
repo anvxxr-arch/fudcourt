@@ -27,7 +27,7 @@ import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-DEFAULT_BASE = "http://127.0.0.1:3100"
+from verifylib import DEFAULT_API_BASE as DEFAULT_BASE
 
 # A real, high-liquidity mint: every measurement below should be populated.
 WSOL = "So11111111111111111111111111111111111111112"
@@ -78,7 +78,7 @@ REQUIRED_ON_MATURE = ("chainId", "dexId", "url", "pairAddress",
                       "baseToken", "quoteToken", "priceUsd", "volume",
                       "liquidity", "txns")
 
-from verifylib import as_dict_loud as as_dict, check_tuple as check
+from verifylib import as_dict_loud as as_dict, check
 from verifylib import note_join as note, section_yellow as section
 from verifylib import GREEN, RED, DIM, RESET
 results: list[tuple[bool, str, str]] = []

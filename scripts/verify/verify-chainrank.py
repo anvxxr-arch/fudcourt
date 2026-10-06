@@ -30,10 +30,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-DEFAULT_BASE = "http://127.0.0.1:3100"
+from verifylib import DEFAULT_API_BASE as DEFAULT_BASE
 UPSTREAM = "https://www.chainrank.fyi"
 
-from verifylib import call, check_tuple as check, hdr, jload
+from verifylib import call, check, hdr, jload
 from verifylib import note_join as note, section
 from verifylib import GREEN, RED, DIM, RESET
 results: list[tuple[bool, str, str]] = []
