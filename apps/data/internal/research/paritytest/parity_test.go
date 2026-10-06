@@ -52,19 +52,21 @@ func fixturesDir(t *testing.T) string {
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Skip("fixtures not found (looked for tests/fixtures, frontend/web/scripts/fixtures and apps/web/scripts/fixtures upward from this source file; set FUDCOURT_DATA_FIXTURES_DIR to run parity)")
+			t.Skip("fixtures not found (looked for tests/fixtures upward from this source file; set FUDCOURT_DATA_FIXTURES_DIR to run parity)")
 		}
 		dir = parent
 	}
 }
 
-// fixtureCandidates are the manifest-bearing roots, in preference order: the
-// current shared location, the frontend-owned scripts tree, and the legacy
-// apps/web/scripts/fixtures kept so this helper works on either tree shape.
+// fixtureCandidates are the manifest-bearing roots. tests/fixtures is the one
+// canonical shared location: the recorder (tests/oracle/record-fixtures.ts)
+// writes there, the shaper tests read there, and this is where the manifest's
+// sha256 per fixture lives. The two frontend-owned candidates that used to sit
+// here (frontend/web/scripts/fixtures, apps/web/scripts/fixtures) were removed
+// with the Phase-9 fixture consolidation — both directories are gone from the
+// tree, so keeping them only widened the walk.
 var fixtureCandidates = []string{
 	filepath.Join("tests", "fixtures"),
-	filepath.Join("frontend", "web", "scripts", "fixtures"),
-	filepath.Join("apps", "web", "scripts", "fixtures"),
 }
 
 // serveOnce runs the real HTTP handler against a stubbed fetcher that returns
