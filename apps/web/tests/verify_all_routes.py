@@ -7,9 +7,12 @@ surface"), read out of the running build, not from memory:
   `/ticker`, `/tracker`, `/llama`, `/markets`, `/market/ticker`, `/dex`,
   `/trench`, `/ticker/:ticker` and `/market/ticker/:ticker` are deliberate 307s
   into the hub (next.config.js, ARCHITECTURE.md §3) and are asserted as such.
-  `/coin` and `/balance` were removed and must answer a REAL 404, and an
-  off-allowlist ticker (`/market/crypto/FOO`) must be a real 404 too, never a
-  soft-404 that renders a 200 shell.
+  `/coin` and `/balance` were removed and must answer a REAL 404.
+  An off-allowlist coin (`/market/crypto/FOO`) must render the NOT-FOUND page
+  rather than the live detail shell — a soft-404. NOTE the status line: Next
+  16.3.6 answers HTTP 200 for EVERY notFound() in this app, so this probe
+  asserts on the BODY, not the status. See the FOO probe below and
+  docs/architecture/design-debt.md §notFound-status.
 - Treasury reads (/api/all, /coins, /wallets, /reconcile, /transactions) are
   session-gated (lib/guard.ts TEAM_API_ROUTES + middleware.ts): anonymous ->
   JSON 401. Gated pages (/team/**, /member, /admin) -> 307 to /login?next=…

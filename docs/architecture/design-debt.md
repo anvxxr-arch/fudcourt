@@ -353,3 +353,89 @@ That build rewrote the same `.next` the live `:3100` unit serves — the unit wa
 unaffected (the harness read the rendered pages), but the in-place build is exactly the trap this
 section warns against, and it is recorded here rather than hidden. A future re-baseline MUST use
 the frozen-copy route above.
+
+## 7. `notFound()` renders the right page but answers HTTP 200
+
+**Measured 2026-10-06, Next.js 16.3.6.**
+
+`notFound()` is called, the nearest `not-found.tsx` boundary renders, and the
+body is the correct "NOT FOUND — this route does not exist" page. The status
+line is `200`, not `404`.
+
+This is **app-wide, not route-specific**. Probed on a production build against
+a live server:
+
+| Path | Body | Status |
+|---|---|---|
+| `/market/crypto/FOO` | not-found boundary | 200 |
+| `/blog/definitely-not-a-real-slug-xyz` | not-found boundary | 200 |
+| `/economy/nation/ZZ` | not-found boundary | 200 |
+| `/trade/notatype` | not-found boundary | 200 |
+
+Proven pre-existing by stashing the route move and probing the committed
+build: `/market/ticker/FOO` answered 200 before the move too. Instrumenting
+the route confirmed the guard executes (`notFound()` is reached, the allowlist
+lookup returns `undefined`), so this is a framework status-code behaviour
+rather than a guard that fails to run.
+
+**Consequence.** An unknown coin, blog slug, nation or instrument produces an
+indexable URL whose body says 404 and whose status says 200. Crawlers that
+trust the status line will index it.
+
+**What the live probe asserts instead.** `apps/web/tests/verify_all_routes.py` asserts
+on the **body** for this case, because asserting the status would be a
+knowingly red test. The markers are `Loading venues` and
+`No venue lists this type for this coin`, which exist only in the live detail
+shell — the `generateMetadata` description is present either way, so it cannot
+discriminate. The probe still catches the failure it exists for: a soft-404
+that renders the detail shell for a coin nobody quotes.
+
+**Fix direction (not done — out of scope for a structural migration).** Either
+set the status explicitly in the `not-found.tsx` boundaries via a route
+segment config or a middleware, or upgrade/pin Next once the behaviour is
+confirmed fixed upstream. Changing it alters response statuses, which the
+migration's zero-behavior-change constraint forbids without a separate
+approved change.
+
+## 7. `notFound()` renders the right page but answers HTTP 200
+
+**Measured 2026-10-06, Next.js 16.3.6.**
+
+`notFound()` is called, the nearest `not-found.tsx` boundary renders, and the
+body is the correct "NOT FOUND — this route does not exist" page. The status
+line is `200`, not `404`.
+
+This is **app-wide, not route-specific**. Probed on a production build against
+a live server:
+
+| Path | Body | Status |
+|---|---|---|
+| `/market/crypto/FOO` | not-found boundary | 200 |
+| `/blog/definitely-not-a-real-slug-xyz` | not-found boundary | 200 |
+| `/economy/nation/ZZ` | not-found boundary | 200 |
+| `/trade/notatype` | not-found boundary | 200 |
+
+Proven pre-existing by stashing the route move and probing the committed
+build: `/market/ticker/FOO` answered 200 before the move too. Instrumenting
+the route confirmed the guard executes (`notFound()` is reached, the allowlist
+lookup returns `undefined`), so this is a framework status-code behaviour
+rather than a guard that fails to run.
+
+**Consequence.** An unknown coin, blog slug, nation or instrument produces an
+indexable URL whose body says 404 and whose status says 200. Crawlers that
+trust the status line will index it.
+
+**What the live probe asserts instead.** `apps/web/tests/verify_all_routes.py`
+asserts on the **body** for this case, because asserting the status would be a
+knowingly red test. The markers are `Loading venues` and
+`No venue lists this type for this coin`, which exist only in the live detail
+shell — the `generateMetadata` description is present either way, so it cannot
+discriminate. The probe still catches the failure it exists for: a soft-404
+that renders the detail shell for a coin nobody quotes.
+
+**Fix direction (not done — out of scope for a structural migration).** Either
+set the status explicitly in the `not-found.tsx` boundaries via a route
+segment config or a middleware, or upgrade/pin Next once the behaviour is
+confirmed fixed upstream. Changing it alters response statuses, which the
+migration's zero-behavior-change constraint forbids without a separate
+approved change.
