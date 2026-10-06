@@ -45,7 +45,7 @@ rows), not unfinished work. As-built tree: `docs/architecture/final-review.md` �
 RFC 2119. These rules are the acceptance criteria for later phases. **Enforcement status
 (2026-10-01):** the Go layering is enforced by `shared/contracts/scripts/check-contract.mjs` +
 `tests/integration/api/check-api-contract.py` + CI; the web layering is enforced by
-`frontend/web/scripts/checks/check-structure.py`. The rules below marked **OPEN** are the ones
+`apps/web/scripts/checks/check-structure.py`. The rules below marked **OPEN** are the ones
 the checks do not yet cover.
 ### 3.1 Allowed — LANDED
 - `frontend/web` MAY import `shared/sdk/typescript`, `shared/contracts` (types only). *(no `packages/config` exists to import)*
@@ -55,15 +55,15 @@ the checks do not yet cover.
   (SQL/DDL versions), never via source imports.
 ### 3.2 Forbidden — status per rule
 - `frontend/web` MUST NOT own or contain: executor runtime, risk, sizing, strategy logic, exchange
-  signing/keys, workers, locks, or execution persistence. — **OPEN.** `frontend/web/src/platform/executor/`
-  and `frontend/web/scripts/executor/` are still present and are still the production executor;
+  signing/keys, workers, locks, or execution persistence. — **OPEN.** `apps/web/src/platform/executor/`
+  and `apps/web/scripts/executor/` are still present and are still the production executor;
   the Go counterpart (`backend/workers/executor`) is built and parity-tested, and the deletion is
   the gated Phase 5 cutover (see `parity-matrix.md`, `final-review.md` §6).
 - Services MUST NOT import each other's implementation — contracts only. No shared Go/Rust/TS
   source across service boundaries. — **ENFORCED** (zero cross-module imports; `final-review.md` §5).
 - `backend/api` MUST NOT reach into `executor.*` tables directly; it commands `backend/workers/executor`
   through the orchestration contract. — **OPEN.** The web routes write `executor.*` through
-  `frontend/web/src/platform/executor/store.ts`; ownership moves to `backend/workers/executor`
+  `apps/web/src/platform/executor/store.ts`; ownership moves to `backend/workers/executor`
   with the cutover.
 - `frontend/web` MUST NOT talk to exchanges or hold API keys/secrets beyond session cookies. —
   **OPEN.** `exchange.ts` + `store.ts` `masterKeyFromEnv` are still in web (cutover).
@@ -112,5 +112,5 @@ executor is DR-023). The restructure changed only the code owning each write pat
 - `scripts/verify` — the repo-wide harnesses (`check-contract.py`, `check-deploy.py`,
   `verify-<family>.py`, `monitor.py`, `verify-all.sh`, `parity-*`); the app-only probes
   (`dom_audit.py`, `verify_all_routes.py`, `dbg-smoke.cjs`) and the web suites live at
-  `frontend/web/tests/`.
+  `apps/web/tests/`.
 - Unit tests live next to their service (Go `*_test.go`, Rust `tests/`, web vitest/node --test).

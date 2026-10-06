@@ -23,7 +23,7 @@
  * no undefined/NaN/Infinity (throws instead of silently dropping), and every
  * number verified to survive a JSON round-trip unchanged.
  *
- * Usage: cd frontend/web && npm run dump:envelopes
+ * Usage: cd apps/web && npm run dump:envelopes
  *   (Same tsc -> node pattern as test:shapers / record:fixtures: plain
  *    `node tests/oracle/dump-envelopes.ts` cannot resolve the extensionless
  *    `@/features/market-data/cryptorank` import. Equivalent one-liner:
@@ -57,7 +57,7 @@ import {
 // This generator lives in the repo-root tests/oracle/ (it produces the shared
 // oracle, not web-app tooling). The shared tree is resolved by walking up from the
 // COMPILED location to the repository root, so the script works from any cwd — the
-// tsc project emits it to frontend/web/.shaper-tests/tests/oracle/.
+// tsc project emits it to apps/web/.shaper-tests/tests/oracle/.
 function repoRoot(start: string): string {
   for (let d = start; ; d = path.dirname(d)) {
     if (existsSync(path.join(d, 'tests', 'fixtures', 'MANIFEST.json'))) return d;

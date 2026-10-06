@@ -125,7 +125,7 @@ func (k EntityKind) Valid() bool {
 // may therefore only appear in the top-level resolution table, never inside an
 // entity that the schema describes:
 //
-//   - ProviderCCXT: the venue ids ccxt uses, which frontend/web/src/features/
+//   - ProviderCCXT: the venue ids ccxt uses, which apps/web/src/features/
 //     ticker/client.ts ships verbatim as TICKER_EXCHANGES. The schema has no
 //     venue provider_ids property at all, so these live in the mapping table.
 //   - ProviderInternal: identifiers this repo itself produces rather than

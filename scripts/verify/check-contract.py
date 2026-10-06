@@ -27,10 +27,10 @@ import sys
 from pathlib import Path
 # This gate is repo-wide (it diffs the TS mode tables against the Go ones), so it
 # lives in scripts/verify/ and resolves everything from the repo root — the web app
-# is the frontend/web subdirectory. Cwd-independent by construction: CI runs it from
-# frontend/web, verify-all.sh from the repo root, an operator from anywhere.
+# is the apps/web subdirectory. Cwd-independent by construction: CI runs it from
+# apps/web, verify-all.sh from the repo root, an operator from anywhere.
 REPO = Path(__file__).resolve().parents[2]  # scripts/verify/ -> scripts -> repo
-WEB = REPO / "frontend" / "web"
+WEB = REPO / "apps" / "web"
 # Every TS source lives under src/ (DR-018), so the gate resolves its TS side
 # through that single root instead of hardcoding an old location. The `app/`
 # route tree is at SRC/app; a `lib/` no longer exists — putting one back would
@@ -67,12 +67,12 @@ def sweep_modes_from(src: str) -> set:
 def modes_from_sweep() -> set:
     """The cryptorank mode set an independent route sweep witnesses.
 
-    The sweep is a web-only artifact and moved to frontend/web/tests/ in the
+    The sweep is a web-only artifact and moved to apps/web/tests/ in the
     restructure. The path fetched from ~/.hermes/cache/… is a machine-local
     operator copy that CI can never have — reading it made this comparison
     unfalsifiable on a runner, so it is not consulted any more.
     """
-    p = REPO / "frontend" / "web" / "tests" / "verify_all_routes.py"
+    p = REPO / "apps" / "web" / "tests" / "verify_all_routes.py"
     if not p.exists():
         return set()
     return sweep_modes_from(p.read_text())
@@ -184,7 +184,7 @@ if lib and len(lib) < 20:
 if not sweep:
     # No witness is a FAIL, not a skip: a comparison that cannot run on CI must
     # never be reported as a parity result (the sweep is tracked in-repo now).
-    fails.append("sweep witness missing: frontend/web/tests/verify_all_routes.py has no "
+    fails.append("sweep witness missing: apps/web/tests/verify_all_routes.py has no "
                  "cryptorank CR table (the lib<->sweep parity check cannot run)")
 elif lib and sweep != lib:
     fails.append(f"mode set mismatch lib vs sweep: only-lib={sorted(lib - sweep)} "

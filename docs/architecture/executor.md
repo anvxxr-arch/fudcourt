@@ -9,7 +9,7 @@
 
 ## 1. Domain map — what the executor is made of
 The execution lifecycle (PRD §57) is one table, owned today by
-`frontend/web/src/platform/executor/types.ts` (`EXECUTION_TRANSITIONS` — the wire contract moved, DR-043)
+`apps/web/src/platform/executor/types.ts` (`EXECUTION_TRANSITIONS` — the wire contract moved, DR-043)
 and ported 1:1 by `apps/executor/internal/execution/lifecycle.go` (`ExecutionTransitions`,
 "the ONE lifecycle truth for API intents and worker transitions alike").
 Terminal states accept nothing:
@@ -36,18 +36,18 @@ Module map (objective §8.9–§8.16; TS owner today → Go target package):
 
 | Slice | What it owns | Today (TS) | Go package | State |
 |---|---|---|---|---|
-| §8.9 domain types | wire + domain contract: statuses, sizing/leverage/margin modes, records; money/quantity as decimal strings | `frontend/web/src/platform/executor/types.ts` (frozen contract) | `internal/core/execution` (`types.go`, `enums.go`, `lifecycle.go`, `records.go`) | landed |
+| §8.9 domain types | wire + domain contract: statuses, sizing/leverage/margin modes, records; money/quantity as decimal strings | `apps/web/src/platform/executor/types.ts` (frozen contract) | `internal/core/execution` (`types.go`, `enums.go`, `lifecycle.go`, `records.go`) | landed |
 | §8.10 execution aggregate | lifecycle commands (`start/pause/resume/cancel/complete/fail`), status mutation, timestamp stamping | `runtime.ts` lifecycle intents + `worker.ts` `transitionExecution` | `internal/core/execution` (`Command`, `Execution.Apply`) | landed |
-| §8.11 planner | request → immutable `ExecutionPlan` + `PreviewResult`: entry reference, strict validation (field-named refusals, never clamped), leverage/margin/liquidation policy, conflicts | `frontend/web/src/platform/executor/plan.ts` (PRD §24, §56, §79–80, §98) | `internal/core/planner` | **in flight** |
-| §8.12 risk | the position-risk formulas — the ONE cost model (PRD §22–23: `totalRisk = Q·unitRisk`, fees, slippage-once, safety reserve), liquidation approximation (PRD §21), the §15 constraint solver | `frontend/web/src/platform/executor/risk.ts` (pure: no HTTP/DB/exchange, PRD §102) | `internal/core/risk` (`types.go`, `risk.go`, `leverage.go`, `solve.go`, `errors.go`) | landed |
+| §8.11 planner | request → immutable `ExecutionPlan` + `PreviewResult`: entry reference, strict validation (field-named refusals, never clamped), leverage/margin/liquidation policy, conflicts | `apps/web/src/platform/executor/plan.ts` (PRD §24, §56, §79–80, §98) | `internal/core/planner` | **in flight** |
+| §8.12 risk | the position-risk formulas — the ONE cost model (PRD §22–23: `totalRisk = Q·unitRisk`, fees, slippage-once, safety reserve), liquidation approximation (PRD §21), the §15 constraint solver | `apps/web/src/platform/executor/risk.ts` (pure: no HTTP/DB/exchange, PRD §102) | `internal/core/risk` (`types.go`, `risk.go`, `leverage.go`, `solve.go`, `errors.go`) | landed |
 | §8.13 sizing | sizing-mode resolution (the nine `SizingMode`s), budget→quantity solving incl. the §33 scale-in ladder, grid rounding (quantity floor DOWN), tick rounding, minimum-notional refusals | `plan.ts` `sizePosition` + `risk.ts` `calculateRiskPosition` | `internal/core/sizing` | landed |
 | §8.14 orders | **Execution ≠ Order**: one execution produces many child orders; the over-order clamp (PRD §107/§128.15) and child accounting | `worker.ts` `clampChild` + `store.ts` child rows | `internal/core/orders` (`Ledger`, `ClampChild`) | landed |
-| §8.15 strategy | deterministic strategies (TWAP, adaptive TWAP, iceberg, chase limit, scale in/out): tick context → submit/cancel/complete actions; seeded PRNG in state; zero submits on reconcile-only passes | `frontend/web/src/platform/executor/engine.ts` (PRD §25–§35) | `internal/strategies` | landed |
-| §8.16 exchange adapters | canonical `Exchange` interface + normalized models/capabilities/errors/symbol mapping; per-venue adapters absorb every venue difference | `frontend/web/src/platform/executor/exchange.ts` (`CcxtLike`, `mapError`, `SECRET_PATTERNS`) | `internal/exchanges` (+ `binance/`, `mexc/`, `paper/`; `bybit/` in flight) | landed |
+| §8.15 strategy | deterministic strategies (TWAP, adaptive TWAP, iceberg, chase limit, scale in/out): tick context → submit/cancel/complete actions; seeded PRNG in state; zero submits on reconcile-only passes | `apps/web/src/platform/executor/engine.ts` (PRD §25–§35) | `internal/strategies` | landed |
+| §8.16 exchange adapters | canonical `Exchange` interface + normalized models/capabilities/errors/symbol mapping; per-venue adapters absorb every venue difference | `apps/web/src/platform/executor/exchange.ts` (`CcxtLike`, `mapError`, `SECRET_PATTERNS`) | `internal/exchanges` (+ `binance/`, `mexc/`, `paper/`; `bybit/` in flight) | landed |
 | idempotency (objective §23) | `fud_<executionID>_<sequence>` client order ids, fill dedup keys; pure, parse-strict | `types.ts` `clientOrderId` (PRD §66), `store.ts` `fillDedupKey` | `internal/runtime/idempotency` | landed |
-| worker/runtime | scheduler, locks, reconciliation, recovery, placement clamps | `frontend/web/src/platform/executor/worker.ts` + `frontend/web/scripts/executor/worker.ts` (unit `infrastructure/systemd/fudcourt-executor-worker.service`) | `internal/runtime/worker` | **in flight** |
-| lock | one worker owns one execution (PRD §65) | `frontend/web/src/platform/executor/lock.ts` | `internal/platform/lock` (`lock.go`, `memory.go`, `valkey.go`) | landed |
-| persistence | `executor.*` schema writes, credential envelope | `frontend/web/src/platform/executor/store.ts` (`EXECUTOR_DDL`) | repository layer | **in flight** (DDL tracked at `database/schema/executor-schema.sql`) |
+| worker/runtime | scheduler, locks, reconciliation, recovery, placement clamps | `apps/web/src/platform/executor/worker.ts` + `apps/web/scripts/executor/worker.ts` (unit `infrastructure/systemd/fudcourt-executor-worker.service`) | `internal/runtime/worker` | **in flight** |
+| lock | one worker owns one execution (PRD §65) | `apps/web/src/platform/executor/lock.ts` | `internal/platform/lock` (`lock.go`, `memory.go`, `valkey.go`) | landed |
+| persistence | `executor.*` schema writes, credential envelope | `apps/web/src/platform/executor/store.ts` (`EXECUTOR_DDL`) | repository layer | **in flight** (DDL tracked at `database/schema/executor-schema.sql`) |
 
 Why risk (§8.12) and sizing (§8.13) stay separate packages:
 1. **Direction.** §8.12 is forward evaluation (given Q → totalRisk, projection,
@@ -114,13 +114,13 @@ production executor) was retired in DR-043; the wire contract `src/platform/exec
 is the only TS-side survivor (consumer-facing — composer + trade client), and the 15
 `/api/executor/*` route handlers are now 4-line forwarders through
 `src/app/(frontend)/api/executor/_proxy.ts`. The TS-runtime test suites
-(`tests/e2e/executor/*`, `tests/integration/executor/*`, `frontend/web/tests/executor-proxy-tests.ts`)
+(`tests/e2e/executor/*`, `tests/integration/executor/*`, `apps/web/tests/executor-proxy-tests.ts`)
 are gone; their assertions are covered by the named Go counterparts in `parity-matrix.md`
 rows 1–9 (253+ test funcs across 19 internal packages). `verify:executor` is
 `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` (12 hermetic
 tests, <1 s, no PG/Valkey/creds/network). The Linux TS worker systemd unit is retired to
 `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt`; the entry script is
-preserved as a 5-line tombstone at `frontend/web/scripts/executor/worker.ts`.
+preserved as a 5-line tombstone at `apps/web/scripts/executor/worker.ts`.
 
 What that means in practice (history — kept for the audit trail):
 
@@ -132,10 +132,10 @@ What that means in practice (history — kept for the audit trail):
   `tests/e2e/executor/executor-{engine,plan,risk,runtime,worker}-tests.ts` (engine 20, plan 25, risk 39,
   runtime 12, worker 9), `tests/integration/executor/executor-{exchange,store}-tests.ts` (exchange 1, store 41),
   `tests/e2e/executor/executor-paper-e2e.ts` (the §127 integration gate), and
-  `frontend/web/tests/executor-proxy-tests.ts` are gone. The only surviving TS test referencing the contract
-  shape is `frontend/web/tests/executor-ui-tests.ts` (still in `test:shapers`).
+  `apps/web/tests/executor-proxy-tests.ts` are gone. The only surviving TS test referencing the contract
+  shape is `apps/web/tests/executor-ui-tests.ts` (still in `test:shapers`).
 - Go code mirrors the frozen TS contract field-for-field (`apps/executor/internal/execution/records.go`).
-  The contract now lives at `frontend/web/src/platform/executor/types.ts` (consumer-facing); the Go-side
+  The contract now lives at `apps/web/src/platform/executor/types.ts` (consumer-facing); the Go-side
   counterpart is `internal/core/execution/{types,enums,lifecycle,records}.go` (row 1 of `parity-matrix.md`).
 - Cutover is **CLOSED** by DR-043: every row of `parity-matrix.md` is `DONE`, `bun run test:shapers` is
   213/213 across 11 files, `go build/vet/test ./backend/workers/executor/...` is green (21 pkgs),

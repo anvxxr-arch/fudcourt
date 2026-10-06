@@ -9,12 +9,12 @@ head `957836d`.
 > generated SQLite dump and the `dump-schema.mjs --check` drift alarm) is
 > retired. The column tables below are the code-derived annotation layer; the
 > Neon schema is versioned via Payload migrations
-> (`frontend/web/src/cms/migrations/`).
+> (`apps/web/src/cms/migrations/`).
 
 ## 1. Postgres `public` (treasury system of record) — the `fudcourt` database
 
 ### 1.1 `transactions` — canonical ledger of money movements
-Reconstructed from `frontend/web/src/app/(frontend)/api/transactions/route.ts` + `[id]/route.ts`:
+Reconstructed from `apps/web/src/app/(frontend)/api/transactions/route.ts` + `[id]/route.ts`:
 
 | Column | Type (`pg-schema.sql`) | Notes |
 |--------|-----------------|-------|
@@ -38,7 +38,7 @@ API: `GET` (filters: `limit, offset, search, chain, venue, direction, from, to`)
 `DELETE` (bulk ids), plus `/api/transactions/[id]` `PUT|PATCH|DELETE`.
 
 ### 1.2 `wallets`
-Reconstructed from `frontend/web/src/app/(frontend)/api/wallets/route.ts`:
+Reconstructed from `apps/web/src/app/(frontend)/api/wallets/route.ts`:
 
 | Column | Notes |
 |--------|-------|
@@ -64,7 +64,7 @@ chain; `value_usd` summed for net worth. Every `INSERT` is snapshotted into the
 
 ## 2. Neon Postgres (payload CMS, merged into frontend/web) — 3.89
 
-Source of truth: `frontend/web/src/cms/migrations/20260917_194354.ts`.
+Source of truth: `apps/web/src/cms/migrations/20260917_194354.ts`.
 
 ### 2.1 Collections (product tables)
 | Table | Purpose | Key columns |

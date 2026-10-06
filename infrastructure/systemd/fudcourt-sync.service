@@ -43,7 +43,7 @@ Type=oneshot
 # system of record and the script writes it directly, so the DR-019
 # `ExecStartPost` projection — and the bun/cwd trap it needed — are gone;
 # WorkingDirectory is now only an anchor for a relative invocation.
-WorkingDirectory=/home/dwizzy/fudcourt/frontend/web
+WorkingDirectory=/home/dwizzy/fudcourt/apps/web
 Environment=NODE_ENV=
 ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/tests/oracle/sync-live.py
 # A failed RPC must not silently zero data; retry after a short backoff.

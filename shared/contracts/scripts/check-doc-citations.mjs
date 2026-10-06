@@ -185,8 +185,8 @@ const SCHEMA_DIRS = ['common', 'accounts', 'assets', 'markets', 'trading', 'fina
 const ALLOWANCES = new Map([
   // Deliberately retained historical references — the citation is the record of the move / the
   // absence itself, never a stale path that should have been rewritten.
-  ['frontend/web/scripts/tools/dump-envelopes.ts', 'deliberately retained historical reference: canonical-model.md "path re-verification" note records "*it was frontend/web/scripts/tools/dump-envelopes.ts when this note was written*" beside the new home tests/oracle/dump-envelopes.ts'],
-  ['frontend/web/src/platform/executor/ui.tsx', 'deliberately retained historical reference: the same note names the old path and its new home (frontend/web/src/features/executor/ui.tsx) in one "→" clause'],
+  ['apps/web/scripts/tools/dump-envelopes.ts', 'deliberately retained historical reference: canonical-model.md "path re-verification" note records "*it was frontend/web/scripts/tools/dump-envelopes.ts when this note was written*" beside the new home tests/oracle/dump-envelopes.ts'],
+  ['apps/web/src/platform/executor/ui.tsx', 'deliberately retained historical reference: the same note names the old path and its new home (frontend/web/src/features/executor/ui.tsx) in one "→" clause'],
   ['backend/api/bin/fudcourt-api', 'build artifact (go build -o bin/fudcourt-api), absent from a clean tree by design; both citations say so'],
   ['database/schema/analytics.sql', 'cited reference that does NOT exist — the citation is the finding ("**Does not exist** (referenced by an older doc)")'],
   ['db/client.ts', 'historical reference: the pre-DR-040 frontend db module (platform/db/pg.ts), retired with the treasury move to src/server/db.ts; the citation records the old layout'],
@@ -218,7 +218,7 @@ function candidatesFor(token) {
     // Try the literal path first, then the pre-migration home, so a citation stays
     // valid across the relocation.
     if (seg === 'core') out.push(`apps/executor/internal/${rest}`);
-    if (seg === 'db') out.push(`frontend/web/src/server/${rest}`);
+    if (seg === 'db') out.push(`apps/web/src/server/${rest}`);
     return out;
   }
   if (seg === 'schemas') {

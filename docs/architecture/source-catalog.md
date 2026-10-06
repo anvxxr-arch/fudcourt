@@ -196,7 +196,7 @@ These bypass `backend/data` entirely: the route handler loads a venue client in-
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `ticker-ccxt-spot` | ccxt `fetchTicker` on spot markets | per-venue (see list) | MARKET_DATA | last/bid/ask/high/low/24h change/baseVolume/quoteVolume per venue+symbol | `frontend/web/src/app/(frontend)/api/ticker/route.ts` + `frontend/web/src/features/ticker/{client.ts,venues.ts}` | Ticker/Price (target) | REALTIME | EPHEMERAL (in-memory sweep L2) | keyless (public market data) | active | `TICKER_TYPES=['spot','swap','future','option']`; `TICKER_VENUES` table |
+| `ticker-ccxt-spot` | ccxt `fetchTicker` on spot markets | per-venue (see list) | MARKET_DATA | last/bid/ask/high/low/24h change/baseVolume/quoteVolume per venue+symbol | `apps/web/src/app/(frontend)/api/ticker/route.ts` + `apps/web/src/features/ticker/{client.ts,venues.ts}` | Ticker/Price (target) | REALTIME | EPHEMERAL (in-memory sweep L2) | keyless (public market data) | active | `TICKER_TYPES=['spot','swap','future','option']`; `TICKER_VENUES` table |
 | `ticker-ccxt-swap` | perpetuals (`swap`) | per-venue | MARKET_DATA | as above **+ fundingRate, openInterest** | same | Ticker + FundingRate + OpenInterest (target) | REALTIME | EPHEMERAL | keyless | active | `ticker/instrument/route.ts` `Quote` fields |
 | `ticker-ccxt-future` | dated futures | per-venue | MARKET_DATA | ticker fields; expiries enumerated from the venue's own market list | same + `features/ticker/instruments.ts` | Instrument (dated) (target) | REALTIME | EPHEMERAL | keyless | active | `ticker/instruments/route.ts` `expiriesFor` |
 | `ticker-ccxt-option` | options | per-venue | MARKET_DATA | ticker fields; strike list from the venue's market list | same | Instrument (option) (target) | REALTIME | EPHEMERAL | keyless | active | `instrumentsFor`/`strikesFor` |
@@ -207,14 +207,14 @@ These bypass `backend/data` entirely: the route handler loads a venue client in-
 | `dex-tokens` / `dex-tokens-v1` | `GET /tokens/v1/{chain}/{address}` | DexScreener | DEX | token pairs + liquidity/fdv for a mint/contract | same | Pool/LiquidityObservation (target) | FREQUENT | NONE | keyless | active | route comment: 200-with-`[]` for an invalid address → local 400 |
 | `dex-pairs` / `dex-token-pairs` | DexScreener pairs by chain/token | DexScreener | DEX | pair rows: priceUsd, priceNative, liquidity, volume, txns | same | Price/LiquidityObservation (target) | FREQUENT | NONE | keyless | active | `isMint` accepts base58/hex/NEAR name |
 | `dex-orders` | DexScreener orders surface | DexScreener | DEX | (type declared; probe-verified 200 only) | same | — | FREQUENT | NONE | keyless | active | `DEX_TYPES` entry `orders` |
-| `signals-data-public` | `https://data-public.vercel.app` signal/sighting feed | self-hosted external service (`fc.dwirijal.my.id` per Khala UA string; vercel host hardcoded) | ALPHA/SIGNALS | signal rows: mint, symbol, mcap, liq, price, ageMin, score, decision, holders, vetoes, socials, sightings, scoreboard buckets | `frontend/web/src/app/(frontend)/api/signals/route.ts:7` | Signal (target) | REALTIME-ish | NONE (proxied) | keyless (no auth header in route) | active | `UPSTREAM = 'https://data-public.vercel.app'` |
+| `signals-data-public` | `https://data-public.vercel.app` signal/sighting feed | self-hosted external service (`fc.dwirijal.my.id` per Khala UA string; vercel host hardcoded) | ALPHA/SIGNALS | signal rows: mint, symbol, mcap, liq, price, ageMin, score, decision, holders, vetoes, socials, sightings, scoreboard buckets | `apps/web/src/app/(frontend)/api/signals/route.ts:7` | Signal (target) | REALTIME-ish | NONE (proxied) | keyless (no auth header in route) | active | `UPSTREAM = 'https://data-public.vercel.app'` |
 
 **ccxt venues actually loaded** (`TICKER_EXCHANGES`, `features/ticker/client.ts:62`):
 `okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken`; per-type
 reachability is the measured table `TICKER_VENUES` (`client.ts:103`). Measured exclusions
 recorded in-code: **binance** and **kucoin** futures hosts are TLS-intercepted on this
 network (certificate validation fails). Venue module files verified present under
-`frontend/web/node_modules/ccxt/js/src/<id>.js` (all ten).
+`apps/web/node_modules/ccxt/js/src/<id>.js` (all ten).
 
 Provider-vs-source note: `okx` etc. are **providers/venues**; `ticker-ccxt-swap` is the
 **source**; the ccxt API key (if one were ever added) would be the **account**.
@@ -314,9 +314,9 @@ Note: `FUDCOURT_DISCORD_API` is a hermetic-test seam that redirects both endpoin
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `manual-wallets` | wallet registry written by the UI | FUDCourt (user) | WALLET | `address, label, chain, monitored, alias, emoji, color, notes` | `frontend/web/src/app/(frontend)/api/wallets/route.ts` (POST/GET) + `apps/reconciler/src/streams.rs` `WALLETS` seed | Wallet (target) | MANUAL | CANONICAL (`Postgres wallets`) | session cookie (`requireMutationAuth`) | active | `UPDATE wallets SET …` route code |
+| `manual-wallets` | wallet registry written by the UI | FUDCourt (user) | WALLET | `address, label, chain, monitored, alias, emoji, color, notes` | `apps/web/src/app/(frontend)/api/wallets/route.ts` (POST/GET) + `apps/reconciler/src/streams.rs` `WALLETS` seed | Wallet (target) | MANUAL | CANONICAL (`Postgres wallets`) | session cookie (`requireMutationAuth`) | active | `UPDATE wallets SET …` route code |
 | `manual-transactions` | transaction ledger entries written by the UI | FUDCourt (user) | MANUAL | `date, chain, asset, event, amount_usd, direction, memo, wallet_to, venue_id, trade_id, hash, url, source` | `.../api/transactions/route.ts` (POST), `.../api/transactions/[id]/route.ts` (PUT/DELETE) | Transaction + LedgerEntry (target) | MANUAL | CANONICAL (`Postgres transactions`) | session cookie | active | `INSERT INTO transactions (…)` route code |
-| `treasury-tables` | `accounts`, `journal`, `ledger`, `venues`, `trades` | FUDCourt (user / operator) | MANUAL / INTERNAL | chart of accounts, journal entries, ledger balances, venue registry, trade log | `database/schema/pg-schema.sql`; read via `platform/db/client.ts:getAll()` | LedgerEntry / Venue / Trade (target) | MANUAL | CANONICAL | session cookie for UI writes (no in-app writer found — see *Gaps*) | served | `DASHBOARD_READS` in `frontend/web/src/server/db.ts` |
+| `treasury-tables` | `accounts`, `journal`, `ledger`, `venues`, `trades` | FUDCourt (user / operator) | MANUAL / INTERNAL | chart of accounts, journal entries, ledger balances, venue registry, trade log | `database/schema/pg-schema.sql`; read via `platform/db/client.ts:getAll()` | LedgerEntry / Venue / Trade (target) | MANUAL | CANONICAL | session cookie for UI writes (no in-app writer found — see *Gaps*) | served | `DASHBOARD_READS` in `apps/web/src/server/db.ts` |
 | `computed-networth` | `SUM(value_usd)` over latest `assets` snapshot | FUDCourt (internal) | INTERNAL | net worth, per-asset share | `pg.ts:82` (`netWorth`) | derived PortfolioValuation (target) | NEAR_REALTIME | NONE (computed at read) | keyless (internal) | active | `SELECT SUM(value_usd) as total FROM assets` |
 | `reconcile-report` | expected-vs-current reconciliation | FUDCourt (internal) | INTERNAL | per-wallet rows, `walletSummary` totals | `apps/reconciler/src/reconciliation/reconcile.rs` → :3102 `/api/reconcile` → `api/reconcile/route.ts` | derived (target) | PERIODIC (on request) | NONE | keyless (loopback proxy) | active | three SELECTs at `reconcile.rs:207,213,219` |
 
@@ -328,12 +328,12 @@ These are *stored* sources — the repo both writes and reads them.
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `postgres-system-of-record` | Local Postgres 17 + TimescaleDB 2.30.1, database `fudcourt` (`public`) — Docker `postgres-hardened`, `127.0.0.1:5432` | self-hosted | INTERNAL | **single system of record** for `assets`, `transactions`, `wallets`, `accounts`, `journal`, `ledger`, `trades`, `venues` + the `asset_history`/`price_history` hypertables | writers `tests/oracle/sync-live.py` (psycopg2), `backend/sync` (Rust `tokio-postgres`, uninstalled), `frontend/web/src/server/db.ts`; DDL `database/schema/pg-schema.sql` | (system of record) | NEAR_REALTIME | CANONICAL | `FUDCOURT_PG_URL` | active | pooled `pg()` client (`platform/db/pg.ts`) |
+| `postgres-system-of-record` | Local Postgres 17 + TimescaleDB 2.30.1, database `fudcourt` (`public`) — Docker `postgres-hardened`, `127.0.0.1:5432` | self-hosted | INTERNAL | **single system of record** for `assets`, `transactions`, `wallets`, `accounts`, `journal`, `ledger`, `trades`, `venues` + the `asset_history`/`price_history` hypertables | writers `tests/oracle/sync-live.py` (psycopg2), `backend/sync` (Rust `tokio-postgres`, uninstalled), `apps/web/src/server/db.ts`; DDL `database/schema/pg-schema.sql` | (system of record) | NEAR_REALTIME | CANONICAL | `FUDCOURT_PG_URL` | active | pooled `pg()` client (`platform/db/pg.ts`) |
 | `postgres-asset-history` | `asset_history` TimescaleDB hypertable | self-hosted | INTERNAL | one row per `assets` INSERT, appended by the `assets_snapshot` trigger (DR-040 — not by application code) | DDL `database/schema/pg-schema.sql:105-128` + trigger `:145-148`; 90-day DELETE in `tests/oracle/sync-live.py` | Balance snapshot (time series) | PERIODIC (per write) | HISTORICAL (90-day retention) | `FUDCOURT_PG_URL` | active | `CREATE TRIGGER assets_snapshot_trg AFTER INSERT ON assets` |
 | `postgres-price-history` | `price_history` hypertable | self-hosted | INTERNAL | `(ts, symbol, source, price)` | DDL only: `database/schema/pg-schema.sql:150-160`; retention DELETE in `tests/oracle/sync-live.py` | Price history (target) | — | HISTORICAL | `FUDCOURT_PG_URL` | **served** (no writer found) | grep: only DDL + retention DELETE reference it |
 | `executor-postgres` | `executor.*` schema | self-hosted Postgres | INTERNAL | accounts+credentials, executions, plans, child orders, fills, events, snapshots, risk profiles, audit logs | DDL `database/schema/executor-schema.sql`; writers `apps/executor/internal/repository/store.go` + the `apps/executor/internal/repository` package (store.go, credentials.go) | (execution system of record) | REALTIME | CANONICAL/EVENT | `FUDCOURT_EXECUTOR_PG_URL` (Go), Postgres DSN via web env | active | `ensureExecutorSchema()` / `EXECUTOR_DDL` |
-| `neon-payload` | Neon Postgres (`DATABASE_URL`, pooled `…neon.tech/neondb`) | Neon | CMS | Payload tables (`posts`, `categories`, `media`, `users`, …) | `frontend/web/src/cms/payload.config.ts:44-46`, DDL `src/cms/migrations/20260917_194354.ts` | NewsArticle/CMS content (target) | MANUAL | CANONICAL | `DATABASE_URL`, `PAYLOAD_SECRET` | active | `postgresAdapter({ connectionString: process.env.DATABASE_URL })` |
-| `payload-media-files` | Uploaded media on disk (`frontend/web/media`) | self-hosted | CMS | image/PDF blobs + metadata | `src/cms/collections/Media.ts` (`staticDir: 'media'`) | MediaAsset (target) | MANUAL | CANONICAL | `PAYLOAD_SECRET` (admin session) | active | Media collection config |
+| `neon-payload` | Neon Postgres (`DATABASE_URL`, pooled `…neon.tech/neondb`) | Neon | CMS | Payload tables (`posts`, `categories`, `media`, `users`, …) | `apps/web/src/cms/payload.config.ts:44-46`, DDL `src/cms/migrations/20260917_194354.ts` | NewsArticle/CMS content (target) | MANUAL | CANONICAL | `DATABASE_URL`, `PAYLOAD_SECRET` | active | `postgresAdapter({ connectionString: process.env.DATABASE_URL })` |
+| `payload-media-files` | Uploaded media on disk (`apps/web/media`) | self-hosted | CMS | image/PDF blobs + metadata | `src/cms/collections/Media.ts` (`staticDir: 'media'`) | MediaAsset (target) | MANUAL | CANONICAL | `PAYLOAD_SECRET` (admin session) | active | Media collection config |
 | `valkey-cache` | Valkey/Redis cache & lock | self-hosted | INTERNAL | cached upstream envelopes, executor leases | `apps/data/platform/cache/cache.go`, `apps/executor/internal/platform/lock/valkey.go` | (cache) | REALTIME | EPHEMERAL | `FUDCOURT_DATA_VALKEY_PASSWORD`, `VALKEY_PASSWORD`, `FUDCOURT_VALKEY_URL` | active | `fudcourt-data.service` env line `FUDCOURT_DATA_VALKEY_ADDR` |
 | `cr-disk-cache` | On-disk per-route JSON cache `~/.cache/crfetch` (shared with the Python helper) | self-hosted | INTERNAL | cached `HelperOut` envelopes | `apps/data/internal/research/cryptorank/fetch.go` (`DefaultCacheDir`, `writeCache`) | (cache) | REALTIME | EPHEMERAL | keyless | active | `fudcourt-data.service` `FUDCOURT_DATA_CACHE_DIR` |
 | `fixtures-recorded` | `tests/fixtures/` (26 `.json.gz` payloads) + `MANIFEST.json` | CryptoRank (recorded 2026-09-27) | RESEARCH (frozen) | 26 raw `HelperOut` payloads, sha256-pinned | `tests/oracle/record-fixtures.ts`, manifest `MANIFEST.json` | raw fixture | STATIC | HISTORICAL | `CR_PYTHON` (path only) | active (test oracle) | `sha256` + `jsonBytes` per mode |
@@ -341,7 +341,7 @@ These are *stored* sources — the repo both writes and reads them.
 | `oracle-capture` | `tests/oracle/fixtures/capture.json` (40 keys) | recorded RPC/price/Hyperliquid responses | INTERNAL (test) | replay bodies keyed `rpc\|<url with ALCHEMY redacted>\|<method>\|<params>` / `prices\|<url>` / `hl\|<body>` | `apps/reconciler/src/oracle.rs` | test oracle | STATIC | HISTORICAL | keyless (keys carry `/v2/{ALCHEMY}` placeholder, never a real key) | active | `capture.json` keys + `oracle.rs` doc |
 | `python-sync-oracle` | `tests/oracle/sync-live.py` | FUDCourt (the deployed sync) | INTERNAL | same pipeline as the Rust sync; oracle for cross-implementation gate | `tests/oracle/sync-live.py` | — | PERIODIC | SNAPSHOT | `ALCHEMY_KEY`, `FUDCOURT_PG_URL` | served (the deployed sync) | `fudcourt-sync.service`/`.timer` |
 | `cr-fetch-python-helper` | `tests/oracle/cr_fetch.py` | FUDCourt (legacy producer) | INTERNAL | `HelperOut` stdout per mode (the Go service is its port) | `tests/oracle/cr_fetch.py` | — | on demand | NONE | keyless | served (tooling/oracle only) | `records-fixtures.ts` `HELPER` path |
-| `payload-seed` | `frontend/web/src/cms/seed.ts` | FUDCourt (operator) | CMS | 2 categories + 3 posts + sharp-generated hero images | `src/cms/seed.ts` | NewsArticle/CMS (target) | MANUAL | CANONICAL | `DATABASE_URL` | scaffolded (run by hand: `bunx payload run src/cms/seed.ts`) | file header |
+| `payload-seed` | `apps/web/src/cms/seed.ts` | FUDCourt (operator) | CMS | 2 categories + 3 posts + sharp-generated hero images | `src/cms/seed.ts` | NewsArticle/CMS (target) | MANUAL | CANONICAL | `DATABASE_URL` | scaffolded (run by hand: `bunx payload run src/cms/seed.ts`) | file header |
 
 ---
 
@@ -374,7 +374,7 @@ running it (e.g. statuses of `served` tables with no in-app writer).
 
 ## 9. Frontend route surface (which upstream each route hits or proxies)
 
-`frontend/web/src/app/(frontend)/api/` route files, enumerated with
+`apps/web/src/app/(frontend)/api/` route files, enumerated with
 `find src/app -type f -name route.ts`.
 
 | Route | Serves | Upstream / backend it hits | Auth | Env |
@@ -406,14 +406,14 @@ document**.
 
 | Unit | Runs | Feeds it drives | Env file / inline env (names only) |
 |---|---|---|---|
-| `fudcourt-web.service` (:3100) | `next start` via bun | §2 market/DEX/ticker/signals feeds, §9 proxies, CMS, executor control plane | `frontend/web/.env.local` |
+| `fudcourt-web.service` (:3100) | `next start` via bun | §2 market/DEX/ticker/signals feeds, §9 proxies, CMS, executor control plane | `apps/web/.env.local` |
 | `fudcourt-data.service` (:3101) | `backend/data/bin/fudcourt-data` | §1 CryptoRank/Khala/DefiLlama/News/ChainRank | `FUDCOURT_DATA_ADDR`, `FUDCOURT_DATA_CACHE_DIR`, `FUDCOURT_DATA_VALKEY_ADDR`, `-…/fudcourt/.env` |
 | `fudcourt-api.service` (:3103) | `backend/api/bin/fudcourt-api` (build artifact, absent from a clean tree) | §5 Discord identity | `-…/fudcourt/.env`, `FUDCOURT_API_ADDR` |
 | `fudcourt-reconciled.service` (:3102) | Rust `fudcourt-reconciled` | §6 reconcile (reads Postgres) | `.env`, `RECONCILE_ADDR` |
 | `fudcourt-sync-rust.service` + `.timer` (5 min) | Rust `fudcourt-sync` | §3 Alchemy/Solana/Hyperliquid/coins.llama.fi → Postgres `assets` (**built, not deployed** — the Python oracle is the deployed sync) | `NODE_ENV=` (unit loads repo `.env` itself) |
 | `fudcourt-sync.service` + `.timer` (5 min) | `python3 sync-live.py` | same pipeline, legacy oracle | inline env only |
-| `fudcourt-executor.service` | Go `fudcourt-executor` (CEX runtime) | §4 venue order/balance/position feeds | `frontend/web/.env.local` |
-| `fudcourt-executor-worker.service` | bun `backend/workers/executor` | same feeds, TS runtime — **FALLBACK only** (the Go `fudcourt-executor.service` is the production executor; this unit is retained until the cutover row `verify:executor` (`apps/executor/internal/tests/e2e`) proves green) | `frontend/web/.env.local`, `NODE_ENV=production` |
+| `fudcourt-executor.service` | Go `fudcourt-executor` (CEX runtime) | §4 venue order/balance/position feeds | `apps/web/.env.local` |
+| `fudcourt-executor-worker.service` | bun `backend/workers/executor` | same feeds, TS runtime — **FALLBACK only** (the Go `fudcourt-executor.service` is the production executor; this unit is retained until the cutover row `verify:executor` (`apps/executor/internal/tests/e2e`) proves green) | `apps/web/.env.local`, `NODE_ENV=production` |
 | `RETIRED-fudcourt-pgload.service.txt` | — | retired Turso → Postgres projection unit (DR-040: the projection is gone; Postgres is the single system of record) | tombstone file |
 | `RETIRED-fudcourt-apicalls.service.txt` | — | retired CryptoRank sidecar (predecessor of `fudcourt-data`) | tombstone file |
 | `RETIRED-fudcourt-blog.service.txt` | — | retired separate blog app (merged by DR-017) | tombstone file |
@@ -425,7 +425,7 @@ executor**; the TypeScript worker (`backend/workers/executor`; unit
 `docs/architecture/parity-matrix.md` are `DONE`. `infrastructure/systemd/fudcourt-executor.service`
 also carries a **PROVISIONING GATE** — the Go unit stays masked until
 `FUDCOURT_EXECUTOR_MASTER_KEY`, `FUDCOURT_EXECUTOR_PG_URL` and `VALKEY_ADDR` exist (§40 fail-closed
-startup; all three live in `frontend/web/.env.local`). Evidence: the two unit headers cited in
+startup; all three live in `apps/web/.env.local`). Evidence: the two unit headers cited in
 this table and `docs/architecture/parity-matrix.md` rows 1–9.
 
 ---

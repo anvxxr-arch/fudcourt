@@ -13,8 +13,8 @@ Two things are being proved here and they are different:
 
 2. PARITY WITH THE ORIGINAL TS SHAPER, which is what makes the port trustworthy
    rather than merely plausible. The shaper is run in-process on the same rows via
-   `bun frontend/web/…` is the historical invocation; the probe now lives at
-   `scripts/verify/parity-reconcile.ts` and is run with cwd=frontend/web so the
+   `bun apps/web/…` is the historical invocation; the probe now lives at
+   `scripts/verify/parity-reconcile.ts` and is run with cwd=apps/web so the
    app's `@/…` imports resolve. The two payloads are diffed section
    by section, JSON key order included. If bun is unavailable the parity half is
    SKIPPED loudly -- never silently downgraded to "passed".
@@ -202,7 +202,7 @@ def main() -> int:
         # The probe moved to scripts/verify/ with this harness (it is the parity half
         # of a repo-wide gate) but still imports the app's `@/…` modules. Bun resolves
         # tsconfig `paths` relative to the ENTRYPOINT, so running a repo-root file with
-        # cwd=frontend/web is not enough — the app tsconfig must be named explicitly
+        # cwd=apps/web is not enough — the app tsconfig must be named explicitly
         # (verified: without this flag bun fails with "Cannot find module
         # '@/platform/db/client'").
         probe = pathlib.Path(__file__).resolve().parent / "parity-reconcile.ts"

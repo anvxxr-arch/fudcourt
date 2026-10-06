@@ -1,14 +1,14 @@
 {
   "name": "fudcourt",
   "private": true,
-  "description": "Monorepo root. Scripts delegate to per-app/per-service tooling; deliberately NO dependencies and NO root lockfile — each app owns its install (frontend/web: bun.lock; backend: go.sum / Cargo.lock).",
+  "description": "Monorepo root. Scripts delegate to per-app/per-service tooling; deliberately NO dependencies and NO root lockfile — each app owns its install (apps/web: bun.lock; backend: go.sum / Cargo.lock).",
   "scripts": {
     "verify": "bash scripts/verify/verify-all.sh",
     "check:contracts": "node shared/contracts/scripts/check-contract.mjs",
     "check:deploy": "python3 scripts/verify/check-deploy.py",
-    "check:structure": "cd frontend/web && python3 scripts/checks/check-structure.py",
+    "check:structure": "cd apps/web && python3 scripts/checks/check-structure.py",
     "check:web-contract": "python3 scripts/verify/check-contract.py",
-    "test:web": "cd frontend/web && bun run test:shapers",
+    "test:web": "cd apps/web && bun run test:shapers",
     "test:go": "go test ./...",
     "test:sync": "cd apps/reconciler && cargo test --release"
   }

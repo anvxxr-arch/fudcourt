@@ -5,7 +5,7 @@
  * Asserts (no network, no deps, node/bun runnable):
  *   (a) every enum value of ExecutionStatus / ChildOrderStatus /
  *       ExecutionEventName in shared/contracts/openapi/fudcourt.yaml matches
- *       the literal union parsed from frontend/web/src/lib/executor.ts;
+ *       the literal union parsed from apps/web/src/lib/executor.ts;
  *   (b) every path documented in the OpenAPI exists as a route handler
  *       (route.ts under the Next.js app api tree) exporting every documented
  *       method, and no executor route handler is undocumented;
@@ -13,7 +13,7 @@
  *       id, alias, or objective name), and events/event.schema.json's
  *       event_type enum matches the catalog's stable ids;
  *   (d) every endpoint listed in the header comment of
- *       frontend/web/src/features/executor/client.ts is documented in the OpenAPI
+ *       apps/web/src/features/executor/client.ts is documented in the OpenAPI
  *       (method + normalized path).
  *
  * Prints `CONTRACTS_OK` with counts, or lists failures and exits 1.
@@ -25,18 +25,18 @@ import { repoRoot as discoverRepoRoot, parseOpenApiEnums } from './lib.mjs';
 const repoRoot = discoverRepoRoot();
 
 // The executor type surface moved in the frontend refactor:
-// frontend/web/src/platform/executor/types.ts -> executor-request-defs.ts (+ lifecycle split);
+// apps/web/src/platform/executor/types.ts -> executor-request-defs.ts (+ lifecycle split);
 // barrel at lib/executor.ts re-exports. parseLiteralUnion does not follow `export *`,
 // so read the defining slices directly and check the unions against their concat.
 const TYPES_TS = [
-  'frontend/web/src/lib/executor-lifecycle.ts',
-  'frontend/web/src/lib/executor-request-defs.ts',
+  'apps/web/src/lib/executor-lifecycle.ts',
+  'apps/web/src/lib/executor-request-defs.ts',
 ].map((p) => path.join(repoRoot, p));
 const OPENAPI_YAML = path.join(repoRoot, 'shared/contracts/openapi/fudcourt.yaml');
 const CATALOG_JSON = path.join(repoRoot, 'shared/contracts/events/catalog.json');
 const EVENT_SCHEMA_JSON = path.join(repoRoot, 'shared/contracts/events/event.schema.json');
-const CLIENT_TS = path.join(repoRoot, 'frontend/web/src/features/executor/client.ts');
-const APP_DIR = path.join(repoRoot, 'frontend/web/src/app');
+const CLIENT_TS = path.join(repoRoot, 'apps/web/src/features/executor/client.ts');
+const APP_DIR = path.join(repoRoot, 'apps/web/src/app');
 
 const CHECKED_ENUMS = ['ExecutionStatus', 'ChildOrderStatus', 'ExecutionEventName'];
 
@@ -137,7 +137,7 @@ for (const name of CHECKED_ENUMS) {
 }
 
 // ---------------------------------------------------------------------------
-// (b) paths: OpenAPI vs route handlers under frontend/web/src/app/**/api/**
+// (b) paths: OpenAPI vs route handlers under apps/web/src/app/**/api/**
 // ---------------------------------------------------------------------------
 const routeFiles = findRouteFiles(APP_DIR).filter((f) => f.includes(`${path.sep}api${path.sep}`));
 const handlerMap = new Map(); // normalized path -> { file, methods }
@@ -159,7 +159,7 @@ for (const [openapiPath, methods] of openapiPaths) {
   pathChecks += 1;
   const handler = handlerMap.get(routeKey);
   if (!handler) {
-    failures.push(`path ${openapiPath}: no route handler at frontend/web/src/app/**/api/${routeKey}/route.ts`);
+    failures.push(`path ${openapiPath}: no route handler at apps/web/src/app/**/api/${routeKey}/route.ts`);
     continue;
   }
   for (const method of methods) {

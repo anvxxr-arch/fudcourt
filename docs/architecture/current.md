@@ -13,7 +13,7 @@
 > landed, the single `.github/workflows/ci.yml` was split into **five** path-filtered workflows
 > (§9 below is pinned to the pre-split single 4-job file), `tests/{e2e,integration}` grew the
 > executor suites, and `infrastructure/systemd/` gained the api/executor units. The app-local gates
-> this file names as `frontend/web/scripts/checks/*` were later split: `check-contract.py` and
+> this file names as `apps/web/scripts/checks/*` were later split: `check-contract.py` and
 > `check-deploy.py` moved to `scripts/verify/`, `check-structure.py` stayed app-side. Read a number
 > here as "as of 2026-10-01 (Phase 0/1)", never as today's.
 >
@@ -48,9 +48,9 @@ Two observations, in order (historical snapshot from before the commits above):
 
 1. **At audit start** `git status` showed a large uncommitted "repurpose" surface: modified
    `.github/workflows/ci.yml`, `.gitignore`, `README.md`; the old `apps/blog/*` (Payload) tree
-   deleted from `frontend/web`'s sibling position; the old flat `frontend/web/app/api/*` layout deleted;
-   an untracked new layout `frontend/web/src/*` (app/, cms/, features/, platform/, shell/, styles/, ui/),
-   untracked `frontend/web/scripts/{tools,verify}/`, `frontend/web/tsconfig.shaper-tests.json`, and untracked
+   deleted from `frontend/web`'s sibling position; the old flat `apps/web/app/api/*` layout deleted;
+   an untracked new layout `apps/web/src/*` (app/, cms/, features/, platform/, shell/, styles/, ui/),
+   untracked `apps/web/scripts/{tools,verify}/`, `apps/web/tsconfig.shaper-tests.json`, and untracked
    `docs/{architecture,operations,prd,product,records}/`. HEAD was
    `5e68576 repurpose: re-align every surface + ARCHITECTURE map`.
 2. **During the audit** a concurrent actor executed the Phase-1 directory moves in the working tree:
@@ -131,7 +131,7 @@ Environmental limitations (recorded as environmental, NOT failures — each bloc
   (the old `TURSO_AUTH_TOKEN` gate is gone — DR-040).
 - ~~`bun run verify:executor`: exact gate `FUDCOURT_EXECUTOR_MASTER_KEY` = 64 hex chars~~
   **RESOLVED 2026-10-01** — a dev key was generated into the gitignored
-  `frontend/web/.env.local` and the gate now runs: **`ALL PAPER-MODE CHECKS PASSED (§127)`**
+  `apps/web/.env.local` and the gate now runs: **`ALL PAPER-MODE CHECKS PASSED (§127)`**
   (exit 0) against real Postgres :5433 + real Valkey + the real worker. The gate is
   listed in the passing table above; it is no longer an environmental skip. Its value
   is that the TS runtime is proven against the live data layer, not that the Go
@@ -228,8 +228,8 @@ Plus `sitemap.ts`, `robots.ts`, `globals.css`, root `layout.tsx`.
 `blog/page.tsx`, `blog/[slug]/page.tsx`. Collections live in `src/cms/collections/`
 (Posts, Users, Categories, Media) + `src/cms/migrations/`.
 
-## 4. Database schemas (`database/schema/*.sql` — moved here from `frontend/web/db/`, Phase 2 of the domain restructure, 2026-10-01)
-> Amended 2026-10-01: `frontend/web/db/` no longer exists; the schemas live at `database/schema/`
+## 4. Database schemas (`database/schema/*.sql` — moved here from `apps/web/db/`, Phase 2 of the domain restructure, 2026-10-01)
+> Amended 2026-10-01: `apps/web/db/` no longer exists; the schemas live at `database/schema/`
 > per `database/README.md`. **Amended 2026-10-03 (DR-040):** the SQLite dump `schema.sql`,
 > its generator and the whole `scripts/database/` directory are deleted; `pg-schema.sql` is
 > the hand-written DDL for the single Postgres system of record (`docs/architecture/SCHEMA.md` §1).
@@ -258,7 +258,7 @@ Ownership today (feature → tables):
   stronger than the TS normalized comparison — it also catches a comment-only edit). The tracked file
   remains the sole owner.
 
-## 5. Executor runtime (`frontend/web/src/platform/executor/`) — in-frontend execution engine
+## 5. Executor runtime (`apps/web/src/platform/executor/`) — in-frontend execution engine
 
 | Module | Responsibility (from its exports) |
 |---|---|
@@ -276,11 +276,11 @@ Adjacent:
 - `src/features/executor/` — UI layer: `client.ts` (typed API client: Preview/Create/Lifecycle/List
   response types), `ui.tsx` (`ExecutorComposer`, `ExecutorProgress`, `ExecutorFrame`, `buildExecution`),
   `shapers.ts` (display formatting).
-- `frontend/web/scripts/executor/worker.ts` — headless worker entry run by systemd
+- `apps/web/scripts/executor/worker.ts` — headless worker entry run by systemd
   `fudcourt-executor-worker.service` (Bun).
 - Tests: `tests/e2e/executor/executor-{engine,plan,risk,runtime,worker}-tests.ts` +
   `tests/integration/executor/executor-{exchange,store}-tests.ts` +
-  `frontend/web/tests/executor-ui-tests.ts`
+  `apps/web/tests/executor-ui-tests.ts`
   (compiled by `tsconfig.shaper-tests.json` into `.shaper-tests/`, run offline via `node --test`).
 - `tests/e2e/executor/executor-paper-e2e.ts` — paper-trading end-to-end verifier (`verify:executor`).
 
@@ -369,7 +369,7 @@ module has moved into it):
   Scheduled by `fudcourt-sync.timer` (every 5 min).
 - `src/bin/fudcourt-reconciled.rs` → **`fudcourt-reconciled`**: bounded HTTP/1.1 service
   (`src/reconciliation/server.rs`) serving `/api/reconcile` (:3102) — Rust port of
-  `frontend/web/src/app/(frontend)/api/reconcile/route.ts` (DR-014); reconciliation math in
+  `apps/web/src/app/(frontend)/api/reconcile/route.ts` (DR-014); reconciliation math in
   `src/reconciliation/reconcile.rs`.
 - Tests: `backend/sync/tests/reconcile.rs` + inline tests (17 total, all passing).
 
@@ -405,7 +405,7 @@ Toolchain pins: Node 22 runtime, Bun 1.4.2, Go 1.24.1, Rust stable.
 
 - **Executor internals reach deep into web**: production files outside
   `src/platform/executor/` import its internals — 15 `api/executor/**` route handlers,
-  `frontend/web/scripts/executor/worker.ts`, `tests/e2e/executor/executor-paper-e2e.ts`, and
+  `apps/web/scripts/executor/worker.ts`, `tests/e2e/executor/executor-paper-e2e.ts`, and
   `src/features/executor/{client,ui}`. Of these, all 15 routes + worker + paper-e2e
   import the **sensitive** modules directly (`risk`, `exchange`, `lock`, `store`, `plan`, `engine`).
 - **Shell depends on features** (upward): `src/components/layout/store-shell.tsx` imports 15+

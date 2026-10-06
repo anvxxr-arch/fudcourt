@@ -6,7 +6,7 @@ different surfaces**, and the repo currently uses only the second one:
 | Surface | Host | Auth | Yields |
 |---|---|---|---|
 | **Public API v3** | `https://api.cryptorank.io` | `X-Api-Key` header | **81 documented endpoints**, typed JSON, real tiers |
-| **HTML scrape (keyless)** | `https://cryptorank.io` | none | the **28 modes** in `frontend/web/src/features/cryptorank/client.ts` |
+| **HTML scrape (keyless)** | `https://cryptorank.io` | none | the **28 modes** in `apps/web/src/features/cryptorank/client.ts` |
 
 Captured live **2026-10-02** from `docs.cryptorank.io` (`llms.txt` index +
 `openapi.json`, 1.0 MB) and the public sitemaps. Every row below is transcribed
@@ -249,7 +249,7 @@ Auth is OAuth against the CryptoRank account. **Irrelevant to us at $0.**
 
 ## 6. The keyless HTML path (what the repo actually runs)
 
-`frontend/web/src/features/cryptorank/client.ts` ships **28 modes** scraped from
+`apps/web/src/features/cryptorank/client.ts` ships **28 modes** scraped from
 `https://cryptorank.io` HTML + the `__NEXT_DATA__` SSR payload, served by the Go
 sidecar on `:3101`:
 

@@ -2,9 +2,9 @@ package reference
 
 import "regexp"
 
-// The address families, transcribed from frontend/web/src/features/dex/client.ts
+// The address families, transcribed from apps/web/src/features/dex/client.ts
 // (MINT_RE / HEX_RE / NAME_RE). They are duplicated here rather than imported
-// because backend/api must not depend on frontend/web source, and because the
+// because apps/api must not depend on apps/web source, and because the
 // contract's address_kind enum is what both sides are pinned to.
 var (
 	// EVMAddressShape matches a 0x-prefixed 20-byte hex address ("hex").

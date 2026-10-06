@@ -17,7 +17,7 @@ exist.
 | slice | rows | enumerates |
 |---|---|---|
 | `acq` | 58 | Go data sidecar acquisition surface — every family and every mode |
-| `routes` | 43 | HTTP route handlers under `frontend/web/src/app/**` — method, domain, auth tier, proxy target |
+| `routes` | 43 | HTTP route handlers under `apps/web/src/app/**` — method, domain, auth tier, proxy target |
 | `db` | 41 | Persistence objects across the three stores (Postgres+TimescaleDB, `executor` schema, Payload/Neon) |
 | `feeds` | 11 | Non-sidecar upstream feeds the app reads directly (ccxt venues, chain RPCs, DexScreener, CoinGecko, CMS, signals) |
 | **total** | **153** | |
@@ -102,55 +102,55 @@ exist.
 | acq-coinmarketcap-exchanges | coinmarketcap mode=exchanges: CoinMarketCap ranked exchange list (start/limit paginated) — upstream https://api.coinmarketcap.com/data-api/v3/exchange/listing | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinmarketcap/modes.go` |
 | acq-family-coinmarketcap | CoinMarketCap acquisition family (4 keyless modes; dashboard backend api.coinmarketcap.com/data-api/v3, NO credential of any kind; documented pro-api.coinmarketcap.com with X-CMC_PRO_API_KEY NOT wired) | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinmarketcap/modes.go` |
 
-### 3.2 `routes` — HTTP route handlers under `frontend/web/src/app/**` — method, domain, auth tier, proxy target
+### 3.2 `routes` — HTTP route handlers under `apps/web/src/app/**` — method, domain, auth tier, proxy target
 
 | id | name | category | layer | auth | freshness | durability | sensitivity | status | path |
 |---|---|---|---|---|---|---|---|---|---|
-| route-blog-cms-api-graphql-playground | GET /blog/cms/api/graphql-playground — Payload GraphQL playground (CMS, generated) | RESEARCH | CANONICAL | keyless | STATIC | CANONICAL | PUBLIC | active | `frontend/web/src/app/blog/(payload)/cms/api/graphql-playground/route.ts` |
-| route-blog-cms-api-graphql | POST\|OPTIONS /blog/cms/api/graphql — Payload GraphQL endpoint (CMS, generated) | RESEARCH | CANONICAL | keyless | STATIC | CANONICAL | PUBLIC | active | `frontend/web/src/app/blog/(payload)/cms/api/graphql/route.ts` |
-| route-blog-cms-api-rest | GET\|POST\|DELETE\|PATCH\|PUT\|OPTIONS /blog/cms/api/[...slug] — Payload REST catch-all (CMS, generated); public read path /blog/cms/api/posts | RESEARCH | CANONICAL | keyless | STATIC | CANONICAL | PUBLIC | active | `frontend/web/src/app/blog/(payload)/cms/api/[...slug]/route.ts` |
-| route-api-admin-members | GET\|POST /api/admin/members — admin guild-member list + role grant/revoke (PROXY -> Go api :3103 handleAdminMembers) | ACCESS | PRODUCT_VIEW | session:admin | REALTIME | NONE | INTERNAL | active | `frontend/web/src/app/(frontend)/api/admin/members/route.ts` |
-| route-api-all | GET /api/all — full treasury snapshot (wallets+assets+transactions) from Postgres | PORTFOLIO | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/all/route.ts` |
-| route-api-coins | GET /api/coins — distinct assets grouped by total USD value from Postgres | PORTFOLIO | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/coins/route.ts` |
-| route-api-wallets | GET\|POST /api/wallets — wallet table read + alias/metadata update (Postgres); POST uses requireMutationAuth('team') | PORTFOLIO | CANONICAL | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/wallets/route.ts` |
-| route-api-transactions | GET\|POST\|DELETE\|PUT /api/transactions — transaction ledger read/filter + bulk insert/delete/update (Postgres) | PORTFOLIO | CANONICAL | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/transactions/route.ts` |
-| route-api-transactions-id | PUT\|PATCH\|DELETE /api/transactions/[id] — single-row ledger edit/delete (Postgres) | PORTFOLIO | CANONICAL | session:team | REALTIME | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/transactions/[id]/route.ts` |
-| route-api-reconcile | GET /api/reconcile — wallet reconciliation (PROXY -> Rust fudcourt-reconciled :3102) | PORTFOLIO | CANONICAL | session:team | FREQUENT | CANONICAL | INTERNAL | active | `frontend/web/src/app/(frontend)/api/reconcile/route.ts` |
-| route-api-auth-login | GET /api/auth/login — OAuth login redirect (PROXY -> Go api :3103 handleAuthLogin, Discord authorize) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `frontend/web/src/app/(frontend)/api/auth/login/route.ts` |
-| route-api-auth-callback | GET /api/auth/callback — OAuth code->session exchange (PROXY -> Go api :3103 handleAuthCallback) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `frontend/web/src/app/(frontend)/api/auth/callback/route.ts` |
-| route-api-auth-logout | GET\|POST /api/auth/logout — session cookie retire (PROXY -> Go api :3103 handleAuthLogout) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `frontend/web/src/app/(frontend)/api/auth/logout/route.ts` |
-| route-api-coinglass | GET /api/coinglass — CoinGlass derivatives surfaces (PROXY -> Go data fudcourt-data :3101) | DERIVATIVES | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/coinglass/route.ts` |
-| route-api-coinank | GET /api/coinank — CoinAnk derivatives surfaces (PROXY -> Go data fudcourt-data :3101; upstream DARK) | DERIVATIVES | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | dark | `frontend/web/src/app/(frontend)/api/coinank/route.ts` |
-| route-api-coinmarketcap | GET /api/coinmarketcap — CoinMarketCap market surfaces (PROXY -> Go data fudcourt-data :3101) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/coinmarketcap/route.ts` |
-| route-api-cryptorank | GET /api/cryptorank — crypto research board (market caps, listings, ecosystems, RWA) (PROXY -> Go data fudcourt-data :3101) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/cryptorank/route.ts` |
-| route-api-llama | GET /api/llama — DeFiLlama chains/protocols TVL (PROXY -> Go data fudcourt-data :3101) | DEFI | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/llama/route.ts` |
-| route-api-news | GET /api/news — Cointelegraph RSS headline feed (PROXY -> Go data fudcourt-data :3101) | NEWS | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/news/route.ts` |
-| route-api-dex | GET /api/dex — DexScreener DEX pairs/profiles/boosts (direct external proxy) | DEFI | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/dex/route.ts` |
-| route-api-markets | GET /api/markets — CoinGecko top-250 market-cap board (direct external proxy, local search/sort/page) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/markets/route.ts` |
-| route-api-market-stock | GET /api/market/stock — Yahoo Finance stock/indices board (direct external proxy) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/market/stock/route.ts` |
-| route-api-market-commodity | GET /api/market/commodity — Yahoo Finance front-month futures board (direct external proxy) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/market/commodity/route.ts` |
-| route-api-market-forex | GET /api/market/forex — curated FX majors from exchangerate-api (direct external proxy, pairs derived locally) | MARKET_DATA | DERIVED | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/market/forex/route.ts` |
-| route-api-market-macro | GET /api/market/macro — global macro board: US curve + DXY + volatility (Yahoo), 33 BIS policy rates, 10 FRED US indicators, 8-economy World Bank comparison; spreads derived locally | MARKET_DATA | DERIVED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/market/macro/route.ts` |
-| route-api-market-indonesia | GET /api/market/indonesia — Indonesia macro board: live rupiah crosses + IDX indices (Yahoo), BI-Rate (BIS), 19 annual World Bank indicators | MARKET_DATA | DERIVED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/market/indonesia/route.ts` |
-| route-api-signals | GET /api/signals — trading signals feed + scoreboard (direct external proxy -> data-public.vercel.app) | TRADING | NORMALIZED | keyless | REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/signals/route.ts` |
-| route-api-ticker | GET /api/ticker — cross-venue CEX ticker board (spot/swap/future/option) via CCXT | MARKET_DATA | NORMALIZED | keyless | REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/ticker/route.ts` |
-| route-api-ticker-instruments | GET /api/ticker/instruments — listed instruments/expiries/strikes for a symbol (CCXT) | MARKET_DATA | NORMALIZED | keyless | REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/ticker/instruments/route.ts` |
-| route-api-ticker-instrument | GET /api/ticker/instrument — price for one specific instrument across venues (CCXT) | MARKET_DATA | NORMALIZED | keyless | REALTIME | SNAPSHOT | PUBLIC | active | `frontend/web/src/app/(frontend)/api/ticker/instrument/route.ts` |
-| route-api-executor-accounts | GET\|POST /api/executor/accounts — BYOK exchange account list/connect (secrets sealed server-side) | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | SECRET | active | `frontend/web/src/app/(frontend)/api/executor/accounts/route.ts` |
-| route-api-executor-accounts-id | GET\|DELETE /api/executor/accounts/[id] — one masked-key account read / revoke | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | SECRET | active | `frontend/web/src/app/(frontend)/api/executor/accounts/[id]/route.ts` |
-| route-api-executor-accounts-id-test | POST /api/executor/accounts/[id]/test — live credential validation | TRADING | PRODUCT_VIEW | session:team | REALTIME | NONE | SECRET | active | `frontend/web/src/app/(frontend)/api/executor/accounts/[id]/test/route.ts` |
-| route-api-executor-emergency | POST /api/executor/emergency — Emergency Stop (halt strategies, cancel managed orders; never closes positions) | TRADING | PRODUCT_VIEW | session:team | REALTIME | EVENT | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/emergency/route.ts` |
-| route-api-executor-executions | GET\|POST /api/executor/executions — execution history / create with immutable input snapshot | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/executions/route.ts` |
-| route-api-executor-executions-id | GET /api/executor/executions/[id] — execution + immutable plan | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/executions/[id]/route.ts` |
-| route-api-executor-executions-id-cancel | POST /api/executor/executions/[id]/cancel — cancel execution + managed child orders | TRADING | PRODUCT_VIEW | session:team | REALTIME | EVENT | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/executions/[id]/cancel/route.ts` |
-| route-api-executor-executions-id-pause | POST /api/executor/executions/[id]/pause | TRADING | PRODUCT_VIEW | session:team | REALTIME | EVENT | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/executions/[id]/pause/route.ts` |
-| route-api-executor-executions-id-resume | POST /api/executor/executions/[id]/resume | TRADING | PRODUCT_VIEW | session:team | REALTIME | EVENT | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/executions/[id]/resume/route.ts` |
-| route-api-executor-executions-id-start | POST /api/executor/executions/[id]/start | TRADING | PRODUCT_VIEW | session:team | REALTIME | EVENT | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/executions/[id]/start/route.ts` |
-| route-api-executor-executions-id-events | GET /api/executor/executions/[id]/events — immutable event log | TRADING | PRODUCT_VIEW | session:team | REALTIME | EVENT | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/executions/[id]/events/route.ts` |
-| route-api-executor-executions-id-fills | GET /api/executor/executions/[id]/fills — deduped fill history | TRADING | PRODUCT_VIEW | session:team | REALTIME | HISTORICAL | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/executions/[id]/fills/route.ts` |
-| route-api-executor-executions-id-orders | GET /api/executor/executions/[id]/orders — child orders | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/executions/[id]/orders/route.ts` |
-| route-api-executor-preview | POST /api/executor/preview — dry run only, nothing created, no external order | TRADING | PRODUCT_VIEW | session:team | REALTIME | NONE | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/preview/route.ts` |
-| route-api-executor-settings | GET\|PUT /api/executor/settings — per-user risk profile | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | USER_PRIVATE | active | `frontend/web/src/app/(frontend)/api/executor/settings/route.ts` |
+| route-blog-cms-api-graphql-playground | GET /blog/cms/api/graphql-playground — Payload GraphQL playground (CMS, generated) | RESEARCH | CANONICAL | keyless | STATIC | CANONICAL | PUBLIC | active | `apps/web/src/app/blog/(payload)/cms/api/graphql-playground/route.ts` |
+| route-blog-cms-api-graphql | POST\|OPTIONS /blog/cms/api/graphql — Payload GraphQL endpoint (CMS, generated) | RESEARCH | CANONICAL | keyless | STATIC | CANONICAL | PUBLIC | active | `apps/web/src/app/blog/(payload)/cms/api/graphql/route.ts` |
+| route-blog-cms-api-rest | GET\|POST\|DELETE\|PATCH\|PUT\|OPTIONS /blog/cms/api/[...slug] — Payload REST catch-all (CMS, generated); public read path /blog/cms/api/posts | RESEARCH | CANONICAL | keyless | STATIC | CANONICAL | PUBLIC | active | `apps/web/src/app/blog/(payload)/cms/api/[...slug]/route.ts` |
+| route-api-admin-members | GET\|POST /api/admin/members — admin guild-member list + role grant/revoke (PROXY -> Go api :3103 handleAdminMembers) | ACCESS | PRODUCT_VIEW | session:admin | REALTIME | NONE | INTERNAL | active | `apps/web/src/app/(frontend)/api/admin/members/route.ts` |
+| route-api-all | GET /api/all — full treasury snapshot (wallets+assets+transactions) from Postgres | PORTFOLIO | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | INTERNAL | active | `apps/web/src/app/(frontend)/api/all/route.ts` |
+| route-api-coins | GET /api/coins — distinct assets grouped by total USD value from Postgres | PORTFOLIO | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | INTERNAL | active | `apps/web/src/app/(frontend)/api/coins/route.ts` |
+| route-api-wallets | GET\|POST /api/wallets — wallet table read + alias/metadata update (Postgres); POST uses requireMutationAuth('team') | PORTFOLIO | CANONICAL | session:team | REALTIME | CANONICAL | INTERNAL | active | `apps/web/src/app/(frontend)/api/wallets/route.ts` |
+| route-api-transactions | GET\|POST\|DELETE\|PUT /api/transactions — transaction ledger read/filter + bulk insert/delete/update (Postgres) | PORTFOLIO | CANONICAL | session:team | REALTIME | CANONICAL | INTERNAL | active | `apps/web/src/app/(frontend)/api/transactions/route.ts` |
+| route-api-transactions-id | PUT\|PATCH\|DELETE /api/transactions/[id] — single-row ledger edit/delete (Postgres) | PORTFOLIO | CANONICAL | session:team | REALTIME | CANONICAL | INTERNAL | active | `apps/web/src/app/(frontend)/api/transactions/[id]/route.ts` |
+| route-api-reconcile | GET /api/reconcile — wallet reconciliation (PROXY -> Rust fudcourt-reconciled :3102) | PORTFOLIO | CANONICAL | session:team | FREQUENT | CANONICAL | INTERNAL | active | `apps/web/src/app/(frontend)/api/reconcile/route.ts` |
+| route-api-auth-login | GET /api/auth/login — OAuth login redirect (PROXY -> Go api :3103 handleAuthLogin, Discord authorize) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `apps/web/src/app/(frontend)/api/auth/login/route.ts` |
+| route-api-auth-callback | GET /api/auth/callback — OAuth code->session exchange (PROXY -> Go api :3103 handleAuthCallback) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `apps/web/src/app/(frontend)/api/auth/callback/route.ts` |
+| route-api-auth-logout | GET\|POST /api/auth/logout — session cookie retire (PROXY -> Go api :3103 handleAuthLogout) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `apps/web/src/app/(frontend)/api/auth/logout/route.ts` |
+| route-api-coinglass | GET /api/coinglass — CoinGlass derivatives surfaces (PROXY -> Go data fudcourt-data :3101) | DERIVATIVES | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/coinglass/route.ts` |
+| route-api-coinank | GET /api/coinank — CoinAnk derivatives surfaces (PROXY -> Go data fudcourt-data :3101; upstream DARK) | DERIVATIVES | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | dark | `apps/web/src/app/(frontend)/api/coinank/route.ts` |
+| route-api-coinmarketcap | GET /api/coinmarketcap — CoinMarketCap market surfaces (PROXY -> Go data fudcourt-data :3101) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/coinmarketcap/route.ts` |
+| route-api-cryptorank | GET /api/cryptorank — crypto research board (market caps, listings, ecosystems, RWA) (PROXY -> Go data fudcourt-data :3101) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/cryptorank/route.ts` |
+| route-api-llama | GET /api/llama — DeFiLlama chains/protocols TVL (PROXY -> Go data fudcourt-data :3101) | DEFI | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/llama/route.ts` |
+| route-api-news | GET /api/news — Cointelegraph RSS headline feed (PROXY -> Go data fudcourt-data :3101) | NEWS | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/news/route.ts` |
+| route-api-dex | GET /api/dex — DexScreener DEX pairs/profiles/boosts (direct external proxy) | DEFI | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/dex/route.ts` |
+| route-api-markets | GET /api/markets — CoinGecko top-250 market-cap board (direct external proxy, local search/sort/page) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/markets/route.ts` |
+| route-api-market-stock | GET /api/market/stock — Yahoo Finance stock/indices board (direct external proxy) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/market/stock/route.ts` |
+| route-api-market-commodity | GET /api/market/commodity — Yahoo Finance front-month futures board (direct external proxy) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/market/commodity/route.ts` |
+| route-api-market-forex | GET /api/market/forex — curated FX majors from exchangerate-api (direct external proxy, pairs derived locally) | MARKET_DATA | DERIVED | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/market/forex/route.ts` |
+| route-api-market-macro | GET /api/market/macro — global macro board: US curve + DXY + volatility (Yahoo), 33 BIS policy rates, 10 FRED US indicators, 8-economy World Bank comparison; spreads derived locally | MARKET_DATA | DERIVED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/market/macro/route.ts` |
+| route-api-market-indonesia | GET /api/market/indonesia — Indonesia macro board: live rupiah crosses + IDX indices (Yahoo), BI-Rate (BIS), 19 annual World Bank indicators | MARKET_DATA | DERIVED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/market/indonesia/route.ts` |
+| route-api-signals | GET /api/signals — trading signals feed + scoreboard (direct external proxy -> data-public.vercel.app) | TRADING | NORMALIZED | keyless | REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/signals/route.ts` |
+| route-api-ticker | GET /api/ticker — cross-venue CEX ticker board (spot/swap/future/option) via CCXT | MARKET_DATA | NORMALIZED | keyless | REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/ticker/route.ts` |
+| route-api-ticker-instruments | GET /api/ticker/instruments — listed instruments/expiries/strikes for a symbol (CCXT) | MARKET_DATA | NORMALIZED | keyless | REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/ticker/instruments/route.ts` |
+| route-api-ticker-instrument | GET /api/ticker/instrument — price for one specific instrument across venues (CCXT) | MARKET_DATA | NORMALIZED | keyless | REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/ticker/instrument/route.ts` |
+| route-api-executor-accounts | GET\|POST /api/executor/accounts — BYOK exchange account list/connect (secrets sealed server-side) | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | SECRET | active | `apps/web/src/app/(frontend)/api/executor/accounts/route.ts` |
+| route-api-executor-accounts-id | GET\|DELETE /api/executor/accounts/[id] — one masked-key account read / revoke | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | SECRET | active | `apps/web/src/app/(frontend)/api/executor/accounts/[id]/route.ts` |
+| route-api-executor-accounts-id-test | POST /api/executor/accounts/[id]/test — live credential validation | TRADING | PRODUCT_VIEW | session:team | REALTIME | NONE | SECRET | active | `apps/web/src/app/(frontend)/api/executor/accounts/[id]/test/route.ts` |
+| route-api-executor-emergency | POST /api/executor/emergency — Emergency Stop (halt strategies, cancel managed orders; never closes positions) | TRADING | PRODUCT_VIEW | session:team | REALTIME | EVENT | USER_PRIVATE | active | `apps/web/src/app/(frontend)/api/executor/emergency/route.ts` |
+| route-api-executor-executions | GET\|POST /api/executor/executions — execution history / create with immutable input snapshot | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | USER_PRIVATE | active | `apps/web/src/app/(frontend)/api/executor/executions/route.ts` |
+| route-api-executor-executions-id | GET /api/executor/executions/[id] — execution + immutable plan | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | USER_PRIVATE | active | `apps/web/src/app/(frontend)/api/executor/executions/[id]/route.ts` |
+| route-api-executor-executions-id-cancel | POST /api/executor/executions/[id]/cancel — cancel execution + managed child orders | TRADING | PRODUCT_VIEW | session:team | REALTIME | EVENT | USER_PRIVATE | active | `apps/web/src/app/(frontend)/api/executor/executions/[id]/cancel/route.ts` |
+| route-api-executor-executions-id-pause | POST /api/executor/executions/[id]/pause | TRADING | PRODUCT_VIEW | session:team | REALTIME | EVENT | USER_PRIVATE | active | `apps/web/src/app/(frontend)/api/executor/executions/[id]/pause/route.ts` |
+| route-api-executor-executions-id-resume | POST /api/executor/executions/[id]/resume | TRADING | PRODUCT_VIEW | session:team | REALTIME | EVENT | USER_PRIVATE | active | `apps/web/src/app/(frontend)/api/executor/executions/[id]/resume/route.ts` |
+| route-api-executor-executions-id-start | POST /api/executor/executions/[id]/start | TRADING | PRODUCT_VIEW | session:team | REALTIME | EVENT | USER_PRIVATE | active | `apps/web/src/app/(frontend)/api/executor/executions/[id]/start/route.ts` |
+| route-api-executor-executions-id-events | GET /api/executor/executions/[id]/events — immutable event log | TRADING | PRODUCT_VIEW | session:team | REALTIME | EVENT | USER_PRIVATE | active | `apps/web/src/app/(frontend)/api/executor/executions/[id]/events/route.ts` |
+| route-api-executor-executions-id-fills | GET /api/executor/executions/[id]/fills — deduped fill history | TRADING | PRODUCT_VIEW | session:team | REALTIME | HISTORICAL | USER_PRIVATE | active | `apps/web/src/app/(frontend)/api/executor/executions/[id]/fills/route.ts` |
+| route-api-executor-executions-id-orders | GET /api/executor/executions/[id]/orders — child orders | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | USER_PRIVATE | active | `apps/web/src/app/(frontend)/api/executor/executions/[id]/orders/route.ts` |
+| route-api-executor-preview | POST /api/executor/preview — dry run only, nothing created, no external order | TRADING | PRODUCT_VIEW | session:team | REALTIME | NONE | USER_PRIVATE | active | `apps/web/src/app/(frontend)/api/executor/preview/route.ts` |
+| route-api-executor-settings | GET\|PUT /api/executor/settings — per-user risk profile | TRADING | PRODUCT_VIEW | session:team | REALTIME | CANONICAL | USER_PRIVATE | active | `apps/web/src/app/(frontend)/api/executor/settings/route.ts` |
 
 ### 3.3 `db` — Persistence objects across the three stores (Postgres+TimescaleDB, `executor` schema, Payload/Neon)
 
@@ -179,40 +179,40 @@ exist.
 | executor-positions-snapshots | executor.positions_snapshots — periodic reconciliation position snapshots (jsonb payload) | TRADING | CANONICAL | FUDCOURT_EXECUTOR_PG_URL | PERIODIC | HISTORICAL | USER_PRIVATE | active | `database/schema/executor-schema.sql` |
 | executor-risk-profiles | executor.risk_profiles — one risk profile per user (jsonb, upsert) | TRADING | CANONICAL | FUDCOURT_EXECUTOR_PG_URL | MANUAL | CANONICAL | USER_PRIVATE | active | `database/schema/executor-schema.sql` |
 | executor-audit-logs | executor.audit_logs — executor action audit trail (jsonb payload) | SYSTEM | CANONICAL | FUDCOURT_EXECUTOR_PG_URL | REALTIME | EVENT | USER_PRIVATE | active | `database/schema/executor-schema.sql` |
-| neon-users | users — Payload CMS editor accounts (email + password digest) | ACCESS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | SECRET | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-users-sessions | users_sessions — Payload admin sessions (cascades on user delete) | ACCESS | CANONICAL | DATABASE_URL | REALTIME | EPHEMERAL | SECRET | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-posts | posts — CMS editorial posts (Lexical content jsonb, drafts/published) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-posts-tags | posts_tags — Payload child array of post tags | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-posts-rels | posts_rels — Payload polymorphic join (post -> category) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-posts-v | posts_v — Payload draft-version history for posts | NEWS | CANONICAL | DATABASE_URL | MANUAL | HISTORICAL | INTERNAL | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-posts-v-version-tags | posts_v_version_tags — version child of post tags | NEWS | CANONICAL | DATABASE_URL | MANUAL | HISTORICAL | INTERNAL | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-posts-v-rels | posts_v_rels — version join (post version -> category) | NEWS | CANONICAL | DATABASE_URL | MANUAL | HISTORICAL | INTERNAL | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-media | media — upload asset metadata (bytes live on disk frontend/web/media) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-categories | categories — editorial content categories (not market categories) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-payload-kv | payload_kv — Payload framework key/value store | SYSTEM | CANONICAL | DATABASE_URL | STATIC | CANONICAL | INTERNAL | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-payload-locked-documents | payload_locked_documents — Payload document-lock table | SYSTEM | CANONICAL | DATABASE_URL | REALTIME | EPHEMERAL | INTERNAL | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-payload-locked-documents-rels | payload_locked_documents_rels — Payload lock join table | SYSTEM | CANONICAL | DATABASE_URL | REALTIME | EPHEMERAL | INTERNAL | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-payload-preferences | payload_preferences — Payload per-user UI preferences | SYSTEM | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | INTERNAL | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-payload-preferences-rels | payload_preferences_rels — Payload preferences join table | SYSTEM | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | INTERNAL | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-payload-migrations | payload_migrations — Payload CMS migration ledger | SYSTEM | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | INTERNAL | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-enum-posts-status | enum_posts_status — Postgres enum (draft\|published) | SYSTEM | CANONICAL | DATABASE_URL | STATIC | NONE | INTERNAL | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
-| neon-enum-posts-v-version-status | enum__posts_v_version_status — Postgres enum (draft\|published) for post versions | SYSTEM | CANONICAL | DATABASE_URL | STATIC | NONE | INTERNAL | active | `frontend/web/src/cms/migrations/20260917_194354.ts` |
+| neon-users | users — Payload CMS editor accounts (email + password digest) | ACCESS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | SECRET | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-users-sessions | users_sessions — Payload admin sessions (cascades on user delete) | ACCESS | CANONICAL | DATABASE_URL | REALTIME | EPHEMERAL | SECRET | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-posts | posts — CMS editorial posts (Lexical content jsonb, drafts/published) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-posts-tags | posts_tags — Payload child array of post tags | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-posts-rels | posts_rels — Payload polymorphic join (post -> category) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-posts-v | posts_v — Payload draft-version history for posts | NEWS | CANONICAL | DATABASE_URL | MANUAL | HISTORICAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-posts-v-version-tags | posts_v_version_tags — version child of post tags | NEWS | CANONICAL | DATABASE_URL | MANUAL | HISTORICAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-posts-v-rels | posts_v_rels — version join (post version -> category) | NEWS | CANONICAL | DATABASE_URL | MANUAL | HISTORICAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-media | media — upload asset metadata (bytes live on disk frontend/web/media) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-categories | categories — editorial content categories (not market categories) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-payload-kv | payload_kv — Payload framework key/value store | SYSTEM | CANONICAL | DATABASE_URL | STATIC | CANONICAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-payload-locked-documents | payload_locked_documents — Payload document-lock table | SYSTEM | CANONICAL | DATABASE_URL | REALTIME | EPHEMERAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-payload-locked-documents-rels | payload_locked_documents_rels — Payload lock join table | SYSTEM | CANONICAL | DATABASE_URL | REALTIME | EPHEMERAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-payload-preferences | payload_preferences — Payload per-user UI preferences | SYSTEM | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-payload-preferences-rels | payload_preferences_rels — Payload preferences join table | SYSTEM | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-payload-migrations | payload_migrations — Payload CMS migration ledger | SYSTEM | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-enum-posts-status | enum_posts_status — Postgres enum (draft\|published) | SYSTEM | CANONICAL | DATABASE_URL | STATIC | NONE | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-enum-posts-v-version-status | enum__posts_v_version_status — Postgres enum (draft\|published) for post versions | SYSTEM | CANONICAL | DATABASE_URL | STATIC | NONE | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
 
 ### 3.4 `feeds` — Non-sidecar upstream feeds the app reads directly (ccxt venues, chain RPCs, DexScreener, CoinGecko, CMS, signals)
 
 | id | name | category | layer | auth | freshness | durability | sensitivity | status | path |
 |---|---|---|---|---|---|---|---|---|---|
 | ccxt-venue-vocabulary | ccxt venue vocabulary — static canonical reference registry of 11 CEX venue ids (binance, bybit, mexc, okx, bitget, phemex, bingx, bitfinex, htx, coinbase, kraken) | MARKET_DATA | CANONICAL | keyless | STATIC | CANONICAL | PUBLIC | scaffolded | `apps/api/internal/markets/reference/seed.go` |
-| ccxt-exchange-ticker | CCXT direct exchange ticker feed — 10 keyless CEX venues (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) over spot/swap/future/option | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `frontend/web/src/features/ticker/client.ts` |
-| dexscreener-api | DexScreener public DEX API — token-profiles, token-boosts, boosts-top, search, tokens, token-pairs, orders | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `frontend/web/src/features/dex/client.ts` |
-| coingecko-markets | CoinGecko /coins/markets top-250 pool (keyless public API) | MARKET_DATA | RAW | keyless | FREQUENT | EPHEMERAL | PUBLIC | active | `frontend/web/src/features/market-data/markets/markets.ts` |
+| ccxt-exchange-ticker | CCXT direct exchange ticker feed — 10 keyless CEX venues (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) over spot/swap/future/option | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `apps/web/src/features/ticker/client.ts` |
+| dexscreener-api | DexScreener public DEX API — token-profiles, token-boosts, boosts-top, search, tokens, token-pairs, orders | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `apps/web/src/features/dex/client.ts` |
+| coingecko-markets | CoinGecko /coins/markets top-250 pool (keyless public API) | MARKET_DATA | RAW | keyless | FREQUENT | EPHEMERAL | PUBLIC | active | `apps/web/src/features/market-data/markets/markets.ts` |
 | alchemy-evm-rpc | Alchemy EVM JSON-RPC — eth_getBalance / eth_call across Ethereum, BSC, Polygon, Arbitrum, Optimism, Base | ONCHAIN | RAW | ALCHEMY_KEY | PERIODIC | SNAPSHOT | PUBLIC | active | `apps/reconciler/src/streams/sync.rs` |
 | solana-rpc | Solana mainnet-beta JSON-RPC — getBalance, getTokenAccountsByOwner (SPL) | ONCHAIN | RAW | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `apps/reconciler/src/chains.rs` |
 | hyperliquid-info | Hyperliquid info API — spotClearinghouseState, clearinghouseState, userFills (positions + realized PnL) | PORTFOLIO | RAW | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `apps/reconciler/src/chains.rs` |
-| payload-cms-content | Payload CMS content store — Neon Postgres (posts, categories, media metadata) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `frontend/web/src/cms/payload.config.ts` |
-| payload-cms-users | Payload CMS admin users — Neon Postgres auth collection | ACCESS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | USER_PRIVATE | active | `frontend/web/src/cms/collections/Users.ts` |
-| payload-cms-media-files | Payload CMS media uploads on local disk (frontend/web/media) | NEWS | RAW | session | MANUAL | CANONICAL | PUBLIC | active | `frontend/web/src/cms/collections/Media.ts` |
-| signals-feed | FUDCourt signals feed (data-public.vercel.app) — index / feed / page / scoreboard modes | RESEARCH | RAW | keyless | FREQUENT | EPHEMERAL | PUBLIC | active | `frontend/web/src/app/(frontend)/api/signals/route.ts` |
+| payload-cms-content | Payload CMS content store — Neon Postgres (posts, categories, media metadata) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/payload.config.ts` |
+| payload-cms-users | Payload CMS admin users — Neon Postgres auth collection | ACCESS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | USER_PRIVATE | active | `apps/web/src/cms/collections/Users.ts` |
+| payload-cms-media-files | Payload CMS media uploads on local disk (frontend/web/media) | NEWS | RAW | session | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/collections/Media.ts` |
+| signals-feed | FUDCourt signals feed (data-public.vercel.app) — index / feed / page / scoreboard modes | RESEARCH | RAW | keyless | FREQUENT | EPHEMERAL | PUBLIC | active | `apps/web/src/app/(frontend)/api/signals/route.ts` |
 
 ## 4. Findings (each independently verified against the live tree)
 
@@ -229,18 +229,18 @@ wires it correctly; the upstream refuses. Status `dark`, nothing broken on our s
 
 **F4 — `coinglass`/`coinank` are unreachable through the web app.** The sidecar exposes
 `/api/coinglass` (`apps/data/main.go:231`) and `/api/coinank` (`:234`) on `:3101`, but
-**0 of the 42** `route.ts` handlers under `frontend/web/src/app` proxy them. Corroborated by the
+**0 of the 42** `route.ts` handlers under `apps/web/src/app` proxy them. Corroborated by the
 contract gate, whose per-family proxy-parity list covers cryptorank, llama and news —
 not coinglass or coinank.
 **Resolved 2026-10-03.** All three keyless families now have a thin web proxy route —
 `api/{coinglass,coinank,coinmarketcap}/route.ts` — so **3 of the 43** `route.ts` handlers under
-`frontend/web/src/app` relay them (`:3101`, verbatim), and the contract gate's per-family
+`apps/web/src/app` relay them (`:3101`, verbatim), and the contract gate's per-family
 proxy-parity list now covers all six research families (CG/CN/CMC mode tables kept TS↔Go equal).
 `coinank` stays `dark` through the new route: the proxy answers upstream's 502 as written.
 
 **F5 — the `markets` surface is unwired.** `apps/api/internal/markets/**` contributes vocabulary
 and types only: `apps/api/main.go` imports no markets package and `curl :3103/api/markets` →
-**404**. The only live ccxt feed is `frontend/web/src/features/ticker/**` (`:3100/api/ticker` → 200).
+**404**. The only live ccxt feed is `apps/web/src/features/ticker/**` (`:3100/api/ticker` → 200).
 
 **F6 — the deployed balance sync is the Python oracle, not Rust.**
 `systemctl --user show fudcourt-sync.service -p ExecStart` →
@@ -250,13 +250,13 @@ not installed. The Alchemy / Solana / Hyperliquid feeds are active **through the
 
 **F7 — the dead tables are confirmed writer-less from the tree.** No `INSERT` targets `accounts`,
 `journal`, `ledger`, `trades`, `venues` or `price_history` anywhere in source — only `SELECT`s in
-`frontend/web/src/server/db.ts` and one 90-day retention `DELETE FROM price_history`
+`apps/web/src/server/db.ts` and one 90-day retention `DELETE FROM price_history`
 (`pg.ts:208`). `status=dead` is therefore verified independently, not copied from DR-036.
 
 **F8 — defense-in-depth note, NOT a vulnerability.** `requiredTierForPath('/api/admin/members')`
 returns `null`: the middleware tier table covers the `/admin` **page** prefix and six team API paths,
 not the `/api/admin/*` API path. The route
-(`frontend/web/src/app/(frontend)/api/admin/members/route.ts`) is a documented thin proxy that holds no
+(`apps/web/src/app/(frontend)/api/admin/members/route.ts`) is a documented thin proxy that holds no
 auth logic by design, and the Go upstream **does** enforce the tier — an unauthenticated
 `curl :3103/api/admin/members` returns **401** `{"detail":"requires admin tier"}`. No bypass exists;
 recorded because the middleware table not covering the path is a real (non-exploitable) asymmetry.

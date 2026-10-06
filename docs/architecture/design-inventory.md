@@ -1,12 +1,12 @@
 # Design Inventory & Contrast Audit (read-only baseline)
 
-Scope: `frontend/web/src/**/*.{ts,tsx}` (excludes `node_modules`, `.next`, `.shaper-tests`).
+Scope: `apps/web/src/**/*.{ts,tsx}` (excludes `node_modules`, `.next`, `.shaper-tests`).
 Method: source scanning only. No application code was modified. Commands are re-runnable
-from `frontend/web/`.
+from `apps/web/`.
 
 > **Snapshot caveat.** These counts are a point-in-time snapshot taken
 > 2026-10-02 ~10:35 UTC at commit `c137929dee9b627c67e8560ee9ddc8340e890a1f` while a sibling
-> migration workstream was actively editing `frontend/web/src` (it moved `#04140f` and other
+> migration workstream was actively editing `apps/web/src` (it moved `#04140f` and other
 > literals between files during the audit). The *distinct* colour set is stable (48 values)
 > but per-value occurrence counts drift as the migration lands; re-run the A.4 commands for
 > current numbers. `src/styles/tokens.ts` was untracked (new) at capture.
@@ -269,7 +269,7 @@ Notes for the migration: `'50%'` and `'inherit'` are keywords, not scale values;
 
 ### A.4 Reproduction commands
 
-All run from `frontend/web/`. The extractor is a throwaway script (not committed);
+All run from `apps/web/`. The extractor is a throwaway script (not committed);
 its logic is reproduced here so the tables are re-derivable without it.
 
 **Distinct raw colours + counts + examples (A.1):**
@@ -363,7 +363,7 @@ Notes on the two fails:
 
 ## C. Fingerprint harness
 
-`frontend/web/tests/design/fingerprint.py` (committed). Modes:
+`apps/web/tests/design/fingerprint.py` (committed). Modes:
 
 ```bash
 PY=/home/dwizzy/farming/.venv/bin/python   # see interpreter note below
@@ -378,7 +378,7 @@ $PY frontend/web/tests/design/fingerprint.py compare --base-url http://127.0.0.1
 exactly what happened: the rival IA rework replaced `/ticker`, `/llama`, `/dex`, `/trench`,
 `/tracker` with the `/market` hub, and edited `ROUTES` to match, so the harness silently covered a
 different surface than the one the migration was proven against. `routes --check` derives the app's
-page routes from `frontend/web/src/app/**/page.tsx` (route groups stripped, dynamic segments kept
+page routes from `apps/web/src/app/**/page.tsx` (route groups stripped, dynamic segments kept
 literal) and **fails (exit 1)** naming any page route that is neither probed nor in the file's
 `EXCLUDED_ROUTES` map (each entry carries the reason it cannot be probed). Reconciled 2026-10-03 to
 **14 probes** covering every page route the app serves except the 14 documented exclusions:
@@ -408,7 +408,7 @@ directory). `python3` (/usr/bin/python3) has no `playwright`. The interpreter us
 `/home/dwizzy/farming/.venv/bin/python` (playwright 1.62.0, Chromium present in
 `~/.cache/ms-playwright/chromium-1243`). Any of the sibling venvs with playwright also work
 (`gonka24-automator`, `outlook-creator`, `tt-register`, `turnstile-solver`); the docstring in
-`frontend/web/tests/dom_audit.py` still references the missing crvenv path.
+`apps/web/tests/dom_audit.py` still references the missing crvenv path.
 
 ---
 
@@ -440,7 +440,7 @@ Full metadata: `/tmp/design-baseline/build-meta.txt`.
 
 **Concurrency caveat (not verified against my own build):** while this audit ran, sibling
 workstreams committed to the repository (`HEAD` moved from `c137929` at capture to
-`241ae4e…` at report time), and `frontend/web/.next` was rebuilt by another process — the
+`241ae4e…` at report time), and `apps/web/.next` was rebuilt by another process — the
 `.next/BUILD_ID` on disk is now `a3V_YCByVvUkb0rxJEC38`, not the `WRMvBF2Bc8uvEwzAzz_ap`
 my 3210 server booted. The 3210 capture reflects the build present at 10:37 UTC; the
 worktree hash recorded at capture (`git status --porcelain | sha1sum` =
@@ -461,18 +461,18 @@ This is the gate the token migration is judged by. Two rules govern it:
 
 Interpreter: **`/home/dwizzy/farming/.venv/bin/python`** (playwright 1.62.0; Chromium in
 `~/.cache/ms-playwright`). The `~/.hermes/cache/scratch/crvenv/bin/python` named in
-`frontend/web/tests/dom_audit.py` **does not exist on this host**; `/usr/bin/python3` has no
+`apps/web/tests/dom_audit.py` **does not exist on this host**; `/usr/bin/python3` has no
 playwright. Any sibling venv with playwright also works (`gonka24-automator`, `outlook-creator`,
 `tt-register`, `turnstile-solver`).
 
 **Serving caveat (learned the hard way):** a bare `cp -a .next /tmp/...` snapshot is not
-runnable. To serve a frozen build immune to sibling rebuilds of `frontend/web/.next`, the
+runnable. To serve a frozen build immune to sibling rebuilds of `apps/web/.next`, the
 snapshot dir needs `node_modules` (symlink), `package.json`, `next.config.js`, `public/`, and
-the app env files (`frontend/web/.env.local` plus repo-root `.env`) — without the env files
+the app env files (`apps/web/.env.local` plus repo-root `.env`) — without the env files
 `/` and `/ticker` never reach `networkidle` and the capture records only partial DOM.
 **LIVE-UNIT BUILD TRAP (do not run step 1 in place while `fudcourt-web` is live).** The
 `fudcourt-web` user unit runs `next start -p 3100` with `WorkingDirectory=/home/dwizzy/fudcourt/frontend/web`
-and `NODE_ENV=production`, i.e. it serves the **same** `frontend/web/.next` directory that
+and `NODE_ENV=production`, i.e. it serves the **same** `apps/web/.next` directory that
 `unset NODE_ENV && bun run build` rewrites — and a build does NOT restart the unit. So a build
 run in place swaps the served build out from under a live process: routes keep answering 200
 from already-rendered HTML while a `/_next/static/chunks/*.js` the HTML still references returns
@@ -610,7 +610,7 @@ lagging row count at capture time, not a static-probe loss.)
   Re-check coverage with `$PY frontend/web/tests/design/fingerprint.py routes --check` (exit 1 on drift).
 - Ports: scratch server on **3211** (killed at the end of this procedure); the deployed
   **3100** systemd unit is never restarted or reconfigured by this procedure.
-- Nothing under `frontend/web/src/` is modified by the harness.
+- Nothing under `apps/web/src/` is modified by the harness.
 
 ### E.7 Provenance-clean HEAD baseline (the authoritative pre-migration state)
 

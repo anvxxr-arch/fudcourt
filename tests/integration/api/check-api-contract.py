@@ -34,7 +34,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 GO_MAIN = ROOT / "apps" / "api" / "main.go"
 OPENAPI = ROOT / "shared" / "contracts" / "openapi" / "fudcourt.yaml"
-WEB_API = ROOT / "frontend" / "web" / "src" / "app" / "(frontend)" / "api"
+WEB_API = ROOT / "apps" / "web" / "src" / "app" / "(frontend)" / "api"
 
 fails: list[str] = []
 

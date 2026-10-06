@@ -18,30 +18,30 @@
 
 | Domain | Today (module) | Today (path) | Target |
 |---|---|---|---|
-| auth / sessions | web platform | `frontend/web/src/platform/auth/*` (session, guard, discord, mutation) | `backend/api` (auth), web keeps UI login |
-| accounts / members | web | `frontend/web/src/app/(frontend)/api/admin/members`, `src/features/*` | `backend/api` |
-| portfolio | web | `frontend/web/src/features/{portfolio,treasury,wallets,transactions}/*.tsx` | `backend/api` (portfolio) |
+| auth / sessions | web platform | `apps/web/src/platform/auth/*` (session, guard, discord, mutation) | `backend/api` (auth), web keeps UI login |
+| accounts / members | web | `apps/web/src/app/(frontend)/api/admin/members`, `src/features/*` | `backend/api` |
+| portfolio | web | `apps/web/src/features/{portfolio,treasury,wallets,transactions}/*.tsx` | `backend/api` (portfolio) |
 | wallets | web | `api/wallets/route.ts` + `features/wallets/ui.tsx` | `backend/api` (wallets) |
 | transactions / ledger | web | `api/transactions{,/[id]}` + `features/transactions/ui.tsx` | `backend/api` (transactions, treasury) |
 | treasury reconciliation (query side) | web | `api/reconcile/route.ts` (proxies Rust) | `backend/api` reads via `backend/sync` |
 | markets / venues / prices (read) | web | `api/{markets,ticker,ticker/instrument(s)}`, `features/{markets,ticker}/*` | `backend/api` (markets) |
 | data acquisition | Go sidecar | `apps/data/internal/research/{llama,cryptorank,khala,chainrank,news,coinglass,coinank,coinmarketcap}` (ex-`apps/apicalls`) | `backend/data` (already moved) |
-| data caching | Go + TS | `apps/data/platform/cache`, `frontend/web/src/platform/cache` | `backend/data` |
+| data caching | Go + TS | `apps/data/platform/cache`, `apps/web/src/platform/cache` | `backend/data` |
 | stream sync / balances | Rust | `apps/reconciler/src/streams/sync.rs` + `{chains,jsonrpc,pyfmt}.rs` + `persistence/db.rs` + Python twin `tests/oracle/sync-live.py` | `backend/sync` (already moved; Phase 6 specializes) |
-| reconciliation maths | Rust + TS twin | `apps/reconciler/src/reconciliation/reconcile.rs` vs `frontend/web/src/app/(frontend)/api/reconcile/route.ts` | `backend/sync` |
+| reconciliation maths | Rust + TS twin | `apps/reconciler/src/reconciliation/reconcile.rs` vs `apps/web/src/app/(frontend)/api/reconcile/route.ts` | `backend/sync` |
 | event normalization | Rust (partial) | `apps/reconciler/src/jsonrpc.rs`, `streams/sync.rs` | `backend/sync` |
-| executor orchestration (command/API) | web | `frontend/web/src/app/(frontend)/api/executor/**` (16 routes) | `backend/api` (executor orchestration) |
-| executor planning | web | `frontend/web/src/platform/executor/plan.ts` | `backend/workers/executor` (planner) |
-| risk & sizing | web | `frontend/web/src/platform/executor/risk.ts` | `backend/workers/executor` (risk, sizing) |
-| strategies (market/limit/TWAP/adaptive-TWAP/iceberg/chase-limit/scale — **not** VWAP or smart-limit) | web | `frontend/web/src/platform/executor/engine.ts` (`defaultSlices`, `createStrategy`, `strategyStep/OnFill/Progress`) | `backend/workers/executor` (strategies) |
-| exchange adapters (binance/bybit/mexc) | web | `frontend/web/src/platform/executor/exchange.ts` (`CcxtLike`, symbol mapping) | `backend/workers/executor` (exchange adapters) |
-| exchange signing / keys | web | `frontend/web/src/platform/executor/store.ts` (`masterKeyFromEnv`) + `exchange.ts` | `backend/workers/executor` (signing) |
-| execution worker | web (Bun) | `frontend/web/scripts/executor/worker.ts` + `src/platform/executor/worker.ts` | `backend/workers/executor` (worker) |
+| executor orchestration (command/API) | web | `apps/web/src/app/(frontend)/api/executor/**` (16 routes) | `backend/api` (executor orchestration) |
+| executor planning | web | `apps/web/src/platform/executor/plan.ts` | `backend/workers/executor` (planner) |
+| risk & sizing | web | `apps/web/src/platform/executor/risk.ts` | `backend/workers/executor` (risk, sizing) |
+| strategies (market/limit/TWAP/adaptive-TWAP/iceberg/chase-limit/scale — **not** VWAP or smart-limit) | web | `apps/web/src/platform/executor/engine.ts` (`defaultSlices`, `createStrategy`, `strategyStep/OnFill/Progress`) | `backend/workers/executor` (strategies) |
+| exchange adapters (binance/bybit/mexc) | web | `apps/web/src/platform/executor/exchange.ts` (`CcxtLike`, symbol mapping) | `backend/workers/executor` (exchange adapters) |
+| exchange signing / keys | web | `apps/web/src/platform/executor/store.ts` (`masterKeyFromEnv`) + `exchange.ts` | `backend/workers/executor` (signing) |
+| execution worker | web (Bun) | `apps/web/scripts/executor/worker.ts` + `src/platform/executor/worker.ts` | `backend/workers/executor` (worker) |
 | execution state machine | web | `src/platform/executor/{engine,worker}.ts` (`transitionChildOrder`, `clampChild`) | `backend/workers/executor` (state machine) |
 | execution locks | web | `src/platform/executor/lock.ts` | `backend/workers/executor` |
 | execution persistence | web | `src/platform/executor/store.ts` (`EXECUTOR_DDL`, `executor.*`) | `backend/workers/executor` (persistence) |
-| executor UI | web | `frontend/web/src/features/executor/{ui.tsx,client.ts,shapers.ts}` + `app/(frontend)/(dashboard)/executor/**` pages | `frontend/web` (stays, via `shared/sdk/typescript`) |
-| CMS / blog | web | `frontend/web/src/app/blog/**`, `src/cms/**` (Payload) | `frontend/web` (frontend-only exception: content, no domain logic) |
+| executor UI | web | `apps/web/src/features/executor/{ui.tsx,client.ts,shapers.ts}` + `app/(frontend)/(dashboard)/executor/**` pages | `frontend/web` (stays, via `shared/sdk/typescript`) |
+| CMS / blog | web | `apps/web/src/app/blog/**`, `src/cms/**` (Payload) | `frontend/web` (frontend-only exception: content, no domain logic) |
 
 ## 2. Table ownership mapping
 
@@ -51,7 +51,7 @@
 | `wallets` | `database/schema/pg-schema.sql`; web treasury | api | `database/schema/portfolio.sql` |
 | `accounts`, `trades`, `journal`, `ledger`, `transactions` | same; web treasury + `backend/sync` writes `assets`-adjacent rows | api | `database/schema/portfolio.sql` |
 | portfolio (derived from `ledger`/`positions`) | web treasury UI | api | `database/schema/portfolio.sql` |
-| `execution` (`executor.executions`, `executor.execution_plans`) | `frontend/web/src/platform/executor/store.ts` | executor | `database/schema/execution.sql` |
+| `execution` (`executor.executions`, `executor.execution_plans`) | `apps/web/src/platform/executor/store.ts` | executor | `database/schema/execution.sql` |
 | `execution_orders` (`executor.child_orders`) | same | executor | `database/schema/execution.sql` |
 | `execution_fills` (`executor.fills`) | same | executor | `database/schema/execution.sql` |
 | `execution_events` (`executor.execution_events`) | same | executor | `database/schema/execution.sql` |
@@ -76,39 +76,39 @@ import the risk/exchange/lock/store/plan/engine modules directly (signing, keys,
 state machine — the exact concerns `target.md` §3.2 forbids in web):
 
 **API routes (16) — all [sensitive]:**
-- `frontend/web/src/app/(frontend)/api/executor/accounts/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/accounts/[id]/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/accounts/[id]/test/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/executions/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/executions/[id]/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/executions/[id]/start/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/executions/[id]/pause/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/executions/[id]/resume/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/executions/[id]/cancel/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/executions/[id]/orders/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/executions/[id]/fills/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/executions/[id]/events/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/preview/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/settings/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/emergency/route.ts`
-- `frontend/web/src/app/(frontend)/api/executor/accounts/route.ts` (list/create shares imports with `[id]`)
+- `apps/web/src/app/(frontend)/api/executor/accounts/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/accounts/[id]/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/accounts/[id]/test/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/executions/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/executions/[id]/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/executions/[id]/start/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/executions/[id]/pause/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/executions/[id]/resume/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/executions/[id]/cancel/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/executions/[id]/orders/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/executions/[id]/fills/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/executions/[id]/events/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/preview/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/settings/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/emergency/route.ts`
+- `apps/web/src/app/(frontend)/api/executor/accounts/route.ts` (list/create shares imports with `[id]`)
 
 **Workers/tools — [sensitive]:**
-- `frontend/web/scripts/executor/worker.ts`
+- `apps/web/scripts/executor/worker.ts`
 - `tests/e2e/executor/executor-paper-e2e.ts`
 
 **Feature UI (executor UI may keep calling the API, but imports runtime types/logic today):**
-- `frontend/web/src/features/executor/client.ts`
-- `frontend/web/src/features/executor/ui.tsx`
+- `apps/web/src/features/executor/client.ts`
+- `apps/web/src/features/executor/ui.tsx`
 
 **Test-only (moves with Phase 5/8, listed for completeness):**
 - `tests/e2e/executor/executor-{engine,plan,risk,runtime,worker}-tests.ts` +
   `tests/integration/executor/executor-{exchange,store}-tests.ts`
-- `frontend/web/tests/executor-ui-tests.ts`
+- `apps/web/tests/executor-ui-tests.ts`
 
 ### 3.2 Shell layer imports feature pages (layering inversion inside frontend/web)
 
-- `frontend/web/src/components/layout/store-shell.tsx` imports `@/features/{dashboard/ui,
+- `apps/web/src/components/layout/store-shell.tsx` imports `@/features/{dashboard/ui,
   portfolio/ui, wallets/ui, transactions/ui, treasury/reconciliation, dex/trench, dex/ui,
   signals/ui, scoreboard/ui, …}` (feature modules; the former `chainrank/ui` import left with
   the board, DR-041).
@@ -116,7 +116,7 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
 
 ### 3.3 Platform-internal coupling (fine today, becomes backend/workers/executor internals)
 
-- `frontend/web/src/platform/executor/{engine,worker,runtime}.ts` import
+- `apps/web/src/platform/executor/{engine,worker,runtime}.ts` import
   `platform/executor/{plan,risk,exchange,store,lock,types}` — single-module-family coupling;
   not a violation per se, but every one of these files is in the Phase-5 move set.
 
@@ -131,7 +131,7 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
 - Balance sync: `apps/reconciler/src/main.rs` + `apps/reconciler/src/streams/sync.rs` **and** `tests/oracle/sync-live.py`,
   each with its own systemd unit (`infrastructure/systemd/fudcourt-sync-rust.service` vs
   `infrastructure/systemd/fudcourt-sync.service`). Phase 6 collapses to Rust after oracle parity.
-- Reconcile: `apps/reconciler/src/reconciliation/reconcile.rs` **and** `frontend/web/…/api/reconcile/route.ts`
+- Reconcile: `apps/reconciler/src/reconciliation/reconcile.rs` **and** `apps/web/…/api/reconcile/route.ts`
   (route proxies the Rust service, verified byte-parity in CI `verify/verify-reconcile.py`).
 
 ### 3.6 Scaffolds started after this audit snapshot (historical — the scaffolds are now built)

@@ -67,7 +67,7 @@ func VenueKey(venueID string) string {
 }
 
 // AddressKind classifies a contract address the way the repo already does:
-// frontend/web/src/features/dex/client.ts addressKind returns
+// apps/web/src/features/dex/client.ts addressKind returns
 // base58 | hex | name from three regexes, because DexScreener accepts all three
 // shapes. The same three families are recognized here so a token's address_kind
 // is exactly one of the contract's enum values.

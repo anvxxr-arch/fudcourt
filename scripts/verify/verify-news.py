@@ -213,7 +213,7 @@ def verify_parity(base: str) -> None:
 def verify_ui_wiring(base: str) -> None:
     section("proxy contract + UI path")
     import pathlib
-    root = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "web"  # scripts/verify -> frontend/web
+    root = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "web"  # scripts/verify -> apps/web
     route = (root / "src/app/(frontend)/api/news/route.ts").read_text()
     lib = (root / "src/features/news/client.ts").read_text()
     check("DATA_URL" in route and "/api/news" in route,

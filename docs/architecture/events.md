@@ -1,6 +1,6 @@
 # Events — canonical contracts
 > Reality-first: everything here is read off `shared/contracts/` (landed),
-> `frontend/web/src/platform/executor/types.ts` and
+> `apps/web/src/platform/executor/types.ts` and
 > `apps/executor/internal/execution/enums.go`. Written 2026-10-01.
 > Sources: `shared/contracts/events/catalog.json`,
 > `shared/contracts/events/event.schema.json`,
@@ -36,7 +36,7 @@ path.)
 
 ## 2. The 23 ExecutionEventName values
 The immutable append-only event vocabulary of the execution log. Rows 1–19
-are the exact legacy list shared 1:1 by `frontend/web/src/platform/executor/types.ts`
+are the exact legacy list shared 1:1 by `apps/web/src/platform/executor/types.ts`
 (`ExecutionEventName`) and `apps/executor/internal/execution/enums.go`;
 rows 20–23 are the 2026-10-01 catalog additions, carried by `enums.go` and
 `catalog.json` but not yet by `types.ts` (no producer emits them yet):
@@ -137,7 +137,7 @@ enforced by redaction on the audit side:
   `[REDACTED]`; redaction recurses through maps AND slices, never mutates its
   input. The same rule applies to anything event/audit-bound.
 
-Producers back this up: `frontend/web/src/platform/executor/exchange.ts`
+Producers back this up: `apps/web/src/platform/executor/exchange.ts`
 sanitizes adapter errors (`SECRET_PATTERNS`) so no key/secret/passphrase or
 signed payload can appear in an `ExecutorError` (PRD §109); the event payloads
 emitted from `runtime.ts`/`worker.ts` carry ids, quantities, prices, statuses

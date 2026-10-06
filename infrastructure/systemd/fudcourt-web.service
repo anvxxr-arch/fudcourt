@@ -20,10 +20,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/dwizzy/fudcourt/frontend/web
+WorkingDirectory=/home/dwizzy/fudcourt/apps/web
 Environment=NODE_ENV=production
-EnvironmentFile=/home/dwizzy/fudcourt/frontend/web/.env.local
-ExecStart=/home/dwizzy/.bun/bin/bun --bun /home/dwizzy/fudcourt/frontend/web/node_modules/next/dist/bin/next start -p 3100 -H 127.0.0.1
+EnvironmentFile=/home/dwizzy/fudcourt/apps/web/.env.local
+ExecStart=/home/dwizzy/.bun/bin/bun --bun /home/dwizzy/fudcourt/apps/web/node_modules/next/dist/bin/next start -p 3100 -H 127.0.0.1
 Restart=always
 RestartSec=5
 KillSignal=SIGINT

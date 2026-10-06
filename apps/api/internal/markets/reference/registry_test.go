@@ -208,7 +208,7 @@ func TestMintIsDeterministicAndSaltSensitive(t *testing.T) {
 }
 
 // TestAddressKindMatchesTheRepoClassifier pins the three address families the
-// tree classifies (frontend/web/src/features/dex/client.ts addressKind) and
+// tree classifies (apps/web/src/features/dex/client.ts addressKind) and
 // proves an unrecognizable string is REFUSED rather than guessed at.
 func TestAddressKindMatchesTheRepoClassifier(t *testing.T) {
 	ok := []struct {
@@ -280,7 +280,7 @@ func TestSchemaLegalProviderSpellingsResolve(t *testing.T) {
 		{ProviderDefiLlama, "coingecko:solana", "SOL", "apps/reconciler/src/chains.rs LLAMA_IDS"},
 		{ProviderDefiLlama, "coingecko:tether", "USDT", "apps/reconciler/src/chains.rs LLAMA_IDS"},
 		{ProviderDefiLlama, "coingecko:usd-coin", "USDC", "apps/reconciler/src/chains.rs LLAMA_IDS"},
-		{ProviderCryptoRank, "bitcoin", "BTC", "tests/fixtures/coins.json.gz (moved from frontend/web/scripts/fixtures/ by fd17dc6; row exists; asset not seeded - see the miss list)"},
+		{ProviderCryptoRank, "bitcoin", "BTC", "tests/fixtures/coins.json.gz (moved from apps/web/scripts/fixtures/ by fd17dc6; row exists; asset not seeded - see the miss list)"},
 	}
 	for _, tc := range cases {
 		id, err := ref.Resolve(tc.provider, tc.id)

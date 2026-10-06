@@ -5,7 +5,7 @@ The decision document. It takes the two audits — `cryptorank-mode-audit.md` (2
 which public pages survive, which merge, which are dropped, and where every unique family ends
 up.
 
-Grounded on the live tree: 14 public pages under `frontend/web/src/app/(frontend)/` and the
+Grounded on the live tree: 14 public pages under `apps/web/src/app/(frontend)/` and the
 provider routes under `…/api/`. Snapshot 2026-10-02.
 
 > **Superseded in part by DR-041 (2026-10-03).** The owner removed the `/khala` and

@@ -12,9 +12,9 @@ The same design value used to live in three places that could diverge, and had:
 
 | Source | What it held | Failure it caused |
 |---|---|---|
-| `frontend/web/src/styles/tokens.ts` (`C`) | the flat hex table the React tree styles itself from | the real rendered colour |
-| `frontend/web/src/app/(frontend)/globals.css` (`:root`) | a SEPARATE set of HSL intents | a second, silently different colour |
-| `frontend/web/tailwind.config.js` (`theme.extend`) | nothing — `{}` was empty | no utility class could reach a token at all |
+| `apps/web/src/styles/tokens.ts` (`C`) | the flat hex table the React tree styles itself from | the real rendered colour |
+| `apps/web/src/app/(frontend)/globals.css` (`:root`) | a SEPARATE set of HSL intents | a second, silently different colour |
+| `apps/web/tailwind.config.js` (`theme.extend`) | nothing — `{}` was empty | no utility class could reach a token at all |
 
 Measured before this change: all seven comparable pairs had drifted. `--background: hsl(160 38% 5%)`
 renders `#08120e` while `C.bg` is `#07110f`; `--primary: hsl(153 74% 61%)` renders `#52e5a3` while
@@ -178,7 +178,7 @@ change NOT in this table is a bug.
 
 `emit-tokens.ts` writes exactly two artifacts and nothing else:
 
-1. the `:root` block inside `frontend/web/src/app/(frontend)/globals.css`, delimited by
+1. the `:root` block inside `apps/web/src/app/(frontend)/globals.css`, delimited by
 
    ```
    /* @generated design-tokens:start — bun scripts/design/emit-tokens.ts */
@@ -188,7 +188,7 @@ change NOT in this table is a bug.
    Text outside the sentinels (the `@tailwind` directives, the hand-written `body` rule) is never
    touched. If the sentinel pair is absent the emitter appends a block; if exactly ONE sentinel is
    present it fails rather than guess where the block belongs.
-2. `frontend/web/tailwind.tokens.json`, which `tailwind.config.js` reads into `theme.extend`. The
+2. `apps/web/tailwind.tokens.json`, which `tailwind.config.js` reads into `theme.extend`. The
    config therefore contains zero raw design values.
 
 `tailwind.config.js` reads that JSON through an **absolute path anchored at `__dirname`**:
@@ -224,7 +224,7 @@ or when exactly one is present. A successful run reports, e.g.
 
 ## The gates
 
-`frontend/web/scripts/checks/check-design-tokens.py` (offline, Python stdlib only) prints one line
+`apps/web/scripts/checks/check-design-tokens.py` (offline, Python stdlib only) prints one line
 per violation and a machine-readable summary:
 
 ```
@@ -273,11 +273,11 @@ stays visible, and are deliberately NOT a build failure.
 
 | Entry | Justification |
 |---|---|
-| `frontend/web/src/styles/tokens.ts` | the SSOT itself — where the raw values are written down |
-| `frontend/web/src/styles/tokens.ts` | keeps the DOMAIN palettes `CHAIN_COLOR` and `COLOR_PRESETS`: brand/provider colours (chain identity) and the user's own wallet swatches. Data the user picks at runtime, not chrome. The legacy `C` table that also lived here was **deleted** at the cutover (see below) |
-| `frontend/web/src/features/*/palette.ts` | **new convention**, matched with `fnmatch` (NOT dict membership — a literal-key lookup would exempt only a file named `*`). When a family genuinely owns a provider/brand palette (chain badges, venue brand colours) it moves to a sibling `palette.ts` named for what it is, instead of being inlined into `ui.tsx`. One file per family; a family with no such palette must not create the file to dodge the gate. The gate FAILS if the glob matches no file, so the entry cannot go inert |
-| `frontend/web/src/cms/**` | the Payload CMS surface; `seed.ts` embeds an inline SVG placeholder uploaded as CMS media |
-| `frontend/web/src/app/blog/(payload)/**` | the Payload admin/login surface and its own stylesheets. **Not** the whole of `src/app/blog/**`: `blog/page.tsx` and `blog/[slug]/page.tsx` are product chrome and are NOT exempt |
+| `apps/web/src/styles/tokens.ts` | the SSOT itself — where the raw values are written down |
+| `apps/web/src/styles/tokens.ts` | keeps the DOMAIN palettes `CHAIN_COLOR` and `COLOR_PRESETS`: brand/provider colours (chain identity) and the user's own wallet swatches. Data the user picks at runtime, not chrome. The legacy `C` table that also lived here was **deleted** at the cutover (see below) |
+| `apps/web/src/features/*/palette.ts` | **new convention**, matched with `fnmatch` (NOT dict membership — a literal-key lookup would exempt only a file named `*`). When a family genuinely owns a provider/brand palette (chain badges, venue brand colours) it moves to a sibling `palette.ts` named for what it is, instead of being inlined into `ui.tsx`. One file per family; a family with no such palette must not create the file to dodge the gate. The gate FAILS if the glob matches no file, so the entry cannot go inert |
+| `apps/web/src/cms/**` | the Payload CMS surface; `seed.ts` embeds an inline SVG placeholder uploaded as CMS media |
+| `apps/web/src/app/blog/(payload)/**` | the Payload admin/login surface and its own stylesheets. **Not** the whole of `src/app/blog/**`: `blog/page.tsx` and `blog/[slug]/page.tsx` are product chrome and are NOT exempt |
 
 Scale rules are exempted in `src/styles/tokens.ts` only. The gate fails if an exempted exact path
 disappears OR if a glob entry matches nothing, so neither the list nor a convention can rot silently.
@@ -303,7 +303,7 @@ also reads as dead.
 ## The atom shelf: `src/ui/`
 
 The presentational shelf holds ATOMS — the smallest reusable leaves. The shelf now lives at
-`frontend/web/src/ui/`: the primitives (`Button`, `Input`, `Select`, `Modal`, `Label`, `Card` in
+`apps/web/src/ui/`: the primitives (`Button`, `Input`, `Select`, `Modal`, `Label`, `Card` in
 `primitives.tsx`) plus the atoms the feature migrations consolidated:
 
 - `badge.tsx` (`Badge`), `banner.tsx` (`Banner`), `breadcrumb.tsx`, `card.tsx` (`Card` — the
@@ -318,7 +318,7 @@ The presentational shelf holds ATOMS — the smallest reusable leaves. The shelf
   `toolbar.tsx`, `value.tsx` (`Value`).
 
 Shelf rules, enforced by the DR-018 layer gate
-(`frontend/web/scripts/checks/check-structure.py`):
+(`apps/web/scripts/checks/check-structure.py`):
 
 - an atom may import **itself only** and `@/styles/**` — never `features/`, `platform/`, `app/` or
   another `components/` shelf; `components/layout/` is the documented exception: composing
@@ -329,7 +329,7 @@ Shelf rules, enforced by the DR-018 layer gate
 - new atoms go on a named shelf; a file dropped directly at `src/components/` fails the structure gate.
 
 Entrance motion: the shelf consumes two hand-written classes from
-`frontend/web/src/app/(frontend)/globals.css` — `.fc-fade-in` / `.fc-fade-in-slow` — whose durations
+`apps/web/src/app/(frontend)/globals.css` — `.fc-fade-in` / `.fc-fade-in-slow` — whose durations
 and easing are read from the emitted motion tokens via
 `var(--fc-motion-deliberate)` / `var(--fc-motion-slow)` / `var(--fc-motion-ease)`, so the classes
 stay in step with `tokens.ts` rather than repeating the values. `src/app/(frontend)/layout.tsx`
@@ -377,7 +377,7 @@ A token is a two-part change; **no invented tokens**.
 1. **Prove a consumer exists.** Find the real call site(s) that will use the value — a token with no
    consumer is drift in the other direction and the dead-token alarm fails the build for it. Prefer
    reusing an existing token when a value repeats.
-2. **Add the value to `frontend/web/src/styles/tokens.ts`**, in the matching scale and in the sorted
+2. **Add the value to `apps/web/src/styles/tokens.ts`**, in the matching scale and in the sorted
    position the other keys occupy (`space: 18`, `fontSize: 24`). Keep the object `as const`.
 3. **Regenerate:** `cd frontend/web && bun run tokens`. This rewrites the `:root` block and
    `tailwind.tokens.json`. Commit both artifacts with the token change.
@@ -391,9 +391,9 @@ when that is done), then delete the key, then re-emit.
 
 ## Where this is wired
 
-- `frontend/web/package.json` — `bun run tokens`, `bun run check:design`.
+- `apps/web/package.json` — `bun run tokens`, `bun run check:design`.
 - `scripts/verify/verify-all.sh` — two steps immediately after `structure gate (DR-018 layers)`:
   `design-token gate` (the migration gate) and `design-token artifact drift` (the `--check`).
 - `.github/workflows/web.yml` — the same two steps beside its structure-gate step.
-- `scripts/githooks/pre-push` — both gates for any `frontend/web/` change, in the same idiom as the
+- `scripts/githooks/pre-push` — both gates for any `apps/web/` change, in the same idiom as the
   structure-gate block, so a raw literal cannot be pushed without CI being the thing that catches it.

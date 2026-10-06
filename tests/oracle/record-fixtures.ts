@@ -1,7 +1,7 @@
 /**
  * Records REAL CryptoRank upstream payloads into tests/fixtures/ (SG-4.1).
  *
- * Why: the shaper unit tests (frontend/web/tests/shaper-tests.ts) must run offline and
+ * Why: the shaper unit tests (apps/web/tests/shaper-tests.ts) must run offline and
  * deterministically against the exact HelperOut shape the live route receives,
  * so upstream template drift shows up as a failing test instead of a silent
  * UI change. A fixture is the helper's raw stdout JSON, byte-for-byte -- never
@@ -9,7 +9,7 @@
  * so a hand-edited fixture fails the tamper check.
  *
  * Usage (fresh upstream fetch, per-mode default key):
- *   cd frontend/web && npm run record:fixtures
+ *   cd apps/web && npm run record:fixtures
  *   (tsc -p tsconfig.shaper-tests.json, then node on the compiled copy under
  *    .shaper-tests/tests/oracle/; the helper and the fixtures are located by
  *    walking up to the repo root, so no cwd assumption.)
@@ -37,7 +37,7 @@ const PYTHON = process.env.CR_PYTHON ?? '/home/dwizzy/.venvs/crfetch/bin/python'
 // (cr_fetch.py) and the fixtures it writes (tests/fixtures, shared with the Go
 // parity gate). Both are resolved by walking up from the COMPILED location to the
 // repository root, so the script works from any cwd — the tsc project emits it to
-// frontend/web/.shaper-tests/tests/oracle/.
+// apps/web/.shaper-tests/tests/oracle/.
 function repoRoot(start: string): string {
   for (let d = start; ; d = path.dirname(d)) {
     if (existsSync(path.join(d, 'tests', 'fixtures', 'MANIFEST.json'))) return d;

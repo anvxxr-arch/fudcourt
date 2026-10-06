@@ -1,13 +1,13 @@
 {
-  // The cross-system executor tests moved out of frontend/web (Phase 7). Bun
+  // The cross-system executor tests moved out of apps/web. Bun
   // resolves the `@/` import alias from the tsconfig.json nearest to the file
   // being run, so a suite under tests/ needs its own mapping back into the web
   // app's src/. This file is read by `bun run tests/e2e/executor/*` only; the
-  // tsc project for `test:shapers` lives in frontend/web/tsconfig.shaper-tests.json.
+  // tsc project for `test:shapers` lives in apps/web/tsconfig.shaper-tests.json.
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["../frontend/web/src/*"]
+      "@/*": ["../apps/web/src/*"]
     }
   }
 }

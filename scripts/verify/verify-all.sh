@@ -8,7 +8,7 @@
 # shared/contracts drift gate, the three
 # Go modules (build/vet/test), the Rust crate (build/test), the sync oracle gate
 # (Python vs Rust byte-identical replay, tests/oracle/fixtures — offline), the
-# cross-service API conformance check, the hook syntax check, and frontend/web
+# cross-service API conformance check, the hook syntax check, and apps/web
 # typecheck + shaper fixture tests.
 #
 # DELIBERATELY NOT HERE: live/network harnesses (scripts/verify/verify-*.py,
@@ -45,15 +45,15 @@ quiet_step() {
 }
 
 step "structure gate (DR-018 layers)"
-(cd frontend/web && python3 scripts/checks/check-structure.py) || fail structure
+(cd apps/web && python3 scripts/checks/check-structure.py) || fail structure
 # The design system: one SSOT (src/styles/tokens.ts) + generated artifacts + these two gates
 # (DR-037). The first step is the MIGRATION gate and is deliberately red until the feature/
 # component workers land — a green run before then would mean the gate was broken, not that the
 # tree was clean. The second is the generated-artifact drift alarm and is green from day one.
 step "design-token gate (raw literals, magic style values, dead tokens)"
-(cd frontend/web && python3 scripts/checks/check-design-tokens.py) || fail design-tokens
+(cd apps/web && python3 scripts/checks/check-design-tokens.py) || fail design-tokens
 step "design-token artifact drift (globals.css block + tailwind.tokens.json are generated)"
-(cd frontend/web && unset NODE_ENV && bun scripts/design/emit-tokens.ts --check) || fail design-tokens-artifacts
+(cd apps/web && unset NODE_ENV && bun scripts/design/emit-tokens.ts --check) || fail design-tokens-artifacts
 
 step "web contract gate (CR_MODES + mutation-auth guards)"
 python3 scripts/verify/check-contract.py || fail web-contract
@@ -93,8 +93,8 @@ python3 tests/integration/api/check-api-contract.py || fail api-contract
 step "pre-push hook syntax"
 bash -n scripts/githooks/pre-push || fail hook-syntax
 
-step "frontend/web typecheck + shaper fixture tests"
-quiet_step web bash -c 'cd frontend/web && unset NODE_ENV && bunx tsc --noEmit && bun run test:shapers' || fail web
+step "apps/web typecheck + shaper fixture tests"
+quiet_step web bash -c 'cd apps/web && unset NODE_ENV && bunx tsc --noEmit && bun run test:shapers' || fail web
 
 echo
 if [ "$rc" -eq 0 ]; then echo "VERIFY_ALL_OK"; else echo "VERIFY_ALL_FAILED (see !! FAILED above)"; fi

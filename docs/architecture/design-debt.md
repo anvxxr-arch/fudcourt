@@ -4,11 +4,11 @@ A read-only ledger of what the design system does **not** yet cover. Every numbe
 MEASURED, with the command that produced it next to it, so the owner can re-run each one. This
 document records; it does not decide. Nothing here is a work item unless the owner makes it one.
 
-Scope: the design system as landed — `frontend/web/src/styles/tokens.ts` as the single source of
-truth, the generated `frontend/web/src/app/(frontend)/globals.css` `:root` block and
-`tailwind.tokens.json`, the atom shelf under `frontend/web/src/ui/`, the hard gate
-`frontend/web/scripts/checks/check-design-tokens.py`, and the pixel harness
-`frontend/web/tests/design/fingerprint.py`. The harness's own coverage is enforced by
+Scope: the design system as landed — `apps/web/src/styles/tokens.ts` as the single source of
+truth, the generated `apps/web/src/app/(frontend)/globals.css` `:root` block and
+`tailwind.tokens.json`, the atom shelf under `apps/web/src/ui/`, the hard gate
+`apps/web/scripts/checks/check-design-tokens.py`, and the pixel harness
+`apps/web/tests/design/fingerprint.py`. The harness's own coverage is enforced by
 `routes --check` and documented in `docs/architecture/design-inventory.md` §E.
 
 Measured 2026-10-02 against the live worktree (the market-IA rework is uncommitted there).
@@ -81,7 +81,7 @@ never fail on them by design, so their only alarm is this count.
 
 ## 2. Atom adoption census
 
-Every exported atom under `frontend/web/src/ui/`, with today's call sites. A "call site"
+Every exported atom under `apps/web/src/ui/`, with today's call sites. A "call site"
 is a file that imports the atom from `@/ui/<shelf>`; `jsx` counts `<Atom` occurrences in
 those files. Measured with an import-resolving scan (a bare name-match over-reports:
 `Stat`/`Table`/`Button` also appear as local type names and `useState`):
@@ -141,11 +141,11 @@ are now closed — two adopted, three deleted:
 
 | atom | shelf | disposition |
 |---|---|---|
-| `Badge` | `frontend/web/src/ui/badge.tsx` | **adopted** — `src/features/home/ui.tsx` |
-| `Stat` | `frontend/web/src/ui/stat.tsx` | **adopted** — `src/features/home/ui.tsx` (6 uses) |
-| `Dash` | `frontend/web/src/ui/feedback.tsx` | **deleted** — the house `—` literal lives at the call sites |
-| `TextArea` | `frontend/web/src/ui/primitives.tsx` | **deleted** — no caller; `transactions`/`wallets` write a raw `<textarea>` where needed |
-| `TFoot` | `frontend/web/src/ui/table.tsx` | **deleted** — no caller |
+| `Badge` | `apps/web/src/ui/badge.tsx` | **adopted** — `src/features/home/ui.tsx` |
+| `Stat` | `apps/web/src/ui/stat.tsx` | **adopted** — `src/features/home/ui.tsx` (6 uses) |
+| `Dash` | `apps/web/src/ui/feedback.tsx` | **deleted** — the house `—` literal lives at the call sites |
+| `TextArea` | `apps/web/src/ui/primitives.tsx` | **deleted** — no caller; `transactions`/`wallets` write a raw `<textarea>` where needed |
+| `TFoot` | `apps/web/src/ui/table.tsx` | **deleted** — no caller |
 
 `Stat` was the sharpest case because it was **actively re-implemented** rather than adopted:
 
@@ -153,8 +153,8 @@ are now closed — two adopted, three deleted:
 cd frontend/web && grep -rnE "^(export )?function Stat\b" src
 ```
 
-- `frontend/web/src/ui/stat.tsx` — the shelf atom, now adopted by the `home` surface.
-- `frontend/web/src/features/ticker/detail.tsx:417` — a local `Stat` (`tone`), used 7 times.
+- `apps/web/src/ui/stat.tsx` — the shelf atom, now adopted by the `home` surface.
+- `apps/web/src/features/ticker/detail.tsx:417` — a local `Stat` (`tone`), used 7 times.
 
 The shelf atom now has a caller. The local one in `ticker/detail.tsx` remains (it carries a `tone`
 the shelf atom does not) and is the remaining adoption candidate if the two are ever folded.
@@ -164,9 +164,9 @@ the shelf atom does not) and is the remaining adoption candidate if the two are 
 ## 3. Coverage gap — routes the pixel harness cannot see
 
 The fingerprint harness only covers the routes in its own `ROUTES` list, and it cannot render a
-session-gated page at all: it has **no cookie/session mechanism**, and `frontend/web/src/middleware.ts`
+session-gated page at all: it has **no cookie/session mechanism**, and `apps/web/src/middleware.ts`
 redirects an anonymous request for those prefixes to `/login` (the policy table is `TIER_PAGES` in
-`frontend/web/src/server/auth.ts`). Those routes therefore have **no pixel-level guarantee**
+`apps/web/src/server/auth.ts`). Those routes therefore have **no pixel-level guarantee**
 from a token change. The harness names each as an explicit, reasoned exclusion in
 `EXCLUDED_ROUTES` and fails if a new one appears unlisted:
 
@@ -193,9 +193,9 @@ The 13 page routes with no pixel guarantee (all redirect `307` to `/login` when 
 | `/team/wallets` | under the `/team` → `team` prefix |
 
 One further page route is excluded as a **third-party surface**, not a session gate:
-`/blog/cms/admin/[[...segments]]` — the Payload admin SPA under `frontend/web/src/app/blog/(payload)/**`,
+`/blog/cms/admin/[[...segments]]` — the Payload admin SPA under `apps/web/src/app/blog/(payload)/**`,
 which styles itself through its own stylesheets and is already colour-exempt in the token gate
-(`COLOR_EXEMPT_DIRS` `src/app/blog/(payload)` in `frontend/web/scripts/checks/check-design-tokens.py`).
+(`COLOR_EXEMPT_DIRS` `src/app/blog/(payload)` in `apps/web/scripts/checks/check-design-tokens.py`).
 It is not product chrome, so it is neither probed nor a gap.
 
 The 14 routes the harness **does** see are listed in `docs/architecture/design-inventory.md` §C.
@@ -229,10 +229,10 @@ Result (verbatim):
 
 | raw element | count | files | the atom that covers it |
 |---|---:|---:|---|
-| `<button` | 33 | 19 | `Button` (`frontend/web/src/ui/primitives.tsx`) |
-| `<input` | 20 | 11 | `Input` (`frontend/web/src/ui/primitives.tsx`) |
-| `<table` | 16 | 12 | `Table` (`frontend/web/src/ui/table.tsx`) |
-| `<select` | 15 | 8 | `Select` (`frontend/web/src/ui/primitives.tsx`) |
+| `<button` | 33 | 19 | `Button` (`apps/web/src/ui/primitives.tsx`) |
+| `<input` | 20 | 11 | `Input` (`apps/web/src/ui/primitives.tsx`) |
+| `<table` | 16 | 12 | `Table` (`apps/web/src/ui/table.tsx`) |
+| `<select` | 15 | 8 | `Select` (`apps/web/src/ui/primitives.tsx`) |
 | `<textarea` | 2 | 2 | **no atom** — `TextArea` was removed 2026-10-05; the two sites write a raw `<textarea>` |
 
 > **Re-measured 2026-10-05** (`HEAD` = `be6fec4`). The counts moved with the `home` surface landing
@@ -244,32 +244,32 @@ covers — the shell itself:
 
 | `file:line` | what it hand-rolls |
 |---|---|
-| `frontend/web/src/features/overview/store-shell.tsx` | a full `<button>` (padding, radius, accent background) — the primary nav/tab chrome |
-| `frontend/web/src/features/market/hub.tsx` | hub tab `<button>` |
-| `frontend/web/src/features/market/hub.tsx` | hub tab `<button>` |
-| `frontend/web/src/features/market/hub.tsx` | hub tab `<button>` |
-| `frontend/web/src/app/(frontend)/(admin)/admin/page.tsx:81` | a raw `<table>` |
-| `frontend/web/src/features/admin/members-table.tsx:82` | a raw `<table>` (and `frontend/web/src/features/admin/members-table.tsx:128`, a raw `<button>`) |
+| `apps/web/src/features/overview/store-shell.tsx` | a full `<button>` (padding, radius, accent background) — the primary nav/tab chrome |
+| `apps/web/src/features/market/hub.tsx` | hub tab `<button>` |
+| `apps/web/src/features/market/hub.tsx` | hub tab `<button>` |
+| `apps/web/src/features/market/hub.tsx` | hub tab `<button>` |
+| `apps/web/src/app/(frontend)/(admin)/admin/page.tsx:81` | a raw `<table>` |
+| `apps/web/src/features/admin/members-table.tsx:82` | a raw `<table>` (and `apps/web/src/features/admin/members-table.tsx:128`, a raw `<button>`) |
 
 Files that hand-roll raw chrome *while also importing atoms* — the migrated half, where the same
 element still appears both ways:
 
 | `file:line` (first raw element) | raw elements | imports atoms? |
 |---|---|---|
-| `frontend/web/src/features/dex/ui.tsx:214` | 2 `<button>`, 4 `<input>`, 2 `<select>` | yes (`Banner`, `Loading`, `Table`) |
-| `frontend/web/src/features/executor/ui.tsx:118` | 1 `<select>`, 1 `<input>`, 5 `<table>` | yes (`Card`, `Label`) |
-| `frontend/web/src/features/ticker/detail.tsx:270` | 1 `<button>`, 3 `<select>`, 1 `<table>` | yes (`Loading`) and a local `Stat` |
-| `frontend/web/src/features/ticker/ui.tsx:207` | 3 `<button>`, 1 `<table>` | yes (`Loading`) |
-| `frontend/web/src/features/overview/tracker.tsx` | 1 `<button>`, 1 `<table>` | yes (`Loading`) |
-| `frontend/web/src/features/overview/transactions.tsx` | 1 `<table>`, 3 `<input>`, 1 `<textarea>` | yes (`Button` ×8, `Input` ×4, `Select` ×4, `Modal`, `Label` ×7) |
-| `frontend/web/src/features/overview/wallets.tsx` | 2 `<input>`, 2 `<button>`, 1 `<textarea>` | yes (`Button` ×3, `Modal`, `Label` ×4, `Card`) |
-| `frontend/web/src/features/overview/dashboard.tsx` | 1 `<table>` | yes (`Card`) |
-| `frontend/web/src/features/dex/trench.tsx:42` | 1 `<button>` | no (bespoke state) |
-| `frontend/web/src/features/news/ui.tsx:47` | 1 `<button>` | yes (`EmptyState`, `Loading`, `Toolbar`) |
-| `frontend/web/src/features/scoreboard/ui.tsx:97` | 1 `<button>` | yes (`Loading`, `Table`, `Toolbar`) |
-| `frontend/web/src/features/signals/ui.tsx:190` | 1 `<button>` | yes (`Loading`, `Table`, `Toolbar`) |
-| `frontend/web/src/features/llama/ui.tsx:122` | 1 `<button>` | yes (`Banner`, `Table`) |
-| `frontend/web/src/features/overview/reconciliation.tsx` | 1 `<table>` | yes (`EmptyState`, `Card`) |
+| `apps/web/src/features/dex/ui.tsx:214` | 2 `<button>`, 4 `<input>`, 2 `<select>` | yes (`Banner`, `Loading`, `Table`) |
+| `apps/web/src/features/executor/ui.tsx:118` | 1 `<select>`, 1 `<input>`, 5 `<table>` | yes (`Card`, `Label`) |
+| `apps/web/src/features/ticker/detail.tsx:270` | 1 `<button>`, 3 `<select>`, 1 `<table>` | yes (`Loading`) and a local `Stat` |
+| `apps/web/src/features/ticker/ui.tsx:207` | 3 `<button>`, 1 `<table>` | yes (`Loading`) |
+| `apps/web/src/features/overview/tracker.tsx` | 1 `<button>`, 1 `<table>` | yes (`Loading`) |
+| `apps/web/src/features/overview/transactions.tsx` | 1 `<table>`, 3 `<input>`, 1 `<textarea>` | yes (`Button` ×8, `Input` ×4, `Select` ×4, `Modal`, `Label` ×7) |
+| `apps/web/src/features/overview/wallets.tsx` | 2 `<input>`, 2 `<button>`, 1 `<textarea>` | yes (`Button` ×3, `Modal`, `Label` ×4, `Card`) |
+| `apps/web/src/features/overview/dashboard.tsx` | 1 `<table>` | yes (`Card`) |
+| `apps/web/src/features/dex/trench.tsx:42` | 1 `<button>` | no (bespoke state) |
+| `apps/web/src/features/news/ui.tsx:47` | 1 `<button>` | yes (`EmptyState`, `Loading`, `Toolbar`) |
+| `apps/web/src/features/scoreboard/ui.tsx:97` | 1 `<button>` | yes (`Loading`, `Table`, `Toolbar`) |
+| `apps/web/src/features/signals/ui.tsx:190` | 1 `<button>` | yes (`Loading`, `Table`, `Toolbar`) |
+| `apps/web/src/features/llama/ui.tsx:122` | 1 `<button>` | yes (`Banner`, `Table`) |
+| `apps/web/src/features/overview/reconciliation.tsx` | 1 `<table>` | yes (`EmptyState`, `Card`) |
 
 Note: several of these files (`ticker/*`, `tracker/*`, `llama/*`, `dex/*`) belong to families the
 market-IA rework absorbs into the `/market` hub; the counts above are the state of the live worktree
@@ -312,7 +312,7 @@ the debt above costs — that is this ledger's only job.
 
 ### 6.1 A build in place arms a trap on the live `:3100` unit
 
-The `fudcourt-web` user unit serves **the same** `frontend/web/.next` directory that
+The `fudcourt-web` user unit serves **the same** `apps/web/.next` directory that
 `unset NODE_ENV && bun run build` rewrites (unit: `WorkingDirectory=/home/dwizzy/fudcourt/frontend/web`,
 `NODE_ENV=production`, `next start -p 3100`), and a build does **not** restart the unit. So a build
 run in place swaps the served build out from under a live process: routes keep answering 200 from
@@ -332,7 +332,7 @@ since been replaced.
 
 Two ways to arm it, both avoided by this ledger's own runs:
 
-* `frontend/web/tests/design/fingerprint.py` — the §E cutover procedure's step 1 IS
+* `apps/web/tests/design/fingerprint.py` — the §E cutover procedure's step 1 IS
   `cd frontend/web && unset NODE_ENV && bunx tsc --noEmit && bun run build`. Following it in place
   while the unit is live arms the trap.
 * the repo-wide gates — CI, `scripts/verify/verify-all.sh` and the pre-push hook all build. This is
@@ -347,7 +347,7 @@ fingerprint procedure restarts or reconfigures the unit.
 
 The baseline behind this ledger's §1–§4 measurements was taken the WRONG-OF-THE-RULE way, which is
 why this note exists: the worktree was built **in place** in `frontend/web` and served on scratch
-port 3214 directly from `frontend/web/.next` (an in-place `bun run build` was part of the sequence).
+port 3214 directly from `apps/web/.next` (an in-place `bun run build` was part of the sequence).
 That build rewrote the same `.next` the live `:3100` unit serves — the unit was never restarted, and
 `.next/BUILD_ID` advanced to `qC0G2FIyUxOwFNkLOqQUP` during that window. The capture itself is
 unaffected (the harness read the rendered pages), but the in-place build is exactly the trap this

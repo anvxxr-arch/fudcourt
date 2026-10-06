@@ -81,8 +81,8 @@ Already moved in earlier commits on this branch (verified via `git log`):
 | --- | --- | --- |
 | `apps/apicalls/` | `backend/data/` | `4e8ba91` (Phase 1) |
 | `apps/sync/` | `backend/sync/` | `4e8ba91` (Phase 1) |
-| `frontend/web/db/*.sql` | `database/schema/*.sql` | `4e8ba91` (Phase 2) |
-| `frontend/web/infrastructure/*`, `apps/apicalls/infrastructure/*`, `apps/sync/infrastructure/*` (`*.service`, `*.timer`) | `infrastructure/systemd/` | `94a2ee1` (Phase 10) |
+| `apps/web/db/*.sql` | `database/schema/*.sql` | `4e8ba91` (Phase 2) |
+| `apps/web/infrastructure/*`, `apps/apicalls/infrastructure/*`, `apps/sync/infrastructure/*` (`*.service`, `*.timer`) | `infrastructure/systemd/` | `94a2ee1` (Phase 10) |
 
 ## 3. Files created
 
@@ -100,10 +100,10 @@ Already moved in earlier commits on this branch (verified via `git log`):
 ## 4. Files removed
 
 - `.github/workflows/ci.yml` — superseded by the five domain workflows (this session).
-- `frontend/web/infrastructure/*` (7 units), `backend/data/infrastructure/*`, `backend/sync/infrastructure/*` — consolidated into `infrastructure/systemd/` (commit `94a2ee1`).
-- `apps/blog/**`, the flat `frontend/web/app/**` layout — removed in the earlier "repurpose" commit `5e68576`.
+- `apps/web/infrastructure/*` (7 units), `backend/data/infrastructure/*`, `backend/sync/infrastructure/*` — consolidated into `infrastructure/systemd/` (commit `94a2ee1`).
+- `apps/blog/**`, the flat `apps/web/app/**` layout — removed in the earlier "repurpose" commit `5e68576`.
 
-**Removed in this session (2026-10-05, DR-043):** `frontend/web/src/platform/executor/**` (8,024 LOC → 0), `frontend/web/scripts/executor/worker.ts` (preserved as a 5-line tombstone in the still-present `scripts/executor/` directory), the 9 TS-runtime test files (`tests/{e2e,integration}/executor/**`, `frontend/web/tests/executor-proxy-tests.ts`), and the `fudcourt-executor-worker.service` systemd unit (renamed to `RETIRED-fudcourt-executor-worker.service.txt`). The 15 `/api/executor/*` route handlers are now one-line forwarders through `src/app/(frontend)/api/executor/_proxy.ts`. The wire contract `src/platform/executor/types.ts` is the only TS-side survivor (consumer-facing). The matrix's `TS modules deleted` row closes to **DONE 2026-10-05 (DR-043)**, and §6 rows 1–3 flip to RESOLVED (same date).
+**Removed in this session (2026-10-05, DR-043):** `apps/web/src/platform/executor/**` (8,024 LOC → 0), `apps/web/scripts/executor/worker.ts` (preserved as a 5-line tombstone in the still-present `scripts/executor/` directory), the 9 TS-runtime test files (`tests/{e2e,integration}/executor/**`, `apps/web/tests/executor-proxy-tests.ts`), and the `fudcourt-executor-worker.service` systemd unit (renamed to `RETIRED-fudcourt-executor-worker.service.txt`). The 15 `/api/executor/*` route handlers are now one-line forwarders through `src/app/(frontend)/api/executor/_proxy.ts`. The wire contract `src/platform/executor/types.ts` is the only TS-side survivor (consumer-facing). The matrix's `TS modules deleted` row closes to **DONE 2026-10-05 (DR-043)**, and §6 rows 1–3 flip to RESOLVED (same date).
 
 ## 5. Architecture decisions
 
@@ -126,10 +126,10 @@ ledger; portfolio is derived; append-only events). Current-state highlights:
 
 | # | Item | Evidence | Blocked on |
 | --- | --- | --- | --- |
-| 1 | ~~**TS executor still in `frontend/web`** — 8,024 LOC, 10 modules~~ **RESOLVED 2026-10-05 (DR-043)** | `find frontend/web/src/platform/executor -type f` → exactly one file: `types.ts` (the wire contract); the 9 runtime modules + the worker entry + 9 TS-runtime test files are deleted; `frontend/web/scripts/executor/worker.ts` is preserved as a tombstone; the systemd unit renamed to `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt` (3-line header). | none — DR-043 closed this. Web↔Go route parity proven (`diff <(curl :3100/api/executor/executions) <(curl :3105/api/executor/executions)` empty for a minted team session); `fudcourt-executor.service` active on :3104+:3105; `bun run verify:executor` is `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` (12 tests, hermetic, <1 s). |
-| 2 | ~~**15 web route handlers still import `platform/executor`**~~ **RESOLVED 2026-10-05 (DR-043)** | the 15 handlers are now 4-line shells forwarding to `src/app/(frontend)/api/executor/_proxy.ts`; the only `@/platform/executor` imports in `frontend/web/src` are the 5 consumer-side type imports of the wire contract (`trade/{client,intent,ui/composer}.ts` + `features/executor/{client,ui}.tsx`). The single mention of the old path left in the tree is a doc comment inside `src/platform/executor/types.ts` (the renamed home) that explains the move — it is text, not an import. | none |
+| 1 | ~~**TS executor still in `frontend/web`** — 8,024 LOC, 10 modules~~ **RESOLVED 2026-10-05 (DR-043)** | `find frontend/web/src/platform/executor -type f` → exactly one file: `types.ts` (the wire contract); the 9 runtime modules + the worker entry + 9 TS-runtime test files are deleted; `apps/web/scripts/executor/worker.ts` is preserved as a tombstone; the systemd unit renamed to `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt` (3-line header). | none — DR-043 closed this. Web↔Go route parity proven (`diff <(curl :3100/api/executor/executions) <(curl :3105/api/executor/executions)` empty for a minted team session); `fudcourt-executor.service` active on :3104+:3105; `bun run verify:executor` is `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` (12 tests, hermetic, <1 s). |
+| 2 | ~~**15 web route handlers still import `platform/executor`**~~ **RESOLVED 2026-10-05 (DR-043)** | the 15 handlers are now 4-line shells forwarding to `src/app/(frontend)/api/executor/_proxy.ts`; the only `@/platform/executor` imports in `apps/web/src` are the 5 consumer-side type imports of the wire contract (`trade/{client,intent,ui/composer}.ts` + `features/executor/{client,ui}.tsx`). The single mention of the old path left in the tree is a doc comment inside `src/platform/executor/types.ts` (the renamed home) that explains the move — it is text, not an import. | none |
 | 3 | ~~**EXECUTOR DDL still embedded in `store.ts`**~~ **RESOLVED 2026-10-05 (DR-043)** | the TS `store.ts` is gone (see row 1). The Go runtime applies the tracked DDL at startup (`apps/executor/internal/repository.EnsureSchema`, `internal/repository/schema.go`), and its `embed` copy is pinned BYTE-EXACT by `TestEmbeddedSchemaMatchesTracked`. The test that previously pinned the TS half is gone with the file. | none |
-| 4 | **Phase 8 move of `frontend/web/scripts/verify/*` — ~~not executed~~ EXECUTED** | the relocation landed in one commit: repo-wide gates → `scripts/verify/`, executor E2E → `tests/e2e/executor/` (later retired by DR-043), fixtures → `tests/fixtures/`, oracle → `tests/oracle/`, database tooling → `scripts/database/`, web-only suites → `frontend/web/tests/`. Every invoker repointed (verify-all, pre-push, integration.yml, check-contract, root README, package.json); `test:shapers` is now **213/213** across 11 shaper files (was 20 files / 240 tests pre-DR-043; the 9 deleted TS-runtime suites' assertions are covered by the named Go counterparts in `parity-matrix.md` rows 1–9). The `verify-*.py` harnesses remain repo tools (their UI-wiring checks read `frontend/web/src/**`), not web-app-only — `git ls-files`; `scripts/verify/{verify-*,monitor}.py`; `tests/{oracle,integration/api,fixtures}/` (the executor subdirs under `tests/e2e/` and `tests/integration/` are gone); `bun run test:shapers` | none |
+| 4 | **Phase 8 move of `apps/web/scripts/verify/*` — ~~not executed~~ EXECUTED** | the relocation landed in one commit: repo-wide gates → `scripts/verify/`, executor E2E → `tests/e2e/executor/` (later retired by DR-043), fixtures → `tests/fixtures/`, oracle → `tests/oracle/`, database tooling → `scripts/database/`, web-only suites → `apps/web/tests/`. Every invoker repointed (verify-all, pre-push, integration.yml, check-contract, root README, package.json); `test:shapers` is now **213/213** across 11 shaper files (was 20 files / 240 tests pre-DR-043; the 9 deleted TS-runtime suites' assertions are covered by the named Go counterparts in `parity-matrix.md` rows 1–9). The `verify-*.py` harnesses remain repo tools (their UI-wiring checks read `apps/web/src/**`), not web-app-only — `git ls-files`; `scripts/verify/{verify-*,monitor}.py`; `tests/{oracle,integration/api,fixtures}/` (the executor subdirs under `tests/e2e/` and `tests/integration/` are gone); `bun run test:shapers` | none |
 | 5 | ~~**`api` lists "admin" as a hosted context but has no `internal/admin`**~~ **RESOLVED** | the false claim is gone: `apps/api/main.go` now names the `/api/admin/members` route plane, `identity.TierAdmin`, and the handlers in `cmd/api/{routes,errors}.go`, with an explicit note that splitting it into `internal/admin` is deferred. `go build ./backend/api/...` green. Package split remains a legitimate follow-up; the misleading comment does not. |
 | 6 | **`request_id` was missing from the executor's four required identifiers** (PRD §66 names `execution_id`, `request_id`, `client_order_id`, `event_id` — only three existed) | `idempotency.RequestID` (`req_<exec>_<seq>`) + `ParseRequestID` added; refuses foreign ids incl. `fud_...` client order ids so the two id spaces can never be cross-parsed. Verified by `TestRequestIDAndClientOrderIDAreDistinct` + `TestRequestIDIsStableAcrossRetry`. Restart/duplicate proof runs against the REAL paper venue: `TestPaperRestartNoDuplicateOrder`, `TestPaperDuplicateStartIsNoOp`, `TestPaperRejectedOrderThenReplaces` all green in `internal/tests/e2e`. | none — gate 5 of `.ai/prompts/executor-migration.md` closed |
 
@@ -141,7 +141,7 @@ Items 1–4 are now RESOLVED. The executor cutover is closed (DR-043, 2026-10-05
 
 | # | Objective "done when" | Status | Evidence (this tree, 2026-10-01) |
 | --- | --- | --- | --- |
-| 1 | `frontend/web` no longer owns executor runtime | **MET (DR-043, 2026-10-05)** | `find frontend/web/src/platform/executor -type f` → exactly one file: `types.ts` (the wire contract — consumer-facing only, no runtime path, no imports out, no executables, no DB, no HTTP). `frontend/web/scripts/executor/worker.ts` is preserved as a 5-line tombstone. The 9 TS-runtime test files are gone. `verify:executor` is the Go hermetic e2e. Web↔Go route parity proven on every `/api/executor/*` URL with a minted team session. |
+| 1 | `frontend/web` no longer owns executor runtime | **MET (DR-043, 2026-10-05)** | `find frontend/web/src/platform/executor -type f` → exactly one file: `types.ts` (the wire contract — consumer-facing only, no runtime path, no imports out, no executables, no DB, no HTTP). `apps/web/scripts/executor/worker.ts` is preserved as a 5-line tombstone. The 9 TS-runtime test files are gone. `verify:executor` is the Go hermetic e2e. Web↔Go route parity proven on every `/api/executor/*` URL with a minted team session. |
 | 2 | `frontend/web` no longer owns DB schema | MET | `find frontend/web -name '*.sql'` → none; DDL lives in `database/schema/{schema,pg-schema,executor-schema}.sql` |
 | 3 | `apps/apicalls` → `backend/data` | MET | `apps/apicalls` absent; `backend/data/{cmd/data,internal/*}`, module path rewritten |
 | 4 | Rust sync under `backend/sync` | MET | `backend/sync/{src,tests,Cargo.toml}`; `cargo test --release` green |
@@ -170,7 +170,7 @@ the only vestige.
 | Metric | Required | Evidence (current tree) |
 | --- | --- | --- |
 | DB schema files inside `frontend/web` | 0 | `find frontend/web -name '*.sql'` → **0** |
-| exchange credentials / signing handled by frontend | 0 | **MET (DR-043, 2026-10-05)** — the only `node:crypto` calls remaining in `frontend/web` are the session-cookie HMAC in `frontend/web/src/platform/auth/session.ts` (the only secret that was ever at the web tier, and stays there because the web tier is its only issuer/verifier). The exchange-credential vault is in the Go service (`apps/executor/internal/platform/credentials`, AES-256-GCM sealed per field under `FUDCOURT_EXECUTOR_MASTER_KEY`); no request signing happens in the web tier; no `sealSecret`/`openSecret` in the web tier; `node:crypto` is no longer imported by the executor path. The Go `apps/executor/internal/platform/credentials` package is the canonical owner of the exchange credentials. |
+| exchange credentials / signing handled by frontend | 0 | **MET (DR-043, 2026-10-05)** — the only `node:crypto` calls remaining in `frontend/web` are the session-cookie HMAC in `apps/web/src/platform/auth/session.ts` (the only secret that was ever at the web tier, and stays there because the web tier is its only issuer/verifier). The exchange-credential vault is in the Go service (`apps/executor/internal/platform/credentials`, AES-256-GCM sealed per field under `FUDCOURT_EXECUTOR_MASTER_KEY`); no request signing happens in the web tier; no `sealSecret`/`openSecret` in the web tier; `node:crypto` is no longer imported by the executor path. The Go `apps/executor/internal/platform/credentials` package is the canonical owner of the exchange credentials. |
 | cross-service implementation imports | 0 | `grep` for `backend/{api,workers/executor,data}/` imports inside the Go services → **none**; `backend/data` mentions `executor` nowhere; `backend/sync` only names TS files in *provenance comments* (`src/{main,chains,reconcile}.rs`), not imports |
 | canonical risk engine | 1 | exactly one `risk.go` → `apps/executor/internal/risk/risk.go` (+31 test funcs) |
 | canonical sizing implementation | 1 | exactly one `sizing.go` → `apps/executor/internal/sizing/sizing.go` (+16 test funcs) |
@@ -399,20 +399,20 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    + pinned clock, no PG/Valkey/network). What remains is **not** a code-surface task — it is the
    three-item checklist: **(a)** thin-proxy the web `/api/executor/*` handlers to
    `127.0.0.1:3105` — **coded 2026-10-02, not switched on:** all 15 handlers delegate to
-   `frontend/web/src/platform/executor/executor-proxy.ts`, and the forward happens only when
+   `apps/web/src/platform/executor/executor-proxy.ts`, and the forward happens only when
    `FUDCOURT_EXECUTOR_PROXY=go` (default OFF, so the TS handlers are still the live path); **(b)**
    `FUDCOURT_SESSION_SECRET` + `FUDCOURT_EXECUTOR_PG_URL` must be provisioned in
-   `frontend/web/.env.local` before the unit can start (provisioning the DSN no longer implies
+   `apps/web/.env.local` before the unit can start (provisioning the DSN no longer implies
    applying the schema by hand — since `8d87df1` `cmd/executor` applies the tracked
    `database/schema/executor-schema.sql` at startup, `repository.EnsureSchema`); **(c)** provision
    `FUDCOURT_EXECUTOR_MASTER_KEY` and run `verify:executor` against the **Go** worker. The TS
    executor stays **production** until all three land — the TS deletion is still OPEN.
-2. ~~**Then** execute the Phase 8 move (`frontend/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
+2. ~~**Then** execute the Phase 8 move (`apps/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),
    repointing the 77 references in one commit.~~ **DONE** — the move landed in one commit
-   (`frontend/web/scripts/verify/*` → `scripts/verify/`, executor E2E → `tests/e2e/executor/`,
+   (`apps/web/scripts/verify/*` → `scripts/verify/`, executor E2E → `tests/e2e/executor/`,
    executor integration → `tests/integration/executor/`, fixtures → `tests/fixtures/`,
    oracle → `tests/oracle/`, database tooling → `scripts/database/`, web-only suites →
-   `frontend/web/tests/`), with the invokers repointed and `test:shapers` still 240/240.
+   `apps/web/tests/`), with the invokers repointed and `test:shapers` still 240/240.
    **Update (DR-040, 2026-10-03):** `scripts/database/` (the schema dumper) and the
    `scripts/verify/parity-*` Postgres projection harness were deleted with the Turso store,
    so the `scripts/database/` half of this move no longer exists on disk.
@@ -421,7 +421,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    As settled on disk: `scripts/verify/{check-contract.py,check-deploy.py,verify-<family>.py,monitor.py,verify-all.sh,parity-*}`,
    `tests/oracle/{cr_fetch.py,record-fixtures.ts,dump-envelopes.ts}`, `tests/e2e/executor/probe-sizing.cjs`,
    and the web-only set (`dom_audit.py`, `verify_all_routes.py`, `dbg-smoke.cjs`) plus the suites
-   under `frontend/web/tests/`. `frontend/web/scripts/` retains only `checks/check-structure.py`,
+   under `apps/web/tests/`. `apps/web/scripts/` retains only `checks/check-structure.py`,
    `executor/worker.ts` and `tools/`.
 3. **Sync oracle gate — DONE and committed.** `scripts/verify/verify-sync.py`
    (fixture replay, no `--fixtures` flag needed) is wired into `verify-all.sh` and passes:
@@ -447,7 +447,7 @@ those pre-staged files in; see the commit-scope note below). `git status` is emp
 **Commit-scope note (honesty):** some of this session's commits were made with a bare
 `git commit` while a concurrent writer had files staged in the shared index, so they swept those
 files in under a different message (e.g. `024fadd`, labelled a docs commit, contains 54 files
-including `frontend/web/infrastructure/*` and `apps/executor/internal/platform/lock/valkey.go`). The **content** is
+including `apps/web/infrastructure/*` and `apps/executor/internal/platform/lock/valkey.go`). The **content** is
 preserved and green; only the commit *messages* under-describe their payload. No work was lost or
 discarded. Re-splitting history now would rewrite commits under an active writer, which is riskier
 than the cosmetic gain, so it is recorded here instead.

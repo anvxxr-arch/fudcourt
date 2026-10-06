@@ -3,7 +3,7 @@
 fudcourt live multi-chain sync -> the local Postgres `assets` table (DR-040).
 
 LOCATION: this script is the ORACLE, and an oracle does not live inside the app
-it checks. The Phase-8 tooling move took it out of `frontend/web/scripts/tools/`
+it checks. The Phase-8 tooling move took it out of `apps/web/scripts/tools/`
 (that directory no longer exists); it is wired by
 `infrastructure/systemd/fudcourt-sync.service` at its current path. Paths named
 below are repo-relative roots (`apps/reconciler/src/**`), not app-relative ones.

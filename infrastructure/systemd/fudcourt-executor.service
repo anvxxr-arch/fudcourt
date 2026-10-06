@@ -1,19 +1,19 @@
 # FUD Court execution runtime (Go worker; apps/executor).
 #
 # This is the production executor. The TypeScript worker
-# (frontend/web/scripts/executor/worker.ts) was the previous owner; the Go worker
+# (apps/web/scripts/executor/worker.ts) was the previous owner; the Go worker
 # in apps/executor is the replacement and parity rows 1-9 of
 # docs/architecture/parity-matrix.md are DONE.
 #
 # CUTOVER (2026-10-05, DR-042): the web tier thin-proxies /api/executor/* here
-# when FUDCOURT_EXECUTOR_PROXY=go (set in frontend/web/.env.local), so this
+# when FUDCOURT_EXECUTOR_PROXY=go (set in apps/web/.env.local), so this
 # process IS the live executor path. Proven: web :3100 ↔ Go :3105 envelope
 # parity on the executor routes and `bun run verify:executor` green. The TS
 # worker unit (fudcourt-executor-worker.service) is no longer run; the TS
 # executor code stays in-tree until the deletion row passes.
 #
 # PROVISIONING: PROVISIONED (2026-10-05). All required keys are present in
-# frontend/web/.env.local:
+# apps/web/.env.local:
 #   FUDCOURT_EXECUTOR_MASTER_KEY 64 hex chars; REQUIRED, fail-closed (§40)
 #   FUDCOURT_EXECUTOR_PG_URL     Postgres DSN (the DR-019 fudcourt DB, now on
 #                                the consolidated instance 127.0.0.1:5432)
@@ -39,7 +39,7 @@
 #   The executor now VERIFIES the same signed session cookie the web tier
 #   ISSUES. That means FUDCOURT_SESSION_SECRET must be present in THIS process
 #   and MUST be byte-identical to the value the web tier signs with. It arrives
-#   through the same EnvironmentFile line below (frontend/web/.env.local — the
+#   through the same EnvironmentFile line below (apps/web/.env.local — the
 #   documented home per SECRETS.md), so there is exactly ONE definition. If the
 #   two copies ever diverge, every /api/executor/* route answers 401
 #   `{error:'unauthorized',...}` while /healthz still reports ready — a silent
@@ -56,8 +56,8 @@ Type=simple
 # The master key is fail-closed: the binary refuses to start without it, so
 # the EnvironmentFile is NOT optional — no `-` prefix. Same file the web tier
 # reads (SECRETS.md: FUDCOURT_EXECUTOR_MASTER_KEY and FUDCOURT_SESSION_SECRET
-# both live in frontend/web/.env.local).
-EnvironmentFile=/home/dwizzy/fudcourt/frontend/web/.env.local
+# both live in apps/web/.env.local).
+EnvironmentFile=/home/dwizzy/fudcourt/apps/web/.env.local
 # Pin the API surface to the documented default explicitly (see the header).
 Environment=FUDCOURT_EXECUTOR_API_ADDR=127.0.0.1:3105
 # NOTE: FUDCOURT_SESSION_SECRET is deliberately NOT set here. It is a secret and

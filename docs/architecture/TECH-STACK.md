@@ -37,13 +37,13 @@ oracle.
 
 ## 2. Frameworks & runtimes
 
-Single-app tree: every version below is `frontend/web/package.json` (DR-017 merged the
+Single-app tree: every version below is `apps/web/package.json` (DR-017 merged the
 blog in); the repo root `package.json` declares **no dependencies** — scripts only.
 
 | Component | Version | Notes |
 |-----------|---------|-------|
-| Next.js | **16.3.6** | App Router; one Next version across the repo (the blog merged into `frontend/web`, DR-017, retiring the 16.3.5 divergence); all 36 `route.ts` under `frontend/web/src/app/(frontend)/api` use `force-dynamic` |
-| React | 19.2.0 | `react` + `react-dom`, declared in `frontend/web/package.json` |
+| Next.js | **16.3.6** | App Router; one Next version across the repo (the blog merged into `frontend/web`, DR-017, retiring the 16.3.5 divergence); all 36 `route.ts` under `apps/web/src/app/(frontend)/api` use `force-dynamic` |
+| React | 19.2.0 | `react` + `react-dom`, declared in `apps/web/package.json` |
 | Payload CMS | 3.89.0 | + `@payloadcms/next`, `@payloadcms/db-postgres`, `@payloadcms/richtext-lexical` |
 | Tailwind CSS | 3.4.17 | styling |
 | TypeScript | 5.9.3 | `frontend/web` dev dependency; the root `package.json` declares none |
@@ -73,9 +73,9 @@ managed cloud. The treasury schema is versioned at `database/schema/pg-schema.sq
 | Local CryptoRank sidecar | `fudcourt-data.service` (systemd --user) → `backend/data/bin/fudcourt-data`, `:3101`; cache `~/.cache/fudcourt-data`, `Restart=always`. Unit versioned at `infrastructure/systemd/fudcourt-data.service` (identical to the installed unit) |
 | Local Rust reconcile service | `fudcourt-reconciled.service` (systemd --user) → `backend/sync/target/release/fudcourt-reconciled`, `127.0.0.1:3102`, `Restart=always`, `EnvironmentFile` the repo `.env`; enabled at boot. **Zero new crates** (tokio `net`+`io-util`; serde_json `preserve_order` is a feature, not a package). Unit versioned at `infrastructure/systemd/fudcourt-reconciled.service` (identical to the installed unit). `/api/reconcile` on `:3100` proxies to it (DR-014) |
 | Local blog | **Retired as a unit (DR-017)** — the blog is served by `fudcourt-web` on `:3100` at `/blog` (public), `/blog/cms/admin` (Payload admin) and `/blog/cms/api/*` (Payload REST/GraphQL). `fudcourt-blog.service` and `:3001` no longer exist; the retirement tombstone is `infrastructure/systemd/RETIRED-fudcourt-blog.service.txt` |
-| Live sync | `fudcourt-sync.timer` → `OnUnitActiveSec=5min` → `fudcourt-sync.service` (`ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/tests/oracle/sync-live.py`, `WorkingDirectory=/home/dwizzy/fudcourt/frontend/web` — the cwd-stable `bun` `ExecStartPost` for `frontend/web/.env.local`) → Postgres `assets` (`FUDCOURT_PG_URL`) |
+| Live sync | `fudcourt-sync.timer` → `OnUnitActiveSec=5min` → `fudcourt-sync.service` (`ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/tests/oracle/sync-live.py`, `WorkingDirectory=/home/dwizzy/fudcourt/frontend/web` — the cwd-stable `bun` `ExecStartPost` for `apps/web/.env.local`) → Postgres `assets` (`FUDCOURT_PG_URL`) |
 | Local Telegram bot | `fudcourt-bot.service` (systemd --user) → `backend/bot/bin/fudcourt-bot`, **stdlib-only Go module** `backend/bot`, long-poll (`getUpdates`, no webhook, no port), `EnvironmentFile` the repo-root `.env` (`FUDCOURT_TELEGRAM_BOT_TOKEN` — the same key `notify` sends with), `Restart=always`. The **receiving half** of the notification channel; see [bot.md](bot.md). Unit versioned at `infrastructure/systemd/fudcourt-bot.service` (identical to the installed unit) |
-| Deploy | Self-hosted only (DR-002: no third-party deploy target; the Vercel projects are unused/deletable — `frontend/web/vercel.json` does not exist, the orphan `.vercel/` link dir is gitignored). The legacy `/portfolio` redirect lives in `frontend/web/next.config.js`: `redirects` `/portfolio` → `/team/portfolio` (307) + `rewrites` `/portfolio/:path*` → `/:path*` |
+| Deploy | Self-hosted only (DR-002: no third-party deploy target; the Vercel projects are unused/deletable — `apps/web/vercel.json` does not exist, the orphan `.vercel/` link dir is gitignored). The legacy `/portfolio` redirect lives in `apps/web/next.config.js`: `redirects` `/portfolio` → `/team/portfolio` (307) + `rewrites` `/portfolio/:path*` → `/:path*` |
 | Monorepo layout | frontend/web + backend/data (+ backend/sync, backend/api, backend/workers/executor) on disk; **apps/blog is gone (DR-017)**; **no npm `workspaces` field** anywhere (root `package.json` has none — per-app install, each app owns its lockfile, and `npm run <script> --workspace=…` fails with "No workspaces found"). Each app's lockfile is `bun.lock` (Bun 1.4.2) and installs are `bun install --frozen-lockfile`; `npm ci` is not a supported path. **No `package-lock.json` exists anywhere in the tree today** (the root one that once listed the long-gone `apps/balance` / `apps/gateway` has been removed) |
 | Git remote | `github.com/anvxxr-arch/fudcourt`, branch `main` |
 
@@ -113,12 +113,12 @@ Browser/agent  ──►  GET /api/cryptorank?mode=…[&key=…][&fresh=1]   (:3
   coins.llama.fi + CoinGecko + publisher-title/oembed GATE3). It keeps driving
   the **Python** oracle `tests/oracle/cr_fetch.py` against the same upstream while
   checking the **Go-served** origin, so the two clients still cross-check each
-  other (DR-005); plus Playwright DOM audit (`frontend/web/tests/dom_audit.py`,
+  other (DR-005); plus Playwright DOM audit (`apps/web/tests/dom_audit.py`,
   4 checks — measured 3 passed / 1 failed: `/tracker` table rows = 0), plus sibling harnesses
-  `scripts/verify/verify-{llama,news,chainrank,dex,signals}.py` and `frontend/web/tests/verify-limiter.mts`.
+  `scripts/verify/verify-{llama,news,chainrank,dex,signals}.py` and `apps/web/tests/verify-limiter.mts`.
 - **Offline shaper tests:** `bun run test:shapers` (node --test; shaper/fixture + auth
   + inbound rate-limit suites, ~0.5s)
-  runs `frontend/web/src/features/cryptorank/shapers.ts` against 26 recorded upstream payloads (`.json.gz`) in
+  runs `apps/web/src/features/cryptorank/shapers.ts` against 26 recorded upstream payloads (`.json.gz`) in
   `tests/fixtures/` (sha256-pinned in `MANIFEST.json`: 26 pinned hashes,
   re-record with `bun run record:fixtures`; `ls tests/fixtures/*.gz | wc -l` = 26). Wired into the pre-push hook and the CI web job, so
   upstream template drift is a red test instead of a silent UI change.
@@ -137,7 +137,7 @@ Browser/agent  ──►  GET /api/cryptorank?mode=…[&key=…][&fresh=1]   (:3
 | Official exchange announcements / league schedules / official quotes | launchpool, prediction, rwa GATE3 |
 
 ## frontend/web layout (DR-018)
-One `src/` tree — the placement rule, enforced by `frontend/web/scripts/checks/check-structure.py`:
+One `src/` tree — the placement rule, enforced by `apps/web/scripts/checks/check-structure.py`:
 ```
 src/app/         routes only ((frontend)/ route groups (public)|(dashboard)|(admin) + api/, blog/ CMS + frontend) + middleware.ts
 src/features/    one slice per data family: client + shaper/types + its panel

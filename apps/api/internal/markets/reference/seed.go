@@ -78,7 +78,7 @@ type seedVenue struct {
 //   - provider ids: ONLY the CryptoRank chain slug, under the surface-qualified
 //     provider `cryptorank-chain`, taken from the recorded chain fixture
 //     tests/fixtures/blockchains.json.gz (moved from
-//     frontend/web/scripts/fixtures/ by fd17dc6)
+//     apps/web/scripts/fixtures/ by fd17dc6)
 //     pageProps.blockchains[] (Ethereum=ethereum, BNB=bnb,
 //     Polygon=matic-network, Solana=solana, Arbitrum=arbitrum, Base=base,
 //     Optimism=optimism).
@@ -99,8 +99,8 @@ type seedVenue struct {
 //     chain-surface value, so the chain ids live in the mapping table only.
 //
 //   - chain_numeric_id is deliberately ABSENT for every chain: no EVM chain id
-//     appears anywhere in the tree (checked: backend, frontend/web/src,
-//     frontend/web/scripts, database). The contract allows null and the schema
+//     appears anywhere in the tree (checked: apps/,
+//     apps/web/scripts, database). The contract allows null and the schema
 //     description wants a value we do not have, so it stays nil rather than
 //     being guessed.
 func seedChains() []seedChain {
@@ -134,7 +134,7 @@ func seedChains() []seedChain {
 // (the same slug the id is built from). Names and provider ids come
 // from the same places as the chains above; the CryptoRank values are the
 // recorded fixture's coin keys
-// (tests/fixtures/coins.json.gz, moved from frontend/web/scripts/fixtures/ by
+// (tests/fixtures/coins.json.gz, moved from apps/web/scripts/fixtures/ by
 // fd17dc6; pageProps.coins[]:
 // bitcoin, ethereum, tether, bnb, usdcoin, solana, polygon-ecosystem-token,
 // hyperliquid).
@@ -220,7 +220,7 @@ func seedTokens() []seedToken {
 //   - binance additionally: backend/workers/executor/internal/execution/
 //     types.go ExchangeBinance/Bybit/MEXC and the three adapters under
 //     backend/workers/executor/internal/exchanges/{binance,bybit,mexc}.
-//   - the other eight: frontend/web/src/features/ticker/client.ts TICKER_EXCHANGES
+//   - the other eight: apps/web/src/features/ticker/client.ts TICKER_EXCHANGES
 //     = ['okx','bybit','bitget','mexc','phemex','bingx','bitfinex','htx',
 //     'coinbase','kraken'] - the ccxt venue vocabulary the ticker actually
 //     queries. none of them is in KnownExchange, so known=false: the data
@@ -273,7 +273,7 @@ func VenueIDInvariants() []VenueIDInvariant {
 			Name:     "ccxt ticker venue vocabulary",
 			Provider: ProviderCCXT,
 			VenueIDs: []string{"okx", "bybit", "bitget", "mexc", "phemex", "bingx", "bitfinex", "htx", "coinbase", "kraken"},
-			Source:   "frontend/web/src/features/ticker/client.ts TICKER_EXCHANGES",
+			Source:   "apps/web/src/features/ticker/client.ts TICKER_EXCHANGES",
 		},
 		{
 			Name:     "executor adapter vocabulary",
@@ -310,12 +310,12 @@ func providerValue(s string) (Provider, string, error) {
 //  2. HYPE provider ids (none). Hyperliquid positions are read but never priced
 //     by the sync, so no provider slug for the asset exists in the tree.
 //  3. chain_numeric_id for every chain (all nil). No EVM chain id appears
-//     anywhere in backend, frontend/web/src, frontend/web/scripts or database.
+//     anywhere in apps/, database or tests/.
 //  4. Venue URLs (all nil) and venue display names beyond the conventional
 //     capitalization: no venue metadata table exists.
 //  5. market_types for the eight data-only venues (all nil): TICKER_VENUES
 //     states which market types each ccxt venue serves
-//     (frontend/web/src/features/ticker/client.ts:103), but that is ccxt's
+//     (apps/web/src/features/ticker/client.ts:103), but that is ccxt's
 //     per-venue product support rather than this build's instrument model, and
 //     the venue contract's description ties the field to
 //     KnownExchange + instrument market types. Left out rather than

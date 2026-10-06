@@ -2,7 +2,7 @@
 
 Scope: the `cryptorank` acquisition family in `apps/data/internal/research/cryptorank/`,
 served by the Go sidecar on `:3101` at `/api/cryptorank` and proxied by the Next route
-`frontend/web/src/app/(frontend)/api/cryptorank/route.ts`. Every row below was probed **live**
+`apps/web/src/app/(frontend)/api/cryptorank/route.ts`. Every row below was probed **live**
 against the running sidecar; nothing is inferred from the mode table alone.
 
 > **Snapshot caveat.** Counts and totals are a point-in-time read (2026-10-02, sidecar on

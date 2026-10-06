@@ -13,14 +13,14 @@ transcript is `history://source-inventory`.
 |---|---|---|---|
 | Postgres 17 + TimescaleDB 2.30.1, `public` (database `fudcourt`) | `database/schema/pg-schema.sql` | hand-written, `IF NOT EXISTS` throughout; **the single system of record since DR-040** (the generated SQLite dump and its `dump-schema.mjs` generator are deleted) | system of record |
 | Postgres, `executor` schema | `database/schema/executor-schema.sql` | tracked copy; executed from an **embedded duplicate** `EXECUTOR_DDL` in `apps/executor/internal/repository/store.go` via `ensureExecutorSchema()`; pinned by `apps/executor/internal/repository/schema_test.go` | execution system of record |
-| Neon Postgres | `frontend/web/src/cms/migrations/20260917_194354.ts` (+ `.json` snapshot, `index.ts` manifest) | Payload PostgreSQL adapter migration, generated | CMS content store |
+| Neon Postgres | `apps/web/src/cms/migrations/20260917_194354.ts` (+ `.json` snapshot, `index.ts` manifest) | Payload PostgreSQL adapter migration, generated | CMS content store |
 
 Connection facts (names only, no values):
 `apps/reconciler/src/persistence/db.rs` reads the DSN from `FUDCOURT_PG_URL` (`tokio-postgres`);
-`frontend/web/src/server/db.ts` Postgres client from `FUDCOURT_PG_URL` (`platform/db/pg.ts`);
+`apps/web/src/server/db.ts` Postgres client from `FUDCOURT_PG_URL` (`platform/db/pg.ts`);
 `tests/oracle/sync-live.py` (psycopg2) reads `FUDCOURT_PG_URL` from the repo-root `.env`;
 executor Go worker from `FUDCOURT_EXECUTOR_PG_URL` (`apps/executor/main.go:95`);
-Payload from `DATABASE_URL` (`frontend/web/src/cms/payload.config.ts:44-46`).
+Payload from `DATABASE_URL` (`apps/web/src/cms/payload.config.ts:44-46`).
 
 ## Column meanings
 
@@ -39,7 +39,7 @@ Writers: the Python oracle `tests/oracle/sync-live.py` (psycopg2, the deployed s
 and `backend/sync` (Rust `tokio-postgres`, built but **not deployed** —
 `fudcourt-sync-rust.service` is the uninstalled replacement) for `assets`; the Next
 `(frontend)` API routes for `transactions`/`wallets`. Readers:
-`frontend/web/src/server/db.ts`, `platform/db/client.ts` `getAll()`, and the
+`apps/web/src/server/db.ts`, `platform/db/client.ts` `getAll()`, and the
 routes below. Every writer writes Postgres directly (DR-040).
 
 ### `assets` — synced balances (latest state)
@@ -50,7 +50,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 | storage | Postgres `public.assets` (system of record, DR-040) |
 | classification | **snapshot** (rewritten wholesale each sync: `DELETE FROM assets` then INSERTs — `db.rs:117,133`) |
 | owning service | `backend/sync` Rust `fudcourt-sync` (`streams/sync.rs`), legacy `sync-live.py` |
-| readers | `frontend/web/src/server/db.ts,79,82`; `api/coins/route.ts` (`SELECT asset, SUM(value_usd) … FROM assets GROUP BY asset`); `api/all/route.ts` via `getAll()`; `apps/reconciler/src/reconciliation/reconcile.rs:207` |
+| readers | `apps/web/src/server/db.ts,79,82`; `api/coins/route.ts` (`SELECT asset, SUM(value_usd) … FROM assets GROUP BY asset`); `api/all/route.ts` via `getAll()`; `apps/reconciler/src/reconciliation/reconcile.rs:207` |
 | canonical entity | **Balance** (account ≈ wallet address × chain, asset by symbol) + derived valuation |
 | durability | SNAPSHOT (live table keeps only the newest run; history lands in Postgres `asset_history`) |
 | sensitivity | INTERNAL (wallet-level holdings; no secrets) |
@@ -224,7 +224,7 @@ The Go worker does **not** create the schema; it assumes it exists
 
 ---
 
-## 4. Neon Postgres — Payload CMS (`frontend/web/src/cms/migrations/20260917_194354.ts`) — 16 tables + 2 enums
+## 4. Neon Postgres — Payload CMS (`apps/web/src/cms/migrations/20260917_194354.ts`) — 16 tables + 2 enums
 
 Storage: Neon serverless Postgres (`DATABASE_URL`, `…neon.tech/neondb`, pooled).
 Classification: **CMS content store** — user/editor managed, not market data, but it is
@@ -240,7 +240,7 @@ Classification: **CMS content store** — user/editor managed, not market data, 
 | `_posts_v` (`:67-86`) | **legacy/version** (draft-version history) | Payload drafts | Payload admin | post version | HISTORICAL | INTERNAL | `latest boolean` marks the newest version. |
 | `_posts_v_version_tags` (`:59-66`) | version child | Payload | admin | tag version | HISTORICAL | INTERNAL | — |
 | `_posts_v_rels` (`:87-94`) | version join | Payload | admin | category version link | HISTORICAL | INTERNAL | — |
-| `media` (`:95-110`) | canonical (asset metadata) | Payload `Media` collection (`staticDir: 'media'`) | blog renderer | MediaAsset | CANONICAL | PUBLIC | File **bytes** live on disk (`frontend/web/media`), only metadata here. |
+| `media` (`:95-110`) | canonical (asset metadata) | Payload `Media` collection (`staticDir: 'media'`) | blog renderer | MediaAsset | CANONICAL | PUBLIC | File **bytes** live on disk (`apps/web/media`), only metadata here. |
 | `categories` (`:111-119`) | canonical | Payload `Categories` / seed | blog index | Content category (editorial, **not** an Asset category) | CANONICAL | PUBLIC | Name collision risk with market "categories" — different concept entirely. |
 | `payload_kv` (`:120-125`) | internal (framework key-value) | Payload | Payload internals | — | CANONICAL | INTERNAL | Framework table. |
 | `payload_locked_documents` + `_rels` (`:126-142`) | internal | Payload | admin | — | EPHEMERAL | INTERNAL | — |

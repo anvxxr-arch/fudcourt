@@ -43,8 +43,8 @@ jobs:
             backend/workers/executor/go.sum
             backend/data/go.sum
       - uses: dtolnay/rust-toolchain@stable
-      - name: Install frontend/web deps (structure/contract gates read the tree; shaper tests need deps)
-        working-directory: frontend/web
+      - name: Install apps/web deps (structure/contract gates read the tree; shaper tests need deps)
+        working-directory: apps/web
         run: bun install --frozen-lockfile
       - name: "Every offline gate (bash scripts/verify/verify-all.sh)"
         run: bash scripts/verify/verify-all.sh
@@ -97,7 +97,7 @@ jobs:
             ('2026-01-02', 'Ethereum', 'USDC', 'Transfer', 100.0, 'OUT', 'Main');
           SQL
       - name: "Reconcile contract vs the Rust service (live Postgres + byte-parity diff)"
-        working-directory: frontend/web
+        working-directory: apps/web
         env:
           FUDCOURT_PG_URL: postgres://postgres:postgres@127.0.0.1:5432/fudcourt
         run: |
@@ -113,7 +113,7 @@ jobs:
             sleep 1
           done
           # verify-reconcile.py moved to the repo-root scripts/verify/ (it is a
-          # repo-wide gate; this job's cwd is frontend/web for bun install/lockfile).
+          # repo-wide gate; this job's cwd is apps/web for bun install/lockfile).
           python3 ../../scripts/verify/verify-reconcile.py --base http://127.0.0.1:3102
   gate:
     name: "integration - gate (required)"

@@ -1,10 +1,10 @@
 #!/bin/bash
 # fudcourt pre-push hook (PLAN T-2.2.1, R-2) — fast, offline only.
 #   - offline contract check (CR_MODES consistency + mutation-auth guards)
-#   - contracts drift gate (shared/, frontend/web changes)
+#   - contracts drift gate (shared/, apps/web changes)
 #   - deploy-unit guard (every ExecStart/Documentation repo path must exist)
 #   - shaper fixture tests (offline, recorded upstream payloads) - SG-4.1
-#   - tsc --noEmit when frontend/web TypeScript changed
+#   - tsc --noEmit when apps/web TypeScript changed
 #   - python syntax check for changed harness scripts
 # Full harnesses (network) stay manual: scripts/verify/verify-*.py
 set -u
@@ -22,35 +22,35 @@ changed=$(git diff --name-only "$remote"...HEAD 2>/dev/null || git diff --name-o
 
 echo "[pre-push] checking $(echo "$changed" | wc -l) changed files..."
 
-if echo "$changed" | grep -q '^frontend/web/'; then
+if echo "$changed" | grep -q '^apps/web/'; then
   echo "[pre-push] offline contract check..."
   if ! python3 scripts/verify/check-contract.py; then rc=1; fi
   echo "[pre-push] deploy-unit guard (every ExecStart path must exist)..."
   if ! python3 scripts/verify/check-deploy.py; then rc=1; fi
   echo "[pre-push] structure gate (DR-018: routes/features/platform/ui/styles)..."
-  if ! (cd frontend/web && python3 scripts/checks/check-structure.py); then rc=1; fi
+  if ! (cd apps/web && python3 scripts/checks/check-structure.py); then rc=1; fi
   # The design system (DR-037): the migration gate (raw literals, magic style values, dead tokens)
   # and the generated-artifact drift alarm. Both are cheap and offline — a hand-written `#ffd166`
   # should never reach CI only to be caught there.
   echo "[pre-push] design-token gate (raw literals, magic style values, dead tokens)..."
-  if ! (cd frontend/web && python3 scripts/checks/check-design-tokens.py); then
+  if ! (cd apps/web && python3 scripts/checks/check-design-tokens.py); then
     echo "[pre-push] DESIGN TOKENS FAILED (use src/styles/tokens.ts; see docs/architecture/DESIGN-SYSTEM.md)"; rc=1
   fi
   echo "[pre-push] design-token artifact drift (globals.css block + tailwind.tokens.json are generated)..."
-  if ! (cd frontend/web && unset NODE_ENV && bun scripts/design/emit-tokens.ts --check); then
-    echo "[pre-push] TOKEN ARTIFACTS DRIFTED (fix: cd frontend/web && bun run tokens, then commit both)"; rc=1
+  if ! (cd apps/web && unset NODE_ENV && bun scripts/design/emit-tokens.ts --check); then
+    echo "[pre-push] TOKEN ARTIFACTS DRIFTED (fix: cd apps/web && bun run tokens, then commit both)"; rc=1
   fi
-  echo "[pre-push] tsc --noEmit (frontend/web)..."
-  if ! (cd frontend/web && unset NODE_ENV && bunx tsc --noEmit); then
+  echo "[pre-push] tsc --noEmit (apps/web)..."
+  if ! (cd apps/web && unset NODE_ENV && bunx tsc --noEmit); then
     echo "[pre-push] TYPECHECK FAILED"; rc=1
   fi
   echo "[pre-push] shaper fixture tests (offline)..."
-  if ! (cd frontend/web && unset NODE_ENV && bun run test:shapers > /tmp/fudcourt-shaper-tests.log 2>&1); then
+  if ! (cd apps/web && unset NODE_ENV && bun run test:shapers > /tmp/fudcourt-shaper-tests.log 2>&1); then
     echo "[pre-push] SHAPER TESTS FAILED"; tail -20 /tmp/fudcourt-shaper-tests.log; rc=1
   fi
 fi
 
-if echo "$changed" | grep -qE '^shared/|^frontend/web/'; then
+if echo "$changed" | grep -qE '^shared/|^apps/web/'; then
   echo "[pre-push] contracts drift gate (shared/contracts)..."
   if ! node shared/contracts/scripts/check-contract.mjs; then rc=1; fi
 fi

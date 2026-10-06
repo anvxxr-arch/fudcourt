@@ -126,7 +126,7 @@ it is computed.
 | Describes | something that **happened** | something that **is** |
 | Ids | 28 stable `event_type` ids (PascalCase) + SCREAMING_SNAKE aliases | entity ids (`*_id`) |
 | Versioning | `event_version` starts at 1; additive changes keep it, breaking bumps it | none — these are the current shape |
-| Drift gate | `shared/contracts/scripts/check-contract.mjs` (c) pins catalogue ↔ `event.schema.json`, and (a) pins `ExecutionStatus`/`ChildOrderStatus`/`ExecutionEventName` ↔ `frontend/web/src/lib/executor.ts` and the OpenAPI enums | **not** covered by a gate yet (see §5) |
+| Drift gate | `shared/contracts/scripts/check-contract.mjs` (c) pins catalogue ↔ `event.schema.json`, and (a) pins `ExecutionStatus`/`ChildOrderStatus`/`ExecutionEventName` ↔ `apps/web/src/lib/executor.ts` and the OpenAPI enums | **not** covered by a gate yet (see §5) |
 | Extra keys | payload is free-form and additive by policy | objects are **closed** (`additionalProperties: false`) where the value set is closed, so an unknown key is a schema error, not an extension |
 
 Two deliberate refusals to duplicate:
@@ -161,7 +161,7 @@ Two deliberate refusals to duplicate:
 
 | Concept | Why there is no schema |
 |---|---|
-| **MacroSeries / MacroObservation** | No code, no provider, no table, no route, no feature directory. Case-insensitive greps for `macro`, `fred`, `cpi`, `inflation`, `macroeconomic`, `yield`, `dxy`, `tbill` over `backend`, `frontend/web/src`, `shared`, `database`, `tests` return zero substantive matches. Writing `macro/` would describe a system that does not exist. |
+| **MacroSeries / MacroObservation** | No code, no provider, no table, no route, no feature directory. Case-insensitive greps for `macro`, `fred`, `cpi`, `inflation`, `macroeconomic`, `yield`, `dxy`, `tbill` over `backend`, `apps/web/src`, `shared`, `database`, `tests` return zero substantive matches. Writing `macro/` would describe a system that does not exist. |
 | **A `reference.json` schema** | The registry artifact (`shared/contracts/data/reference.json`) is generated and self-describing (`document_version`, `id_rule`, `salt`), but it is a **data** file, not a schema, and it lives under `data/` not `schemas/`. Describing it here would duplicate the entity schemas it instantiates. |
 | **An `instrument_id` producer** | `markets/instrument.json` remains the one CANONICAL schema whose id the registry does **not** mint. Recorded, not silently closed (`canonical-model.md` O4). |
 | **Payload schemas for events** | See §3 (2). |

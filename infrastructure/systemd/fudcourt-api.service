@@ -1,7 +1,7 @@
 # FUD Court primary Go backend API (apps/api).
 #
 # Listens on 127.0.0.1:3103 — the Go API is the authoritative backend; the
-# Next.js BFF proxies /api/* to it (see frontend/web middleware). Built from the
+# Next.js BFF proxies /api/* to it (see apps/web middleware). Built from the
 # repository root, which is one Go module. The binary is NOT committed: it is
 # built by the unit's ExecStartPre and lives in apps/api/bin/, which .gitignore
 # excludes.

@@ -11,12 +11,12 @@
 > Each phase block below keeps its original plan text plus a dated amendment; **read a phase's
 > original bullet list as the plan of record at the time, and its amendments as what actually
 > happened.** Paths in the original bullets (`apps/…`, `services/…`, `packages/…`,
-> `frontend/web/db/`) are pre-move and no longer exist on disk.
+> `apps/web/db/`) are pre-move and no longer exist on disk.
 >
 > Phase 0 planning artifact. Grounded in the audit in `current.md` / `domain-map.md`
 > (working tree 2026-10-01). Every phase ends with the same exit gate:
 > `go build/vet/test`, `cargo check/test`, `bun run test:shapers`, `bunx tsc --noEmit`,
-> `bun run build`, `frontend/web/scripts/checks/check-structure.py`,
+> `bun run build`, `apps/web/scripts/checks/check-structure.py`,
 > `scripts/verify/check-contract.py`, `scripts/verify/check-deploy.py`
 > all green (the exact baseline table in `current.md` §2 — a dated snapshot, see that file's header).
 
@@ -61,7 +61,7 @@ runs on push in CI. Nothing remains open in this phase.
 
 ## Phase 2 — `database/` extraction
 > **Amended 2026-10-01 (partially executed), 2026-10-02 (DDL lift DONE):**
-> `frontend/web/db/{schema.sql,pg-schema.sql,executor-schema.sql}` are now
+> `apps/web/db/{schema.sql,pg-schema.sql,executor-schema.sql}` are now
 > `database/schema/{pg-schema.sql,executor-schema.sql}`
 > (`database/README.md` records the move). `pg-load.ts`, `mirror.ts`, `store.ts`
 > path comments updated. **The DDL lift
@@ -72,9 +72,9 @@ runs on push in CI. Nothing remains open in this phase.
 > `database/seeds|fixtures/` remain empty; `database/migrations/` deliberately not created
 > (DR-020).
 
-- Move `frontend/web/db/{schema.sql,pg-schema.sql,executor-schema.sql}` →
+- Move `apps/web/db/{schema.sql,pg-schema.sql,executor-schema.sql}` →
   `database/{schema,seeds,fixtures}/`; keep a generated copy or path update in
-  `frontend/web/src/platform/executor/store.ts` (the `pg-load.ts` projection script
+  `apps/web/src/platform/executor/store.ts` (the `pg-load.ts` projection script
   was deleted by DR-040).
 - Lift `EXECUTOR_DDL` out of `store.ts` into the tracked schema file (store.ts imports
   the file or a generated constant). **Status 2026-10-02: DONE** — the tracked name is
@@ -106,9 +106,9 @@ re-derive with `node shared/contracts/scripts/check-contract.mjs` rather than tr
 - Author `openapi/` for the four HTTP surfaces (web's 36 `(frontend)/api` routes collapse to api+executor+data+sync
   contracts), `events/` for execution lifecycle (`executor.execution_events` rows) and stream
   normalization, `schemas/` for the table groups in `domain-map.md` §2.
-- Extract `shared/sdk/typescript` from `frontend/web/src/features/executor/client.ts` + the other
+- Extract `shared/sdk/typescript` from `apps/web/src/features/executor/client.ts` + the other
   `features/*/client.ts` typed clients.
-- **Risks:** the shaper tests (`frontend/web/tests/*`, plus the executor suites under `tests/{e2e,integration}/executor/`) assert today's response shapes — they double as
+- **Risks:** the shaper tests (`apps/web/tests/*`, plus the executor suites under `tests/{e2e,integration}/executor/`) assert today's response shapes — they double as
   contract fixtures; regenerate from `record:fixtures` output, don't hand-copy.
 - **Ordering:** after Phase 2; before Phases 4–6 (each service port consumes contracts).
 - **Rollback:** contracts are additive new files; consumers not yet cut over.
@@ -136,7 +136,7 @@ re-derive with `node shared/contracts/scripts/check-contract.mjs` rather than tr
 > the identity port deliberately excluded cookie crypto).
 
 - Create `backend/api` with auth/accounts/members/portfolio/wallets/transactions/treasury/markets
-  handlers moved domain-by-domain from `frontend/web/src/app/(frontend)/api/**`.
+  handlers moved domain-by-domain from `apps/web/src/app/(frontend)/api/**`.
 - During the transition each Next.js route becomes a thin proxy to `backend/api`
   (keeps `bun run build` + existing e2e green); delete the route when its consumer switches.
 - **Risks:** auth (session cookie, Discord) is embedded in `src/platform/auth/*` + middleware
@@ -165,14 +165,14 @@ re-derive with `node shared/contracts/scripts/check-contract.mjs` rather than tr
 > Go `verify:executor` proof has not run. The [parity matrix](parity-matrix.md) gates
 > any TS deletion — the TS executor remains the production executor until then.**
 >
-> **CLOSED 2026-10-05 by DR-043.** The TS executor was deleted in this pass: `frontend/web/src/platform/executor/**`
-> (10 files, 8,024 LOC → 0), `frontend/web/scripts/executor/worker.ts` (preserved as a 5-line tombstone),
+> **CLOSED 2026-10-05 by DR-043.** The TS executor was deleted in this pass: `apps/web/src/platform/executor/**`
+> (10 files, 8,024 LOC → 0), `apps/web/scripts/executor/worker.ts` (preserved as a 5-line tombstone),
 > the 9 TS-runtime test files (`tests/e2e/executor/*`, `tests/integration/executor/*`,
-> `frontend/web/tests/executor-proxy-tests.ts`), and the `fudcourt-executor-worker.service`
+> `apps/web/tests/executor-proxy-tests.ts`), and the `fudcourt-executor-worker.service`
 > systemd unit (retired to `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt`).
 > The 15 `/api/executor/*` route handlers are now 4-line forwarders through
 > `src/app/(frontend)/api/executor/_proxy.ts`. The wire contract
-> `frontend/web/src/platform/executor/types.ts` is the only TS-side survivor (consumer-facing —
+> `apps/web/src/platform/executor/types.ts` is the only TS-side survivor (consumer-facing —
 > composer + trade client). `bun run test:shapers` is 213/213 across 11 files; `go build/vet/test
 > ./backend/workers/executor/...` is green (21 pkgs); `bash scripts/verify/verify-all.sh`
 > is `VERIFY_ALL_OK`. Every row of `parity-matrix.md` is `DONE`; the cutover row and the
@@ -187,7 +187,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 3. `store.ts` persistence (`executor.*` writes) + `lock.ts`.
 4. `exchange.ts` adapters (binance/bybit/mexc via `CcxtLike` shape) + key handling
    (`masterKeyFromEnv` — move key custody to backend/workers/executor, web never sees secrets).
-5. `worker.ts` + `frontend/web/scripts/executor/worker.ts` last (it composes everything).
+5. `worker.ts` + `apps/web/scripts/executor/worker.ts` last (it composes everything).
 
 - **Rule: parity tests MUST pass before each TS module is deleted** — followed and now closed: every deleted TS module's assertions are covered by the named Go counterparts per `parity-matrix.md` rows 1–9. `verify:executor` is now `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` (12 hermetic tests, <1 s, no PG/Valkey/creds/network). The previous `executor-paper-e2e.ts` integration gate (Bun.sql + real PG on :5433 + real Valkey + real worker) is gone — the hermetic Go harness is the canonical offline proof, the live PG/Valkey/worker proof is no longer an offline gate.
 - **Parity baseline (2026-10-01):** `current.md` §5a records the per-suite breakdown
@@ -208,7 +208,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 - **Rollback:** if a regression is found, revert the DR-043 commit — `git revert` restores the TS tree,
   the systemd unit, the test files and the route-handler bodies; the systemd unit history is preserved
   in `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt`, the worker entry in
-  `frontend/web/scripts/executor/worker.ts` (5-line tombstone). The `executor.*` schema is unchanged,
+  `apps/web/scripts/executor/worker.ts` (5-line tombstone). The `executor.*` schema is unchanged,
   so state survives a rollback. Note: the Go runtime on `:3104` + `:3105` has been the sole live path
   since 2026-10-05, so a rollback also needs `FUDCOURT_EXECUTOR_PROXY` behaviour understood (the TS
   handlers are the only proxy-unavailable fallback; the Go proxy module is gone — the Go runtime stays
@@ -239,7 +239,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 > remains a follow-up (not in this pass — the composer/trade clients still import the wire contract
 > directly; recorded as a follow-up in DR-043 "Out of scope").
 
-- Delete `frontend/web/src/platform/executor/` and `frontend/web/scripts/executor/` remnants (post-5),
+- Delete `apps/web/src/platform/executor/` and `apps/web/scripts/executor/` remnants (post-5),
   data-passthrough routes replaced by `backend/data` via `backend/api` (post-4),
   `src/features/executor/client.ts` re-targeted to `shared/sdk/typescript`.
 - Fix the shell inversion: `src/components/layout/store-shell.tsx` (the DR-018 location — the
@@ -250,14 +250,14 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 
 ## Phase 8 — tests layout
 
-- Move `frontend/web/scripts/{tests,fixtures,oracle,verify}` → `tests/{integration,fixtures,oracle}`
+- Move `apps/web/scripts/{tests,fixtures,oracle,verify}` → `tests/{integration,fixtures,oracle}`
   + per-service unit tests; keep `test:shapers` working via a shared tsconfig until the
   last move. *(No `packages/config` was created — DR-018 keeps
-  `frontend/web/tsconfig.shaper-tests.json` in the app; `tests/tsconfig.json` covers the moved
+  `apps/web/tsconfig.shaper-tests.json` in the app; `tests/tsconfig.json` covers the moved
   suites.)* **Status 2026-10-01: EXECUTED** — see `final-review.md` §9.2 for the exact map and its
   one caveat: the repo-wide harnesses moved to `scripts/verify/` + `tests/…`, while the web-only
   probes (`dom_audit.py`, `verify_all_routes.py`, `dbg-smoke.cjs`) went to the app's own
-  `frontend/web/tests/`.
+  `apps/web/tests/`.
 - **Risks:** `test:shapers` compiles via `tsconfig.shaper-tests.json` into `.shaper-tests/`
   with a custom `alias-resolver.cjs` — path moves break the alias map; move the resolver with it.
 - **Ordering:** after 7 (code settles first). **Rollback:** revert moves; CI job paths updated
@@ -294,7 +294,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 
 **Status: core move EXECUTED (2026-10-01), verified green.**
 - All 10 unit files consolidated into `infrastructure/systemd/` via `git mv` (was
-  `frontend/web/infrastructure/`, `backend/data/infrastructure/`, `backend/sync/infrastructure/`), including
+  `apps/web/infrastructure/`, `backend/data/infrastructure/`, `backend/sync/infrastructure/`), including
   the `RETIRED-fudcourt-blog.service.txt` tombstone. `ExecStart`/`WorkingDirectory`
   targets are code paths and needed no changes.
 - The `fudcourt-sync` name collision is resolved as of this move: the Rust pair was
