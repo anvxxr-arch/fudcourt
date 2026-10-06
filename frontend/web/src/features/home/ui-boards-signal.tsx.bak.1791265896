@@ -50,7 +50,7 @@ export function SignalQuality() {
             const b = c.latest as ScoreboardBucket;
             return (
               <div key={`meter-${chain}`} style={{ marginBottom: space[12] }}>
-                <h3 style={{ ...h4Style, marginTop: 0 }}>{chain} — {b.day}</h3>
+                <h3 style={{ ...h4Style, marginTop: 0 }}>{chain} — {b.day}</h4>
                 <Meter
                   parts={[
                     { label: 'ran', value: b.run, color: color.green },

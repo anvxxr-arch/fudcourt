@@ -136,7 +136,7 @@ export function CoinCell({ image, symbol, name }: { image: string | null; symbol
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8] }}>
       {image
-        ? <img src={imgSrc(image)} alt="" width={16} height={16} loading="lazy" decoding="async" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
+        ? <img src={imgSrc(image)} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
         : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.separator, display: 'inline-block' }} />}
       <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{label}</span>
       {sub ? <span style={{ color: color.labelTertiary }}>{sub}</span> : null}

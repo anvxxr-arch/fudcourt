@@ -167,6 +167,17 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 0.7,
   },
   {
+    // Discord sign-in landing (middleware 307 target for /team, /admin and the
+    // treasury API, plus the OAuth failure return). Public and crawlable like
+    // the other static boards -- an unauthenticated visitor sees the sign-in
+    // panel, never another user's session.
+    path: '/login',
+    title: 'Sign In with Discord to Open Your Terminal | FUDCOURT',
+    description:
+      'Sign in with Discord to open your FudCourt member terminal. Browsing stays free — sign-in only unlocks private terminals.',
+    priority: 0.3,
+  },
+  {
     path: '/economy/compare',
     title: 'Compare — Countries & series | FUDCOURT',
     description:

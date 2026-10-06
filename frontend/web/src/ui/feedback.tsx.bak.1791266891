@@ -19,7 +19,7 @@ export function Loading({ label, what }: { label?: string; what?: string }) {
 export function ErrorState({ title, detail }: { title: string; detail?: string }) {
   return (
     <div style={{ background: alpha(color.red, 0.08), border: `1px solid ${alpha(color.red, 0.4)}`, borderRadius: radius[8], padding: `${space[12]}px ${space[12]}px`, color: color.labelPrimary }}>
-      <strong style={{ color: color.labelPrimary }}>{title}</strong>
+      <strong style={{ color: color.red }}>{title}</strong>
       {detail ? <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[12], color: color.labelTertiary }}>{detail}</p> : null}
     </div>
   );

@@ -128,10 +128,10 @@ export async function getAll() {
   const names = Object.keys(DASHBOARD_READS) as (keyof typeof DASHBOARD_READS)[];
   const rows = await Promise.all(names.map((n) => query(DASHBOARD_READS[n])));
   const [accounts, transactions, journal, ledger, assets, wallets, trades, netWorthRows] = rows;
-  const total = netWorthRows[0]?.total;
+  const total = Number(netWorthRows[0]?.total ?? 0);
   return {
     accounts, transactions, journal, ledger, assets, wallets, trades,
-    net_worth: typeof total === 'number' ? total : 0,
+    net_worth: Number.isFinite(total) ? total : 0,
     period: '9 Sep 2026 – sekarang',
     liabilities: 0,
     pnl: 0,

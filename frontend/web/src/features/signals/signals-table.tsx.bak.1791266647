@@ -41,7 +41,7 @@ export function SignalsTable({ rows, chain, loading, data, error }: {
               <td style={{ padding: `${space[8]}px ${space[8]}px`, whiteSpace: 'nowrap' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8] }}>
                   {r.image
-                    ? <img src={imgSrc(r.image)} alt="" width={16} height={16} loading="lazy" decoding="async" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
+                    ? <img src={imgSrc(r.image)} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
                     : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.separator, display: 'inline-block' }} />}
                   <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{r.symbol || '?'}</span>
                   <span style={{ color: color.labelTertiary }}>{shortAddr(r.mint)}</span>

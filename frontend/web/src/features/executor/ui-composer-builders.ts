@@ -14,7 +14,8 @@ import type {
   TwapConfig,
 } from '@/lib/executor';
 import type { ComposerState } from './ui-composer-build';
-import { minutesToMs, num } from './ui-shared';
+import { minutesToMs } from './ui-shared';
+import { num } from '@/lib/num';
 import { RISK_SIZING, type LevelRow } from './ui-composer-fields';
 
 /** A required numeric field's value. The gate below blocks the request before it could reach the wire. */

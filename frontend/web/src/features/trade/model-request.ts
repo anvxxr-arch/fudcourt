@@ -25,10 +25,7 @@ import type {
   ExecutionRequest,
   SizingMode,
 } from '@/lib/executor';
-// `num` lives in `@/lib/num` — shared with the executor panels. Re-exported so
-// the `@/features/trade/model` barrel keeps its public name.
 import { num } from '@/lib/num';
-export { num };
 
 /** Every field the composer form collects. */
 export type ComposerState = {

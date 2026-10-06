@@ -102,25 +102,25 @@ export async function GET(req: NextRequest) {
   // so a 400-800px upstream file never ships to the browser. SVG passes
   // through (vector, no raster cost); on any sharp failure the original
   // bytes are served rather than an error.
-  let body: ArrayBuffer | Uint8Array = buf;
+  let body: ArrayBuffer | Buffer = buf;
   let outCt = ct;
   if (ct !== 'image/svg+xml') {
     try {
       const sharp = (await import('sharp')).default;
       const out = await sharp(Buffer.from(buf)).resize(64, 64, { fit: 'inside', withoutEnlargement: true }).webp({ quality: 70 }).toBuffer();
-      body = new Uint8Array(out);
+      body = out;
       outCt = 'image/webp';
     } catch {
       body = buf;
     }
   }
-  const ab: ArrayBuffer = body instanceof Uint8Array ? body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) as ArrayBuffer : body;
-  return new NextResponse(ab, {
+  const bytes = body instanceof Buffer ? body : Buffer.from(body);
+  return new NextResponse(bytes, {
     status: 200,
     headers: {
       'content-type': outCt,
       'cache-control': 'public, max-age=31536000, immutable',
-      'content-length': String(ab.byteLength),
+      'content-length': String(bytes.byteLength),
     },
   });
 }

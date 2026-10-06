@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { color, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
 
 /**
@@ -7,7 +7,7 @@ import { color, fontSize, fontWeight, letterSpacing, radius, space } from '@/sty
  * PageHeader provides. Both the economy and trade module kits used a
  * byte-identical private copy of this exact shape.
  */
-export function Card({ title, subtitle, right, children }: { title?: string; subtitle?: string; right?: ReactNode; children: ReactNode }) {
+export function Card({ title, subtitle, right, children, style }: { title?: string; subtitle?: string; right?: ReactNode; children: ReactNode; style?: CSSProperties }) {
   return (
     <section
       className="fc-fade-in"
@@ -16,6 +16,7 @@ export function Card({ title, subtitle, right, children }: { title?: string; sub
         border: `1px solid ${color.separator}`,
         borderRadius: radius[8],
         padding: `${space[12]}px ${space[16]}px`,
+        ...style,
       }}
     >
       {(title || right) && (

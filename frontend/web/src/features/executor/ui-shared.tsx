@@ -4,10 +4,7 @@
  */
 import type { CSSProperties } from 'react';
 import { color, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
-// `num` lives in `@/lib/num` — the executor panels and the trade composer share
-// it. Re-exported here so existing `./ui-shared` importers keep working.
 import { num } from '@/lib/num';
-export { num };
 
 export const pairStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: space[8] };
 export const h3Style: CSSProperties = { color: color.blue, fontSize: fontSize[12], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px`, letterSpacing: letterSpacing.wide };

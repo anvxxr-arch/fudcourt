@@ -142,7 +142,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
   const boardHeader = !isTeam ? BOARD_HEADERS[boardKey] : undefined;
 
   return (
-    <main style={{ background: color.bgBase, minHeight: '100vh', color: color.labelPrimary, padding: space[20], fontFamily: fontFamily.mono }}>
+    <div style={{ background: color.bgBase, minHeight: '100vh', color: color.labelPrimary, padding: space[20], fontFamily: fontFamily.mono }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: space[8] }}>
         <div>
           <h1 style={{ margin: 0, color: color.blue, letterSpacing: letterSpacing.wider }}>{boardHeader ? boardHeader.title : 'FUDCOURT'}</h1>
@@ -228,6 +228,6 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       <div style={{ marginTop: space[32], color: color.labelSecondary, fontSize: fontSize[11], borderTop: `1px solid ${color.separator}`, paddingTop: space[8] }}>
         {isTeam ? 'Fox · FUDCOURT OS · auto-refresh 30s · data: Postgres + TimescaleDB · live RPC' : 'Fox · FUDCOURT OS · public boards · data served live from origin APIs · no treasury sync'}
       </div>
-    </main>
+    </div>
   );
 }

@@ -112,7 +112,7 @@ export default function SignalsPage() {
               title={allowed ? c.label : `${c.label} is not served by the ${activeMode.label} endpoint`}
               style={{
                 background: chain === c.key ? c.color : color.bgSecondary,
-                color: chain === c.key ? color.labelPrimary : allowed ? color.labelSecondary : alpha(color.labelTertiary, 0.35),
+                color: chain === c.key ? color.labelOnAccent : allowed ? color.labelSecondary : alpha(color.labelTertiary, 0.35),
                 border: `1px solid ${color.separator}`,
                 padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11],
                 cursor: allowed ? 'pointer' : 'not-allowed',

@@ -227,7 +227,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
                   <div key={p.slug} style={listRowStyle}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8], minWidth: 0 }}>
                       {p.logo
-                        ? <img src={imgSrc(p.logo)} alt="" width={16} height={16} loading="lazy" decoding="async" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
+                        ? <img src={imgSrc(p.logo)} alt="" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
                         : null}
                       <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
                     </span>

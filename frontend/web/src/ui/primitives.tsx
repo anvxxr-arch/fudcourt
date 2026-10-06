@@ -105,10 +105,4 @@ export function Label({ children }: { children: React.ReactNode }) {
   return <label style={{ fontSize: fontSize[11], color: color.labelTertiary, display: 'block', marginBottom: space[4] }}>{children}</label>;
 }
 
-export function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <div style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, borderRadius: radius[12], padding: space[12], marginBottom: space[8], ...style }}>
-      {children}
-    </div>
-  );
-}
+export { Card } from '@/ui/card';

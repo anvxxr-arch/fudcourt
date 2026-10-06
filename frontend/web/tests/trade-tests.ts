@@ -65,7 +65,8 @@ import {
   capabilitiesForVenue,
 } from '@/features/trade/model';
 import { VENUE_BINDINGS, VENUE_BINDING_LIST, bindingFor } from '@/features/trade/adapters';
-import { buildTradeRequest, missingRequired, num, type ComposerState } from '@/features/trade/model';
+import { buildTradeRequest, missingRequired, type ComposerState } from '@/features/trade/model';
+import { num } from '@/lib/num';
 import {
   INSTRUMENTS,
   canonicalInstrumentId,

@@ -71,7 +71,7 @@ export default function TrenchPage() {
               <div style={{ padding: space[8] }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: space[8], marginBottom: space[4] }}>
                   {p.icon && (
-                    <img src={imgSrc(p.icon)} alt="" width={24} height={24} loading="lazy" decoding="async" style={{ width: space[24], height: space[24], borderRadius: radius.circle }} />
+                    <img src={imgSrc(p.icon)} alt="" style={{ width: space[24], height: space[24], borderRadius: radius.circle }} />
                   )}
                   <div>
                     <div style={{ fontWeight: fontWeight.bold, fontSize: fontSize[12], color: color.labelPrimary }}>
