@@ -47,17 +47,20 @@ func (f ClockFunc) Now() int64 { return f() }
 // an internal/platform/lock package — the worker must not couple to a specific lease
 // backend (Valkey, Postgres advisory, in-test fakes all satisfy this shape).
 // It is structurally satisfied by internal/platform/lock's implementations.
+// Every method takes a context.Context (house convention:
+// internal/platform/lock.ExecutionLock) so a lease backend can be bounded and
+// cancelled per call — a cancelled pass must not leave a dial hanging.
 //
 // INVARIANT (fail-closed): every method answers conservatively on ANY failure.
 // Acquire false/err = "do not trade", Renew false/err = "lease lost — stop
 // placing immediately", Release is best-effort (there is nothing to lose).
 type Lock interface {
 	// Acquire tries to take the lease on executionID for owner with a TTL.
-	Acquire(executionID, owner string, ttlMs int64) (bool, error)
+	Acquire(ctx context.Context, executionID, owner string, ttlMs int64) (bool, error)
 	// Renew extends a held lease; false means the lease is gone.
-	Renew(executionID, owner string, ttlMs int64) (bool, error)
+	Renew(ctx context.Context, executionID, owner string, ttlMs int64) (bool, error)
 	// Release drops a held lease. Releasing someone else's lease must be a no-op.
-	Release(executionID, owner string) error
+	Release(ctx context.Context, executionID, owner string) error
 }
 
 // Store is the executor persistence boundary (objective §8.9). The five

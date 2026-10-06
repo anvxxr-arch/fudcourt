@@ -29,21 +29,21 @@ type fakeLock struct {
 	releases int
 }
 
-func (f *fakeLock) Acquire(executionID, owner string, ttlMs int64) (bool, error) {
+func (f *fakeLock) Acquire(ctx context.Context, executionID, owner string, ttlMs int64) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.acquires++
 	return f.acquire, nil
 }
 
-func (f *fakeLock) Renew(executionID, owner string, ttlMs int64) (bool, error) {
+func (f *fakeLock) Renew(ctx context.Context, executionID, owner string, ttlMs int64) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.renews++
 	return f.renew, nil
 }
 
-func (f *fakeLock) Release(executionID, owner string) error {
+func (f *fakeLock) Release(ctx context.Context, executionID, owner string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.releases++

@@ -37,20 +37,20 @@ import (
 const baseMs = 1_700_000_000_000
 
 // leaseAdapter bridges lock.ExecutionLock (context + Duration) to worker.Lock
-// (no context, TTL in ms). cmd/executor has an identical adapter; the worker
+// (context + TTL in ms). cmd/executor has an identical adapter; the worker
 // deliberately does not import internal/platform/lock, so the composition root supplies
 // the seam. Duplicating the four lines here keeps the harness on the PUBLIC
 // boundary instead of reaching into package main.
 type leaseAdapter struct{ lock lock.ExecutionLock }
 
-func (a leaseAdapter) Acquire(id, owner string, ttlMs int64) (bool, error) {
-	return a.lock.Acquire(context.Background(), id, owner, time.Duration(ttlMs)*time.Millisecond)
+func (a leaseAdapter) Acquire(ctx context.Context, id, owner string, ttlMs int64) (bool, error) {
+	return a.lock.Acquire(ctx, id, owner, time.Duration(ttlMs)*time.Millisecond)
 }
-func (a leaseAdapter) Renew(id, owner string, ttlMs int64) (bool, error) {
-	return a.lock.Renew(context.Background(), id, owner, time.Duration(ttlMs)*time.Millisecond)
+func (a leaseAdapter) Renew(ctx context.Context, id, owner string, ttlMs int64) (bool, error) {
+	return a.lock.Renew(ctx, id, owner, time.Duration(ttlMs)*time.Millisecond)
 }
-func (a leaseAdapter) Release(id, owner string) error {
-	return a.lock.Release(context.Background(), id, owner)
+func (a leaseAdapter) Release(ctx context.Context, id, owner string) error {
+	return a.lock.Release(ctx, id, owner)
 }
 
 var _ worker.Lock = leaseAdapter{}

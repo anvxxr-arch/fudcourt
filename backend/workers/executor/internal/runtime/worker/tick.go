@@ -34,11 +34,11 @@ func (w *Worker) drive(ctx context.Context, rec execution.ExecutionRecord, place
 		return
 	}
 	ttl := w.cfg.LockTTL.Milliseconds()
-	acquired, err := w.cfg.Lock.Acquire(rec.ID, w.cfg.Owner, ttl)
+	acquired, err := w.cfg.Lock.Acquire(ctx, rec.ID, w.cfg.Owner, ttl)
 	if err != nil || !acquired {
 		return // contention or lock failure: leave the execution untouched (§65)
 	}
-	defer func() { _ = w.cfg.Lock.Release(rec.ID, w.cfg.Owner) }()
+	defer func() { _ = w.cfg.Lock.Release(ctx, rec.ID, w.cfg.Owner) }()
 
 	ex, err := w.cfg.Exchanges(rec)
 	if err != nil {
@@ -240,7 +240,7 @@ func (w *Worker) placeChild(ctx context.Context, rec execution.ExecutionRecord, 
 	// Renew the lease BEFORE the money moves (§65 fail-closed): a lost lease
 	// must stop placement cold. No child row is written on failure, so the
 	// deterministic id is simply re-minted on a later owned pass.
-	renewed, err := w.cfg.Lock.Renew(rec.ID, w.cfg.Owner, w.cfg.LockTTL.Milliseconds())
+	renewed, err := w.cfg.Lock.Renew(ctx, rec.ID, w.cfg.Owner, w.cfg.LockTTL.Milliseconds())
 	if err != nil || !renewed {
 		return true // lease lost: stop this pass entirely
 	}
@@ -259,7 +259,7 @@ func (w *Worker) placeChild(ctx context.Context, rec execution.ExecutionRecord, 
 		SubmittedAt:    now,
 		UpdatedAt:      now,
 	})
-	placed, err := ex.CreateOrder(context.Background(), req)
+	placed, err := ex.CreateOrder(ctx, req)
 	if err != nil {
 		// A retryable failure may still have reached the venue: leave the row
 		// SUBMITTING and let reconciliation adopt/correct it (§66). Anything
@@ -479,7 +479,7 @@ func (w *Worker) pauseLiveDisabled(ctx context.Context, rec execution.ExecutionR
 func (w *Worker) cancelChild(ctx context.Context, rec execution.ExecutionRecord, ex exchanges.Exchange, c execution.ChildOrderRecord) {
 	now := w.clock.Now()
 	if c.ExchangeOrderID != nil && *c.ExchangeOrderID != "" {
-		if _, err := ex.CancelOrder(context.Background(), c.Symbol, *c.ExchangeOrderID); err != nil {
+		if _, err := ex.CancelOrder(ctx, c.Symbol, *c.ExchangeOrderID); err != nil {
 			if isRetryable(err) {
 				return // try again next pass; row stays live
 			}

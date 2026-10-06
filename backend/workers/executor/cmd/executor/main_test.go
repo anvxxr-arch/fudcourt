@@ -111,13 +111,13 @@ func (f *fakeLock) Release(_ context.Context, id, owner string) error {
 func TestLeaseAdapterTranslatesTTLAndProxiesCalls(t *testing.T) {
 	f := &fakeLock{ok: true}
 	a := leaseAdapter{lock: f}
-	if ok, err := a.Acquire("e1", "o1", 250); !ok || err != nil {
+	if ok, err := a.Acquire(context.Background(), "e1", "o1", 250); !ok || err != nil {
 		t.Fatalf("acquire: got (%v,%v)", ok, err)
 	}
-	if ok, err := a.Renew("e1", "o1", 1000); !ok || err != nil {
+	if ok, err := a.Renew(context.Background(), "e1", "o1", 1000); !ok || err != nil {
 		t.Fatalf("renew: got (%v,%v)", ok, err)
 	}
-	if err := a.Release("e1", "o1"); err != nil {
+	if err := a.Release(context.Background(), "e1", "o1"); err != nil {
 		t.Fatalf("release: %v", err)
 	}
 	want := []string{"acquire:e1:o1:250ms", "renew:e1:o1:1s", "release:e1:o1"}
@@ -136,7 +136,7 @@ func TestLeaseAdapterTranslatesTTLAndProxiesCalls(t *testing.T) {
 func TestLeaseAdapterForwardsFailClosed(t *testing.T) {
 	f := &fakeLock{ok: false, err: errBoom}
 	a := leaseAdapter{lock: f}
-	ok, err := a.Acquire("e1", "o1", 30)
+	ok, err := a.Acquire(context.Background(), "e1", "o1", 30)
 	if ok || err != errBoom {
 		t.Fatalf("fail-closed lost: got (%v,%v), want (false,errBoom)", ok, err)
 	}

@@ -36,7 +36,7 @@ func decNumPtr(raw json.RawMessage) (*string, error) {
 	}
 	v, err := decodeNum(raw)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode number: %w", err)
 	}
 	return &v, nil
 }
@@ -47,7 +47,7 @@ func decBoolPtr(raw json.RawMessage) (*bool, error) {
 	}
 	var b bool
 	if err := json.Unmarshal(raw, &b); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode boolean: %w", err)
 	}
 	return &b, nil
 }
@@ -58,7 +58,7 @@ func decIntPtr(raw json.RawMessage) (*int64, error) {
 	}
 	var n int64
 	if err := json.Unmarshal(raw, &n); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode integer: %w", err)
 	}
 	return &n, nil
 }
@@ -69,7 +69,7 @@ func decStringPtr(raw json.RawMessage) (*string, error) {
 	}
 	var s string
 	if err := json.Unmarshal(raw, &s); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode string: %w", err)
 	}
 	return &s, nil
 }
@@ -86,7 +86,7 @@ type obj map[string]json.RawMessage
 func decodeObj(raw json.RawMessage) (obj, error) {
 	var o obj
 	if err := json.Unmarshal(raw, &o); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode object: %w", err)
 	}
 	return o, nil
 }
@@ -504,7 +504,7 @@ func decodeConstraints(raw json.RawMessage) (*planner.ConstraintSpec, error) {
 func decodeSettingsPatch(body json.RawMessage) (map[string]json.RawMessage, error) {
 	var o map[string]json.RawMessage
 	if err := json.Unmarshal(body, &o); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode settings patch: %w", err)
 	}
 	return o, nil
 }
