@@ -1,7 +1,7 @@
 // Package repository is the durable Postgres implementation of the executor
 // worker's Store (objective §8.9): every execution, child order and audit
 // event lives in the tracked executor.* schema
-// (database/schema/executor-schema.sql), not in process memory.
+// (db/schema/executor-schema.sql), not in process memory.
 //
 // DURABILITY GUARANTEES
 //

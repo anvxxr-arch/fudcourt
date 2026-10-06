@@ -13,7 +13,7 @@
  *    and every route read the same strings.
  *
  * `assets` snapshots are NOT taken here: a database TRIGGER (`assets_snapshot`
- * in `database/schema/pg-schema.sql`) appends every `assets` insert to the
+ * in `db/schema/pg-schema.sql`) appends every `assets` insert to the
  * `asset_history` hypertable, so every writer — the sync, a route, an operator
  * — lands in the time series identically, with no code on this side.
  */

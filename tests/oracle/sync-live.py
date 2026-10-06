@@ -354,7 +354,7 @@ def write_and_report(rows, tot):
     """Flagless path only: replace `assets` in the local Postgres system of
     record and read it back. The replace is ONE transaction, so the board never
     sees a half-written table; the `assets_snapshot` trigger (see
-    database/schema/pg-schema.sql) appends each row to `asset_history` as it
+    db/schema/pg-schema.sql) appends each row to `asset_history` as it
     lands. Not touched in oracle mode."""
     conn = _pg_conn()
     with conn.cursor() as cur:

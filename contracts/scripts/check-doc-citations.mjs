@@ -69,7 +69,7 @@
  *      path and its new home (`frontend/web/src/features/executor/ui.tsx`) in one sentence.
  *   3. `backend/api/bin/fudcourt-api` (2) — a build artifact (`go build -o bin/fudcourt-api`), absent
  *      from a clean tree by design; both citations say so ("build artifact, absent from a clean tree").
- *   4. `database/schema/analytics.sql` (2) — cited as a reference that does NOT exist; the citation
+ *   4. `db/schema/analytics.sql` (2) — cited as a reference that does NOT exist; the citation
  *      *is* the finding ("**Does not exist** (referenced by an older doc)").
  *  Deliberately NOT on this list, though they look similar: `backend/api markets/instruments` and
  *  its siblings (whitespace ⇒ skipped as prose, never counted), `database/migrations/` (trailing `/`
@@ -188,7 +188,7 @@ const ALLOWANCES = new Map([
   ['apps/web/scripts/tools/dump-envelopes.ts', 'deliberately retained historical reference: canonical-model.md "path re-verification" note records "*it was frontend/web/scripts/tools/dump-envelopes.ts when this note was written*" beside the new home tests/oracle/dump-envelopes.ts'],
   ['apps/web/src/platform/executor/ui.tsx', 'deliberately retained historical reference: the same note names the old path and its new home (frontend/web/src/features/executor/ui.tsx) in one "→" clause'],
   ['backend/api/bin/fudcourt-api', 'build artifact (go build -o bin/fudcourt-api), absent from a clean tree by design; both citations say so'],
-  ['database/schema/analytics.sql', 'cited reference that does NOT exist — the citation is the finding ("**Does not exist** (referenced by an older doc)")'],
+  ['db/schema/analytics.sql', 'cited reference that does NOT exist — the citation is the finding ("**Does not exist** (referenced by an older doc)")'],
   ['db/client.ts', 'historical reference: the pre-DR-040 frontend db module (platform/db/pg.ts), retired with the treasury move to src/server/db.ts; the citation records the old layout'],
   ['db/README', 'historical reference: the pre-DR-040 db module README, retired with the same move'],
 ]);

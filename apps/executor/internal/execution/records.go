@@ -2,7 +2,7 @@ package execution
 
 // The persistence shapes below mirror frontend/web/src/lib/executor.ts
 // field-for-field (ExecutionRecord, ChildOrderRecord, FillRecord,
-// ExecutionEventRecord, RiskProfile) and database/schema/executor-schema.sql.
+// ExecutionEventRecord, RiskProfile) and db/schema/executor-schema.sql.
 // Money and quantity are decimal strings; nullable decimals are *string so an
 // unknown figure is honestly absent, never a fabricated 0 (house rule).
 

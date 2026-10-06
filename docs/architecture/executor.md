@@ -47,7 +47,7 @@ Module map (objective §8.9–§8.16; TS owner today → Go target package):
 | idempotency (objective §23) | `fud_<executionID>_<sequence>` client order ids, fill dedup keys; pure, parse-strict | `types.ts` `clientOrderId` (PRD §66), `store.ts` `fillDedupKey` | `internal/runtime/idempotency` | landed |
 | worker/runtime | scheduler, locks, reconciliation, recovery, placement clamps | `apps/web/src/platform/executor/worker.ts` + `apps/web/scripts/executor/worker.ts` (unit `infrastructure/systemd/fudcourt-executor-worker.service`) | `internal/runtime/worker` | **in flight** |
 | lock | one worker owns one execution (PRD §65) | `apps/web/src/platform/executor/lock.ts` | `internal/platform/lock` (`lock.go`, `memory.go`, `valkey.go`) | landed |
-| persistence | `executor.*` schema writes, credential envelope | `apps/web/src/platform/executor/store.ts` (`EXECUTOR_DDL`) | repository layer | **in flight** (DDL tracked at `database/schema/executor-schema.sql`) |
+| persistence | `executor.*` schema writes, credential envelope | `apps/web/src/platform/executor/store.ts` (`EXECUTOR_DDL`) | repository layer | **in flight** (DDL tracked at `db/schema/executor-schema.sql`) |
 
 Why risk (§8.12) and sizing (§8.13) stay separate packages:
 1. **Direction.** §8.12 is forward evaluation (given Q → totalRisk, projection,
@@ -68,7 +68,7 @@ Why risk (§8.12) and sizing (§8.13) stay separate packages:
 Execution ≠ Order (§8.14): an **execution** is the user's intent + plan +
 lifecycle (PRD §57); **child orders** are the venue-facing artifacts with their
 own lifecycle (PRD §58) and their own rows (`executor.child_orders`,
-`database/schema/executor-schema.sql`; `UNIQUE (execution_id, client_order_id)`).
+`db/schema/executor-schema.sql`; `UNIQUE (execution_id, client_order_id)`).
 Cancel cancels orders and NEVER closes a position (PRD §75;
 `contracts/openapi/fudcourt.yaml` lifecycle notes).
 

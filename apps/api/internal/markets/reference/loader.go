@@ -1,7 +1,7 @@
 // Package reference — the SQL half of the canonical mapping.
 //
 // This file turns the published artifact contracts/data/reference.json into
-// the rows of the Postgres table database/schema/pg-schema.sql declares
+// the rows of the Postgres table db/schema/pg-schema.sql declares
 // (`canonical_reference` + `canonical_reference_miss`). It is the loader the
 // canonical id space has been missing: before it, a database consumer could only
 // resolve identity through a symbol string.
@@ -27,7 +27,7 @@
 //
 // # Applying it
 //
-// database/schema/pg-schema.sql carries the DDL. Apply that first, then this
+// db/schema/pg-schema.sql carries the DDL. Apply that first, then this
 // loader's output. RenderSQL emits ONE statement — a data-modifying CTE that
 // upserts the mappings and misses and prunes any provider key the artifact no
 // longer lists — so psql/bun can run it without a wrapping transaction, and it

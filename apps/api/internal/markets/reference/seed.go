@@ -129,7 +129,7 @@ func seedChains() []seedChain {
 // Provenance: apps/reconciler/src/chains.rs LLAMA_IDS - a SYMBOL -> price-id map,
 // so its values denote the ASSET, not the chain - keys (ETH, BNB, POL, SOL,
 // USDT, USDC), plus USD, which is the unit of every *_usd figure in the
-// database/schema files and of common/money.json. Those six `coingecko:` ids are
+// db/schema files and of common/money.json. Those six `coingecko:` ids are
 // therefore registered here, under both `defillama` (verbatim) and `coingecko`
 // (the same slug the id is built from). Names and provider ids come
 // from the same places as the chains above; the CryptoRank values are the

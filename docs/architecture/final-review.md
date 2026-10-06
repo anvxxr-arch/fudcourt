@@ -81,7 +81,7 @@ Already moved in earlier commits on this branch (verified via `git log`):
 | --- | --- | --- |
 | `apps/apicalls/` | `backend/data/` | `4e8ba91` (Phase 1) |
 | `apps/sync/` | `backend/sync/` | `4e8ba91` (Phase 1) |
-| `apps/web/db/*.sql` | `database/schema/*.sql` | `4e8ba91` (Phase 2) |
+| `apps/web/db/*.sql` | `db/schema/*.sql` | `4e8ba91` (Phase 2) |
 | `apps/web/infrastructure/*`, `apps/apicalls/infrastructure/*`, `apps/sync/infrastructure/*` (`*.service`, `*.timer`) | `infrastructure/systemd/` | `94a2ee1` (Phase 10) |
 
 ## 3. Files created
@@ -142,13 +142,13 @@ Items 1–4 are now RESOLVED. The executor cutover is closed (DR-043, 2026-10-05
 | # | Objective "done when" | Status | Evidence (this tree, 2026-10-01) |
 | --- | --- | --- | --- |
 | 1 | `frontend/web` no longer owns executor runtime | **MET (DR-043, 2026-10-05)** | `find frontend/web/src/platform/executor -type f` → exactly one file: `types.ts` (the wire contract — consumer-facing only, no runtime path, no imports out, no executables, no DB, no HTTP). `apps/web/scripts/executor/worker.ts` is preserved as a 5-line tombstone. The 9 TS-runtime test files are gone. `verify:executor` is the Go hermetic e2e. Web↔Go route parity proven on every `/api/executor/*` URL with a minted team session. |
-| 2 | `frontend/web` no longer owns DB schema | MET | `find frontend/web -name '*.sql'` → none; DDL lives in `database/schema/{schema,pg-schema,executor-schema}.sql` |
+| 2 | `frontend/web` no longer owns DB schema | MET | `find frontend/web -name '*.sql'` → none; DDL lives in `db/schema/{schema,pg-schema,executor-schema}.sql` |
 | 3 | `apps/apicalls` → `backend/data` | MET | `apps/apicalls` absent; `backend/data/{cmd/data,internal/*}`, module path rewritten |
 | 4 | Rust sync under `backend/sync` | MET | `backend/sync/{src,tests,Cargo.toml}`; `cargo test --release` green |
 | 5 | `backend/api` is the primary Go API | MET | 18 internal packages, 112 test funcs; 4 routes live; conformance-gated vs contract |
 | 6 | `backend/workers/executor` owns executor logic | **MET (DR-043, 2026-10-05)** | the Go runtime is the sole owner. 19 internal packages + 21 `internal/api` funcs (route surface) + 12 composed hermetic e2e tests + 8 paper/worker gate tests; the TS tree is gone; the systemd unit is retired to `RETIRED-fudcourt-executor-worker.service.txt`. |
 | 7 | exchange adapters use a common abstraction | MET | `internal/exchanges/{interface,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package |
-| 8 | PostgreSQL is the durable execution truth | MET | `database/schema/executor-schema.sql` (10 tables) + `internal/repository`; **proven live this session** — the DSN-gated `TestStoreEndToEnd`/`TestStoreNewFailLoud` run green against a throwaway local Postgres with that schema applied (`4959f8f`) |
+| 8 | PostgreSQL is the durable execution truth | MET | `db/schema/executor-schema.sql` (10 tables) + `internal/repository`; **proven live this session** — the DSN-gated `TestStoreEndToEnd`/`TestStoreNewFailLoud` run green against a throwaway local Postgres with that schema applied (`4959f8f`) |
 | 9 | Valkey only ephemeral coordination | MET | `internal/platform/lock/{valkey,memory}.go`; durable state is Postgres |
 | 10 | API contracts centralized | MET | `contracts/{openapi,events,schemas}`; `CONTRACTS_OK` gate |
 | 11 | cross-service tests outside `frontend/web` | MET | `tests/integration/api/check-api-contract.py`, `tests/oracle/fixtures/` |
@@ -338,7 +338,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    schema: non-UUID `user-1`/`acc-1` ids (the store now refuses non-UUIDs), no
    `executor.exchange_accounts` row for the `executions.account_id` FK, and a `DRAFT` fixture status
    that `LoadRecoverable` (like `worker.MemoryStore`) excludes. Proven by running it for real this
-   session against a throwaway local Postgres + `database/schema/executor-schema.sql`; fixed
+   session against a throwaway local Postgres + `db/schema/executor-schema.sql`; fixed
    (`4959f8f`). Both store tests now pass live.
 
 ## 9. Recommended next steps
@@ -353,7 +353,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    delete the TS executor + re-point the 15 route handlers still importing
    `platform/executor` (Phase 5/7). This unblocks debt items 1–4 at once.
    **(b) precision (`8d87df1`):** provisioning `FUDCOURT_EXECUTOR_PG_URL` no longer implies applying
-   the schema out-of-band — `cmd/executor` now applies the tracked `database/schema/executor-schema.sql`
+   the schema out-of-band — `cmd/executor` now applies the tracked `db/schema/executor-schema.sql`
    at startup (`repository.EnsureSchema`), so the Go worker self-bootstraps an empty database exactly
    as the TS path does; the remaining prerequisites are exactly env provisioning + the live
    `verify:executor` run against the Go worker.
@@ -404,7 +404,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    `FUDCOURT_SESSION_SECRET` + `FUDCOURT_EXECUTOR_PG_URL` must be provisioned in
    `apps/web/.env.local` before the unit can start (provisioning the DSN no longer implies
    applying the schema by hand — since `8d87df1` `cmd/executor` applies the tracked
-   `database/schema/executor-schema.sql` at startup, `repository.EnsureSchema`); **(c)** provision
+   `db/schema/executor-schema.sql` at startup, `repository.EnsureSchema`); **(c)** provision
    `FUDCOURT_EXECUTOR_MASTER_KEY` and run `verify:executor` against the **Go** worker. The TS
    executor stays **production** until all three land — the TS deletion is still OPEN.
 2. ~~**Then** execute the Phase 8 move (`apps/web/scripts/verify/*` → `tests/{integration,e2e,fixtures,oracle}`),

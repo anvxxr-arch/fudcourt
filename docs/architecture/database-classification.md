@@ -11,8 +11,8 @@ transcript is `history://source-inventory`.
 
 | Storage | DDL file | Generator / provenance | Extra DBs |
 |---|---|---|---|
-| Postgres 17 + TimescaleDB 2.30.1, `public` (database `fudcourt`) | `database/schema/pg-schema.sql` | hand-written, `IF NOT EXISTS` throughout; **the single system of record since DR-040** (the generated SQLite dump and its `dump-schema.mjs` generator are deleted) | system of record |
-| Postgres, `executor` schema | `database/schema/executor-schema.sql` | tracked copy; executed from an **embedded duplicate** `EXECUTOR_DDL` in `apps/executor/internal/repository/store.go` via `ensureExecutorSchema()`; pinned by `apps/executor/internal/repository/schema_test.go` | execution system of record |
+| Postgres 17 + TimescaleDB 2.30.1, `public` (database `fudcourt`) | `db/schema/pg-schema.sql` | hand-written, `IF NOT EXISTS` throughout; **the single system of record since DR-040** (the generated SQLite dump and its `dump-schema.mjs` generator are deleted) | system of record |
+| Postgres, `executor` schema | `db/schema/executor-schema.sql` | tracked copy; executed from an **embedded duplicate** `EXECUTOR_DDL` in `apps/executor/internal/repository/store.go` via `ensureExecutorSchema()`; pinned by `apps/executor/internal/repository/schema_test.go` | execution system of record |
 | Neon Postgres | `apps/web/src/cms/migrations/20260917_194354.ts` (+ `.json` snapshot, `index.ts` manifest) | Payload PostgreSQL adapter migration, generated | CMS content store |
 
 Connection facts (names only, no values):
@@ -33,7 +33,7 @@ Payload from `DATABASE_URL` (`apps/web/src/cms/payload.config.ts:44-46`).
 
 ---
 
-## 1. Postgres `public` — treasury system of record (`database/schema/pg-schema.sql`) — 8 tables
+## 1. Postgres `public` — treasury system of record (`db/schema/pg-schema.sql`) — 8 tables
 
 Writers: the Python oracle `tests/oracle/sync-live.py` (psycopg2, the deployed sync)
 and `backend/sync` (Rust `tokio-postgres`, built but **not deployed** —
@@ -46,7 +46,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 
 | Field | Value |
 |---|---|
-| table | `assets` (`database/schema/pg-schema.sql:20-29`) |
+| table | `assets` (`db/schema/pg-schema.sql:20-29`) |
 | storage | Postgres `public.assets` (system of record, DR-040) |
 | classification | **snapshot** (rewritten wholesale each sync: `DELETE FROM assets` then INSERTs — `db.rs:117,133`) |
 | owning service | `backend/sync` Rust `fudcourt-sync` (`streams/sync.rs`), legacy `sync-live.py` |
@@ -61,7 +61,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 
 | Field | Value |
 |---|---|
-| table | `transactions` (`database/schema/pg-schema.sql:64-80`) |
+| table | `transactions` (`db/schema/pg-schema.sql:64-80`) |
 | storage | Postgres `public.transactions` (system of record, DR-040) |
 | classification | **canonical** (user-entered ledger of movements; append + edit + delete) |
 | owning service | Next `(frontend)` API: `api/transactions/route.ts` (POST, DELETE, bulk PUT), `api/transactions/[id]/route.ts` (PUT/DELETE) |
@@ -76,7 +76,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 
 | Field | Value |
 |---|---|
-| table | `wallets` (`database/schema/pg-schema.sql:88-102`) |
+| table | `wallets` (`db/schema/pg-schema.sql:88-102`) |
 | storage | Postgres `public.wallets` (system of record, DR-040) |
 | classification | **canonical** (wallet registry; UI-editable metadata) |
 | owning service | Next API `api/wallets/route.ts` (**UPDATE only** — no INSERT exists anywhere in the tree; rows are created out-of-band); the addresses the sync *reads* are code constants `apps/reconciler/src/chains.rs` `WALLETS` (Main, Hanif, Akang) |
@@ -91,7 +91,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 
 | Field | Value |
 |---|---|
-| table | `accounts` (`database/schema/pg-schema.sql:13-18`) |
+| table | `accounts` (`db/schema/pg-schema.sql:13-18`) |
 | storage | Postgres `public.accounts` (system of record, DR-040) |
 | classification | **canonical** (chart of accounts) |
 | owning service | **none found in-repo** — no INSERT/UPDATE against `accounts` anywhere (only reads). **DEAD (DR-036):** 6 rows, frozen at the 2026-09-15 import; no out-of-band writer in cron, any timer, or `~/.hermes/**` |
@@ -106,7 +106,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 
 | Field | Value |
 |---|---|
-| table | `journal` (`database/schema/pg-schema.sql:31-41`) |
+| table | `journal` (`db/schema/pg-schema.sql:31-41`) |
 | storage | Postgres `public.journal` (system of record, DR-040) |
 | classification | **event** (dated accounting entries with a `status`) |
 | owning service | **none found in-repo** (read-only usage) `[INFERENCE]` manual entry. **DEAD (DR-036):** 8 rows, max `created_at` `2026-09-15 23:48:35` — frozen at the import, never advanced |
@@ -120,7 +120,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 
 | Field | Value |
 |---|---|
-| table | `ledger` (`database/schema/pg-schema.sql:43-50`) |
+| table | `ledger` (`db/schema/pg-schema.sql:43-50`) |
 | storage | Postgres `public.ledger` (system of record, DR-040) |
 | classification | **snapshot** (a `balance` per `(account, side, currency)`) |
 | owning service | **none found in-repo**. **DEAD (DR-036):** 3 rows, frozen at the 2026-09-15 import |
@@ -134,7 +134,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 
 | Field | Value |
 |---|---|
-| table | `trades` (`database/schema/pg-schema.sql:52-62`) |
+| table | `trades` (`db/schema/pg-schema.sql:52-62`) |
 | storage | Postgres `public.trades` (system of record, DR-040) |
 | classification | **event** (executed trade log) |
 | owning service | **none found in-repo** `[INFERENCE]` manual entry. **DEAD (DR-036):** 0 rows, never written |
@@ -148,7 +148,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 
 | Field | Value |
 |---|---|
-| table | `venues` (`database/schema/pg-schema.sql:82-86`) |
+| table | `venues` (`db/schema/pg-schema.sql:82-86`) |
 | storage | Postgres `public.venues` (system of record, DR-040) |
 | classification | **canonical** (venue registry; `id` is a text slug, not a provider id) |
 | owning service | **none found in-repo**. **DEAD — the TABLE only (DR-036):** 12 rows, seeded once at the 2026-09-15 import. The venue *entity* is alive despite the unwritten table: `contracts/data/reference.json` mints 12 `venue_id`s, `apps/api/internal/accounts/exchange/account.go:122` `KnownExchange` validates the slug, and the executor's venue boundary (`apps/executor/internal/exchanges/`) resolves it in code — so a cleanup retires the TABLE, never the identity |
@@ -186,7 +186,7 @@ history `asset_history` is appended by the `assets_snapshot` trigger, not by a l
 
 ---
 
-## 3. Postgres `executor` (`database/schema/executor-schema.sql`) — schema + 10 tables
+## 3. Postgres `executor` (`db/schema/executor-schema.sql`) — schema + 10 tables
 
 Writer split (both found in-repo):
 
@@ -213,7 +213,7 @@ Writer split (both found in-repo):
 | `executor.audit_logs` (`:168-175`) | **event** | Next `store.ts:483`; Go repository | Next `store.ts` | AuditRecord (system domain) | EVENT | USER_PRIVATE | `payload jsonb`; no retention/rotation policy stated. |
 
 **Embedded-DDL duplication (violation to record, not fix here):** the same 10
-`CREATE TABLE` statements exist twice — `database/schema/executor-schema.sql` and the
+`CREATE TABLE` statements exist twice — `db/schema/executor-schema.sql` and the
 `EXECUTOR_DDL` template literal (retired with the TS store module 2026-10-05, DR-043) lived at the TS platform store path; the canonical embeddable is now `apps/executor/internal/repository/schema.go`.
 The tracked file is *not* what runs; `ensureExecutorSchema()` executes the embedded copy.
 `apps/executor/internal/repository/schema_test.go` compares them after normalizing
@@ -256,11 +256,11 @@ Enumerated, not implied:
 
 | Expected thing | Status | Evidence |
 |---|---|---|
-| `database/migrations/` | **Does not exist** | `ls database/` → `README.md`, `schema/` only. The only migration runners are Payload's (`src/cms/migrations/index.ts`) and the executor's two idempotent startup appliers of `database/schema/executor-schema.sql`: the TS `ensureExecutorSchema()` and — added `8d87df1` — the Go `repository.EnsureSchema` at `cmd/executor` startup. |
-| A Postgres migration framework for the treasury tables | **Does not exist** | `database/schema/pg-schema.sql` is hand-written and applied by hand; there is no migration runner (DR-020). |
+| `database/migrations/` | **Does not exist** | `ls database/` → `README.md`, `schema/` only. The only migration runners are Payload's (`src/cms/migrations/index.ts`) and the executor's two idempotent startup appliers of `db/schema/executor-schema.sql`: the TS `ensureExecutorSchema()` and — added `8d87df1` — the Go `repository.EnsureSchema` at `cmd/executor` startup. |
+| A Postgres migration framework for the treasury tables | **Does not exist** | `db/schema/pg-schema.sql` is hand-written and applied by hand; there is no migration runner (DR-020). |
 | Seed scripts for the treasury tables | **Does not exist** | No `INSERT INTO accounts/journal/ledger/venues/trades` in any **source** file (the phrase occurs in the prose recording it, so a bare whole-tree grep is non-zero); `wallets` is seeded only as Rust constants (`chains.rs` `WALLETS`) which are *read* as the sync's watch list, not inserted by the app. |
 | SQL fixture files for the treasury schema | **Does not exist** | Only `tests/oracle/fixtures/capture.json` (HTTP bodies) and `tests/fixtures/**` (provider payloads). |
-| `database/schema/analytics.sql` | **Does not exist** (referenced by an older doc) | `docs/architecture/domain-map.md:53` names it; the file is not in the tree. The analytics tables actually live in `pg-schema.sql`. `[INFERENCE]` stale doc reference, out of my write scope. |
+| `db/schema/analytics.sql` | **Does not exist** (referenced by an older doc) | `docs/architecture/domain-map.md:53` names it; the file is not in the tree. The analytics tables actually live in `pg-schema.sql`. `[INFERENCE]` stale doc reference, out of my write scope. |
 | Tables for: bank accounts, macro series/observations, DEX pools/LP positions, signals, wallets-indexer data, Candles/OHLCV, news from any provider other than the CMS | **Do not exist** | No DDL matches; no writer exists. `price_history` is the only price-series table and has no writer — DR-036 confirms it dead (empty in Postgres, no producer). |
 | Any table holding plaintext API keys/secrets | **Does not exist** | `executor.exchange_accounts` stores only `bytea` ciphertext + `iv`/`auth_tag` + `api_key_masked`; `users.hash`/`salt` are digests. |
 | A `raw_*` provider table namespace | **Does not exist** | The scope's suggested `raw_cryptorank_*`/`raw_exchange_*` naming has no implementation; raw payloads live in the disk cache (`~/.cache/crfetch`) and gzipped fixtures only. |

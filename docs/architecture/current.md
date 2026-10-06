@@ -71,7 +71,7 @@ verified post-move runs.
 ```
 frontend/web/        Next.js 15 + Bun 1.4.2 + TypeScript — frontend, all HTTP API routes,
                  the in-frontend executor runtime, the Payload blog CMS (DB schema DDL
-                 moved out to `database/schema/` in the Phase-2 wave, see §4)
+                 moved out to `db/schema/` in the Phase-2 wave, see §4)
 backend/data/   Go sidecar ("fudcourt-data") — upstream data acquisition (was apps/apicalls)
 backend/sync/   Rust crate "fudcourt-sync" — balance sync + reconcile service (was apps/sync)
 docs/            architecture/, operations/, prd/, product/, records/
@@ -127,7 +127,7 @@ Environmental limitations (recorded as environmental, NOT failures — each bloc
   Parity tests (`internal/research/paritytest`, `internal/research/cryptorank/{parity,slice_semantics}_test.go`)
   run offline against golden envelopes and are included in the `go test ./...` PASS above.
 - CI's "Reconcile contract vs the Rust service" job step: it now starts its own TimescaleDB
-  service container, applies `database/schema/pg-schema.sql`, seeds rows and needs **no secret**
+  service container, applies `db/schema/pg-schema.sql`, seeds rows and needs **no secret**
   (the old `TURSO_AUTH_TOKEN` gate is gone — DR-040).
 - ~~`bun run verify:executor`: exact gate `FUDCOURT_EXECUTOR_MASTER_KEY` = 64 hex chars~~
   **RESOLVED 2026-10-01** — a dev key was generated into the gitignored
@@ -228,9 +228,9 @@ Plus `sitemap.ts`, `robots.ts`, `globals.css`, root `layout.tsx`.
 `blog/page.tsx`, `blog/[slug]/page.tsx`. Collections live in `src/cms/collections/`
 (Posts, Users, Categories, Media) + `src/cms/migrations/`.
 
-## 4. Database schemas (`database/schema/*.sql` — moved here from `apps/web/db/`, Phase 2 of the domain restructure, 2026-10-01)
-> Amended 2026-10-01: `apps/web/db/` no longer exists; the schemas live at `database/schema/`
-> per `database/README.md`. **Amended 2026-10-03 (DR-040):** the SQLite dump `schema.sql`,
+## 4. Database schemas (`db/schema/*.sql` — moved here from `apps/web/db/`, Phase 2 of the domain restructure, 2026-10-01)
+> Amended 2026-10-01: `apps/web/db/` no longer exists; the schemas live at `db/schema/`
+> per `db/README.md`. **Amended 2026-10-03 (DR-040):** the SQLite dump `schema.sql`,
 > its generator and the whole `scripts/database/` directory are deleted; `pg-schema.sql` is
 > the hand-written DDL for the single Postgres system of record (`docs/architecture/SCHEMA.md` §1).
 
@@ -249,7 +249,7 @@ Ownership today (feature → tables):
   `tests/oracle/sync-live.py` (the deployed sync) or `backend/sync` (Rust, not deployed);
   `asset_history` is appended by the `assets_snapshot` trigger, not by app code (DR-040).
 - **DDL byte-identity (Phase-5 anchor): PASS** — `store.ts` `EXECUTOR_DDL` is asserted
-  byte-identical (normalized) to `database/schema/executor-schema.sql` by
+  byte-identical (normalized) to `db/schema/executor-schema.sql` by
   `tests/integration/executor/executor-store-tests.ts` §59 ("no silent drift"); suite 41/41 green 2026-10-01
   (details in §5a). **A second applier and guard were added `8d87df1`:** the Go runtime embeds a copy
   at `apps/executor/internal/repository/schema/executor-schema.sql` and applies it at
@@ -269,7 +269,7 @@ Ownership today (feature → tables):
 | `exchange.ts` | Venue adapters: `CcxtLike` interface, `CreateAdapterOptions`, venue symbol mapping (`toVenueSymbol`/`fromVenueSymbol`), error sanitization/`mapError` |
 | `worker.ts` | Execution worker: `createWorker` → `ExecutorWorkerApi`, child clamping (`clampChild`), fill summaries, live-adapter factory (`setLiveAdapterFactory`) |
 | `lock.ts` | Distributed execution lock: `LockClient`, `lockKey(executionId)`, `executionLock` |
-| `store.ts` | Postgres persistence for `executor.*` (`pg()`, `ensureExecutorSchema`, `EXECUTOR_DDL`), key handling (`masterKeyFromEnv` — encrypted exchange credentials). **Second applier added `8d87df1`:** the Go runtime (`apps/executor/internal/repository/schema.go` `EnsureSchema` at `cmd/executor` startup) applies the same tracked DDL; both copies are drift-guarded against `database/schema/executor-schema.sql` |
+| `store.ts` | Postgres persistence for `executor.*` (`pg()`, `ensureExecutorSchema`, `EXECUTOR_DDL`), key handling (`masterKeyFromEnv` — encrypted exchange credentials). **Second applier added `8d87df1`:** the Go runtime (`apps/executor/internal/repository/schema.go` `EnsureSchema` at `cmd/executor` startup) applies the same tracked DDL; both copies are drift-guarded against `db/schema/executor-schema.sql` |
 | `runtime.ts` | Bootstrap & request auth: `bootstrapExecutor`, `requireExecutorUser`, plan-adapter factory, runtime caches |
 
 Adjacent:
@@ -394,7 +394,7 @@ Ingress: `fc.dwirijal.my.id` via Cloudflare Tunnel to the loopback origin (DR-00
 
 | Job | Working dir | Steps |
 |---|---|---|
-| `web` | `frontend/web` | bun install --frozen-lockfile → check-contract → check-deploy → check-structure → `tsc --noEmit` → `test:shapers` → live reconcile harness vs Rust `fudcourt-reconciled` (the `reconcile-live` job starts its own TimescaleDB container, applies `database/schema/pg-schema.sql` and needs no secret — DR-040) → `bun run build` |
+| `web` | `frontend/web` | bun install --frozen-lockfile → check-contract → check-deploy → check-structure → `tsc --noEmit` → `test:shapers` → live reconcile harness vs Rust `fudcourt-reconciled` (the `reconcile-live` job starts its own TimescaleDB container, applies `db/schema/pg-schema.sql` and needs no secret — DR-040) → `bun run build` |
 | `fudcourt-data` | `backend/data` | `go build ./...` → `go vet ./...` → `go test ./...` (Go 1.24.1) |
 | `sync` | `backend/sync` | `cargo build --release --bins` → `cargo test --release` (stable) |
 | `hooks` | repo root | `bash -n scripts/githooks/pre-push` |

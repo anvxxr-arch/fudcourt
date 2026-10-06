@@ -62,11 +62,11 @@ runs on push in CI. Nothing remains open in this phase.
 ## Phase 2 — `database/` extraction
 > **Amended 2026-10-01 (partially executed), 2026-10-02 (DDL lift DONE):**
 > `apps/web/db/{schema.sql,pg-schema.sql,executor-schema.sql}` are now
-> `database/schema/{pg-schema.sql,executor-schema.sql}`
-> (`database/README.md` records the move). `pg-load.ts`, `mirror.ts`, `store.ts`
+> `db/schema/{pg-schema.sql,executor-schema.sql}`
+> (`db/README.md` records the move). `pg-load.ts`, `mirror.ts`, `store.ts`
 > path comments updated. **The DDL lift
 > landed 2026-10-02:** `store.ts` no longer embeds the DDL — `EXECUTOR_DDL` reads
-> `database/schema/executor-schema.sql` (comment lines dropped) at module load, and the §59 test
+> `db/schema/executor-schema.sql` (comment lines dropped) at module load, and the §59 test
 > asserts the constant is that file verbatim, so the tracked file is the sole copy on the TS side
 > (the Go side keeps a byte-pinned `embed` copy: `go:embed` refuses parent-directory patterns).
 > `database/seeds|fixtures/` remain empty; `database/migrations/` deliberately not created
@@ -78,7 +78,7 @@ runs on push in CI. Nothing remains open in this phase.
   was deleted by DR-040).
 - Lift `EXECUTOR_DDL` out of `store.ts` into the tracked schema file (store.ts imports
   the file or a generated constant). **Status 2026-10-02: DONE** — the tracked name is
-  `database/schema/executor-schema.sql` (the `executor.sql` in the original bullet was never
+  `db/schema/executor-schema.sql` (the `executor.sql` in the original bullet was never
   created) and `store.ts` now reads it rather than embedding a copy. What survives is the Go
   `embed` duplicate, which cannot be removed: `go:embed` refuses a pattern that reaches a parent
   directory.

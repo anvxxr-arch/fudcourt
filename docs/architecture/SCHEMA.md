@@ -3,7 +3,7 @@
 Two databases + one API envelope contract. Verified 2026-09-27 against remote
 head `957836d`.
 
-> **Updated 2026-10-03 (DR-040):** `database/schema/pg-schema.sql` is the
+> **Updated 2026-10-03 (DR-040):** `db/schema/pg-schema.sql` is the
 > hand-written Postgres+TimescaleDB schema and the **only** treasury schema —
 > Postgres is the single system of record, and the Turso/libSQL store (with its
 > generated SQLite dump and the `dump-schema.mjs --check` drift alarm) is
@@ -51,7 +51,7 @@ Written by `tests/oracle/sync-live.py` with the hard rule:
 **failed RPC raises; it never writes `0`**. Keyed by exact wallet address +
 chain; `value_usd` summed for net worth. Every `INSERT` is snapshotted into the
 `asset_history` TimescaleDB hypertable by the `assets_snapshot` trigger
-(`database/schema/pg-schema.sql`), not by application code.
+(`db/schema/pg-schema.sql`), not by application code.
 
 ### 1.4 Accounting tables (read by `getAll()`)
 | Table | Read shape |

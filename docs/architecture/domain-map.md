@@ -47,23 +47,23 @@
 
 | Table(s) | Today (schema + writer) | Target owner | Target location |
 |---|---|---|---|
-| `users`, `members` (admin) | web `platform/auth`, admin UI; no dedicated table yet (Payload `users` in `src/cms`) | api | `database/schema/accounts.sql` |
-| `wallets` | `database/schema/pg-schema.sql`; web treasury | api | `database/schema/portfolio.sql` |
-| `accounts`, `trades`, `journal`, `ledger`, `transactions` | same; web treasury + `backend/sync` writes `assets`-adjacent rows | api | `database/schema/portfolio.sql` |
-| portfolio (derived from `ledger`/`positions`) | web treasury UI | api | `database/schema/portfolio.sql` |
-| `execution` (`executor.executions`, `executor.execution_plans`) | `apps/web/src/platform/executor/store.ts` | executor | `database/schema/execution.sql` |
-| `execution_orders` (`executor.child_orders`) | same | executor | `database/schema/execution.sql` |
-| `execution_fills` (`executor.fills`) | same | executor | `database/schema/execution.sql` |
-| `execution_events` (`executor.execution_events`) | same | executor | `database/schema/execution.sql` |
-| `executor.{balance_snapshots,positions_snapshots,risk_profiles,audit_logs,exchange_accounts}` | same | executor | `database/schema/execution.sql` |
-| `analytics` (`assets`, `asset_history`, `price_history`) | `backend/sync` + `tests/oracle/sync-live.py` (Postgres `assets`) + `backend/data` (upstream values) | data + sync | `database/schema/analytics.sql` |
-| `venues` | web markets + sync chains registry | api (read) / sync (write) | `database/schema/markets.sql` |
+| `users`, `members` (admin) | web `platform/auth`, admin UI; no dedicated table yet (Payload `users` in `src/cms`) | api | `db/schema/accounts.sql` |
+| `wallets` | `db/schema/pg-schema.sql`; web treasury | api | `db/schema/portfolio.sql` |
+| `accounts`, `trades`, `journal`, `ledger`, `transactions` | same; web treasury + `backend/sync` writes `assets`-adjacent rows | api | `db/schema/portfolio.sql` |
+| portfolio (derived from `ledger`/`positions`) | web treasury UI | api | `db/schema/portfolio.sql` |
+| `execution` (`executor.executions`, `executor.execution_plans`) | `apps/web/src/platform/executor/store.ts` | executor | `db/schema/execution.sql` |
+| `execution_orders` (`executor.child_orders`) | same | executor | `db/schema/execution.sql` |
+| `execution_fills` (`executor.fills`) | same | executor | `db/schema/execution.sql` |
+| `execution_events` (`executor.execution_events`) | same | executor | `db/schema/execution.sql` |
+| `executor.{balance_snapshots,positions_snapshots,risk_profiles,audit_logs,exchange_accounts}` | same | executor | `db/schema/execution.sql` |
+| `analytics` (`assets`, `asset_history`, `price_history`) | `backend/sync` + `tests/oracle/sync-live.py` (Postgres `assets`) + `backend/data` (upstream values) | data + sync | `db/schema/analytics.sql` |
+| `venues` | web markets + sync chains registry | api (read) / sync (write) | `db/schema/markets.sql` |
 
 Naming note: today's physical names (`executor.*` schema, `child_orders`, `fills`) map to the
 target's logical names (`execution_orders`, `execution_fills`); renaming happens in Phase 2/5.
-**Re-read 2026-10-01 (docs-reality pass):** the `database/schema/*.sql` filenames in the "target
+**Re-read 2026-10-01 (docs-reality pass):** the `db/schema/*.sql` filenames in the "target
 location" column are the **Phase-2 proposal** and were never created — the tree holds exactly
-three schema files, `database/schema/{pg-schema.sql,executor-schema.sql}`, and
+three schema files, `db/schema/{pg-schema.sql,executor-schema.sql}`, and
 `database/migrations/` is deliberately absent (DR-020). Read that column as "which schema file
 would own this table if the split were made".
 
@@ -142,7 +142,7 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
 - Uncommitted as of this writing (post-`4e8ba91`): `backend/api/` (Go: `cmd/api`,
   `internal/{identity,credentials,authorization,platform/{errs,health,httpx}}`),
   `backend/workers/executor/` (Go: `internal/{decimal,exchange,executor}` — `records.go`/`types.go`
-  already pin `database/schema/executor-schema.sql` as their reference), `packages/`, `go.work`,
+  already pin `db/schema/executor-schema.sql` as their reference), `packages/`, `go.work`,
   and the `infrastructure/systemd/` consolidation (units moved from per-app `infrastructure/` folders into one
   repo-level folder; the Python-vs-Rust `fudcourt-sync` name collision resolved as
   `fudcourt-sync.service` (Python) vs `fudcourt-sync-rust.service` (Rust)). Those paths are now
@@ -171,7 +171,7 @@ internal/
 ```
 Judgment calls, with their evidence:
 - **`wallets` → `accounts/wallets`.** `wallets.go` is the metadata of a `wallets` table row
-  (`database/schema/pg-schema.sql:77`, `pg-schema.sql:95`; written by `backend/sync`), not a derived
+  (`db/schema/pg-schema.sql:77`, `pg-schema.sql:95`; written by `backend/sync`), not a derived
   holding — it is the durable source record, so it belongs to the account side. Its defining rule
   is chain-address-only and refuses CEX names (`WALLET_CHAIN_IS_EXCHANGE`), and it is exactly the
   pairing the browser talks to as `/api/wallets` beside the CEX accounts.

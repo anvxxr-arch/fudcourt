@@ -61,7 +61,7 @@ blog in); the repo root `package.json` declares **no dependencies** — scripts 
 | **Neon Postgres** | the merged app's CMS half (`src/cms`, was apps/blog) | `@payloadcms/db-postgres` via `DATABASE_URL` (pooler, ap-southeast-1) | payload schema: users, posts, media, categories, versions, KV, preferences |
 
 The treasury store is **local and self-hosted** (DR-040); only the Neon CMS half is
-managed cloud. The treasury schema is versioned at `database/schema/pg-schema.sql`
+managed cloud. The treasury schema is versioned at `db/schema/pg-schema.sql`
 (hand-written DDL, `IF NOT EXISTS` throughout) — the generated SQLite dump and its
 `dump-schema.mjs --check` drift alarm were deleted with Turso.
 

@@ -3,7 +3,7 @@
 > Sources: `apps/web/src/platform/auth/{session,guard,mutation}.ts`,
 > `apps/web/src/middleware.ts`, `apps/web/src/platform/executor/store.ts`,
 > `apps/web/src/platform/executor/{runtime,exchange,types,lock}.ts`,
-> `database/schema/executor-schema.sql`, PRD §43–§47, §108–§110,
+> `db/schema/executor-schema.sql`, PRD §43–§47, §108–§110,
 > `docs/operations/SECRETS.md`, `apps/api/internal/audit/audit.go`.
 
 ## 1. Session auth
@@ -29,7 +29,7 @@
 
 ## 2. Credential vault (BYOK, non-custodial)
 One connected account = one credential set (`executor.exchange_accounts`,
-merged §59+§45 — `database/schema/executor-schema.sql`):
+merged §59+§45 — `db/schema/executor-schema.sql`):
 
 | Property | Rule | Evidence |
 |---|---|---|
@@ -51,7 +51,7 @@ Plaintext key material (API secret, full API key, signed payload, auth headers
 |---|---|---|
 | logs | PRD §109 allowed list only (exchange, account id, execution id, symbol, order id, status, latency, error code) | PRD §109 |
 | events | events never carry credentials/secrets | `docs/architecture/events.md` §4 |
-| analytics | analytics tables (`assets`, `asset_history`, `price_history`) hold market data only — no credential columns exist | `database/schema/pg-schema.sql` |
+| analytics | analytics tables (`assets`, `asset_history`, `price_history`) hold market data only — no credential columns exist | `db/schema/pg-schema.sql` |
 | audit | `Redact` replaces values under sensitive keys with `[REDACTED]`, recursively, before storage | `apps/api/internal/audit/audit.go` |
 | frontend state | secrets leave the browser exactly once (connect form) and are cleared immediately; the API only ever answers with the masked key | `ui.tsx` comment + PRD §109 |
 | URLs | secrets never travel in URLs; request URLs carry ids and filters only | `apps/web/src/features/executor/client.ts` |

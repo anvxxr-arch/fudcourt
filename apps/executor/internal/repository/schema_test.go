@@ -27,7 +27,7 @@ func TestParsePoolConfigMatchesTS(t *testing.T) {
 
 // TestEmbeddedSchemaMatchesTracked is the drift guard for the embedded DDL
 // (mirror of the TS test "§59: the embedded DDL matches the tracked
-// database/schema/executor-schema.sql").
+// db/schema/executor-schema.sql").
 //
 // It asserts BYTE IDENTITY, not the normalized comparison the TS test uses.
 // Justification: the TS side must compare a string literal it re-formats by
@@ -37,7 +37,7 @@ func TestParsePoolConfigMatchesTS(t *testing.T) {
 // strictly stronger than the TS one, and it also catches a comment-only edit
 // (the schema's comment block is itself documentation a drift test should
 // protect). The one thing both guards share is the intent: the tracked
-// database/schema/executor-schema.sql is the sole owner of the DDL.
+// db/schema/executor-schema.sql is the sole owner of the DDL.
 func TestEmbeddedSchemaMatchesTracked(t *testing.T) {
 	embedded, err := SchemaSQL()
 	if err != nil {
@@ -50,7 +50,7 @@ func TestEmbeddedSchemaMatchesTracked(t *testing.T) {
 		for i < len(embedded) && i < len(tracked) && embedded[i] == tracked[i] {
 			i++
 		}
-		t.Fatalf("embedded %s drifted from tracked database/schema/executor-schema.sql at byte %d:\n embedded: %q\n tracked:  %q",
+		t.Fatalf("embedded %s drifted from tracked db/schema/executor-schema.sql at byte %d:\n embedded: %q\n tracked:  %q",
 			SchemaSQLPath, i, snippet(embedded, i), snippet(tracked, i))
 	}
 }
@@ -60,7 +60,7 @@ func TestEmbeddedSchemaMatchesTracked(t *testing.T) {
 // from the module dir, from the repo root, or from CI.
 func readTrackedSchema(t *testing.T) string {
 	t.Helper()
-	path := filepath.Join("..", "..", "..", "..", "database", "schema", "executor-schema.sql")
+	path := filepath.Join("..", "..", "..", "..", "db", "schema", "executor-schema.sql")
 	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read tracked schema %s: %v", path, err)

@@ -11,7 +11,7 @@ import (
 
 // The executor DDL is embedded at build time so the binary never depends on
 // the process CWD. The tracked DDL lives OUTSIDE this Go module
-// (database/schema/executor-schema.sql) and `go:embed` refuses patterns that
+// (db/schema/executor-schema.sql) and `go:embed` refuses patterns that
 // reach a parent directory ("invalid pattern syntax"), so the embed reads a
 // byte-identical copy inside the module. The tracked file stays the sole
 // owner: schema/executor-schema.sql is a COPIED artifact, and
@@ -29,7 +29,7 @@ const SchemaSQLPath = "schema/executor-schema.sql"
 
 // SchemaSQL returns the embedded DDL: the executor.* schema definition that
 // EnsureSchema applies. The returned text is this module's copy — the drift
-// guard proves it byte-equal to the tracked database/schema/executor-schema.sql.
+// guard proves it byte-equal to the tracked db/schema/executor-schema.sql.
 func SchemaSQL() (string, error) {
 	b, err := embeddedSchemaFS.ReadFile(SchemaSQLPath)
 	if err != nil {

@@ -6,7 +6,7 @@
 //
 // Money and quantity are DECIMAL STRINGS end to end (the TS side computes with
 // decimal.js; float64 cannot represent these values exactly). Timestamps are
-// unix milliseconds (database/schema/executor-schema.sql convention).
+// unix milliseconds (db/schema/executor-schema.sql convention).
 package execution
 
 // MarketType distinguishes spot from linear perpetuals (types.ts MarketType).

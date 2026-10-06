@@ -71,7 +71,7 @@ the checks do not yet cover.
   `check-structure.py` (the shell may import feature pages; `platform/` must not import a feature).
 - `database/*` is owned by migrations tooling only; services MUST NOT embed DDL strings. —
   **CLOSED 2026-10-02.** `store.ts` no longer embeds the DDL: `EXECUTOR_DDL` reads
-  `database/schema/executor-schema.sql` at module load (comment lines dropped), so the tracked
+  `db/schema/executor-schema.sql` at module load (comment lines dropped), so the tracked
   file is the only copy on the TS side; `tests/integration/executor/executor-store-tests.ts` §59
   pins the constant to that file verbatim and reads the file directly for its structural
   assertions, so a re-derivation cannot slip through. The Go side keeps its `embed` copy

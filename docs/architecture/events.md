@@ -72,7 +72,7 @@ evidence, not a closed contract (`catalog.json` `payload_policy`); additive
 keys may appear and consumers must ignore unknown ones.
 
 Storage: the executor event log is `executor.execution_events`
-(`database/schema/executor-schema.sql`: "Append-only event log (PRD §63): no
+(`db/schema/executor-schema.sql`: "Append-only event log (PRD §63): no
 UPDATE/DELETE path exists in the store and none may be added — history is the
 product here"); the row shape is `ExecutionEventRecord` (`types.ts`:
 `id`, `executionId`, `name`, `payload`, `createdAt`).

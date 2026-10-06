@@ -30,22 +30,22 @@ Availability legend, verified this turn:
 
 ---
 
-## A. SQL — Postgres system of record (`database/schema/pg-schema.sql`, 8 tables)
+## A. SQL — Postgres system of record (`db/schema/pg-schema.sql`, 8 tables)
 
 | # | where | what string | role | consumer(s) that would break | canonical replacement | availability |
 |---|---|---|---|---|---|---|
-| A1 | `database/schema/pg-schema.sql:20-29` (`assets.chain`, `assets.asset`) | `assets.asset`, `assets.chain` | **identity** — the de-facto PK of a balance row; `(wallet, chain, asset)` is undeclared but used as one | `api/coins/route.ts:11,17` (`GROUP BY asset`); `api/all/route.ts`→`db/client.ts:61-67`; `platform/db/pg.ts:52`; `sync/reconciliation/reconcile.rs:123,208`; `dashboard/ui.tsx:14-15,41,64`; `portfolio/ui.tsx:12-13` | `asset_id`, `chain_id` | **BLOCKED as stored**: the value is a *label* (`MATIC` for a POL node, `SPL:<mint6>`), not a resolvable `(provider, provider_id)`. `MATIC`→`asset:315d864f27` does exist in `mappings` (provider `internal`), so `assets.asset` is resolvable **only for that one relabel**; `SPL:<mint6>` is truncation-lossy (A: `unmapped[0]`, `misses[2]` `known_absence:true`) |
-| A2 | `database/schema/pg-schema.sql:20-29` (`assets.wallet`) | owner **label** (`Main`, `Hanif`, `Akang`), not an address | **identity** in practice | `reconcile.rs:123`; `dashboard/ui.tsx:14`; `pg.ts:52` | none — Wallet is not a canonical id kind; the real key is `wallets.address` (A14) | **BLOCKED**: the label is a code constant (`chains.rs` `WALLETS`), and no Wallet id kind is minted (canonical-model §2.1) |
-| A3 | `database/schema/pg-schema.sql:64-80` (`transactions.chain/asset/hash/source/venue_id`) | free-form chain, asset symbol, tx hash, `source`, loose venue link | **identity** (hash), **join key** (`venue_id`→`venues.id`), display (`source`) | `api/transactions/route.ts:28,29,179,180,186` (filter and PUT by `chain`/`venue_id`/`asset`); `transactions/ui.tsx:11,12,21`; `reconcile.rs:214` | `chain_id`, `asset_id`, `venue_id` | **AVAILABLE** for symbols present in `mappings` (8 assets); `hash` has no canonical id kind. The Go mirror carries `chain_id`/`asset_id` as **optional** schema fields already (`finance/transaction.json`) |
-| A4 | `database/schema/pg-schema.sql:52-62` (`trades.venue`, `trades.symbol`) | venue string + `BASE/QUOTE` | **identity** — the row's only market key | `pg.ts:55,81` (`DASHBOARD_READS.trades`); `db/client.ts:64` | `venue_id` + `instrument_id` | **AVAILABLE (instrument)** for the venue slug; the *symbol* is a spelling, so only `ResolveInstrument` over a venue-complete registry resolves it |
-| A5 | `database/schema/pg-schema.sql:43-50` (`ledger.account_code`, `ledger.currency`) | account code + `'USD'` default | **join key** into `accounts.code` (no FK declared); `currency` is a currency code | `pg.ts:54,78`; `[removed: finance/ledger]` `Entry.AccountID` (D3) | none (account codes are chart-of-accounts, not canonical entities) | **BLOCKED** — no Account id kind; `db/README`/classification record `accounts` as dead (DR-036) |
-| A6 | `database/schema/pg-schema.sql:31-41` (`journal.entry_code/debit_account/credit_account`) | entry code + two account codes | **join key** into `accounts.code` | `pg.ts:53,77` | none | **BLOCKED** — same as A5; `journal` is dead (DR-036) |
-| A7 | `database/schema/pg-schema.sql:64-80` (`transactions.source`) | provenance string (`manual`, provider name) | display-only + provenance | `transactions/ui.tsx:12` (`source` rendered); `[removed: finance/transactions]` `DefaultSource:37` | none (Source is not an entity — canonical-model §10 INFERENCE 5) | **BLOCKED** (by design: it is provenance, not identity) |
-| A8 | `database/schema/pg-schema.sql:82-86` (`venues.id`) | text slug PK | **identity** of the venue registry row | `transactions.venue_id` implies an FK that is **not declared**; `pg.ts:57` mirrors it | `venue_id` | **AVAILABLE** — the slug is the natural key (`venue/<venue-id>`); `mappings` has 23 venue rows |
-| A9 | `database/schema/pg-schema.sql:88-98` (`wallets.address` PK) | exact on-chain address | **identity** (true key) | `api/wallets/route.ts:33,34` (`WHERE address = ?`); `pg-schema.sql:68` `memo/wallet_to` text link; `pg.ts:58`; `reconcile.rs:123` | none — Wallet has no id kind; **the address is the correct identity and needs no replacement** | **N/A** (already canonical-shaped) — listed because it is the join target the *label* A2 must eventually use |
-| A10 | `database/schema/pg-schema.sql:88-98` (`wallets.chain`) | free-form chain name | join key to `assets.chain` | `pg.ts:58`; `reconcile.rs:214` joins by `wallet`+`asset`, `chain` only selected | `chain_id` | **AVAILABLE** — `reference.json` `chains` carries `name` (`ethereum`, `bsc`, …); `ChainByName:554` maps it |
+| A1 | `db/schema/pg-schema.sql:20-29` (`assets.chain`, `assets.asset`) | `assets.asset`, `assets.chain` | **identity** — the de-facto PK of a balance row; `(wallet, chain, asset)` is undeclared but used as one | `api/coins/route.ts:11,17` (`GROUP BY asset`); `api/all/route.ts`→`db/client.ts:61-67`; `platform/db/pg.ts:52`; `sync/reconciliation/reconcile.rs:123,208`; `dashboard/ui.tsx:14-15,41,64`; `portfolio/ui.tsx:12-13` | `asset_id`, `chain_id` | **BLOCKED as stored**: the value is a *label* (`MATIC` for a POL node, `SPL:<mint6>`), not a resolvable `(provider, provider_id)`. `MATIC`→`asset:315d864f27` does exist in `mappings` (provider `internal`), so `assets.asset` is resolvable **only for that one relabel**; `SPL:<mint6>` is truncation-lossy (A: `unmapped[0]`, `misses[2]` `known_absence:true`) |
+| A2 | `db/schema/pg-schema.sql:20-29` (`assets.wallet`) | owner **label** (`Main`, `Hanif`, `Akang`), not an address | **identity** in practice | `reconcile.rs:123`; `dashboard/ui.tsx:14`; `pg.ts:52` | none — Wallet is not a canonical id kind; the real key is `wallets.address` (A14) | **BLOCKED**: the label is a code constant (`chains.rs` `WALLETS`), and no Wallet id kind is minted (canonical-model §2.1) |
+| A3 | `db/schema/pg-schema.sql:64-80` (`transactions.chain/asset/hash/source/venue_id`) | free-form chain, asset symbol, tx hash, `source`, loose venue link | **identity** (hash), **join key** (`venue_id`→`venues.id`), display (`source`) | `api/transactions/route.ts:28,29,179,180,186` (filter and PUT by `chain`/`venue_id`/`asset`); `transactions/ui.tsx:11,12,21`; `reconcile.rs:214` | `chain_id`, `asset_id`, `venue_id` | **AVAILABLE** for symbols present in `mappings` (8 assets); `hash` has no canonical id kind. The Go mirror carries `chain_id`/`asset_id` as **optional** schema fields already (`finance/transaction.json`) |
+| A4 | `db/schema/pg-schema.sql:52-62` (`trades.venue`, `trades.symbol`) | venue string + `BASE/QUOTE` | **identity** — the row's only market key | `pg.ts:55,81` (`DASHBOARD_READS.trades`); `db/client.ts:64` | `venue_id` + `instrument_id` | **AVAILABLE (instrument)** for the venue slug; the *symbol* is a spelling, so only `ResolveInstrument` over a venue-complete registry resolves it |
+| A5 | `db/schema/pg-schema.sql:43-50` (`ledger.account_code`, `ledger.currency`) | account code + `'USD'` default | **join key** into `accounts.code` (no FK declared); `currency` is a currency code | `pg.ts:54,78`; `[removed: finance/ledger]` `Entry.AccountID` (D3) | none (account codes are chart-of-accounts, not canonical entities) | **BLOCKED** — no Account id kind; `db/README`/classification record `accounts` as dead (DR-036) |
+| A6 | `db/schema/pg-schema.sql:31-41` (`journal.entry_code/debit_account/credit_account`) | entry code + two account codes | **join key** into `accounts.code` | `pg.ts:53,77` | none | **BLOCKED** — same as A5; `journal` is dead (DR-036) |
+| A7 | `db/schema/pg-schema.sql:64-80` (`transactions.source`) | provenance string (`manual`, provider name) | display-only + provenance | `transactions/ui.tsx:12` (`source` rendered); `[removed: finance/transactions]` `DefaultSource:37` | none (Source is not an entity — canonical-model §10 INFERENCE 5) | **BLOCKED** (by design: it is provenance, not identity) |
+| A8 | `db/schema/pg-schema.sql:82-86` (`venues.id`) | text slug PK | **identity** of the venue registry row | `transactions.venue_id` implies an FK that is **not declared**; `pg.ts:57` mirrors it | `venue_id` | **AVAILABLE** — the slug is the natural key (`venue/<venue-id>`); `mappings` has 23 venue rows |
+| A9 | `db/schema/pg-schema.sql:88-98` (`wallets.address` PK) | exact on-chain address | **identity** (true key) | `api/wallets/route.ts:33,34` (`WHERE address = ?`); `pg-schema.sql:68` `memo/wallet_to` text link; `pg.ts:58`; `reconcile.rs:123` | none — Wallet has no id kind; **the address is the correct identity and needs no replacement** | **N/A** (already canonical-shaped) — listed because it is the join target the *label* A2 must eventually use |
+| A10 | `db/schema/pg-schema.sql:88-98` (`wallets.chain`) | free-form chain name | join key to `assets.chain` | `pg.ts:58`; `reconcile.rs:214` joins by `wallet`+`asset`, `chain` only selected | `chain_id` | **AVAILABLE** — `reference.json` `chains` carries `name` (`ethereum`, `bsc`, …); `ChainByName:554` maps it |
 
-## B. SQL — Postgres `public` read model (`database/schema/pg-schema.sql`)
+## B. SQL — Postgres `public` read model (`db/schema/pg-schema.sql`)
 
 The whole of §A is mirrored here (`pg-schema.sql:20-105`), so every A-row has a `public` twin at the
 mirror's line; the rows below are the ones that are **not** pure copies.
@@ -58,7 +58,7 @@ mirror's line; the rows below are the ones that are **not** pure copies.
 | B4 | `pg-schema.sql:168-175` (`canonical_reference`) | `(provider, provider_id)` PK → `canonical_id` | **the resolver table itself** | none — **unwired** (DR-036: "nothing calls the loader") | — (this IS the replacement) | **SCHEMA-ONLY**: `reader.go` loads it from the artifact; no money row joins to it yet |
 | B5 | `pg-schema.sql:190-198` (`canonical_reference_miss`) | `(provider, provider_id)` of known-unresolved keys | the honest negative half of B4 | none — unwired | — | **SCHEMA-ONLY** |
 
-## C. SQL — Postgres `executor` schema (`database/schema/executor-schema.sql`)
+## C. SQL — Postgres `executor` schema (`db/schema/executor-schema.sql`)
 
 | # | where | what string | role | consumer(s) that would break | canonical replacement | availability |
 |---|---|---|---|---|---|---|
@@ -241,7 +241,7 @@ DDL" count is derived by intersecting the row sets, not from a stored declaratio
    document contradicts itself in two places.)
 2. `canonical-model.md` §7 D-CANON claims *"grep `(?i)(external_id|provider_id|canonical_id|…)` over
    the whole repo → no SQL/DDL hits"* and *"no mapping/taxonomy table"* in `database/`; both are
-   falsified by `database/schema/pg-schema.sql:168-198` (`canonical_reference`, added by DR-036).
+   falsified by `db/schema/pg-schema.sql:168-198` (`canonical_reference`, added by DR-036).
 3. `canonical-model.md:605` still says `price_history`'s key "is **the** one schema-level violation
    of the identity rule" while `asset_history_snapshot` (B1) is a second, live one.
 4. `canonical-acceptance.md:44` (row 16b) and its P0 rows still say `database/` "has no mapping
@@ -251,8 +251,8 @@ DDL" count is derived by intersecting the row sets, not from a stored declaratio
 6. The brief refers to `canonical-placement.md` **§9**; that file has no §9 (its resolver table is
    §6.1). Reported, not edited.
 
-**Note on a concurrent actor.** While this inventory was being written, `database/schema/pg-schema.sql`
-(+54 lines) and `database/schema/executor-schema.sql` (+18/-5), `apps/api/internal/markets/reference/loader.go`,
+**Note on a concurrent actor.** While this inventory was being written, `db/schema/pg-schema.sql`
+(+54 lines) and `db/schema/executor-schema.sql` (+18/-5), `apps/api/internal/markets/reference/loader.go`,
 `docs/architecture/canonical-model.md`, `docs/architecture/database-classification.md`,
 `docs/records/DECISIONS.md` and others changed underfoot (DR-036). Every line number above was
 re-read **after** those changes; the SQL rows quoted here are from the current working tree
