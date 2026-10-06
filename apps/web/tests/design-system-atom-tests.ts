@@ -513,6 +513,36 @@ test('lifecycle: the mirrored status arrays match the atom label maps', () => {
   assert.deepEqual([...EXECUTION_STATUSES], Object.keys(EXECUTION_STATUS), 'EXECUTION_STATUSES drifted from the atom label map');
   assert.deepEqual([...CHILD_ORDER_STATUSES], Object.keys(CHILD_STATUS), 'CHILD_ORDER_STATUSES drifted from the atom label map');
 });
+test('lifecycle: the mirrored arrays are the engine vocabulary, in the frozen contract order', () => {
+  // Membership against the ENGINE, order-insensitive: every state the engine's transition
+  // table can hold has an entry and the mirror invents none. Order is deliberately NOT
+  // asserted here — `EXECUTION_TRANSITIONS` is keyed non-terminal-then-terminal by design,
+  // while the arrays follow the engine's declaration order, so the two orders legitimately
+  // differ and pinning one to the other would be a false red.
+  assert.deepEqual(
+    [...EXECUTION_STATUSES].sort(),
+    Object.keys(EXECUTION_TRANSITIONS).sort(),
+    'EXECUTION_STATUSES is not the engine vocabulary',
+  );
+  // Order against the FROZEN CONTRACT. `execution_status`'s description states the list
+  // "MUST NOT be re-spelled or reordered", yet `check-contract.mjs` compares only set
+  // equality and count — so this is the one place the published ORDER is proven. The chain
+  // closes: the contract's membership is checked against the engine's unions by
+  // `check-contract.mjs`, and its order is checked against the mirror here.
+  const contract = JSON.parse(
+    readFileSync(join(process.cwd(), '..', '..', 'contracts', 'schemas', 'trading', 'order.json'), 'utf8'),
+  ) as { $defs: { child_order_status: { enum: string[] }; execution_status: { enum: string[] } } };
+  assert.deepEqual(
+    [...EXECUTION_STATUSES],
+    contract.$defs.execution_status.enum,
+    'EXECUTION_STATUSES drifted from the frozen contract order',
+  );
+  assert.deepEqual(
+    [...CHILD_ORDER_STATUSES],
+    contract.$defs.child_order_status.enum,
+    'CHILD_ORDER_STATUSES drifted from the frozen contract order',
+  );
+});
 
 // ---------------------------------------------------------------------------
 // 6. Financial input atoms (Task 14)

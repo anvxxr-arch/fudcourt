@@ -1326,6 +1326,46 @@ fails it; recreating `lib/` fails it; the tree restores to `STRUCTURE_OK`.
 - Rollback: the pre-change tree is archived (`/tmp/prestruct/{web,docs}.tgz`) and
   `git checkout` of the old paths restores it.
 
+### DR-018 amendment — the `ui/` lifecycle vocabulary is a MIRROR, and that is the correct trade (2026-10-06)
+**What happened.** The design-system atoms (`src/ui/atoms/system/index.tsx`) imported
+`ExecutionStatus` and `ChildOrderStatus` from `@/lib/executor-lifecycle` and
+`@/lib/executor-request-defs`. The gate caught it — rule 4b is a hard error with no
+allowlist — and the repair (`1d6960e`) declared the two unions again in
+`src/ui/atoms/system/lifecycle.ts` rather than importing them. A duplicated union is a
+duplicate source of truth, so the trade is recorded here rather than left as a comment.
+**Why the mirror is the right answer, not a shortcut.**
+- **There is no gate-legal shared home.** `layer_of()` returns the first path segment
+  under `src/`, so `src/ui/foundations/*` is layer `ui` and rule 4b applies to it
+  identically. The layer table is closed, so a new top-level directory fails
+  "is not a layer". The only two candidates are `ui/` and `styles/` — and `styles/` is
+  documented as "design tokens + shared view types", which an execution state machine
+  is not.
+- **Moving the unions out of `lib/` breaks the contract gate.** `check-contract.mjs`
+  defines `TYPES_TS` as exactly `apps/web/src/lib/executor-lifecycle.ts` and
+  `apps/web/src/lib/executor-request-defs.ts`, and `parseLiteralUnion` does not follow
+  `export *`. Relocate either union and the gate fails with
+  `enum ExecutionStatus: literal union not found in types.ts` — a red gate on the
+  contract spine, which is the one surface that must never drift.
+- **The only gate-legal direction inverts the dependency.** `lib/` importing from `ui/`
+  passes rule 4c, which forbids only `features`/`app`/`server`. It would make the
+  executor's wire contract depend on a React component shelf, and the gate would not
+  notice.
+- **Weakening the gate to permit type-only imports erodes a proven boundary.** The
+  rule's stated intent is reasoning, not runtime cost: "a component library that
+  depends on the domain cannot be reasoned about, reused or tested in isolation". A
+  type-only import still creates edit-time coupling, and `imports_of()` cannot see
+  `import()` or `require()` — so the erosion path from "types are fine" to "just this
+  one value import" is short. `isolatedModules: true` guarantees `import type` is
+  erased, which is true and beside the point.
+**The trade, stated plainly.** The duplication is deliberate, type-only and inert: all
+runtime behaviour (`EXECUTION_TRANSITIONS`, `canTransition`, `isTerminalExecution`)
+stays only in `src/lib/executor-lifecycle.ts`, which remains canonical. The mirror is
+proven equal four independent ways in `apps/web/tests/design-system-atom-tests.ts` —
+compile-time mutual assignability over the two unions, the engine's transition table,
+the frozen contract schema's enums, and array/map order agreement. A state added to
+either side without the other fails `bunx tsc --noEmit` rather than silently failing
+to render.
+
 ## DR-019 — Blazingly fast: local Postgres+TimescaleDB read model and a shared Valkey cache (2026-09-30)
 **Status:** accepted, deployed (`fudcourt-web` :3100, `fudcourt-apicalls` :3101,
 `fudcourt-pgload.timer`; both services enabled at boot).

@@ -1,5 +1,7 @@
 /**
- * atoms/system/lifecycle.ts — the canonical execution lifecycle vocabulary, declared here.
+ * atoms/system/lifecycle.ts — a MIRROR of the engine's execution lifecycle vocabulary.
+ * The canonical declarations live in `src/lib/`; this file repeats them so the atom layer
+ * can name them without importing `lib/`.
  *
  * WHY IT IS DECLARED HERE AND NOT IMPORTED: `src/ui/` is a presentational leaf. The repo's
  * structure gate (check-structure.py rule 4b) allows `src/ui/` to import only `@/ui` and
