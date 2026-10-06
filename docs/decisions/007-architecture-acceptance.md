@@ -70,6 +70,28 @@ fails; a plausible-but-nonexistent `features/market/quotes.ts` fails;
 malformed JSON fails cleanly rather than crashing; and the fragment,
 absolute-path and bare-filename cases still pass.
 
+The **fragment-suffix** rule — the trickiest logic in the extension, since
+it is the one that lets a token pass *without* existing at its literal
+path — was then tested in both directions by renaming a file that is
+referenced ONLY as a fragment:
+
+```
+$ mv apps/executor/internal/repository/port_pg.go{,.bak}
+DOC_FAIL docs/architecture/data-categorization.json [executor-executions].evidence:
+  cited path 'repository/port_pg.go' does not exist and matches no repo file as a suffix
+DOCS_FAILED failures=1            # exit 1
+
+$ mv apps/executor/internal/repository/port_pg.go{.bak,}
+DOCS_OK ... sidecar_rows=155 sidecar_paths=249
+```
+
+So a fragment is not waved through: it is accepted only while the file it
+continues still exists. The same rename of
+`apps/web/src/features/market/dex/client.ts` produces 11 failures — 2 from
+the sidecar (`[route-api-dex].evidence`, `[dexscreener-api].code_path`) and
+9 from the markdown walk — and renaming `tests/oracle/sync-live.py` fails
+the absolute-path rows too.
+
 `data-categorization.json` is the only doc sidecar in the tree that
 carries path prose — checked by scanning every `docs/**/*.json` for
 path-shaped tokens (218 hits, all in this one file). The

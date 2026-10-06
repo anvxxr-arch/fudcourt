@@ -423,8 +423,9 @@ USDT linear perps) and the funds never leave the exchange. Records:
  │     strategy state; reconcile venue BEFORE acting; crash recovery =   │
  │     first tick with placement disabled                                │
  │ internal/platform/lock — Valkey lease, FAIL-CLOSED                    │
- │ internal/{risk,sizing,planner,orders,execution,strategies} — sizing, │
- │     fees, leverage, margin, liquidation + constraints ⇒ PlanResult  │
+ │ internal/{risk,sizing} — how big, allowed? · planner ⇒ PlanResult     │
+ │     (fees, leverage, margin, liquidation + constraints); orders,      │
+ │     execution, strategies — the state machine + venue translation     │
  │ Live placement requires FUDCOURT_EXECUTOR_LIVE=1; off ⇒ live rows     │
  │ PAUSED at the placement boundary (deterministic kill switch);         │
  │ paper is the default posture (DR-042)                                 │
