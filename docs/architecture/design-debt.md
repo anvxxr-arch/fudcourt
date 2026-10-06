@@ -6,7 +6,7 @@ document records; it does not decide. Nothing here is a work item unless the own
 
 Scope: the design system as landed — `frontend/web/src/styles/tokens.ts` as the single source of
 truth, the generated `frontend/web/src/app/(frontend)/globals.css` `:root` block and
-`tailwind.tokens.json`, the atom shelf under `frontend/web/src/components/ui/`, the hard gate
+`tailwind.tokens.json`, the atom shelf under `frontend/web/src/ui/`, the hard gate
 `frontend/web/scripts/checks/check-design-tokens.py`, and the pixel harness
 `frontend/web/tests/design/fingerprint.py`. The harness's own coverage is enforced by
 `routes --check` and documented in `docs/architecture/design-inventory.md` §E.
@@ -81,8 +81,8 @@ never fail on them by design, so their only alarm is this count.
 
 ## 2. Atom adoption census
 
-Every exported atom under `frontend/web/src/components/ui/`, with today's call sites. A "call site"
-is a file that imports the atom from `@/components/ui/<shelf>`; `jsx` counts `<Atom` occurrences in
+Every exported atom under `frontend/web/src/ui/`, with today's call sites. A "call site"
+is a file that imports the atom from `@/ui/<shelf>`; `jsx` counts `<Atom` occurrences in
 those files. Measured with an import-resolving scan (a bare name-match over-reports:
 `Stat`/`Table`/`Button` also appear as local type names and `useState`):
 
@@ -91,9 +91,9 @@ cd frontend/web && python3 - <<'PY'
 import re, pathlib
 src = pathlib.Path('src'); used = {}
 for p in src.rglob('*.tsx'):
-    if 'components/ui/' in p.as_posix(): continue
+    if 'src/ui/' in p.as_posix(): continue
     t = p.read_text(encoding='utf-8', errors='replace')
-    for m in re.finditer(r"import\s*\{([^}]*)\}\s*from\s*'@/components/ui/(\w+)'", t):
+    for m in re.finditer(r"import\s*\{([^}]*)\}\s*from\s*'@/ui/(\w+)'", t):
         for n in m.group(1).split(','):
             n = n.strip().split(' as ')[0].strip()
             if n: used.setdefault(n, set()).add(p.as_posix())
@@ -217,7 +217,7 @@ pats = {'<table':r"<table[\s>]", '<button':r"<button[\s>]", '<input':r"<input[\s
 for k, rx in pats.items():
     tot, files = 0, []
     for p in sorted(pathlib.Path('src').rglob('*.tsx')):
-        if 'components/ui/' in p.as_posix(): continue
+        if 'src/ui/' in p.as_posix(): continue
         n = len(re.findall(rx, p.read_text(encoding='utf-8', errors='replace')))
         if n: files.append((n, p.as_posix())); tot += n
     print(f"{k}: {tot} in {len(files)} files")
@@ -289,7 +289,7 @@ cd frontend/web && python3 scripts/checks/check-design-tokens.py
 python3 -c "import importlib.util,sys; s=importlib.util.spec_from_file_location('g','frontend/web/scripts/checks/check-design-tokens.py'); g=importlib.util.module_from_spec(s); sys.modules['g']=g; s.loader.exec_module(g); g.scan_module_files(); g.scan_style_files(); g.print_soft_report()"
 
 # Atom adoption census (the inline script in §2), then list zero-use exports:
-cd frontend/web && grep -rn "@/components/ui/" src --include=*.tsx
+cd frontend/web && grep -rn "@/ui/" src --include=*.tsx
 
 # Harness route coverage vs the app tree (exit 1 on drift):
 /home/dwizzy/farming/.venv/bin/python frontend/web/tests/design/fingerprint.py routes --check

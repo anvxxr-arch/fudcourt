@@ -9,25 +9,28 @@ schemas say `nullable`, not `0`.
 
 ## What this package is
 
-* **The API contract source of truth for the Go services being built.**
-  `backend/api` and `backend/workers/executor` MUST preserve the methods, paths, and
-  response envelopes in [`openapi/fudcourt.yaml`](openapi/fudcourt.yaml); the
-  migration may add endpoints but must not change or drop these.
+* **The API contract source of truth for the Go services.** `backend/api` and
+  `backend/workers/executor` MUST preserve the methods, paths, and response
+  envelopes in [`openapi/fudcourt.yaml`](openapi/fudcourt.yaml); additions are
+  allowed but these must not change or drop.
 * **The event contract** for anything that emits domain events (Go services,
   workers, projections).
 
-The OpenAPI document covers the CURRENT TS-owned surface during the Go
-migration: the endpoint list mirrors the header of
-`frontend/web/src/features/executor/client.ts`, the schemas mirror the frozen types
-in `frontend/web/src/lib/executor.ts` exactly, and the response
-envelopes mirror the route handlers under the Next.js app api tree
-(`frontend/web/src/app/(frontend)/api/executor/*/route.ts`).
+The OpenAPI document covers the **Go-owned** executor HTTP surface: the endpoint
+list mirrors the header of `frontend/web/src/features/executor/client.ts`, the
+schemas mirror the frozen wire types in `frontend/web/src/lib/executor.ts`
+exactly, and the response envelopes are the contract the Go runtime
+(`backend/workers/executor`) serves. Since DR-042 the executor runtime is the Go
+service and the Next.js route handlers under
+`frontend/web/src/app/(frontend)/api/executor/*/route.ts` are thin `_proxy.ts`
+shells that forward to it (DR-043); this document describes the Go surface, not a
+TS implementation.
 
 ## File map
 
 | Path | What it is |
 | --- | --- |
-| `openapi/fudcourt.yaml` | OpenAPI 3.0.3 of the executor HTTP surface (15 paths / 19 operations): preview, executions + lifecycle + child orders/fills/events, BYOK accounts (masked-only), settings, emergency stop. Component schemas mirror `types.ts` 1:1, including the enums (`ExecutionStatus` 15 values, `ExecutionEventName` 19 values, the 9 sizing modes, …). |
+| `openapi/fudcourt.yaml` | OpenAPI 3.0.3 of the executor HTTP surface (15 paths / 19 operations): preview, executions + lifecycle + child orders/fills/events, BYOK accounts (masked-only), settings, emergency stop. Component schemas mirror `frontend/web/src/lib/executor.ts` 1:1, including the enums (`ExecutionStatus` 15 values, `ExecutionEventName` 19 values, the 9 sizing modes, …). |
 | `events/catalog.json` | **Single source of truth** for stable `event_type` ids and their aliases (legacy TS `ExecutionEventName` names ↔ canonical PascalCase names). |
 | `events/event.schema.json` | JSON Schema (draft 2020-12) for one canonical event. |
 | `events/README.md` | Envelope field table, naming/alias rules, no-secrets rule, evolution rules. |

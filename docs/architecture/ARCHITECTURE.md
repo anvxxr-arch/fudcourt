@@ -7,7 +7,7 @@
 >
 > Counts are re-derived, never inherited. **Re-derived 2026-10-03 UTC** by
 > reading the code: **14** views = `TEAM_TABS` (5) + `BOARD_TABS` (**4**) + the five
-> market-hub section views in `src/components/layout/store-shell.tsx`; the §3 registry
+> market-hub section views in `src/features/overview/store-shell.tsx`; the §3 registry
 > enumerates the shell views plus the tier surfaces around them, so it carries **18** rows. **10** data families = the §4
 > table rows. Re-derived 2026-10-03 the app carries **40** `/api` route handlers under
 > `src/app/(frontend)/api/**` (3 auth + 37 data incl. the executor surface and the
@@ -15,8 +15,8 @@
 > *(2026-10-01; 3 auth + 33 data)* counts are kept as the dated measurements they were.
 > `find "frontend/web/src/app/(frontend)/api" -name route.ts` = **40** today, three of them
 > `src/app/(frontend)/api/auth/*`; the **chainrank** and **khala** Next proxy routes are gone
-> with their boards (DR-041). Sitemap: **11** static routes in `src/platform/routing/public-routes.ts` + **30**
-> `TICKER_SYMBOLS` = **41** `<loc>` (the `/chainrank` and `/khala` entries left `PUBLIC_ROUTES` with DR-041).
+> with their boards (DR-041). Sitemap: **22** static routes in `src/server/routes.ts` + **30**
+> `TICKER_SYMBOLS` + **125** `COUNTRY_LIST` + **2,416** `INDICATORS` + **33** `CENTRAL_BANKS` + **6** `MARKET_TYPES` + **150** trade-instrument pages + **3** blog slugs ≈ **2,785** `<loc>` entries.
 >
 > **The `chainrank` and `khala` web surfaces are removed (DR-041):** their page routes, feature
 > slices and Next proxy routes are gone, so `:3100` serves neither path. Both Go families STAY —
@@ -65,7 +65,7 @@ origin; DR-002 — no third-party deploy target, ever).
                                                        │ www.khala.io (Framer SSR;
                                                        │ plain net/http — PLAN G8)
                                                        ▼
-                                          src/platform/http/rate-limit.ts (shared limiter for the
+                                          src/lib/rate-limit.ts (shared limiter for the
                                           families still fetched here: min-gap + TTL
                                           cache + single-flight)
 
@@ -125,14 +125,15 @@ A directory exists only where real code lives. There is deliberately **no** `ban
 `sources/`, `finance/assets`, `finance/valuation`, `executor/` or `admin/` package: those names
 are reserved for functionality that does not exist in this module yet, and an empty placeholder
 would misdescribe the tree. `executor/` here is a facade name (commands/queries over the real
-engine in `backend/workers/executor`); the `/api/executor/**` orchestration plane is still TS
-(§8b), and the `/api/admin/members` plane is an api route plane, not an `internal/admin` package.
+engine in `backend/workers/executor`); the `/api/executor/**` surface is Go-owned since
+DR-042/DR-043 (the web tier thin-proxies it, §8b), and the `/api/admin/members` plane is an
+api route plane, not an `internal/admin` package.
 Domain ownership of the tables these packages model is in [domain-map.md](domain-map.md) §1-§2;
 the full judgment record for the grouping is §4 of that file.
 
 ## 3. `frontend/web` — SPA shell anatomy
 
-- `src/components/layout/store-shell.tsx` owns `page` state (`initialPage` prop) and renders one
+- `src/features/overview/store-shell.tsx` owns `page` state (`initialPage` prop) and renders one
   view per tab. It takes an `isTeam` prop: **false → market boards only** (no
   treasury fetch, no treasury render); true → the full tab strip.
 - `src/app/(frontend)/page.tsx` (`/`) is the **landing page** — it mounts `features/home/ui.tsx`,
@@ -167,7 +168,7 @@ the full judgment record for the grouping is §4 of that file.
 - Deep links under `/team/**` and `/admin/**` call `requireTier(...)` before rendering.
 - Public deep links (`/market/crypto`, `/market/trench`, `/signals`, `/scoreboard`, `/news`, …)
   are one-line wrappers: `<StoreShell initialPage="…" />` — no server data of their own.
-- Route paths are centralised in `src/platform/routing/view-routes.ts` (`viewPath`), used by
+- Route paths are centralised in `src/lib/view-routes.ts` (`viewPath`), used by
   BOTH the nav `href` and the `history.replaceState` effect, so a tab can
   never link to a 404 again (this replaced two hand-written nested ternaries
   that fell through to `/${key}` and 404'd on `/wallets`, `/transactions`,
@@ -191,7 +192,7 @@ the full judgment record for the grouping is §4 of that file.
 | public | market · stock | `/market/stock` | `MarketHub section="stock"` → `StockBoard` (`?region=us\|asia\|europe`) | `/api/market/stock?region=…` |
 | public | market · macro (API-only) | — (read by `/` and any board) | `MacroBoard` in `features/home/ui.tsx` | `/api/market/macro` (US curve 13w/5y/10y/30y · DXY · VIX · VVIX · locally-derived curve spreads · 33 BIS policy rates · 10 FRED US indicators · worldwide annual board: 125 countries + 18 aggregates × 32 themed series, budget balance derived locally) |
 | public | market · indonesia (API-only) | — (read by `/`) | `IndonesiaBoard` in `features/home/ui.tsx` | `/api/market/indonesia` (live USD/EUR/JPY/CNY-IDR · IHSG · LQ45 · BI-Rate via BIS · 19 annual World Bank indicators · 8 IMF Fiscal Monitor government-finance series, actuals only) |
-| public | economy · nation | `/economy/nation` → `/economy/nation/[countryCode]` | `NationIndex` → `NationBoard` | `/api/market/nation/[code]` (one country: the SAME 32 themed World Bank series the worldwide board carries, each with its own reference year · 8 IMF Fiscal Monitor actuals · the BIS policy rate · the currency against the dollar) — `[countryCode]` accepts the alpha-2 or alpha-3, either case; an unknown code is a real **404** |
+| public | economy · nation | `/economy/nation` → `/economy/nation/[countryCode]` | `NationExplorer` → `NationProfile` (`features/economy/ui/nation.tsx`) | `/api/economy/countries/[code]` (one country: the SAME themed World Bank series the worldwide board carries, each with its own reference year · 8 IMF Fiscal Monitor actuals · the BIS policy rate · the currency against the dollar) — `[countryCode]` accepts the alpha-2 or alpha-3, either case; an unknown code is a real **404** |
 | public | market · trench | `/market/trench` | `MarketHub section="trench"` → `DexPage` · `TrenchPage` | `/api/dex?type=profiles&limit=50` |
 | public | signals | `/signals` | `SignalsPage` | `/api/signals?chain&type` |
 | public | scoreboard | `/scoreboard` | `ScoreboardPage` | `/api/signals?type=scoreboard` |
@@ -202,9 +203,8 @@ the landing page). The boards that folded into
 the hub redirect the same way (`next.config.js`): `/ticker`, `/tracker`, `/llama`
 and `/market/ticker` → `/market/crypto`; `/dex` and `/trench` → `/market/trench`;
 `/markets` → `/market`; `/ticker/:ticker` → `/market/ticker/:ticker`. The hub
-itself lives in `components/layout/market-hub.tsx`, not in `features/market/` —
-it composes other families, which the structure gate (DR-018 rule 5) forbids
-inside a feature slice.
+itself lives in `src/features/market/hub.tsx`, a feature slice that composes other
+families — an explicit, audited exception to the structure gate (DR-018 rule 5).
 
 ## 4. Data families (the contract spine)
 
@@ -216,20 +216,20 @@ plus its verifier only.
 
 | Family | Upstream | Route(s) | Contract | Verifier | Trust |
 |---|---|---|---|---|---|
-| **treasury** | Postgres `public` (own data, DR-040) | `/api/all`, `/coins`, `/wallets`, `/reconcile`, `/transactions(+/[id])` | `src/platform/db/client.ts` (env-ref only); `/reconcile` is a proxy to the **Rust** `fudcourt-reconciled` `:3102` (DR-014) | `check-contract.py` (mutation-guard) + `sync-live.py` fail-loud + `verify-reconcile.py` (28 checks incl. live TS↔Rust parity) | INTERNAL |
-| **cryptorank** | cryptorank.io SSR (RE) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/cryptorank` (28 modes, thin proxy to `fudcourt-data`) | runtime: `backend/data/internal/research/cryptorank` · TS mirror `src/features/cryptorank/client.ts` + `src/features/cryptorank/shapers.ts` | `verify-cryptorank.py` 244 checks (oracle `tests/oracle/cr_fetch.py`) · 3-gate · shaper fixtures 56/56 | GATED |
+| **treasury** | Postgres `public` (own data, DR-040) | `/api/all`, `/coins`, `/wallets`, `/reconcile`, `/transactions(+/[id])` | `src/server/db.ts` (env-ref only); `/reconcile` is a proxy to the **Rust** `fudcourt-reconciled` `:3102` (DR-014) | `check-contract.py` (mutation-guard) + `sync-live.py` fail-loud + `verify-reconcile.py` (28 checks incl. live TS↔Rust parity) | INTERNAL |
+| **cryptorank** | cryptorank.io SSR (RE) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/cryptorank` (28 modes, thin proxy to `fudcourt-data`) | runtime: `backend/data/internal/research/cryptorank` · TS mirror `src/features/market-data/cryptorank.ts` + `src/features/market-data/cryptorank-shapers.ts` | `verify-cryptorank.py` 244 checks (oracle `tests/oracle/cr_fetch.py`) · 3-gate · shaper fixtures 56/56 | GATED |
 | **chainrank** | chainrank.fyi — fetched by the Go `fudcourt-data` sidecar :3101, not by the web app (web surface removed, DR-041) | sidecar `/api/chainrank` (2 modes; no web route) | runtime: **`backend/data/internal/research/chainrank`** (mode table, pagination relayed verbatim into the upstream URL and the cache key, explicit 32-entry cache ceiling, shape check) | `verify-chainrank.py` 50 checks (incl. the relay matrix vs real upstream) | GATED |
 | **llama** | api.llama.fi — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/llama` (3 modes, thin proxy to `fudcourt-data`) | runtime: **`backend/data/internal/research/llama`** (mode table, strict `top`/`days`, in-process 15 s TTL cache + single-flight, sort/trim); `src/features/llama/client.ts` is the typing/display mirror | `verify-llama.py` 51 checks (incl. anti-fake parity against a direct `/v2/chains`) | GATED |
 | **dex** | dexscreener | `/api/dex` | `src/features/dex/client.ts` | `verify-dex.py` | GATED |
 | **signals** | data-public.vercel.app (external dataset) | `/api/signals` | route-local | `verify-signals.py` | GATED |
-| **markets** | api.coingecko.com (`/coins/markets`, top-250 pool) | `/api/markets` | `src/features/markets/client.ts` | `verify-markets.py` 49 checks (GATE2 llama · GATE3 cryptorank, 3%) | GATED |
-| **market** (hub sections) | open.er-api.com (forex, ECB daily) + Yahoo Finance chart (commodity, stock, macro, indonesia) + stats.bis.org `WS_CBPOL` (policy rates) + fred.stlouisfed.org CSV (US indicators) + api.worldbank.org v2 (annual indicators) + api.imf.org SDMX 2.1 (Fiscal Monitor vintages, Indonesia + per-country government finance) — all keyless | `/api/market/forex`, `/api/market/commodity`, `/api/market/stock` (`?region=us\|asia\|europe`), `/api/market/macro`, `/api/market/indonesia`, `/api/market/nation/[code]` | `src/features/market/forex/client.ts` + `src/features/market/{commodity,stock,macro,indonesia,nation}/client.ts`, sharing `src/features/market/quotes.ts` and `src/features/market/sources/{bis,fred,worldbank,imf,ttl}.ts` | `verify-all.sh` (tsc + shapers); live: 5 boards 200, `?region=amer` → 400, `/api/market/nation/{id,IDN,us,my}` → 200 with `failed: []` and an unknown code → 404; deep verifier pending | **SMOKE** — deep verifier pending |
+| **markets** | api.coingecko.com (`/coins/markets`, top-250 pool) | `/api/markets` | `src/features/market-data/markets.ts` | `verify-markets.py` 49 checks (GATE2 llama · GATE3 cryptorank, 3%) | GATED |
+| **market** (hub sections) | open.er-api.com (forex, ECB daily) + Yahoo Finance chart (commodity, stock, macro, indonesia) + stats.bis.org `WS_CBPOL` (policy rates) + fred.stlouisfed.org CSV (US indicators) + api.worldbank.org v2 (annual indicators) + api.imf.org SDMX 2.1 (Fiscal Monitor vintages, Indonesia + per-country government finance) — all keyless | `/api/market/forex`, `/api/market/commodity`, `/api/market/stock` (`?region=us\|asia\|europe`), `/api/market/macro`, `/api/market/indonesia`, `/api/economy/countries/[code]` | `src/features/market/{forex,commodity,stock}.tsx` + `src/features/market/clients*.ts`, `src/features/market/{imf,bis,fred,worldbank}.ts`, nation via `src/features/economy` | `verify-all.sh` (tsc + shapers); live: 5 boards 200, `?region=amer` → 400, `/api/economy/countries/{IDN,ID,US,MY}` → 200 and an unknown code → 404; deep verifier pending | **SMOKE** — deep verifier pending |
 | **ticker** | 10 CEX natives via CCXT (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) | `/api/ticker`, `/api/ticker/instruments`, `/api/ticker/instrument` | `src/features/ticker/client.ts` | route sweep (status/shape/400 contract); deep verifier pending | **SMOKE** — deep verifier pending |
 | **news** | cointelegraph.com/rss — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/news` (thin verbatim proxy to `fudcourt-data`) | runtime: **`backend/data/internal/research/news`** (feed table, strict `source`/`limit` 1..100, RSS parse into the six-key projection, in-process 15 s TTL cache + single-flight keyed on the FEED URL); `src/features/news/client.ts` is the typing/display mirror | `verify-news.py` 50 checks (incl. anti-fake parity against a direct feed fetch) | GATED |
 | **khala** (sidecar-only after DR-041: the Go mux serves `/api/khala`; `verify-khala.py` **136/0/0**) | khala.io (Framer SSR; `framerusercontent.com` search index unused by design) | sidecar `/api/khala` (**3 modes**: `reports`, `report`, `latest`; no web route after DR-041; `upstream` scalar, provenance in `slice`, structured `body` — no HTML shipped) | runtime: **`backend/data/internal/research/khala`** — one Go package (no 3-way split: this family has one upstream artifact, not three). Its TS typing/display mirror was removed with the board (`features/khala/`, DR-041) — the route never validated, so the sidecar stays the single validator; that is why `check-contract.py` carries **no** khala table pair — [DR-006](../records/DECISIONS.md) | `verify-khala.py` — the live sidecar harness, run green against `:3101`: **136 pass / 0 fail / 0 skip**; 2 independent ground-truth gates (sitemap slug-set equality · site title/date parity, oracle = direct khala.io fetches) | **GATED** — `verify-khala.py` green against the served `:3101` sidecar |
-| **coinglass** | capi.coinglass.com (dashboard backend, keyless by DECRYPTION: AES-128-ECB ×2 + gzip) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/coinglass` (4 modes: `statistics`, `openInterest`, `fundingRate`, `markets`; thin verbatim proxy to `fudcourt-data`, forwarding `X-CG-Upstream`/`X-CG-Cache`/`X-CG-Cipher`) | runtime: **`backend/data/internal/research/coinglass`** (mode table, param scoping, the `v` rotation table, decrypt+gunzip, 60 s disk-cache TTL keyed on the upstream URL, shape check); `src/features/coinglass/client.ts` is the typing/display mirror | no dedicated verifier yet (the family's hermetic tests + live probes stand in); `check-contract.py` keeps `CG_MODES` TS↔Go equal + the route a proxy | GATED |
-| **coinank** | api.coinank.com (dashboard backend, keyless by a COMPUTED client signature) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/coinank` (5 modes: `fundingRate`, `liquidation`, `longShort`, `etf`, `whales`; thin verbatim proxy to `fudcourt-data`, forwarding `X-CA-Upstream`/`X-CA-Cache`) | runtime: **`backend/data/internal/research/coinank`** (mode table, the `interval` allowlist, the reconstructed signature, 60 s disk-cache TTL keyed on the upstream URL, shape check); `src/features/coinank/client.ts` is the typing/display mirror | `verify-coinank.py` 114 checks; `check-contract.py` keeps `CN_MODES` TS↔Go equal + the route a proxy | GATED (DARK — every mode is upstream's 502 `403`; DR-038) |
-| **coinmarketcap** | api.coinmarketcap.com/data-api/v3 (dashboard backend, keyless by having NO credential at all) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/coinmarketcap` (4 modes: `listing`, `global`, `marketPairs`, `exchanges`; thin verbatim proxy to `fudcourt-data`, forwarding `X-CMC-Upstream`/`X-CMC-Cache`) | runtime: **`backend/data/internal/research/coinmarketcap`** (mode table, param scoping, LOCAL `start`/`limit` bounds validated before any fetch, 60 s disk-cache TTL keyed on the upstream URL, shape check); `src/features/coinmarketcap/client.ts` is the typing/display mirror | `verify-coinmarketcap.py` 70 checks (incl. a direct oracle); `check-contract.py` keeps `CMC_MODES` TS↔Go equal + the route a proxy | GATED |
+| **coinglass** | capi.coinglass.com (dashboard backend, keyless by DECRYPTION: AES-128-ECB ×2 + gzip) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/coinglass` (4 modes: `statistics`, `openInterest`, `fundingRate`, `markets`; thin verbatim proxy to `fudcourt-data`, forwarding `X-CG-Upstream`/`X-CG-Cache`/`X-CG-Cipher`) | runtime: **`backend/data/internal/research/coinglass`** (mode table, param scoping, the `v` rotation table, decrypt+gunzip, 60 s disk-cache TTL keyed on the upstream URL, shape check); the TS mirror (`src/features/coinglass/client.ts`) is retired — the family is sidecar-only with a thin proxy route | no dedicated verifier yet (the family's hermetic tests + live probes stand in); `check-contract.py` keeps `CG_MODES` parity + the route a proxy | GATED |
+| **coinank** | api.coinank.com (dashboard backend, keyless by a COMPUTED client signature) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/coinank` (5 modes: `fundingRate`, `liquidation`, `longShort`, `etf`, `whales`; thin verbatim proxy to `fudcourt-data`, forwarding `X-CA-Upstream`/`X-CA-Cache`) | runtime: **`backend/data/internal/research/coinank`** (mode table, the `interval` allowlist, the reconstructed signature, 60 s disk-cache TTL keyed on the upstream URL, shape check); the TS mirror (`src/features/coinank/client.ts`) is retired — the family is sidecar-only with a thin proxy route | `verify-coinank.py` 114 checks; `check-contract.py` keeps `CN_MODES` parity + the route a proxy | GATED (DARK — every mode is upstream's 502 `403`; DR-038) |
+| **coinmarketcap** | api.coinmarketcap.com/data-api/v3 (dashboard backend, keyless by having NO credential at all) — fetched by the Go `fudcourt-data` sidecar :3101, not by the route | `/api/coinmarketcap` (4 modes: `listing`, `global`, `marketPairs`, `exchanges`; thin verbatim proxy to `fudcourt-data`, forwarding `X-CMC-Upstream`/`X-CMC-Cache`) | runtime: **`backend/data/internal/research/coinmarketcap`** (mode table, param scoping, LOCAL `start`/`limit` bounds validated before any fetch, 60 s disk-cache TTL keyed on the upstream URL, shape check); the TS mirror (`src/features/coinmarketcap/client.ts`) is retired — the family is sidecar-only with a thin proxy route | `verify-coinmarketcap.py` 70 checks (incl. a direct oracle); `check-contract.py` keeps `CMC_MODES` parity + the route a proxy | GATED |
 
 House rules every family obeys (see `docs/product/ANALYSIS.md` + PLAN):
 
@@ -239,10 +239,10 @@ House rules every family obeys (see `docs/product/ANALYSIS.md` + PLAN):
 - **Empty upstream ≠ valid answer** — loud 502/503 with the real reason.
 - **Null stays null** — sparse metric renders `—`, never `0`.
 - **Derived/local work is labelled** (`derived` + `upstreamTotal` + `pool`).
-- **Shared limiter** (`src/platform/http/rate-limit.ts`): TTL cache, min-gap, single-flight,
+- **Shared limiter** (`src/lib/rate-limit.ts`): TTL cache, min-gap, single-flight,
   `X-Cache` header so caching is observable. **Outbound only** — it protects
   upstreams from us.
-- **Inbound limiter** (`src/platform/http/rate-limit-inbound.ts`, enforced by `src/middleware.ts`
+- **Inbound limiter** (`src/lib/rate-limit-inbound.ts`, enforced by `src/middleware.ts`
   on `/api/:path*`): a per-client, cost-weighted 60 s window, where cost is the
   measured worst-case payload of the route (unit = 50 KB). Heavy routes get 80
   units, light 120; a signed-in caller 3×, and traffic the origin accepted from
@@ -270,7 +270,7 @@ implies team implies member.
 | `team` | `/team/{balance,portfolio,wallets,transactions,reconciliation}` + treasury APIs | middleware + page + server-side write check |
 | `admin` | `/admin` (member list, role grant/revoke, treasury audit) + `/api/admin/members` | middleware + page + API re-check |
 
-- Route policy is one table (`src/platform/auth/guard.ts` → `requiredTierForPath`), consumed
+- Route policy is one table (`src/server/auth.ts` → `requiredTierForPath`), consumed
   by `middleware.ts` before a route runs: protected pages get a redirect to
   `/login?next=…`, protected APIs get a JSON 401 — never an HTML login page
   to a fetch caller.
@@ -282,15 +282,19 @@ implies team implies member.
   reads the session server-side and mounts `StoreShell` with `isTeam`, which
   gates both the fetch and every treasury render.
 - `public/robots.txt` does not exist as a file — `src/app/robots.ts` serves real
-  `text/plain` and `src/app/(frontend)/sitemap.ts` yields **167** `<loc>` entries
-  (re-derived 2026-10-04 from the source: `PUBLIC_ROUTES` in
-  `src/platform/routing/public-routes.ts` — the single source of truth for the crawl
-  tier — holds **12** entries, plus **30** per-coin `/ticker/<base>` pages enumerated
-  from `TICKER_SYMBOLS`, plus **125** per-country `/economy/nation/<iso2>` profiles
-  enumerated from `NATIONS`). The `/chainrank` and `/khala` boards left `PUBLIC_ROUTES`
-  with their pages (DR-041); `/blog` is public and crawlable (individual posts are not
-  enumerated — the index links them). `curl -s :3100/sitemap.xml | grep -c '<loc>'` re-confirms the served
-  count on any running build.
+  `text/plain` and `src/app/(frontend)/sitemap.ts` enumerates `<loc>` entries from
+  the source lists (re-derived 2026-10-06: `PUBLIC_ROUTES` in `src/server/routes.ts`
+  holds **22** entries, plus **3** blog slugs, plus **30** per-coin
+  `/market/ticker/<base>` pages from `TICKER_SYMBOLS`, plus **125** per-country
+  `/economy/nation/<iso2>` profiles from `COUNTRY_LIST`
+  (`features/economy/model-nation.ts:209`), plus **2,416** `/economy/indicator/<slug>`
+  pages from `INDICATORS`, plus **33** `/economy/central-bank/<slug>` pages from
+  `CENTRAL_BANKS`, plus **6** `/trade/<marketType>` boards from `MARKET_TYPES`, plus
+  **150** `/trade/<marketType>/<instrument>` pages from the 5 quoteable market types ×
+  30 `INSTRUMENTS` — about **2,785** `<loc>` entries in total). The `/chainrank` and
+  `/khala` boards left `PUBLIC_ROUTES` with their pages (DR-041); individual blog
+  posts are enumerated from the sitemap's `BLOG_POST_SLUGS` list. `curl -s
+  :3100/sitemap.xml | grep -c '<loc>'` re-confirms the served count on any running build.
 
 ## 6. Trust classes
 
@@ -305,7 +309,7 @@ implies team implies member.
 - **INTERNAL** — our own database. Gated by the Discord session tier: the
   treasury reads (`/api/all`, `/api/wallets`, `/api/coins`, `/api/reconcile`,
   `/api/transactions`) require `team`, and every write additionally re-checks
-  the session server-side (`src/platform/auth/mutation.ts`). The retired `x-fud-token`
+  the session server-side (`src/server/auth.ts` → `requireMutationAuth`). The retired `x-fud-token`
   header is gone: it was sent from a `NEXT_PUBLIC_` variable and shipped
   verbatim inside a public JS chunk, so any visitor could write to wallets and
   transactions.
@@ -357,43 +361,44 @@ USDT linear perps) and the funds never leave the exchange. Records:
  │            frontend/web :3100 — the same Next app, tier `team`            │
  ├───────────────────────────────────────────────────────────────────────┤
  │ src/app/(frontend)/api/executor/**  — 15 thin route handlers          │
- │     ↓ parse → call → respond                                          │
- │ src/platform/executor/runtime.ts — the ONE composition root:          │
- │     requireExecutorUser()  (fail-closed session; wrong owner ⇒ 404)   │
- │     bootstrapExecutor()  →  ensureExecutorSchema()                    │
- │ src/platform/executor/plan.ts → risk.ts  (decimal.js, pure):          │
- │     sizing + fees + leverage + margin + liquidation + constraints     │
- │     ⇒ ExecutionPlan (immutable)  +  PreviewResult                     │
- │ POST /api/executor/executions → row + execution_plans snapshot        │
- │     (PREVIEW persists nothing; the API writes INTENT, never performs) │
+ │     ↓ forwardExecutor(req) — the WHOLE handler (DR-043)               │
+ │ src/app/(frontend)/api/executor/_proxy.ts — thin proxy to Go          │
+ │     (cookie travels untouched; the Go side is the single auth         │
+ │     authority, DR-035)                                                │
+ │ The frozen wire contract lives at src/lib/executor.ts (DR-044).       │
+ └───────────────────────────────────────────────────────────────────────┘
+    │  cookie + body forwarded verbatim
+    ▼
+ ┌───────────────────────────────────────────────────────────────────────┐
+ │   fudcourt-executor.service — Go (backend/workers/executor)           │
+ │   127.0.0.1:3105 /api/executor/*  ·  127.0.0.1:3104 /healthz+/readyz  │
+ ├───────────────────────────────────────────────────────────────────────┤
+ │ internal/api — the 15 contract routes, one process, Go-owned          │
+ │ internal/repository — Postgres store + EnsureSchema (executor        │
+ │     schema bootstrap, fatal on failure, TestEmbeddedSchema… byte-     │
+ │     exact vs database/schema/executor-schema.sql)                     │
+ │ internal/runtime/worker — deterministic tick loop seeded from the     │
+ │     strategy state; reconcile venue BEFORE acting; crash recovery =   │
+ │     first tick with placement disabled                                │
+ │ internal/platform/lock — Valkey lease, FAIL-CLOSED                    │
+ │ internal/strategies · internal/core — sizing, fees, leverage,        │
+ │     margin, liquidation + constraints ⇒ immutable PlanResult          │
+ │ Live placement requires FUDCOURT_EXECUTOR_LIVE=1; off ⇒ live rows     │
+ │ PAUSED at the placement boundary (deterministic kill switch);         │
+ │ paper is the default posture (DR-042)                                 │
  └───────────────────────────────────────────────────────────────────────┘
     │                                          │
-    │ intent + immutable plan                 │ Valkey lease
-    ▼                                          ▼
- ┌───────────────────────────────────────────────────────────────────────┐
- │            executor.* Postgres — 10 tables, never `public`            │
- ├───────────────────────────────────────────────────────────────────────┤
- │ exchange_accounts    AES-256-GCM per field, master                    │
- │                      key from env (only sealed bytes stored)          │
- │ executions · execution_plans · child_orders · fills                   │
- │ execution_events (append-only) · balance_snapshots ·                  │
- │ positions_snapshots · risk_profiles · audit_logs                      │
- └───────────────────────────────────────────────────────────────────────┘
-
- ┌───────────────────────────────────────────────────────────────────────┐
- │   fudcourt-executor-worker.service — bun frontend/web/scripts/executor/worker.ts   │
- ├───────────────────────────────────────────────────────────────────────┤
- │ · Valkey lease per execution: SET NX PX + Lua heartbeat               │
- │ · reconcile the venue BEFORE acting on local state                    │
- │ · engine.ts: one deterministic tick at a time (2 s), seeded RNG       │
- │ · worker clampChild: over-order cap + RISK_STOPPED                    │
- │ · crash recovery = the same path with placement disabled              │
- │ · no dependency on fudcourt-web: closing the browser never stops it   │
- └───────────────────────────────────────────────────────────────────────┘
+    │                                          ▼ Valkey lease
+    ▼
+ executor.* Postgres — 10 tables, never `public`:
+   exchange_accounts (AES-256-GCM per field, master key from env),
+   executions · execution_plans · child_orders · fills ·
+   execution_events (append-only) · balance_snapshots ·
+   positions_snapshots · risk_profiles · audit_logs
                                      ▼
         ExchangeAdapter — the SAME interface for live and paper:
           live:  ccxt (binance · bybit · mexc; spot + linear_perp)
-          paper: PaperExchangeAdapter (simulated matcher)
+          paper: hermetic simulator, MarketSource seam → live tape (DR-042)
                                      ▼
                               Binance · Bybit · MEXC
 ```
@@ -402,35 +407,38 @@ USDT linear perps) and the funds never leave the exchange. Records:
 
 | Piece | Where | Why |
 |---|---|---|
-| Web app + API | `frontend/web`, `:3100`, `src/app/(frontend)/api/executor/**` | one origin, one session, one tier gate (`/executor` and `/api/executor` are `team` — the same tier as the treasury surface it sits beside) |
-| Worker service | `frontend/web/scripts/executor/worker.ts`, unit `infrastructure/systemd/fudcourt-executor-worker.service` (Bun, versioned in-repo) | **independent of `fudcourt-web`**: closing the browser or restarting the web unit never stops an execution |
-| Valkey lease | `src/platform/executor/lock.ts` | one worker owns one execution; **FAIL-CLOSED** — a lock that fails open means duplicate orders, so any Valkey error makes `acquire` false and the worker does not trade (the inverse of the JSON cache in `platform/cache/valkey.ts`, which fails open) |
-| Postgres store | `src/platform/executor/store.ts` → `executor` schema | its own schema, never `public`: the executor owns its writes and the treasury tables belong to the sync, so neither prunes the other's rows. No migration runner — the embedded DDL is asserted byte-identical to `database/schema/executor-schema.sql`. **Both runtimes apply it at startup** (added `8d87df1`): TS `ensureExecutorSchema()` and Go `repository.EnsureSchema` (`backend/workers/executor/internal/repository/schema.go`, before the worker/API serve, fatal on failure), each with its own drift guard (TS §59 normalized; Go `TestEmbeddedSchemaMatchesTracked` byte-exact) |
-| Adapters | `src/platform/executor/exchange.ts` | one translation layer per venue; paper and live implement the SAME interface, so the worker has a single code path |
+| Web app + API | `frontend/web`, `:3100`, `src/app/(frontend)/api/executor/**` → `forwardExecutor` in `src/app/(frontend)/api/executor/_proxy.ts` | one origin, one session, one tier gate (`/executor` and `/api/executor` are `team` — the same tier as the treasury surface it sits beside) |
+| Executor runtime | `backend/workers/executor` (Go), unit `infrastructure/systemd/fudcourt-executor.service`, `:3104` health + `:3105` executor API | **independent of `fudcourt-web`**: closing the browser or restarting the web unit never stops an execution |
+| Valkey lease | `backend/workers/executor/internal/platform/lock` | one worker owns one execution; **FAIL-CLOSED** — a lock that fails open means duplicate orders, so any Valkey error makes the lease unusable and the worker does not trade (the inverse of the JSON cache in `src/server/cache.ts`, which fails open) |
+| Postgres store | `backend/workers/executor/internal/repository` → `executor` schema | its own schema, never `public`: the executor owns its writes and the treasury tables belong to the sync, so neither prunes the other's rows. No migration runner — the embedded DDL is asserted byte-identical to `database/schema/executor-schema.sql` by `repository.EnsureSchema` (fatal on failure) with drift guard `TestEmbeddedSchemaMatchesTracked` (byte-exact) |
+| Adapters | `backend/workers/executor/internal/exchanges` | one translation layer per venue; paper and live implement the SAME interface, so the worker has a single code path; paper's `MarketSource` seam delegates marks/fees to the live adapter (DR-042) |
 
-**Determinism, ownership and the switch.** Time comes from the tick clock and
-randomness from a seeded mulberry32 stream persisted in the strategy state, so a
-restart recomputes the same decisions; every risk figure is read from the immutable
+**Determinism, ownership and the switch.** The worker drives one deterministic
+tick at a time from a strategy state seeded by a PRNG (Go `internal/strategies`,
+same seed across restarts ⇒ the same decisions; the first tick after start IS
+the recovery pass). Every risk figure is read from the immutable
 `execution_plans` snapshot, never re-derived. Every user-scoped store statement
 binds `user_id` (a wrong user reads `null`/`[]` → API 404). Placement requires
 `FUDCOURT_EXECUTOR_LIVE=1` — off, live executions pause at the placement boundary
 while paper mode and reconciliation keep running, so **paper is the default posture**.
-Offline: **143 tests** across seven `executor-*-tests.ts` suites in `test:shapers`;
-live: `bun run verify:executor` — **38/38** paper-mode checks against the real
-Postgres + Valkey + worker loop (PLAN G14).
+Offline: Go test suites across `backend/workers/executor/internal/...` (incl. the
+composed hermetic e2e in `internal/tests/e2e`); live: `bun run verify:executor`
+→ `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...`
+(PLAN G14, DR-043).
 
 **Portfolio ceilings gate creation, not just the settings screen.** `maxOpenRiskPct`
-and `maxDailyLossPct` are checked in `createExecution` *before* the row exists, so a
-refusal leaves nothing to reconcile. `store.summarizePortfolioRisk` aggregates the
-committed book in one statement — `SUM(COALESCE(current_risk, planned_risk))` over
-the user's live executions — so the ceiling is compared against a single consistent
-snapshot rather than a sum that could straddle a concurrent fill; the current risk
-the worker recalculates after each fill (PRD §36) wins over the stale plan, because
-committed risk is what it stands at. The rule itself is a pure function,
-`evaluatePortfolioGates`, so it is testable with no database and no venue. Exits are
-never gated — a guard that could refuse a `close` or `reduce` would trap the user
-inside the risk it exists to bound. Refusals are 409 and carry the committed figure,
-the requested figure and the computed ceiling.
+and `maxDailyLossPct` are checked in the executor's `checkPortfolioGates`
+*before* the row exists, so a refusal leaves nothing to reconcile.
+`SummarizePortfolioRisk` aggregates the committed book in one statement —
+`SUM(COALESCE(current_risk, planned_risk))` over the user's live executions —
+so the ceiling is compared against a single consistent snapshot rather than a
+sum that could straddle a concurrent fill; the current risk the worker
+recalculates after each fill (PRD §36) wins over the stale plan, because
+committed risk is what it stands at. The rule itself is a pure function, so it
+is testable with no database and no venue. Exits are never gated — a guard that
+could refuse a `close` or `reduce` would trap the user inside the risk it
+exists to bound. Refusals are 409 and carry the committed figure, the requested
+figure and the computed ceiling.
 
 ## 9. Open alignment items
 
