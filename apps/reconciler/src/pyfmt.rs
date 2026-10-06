@@ -140,6 +140,10 @@ mod tests {
 
     /// Expected values produced by CPython 3 (`repr()`), including every
     /// exponent-format boundary.
+    // `3.14159` below is a deliberate INPUT value for the repr-parity table, not
+    // an approximation of PI; clippy's `approx_constant` reads the digits and
+    // fires. The value is part of the CPython-parity contract, so it stays.
+    #[allow(clippy::approx_constant)]
     #[test]
     fn repr_matches_cpython() {
         let cases: &[(f64, &str)] = &[
