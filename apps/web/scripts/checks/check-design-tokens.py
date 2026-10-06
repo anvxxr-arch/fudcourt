@@ -186,7 +186,11 @@ SOFT_GROUPS: dict[str, str] = {
     "position": r"(?:top|left|right|bottom)",
     "size": r"(?:width|height|minWidth|minHeight|maxWidth|maxHeight)",
 }
-EXPORT_BLOCK = re.compile(r"export const (\w+) = \{(.*?)\} as const;", re.S)
+# Every exported object literal in tokens.ts, `as const` or explicitly typed. The `as const`
+# form is the convention, but a typed export (`Record<string, string>`) is still a token
+# namespace and must be inventoried — otherwise a hand-written export escapes the dead-token
+# alarm entirely, which is how an invented key gets shipped.
+EXPORT_BLOCK = re.compile(r"export const (\w+)(?:\s*:[^{]+)? = \{(.*?)\}(?:\s+as\s+const)?;", re.S)
 COMMENT_LINE = re.compile(r"^\s*(?:/\*|\*|//)")
 
 VAR_SCHEME = {
@@ -449,14 +453,9 @@ def scan_dead_tokens() -> None:
     # which is how `themeColor` stays key-for-key with `color` by construction.
     views: dict[str, str] = {}
     tokens_src = TOKENS_TS.read_text(encoding="utf-8")
-    for parent, body in EXPORT_BLOCK.findall(tokens_src):
-        pairs = re.findall(r"['\"]?(\w+)['\"]?\s*:\s*['\"]([^'\"]+)['\"]", body)
-        if pairs and all(v.startswith("var(--fc-") for _, v in pairs):
-            for candidate, cand_prefix in VAR_SCHEME.items():
-                if all(v.startswith(f"var({cand_prefix}") for _, v in pairs):
-                    views[parent] = candidate
-                    break
-    # The fromEntries form: `Object.fromEntries(Object.keys(X).map((k) => [k, \`var(--fc-P-${k})\`]))`
+    # The fromEntries form: `Object.fromEntries(Object.keys(X).map((k) => [k, \`var(--fc-P-${k})\`]))`.
+    # The key set is the PARENT's by construction, so a key the parent lacks cannot exist here —
+    # this form is unconditionally a derived view.
     for m in re.finditer(
         r"export const (\w+)[^=]*=\s*Object\.fromEntries\(\s*Object\.keys\((\w+)\)"
         r"[^`]*`var\((--fc-[\w-]+)",
@@ -467,6 +466,26 @@ def scan_dead_tokens() -> None:
             if prefix == cand_prefix:
                 views[view_name] = candidate
                 break
+    # The object-literal form qualifies as a view ONLY when every key it declares also exists
+    # in the parent it re-points at. An all-`var()` literal whose keys are NOT the parent's is
+    # a hand-written namespace with invented keys, and those keys are checked normally — this
+    # is what stops `{ phantom: 'var(--fc-color-phantom)' }` from hiding behind the rule.
+    for parent, body in EXPORT_BLOCK.findall(tokens_src):
+        pairs = re.findall(r"['\"]?(\w+)['\"]?\s*:\s*['\"]([^'\"]+)['\"]", body)
+        if not pairs or not all(v.startswith("var(--fc-") for _, v in pairs):
+            continue
+        for candidate, cand_prefix in VAR_SCHEME.items():
+            if not all(v.startswith(f"var({cand_prefix}") for _, v in pairs):
+                continue
+            parent_keys = set(
+                re.findall(
+                    r"['\"]?(\w+)['\"]?\s*:\s*['\"][^'\"]+['\"]",
+                    next((b for p, b in EXPORT_BLOCK.findall(tokens_src) if p == candidate), ""),
+                )
+            )
+            if parent_keys and all(k in parent_keys for k, _ in pairs):
+                views[parent] = candidate
+            break
     # A RAMP is a frozen palette, not a menu of choices: the plan fixes every step of the
     # orange and neutral ramps and the market semantics, and the semantic layer decides
     # which steps are in use. A ramp step that no semantic role currently names is still a
