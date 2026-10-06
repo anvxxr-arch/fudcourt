@@ -174,6 +174,7 @@ const DOCS = [
 const TOP_LEVEL = [
   'backend/', 'frontend/', 'shared/', 'scripts/',
   'tests/', 'database/', 'infrastructure/', '.github/',
+  'apps/', 'core/', 'contracts/', 'db/', 'tools/', 'deploy/', 'docs/',
 ];
 // Directory names under shared/contracts/schemas/ (the layout block in schemas/README.md §1).
 const SCHEMA_DIRS = ['common', 'accounts', 'assets', 'markets', 'trading', 'finance', 'defi', 'research', 'signals'];
@@ -188,6 +189,8 @@ const ALLOWANCES = new Map([
   ['frontend/web/src/platform/executor/ui.tsx', 'deliberately retained historical reference: the same note names the old path and its new home (frontend/web/src/features/executor/ui.tsx) in one "→" clause'],
   ['backend/api/bin/fudcourt-api', 'build artifact (go build -o bin/fudcourt-api), absent from a clean tree by design; both citations say so'],
   ['database/schema/analytics.sql', 'cited reference that does NOT exist — the citation is the finding ("**Does not exist** (referenced by an older doc)")'],
+  ['db/client.ts', 'historical reference: the pre-DR-040 frontend db module (platform/db/pg.ts), retired with the treasury move to src/server/db.ts; the citation records the old layout'],
+  ['db/README', 'historical reference: the pre-DR-040 db module README, retired with the same move'],
 ]);
 // Tokens that are glob/prose shapes the walk must not even consider. Kept explicit so an unexpected
 // token cannot be excused as "probably one of these".
@@ -204,11 +207,20 @@ const missing = []; // citations that resolve to nothing on disk; classified aft
 /** Candidate repo-relative paths a citation token may resolve to, most specific first. */
 function candidatesFor(token) {
   const hasTop = TOP_LEVEL.some((t) => token.startsWith(t));
-  if (hasTop) return [token];
   const seg = token.split('/')[0];
   const rest = token.slice(seg.length + 1);
   const isJson = token.endsWith('.json');
   const out = [];
+  if (hasTop) {
+    out.push(token);
+    // `core/` and `db/` are real top-levels in the target tree AND short forms the
+    // canonical docs use for the Go executor packages and the frontend db module.
+    // Try the literal path first, then the pre-migration home, so a citation stays
+    // valid across the relocation.
+    if (seg === 'core') out.push(`apps/executor/internal/core/${rest}`);
+    if (seg === 'db') out.push(`frontend/web/src/server/${rest}`);
+    return out;
+  }
   if (seg === 'schemas') {
     out.push(`shared/contracts/schemas/${rest}`);
   } else if (SCHEMA_DIRS.includes(seg) && (isJson || seg === 'common' || seg === 'research' || seg === 'defi')) {
@@ -216,8 +228,8 @@ function candidatesFor(token) {
   }
   if (['reference', 'finance', 'accounts', 'markets', 'access'].includes(seg)) {
     out.push(seg === 'reference'
-      ? `backend/api/internal/markets/reference/${rest}`
-      : `backend/api/internal/${token}`);
+      ? `apps/api/internal/markets/reference/${rest}`
+      : `apps/api/internal/${token}`);
   }
   return out;
 }

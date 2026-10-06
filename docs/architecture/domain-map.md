@@ -4,7 +4,7 @@
 > Go scaffolds `services/{api,executor}` — since renamed `backend/api` + `backend/workers/executor`
 > — started in the uncommitted wave). Paths are repo-relative.
 >
-> **Amended 2026-10-01 (api bounded-context regroup):** `backend/api/internal/` was regrouped
+> **Amended 2026-10-01 (api bounded-context regroup):** `apps/api/internal/` was regrouped
 > from a flat package set into explicit bounded contexts (`access/`, `accounts/`, `finance/`,
 > `markets/`) — the as-built layout is §4 below, the ownership mapping stays §1. No behavior,
 > route, response shape, error code or exported symbol changed; the module path is unchanged.
@@ -25,8 +25,8 @@
 | transactions / ledger | web | `api/transactions{,/[id]}` + `features/transactions/ui.tsx` | `backend/api` (transactions, treasury) |
 | treasury reconciliation (query side) | web | `api/reconcile/route.ts` (proxies Rust) | `backend/api` reads via `backend/sync` |
 | markets / venues / prices (read) | web | `api/{markets,ticker,ticker/instrument(s)}`, `features/{markets,ticker}/*` | `backend/api` (markets) |
-| data acquisition | Go sidecar | `backend/data/internal/research/{llama,cryptorank,khala,chainrank,news,coinglass,coinank,coinmarketcap}` (ex-`apps/apicalls`) | `backend/data` (already moved) |
-| data caching | Go + TS | `backend/data/platform/cache`, `frontend/web/src/platform/cache` | `backend/data` |
+| data acquisition | Go sidecar | `apps/data/internal/research/{llama,cryptorank,khala,chainrank,news,coinglass,coinank,coinmarketcap}` (ex-`apps/apicalls`) | `backend/data` (already moved) |
+| data caching | Go + TS | `apps/data/platform/cache`, `frontend/web/src/platform/cache` | `backend/data` |
 | stream sync / balances | Rust | `backend/sync/src/streams/sync.rs` + `{chains,jsonrpc,pyfmt}.rs` + `persistence/db.rs` + Python twin `tests/oracle/sync-live.py` | `backend/sync` (already moved; Phase 6 specializes) |
 | reconciliation maths | Rust + TS twin | `backend/sync/src/reconciliation/reconcile.rs` vs `frontend/web/src/app/(frontend)/api/reconcile/route.ts` | `backend/sync` |
 | event normalization | Rust (partial) | `backend/sync/src/jsonrpc.rs`, `streams/sync.rs` | `backend/sync` |
@@ -136,7 +136,7 @@ state machine — the exact concerns `target.md` §3.2 forbids in web):
 
 ### 3.6 Scaffolds started after this audit snapshot (historical — the scaffolds are now built)
 > **Superseded 2026-10-01:** the paragraph below records the uncommitted state this audit saw.
-> Those scaffolds were committed and then completed; `backend/api/internal/` has since been
+> Those scaffolds were committed and then completed; `apps/api/internal/` has since been
 > regrouped into bounded contexts (see §4, "backend/api package layout (as-built)"), and
 > `backend/data` + `backend/sync` were regrouped by their own lanes.
 - Uncommitted as of this writing (post-`4e8ba91`): `backend/api/` (Go: `cmd/api`,

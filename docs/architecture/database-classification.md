@@ -12,14 +12,14 @@ transcript is `history://source-inventory`.
 | Storage | DDL file | Generator / provenance | Extra DBs |
 |---|---|---|---|
 | Postgres 17 + TimescaleDB 2.30.1, `public` (database `fudcourt`) | `database/schema/pg-schema.sql` | hand-written, `IF NOT EXISTS` throughout; **the single system of record since DR-040** (the generated SQLite dump and its `dump-schema.mjs` generator are deleted) | system of record |
-| Postgres, `executor` schema | `database/schema/executor-schema.sql` | tracked copy; executed from an **embedded duplicate** `EXECUTOR_DDL` in `backend/workers/executor/internal/repository/store.go` via `ensureExecutorSchema()`; pinned by `backend/workers/executor/internal/repository/schema_test.go` | execution system of record |
+| Postgres, `executor` schema | `database/schema/executor-schema.sql` | tracked copy; executed from an **embedded duplicate** `EXECUTOR_DDL` in `apps/executor/internal/repository/store.go` via `ensureExecutorSchema()`; pinned by `apps/executor/internal/repository/schema_test.go` | execution system of record |
 | Neon Postgres | `frontend/web/src/cms/migrations/20260917_194354.ts` (+ `.json` snapshot, `index.ts` manifest) | Payload PostgreSQL adapter migration, generated | CMS content store |
 
 Connection facts (names only, no values):
 `backend/sync/src/persistence/db.rs` reads the DSN from `FUDCOURT_PG_URL` (`tokio-postgres`);
 `frontend/web/src/server/db.ts` Postgres client from `FUDCOURT_PG_URL` (`platform/db/pg.ts`);
 `tests/oracle/sync-live.py` (psycopg2) reads `FUDCOURT_PG_URL` from the repo-root `.env`;
-executor Go worker from `FUDCOURT_EXECUTOR_PG_URL` (`backend/workers/executor/cmd/executor/main.go:95`);
+executor Go worker from `FUDCOURT_EXECUTOR_PG_URL` (`apps/executor/main.go:95`);
 Payload from `DATABASE_URL` (`frontend/web/src/cms/payload.config.ts:44-46`).
 
 ## Column meanings
@@ -151,7 +151,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 | table | `venues` (`database/schema/pg-schema.sql:82-86`) |
 | storage | Postgres `public.venues` (system of record, DR-040) |
 | classification | **canonical** (venue registry; `id` is a text slug, not a provider id) |
-| owning service | **none found in-repo**. **DEAD — the TABLE only (DR-036):** 12 rows, seeded once at the 2026-09-15 import. The venue *entity* is alive despite the unwritten table: `shared/contracts/data/reference.json` mints 12 `venue_id`s, `backend/api/internal/accounts/exchange/account.go:122` `KnownExchange` validates the slug, and the executor's venue boundary (`backend/workers/executor/internal/exchanges/`) resolves it in code — so a cleanup retires the TABLE, never the identity |
+| owning service | **none found in-repo**. **DEAD — the TABLE only (DR-036):** 12 rows, seeded once at the 2026-09-15 import. The venue *entity* is alive despite the unwritten table: `shared/contracts/data/reference.json` mints 12 `venue_id`s, `apps/api/internal/accounts/exchange/account.go:122` `KnownExchange` validates the slug, and the executor's venue boundary (`apps/executor/internal/exchanges/`) resolves it in code — so a cleanup retires the TABLE, never the identity |
 | readers | `pg.ts:57` (read, but **not** in `DASHBOARD_READS`); `transactions.venue_id` implies a foreign key that does not exist |
 | canonical entity | **Venue** |
 | durability | CANONICAL |
@@ -190,11 +190,11 @@ history `asset_history` is appended by the `assets_snapshot` trigger, not by a l
 
 Writer split (both found in-repo):
 
-- **Next app** (`backend/workers/executor/internal/repository/store.go`, `EXECUTOR_DDL` +
+- **Next app** (`apps/executor/internal/repository/store.go`, `EXECUTOR_DDL` +
   `STATEMENTS`) — owns `exchange_accounts` writes (sealing via
   `sealCredentials`, `aes-256-gcm`), execution/plan creation, lifecycle transitions,
   settings, audit.
-- **Go worker** (`backend/workers/executor/internal/repository/{store,credentials}.go`) —
+- **Go worker** (`apps/executor/internal/repository/{store,credentials}.go`) —
   owns order/fill/event ingestion and `last_used_at` touches.
 - Go also reads credentials (`credentials.go:51`) but never writes them; TS never
   writes fills (`[INFERENCE]` from statement inventory in both files).
@@ -214,9 +214,9 @@ Writer split (both found in-repo):
 
 **Embedded-DDL duplication (violation to record, not fix here):** the same 10
 `CREATE TABLE` statements exist twice — `database/schema/executor-schema.sql` and the
-`EXECUTOR_DDL` template literal (retired with the TS store module 2026-10-05, DR-043) lived at the TS platform store path; the canonical embeddable is now `backend/workers/executor/internal/repository/schema.go`.
+`EXECUTOR_DDL` template literal (retired with the TS store module 2026-10-05, DR-043) lived at the TS platform store path; the canonical embeddable is now `apps/executor/internal/repository/schema.go`.
 The tracked file is *not* what runs; `ensureExecutorSchema()` executes the embedded copy.
-`backend/workers/executor/internal/repository/schema_test.go` compares them after normalizing
+`apps/executor/internal/repository/schema_test.go` compares them after normalizing
 blank/comment lines, so drift is caught only by that test.
 
 The Go worker does **not** create the schema; it assumes it exists
@@ -264,8 +264,8 @@ Enumerated, not implied:
 | Tables for: bank accounts, macro series/observations, DEX pools/LP positions, signals, wallets-indexer data, Candles/OHLCV, news from any provider other than the CMS | **Do not exist** | No DDL matches; no writer exists. `price_history` is the only price-series table and has no writer — DR-036 confirms it dead (empty in Postgres, no producer). |
 | Any table holding plaintext API keys/secrets | **Does not exist** | `executor.exchange_accounts` stores only `bytea` ciphertext + `iv`/`auth_tag` + `api_key_masked`; `users.hash`/`salt` are digests. |
 | A `raw_*` provider table namespace | **Does not exist** | The scope's suggested `raw_cryptorank_*`/`raw_exchange_*` naming has no implementation; raw payloads live in the disk cache (`~/.cache/crfetch`) and gzipped fixtures only. |
-| Tables for CoinGlass / CoinAnk derivatives metrics (funding, open interest, liquidations, long/short, ETF flows) | **Do not exist** | Neither family persists: `backend/data/internal/research/{coinglass,coinank}` serve the upstream body through the disk cache only (no DDL, no writer). CoinAnk is additionally `dark` — every mode returns HTTP 502 `403`. |
-| Tables for CoinMarketCap market surfaces (listing, global metrics, market pairs, exchanges) | **Do not exist** | `backend/data/internal/research/coinmarketcap` serves the upstream body through the disk cache only (no DDL, no writer); like its CoinGlass/CoinAnk siblings it is a pass-through acquisition family, not a persisted dataset. |
+| Tables for CoinGlass / CoinAnk derivatives metrics (funding, open interest, liquidations, long/short, ETF flows) | **Do not exist** | Neither family persists: `apps/data/internal/research/{coinglass,coinank}` serve the upstream body through the disk cache only (no DDL, no writer). CoinAnk is additionally `dark` — every mode returns HTTP 502 `403`. |
+| Tables for CoinMarketCap market surfaces (listing, global metrics, market pairs, exchanges) | **Do not exist** | `apps/data/internal/research/coinmarketcap` serves the upstream body through the disk cache only (no DDL, no writer); like its CoinGlass/CoinAnk siblings it is a pass-through acquisition family, not a persisted dataset. |
 
 ---
 
@@ -287,7 +287,7 @@ Enumerated, not implied:
    each TABLE, never on the noun:** `venues`'s table is unwritten while the venue *entity* is live
    (12 `venue_id`s in `reference.json`; slug validated at `accounts/exchange/account.go:122`;
    resolved by the executor's venue boundary), and `Account`/`LedgerEntry`/`Fill` are live entities
-   in `backend/api/internal/accounts/**`, `[removed: finance/ledger]` and `executor.fills`; only `journal` is
+   in `apps/api/internal/accounts/**`, `[removed: finance/ledger]` and `executor.fills`; only `journal` is
    table-only (no code-side entity beyond the dashboard read).
 2. **`price_history` has a schema, an index, a retention DELETE, and no writer.** **Dead by
    the same evidence (DR-036): the table is empty and has never been written, and `grep -rniI "INSERT INTO price_history"` over the **source** tree → 0 hits** (run it with source globs; a bare whole-tree grep is non-zero by construction, because the phrase occurs in the prose that records it, e.g. `canonical-model.md:856`) —

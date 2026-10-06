@@ -280,7 +280,7 @@ Egress IP: `200` reachability confirmed (all hosts reachable from this box).
    shipping any `capi` mode: verify a nonexistent symbol does not return fabricated data and
    cross-check one value against an independent feed.
 
-## 7. Go implementation (SHIPPED in `backend/data/internal/research/coinglass`)
+## 7. Go implementation (SHIPPED in `apps/data/internal/research/coinglass`)
 
 The keyless `capi` path is wired into the sidecar as the sixth research family:
 `/api/coinglass?mode=<statistics|openInterest|fundingRate|markets>`, all four

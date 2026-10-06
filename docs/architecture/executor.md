@@ -10,7 +10,7 @@
 ## 1. Domain map — what the executor is made of
 The execution lifecycle (PRD §57) is one table, owned today by
 `frontend/web/src/platform/executor/types.ts` (`EXECUTION_TRANSITIONS` — the wire contract moved, DR-043)
-and ported 1:1 by `backend/workers/executor/internal/core/execution/lifecycle.go` (`ExecutionTransitions`,
+and ported 1:1 by `apps/executor/internal/core/execution/lifecycle.go` (`ExecutionTransitions`,
 "the ONE lifecycle truth for API intents and worker transitions alike").
 Terminal states accept nothing:
 
@@ -73,13 +73,13 @@ Cancel cancels orders and NEVER closes a position (PRD §75;
 `shared/contracts/openapi/fudcourt.yaml` lifecycle notes).
 
 No-venue-conditionals rule (§8.16): core executor code MUST NOT branch on the
-venue. `backend/workers/executor/internal/exchanges/interface.go` states it verbatim —
+venue. `apps/executor/internal/exchanges/interface.go` states it verbatim —
 "No `if exchange == "binance"` outside this package (objective §8.16)" —
 symbols, precision, statuses, order types and API errors are normalized by the
 adapters (`binance/`, `mexc/`, `paper/`; `mexc/mexc.go`: "venue conditionals
 never leave this package").
 
-## 2. Go port state — `backend/workers/executor/internal/*`
+## 2. Go port state — `apps/executor/internal/*`
 Checked 2026-10-01 (tree is moving as sibling slices land). Package layout is
 grouped by role: `core/` (business logic), `strategies/`, `exchanges/` (venue
 boundary), `runtime/` (worker + idempotency), `platform/` (decimal, credentials,
@@ -134,7 +134,7 @@ What that means in practice (history — kept for the audit trail):
   `tests/e2e/executor/executor-paper-e2e.ts` (the §127 integration gate), and
   `frontend/web/tests/executor-proxy-tests.ts` are gone. The only surviving TS test referencing the contract
   shape is `frontend/web/tests/executor-ui-tests.ts` (still in `test:shapers`).
-- Go code mirrors the frozen TS contract field-for-field (`backend/workers/executor/internal/core/execution/records.go`).
+- Go code mirrors the frozen TS contract field-for-field (`apps/executor/internal/core/execution/records.go`).
   The contract now lives at `frontend/web/src/platform/executor/types.ts` (consumer-facing); the Go-side
   counterpart is `internal/core/execution/{types,enums,lifecycle,records}.go` (row 1 of `parity-matrix.md`).
 - Cutover is **CLOSED** by DR-043: every row of `parity-matrix.md` is `DONE`, `bun run test:shapers` is

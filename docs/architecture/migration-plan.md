@@ -114,7 +114,7 @@ re-derive with `node shared/contracts/scripts/check-contract.mjs` rather than tr
 - **Rollback:** contracts are additive new files; consumers not yet cut over.
 
 ## Phase 4 — `backend/api` (Go) incremental, Next.js proxy compatibility
-> **Amended 2026-10-01 (bounded-context regroup):** `backend/api/internal/` is now grouped by
+> **Amended 2026-10-01 (bounded-context regroup):** `apps/api/internal/` is now grouped by
 > context — `access/{identity,authorization,entitlements,credentials}`,
 > `accounts/{exchange,wallets}`, `finance/{ledger,portfolio,treasury,transactions}`,
 > `markets/{instruments,overview}`, plus top-level `notifications`, `audit`, `jobs` and

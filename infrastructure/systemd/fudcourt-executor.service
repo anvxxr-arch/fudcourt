@@ -1,8 +1,8 @@
-# FUD Court execution runtime (Go worker; backend/workers/executor).
+# FUD Court execution runtime (Go worker; apps/executor).
 #
 # This is the production executor. The TypeScript worker
 # (frontend/web/scripts/executor/worker.ts) was the previous owner; the Go worker
-# in backend/workers/executor is the replacement and parity rows 1-9 of
+# in apps/executor is the replacement and parity rows 1-9 of
 # docs/architecture/parity-matrix.md are DONE.
 #
 # CUTOVER (2026-10-05, DR-042): the web tier thin-proxies /api/executor/* here
@@ -29,7 +29,7 @@
 #                   rather than silently losing visibility.
 #   127.0.0.1:3105  /api/executor/* — the 15 executor contract routes, served by
 #                   the executor process itself (objective §52). This replaces
-#                   backend/api as the owner of that path: the web tier thin-
+#                   apps/api as the owner of that path: the web tier thin-
 #                   proxies the browser request (cookie and all) here.
 #                   The port is the FUDCOURT_EXECUTOR_API_ADDR default, so the
 #                   Environment line below restates it explicitly — a pin an
@@ -63,9 +63,9 @@ Environment=FUDCOURT_EXECUTOR_API_ADDR=127.0.0.1:3105
 # NOTE: FUDCOURT_SESSION_SECRET is deliberately NOT set here. It is a secret and
 # must come from the EnvironmentFile above, so the file the web tier reads and
 # the file this unit reads cannot drift apart.
-WorkingDirectory=/home/dwizzy/fudcourt/backend/workers/executor
-ExecStartPre=/usr/bin/go build -C /home/dwizzy/fudcourt/backend/workers/executor -o bin/fudcourt-executor ./cmd/executor
-ExecStart=/home/dwizzy/fudcourt/backend/workers/executor/bin/fudcourt-executor
+WorkingDirectory=/home/dwizzy/fudcourt/apps/executor
+ExecStartPre=/usr/bin/go build -C /home/dwizzy/fudcourt/apps/executor -o bin/fudcourt-executor .
+ExecStart=/home/dwizzy/fudcourt/apps/executor/bin/fudcourt-executor
 Restart=on-failure
 RestartSec=3
 LimitNOFILE=65536

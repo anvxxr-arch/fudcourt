@@ -70,19 +70,10 @@ step "markdown table-shape gate (a row must not exceed its header; GFM drops exc
 node shared/contracts/scripts/check-table-shape.mjs || fail table-shape
 
 step "canonical reference artifact drift (reference.json is generated)"
-go run ./backend/api/internal/markets/reference/cmd/emit -check || fail reference
+go run ./apps/api/internal/markets/reference/cmd/emit -check || fail reference
 
-step "go build/vet/test (backend/api)"
-go build ./backend/api/... && go vet ./backend/api/... && go test ./backend/api/... || fail go-api
-
-step "go build/vet/test (backend/workers/executor)"
-go build ./backend/workers/executor/... && go vet ./backend/workers/executor/... && go test ./backend/workers/executor/... || fail go-executor
-
-step "go build/vet/test (backend/data)"
-go build ./backend/data/... && go vet ./backend/data/... && go test ./backend/data/... || fail go-data
-
-step "go build/vet/test (backend/bot)"
-go build ./backend/bot/... && go vet ./backend/bot/... && go test ./backend/bot/... || fail go-bot
+step "go build/vet/test (all packages)"
+go build ./... && go vet ./... && go test ./... || fail go
 
 step "cargo build/test (backend/sync)"
 (cd backend/sync && cargo fmt --check && cargo build --release --quiet && cargo test --release --quiet) || fail rust

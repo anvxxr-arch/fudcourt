@@ -1,6 +1,6 @@
 # CryptoRank Mode Audit (28 modes — uniqueness vs duplication)
 
-Scope: the `cryptorank` acquisition family in `backend/data/internal/research/cryptorank/`,
+Scope: the `cryptorank` acquisition family in `apps/data/internal/research/cryptorank/`,
 served by the Go sidecar on `:3101` at `/api/cryptorank` and proxied by the Next route
 `frontend/web/src/app/(frontend)/api/cryptorank/route.ts`. Every row below was probed **live**
 against the running sidecar; nothing is inferred from the mode table alone.
@@ -37,7 +37,7 @@ CryptoRank is **not an API** — it scrapes the `__NEXT_DATA__` SSR payload out 
 every non-browser client, and the market pages do the same unless the ClientHello really is
 Chrome. The fetcher therefore carries a bespoke TLS stack: a **Chrome 131 fingerprint AND
 HTTP/2, both required** (either alone → `403 cf-mitigated: challenge`). Source:
-`backend/data/internal/research/cryptorank/fetch.go`.
+`apps/data/internal/research/cryptorank/fetch.go`.
 
 Consequence: **26 live modes ride one pinned fingerprint.** When that profile goes stale,
 every one of them 403s silently together — the `HardError{Kind: "cf-challenge"}` path exists
@@ -76,7 +76,7 @@ precisely to alarm on that.
 | `funding` | **REFUSED 503** — upstream serves synthetic decoy | 0 | — | — |
 | `unlocks` | **REFUSED 503** — upstream serves synthetic decoy | 0 | — | — |
 
-Row shapes are in `backend/data/internal/research/cryptorank/types.go` (`CrEnvelope` +
+Row shapes are in `apps/data/internal/research/cryptorank/types.go` (`CrEnvelope` +
 per-family structs). Two refusal modes carry the verbatim reason string
 (`DisabledReason`, `modes.go`): upstream `/_next/data` fabricates payloads for nonexistent
 slugs and prices diverge from ground truth (measured 57k–67k vs real 84.5k BTC).

@@ -44,7 +44,7 @@ Headers the web client sends on every call: `coinank-apikey`, `web-version`,
 > documentation-hygiene call and not the DR-033 credential rule. Where a
 > re-implementation genuinely needs them, they belong **in that code**, next to
 > the derivation that consumes them (see how
-> `backend/data/internal/research/coinglass/decrypt.go` carries CoinGlass's
+> `apps/data/internal/research/coinglass/decrypt.go` carries CoinGlass's
 > analogous `v`-table constants), never duplicated into prose.
 
 **Live verification performed by this recon (own key computation, 2026-10-02):**

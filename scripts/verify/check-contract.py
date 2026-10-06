@@ -39,7 +39,7 @@ SRC = WEB / "src"
 # Normally backend/data/internal/cryptorank/modes.go; overridable so the parity
 # gate can be exercised (and so CI survives a different checkout layout).
 GO_TABLE = Path(os.environ.get(
-    "FUDCOURT_DATA_MODES_GO", REPO / "backend" / "data" / "internal" / "research" / "cryptorank" / "modes.go"))
+    "FUDCOURT_DATA_MODES_GO", REPO / "apps" / "data" / "internal" / "research" / "cryptorank" / "modes.go"))
 fails = []
 def modes_from_lib() -> set:
     src = (SRC / "features" / "market-data" / "cryptorank" / "cryptorank-modes.ts").read_text()
@@ -203,7 +203,7 @@ kh_parity = "khala web surface removed (sidecar-only, DR-041)"
 # modes.go the Go one, and the route must be the verbatim proxy.
 LL_TS = SRC / "features" / "llama" / "client.ts"
 LL_GO = Path(os.environ.get("FUDCOURT_DATA_LLAMA_GO",
-                            REPO / "backend" / "data" / "internal" / "research" / "llama" / "modes.go"))
+                            REPO / "apps" / "data" / "internal" / "research" / "llama" / "modes.go"))
 ll_parity = "llama absent"
 if LL_TS.exists() and LL_GO.exists():
     ll_ts_modes = set(re.findall(
@@ -234,7 +234,7 @@ if check_route_is_proxy("llama", ("execFile", "child_process", "limitedFetch",
 # route that regrows one is the drift this row exists to catch.
 NW_TS = SRC / "features" / "news" / "client.ts"
 NW_GO = Path(os.environ.get("FUDCOURT_DATA_NEWS_GO",
-                            REPO / "backend" / "data" / "internal" / "research" / "news" / "modes.go"))
+                            REPO / "apps" / "data" / "internal" / "research" / "news" / "modes.go"))
 nw_parity = "news absent"
 if NW_TS.exists() and NW_GO.exists():
     nw_ts_sources = set(re.findall(
@@ -289,7 +289,7 @@ def _keyless_parity(prefix, family, needles):
     """
     ts = SRC / "features" / family / "client.ts"
     go = Path(os.environ.get(f"FUDCOURT_DATA_{family.upper()}_GO",
-                             str(REPO / "backend" / "data" / "internal" / "research" / family / "modes.go")))
+                             str(REPO / "apps" / "data" / "internal" / "research" / family / "modes.go")))
     row = f"{family} absent"
     if not ts.exists():
         # The TS typing mirror was retired with the features/* -> features/market-data

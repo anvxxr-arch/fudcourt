@@ -54,16 +54,13 @@ if echo "$changed" | grep -qE '^shared/|^frontend/web/'; then
   echo "[pre-push] contracts drift gate (shared/contracts)..."
   if ! node shared/contracts/scripts/check-contract.mjs; then rc=1; fi
 fi
-if echo "$changed" | grep -qE '^backend/|\.go$'; then
-  echo "[pre-push] go build/vet/test (backend/data, backend/api, backend/bot, backend/workers/executor)..."
-  # GOTOOLCHAIN=auto resolves go>=1.25.0 (backend/api|bot|workers/executor) / >=1.24.1
-  # (backend/data: fhttp/tls-client floor) from the locally cached toolchain —
+if echo "$changed" | grep -qE '^apps/|^core/|\.go$'; then
+  echo "[pre-push] go build/vet/test (single module)..."
+  # GOTOOLCHAIN=auto resolves go>=1.25.0 from the locally cached toolchain —
   # offline-safe here; see docs/DECISIONS.md DR-005.
-  for mod in backend/data backend/api backend/bot backend/workers/executor; do
-    if ! (cd "$mod" && go build ./... && go vet ./... && go test ./...); then
-      echo "[pre-push] GO BUILD/VET/TEST FAILED ($mod)"; rc=1
-    fi
-  done
+  if ! (go build ./... && go vet ./... && go test ./...); then
+    echo "[pre-push] GO BUILD/VET/TEST FAILED"; rc=1
+  fi
 fi
 
 if echo "$changed" | grep -qE '^backend/sync/|\.rs$'; then

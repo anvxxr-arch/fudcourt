@@ -32,7 +32,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-GO_MAIN = ROOT / "backend" / "api" / "cmd" / "api" / "main.go"
+GO_MAIN = ROOT / "apps" / "api" / "main.go"
 OPENAPI = ROOT / "shared" / "contracts" / "openapi" / "fudcourt.yaml"
 WEB_API = ROOT / "frontend" / "web" / "src" / "app" / "(frontend)" / "api"
 

@@ -12,7 +12,7 @@ provider routes under `…/api/`. Snapshot 2026-10-02.
 > `/chainrank` **boards** outright — the Next pages, their `/api/*` proxy routes and their nav
 > tabs are gone. Every row below that proposed to *fold `/khala` into Signals* or to *keep
 > `/chainrank` as-is* is therefore **moot** and is marked inline; the Go sidecar families
-> (`backend/data/internal/research/{khala,chainrank}`) **stay**, serving API-only on `:3101`.
+> (`apps/data/internal/research/{khala,chainrank}`) **stay**, serving API-only on `:3101`.
 > The rows are kept, not deleted, so the analysis this map recorded is not lost.
 
 ## 1. Current surface inventory

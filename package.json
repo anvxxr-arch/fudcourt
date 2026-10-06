@@ -9,7 +9,7 @@
     "check:structure": "cd frontend/web && python3 scripts/checks/check-structure.py",
     "check:web-contract": "python3 scripts/verify/check-contract.py",
     "test:web": "cd frontend/web && bun run test:shapers",
-    "test:go": "go test ./backend/api/... ./backend/workers/executor/... ./backend/data/...",
+    "test:go": "go test ./...",
     "test:sync": "cd backend/sync && cargo test --release"
   }
 }

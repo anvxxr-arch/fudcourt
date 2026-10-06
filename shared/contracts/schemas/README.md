@@ -14,7 +14,7 @@ every claim restated here.
 >
 > **Update — four of those five now have a producer.** `assets/asset.json`, `assets/chain.json`,
 > `assets/token.json` and `markets/venue.json` are backed by
-> `backend/api/internal/markets/reference`, which mints `asset_id`/`chain_id`/`token_id`/`venue_id`
+> `apps/api/internal/markets/reference`, which mints `asset_id`/`chain_id`/`token_id`/`venue_id`
 > and publishes the `(provider, provider_id) → canonical_id` table as
 > **`shared/contracts/data/reference.json`**. That artifact is the machine-readable instance of these
 > four schemas; the schemas stay the normative *shape*, and `markets/instrument.json`'s
@@ -78,10 +78,10 @@ it is computed.
 | [`accounts/exchange-account.json`](accounts/exchange-account.json) | CANONICAL | `backend/api accounts/exchange` (+ executor store) | minted uuid |
 | [`accounts/balance.json`](accounts/balance.json) | CANONICAL | `backend/workers/executor` / `backend/api [removed: finance/ledger]` | via account+asset |
 | [`accounts/account-equity.json`](accounts/account-equity.json) | CANONICAL | `backend/workers/executor` | via account |
-| [`assets/asset.json`](assets/asset.json) | **CANONICAL** | **`backend/api/internal/markets/reference`** (new) | `asset_id` minted; instance in `shared/contracts/data/reference.json` |
-| [`assets/token.json`](assets/token.json) | **CANONICAL** | **`backend/api/internal/markets/reference`** (new) | `token_id` minted over `chain/address`; instance in `reference.json` |
-| [`assets/chain.json`](assets/chain.json) | **CANONICAL** | **`backend/api/internal/markets/reference`** (new) | `chain_id` minted; instance in `reference.json`; `backend/sync/src/chains.rs` is still a separate private table |
-| [`markets/venue.json`](markets/venue.json) | **CANONICAL** | **`backend/api/internal/markets/reference`** (new) | `venue_id` minted; instance in `reference.json`; the three inline allowlists are now redundant |
+| [`assets/asset.json`](assets/asset.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `asset_id` minted; instance in `shared/contracts/data/reference.json` |
+| [`assets/token.json`](assets/token.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `token_id` minted over `chain/address`; instance in `reference.json` |
+| [`assets/chain.json`](assets/chain.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `chain_id` minted; instance in `reference.json`; `backend/sync/src/chains.rs` is still a separate private table |
+| [`markets/venue.json`](markets/venue.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `venue_id` minted; instance in `reference.json`; the three inline allowlists are now redundant |
 | [`markets/instrument.json`](markets/instrument.json) | CANONICAL | `backend/api [removed: markets/instruments]` | **`instrument_id`, no minter** |
 | [`markets/ticker.json`](markets/ticker.json) | CANONICAL | `backend/api [removed: markets/overview]` | via instrument+venue |
 | [`markets/price.json`](markets/price.json) | CANONICAL | **absent** | schema only |
@@ -181,7 +181,7 @@ python3 -c "import json,glob;[json.load(open(f)) for f in glob.glob('shared/cont
 These schemas are **not** wired into a generator or a route yet: `events/` remains the event source
 of truth, and `openapi/fudcourt.yaml` remains the HTTP contract. The same is true of the reference
 registry: `shared/contracts/data/reference.json` has a producer
-(`backend/api/internal/markets/reference/cmd/emit`) and a drift test
+(`apps/api/internal/markets/reference/cmd/emit`) and a drift test
 (`TestReferenceArtifactIsCurrent`), but **no HTTP route and no consumer** yet. Extending
 `shared/contracts/scripts/check-contract.mjs` to validate these files is Phase 7/8 work
 (`canonical-model.md` §9.1); nothing in this directory changes behaviour today.

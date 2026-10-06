@@ -128,9 +128,9 @@ ledger; portfolio is derived; append-only events). Current-state highlights:
 | --- | --- | --- | --- |
 | 1 | ~~**TS executor still in `frontend/web`** — 8,024 LOC, 10 modules~~ **RESOLVED 2026-10-05 (DR-043)** | `find frontend/web/src/platform/executor -type f` → exactly one file: `types.ts` (the wire contract); the 9 runtime modules + the worker entry + 9 TS-runtime test files are deleted; `frontend/web/scripts/executor/worker.ts` is preserved as a tombstone; the systemd unit renamed to `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt` (3-line header). | none — DR-043 closed this. Web↔Go route parity proven (`diff <(curl :3100/api/executor/executions) <(curl :3105/api/executor/executions)` empty for a minted team session); `fudcourt-executor.service` active on :3104+:3105; `bun run verify:executor` is `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` (12 tests, hermetic, <1 s). |
 | 2 | ~~**15 web route handlers still import `platform/executor`**~~ **RESOLVED 2026-10-05 (DR-043)** | the 15 handlers are now 4-line shells forwarding to `src/app/(frontend)/api/executor/_proxy.ts`; the only `@/platform/executor` imports in `frontend/web/src` are the 5 consumer-side type imports of the wire contract (`trade/{client,intent,ui/composer}.ts` + `features/executor/{client,ui}.tsx`). The single mention of the old path left in the tree is a doc comment inside `src/platform/executor/types.ts` (the renamed home) that explains the move — it is text, not an import. | none |
-| 3 | ~~**EXECUTOR DDL still embedded in `store.ts`**~~ **RESOLVED 2026-10-05 (DR-043)** | the TS `store.ts` is gone (see row 1). The Go runtime applies the tracked DDL at startup (`backend/workers/executor/internal/repository.EnsureSchema`, `internal/repository/schema.go`), and its `embed` copy is pinned BYTE-EXACT by `TestEmbeddedSchemaMatchesTracked`. The test that previously pinned the TS half is gone with the file. | none |
+| 3 | ~~**EXECUTOR DDL still embedded in `store.ts`**~~ **RESOLVED 2026-10-05 (DR-043)** | the TS `store.ts` is gone (see row 1). The Go runtime applies the tracked DDL at startup (`apps/executor/internal/repository.EnsureSchema`, `internal/repository/schema.go`), and its `embed` copy is pinned BYTE-EXACT by `TestEmbeddedSchemaMatchesTracked`. The test that previously pinned the TS half is gone with the file. | none |
 | 4 | **Phase 8 move of `frontend/web/scripts/verify/*` — ~~not executed~~ EXECUTED** | the relocation landed in one commit: repo-wide gates → `scripts/verify/`, executor E2E → `tests/e2e/executor/` (later retired by DR-043), fixtures → `tests/fixtures/`, oracle → `tests/oracle/`, database tooling → `scripts/database/`, web-only suites → `frontend/web/tests/`. Every invoker repointed (verify-all, pre-push, integration.yml, check-contract, root README, package.json); `test:shapers` is now **213/213** across 11 shaper files (was 20 files / 240 tests pre-DR-043; the 9 deleted TS-runtime suites' assertions are covered by the named Go counterparts in `parity-matrix.md` rows 1–9). The `verify-*.py` harnesses remain repo tools (their UI-wiring checks read `frontend/web/src/**`), not web-app-only — `git ls-files`; `scripts/verify/{verify-*,monitor}.py`; `tests/{oracle,integration/api,fixtures}/` (the executor subdirs under `tests/e2e/` and `tests/integration/` are gone); `bun run test:shapers` | none |
-| 5 | ~~**`api` lists "admin" as a hosted context but has no `internal/admin`**~~ **RESOLVED** | the false claim is gone: `backend/api/cmd/api/main.go` now names the `/api/admin/members` route plane, `identity.TierAdmin`, and the handlers in `cmd/api/{routes,errors}.go`, with an explicit note that splitting it into `internal/admin` is deferred. `go build ./backend/api/...` green. Package split remains a legitimate follow-up; the misleading comment does not. |
+| 5 | ~~**`api` lists "admin" as a hosted context but has no `internal/admin`**~~ **RESOLVED** | the false claim is gone: `apps/api/main.go` now names the `/api/admin/members` route plane, `identity.TierAdmin`, and the handlers in `cmd/api/{routes,errors}.go`, with an explicit note that splitting it into `internal/admin` is deferred. `go build ./backend/api/...` green. Package split remains a legitimate follow-up; the misleading comment does not. |
 | 6 | **`request_id` was missing from the executor's four required identifiers** (PRD §66 names `execution_id`, `request_id`, `client_order_id`, `event_id` — only three existed) | `idempotency.RequestID` (`req_<exec>_<seq>`) + `ParseRequestID` added; refuses foreign ids incl. `fud_...` client order ids so the two id spaces can never be cross-parsed. Verified by `TestRequestIDAndClientOrderIDAreDistinct` + `TestRequestIDIsStableAcrossRetry`. Restart/duplicate proof runs against the REAL paper venue: `TestPaperRestartNoDuplicateOrder`, `TestPaperDuplicateStartIsNoOp`, `TestPaperRejectedOrderThenReplaces` all green in `internal/tests/e2e`. | none — gate 5 of `.ai/prompts/executor-migration.md` closed |
 
 | 7 | **Sync oracle gate wired (Phase 6) — done, committed** | `verify-sync.py` + `tests/oracle/fixtures/{capture.json,expected-projection.txt,make-capture.py}` exist and the gate is in `verify-all.sh`; run output `SYNC_ORACLE_OK (34 rows, 40 request keys)` | none (committed; §9.3) |
@@ -170,11 +170,11 @@ the only vestige.
 | Metric | Required | Evidence (current tree) |
 | --- | --- | --- |
 | DB schema files inside `frontend/web` | 0 | `find frontend/web -name '*.sql'` → **0** |
-| exchange credentials / signing handled by frontend | 0 | **MET (DR-043, 2026-10-05)** — the only `node:crypto` calls remaining in `frontend/web` are the session-cookie HMAC in `frontend/web/src/platform/auth/session.ts` (the only secret that was ever at the web tier, and stays there because the web tier is its only issuer/verifier). The exchange-credential vault is in the Go service (`backend/workers/executor/internal/platform/credentials`, AES-256-GCM sealed per field under `FUDCOURT_EXECUTOR_MASTER_KEY`); no request signing happens in the web tier; no `sealSecret`/`openSecret` in the web tier; `node:crypto` is no longer imported by the executor path. The Go `backend/workers/executor/internal/platform/credentials` package is the canonical owner of the exchange credentials. |
+| exchange credentials / signing handled by frontend | 0 | **MET (DR-043, 2026-10-05)** — the only `node:crypto` calls remaining in `frontend/web` are the session-cookie HMAC in `frontend/web/src/platform/auth/session.ts` (the only secret that was ever at the web tier, and stays there because the web tier is its only issuer/verifier). The exchange-credential vault is in the Go service (`apps/executor/internal/platform/credentials`, AES-256-GCM sealed per field under `FUDCOURT_EXECUTOR_MASTER_KEY`); no request signing happens in the web tier; no `sealSecret`/`openSecret` in the web tier; `node:crypto` is no longer imported by the executor path. The Go `apps/executor/internal/platform/credentials` package is the canonical owner of the exchange credentials. |
 | cross-service implementation imports | 0 | `grep` for `backend/{api,workers/executor,data}/` imports inside the Go services → **none**; `backend/data` mentions `executor` nowhere; `backend/sync` only names TS files in *provenance comments* (`src/{main,chains,reconcile}.rs`), not imports |
-| canonical risk engine | 1 | exactly one `risk.go` → `backend/workers/executor/internal/core/risk/risk.go` (+31 test funcs) |
-| canonical sizing implementation | 1 | exactly one `sizing.go` → `backend/workers/executor/internal/core/sizing/sizing.go` (+16 test funcs) |
-| canonical exchange abstraction | 1 | `backend/workers/executor/internal/exchanges/{interface,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package (85 test funcs) |
+| canonical risk engine | 1 | exactly one `risk.go` → `apps/executor/internal/core/risk/risk.go` (+31 test funcs) |
+| canonical sizing implementation | 1 | exactly one `sizing.go` → `apps/executor/internal/core/sizing/sizing.go` (+16 test funcs) |
+| canonical exchange abstraction | 1 | `apps/executor/internal/exchanges/{interface,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package (85 test funcs) |
 | contract source of truth | 1 | `shared/contracts/`: `openapi/fudcourt.yaml`, `events/{catalog,event.schema}.json`, `schemas/{error,event}-envelope.json`, gated by `CONTRACTS_OK` |
 | core executor logic inside `frontend/web` | 0 | **MET (DR-043, 2026-10-05)** — `find frontend/web/src/platform/executor -type f` → 1 (only `types.ts`; the wire contract has no runtime path: types only, no imports, no executables, no DB, no HTTP). The 9 deleted TS-runtime test files' assertions are covered by the named Go counterparts per `parity-matrix.md` rows 1–9 (253+ test funcs across 19 internal packages). |
 | independently deployable: web / api / data / executor / sync | 5 | `infrastructure/systemd/fudcourt-{web,api,data,executor,sync}.service` all present; `check-deploy` OK; `/api` independently built (`go build ./...` OK) |
@@ -228,7 +228,7 @@ even when no slice ever filled).
 **The tree is clean and green.** `bash scripts/verify/verify-all.sh` returns
 `VERIFY_ALL_OK` (exit 0) against the current tree, and `git status` is **empty** — the large
 uncommitted wave that was present earlier in the session (§10) has since been committed. During the
-session the `backend/workers/executor/internal/platform/lock` package did flap while a concurrent writer held an
+session the `apps/executor/internal/platform/lock` package did flap while a concurrent writer held an
 in-progress edit of it (`valkey.go` + `valkey_test.go`, plus `zz_probe*_test.go` scratch files);
 observed states included a missing `fakeValkey` type, literal CR bytes inside string literals, a
 scripted server that never served its steps, and a syntax error at `valkey_test.go:649`. That
@@ -266,7 +266,7 @@ carries the writer's uncommitted edits above.
 is still fully green — re-verified on a clean `git worktree --detach HEAD`: `go vet`/`go test
 ./...` clean for `backend/workers/executor`, and `verify-all.sh`'s non-Go steps (structure, contract,
 api-contract, sync-oracle, deploy, contracts, web typecheck, sync, data) all pass. The only
-shared-tree red is the concurrent writer's untracked, mid-edit `backend/workers/executor/cmd/executor/
+shared-tree red is the concurrent writer's untracked, mid-edit `apps/executor/executor/
 health.go` + `health_test.go` (observed states: `undefined: errInvalidProbeTimeout`, then
 `fakeLock redeclared` against the tracked `main_test.go`) — an in-flight edit, not a committed
 regression; the writer has landed the symbol and the production `go build` returns clean between
@@ -286,12 +286,12 @@ the writer's in-flight `cmd/executor/health*.go`.
 **None outstanding.** Eight failures were found and fixed; all were pre-existing in the
 working tree or in the branch's committed history (none caused by this session's changes — checked
 against the baseline and against `94a2ee1`/`642e7ef`):
-1. `backend/api/cmd/api/main.go:5` — a comment line missing its `//` (`notifications, jobs.`),
+1. `apps/api/main.go:5` — a comment line missing its `//` (`notifications, jobs.`),
    a Go **syntax error** that failed `go build ./backend/api/...`. Fixed (line is a comment again).
 2. `shared/contracts/openapi/fudcourt.yaml` — referenced **29 undefined components**
    (`RateLimited`, `MutationUnauthorized`, and 27 data-surface schemas), so `bun run generate`
    failed and the whole SDK/contract gate was red. Fixed by defining every referenced component.
-3. **`backend/workers/executor/cmd/executor` test did not compile at HEAD** — commit `642e7ef` landed
+3. **`apps/executor/executor` test did not compile at HEAD** — commit `642e7ef` landed
    `main_test.go` ahead of its `main.go`/`Acquire` implementation (`undefined: loadConfigFrom`);
    production `go build ./...` still passed, so only the *test* target was red. The writer's working
    tree held the coherent completion; this session landed it (`befd141`, `25cd532`) and verified HEAD
@@ -346,7 +346,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
 1. **Close the executor cutover (the one unblocker).** ~~Two~~ **Three** preconditions, in order:
    ~~(a) build the Go HTTP surface for the 16 `/api/executor/*` endpoints (neither `backend/api` nor
    `cmd/executor` serves them today)~~ → **(a) DONE (`7b8dc2d`)** — the Go surface is served by
-   `backend/workers/executor/internal/api` on `cmd/executor`'s `:3105`; what remains is the web
+   `apps/executor/internal/api` on `cmd/executor`'s `:3105`; what remains is the web
    re-point to it, then **(b)** provision `FUDCOURT_SESSION_SECRET` + `FUDCOURT_EXECUTOR_PG_URL`
    (the unit cannot start without them) and `FUDCOURT_EXECUTOR_MASTER_KEY` (64 hex) and run the gate
    against the Go worker; only then
@@ -361,7 +361,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    imports `@/platform/executor/{store,worker,plan,runtime,lock}` — it exercises the **TS**
    runtime against the real Postgres/Valkey, so it is *not yet* the "against the Go worker" gate
    the parity matrix names. **The Go offline half of that gate is now proven**: the composed
-   harness in `backend/workers/executor/internal/tests/e2e` (12 tests, hermetic) drives the **real** worker +
+   harness in `apps/executor/internal/tests/e2e` (12 tests, hermetic) drives the **real** worker +
    **real** `exchange/paper` venue + **real** `lock.MemoryLock` over a `worker.MemoryStore` with a
    hand-advanced `FixedClock`, covering create→start→recovery→place→fill→complete, lease
    contention (§65/§127.4), restart without duplicate (§66/§127.5), cancel a resting entry (§127.6),
@@ -370,7 +370,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    children over the window, each sized from the remainder, closing fully released even when no
    slice ever filled). It immediately found and pinned two real bugs (§8.4, §8.5). What is *still*
    gated is only the **live** proof, and this session pinned exactly *why* it is credential-gated:
-   verified by reading `backend/workers/executor/cmd/executor/main.go` — its `resolver.adapterFor` maps only
+   verified by reading `apps/executor/executor/main.go` — its `resolver.adapterFor` maps only
    `ExchangeBinance`/`ExchangeBybit`/`ExchangeMEXC` and has **no `paper` branch**, so a live run needs
    a real venue credential; and the credential is a sealed envelope (`exchange_accounts
    .api_key_encrypted`) that only `FUDCOURT_EXECUTOR_MASTER_KEY` can open, which the repo does not
@@ -391,7 +391,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    writer's `backend/workers/executor`/`backend/api` lane; doing it from here would collide with
    their in-flight commits.
    **UPDATE (`7b8dc2d`, same day) — the "surface-gated" half is RETIRED.** The Go surface this
-   paragraph says must be built first **now exists**: `backend/workers/executor/internal/api/**`
+   paragraph says must be built first **now exists**: `apps/executor/internal/api/**`
    serves all **15** `/api/executor/*` contract routes, mounted by `cmd/executor` on its own
    loopback listener `FUDCOURT_EXECUTOR_API_ADDR` (default `127.0.0.1:3105`, pinned by
    `infrastructure/systemd/fudcourt-executor.service`), with TS-handler envelope fidelity pinned by
@@ -447,7 +447,7 @@ those pre-staged files in; see the commit-scope note below). `git status` is emp
 **Commit-scope note (honesty):** some of this session's commits were made with a bare
 `git commit` while a concurrent writer had files staged in the shared index, so they swept those
 files in under a different message (e.g. `024fadd`, labelled a docs commit, contains 54 files
-including `frontend/web/infrastructure/*` and `backend/workers/executor/internal/platform/lock/valkey.go`). The **content** is
+including `frontend/web/infrastructure/*` and `apps/executor/internal/platform/lock/valkey.go`). The **content** is
 preserved and green; only the commit *messages* under-describe their payload. No work was lost or
 discarded. Re-splitting history now would rewrite commits under an active writer, which is riskier
 than the cosmetic gain, so it is recorded here instead.

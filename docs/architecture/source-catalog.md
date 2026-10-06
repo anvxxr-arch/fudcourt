@@ -33,7 +33,7 @@ Provider ≠ account ≠ source, per the scope prompt: **Binance** is a provider
 
 ## 1. Research / market-aggregator feeds (Go `backend/data` sidecar, :3101)
 
-All five families are served by `backend/data/cmd/data/main.go` on
+All five families are served by `apps/data/main.go` on
 `127.0.0.1:3101` (`/api/cryptorank`, `/api/khala`, `/api/llama`, `/api/news`,
 `/api/chainrank`). Cryptorank/DefiLlama/News are also proxied verbatim by the Next
 routes in §9; **Khala and ChainRank are sidecar-only** — their Next
@@ -43,7 +43,7 @@ keep the last-known upstream constants for the fixture/shaper tooling.
 
 ### 1.1 CryptoRank (`https://cryptorank.io`)
 
-Code: `backend/data/internal/research/cryptorank/{fetch.go,modes.go}`
+Code: `apps/data/internal/research/cryptorank/{fetch.go,modes.go}`
 (28 modes declared, `ModeCount = len(Modes)`; 26 recorded live, 2 refused-by-design data-route
 only). HTML pages are fetched with a Chrome-131 TLS fingerprint **and** HTTP/2 because
 `api.cryptorank.io/v0/*` answers a Cloudflare managed challenge to non-browser clients
@@ -51,7 +51,7 @@ only). HTML pages are fetched with a Chrome-131 TLS fingerprint **and** HTTP/2 b
 
 | source_id | source | provider | category | data produced (concrete) | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `cr-html-home` | CryptoRank homepage SSR payload | CryptoRank | RESEARCH | global mcap/volume/dominance, top coins, gainers/losers slices | `backend/data/internal/research/cryptorank/fetch.go` | MarketOverview (product view) | FREQUENT | NONE (disk cache 60 s) | keyless | active | fixture `home.json.gz` + `MANIFEST.json` |
+| `cr-html-home` | CryptoRank homepage SSR payload | CryptoRank | RESEARCH | global mcap/volume/dominance, top coins, gainers/losers slices | `apps/data/internal/research/cryptorank/fetch.go` | MarketOverview (product view) | FREQUENT | NONE (disk cache 60 s) | keyless | active | fixture `home.json.gz` + `MANIFEST.json` |
 | `cr-html-coins` | All-coins list page | CryptoRank | RESEARCH | per-coin rank, symbol, price, 24h/7d change, mcap, volume | same | Asset, Price (target) | FREQUENT | NONE | keyless | active | `MANIFEST.json` mode `coins` |
 | `cr-html-trending` | Trending page | CryptoRank | RESEARCH | trending coin rows + ranks | same | Asset (enrichment) | FREQUENT | NONE | keyless | active | `MANIFEST.json` mode `trending` |
 | `cr-html-gainers` | Gainers page | CryptoRank | RESEARCH | top gainers with % change | same | Price/MarketData (derived) | FREQUENT | NONE | keyless | active | `MANIFEST.json` mode `gainers` |
@@ -85,78 +85,78 @@ unique temp file).
 
 ### 1.2 Khala (`https://www.khala.io`)
 
-Code: `backend/data/internal/research/khala/{fetch.go,modes.go,parse.go,shape.go}`.
+Code: `apps/data/internal/research/khala/{fetch.go,modes.go,parse.go,shape.go}`.
 Plain `net/http`, no browser fingerprint needed (upstream answers non-browser UA with a
 real 200 — measured, quoted at `modes.go:18-21`). Two source URLs: homepage rows and
 `sitemap.xml` (auxiliary enumeration, 11 `<loc>` entries).
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `khala-reports` | khala.io homepage report cards, newest-first | Khala | RESEARCH | report slug, title, category, image; **no dates** | `backend/data/internal/research/khala/fetch.go` | ResearchReport (target) | PERIODIC | NONE | keyless | active | `modes.go` modes `reports`; `HomeURL` |
+| `khala-reports` | khala.io homepage report cards, newest-first | Khala | RESEARCH | report slug, title, category, image; **no dates** | `apps/data/internal/research/khala/fetch.go` | ResearchReport (target) | PERIODIC | NONE | keyless | active | `modes.go` modes `reports`; `HomeURL` |
 | `khala-report` | One report page `/ <slug>` | Khala | RESEARCH | report body text, headings, authors, external links | same | ResearchReport (target) | STATIC | NONE | keyless | active | `modes.go` mode `report`, `KeyRe` (128-char max, measured) |
 | `khala-latest` | homepage rows + per-report fetches to resolve dates | Khala | RESEARCH | newest N reports *with* `published_at` resolved | same | ResearchReport (target) | PERIODIC | NONE | keyless | active | `modes.go` mode `latest`, `LimitMin/LimitMax` 1–50, default 5 |
-| `khala-sitemap` | `https://www.khala.io/sitemap.xml` | Khala | RESEARCH | 11 `<loc>` entries → `upstreamTotal` independent of the homepage parse | `backend/data/internal/research/khala/fetch.go` | enumeration metadata | PERIODIC | NONE | keyless | active | `modes.go:SitemapURL` comment |
-| `khala-searchindex` | `framerusercontent.com/sites/<id>/searchIndex.json` | Framer (host) | RESEARCH | Framer search index (used by tests/diagnostics only) | `backend/data/internal/research/khala/fetch.go:128` (comment), `fetch_test.go:362` | raw provider payload | PERIODIC | NONE | keyless | scaffolded | test fixture reference |
+| `khala-sitemap` | `https://www.khala.io/sitemap.xml` | Khala | RESEARCH | 11 `<loc>` entries → `upstreamTotal` independent of the homepage parse | `apps/data/internal/research/khala/fetch.go` | enumeration metadata | PERIODIC | NONE | keyless | active | `modes.go:SitemapURL` comment |
+| `khala-searchindex` | `framerusercontent.com/sites/<id>/searchIndex.json` | Framer (host) | RESEARCH | Framer search index (used by tests/diagnostics only) | `apps/data/internal/research/khala/fetch.go:128` (comment), `fetch_test.go:362` | raw provider payload | PERIODIC | NONE | keyless | scaffolded | test fixture reference |
 
 ### 1.3 DefiLlama (`https://api.llama.fi`)
 
-Code: `backend/data/internal/research/llama/{fetch.go,modes.go,shape.go}`. In-memory
+Code: `apps/data/internal/research/llama/{fetch.go,modes.go,shape.go}`. In-memory
 per-process TTL cache, default 15 s (`FUDCOURT_DATA_LLAMA_TTL`), keyed on the upstream
 URL; bounded by construction at three URLs.
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `llama-chains` | `GET /v2/chains` | DefiLlama | RESEARCH | per-chain TVL rows (list of 467), re-sorted by TVL desc | `backend/data/internal/research/llama/modes.go` | Protocol/Chain TVL (target) | PERIODIC | NONE | keyless | active | `modes.go` mode `chains`, `DerivedChains` |
+| `llama-chains` | `GET /v2/chains` | DefiLlama | RESEARCH | per-chain TVL rows (list of 467), re-sorted by TVL desc | `apps/data/internal/research/llama/modes.go` | Protocol/Chain TVL (target) | PERIODIC | NONE | keyless | active | `modes.go` mode `chains`, `DerivedChains` |
 | `llama-protocols` | `GET /protocols` (8.9 MB) | DefiLlama | RESEARCH | protocol slug/name/category/chains/tvl, trimmed to `top` head (default 50, max 200) | same | Protocol + TVLObservation (target) | PERIODIC | NONE | keyless | active | `modes.go` mode `protocols`, `TopParam` |
 | `llama-historical` | `GET /v2/historicalChainTvl` (3290 pts, oldest-first) | DefiLlama | RESEARCH | `{date, tvl}` tail, default 365 days, max 3288 | same | TVLObservation history (target) | PERIODIC | NONE | keyless | active | `modes.go` mode `historical`, `DaysParam` |
 
 ### 1.4 News — Cointelegraph RSS
 
-Code: `backend/data/internal/research/news/{fetch.go,modes.go,parse.go,shape.go}`.
+Code: `apps/data/internal/research/news/{fetch.go,modes.go,parse.go,shape.go}`.
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `news-cointelegraph-rss` | `GET https://cointelegraph.com/rss` (~340 KB, one `<channel>`, 30–100 `<item>`) | Cointelegraph | NEWS | title, link, description, pubDate, optional `media:content` image | `backend/data/internal/research/news/modes.go` (`Sources` table, one row) | NewsArticle (target) | FREQUENT | NONE (TTL cache) | keyless | active | `modes.go:PathRSS`, `Sources = [{cointelegraph …}]` |
+| `news-cointelegraph-rss` | `GET https://cointelegraph.com/rss` (~340 KB, one `<channel>`, 30–100 `<item>`) | Cointelegraph | NEWS | title, link, description, pubDate, optional `media:content` image | `apps/data/internal/research/news/modes.go` (`Sources` table, one row) | NewsArticle (target) | FREQUENT | NONE (TTL cache) | keyless | active | `modes.go:PathRSS`, `Sources = [{cointelegraph …}]` |
 
 The table shape is deliberately kept so a second feed is a table row, not a second code
 path (`modes.go` comment). No second feed exists.
 
 ### 1.5 ChainRank (`https://www.chainrank.fyi`)
 
-Code: `backend/data/internal/research/chainrank/{fetch.go,modes.go,shape.go}`.
+Code: `apps/data/internal/research/chainrank/{fetch.go,modes.go,shape.go}`.
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `chainrank-stats` | `GET /api/stats` | ChainRank | MARKET_DATA | `online, totalClicks, listings, totalUsdCents, topUsdCents, claimTopCents` | `backend/data/internal/research/chainrank/modes.go` | internal site metric (not portfolio data) | REALTIME-ish | NONE | keyless | active | `modes.go:Modes = ["stats","listings"]` |
+| `chainrank-stats` | `GET /api/stats` | ChainRank | MARKET_DATA | `online, totalClicks, listings, totalUsdCents, topUsdCents, claimTopCents` | `apps/data/internal/research/chainrank/modes.go` | internal site metric (not portfolio data) | REALTIME-ish | NONE | keyless | active | `modes.go:Modes = ["stats","listings"]` |
 | `chainrank-listings` | `GET /api/listings?page&pageSize` | ChainRank | MARKET_DATA | listing rows + pagination (`total,totalPages`), params relayed untouched | same | site directory listing (not portfolio) | FREQUENT | NONE | keyless | active | `modes.go:UpstreamURL` |
 | `chainrank-writes` | `POST /api/click|presence|claim/*|upload` | ChainRank | — | **deliberately not proxied** (writes) | comment in `modes.go` | — | — | NONE | keyless | absent by design | `modes.go` header comment |
 
 **Path note (correction B).** Every path cited in this document was re-verified with
 `test -f` / `test -e` against the tree as it stands now. Two regroupings landed while this
-audit ran and **all citations use the post-move paths**: `backend/data/internal/{cryptorank,
-khala,llama,news,chainrank,paritytest}` → `backend/data/internal/research/*` and
-`backend/data/internal/{cache,httpx}` → `backend/data/platform/*`; `backend/api/internal/
+audit ran and **all citations use the post-move paths**: `apps/data/internal/{cryptorank,
+khala,llama,news,chainrank,paritytest}` → `apps/data/internal/research/*` and
+`apps/data/internal/{cache,httpx}` → `apps/data/platform/*`; `apps/api/internal/
 {markets,instruments,ledger,portfolio,treasury,transactions,wallets,exchangeaccounts,
-credentials,authorization,entitlements,identity}` → `backend/api/internal/
+credentials,authorization,entitlements,identity}` → `apps/api/internal/
 {markets/{instruments,overview}, finance/*, accounts/{exchange,wallets}, access/*}`.
 Paths that refer to a directory rather than an exact file were verified as directories.
 
 ### 1.6 CoinGlass (`https://capi.coinglass.com`)
 
-Code: `backend/data/internal/research/coinglass/{modes.go,fetch.go}`. Keyless: this is the dashboard's
+Code: `apps/data/internal/research/coinglass/{modes.go,fetch.go}`. Keyless: this is the dashboard's
 own backend, whose body is two rounds of AES-128-ECB+PKCS#7 (see the `fudcourt-development` skill §9).
 **No `CG-API-KEY`**, and the official `open-api-v4` host is NOT wired.
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `cg-futures-statistics` | `GET /api/futures/home/statistics` | CoinGlass | DERIVATIVES | futures home statistics (encrypted dashboard body) | `backend/data/internal/research/coinglass/modes.go:UpstreamURL` | derivatives aggregate (target) | FREQUENT | NONE | keyless | active | `curl 127.0.0.1:3101/api/coinglass?mode=statistics` → 200 |
+| `cg-futures-statistics` | `GET /api/futures/home/statistics` | CoinGlass | DERIVATIVES | futures home statistics (encrypted dashboard body) | `apps/data/internal/research/coinglass/modes.go:UpstreamURL` | derivatives aggregate (target) | FREQUENT | NONE | keyless | active | `curl 127.0.0.1:3101/api/coinglass?mode=statistics` → 200 |
 | `cg-open-interest` | `GET /api/openInterest/info?symbol=<SYM>` | CoinGlass | DERIVATIVES | open interest for one symbol (keyed) | same | OpenInterest (target) | FREQUENT | NONE | keyless | active | `curl ...mode=openInterest&symbol=BTC` → 200 |
 | `cg-funding-rank` | `GET /api/fundingRate/rank` | CoinGlass | DERIVATIVES | funding-rate rank, 50 most extreme ± | same | FundingRate (target) | FREQUENT | NONE | keyless | active | `curl ...mode=fundingRate` → 200 |
 | `cg-futures-markets` | `GET /api/futures/v2/coins/markets` | CoinGlass | DERIVATIVES | futures coins markets table | same | Instrument + derivatives metrics (target) | FREQUENT | NONE | keyless | active | `curl ...mode=markets` → 200 |
 
 ### 1.7 CoinAnk (`https://api.coinank.com`)
 
-Code: `backend/data/internal/research/coinank/{modes.go,fetch.go}`. Keyless via a client-computed
+Code: `apps/data/internal/research/coinank/{modes.go,fetch.go}`. Keyless via a client-computed
 signature; **no issued key**, and the official `open-api.coinank.com` host is NOT wired. **All five
 modes are `dark`** — every call returns HTTP 502 carrying the upstream body
 `{"code":"403","detail":"CoinAnk refused the request: please sub api to get data"}`. The sidecar wires
@@ -164,7 +164,7 @@ the family correctly; the upstream refuses. The `monitor-coinank` job watches fo
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `ca-funding-rate` | `GET /api/fundingRate/current` | CoinAnk | DERIVATIVES | funding rates, 882 symbols × per-exchange maps | `backend/data/internal/research/coinank/modes.go:UpstreamURL` | FundingRate (target) | FREQUENT | NONE | keyless | dark | `curl 127.0.0.1:3101/api/coinank?mode=fundingRate` → 502 `403` |
+| `ca-funding-rate` | `GET /api/fundingRate/current` | CoinAnk | DERIVATIVES | funding rates, 882 symbols × per-exchange maps | `apps/data/internal/research/coinank/modes.go:UpstreamURL` | FundingRate (target) | FREQUENT | NONE | keyless | dark | `curl 127.0.0.1:3101/api/coinank?mode=fundingRate` → 502 `403` |
 | `ca-liquidation` | `GET /api/liquidation/allExchange` (interval allowlist 1h/2h/4h/6h/12h/1d) | CoinAnk | DERIVATIVES | per-exchange liquidation turnover | same | liquidation metric (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=liquidation` → 502 `403` |
 | `ca-long-short` | `GET /api/longshort/all` | CoinAnk | DERIVATIVES | long/short ratios across exchanges | same | long/short ratio (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=longShort` → 502 `403` |
 | `ca-etf-inflow` | `GET /api/etf/etfInflow` | CoinAnk | MARKET_DATA | daily spot-ETF creations/redemptions | same | ETF flow (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=etf` → 502 `403` |
@@ -172,7 +172,7 @@ the family correctly; the upstream refuses. The `monitor-coinank` job watches fo
 
 ### 1.8 CoinMarketCap (`https://api.coinmarketcap.com/data-api/v3`)
 
-Code: `backend/data/internal/research/coinmarketcap/{modes.go,fetch.go}`. Keyless for a **third**
+Code: `apps/data/internal/research/coinmarketcap/{modes.go,fetch.go}`. Keyless for a **third**
 mechanism — neither an encrypted body to decrypt (CoinGlass) nor a computed signature (CoinAnk):
 this is the coinmarketcap.com dashboard's own backend and it takes **no credential of any kind**, so
 the fetch is a plain `net/http` GET. The documented `pro-api.coinmarketcap.com` (which needs an issued
@@ -183,7 +183,7 @@ list**, so the pagination bounds are validated locally (a bad value is a 400 bef
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `cmc-listing` | `GET /cryptocurrency/listing?start&limit` | CoinMarketCap | MARKET_DATA | ranked coin listing (price/market-cap/volume) | `backend/data/internal/research/coinmarketcap/modes.go:UpstreamURL` | Instrument + quote metrics (target) | FREQUENT | NONE (disk cache) | keyless (none) | active | `curl 127.0.0.1:3101/api/coinmarketcap?mode=listing` → 200 |
+| `cmc-listing` | `GET /cryptocurrency/listing?start&limit` | CoinMarketCap | MARKET_DATA | ranked coin listing (price/market-cap/volume) | `apps/data/internal/research/coinmarketcap/modes.go:UpstreamURL` | Instrument + quote metrics (target) | FREQUENT | NONE (disk cache) | keyless (none) | active | `curl 127.0.0.1:3101/api/coinmarketcap?mode=listing` → 200 |
 | `cmc-global` | `GET /global-metrics/quotes/latest` | CoinMarketCap | MARKET_DATA | global market aggregate (object payload) | same | market aggregate (target) | FREQUENT | NONE (disk cache) | keyless (none) | active | `curl ...mode=global` → 200 |
 | `cmc-market-pairs` | `GET /cryptocurrency/market-pairs/latest?slug=<SLUG>` | CoinMarketCap | MARKET_DATA | trading pairs for one coin (`slug` required) | same | Instrument markets (target) | FREQUENT | NONE (disk cache) | keyless (none) | active | `curl ...mode=marketPairs&slug=bitcoin` → 200 (no `slug` → 400) |
 | `cmc-exchanges` | `GET /exchange/listing?start&limit` | CoinMarketCap | MARKET_DATA | ranked exchange listing (volume/score) | same | venue metrics (target) | FREQUENT | NONE (disk cache) | keyless (none) | active | `curl ...mode=exchanges` → 200 |
@@ -277,7 +277,7 @@ Venue boundary: `internal/exchanges/interface.go` (`Exchange` interface). Adapte
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `binance-account` | `GET /api/v3/account` + `GET /fapi/v2/positionRisk` | Binance | CEX | asset free/locked balances; futures position risk rows | `backend/workers/executor/internal/exchanges/binance/binance.go` | Balance + Position (target) | REALTIME | SNAPSHOT (`executor.balance_snapshots` / `positions_snapshots`) | per-account HMAC key (`executor.exchange_accounts.api_key_encrypted`) | active | `DefaultBaseURL = "https://api.binance.com"` |
+| `binance-account` | `GET /api/v3/account` + `GET /fapi/v2/positionRisk` | Binance | CEX | asset free/locked balances; futures position risk rows | `apps/executor/internal/exchanges/binance/binance.go` | Balance + Position (target) | REALTIME | SNAPSHOT (`executor.balance_snapshots` / `positions_snapshots`) | per-account HMAC key (`executor.exchange_accounts.api_key_encrypted`) | active | `DefaultBaseURL = "https://api.binance.com"` |
 | `binance-ticker` | `GET /api/v3/ticker/bookTicker` | Binance | CEX/MARKET_DATA | bid/ask book ticker | same | Ticker (target) | REALTIME | EPHEMERAL | keyless | active | adapter path list |
 | `binance-orders` | `POST /api/v3/order`, `GET /api/v3/order`, `GET /api/v3/openOrders`, `DELETE /api/v3/order` | Binance | CEX | normalized order (status, executed qty, fills) | same | Order (target) | REALTIME | EVENT (`executor.child_orders`, `execution_events`) | account key | active | `internal/orders/orders.go` |
 | `binance-fills` | `GET /api/v3/myTrades` | Binance | CEX | trade prints (price, qty, commission, tradeId) | same | Fill (target) | REALTIME | EVENT (`executor.fills`, unique `(account_id, exchange_trade_id)`) | account key | active | `insertFill` dedup comment |
@@ -302,8 +302,8 @@ Venue id ↔ default host are the only hardcoded roots; `Config.BaseURL` overrid
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `discord-oauth` | OAuth2 authorize + token exchange (`/oauth2/authorize`, `/api/oauth2/token`) | Discord | IDENTITY | access/refresh token, then `/api/v10/users/@me` profile | `backend/api/cmd/api/discord.go:25-27` | Identity/Session (target) | MANUAL/on-login | SESSION (HMAC cookie) | `FUDCOURT_CLIENT_ID` + `FUDCOURT_CLIENT_SECRET` | active | `discordAPI = "https://discord.com/api/v10"` |
-| `discord-guild-member` | guild member lookup (roles → tier) | Discord | IDENTITY | member roles → `TEAM`/`ADMIN` tier | `backend/api/cmd/api/discord.go`, `backend/api/internal/access/identity/roles.go` | Authorization (target) | MANUAL/on-login | NONE | `FUDCOURT_BOT_TOKEN`, `FUDCOURT_GUILD_ID`, `FUDCOURT_ROLE_TEAM`, `FUDCOURT_ROLE_ADMIN` | active | role env names in `main.go:60-63` |
+| `discord-oauth` | OAuth2 authorize + token exchange (`/oauth2/authorize`, `/api/oauth2/token`) | Discord | IDENTITY | access/refresh token, then `/api/v10/users/@me` profile | `apps/api/discord.go:25-27` | Identity/Session (target) | MANUAL/on-login | SESSION (HMAC cookie) | `FUDCOURT_CLIENT_ID` + `FUDCOURT_CLIENT_SECRET` | active | `discordAPI = "https://discord.com/api/v10"` |
+| `discord-guild-member` | guild member lookup (roles → tier) | Discord | IDENTITY | member roles → `TEAM`/`ADMIN` tier | `apps/api/discord.go`, `apps/api/internal/access/identity/roles.go` | Authorization (target) | MANUAL/on-login | NONE | `FUDCOURT_BOT_TOKEN`, `FUDCOURT_GUILD_ID`, `FUDCOURT_ROLE_TEAM`, `FUDCOURT_ROLE_ADMIN` | active | role env names in `main.go:60-63` |
 
 Note: `FUDCOURT_DISCORD_API` is a hermetic-test seam that redirects both endpoints
 (`main.go:66-71`); unset keeps real `discord.com`.
@@ -331,11 +331,11 @@ These are *stored* sources — the repo both writes and reads them.
 | `postgres-system-of-record` | Local Postgres 17 + TimescaleDB 2.30.1, database `fudcourt` (`public`) — Docker `postgres-hardened`, `127.0.0.1:5432` | self-hosted | INTERNAL | **single system of record** for `assets`, `transactions`, `wallets`, `accounts`, `journal`, `ledger`, `trades`, `venues` + the `asset_history`/`price_history` hypertables | writers `tests/oracle/sync-live.py` (psycopg2), `backend/sync` (Rust `tokio-postgres`, uninstalled), `frontend/web/src/server/db.ts`; DDL `database/schema/pg-schema.sql` | (system of record) | NEAR_REALTIME | CANONICAL | `FUDCOURT_PG_URL` | active | pooled `pg()` client (`platform/db/pg.ts`) |
 | `postgres-asset-history` | `asset_history` TimescaleDB hypertable | self-hosted | INTERNAL | one row per `assets` INSERT, appended by the `assets_snapshot` trigger (DR-040 — not by application code) | DDL `database/schema/pg-schema.sql:105-128` + trigger `:145-148`; 90-day DELETE in `tests/oracle/sync-live.py` | Balance snapshot (time series) | PERIODIC (per write) | HISTORICAL (90-day retention) | `FUDCOURT_PG_URL` | active | `CREATE TRIGGER assets_snapshot_trg AFTER INSERT ON assets` |
 | `postgres-price-history` | `price_history` hypertable | self-hosted | INTERNAL | `(ts, symbol, source, price)` | DDL only: `database/schema/pg-schema.sql:150-160`; retention DELETE in `tests/oracle/sync-live.py` | Price history (target) | — | HISTORICAL | `FUDCOURT_PG_URL` | **served** (no writer found) | grep: only DDL + retention DELETE reference it |
-| `executor-postgres` | `executor.*` schema | self-hosted Postgres | INTERNAL | accounts+credentials, executions, plans, child orders, fills, events, snapshots, risk profiles, audit logs | DDL `database/schema/executor-schema.sql`; writers `backend/workers/executor/internal/repository/store.go` + the `backend/workers/executor/internal/repository` package (store.go, credentials.go) | (execution system of record) | REALTIME | CANONICAL/EVENT | `FUDCOURT_EXECUTOR_PG_URL` (Go), Postgres DSN via web env | active | `ensureExecutorSchema()` / `EXECUTOR_DDL` |
+| `executor-postgres` | `executor.*` schema | self-hosted Postgres | INTERNAL | accounts+credentials, executions, plans, child orders, fills, events, snapshots, risk profiles, audit logs | DDL `database/schema/executor-schema.sql`; writers `apps/executor/internal/repository/store.go` + the `apps/executor/internal/repository` package (store.go, credentials.go) | (execution system of record) | REALTIME | CANONICAL/EVENT | `FUDCOURT_EXECUTOR_PG_URL` (Go), Postgres DSN via web env | active | `ensureExecutorSchema()` / `EXECUTOR_DDL` |
 | `neon-payload` | Neon Postgres (`DATABASE_URL`, pooled `…neon.tech/neondb`) | Neon | CMS | Payload tables (`posts`, `categories`, `media`, `users`, …) | `frontend/web/src/cms/payload.config.ts:44-46`, DDL `src/cms/migrations/20260917_194354.ts` | NewsArticle/CMS content (target) | MANUAL | CANONICAL | `DATABASE_URL`, `PAYLOAD_SECRET` | active | `postgresAdapter({ connectionString: process.env.DATABASE_URL })` |
 | `payload-media-files` | Uploaded media on disk (`frontend/web/media`) | self-hosted | CMS | image/PDF blobs + metadata | `src/cms/collections/Media.ts` (`staticDir: 'media'`) | MediaAsset (target) | MANUAL | CANONICAL | `PAYLOAD_SECRET` (admin session) | active | Media collection config |
-| `valkey-cache` | Valkey/Redis cache & lock | self-hosted | INTERNAL | cached upstream envelopes, executor leases | `backend/data/platform/cache/cache.go`, `backend/workers/executor/internal/platform/lock/valkey.go` | (cache) | REALTIME | EPHEMERAL | `FUDCOURT_DATA_VALKEY_PASSWORD`, `VALKEY_PASSWORD`, `FUDCOURT_VALKEY_URL` | active | `fudcourt-data.service` env line `FUDCOURT_DATA_VALKEY_ADDR` |
-| `cr-disk-cache` | On-disk per-route JSON cache `~/.cache/crfetch` (shared with the Python helper) | self-hosted | INTERNAL | cached `HelperOut` envelopes | `backend/data/internal/research/cryptorank/fetch.go` (`DefaultCacheDir`, `writeCache`) | (cache) | REALTIME | EPHEMERAL | keyless | active | `fudcourt-data.service` `FUDCOURT_DATA_CACHE_DIR` |
+| `valkey-cache` | Valkey/Redis cache & lock | self-hosted | INTERNAL | cached upstream envelopes, executor leases | `apps/data/platform/cache/cache.go`, `apps/executor/internal/platform/lock/valkey.go` | (cache) | REALTIME | EPHEMERAL | `FUDCOURT_DATA_VALKEY_PASSWORD`, `VALKEY_PASSWORD`, `FUDCOURT_VALKEY_URL` | active | `fudcourt-data.service` env line `FUDCOURT_DATA_VALKEY_ADDR` |
+| `cr-disk-cache` | On-disk per-route JSON cache `~/.cache/crfetch` (shared with the Python helper) | self-hosted | INTERNAL | cached `HelperOut` envelopes | `apps/data/internal/research/cryptorank/fetch.go` (`DefaultCacheDir`, `writeCache`) | (cache) | REALTIME | EPHEMERAL | keyless | active | `fudcourt-data.service` `FUDCOURT_DATA_CACHE_DIR` |
 | `fixtures-recorded` | `tests/fixtures/` (26 `.json.gz` payloads) + `MANIFEST.json` | CryptoRank (recorded 2026-09-27) | RESEARCH (frozen) | 26 raw `HelperOut` payloads, sha256-pinned | `tests/oracle/record-fixtures.ts`, manifest `MANIFEST.json` | raw fixture | STATIC | HISTORICAL | `CR_PYTHON` (path only) | active (test oracle) | `sha256` + `jsonBytes` per mode |
 | `fixtures-expected` | `tests/fixtures/expected/` (one JSON per mode) | FUDCourt (frozen envelopes) | INTERNAL | expected envelope output per mode for the Go/TS parity diff | `tests/oracle/dump-envelopes.ts` | test oracle | STATIC | HISTORICAL | keyless | active | `dump:envelopes` script |
 | `oracle-capture` | `tests/oracle/fixtures/capture.json` (40 keys) | recorded RPC/price/Hyperliquid responses | INTERNAL (test) | replay bodies keyed `rpc\|<url with ALCHEMY redacted>\|<method>\|<params>` / `prices\|<url>` / `hl\|<body>` | `backend/sync/src/oracle.rs` | test oracle | STATIC | HISTORICAL | keyless (keys carry `/v2/{ALCHEMY}` placeholder, never a real key) | active | `capture.json` keys + `oracle.rs` doc |
@@ -393,7 +393,7 @@ running it (e.g. statuses of `served` tables with no in-app writer).
 | `GET /api/reconcile` | reconciliation board | Rust :3102 `/api/reconcile` | keyless | `RECONCILE_URL` |
 | `GET /api/auth/login`, `/api/auth/callback`, `/api/auth/logout` | Discord OAuth | Go :3103 `/api/auth/*` | Discord OAuth | `FUDCOURT_API_URL` |
 | `GET/POST /api/admin/members` | member/tier admin | Go :3103 `/api/admin/members` | session + admin tier | `FUDCOURT_API_URL` |
-| `/api/executor/**` (accounts, executions, orders, fills, events, preview, settings, emergency, start/pause/resume/cancel) | executor control plane | **`executor.*` Postgres directly from the Next app** (`backend/workers/executor/internal/repository/store.go`) | executor user session | Postgres DSN |
+| `/api/executor/**` (accounts, executions, orders, fills, events, preview, settings, emergency, start/pause/resume/cancel) | executor control plane | **`executor.*` Postgres directly from the Next app** (`apps/executor/internal/repository/store.go`) | executor user session | Postgres DSN |
 | `/blog/cms/api/[...slug]`, `/blog/cms/api/graphql` | Payload CMS REST/GraphQL | Neon Postgres via Payload | Payload admin session | `DATABASE_URL`, `PAYLOAD_SECRET` |
 
 ---
@@ -413,7 +413,7 @@ document**.
 | `fudcourt-sync-rust.service` + `.timer` (5 min) | Rust `fudcourt-sync` | §3 Alchemy/Solana/Hyperliquid/coins.llama.fi → Postgres `assets` (**built, not deployed** — the Python oracle is the deployed sync) | `NODE_ENV=` (unit loads repo `.env` itself) |
 | `fudcourt-sync.service` + `.timer` (5 min) | `python3 sync-live.py` | same pipeline, legacy oracle | inline env only |
 | `fudcourt-executor.service` | Go `fudcourt-executor` (CEX runtime) | §4 venue order/balance/position feeds | `frontend/web/.env.local` |
-| `fudcourt-executor-worker.service` | bun `backend/workers/executor` | same feeds, TS runtime — **FALLBACK only** (the Go `fudcourt-executor.service` is the production executor; this unit is retained until the cutover row `verify:executor` (`backend/workers/executor/internal/tests/e2e`) proves green) | `frontend/web/.env.local`, `NODE_ENV=production` |
+| `fudcourt-executor-worker.service` | bun `backend/workers/executor` | same feeds, TS runtime — **FALLBACK only** (the Go `fudcourt-executor.service` is the production executor; this unit is retained until the cutover row `verify:executor` (`apps/executor/internal/tests/e2e`) proves green) | `frontend/web/.env.local`, `NODE_ENV=production` |
 | `RETIRED-fudcourt-pgload.service.txt` | — | retired Turso → Postgres projection unit (DR-040: the projection is gone; Postgres is the single system of record) | tombstone file |
 | `RETIRED-fudcourt-apicalls.service.txt` | — | retired CryptoRank sidecar (predecessor of `fudcourt-data`) | tombstone file |
 | `RETIRED-fudcourt-blog.service.txt` | — | retired separate blog app (merged by DR-017) | tombstone file |

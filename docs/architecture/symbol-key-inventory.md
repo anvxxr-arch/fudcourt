@@ -6,7 +6,7 @@ duplicate of — `data-catalog.md` (per-dataset identity strategy), `database-cl
 Those documents answer "what is this dataset/table/column"; this one answers "which concrete
 string, at which line, is load-bearing as an identity, and what would replace it".
 
-Canonical minting and the mapping artifact: `backend/api/internal/markets/reference/**`,
+Canonical minting and the mapping artifact: `apps/api/internal/markets/reference/**`,
 `[removed: markets/instruments/canonical.go]`, `shared/contracts/data/reference.json`
 (9 chains, 8 assets, 11 tokens, 12 venues, 49 mappings, 3 misses — re-read this turn), DR-034 and
 DR-036 in `docs/records/DECISIONS.md`.
@@ -20,7 +20,7 @@ resolver exists **today**. Anything not directly read from a file this session i
 Availability legend, verified this turn:
 - **AVAILABLE** — `reference.json` `mappings` resolves it by `(provider, provider_id)`, or
   `reference.Build()` + `Reference.Resolve`/`ChainByName`/`TokenByAddress`
-  (`backend/api/internal/markets/reference/registry.go:486,554,582`) does in-process.
+  (`apps/api/internal/markets/reference/registry.go:486,554,582`) does in-process.
 - **AVAILABLE (instrument)** — `instruments.ResolveInstrument` (`canonical.go:351`) over a built
   registry; **not** emitted to `reference.json` by design (`canonical.go:40-45`).
 - **BLOCKED** — no resolver exists for this string at all (no mapping row, lossy value, or the
@@ -70,7 +70,7 @@ mirror's line; the rows below are the ones that are **not** pure copies.
 | C6 | `executor-schema.sql:147,154` `UNIQUE (account_id, exchange_trade_id)` | venue trade id | **unique-index key** — the idempotent-fill guarantee (DR-021 §62) | `store.ts:290,468-471`; `records.go:96-108`; `executor/types.ts:1299-1300`; `wire.go:162` | none — provider id under an account-scoped key | **N/A** |
 | C7 | `executor-schema.sql:152` (`fills.fee_asset`) | fee asset symbol | **identity** of what the fee was charged in | `records.go:105,244`; `wire.go:167`; `executor/types.ts:1157` region | `asset_id` | **AVAILABLE** for the 8 seeded assets; a venue fee in an unseeded coin is **BLOCKED** (no mapping row; `misses` has the HYPE/zero-address cases) |
 
-## D. Go — `backend/api/internal/**`
+## D. Go — `apps/api/internal/**`
 
 | # | where | what string | role | consumer(s) that would break | canonical replacement | availability |
 |---|---|---|---|---|---|---|
@@ -87,7 +87,7 @@ mirror's line; the rows below are the ones that are **not** pure copies.
 | D11 | `[removed: markets/instruments/canonical.go],478` `assetIDForSymbol`,`venueIDForSlug` | the symbol→id lookup itself | the resolver's internals | `ResolveInstrument` | — | **AVAILABLE** — but note `canonical-model.md:930` (INFERENCE 14): the registry reads the *entity list*, and only one asset (`MATIC`) is seeded as an `internal` provider id |
 | D12 | `[removed: markets/overview/market.go]` | `Exchange`+`Symbol` on **eight** structs: `Ticker:39,41`, `Candle:51,52`, `Book:74,75`, `MarkPrice:85,86`, `IndexPrice:94,95`, `FundingRate:104,105`, `OpenInterest:114,115` | **identity** of each market-data row (`Ticker.Symbol` is canonical `BASE/QUOTE`) | `validate.go` (every `Validate` refuses an empty exchange/symbol); `markets/ticker.json` wants `instrument_id`+`venue_id` | `instrument_id` + `venue_id` | **AVAILABLE (instrument)**; **no producer serves these types yet** (`canonical-model.md:347-361` records "schema only — no runtime consumer") |
 
-## E. Go — `backend/workers/executor/internal/**`
+## E. Go — `apps/executor/internal/**`
 
 | # | where | what string | role | consumer(s) that would break | canonical replacement | availability |
 |---|---|---|---|---|---|---|
@@ -252,7 +252,7 @@ DDL" count is derived by intersecting the row sets, not from a stored declaratio
    §6.1). Reported, not edited.
 
 **Note on a concurrent actor.** While this inventory was being written, `database/schema/pg-schema.sql`
-(+54 lines) and `database/schema/executor-schema.sql` (+18/-5), `backend/api/internal/markets/reference/loader.go`,
+(+54 lines) and `database/schema/executor-schema.sql` (+18/-5), `apps/api/internal/markets/reference/loader.go`,
 `docs/architecture/canonical-model.md`, `docs/architecture/database-classification.md`,
 `docs/records/DECISIONS.md` and others changed underfoot (DR-036). Every line number above was
 re-read **after** those changes; the SQL rows quoted here are from the current working tree

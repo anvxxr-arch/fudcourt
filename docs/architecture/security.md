@@ -4,7 +4,7 @@
 > `frontend/web/src/middleware.ts`, `frontend/web/src/platform/executor/store.ts`,
 > `frontend/web/src/platform/executor/{runtime,exchange,types,lock}.ts`,
 > `database/schema/executor-schema.sql`, PRD §43–§47, §108–§110,
-> `docs/operations/SECRETS.md`, `backend/api/internal/audit/audit.go`.
+> `docs/operations/SECRETS.md`, `apps/api/internal/audit/audit.go`.
 
 ## 1. Session auth
 - **Discord OAuth2 + one HMAC-signed cookie.** `fud_session` is HMAC-SHA256,
@@ -52,7 +52,7 @@ Plaintext key material (API secret, full API key, signed payload, auth headers
 | logs | PRD §109 allowed list only (exchange, account id, execution id, symbol, order id, status, latency, error code) | PRD §109 |
 | events | events never carry credentials/secrets | `docs/architecture/events.md` §4 |
 | analytics | analytics tables (`assets`, `asset_history`, `price_history`) hold market data only — no credential columns exist | `database/schema/pg-schema.sql` |
-| audit | `Redact` replaces values under sensitive keys with `[REDACTED]`, recursively, before storage | `backend/api/internal/audit/audit.go` |
+| audit | `Redact` replaces values under sensitive keys with `[REDACTED]`, recursively, before storage | `apps/api/internal/audit/audit.go` |
 | frontend state | secrets leave the browser exactly once (connect form) and are cleared immediately; the API only ever answers with the masked key | `ui.tsx` comment + PRD §109 |
 | URLs | secrets never travel in URLs; request URLs carry ids and filters only | `frontend/web/src/features/executor/client.ts` |
 | errors | `mapError` + `SECRET_PATTERNS` sanitize adapter errors so no key/secret/passphrase or signed payload can appear in an `ExecutorError` | `frontend/web/src/platform/executor/exchange.ts` (PRD §109) |

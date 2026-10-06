@@ -237,7 +237,7 @@ Plus `sitemap.ts`, `robots.ts`, `globals.css`, root `layout.tsx`.
 | File | Dialect / role | Objects |
 |---|---|---|
 | `pg-schema.sql` | Postgres system of record (hand-written, DR-040) | `accounts`, `assets`, `journal`, `ledger`, `trades`, `transactions`, `venues`, `wallets` + `asset_history` (indexes `asset_history_asset_ts`, unique snapshot, the `assets_snapshot` trigger), `price_history` (unique `price_history_symbol_ts_source`), `canonical_reference` + `canonical_reference_miss` |
-| `executor-schema.sql` | Postgres `executor` schema (sole owner of the DDL; mirrored in `src/platform/executor/store.ts` `EXECUTOR_DDL` and applied via `ensureExecutorSchema`, and — added `8d87df1` — embedded at `backend/workers/executor/internal/repository/schema/executor-schema.sql`, applied by the Go `repository.EnsureSchema` at `cmd/executor` startup) | `executor.exchange_accounts`, `executor.executions`, `executor.execution_plans`, `executor.child_orders`, `executor.fills`, `executor.execution_events`, `executor.balance_snapshots`, `executor.positions_snapshots`, `executor.risk_profiles`, `executor.audit_logs` (each with the indexes named in the file) |
+| `executor-schema.sql` | Postgres `executor` schema (sole owner of the DDL; mirrored in `src/platform/executor/store.ts` `EXECUTOR_DDL` and applied via `ensureExecutorSchema`, and — added `8d87df1` — embedded at `apps/executor/internal/repository/schema/executor-schema.sql`, applied by the Go `repository.EnsureSchema` at `cmd/executor` startup) | `executor.exchange_accounts`, `executor.executions`, `executor.execution_plans`, `executor.child_orders`, `executor.fills`, `executor.execution_events`, `executor.balance_snapshots`, `executor.positions_snapshots`, `executor.risk_profiles`, `executor.audit_logs` (each with the indexes named in the file) |
 
 Ownership today (feature → tables):
 
@@ -252,7 +252,7 @@ Ownership today (feature → tables):
   byte-identical (normalized) to `database/schema/executor-schema.sql` by
   `tests/integration/executor/executor-store-tests.ts` §59 ("no silent drift"); suite 41/41 green 2026-10-01
   (details in §5a). **A second applier and guard were added `8d87df1`:** the Go runtime embeds a copy
-  at `backend/workers/executor/internal/repository/schema/executor-schema.sql` and applies it at
+  at `apps/executor/internal/repository/schema/executor-schema.sql` and applies it at
   `cmd/executor` startup (`repository.EnsureSchema`, before the worker/API serve, fatal on failure);
   `TestEmbeddedSchemaMatchesTracked` pins that copy to the tracked file **byte-exact** (strictly
   stronger than the TS normalized comparison — it also catches a comment-only edit). The tracked file
@@ -269,7 +269,7 @@ Ownership today (feature → tables):
 | `exchange.ts` | Venue adapters: `CcxtLike` interface, `CreateAdapterOptions`, venue symbol mapping (`toVenueSymbol`/`fromVenueSymbol`), error sanitization/`mapError` |
 | `worker.ts` | Execution worker: `createWorker` → `ExecutorWorkerApi`, child clamping (`clampChild`), fill summaries, live-adapter factory (`setLiveAdapterFactory`) |
 | `lock.ts` | Distributed execution lock: `LockClient`, `lockKey(executionId)`, `executionLock` |
-| `store.ts` | Postgres persistence for `executor.*` (`pg()`, `ensureExecutorSchema`, `EXECUTOR_DDL`), key handling (`masterKeyFromEnv` — encrypted exchange credentials). **Second applier added `8d87df1`:** the Go runtime (`backend/workers/executor/internal/repository/schema.go` `EnsureSchema` at `cmd/executor` startup) applies the same tracked DDL; both copies are drift-guarded against `database/schema/executor-schema.sql` |
+| `store.ts` | Postgres persistence for `executor.*` (`pg()`, `ensureExecutorSchema`, `EXECUTOR_DDL`), key handling (`masterKeyFromEnv` — encrypted exchange credentials). **Second applier added `8d87df1`:** the Go runtime (`apps/executor/internal/repository/schema.go` `EnsureSchema` at `cmd/executor` startup) applies the same tracked DDL; both copies are drift-guarded against `database/schema/executor-schema.sql` |
 | `runtime.ts` | Bootstrap & request auth: `bootstrapExecutor`, `requireExecutorUser`, plan-adapter factory, runtime caches |
 
 Adjacent:
@@ -325,7 +325,7 @@ at /home/dwizzy/fudcourt/tests/e2e/executor/executor-paper-e2e.ts:100:29
 266+ test funcs (all three Go
 modules together: 550+ test funcs). Row-by-row TS↔Go status lives in
 [`parity-matrix.md`](parity-matrix.md) §cutover; every `DONE` row cites the Go suite that pins it.
-The offline composed artifact of that matrix is `backend/workers/executor/internal/tests/e2e/` — 12 hermetic
+The offline composed artifact of that matrix is `apps/executor/internal/tests/e2e/` — 12 hermetic
 scenarios (create→place→fill→complete, TWAP multi-child schedule with the §107 sum bound, lease
 contention, restart-no-duplicate-order, cancel-resting, duplicate-start-noop,
 disconnect-degrade-then-recover, rejected-order-then-replaces, partial-fill-then-complete,
