@@ -1,6 +1,7 @@
-import { l2GetJson, l2SetJson } from '@/server/cache';
-import { TICKER_EXCHANGES, TICKER_TTL_MS, isQuotableSettlement } from '@/features/ticker/client';
-import type { TickerExchange, TickerInstrument, TickerRow, TickerType } from '@/features/ticker/client';
+import 'server-only';
+import { l2GetJson, l2SetJson } from '@/lib/l2';
+import { TICKER_EXCHANGES, TICKER_TTL_MS, isQuotableSettlement } from '../client';
+import type { TickerExchange, TickerInstrument, TickerRow, TickerType } from '../client';
 let sweepCache: { at: number; rows: TickerRow[] } | null = null;
 const SWEEP_KEY = 'fudcourt:web:ticker:sweep';
 

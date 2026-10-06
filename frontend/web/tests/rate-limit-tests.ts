@@ -86,6 +86,25 @@ test('cost: the executor family is priced above the default — placing an order
   }
   assert.ok(ROUTE_COST.executor > DEFAULT_COST, 'the executor must not fall through to the cheapest tier');
 });
+test('cost: the widened route table prices the fan-out families as measured', () => {
+  // Each of these families answers with a board that fans out one upstream call
+  // per dimension/series behind a single page, so a silent default would make
+  // the fattest single-route payloads among the cheapest ways into the upstream.
+  // The figures are the ones the table records, pinned here so re-pricing one
+  // without evidence fails rather than shipping quietly.
+  assert.equal(cost('/api/economy/regime'), ROUTE_COST.economy, 'the regime board reads five series');
+  assert.equal(cost('/api/signals/feed'), ROUTE_COST.signals, 'the signals feed carries full row arrays');
+  assert.ok(ROUTE_COST.economy > DEFAULT_COST, 'the economy family must not fall through to the cheapest tier');
+  assert.ok(ROUTE_COST.signals > DEFAULT_COST, 'the signals family must not fall through to the cheapest tier');
+  // Sub-paths inherit the family price, so a nested route is never a cheaper
+  // way into the same surface.
+  assert.equal(cost('/api/economy/compare'), ROUTE_COST.economy);
+  assert.equal(cost('/api/economy/countries/USA'), ROUTE_COST.economy);
+  assert.equal(cost('/api/signals'), ROUTE_COST.signals);
+  assert.equal(cost('/api/market/stock'), ROUTE_COST.market, 'the asset-class boards ride the market family price');
+  assert.equal(cost('/api/market/commodity'), ROUTE_COST.market);
+  assert.equal(cost('/api/market/macro'), ROUTE_COST.market);
+});
 test('budget: a real cryptorank board mount still fits one window', () => {
   __resetRateLimit();
   // Measured mount (src/features/market-data/cryptorank.ts §useEffect):

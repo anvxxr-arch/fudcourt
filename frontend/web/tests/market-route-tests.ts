@@ -28,7 +28,21 @@ import { GET as commodityGET } from '@/app/(frontend)/api/market/commodity/route
 import { GET as macroGET } from '@/app/(frontend)/api/market/macro/route';
 import { STOCK_REGIONS, STOCK_SYMBOLS } from '@/features/market/stock-regions';
 import { COMMODITY_SYMBOLS } from '@/features/market/commodity-symbols';
-import { MACRO_SYMBOLS, YAHOO_CHART } from '@/features/market/clients';
+import {
+  ECONOMY_INDICATORS,
+  INDICATORS,
+  MACRO_SPREADS,
+  MACRO_SYMBOLS,
+  POLICY_RATES,
+  POLICY_RATE_AREAS,
+  WORLD_AGGREGATES,
+  WORLD_CODES,
+  WORLD_COUNTRIES,
+  YAHOO_CHART,
+} from '@/features/market/clients';
+import { BIS_CBPOL } from '@/features/market/bis';
+import { FRED_CSV } from '@/features/market/fred';
+import { WORLDBANK_API } from '@/features/market/worldbank';
 import { __resetLimiter } from '@/lib/rate-limit';
 // ---------------------------------------------------------------------------
 // A fetch stub. Every upstream call these routes make goes through
@@ -54,9 +68,12 @@ function stubFetch(handler: (url: string) => Answer): () => void {
     const answer = handler(url);
     if (answer === REFUSED) throw new Error('stubbed upstream: connection refused');
     const { status = 200, body } = answer;
-    return new Response(JSON.stringify(body ?? {}), {
+    // A string body is CSV/text (BIS, FRED): it must reach the parser verbatim,
+    // so it is written as-is rather than JSON-encoded into a quoted one-liner.
+    const text = typeof body === 'string' ? body : JSON.stringify(body ?? {});
+    return new Response(text, {
       status,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': typeof body === 'string' ? 'text/csv' : 'application/json' },
     });
   }) as typeof fetch;
   return () => {
@@ -85,6 +102,36 @@ function chartBody(symbol: string, price: number): unknown {
       ],
     },
   };
+}
+/** The BIS CSV envelope `parseBisCsv` accepts: one row per requested area, each
+ *  carrying a rate. The header names are the ones the parser indexes, so a stub
+ *  that renamed them would be testing the failure path, not the success path. */
+function bisBody(areas: readonly string[], rate = 4.25): string {
+  const rows = areas.map((a) => `${a},2026-09-30,${rate}`).join('\n');
+  return `REF_AREA,TIME_PERIOD,OBS_VALUE\n${rows}\n`;
+}
+/** The FRED CSV envelope `parseFred` accepts: a monthly series long enough for a
+ *  12-month YoY, because the shapes with a lag refuse a shorter window. */
+function fredBody(seriesId: string, months = 24): string {
+  const rows: string[] = [];
+  const start = new Date(Date.UTC(2024, 9, 1));
+  for (let i = 0; i < months; i++) {
+    const d = new Date(start);
+    d.setUTCMonth(start.getUTCMonth() + i);
+    rows.push(`${d.toISOString().slice(0, 7)}-01,${(100 + i * 0.5).toFixed(3)}`);
+  }
+  return `observation_date,${seriesId}\n${rows.join('\n')}\n`;
+}
+/** The World Bank envelope `parseWorldBankSeries` accepts: a two-element array
+ *  whose second element is the row list. One row per requested country with a
+ *  value in the window and a decade-earlier one, so `pickLatestAndPrior` can
+ *  fill both the newest cell and its comparison. */
+function worldBankBody(codes: readonly string[], value = 10.5): unknown {
+  const rows = codes.flatMap((code) => [
+    { countryiso3code: code, date: '2024', value },
+    { countryiso3code: code, date: '2015', value: value - 1 },
+  ]);
+  return [null, rows];
 }
 /** `createFetchPool` logs every non-ok upstream, which is right in production
  *  and noise in a test whose whole point is that every call fails. */
@@ -203,6 +250,92 @@ test('market stock: one symbol failing is a 200 with that symbol named in failed
       'a failed symbol must not also appear as a quote'
     );
     assert.equal(calls.length, symbols.length, 'one upstream call per symbol, no batch endpoint');
+  } finally {
+    restore();
+  }
+});
+test('market commodity: one symbol failing is a 200 with that symbol named in failed[]', async () => {
+  const broken = COMMODITY_SYMBOLS[0];
+  const restore = stubFetch((url) => {
+    const symbol = decodeURIComponent(url.slice(YAHOO_CHART.length + 1).split('?')[0]);
+    if (symbol === broken) return { status: 503 };
+    return { body: chartBody(symbol, 100 + symbol.length) };
+  });
+  try {
+    const res = await commodityGET();
+    assert.equal(res.status, 200, 'a partial board is a success that admits its gap, not an error');
+    const body = await res.json();
+    assert.equal(body.count, COMMODITY_SYMBOLS.length - 1);
+    assert.equal(body.quotes.length, COMMODITY_SYMBOLS.length - 1);
+    assert.equal(body.failed.length, 1, 'exactly the one symbol that failed');
+    assert.equal(body.failed[0].symbol, broken);
+    assert.equal(body.failed[0].reason, `upstream 503`, 'a non-200 is reported by status, not as a fetch failure');
+    assert.ok(
+      !body.quotes.some((q: { symbol: string }) => q.symbol === broken),
+      'a failed symbol must not also appear as a quote'
+    );
+    // The curated label is what the board renders, so a surviving row must carry
+    // it rather than Yahoo's contract-calendar name.
+    const survivor = body.quotes.find((q: { symbol: string }) => q.symbol === COMMODITY_SYMBOLS[1]);
+    assert.equal(survivor.name, 'Silver', 'a surviving row keeps the curated label');
+    assert.match(String(body.derived), /1 of 12 failed/, 'the derived line counts the gap');
+    assert.equal(calls.length, COMMODITY_SYMBOLS.length, 'one upstream call per symbol, no batch endpoint');
+  } finally {
+    restore();
+  }
+});
+test('market macro: one quote symbol failing is a 200 with that symbol named in failed[]', async () => {
+  const broken = MACRO_SYMBOLS[0];
+  const restore = stubFetch((url) => {
+    if (url.startsWith(YAHOO_CHART)) {
+      const symbol = decodeURIComponent(url.slice(YAHOO_CHART.length + 1).split('?')[0]);
+      if (symbol === broken) return REFUSED;
+      return { body: chartBody(symbol, 4 + symbol.length) };
+    }
+    if (url.startsWith(BIS_CBPOL)) return { body: bisBody(POLICY_RATE_AREAS) };
+    if (url.startsWith(FRED_CSV)) {
+      return { body: fredBody(new URL(url).searchParams.get('id') ?? '') };
+    }
+    if (url.startsWith(WORLDBANK_API)) return { body: worldBankBody(WORLD_CODES) };
+    return REFUSED;
+  });
+  try {
+    const res = await macroGET();
+    assert.equal(res.status, 200, 'a partial quote block is still a board, not an error');
+    const body = await res.json();
+    assert.equal(body.count, MACRO_SYMBOLS.length - 1);
+    assert.equal(body.quotes.length, MACRO_SYMBOLS.length - 1);
+    assert.equal(body.failed.length, 1, 'exactly the one quote symbol that failed');
+    assert.equal(body.failed[0].symbol, broken);
+    assert.match(body.failed[0].reason, /^fetch failed: /);
+    assert.ok(
+      !body.quotes.some((q: { symbol: string }) => q.symbol === broken),
+      'a failed symbol must not also appear as a quote'
+    );
+    // The other three families still report: a partial quote block must not
+    // excuse the policy-rate table, the indicator table or the worldwide board
+    // from being served.
+    assert.equal(body.policyRates.length, POLICY_RATES.length, 'every policy-rate row is still built');
+    assert.ok(
+      body.policyRates.every((r: { rate: number | null }) => r.rate !== null),
+      'the BIS family answered, so no rate cell is withheld'
+    );
+    assert.equal(body.indicators.length, INDICATORS.length, 'every FRED indicator row is still built');
+    assert.ok(
+      body.indicators.every((r: { value: number | null }) => r.value !== null),
+      'the FRED family answered, so no indicator value is withheld'
+    );
+    assert.equal(body.economies.length, WORLD_COUNTRIES.length, 'the worldwide board still lists every country');
+    assert.equal(body.aggregates.length, WORLD_AGGREGATES.length, 'the worldwide board still lists every aggregate');
+    // A spread over the broken leg is withheld, never computed from a zero.
+    const brokenLeg = MACRO_SPREADS.find((s) => s.long === broken || s.short === broken);
+    if (brokenLeg) {
+      const spread = body.spreads.find((s: { label: string }) => s.label === brokenLeg.label);
+      assert.equal(spread.bp, null, `the ${brokenLeg.label} spread has a missing leg and must stay null`);
+    }
+    // The quote symbols are the only family that failed, so the derived line's
+    // failure count names exactly one item.
+    assert.match(String(body.derived), /1 upstream item\(s\) failed/, 'the derived line counts the single gap');
   } finally {
     restore();
   }

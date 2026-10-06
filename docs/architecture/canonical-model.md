@@ -159,7 +159,7 @@ dex/markets/signals/ticker (documented acquisition debt, `docs/architecture/doma
 
 | Implementation | Location | Evidence |
 |---|---|---|
-| CryptoRank `Cr*` structs | `…/cryptorank/types.go:8-437` (43 exported types) | Header `types.go:2-5`: "Types mirror apps/web/lib/cryptorank.ts's Cr* interfaces exactly: the JSON tags are the wire contract" — *the quoted header is pre-move wording kept verbatim; that TS file is now `frontend/web/src/features/market-data/cryptorank.ts`*. Renames only: `price→PriceUsd`, `volumes.day.toUSD→DayVolUsd`, `funds[].name→[]string`. |
+| CryptoRank `Cr*` structs | `…/cryptorank/types.go:8-437` (43 exported types) | Header `types.go:2-5`: "Types mirror apps/web/lib/cryptorank.ts's Cr* interfaces exactly: the JSON tags are the wire contract" — *the quoted header is pre-move wording kept verbatim; that TS file is now `frontend/web/src/features/market-data/cryptorank/cryptorank.ts`*. Renames only: `price→PriceUsd`, `volumes.day.toUSD→DayVolUsd`, `funds[].name→[]string`. |
 | CryptoRank shapers | `…/cryptorank/shapers.go:17,70,93,106,126,148,162,180,214,252,286,307,339,384,414,444,457,470,547,631` | Header `shapers.go:5-8`: "an absent upstream value becomes null rather than 0". |
 | Envelope assembly | `…/cryptorank/envelope.go:36` (`Envelope`), 26 mode arms | Lines 45-53 stamp `fetchedAt`/`cache`. |
 | Khala envelope | `…/research/khala/shape.go` (`BuildReport`, `List`) | |
@@ -224,7 +224,7 @@ Provider-specific parsers that **already exist** and the layer they occupy (requ
 | News RSS→`Item` | `…/research/news/{fetch,parse,shape,modes}.go` | RAW→PARSED(=wire)→PRODUCT VIEW |
 | ChainRank spread | `…/research/chainrank/{fetch,shape,modes}.go` | RAW→PRODUCT VIEW |
 | DexScreener→`DexPair` | `frontend/web/src/features/dex/client.ts:75` | RAW→PARSED (string prices preserved) |
-| CoinGecko→`MarketsCoin` | `frontend/web/src/features/market-data/markets.ts`, route shaping `api/markets/route.ts:159-201` | RAW→NORMALIZED→PRODUCT VIEW |
+| CoinGecko→`MarketsCoin` | `frontend/web/src/features/market-data/markets/markets.ts`, route shaping `api/markets/route.ts:159-201` | RAW→NORMALIZED→PRODUCT VIEW |
 | ccxt→`VenueQuote`/`TickerRow` | `frontend/web/src/features/ticker/client.ts:185,254`, `instruments.ts:94` | RAW→NORMALIZED→ENRICHED→PRODUCT VIEW |
 | Signals→`SignalRow` | `frontend/web/src/app/(frontend)/api/signals/route.ts:10` | RAW→PRODUCT VIEW |
 | Venue REST→`Order`/`Fill`/`Balance` | `backend/workers/executor/internal/exchanges/{binance,bybit,mexc}/parse.go` | RAW→PARSED→NORMALIZED→(CANONICAL via executor ids) |
@@ -453,9 +453,9 @@ one of them (em-dash rendering), which is the part that is right.
 | File | Fields |
 |---|---|
 | `frontend/web/src/features/ticker/client.ts` | `VenueQuote.last:187`, `bid:188`, `ask:189`, `high24h:191`, `low24h:192`, `baseVolume:193`, `quoteVolume:194`, `change24h:201`, `openInterest:210`, `fundingRate:215`; `TickerInstrument.expiry:241`, `strike:243`, `contractSize:247`; `TickerRow.price:263`, `change24h:265`, `high24h:266`, `low24h:267`, `quoteVolume:268`, `spread:276` |
-| `frontend/web/src/features/market-data/markets.ts` | `MarketsCoin.lastPrice:60`, `priceChangePercent:61`, `highPrice:62`, `lowPrice:63`, `volume:64`, `quoteVolume:65`, `marketCap:66`, `rank:67` |
+| `frontend/web/src/features/market-data/markets/markets.ts` | `MarketsCoin.lastPrice:60`, `priceChangePercent:61`, `highPrice:62`, `lowPrice:63`, `volume:64`, `quoteVolume:65`, `marketCap:66`, `rank:67` |
 | `frontend/web/src/features/llama/client.ts` | `LlamaChain.tvl:34`, `LlamaProtocol.tvl:45`, `change_1d:46`, `change_7d:47`, `mcap:48`, `LlamaHistoricalPoint.tvl:56` |
-| `frontend/web/src/features/market-data/cryptorank.ts` | `CrCoin.priceUsd:239`, `marketCap:240`, `athUsd`, `change24h`, `volume24hUsd`… (~40 fields, see the Go mirror below — the two are field-identical by contract) |
+| `frontend/web/src/features/market-data/cryptorank/cryptorank.ts` | `CrCoin.priceUsd:239`, `marketCap:240`, `athUsd`, `change24h`, `volume24hUsd`… (~40 fields, see the Go mirror below — the two are field-identical by contract) |
 | `frontend/web/src/features/dex/client.ts` | `DexPair.marketCap:86`, `fdv:87`, `volume:89` (`Record<string,number>`), `priceChange:90`, `liquidity:{usd,base,quote}:91`, `pairCreatedAt:92`; `DexProfile.amount:110`, `totalAmount:111`. **Exception:** `priceNative:83` and `priceUsd:84` are `string` (the upstream wire form) |
 | `frontend/web/src/app/(frontend)/api/signals/route.ts` | `mcap:18`, `liq:19`, `price:20`, `score:22`, `volTrend:28`, `topHolderPct:29`, `holdersCount:26`; scoreboard `peak24:49`, `x24h:52`, `score:44` |
 | `frontend/web/src/lib/executor.ts` | The executor **wire** types: `ExecutionPlan.quantity/notional/estimatedEntry/stopLoss/…:689-723`, `PreviewResult.expectedLossAtStop/…:729-735`, `FillRecord.price/quantity/quoteQuantity/fee:1157-1161`, `ExecutionRecord.sizingValue…currentRisk:1094-1113`, `Balance:906-908`, `AccountEquity:912-914`, `Position:925-929`, `Order:940-943`, `RiskProfile:1186-1195`. Header `:31-35` states `number` is the WIRE type only. |

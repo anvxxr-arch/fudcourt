@@ -1,5 +1,5 @@
 import { color, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight, motion, radius, space, target as higTarget } from '@/styles/tokens';
-import { isSafeNext } from '@/server/auth';
+import { isSafeNext } from '@/lib/safe-next';
 // The login view itself. It lives in features/auth because it is the auth
 // family's UI; the route (`/login`) is the thin wrapper that reads
 // `searchParams` and renders it. The body below is the route's original render,

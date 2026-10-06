@@ -69,3 +69,20 @@ test('pool: a rejecting callback propagates the rejection', async () => {
     'a swallowed rejection would render a half-filled row as a success'
   );
 });
+test('pool: an in-flight rejection still drains the queue — every callback runs', async () => {
+  // The rejection must not abandon the half-drained queue. The other workers
+  // keep pulling items until the pool is empty, so a single bad upstream cannot
+  // silently skip the items that were queued behind it.
+  const boom = new Error('item 1 upstream died');
+  const ran: number[] = [];
+  await assert.rejects(
+    mapPool([1, 2, 3, 4], 2, async (n) => {
+      ran.push(n);
+      if (n === 1) throw boom;
+      return n;
+    }),
+    boom,
+    'the rejection surfaces, and the pool does not stop feeding its workers'
+  );
+  assert.deepEqual([...ran].sort((a, b) => a - b), [1, 2, 3, 4], 'every item must run, including the ones queued behind the failure');
+});

@@ -33,7 +33,7 @@ import {
   defaultInstrument,
   instrumentsFor,
   tickerClients,
-} from '@/server/ticker';
+} from '@/features/ticker/venues';
 import type { Exchange as CcxtExchange } from 'ccxt';
 import { num } from '../_lib/num';
 import { fail } from '../_lib/http';

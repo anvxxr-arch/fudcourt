@@ -13,7 +13,7 @@ import {
   ensureMarkets,
   instrumentsFor,
   tickerClients,
-} from '@/server/ticker';
+} from '@/features/ticker/venues';
 
 import { num } from '../../_lib/num';
 

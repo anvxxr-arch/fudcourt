@@ -200,6 +200,23 @@ for f in sources():
                 f"src/{rel}:{line_no} imports server/{tname} from a use-client file — "
                 f"server/ modules must stay server-only"
             )
+        # --- rule 4e: server/ is infrastructure, not a feature consumer -------
+        # server/ may not reach for a family, the route tree, or presentational
+        # code. A server module that needs a feature's shape/call goes through
+        # lib/ or an API instead — the dependency runs one way only.
+        if layer == "server" and tlayer in ("features", "app", "ui", "components"):
+            violations.append(
+                f"src/{rel}:{line_no} server/ imports {tlayer}/{tname} — "
+                f"server/ is infrastructure and may not depend on a feature, the route tree, or presentational code"
+            )
+        # --- rule 4f: features are self-contained ------------------------------
+        # A family owns its shaper, types and panel; it may not depend on
+        # server-only infrastructure. Share through lib/ or an API instead.
+        if layer == "features" and tlayer == "server":
+            violations.append(
+                f"src/{rel}:{line_no} feature '{rel.parts[1]}' imports server/{tname} — "
+                f"a family may not depend on server-only infrastructure; share through lib/ or an API"
+            )
         # --- rule 5: no cross-feature coupling -------------------------------
         # Shell composition roots (market/hub.tsx composes boards, overview/store-shell.tsx
         # composes pages) are exempt: composing features is their whole job.

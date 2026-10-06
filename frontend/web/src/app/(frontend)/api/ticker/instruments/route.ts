@@ -21,7 +21,7 @@ import {
   strikesFor,
   tickerClients,
   type TypeInstrumentSummary,
-} from '@/server/ticker';
+} from '@/features/ticker/venues';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

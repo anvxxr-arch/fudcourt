@@ -11,9 +11,9 @@ verify-cryptorank.py -- executable contract for the CryptoRank integration.
                 dex/spot, perpetuals; else 400)
                 funding | unlocks   (503 loud refusal -- synthetic data-route)
                 funding | unlocks -> 503 REFUSED (upstream /_next/data class
-                serves synthetic decoy; see src/features/market-data/cryptorank.ts CR_DISABLED)
+                serves synthetic decoy; see src/features/market-data/cryptorank/cryptorank.ts CR_DISABLED)
     data path:  route -> tests/oracle/cr_fetch.py (venv curl_cffi) -> cryptorank.io
-                market-page __NEXT_DATA__ SSR payload (see src/features/market-data/cryptorank.ts header
+                market-page __NEXT_DATA__ SSR payload (see src/features/market-data/cryptorank/cryptorank.ts header
                 for the measured access matrix: API host challenged, market pages
                 readable, fundraising tree walled).
 
@@ -532,7 +532,7 @@ def main() -> int:
             "decoy detector",
             f"nonexistent slug still returns 200 ({probe.get('bytes')}B fabricated payload) -> "
             "funding/unlocks stay REFUSED; re-enable gate: slug must 404 AND content must match "
-            "an independent source (see src/features/market-data/cryptorank.ts CR_DISABLED)",
+            "an independent source (see src/features/market-data/cryptorank/cryptorank.ts CR_DISABLED)",
         )
     elif probe.get("ok") and probe.get("status") == 404:
         info(
@@ -971,7 +971,7 @@ def main() -> int:
         # upstream's PINNED PROMO slot (measured 2026-09-29: url:null AND
         # date:null). Requiring a URL on EVERY row tested upstream's CMS, not our
         # shaping. url:null is the documented promo marker
-        # (src/features/market-data/cryptorank.ts: "null upstream = pinned promo
+        # (src/features/market-data/cryptorank/cryptorank.ts: "null upstream = pinned promo
         # slot"). The honest invariant kept here: titles always intact; every
         # REAL url is non-empty http; a null url only on a pinned promo slot.
         # Captured upstream rows (promo + real; recorded + live):
@@ -1712,7 +1712,7 @@ def main() -> int:
           bool(_dl) and _dl_needle in _dl,
           "searched src/app/(frontend)/(public)/cryptorank/page.tsx: "
           f"exists={bool(_dl)} {_dl_needle!r} present={_dl_needle in _dl}")
-    comp = read("src/features/market-data/cryptorank.ts")
+    comp = read("src/features/market-data/cryptorank/cryptorank.ts")
     check("component: fetches /api/cryptorank", "/api/cryptorank?mode=" in comp, "")
     check("component: em-dash never 0 for absent", "'—'" in comp, "")
     check("component: unlocks section ABSENT (synthetic upstream)",
@@ -1780,7 +1780,7 @@ def main() -> int:
           and "_next/data" in helper_src, "")
     check("helper: buildId rotation handled", "force=True" in helper_src
           and "buildid.txt" in helper_src, "")
-    lib = read("src/features/market-data/cryptorank.ts")
+    lib = read("src/features/market-data/cryptorank/cryptorank.ts")
     lib_modes = set(re.findall(
         r"'(home|coins|trending|gainers|losers|funding|unlocks|categories|exchanges|coin|listings|blockchains|chain|launchpool|nodesale|news|tags|tag|ecosystems|ecosystem|rwa|rwaasset|quarterly|prediction|converter|media|newstag|aioverview)'", lib))
     check(
