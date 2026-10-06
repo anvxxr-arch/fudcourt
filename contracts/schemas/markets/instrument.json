@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/markets/instrument.json",
   "title": "Instrument",
-  "description": "One tradable market on one venue, with its price/quantity grid. THE ONLY NEAR-COMPLETE CANONICAL ENTITY IN THE REPO: the type and the id convention exist (apps/api/internal/markets/instruments/instrument.go Instrument, InstrumentID = 'exchange:market_type:BASE/QUOTE', evidenced by the fixture in instrument_test.go), the symbol normalization exists (symbol.go CanonicalSymbol/VenueSymbol) and the grid rounding exists (rounding.go RoundQuantityDown/RoundPrice). NO PRODUCER MINTS IT outside tests, and no service serves it over HTTP. Closed object: the field set is the Go struct's, and additionalProperties is false because Validate refuses unknown grid parameters rather than ignoring them. Absent-vs-zero rule (instrument.go doc): an empty grid string or null means 'the venue did not report it', never 0 - ContractSize excepted, which must be positive ('a zero would silently zero out every notional').",
+  "description": "One tradable market on one venue, with its price/quantity grid. CONTRACT-DEFINED, NOT YET IMPLEMENTED IN A CANONICAL ENTITY: no Instrument type exists in the repo. The id convention is 'exchange:market_type:BASE/QUOTE', evidenced by the executor fixture 'binance:spot:BTC/USDT', and the grid rounding exists (apps/executor/internal/risk/risk.go RoundQuantityDown). NO PRODUCER MINTS IT and no service serves it over HTTP. Closed object: the field set is fixed by this schema, and additionalProperties is false because an unknown grid parameter is a schema error rather than something to ignore. Absent-vs-zero rule: an empty grid string or null means 'the venue did not report it', never 0 - contract_size excepted, which must be positive ('a zero would silently zero out every notional').",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -95,7 +95,7 @@
         "spot",
         "linear_perp"
       ],
-      "description": "Frozen pair, declared identically in apps/api/internal/markets/instruments/instrument.go and apps/api/internal/accounts/exchange/account.go (duplicated type, same values - see canonical-model.md D-US2). The executor's TS union is the same two values (apps/web/src/platform/executor/types.ts MarketType)."
+      "description": "Frozen pair: exactly these two values, nothing else. The executor's TS union is the same two values (apps/web/src/lib/executor-request-defs.ts MarketType) and the API's Go enum is apps/api/internal/accounts/exchange/account.go MarketType."
     }
   }
 }

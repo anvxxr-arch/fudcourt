@@ -126,7 +126,7 @@ it is computed.
 | Describes | something that **happened** | something that **is** |
 | Ids | 28 stable `event_type` ids (PascalCase) + SCREAMING_SNAKE aliases | entity ids (`*_id`) |
 | Versioning | `event_version` starts at 1; additive changes keep it, breaking bumps it | none — these are the current shape |
-| Drift gate | `contracts/scripts/check-contract.mjs` (c) pins catalogue ↔ `event.schema.json`, and (a) pins `ExecutionStatus`/`ChildOrderStatus`/`ExecutionEventName` ↔ `apps/web/src/lib/executor.ts` and the OpenAPI enums | **not** covered by a gate yet (see §5) |
+| Drift gate | `contracts/scripts/check-contract.mjs` (c) pins catalogue ↔ `event.schema.json`, and (a) pins `ExecutionStatus`/`ChildOrderStatus`/`ExecutionEventName` ↔ `apps/web/src/lib/executor-lifecycle.ts` + `apps/web/src/lib/executor-request-defs.ts` (the defining slices; it reads them directly because the `apps/web/src/lib/executor.ts` barrel re-exports with `export *`, which `parseLiteralUnion` does not follow) and the OpenAPI enums | **not** covered by a gate yet (see §5) |
 | Extra keys | payload is free-form and additive by policy | objects are **closed** (`additionalProperties: false`) where the value set is closed, so an unknown key is a schema error, not an extension |
 
 Two deliberate refusals to duplicate:

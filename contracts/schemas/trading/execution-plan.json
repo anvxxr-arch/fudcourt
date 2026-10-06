@@ -135,7 +135,7 @@
         "RECONCILING",
         "STOPPED"
       ],
-      "description": "Execution lifecycle. FROZEN: this list is cross-checked against apps/web/src/platform/executor/types.ts and contracts/openapi/fudcourt.yaml by contracts/scripts/check-contract.mjs (CHECKED_ENUMS), so it MUST NOT be re-spelled or reordered, and it MUST NOT be merged with ChildOrderStatus."
+      "description": "Execution lifecycle. FROZEN: this list is cross-checked against apps/web/src/lib/executor-lifecycle.ts and apps/web/src/lib/executor-request-defs.ts (the two defining slices check-contract.mjs reads as TYPES_TS) and contracts/openapi/fudcourt.yaml by contracts/scripts/check-contract.mjs (CHECKED_ENUMS), so it MUST NOT be re-spelled or reordered, and it MUST NOT be merged with ChildOrderStatus."
     },
     "child_order_status": {
       "type": "string",
@@ -288,7 +288,7 @@
     },
     "event_name": {
       "type": "string",
-      "description": "A STABLE event id from contracts/events/catalog.json (PascalCase), whose SCREAMING_SNAKE spellings are accepted aliases of the same id. NOT re-enumerated on purpose: events/catalog.json + events/event.schema.json are the single source of truth and are pinned by contracts/scripts/check-contract.mjs; a second list here would be a drift surface. Note the live asymmetry: the executor enum (apps/executor/internal/executor/enums.go) declares 23 of the catalogue's 28 ids - the five account/credential/reconciliation events (CredentialCreated, CredentialRevoked, ExchangeAccountConnected, ReconciliationStarted, ReconciliationCompleted) exist in the catalogue and in the web implementation but have no Go constant yet."
+      "description": "A STABLE event id from contracts/events/events.json (PascalCase), whose SCREAMING_SNAKE spellings are accepted aliases of the same id. NOT re-enumerated on purpose: events/catalog.json + events/event.schema.json are the single source of truth and are pinned by contracts/scripts/check-contract.mjs; a second list here would be a drift surface. Note the live asymmetry: the executor enum (apps/executor/internal/execution/enums.go) declares 23 of the catalogue's 28 ids - the five account/credential/reconciliation events (CredentialCreated, CredentialRevoked, ExchangeAccountConnected, ReconciliationStarted, ReconciliationCompleted) exist in the catalogue and in the web implementation but have no Go constant yet."
     },
     "execution_strategy": {
       "type": "string",

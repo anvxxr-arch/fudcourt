@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/trading/position.json",
   "title": "Position (venue-reported or derived)",
-  "description": "A held directional exposure. TWO IMPLEMENTATIONS EXIST IN DIFFERENT DOMAINS and this schema is the VENUE one (canonical-model.md D-Position): the venue's own report (apps/executor/internal/executor/records.go Position, read from the exchange API) versus a DERIVED position computed from fills/entries (apps/api/internal/finance/portfolio/portfolio.go Position, keyed on instrument_id). They are not interchangeable: the venue's is the truth for reconciliation and carries leverage/liquidation, the derived one is a valuation input. quantity is SIGNED here on purpose (positive = long), unlike the derived model whose Quantity is an unsigned magnitude with a separate side. No synthetic id: a venue position is keyed by (instrument, position_side).",
+  "description": "A held directional exposure, as the VENUE reports it (canonical-model.md D-Position): the venue's own report read from the exchange API (apps/executor/internal/execution/records.go Position). No derived-from-fills position model is built in this repo, so this shape is the only one; it is the truth for reconciliation and carries leverage and liquidation. quantity is SIGNED here on purpose (positive = long). No synthetic id: a venue position is keyed by (instrument, position_side).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -164,7 +164,7 @@
         "RECONCILING",
         "STOPPED"
       ],
-      "description": "Execution lifecycle. FROZEN: this list is cross-checked against apps/web/src/platform/executor/types.ts and contracts/openapi/fudcourt.yaml by contracts/scripts/check-contract.mjs (CHECKED_ENUMS), so it MUST NOT be re-spelled or reordered, and it MUST NOT be merged with ChildOrderStatus."
+      "description": "Execution lifecycle. FROZEN: this list is cross-checked against apps/web/src/lib/executor-lifecycle.ts and apps/web/src/lib/executor-request-defs.ts (the two defining slices check-contract.mjs reads as TYPES_TS) and contracts/openapi/fudcourt.yaml by contracts/scripts/check-contract.mjs (CHECKED_ENUMS), so it MUST NOT be re-spelled or reordered, and it MUST NOT be merged with ChildOrderStatus."
     },
     "child_order_status": {
       "type": "string",
@@ -317,7 +317,7 @@
     },
     "event_name": {
       "type": "string",
-      "description": "A STABLE event id from contracts/events/catalog.json (PascalCase), whose SCREAMING_SNAKE spellings are accepted aliases. Not re-enumerated here on purpose: events/catalog.json plus events/event.schema.json are the single source of truth, pinned by check-contract.mjs, and duplicating the list in a second schema would create a drift surface."
+      "description": "A STABLE event id from contracts/events/events.json (PascalCase), whose SCREAMING_SNAKE spellings are accepted aliases. Not re-enumerated here on purpose: events/catalog.json plus events/event.schema.json are the single source of truth, pinned by check-contract.mjs, and duplicating the list in a second schema would create a drift surface."
     }
   }
 }
