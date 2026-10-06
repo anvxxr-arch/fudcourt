@@ -32,7 +32,7 @@
  *
  * Usage: cd apps/web && bun run test:shapers
  */
-import { test } from 'node:test';
+import { test, mock } from 'bun:test';
 import assert from 'node:assert/strict';
 import { GET as instrumentGET } from '@/app/(frontend)/api/ticker/instrument/route';
 import { GET as instrumentsGET } from '@/app/(frontend)/api/ticker/instruments/route';
@@ -110,25 +110,28 @@ function stubVenues(opts: {
       },
     };
   }
-  const holder = venuesModule as unknown as {
-    tickerClients: () => Map<TickerExchange, unknown>;
-    ensureMarkets: (venue: TickerExchange, load: (client: never) => Promise<unknown>) => Promise<unknown>;
-  }; // compiled-CJS module namespace: same object identity the routes close over
-  const origClients = holder.tickerClients;
-  const origEnsure = holder.ensureMarkets;
   const fakes = new Map<TickerExchange, FakeClient>(
     (Object.keys(clients) as TickerExchange[]).map((v) => [v, clients[v]]),
   );
-  holder.tickerClients = () => fakes as unknown as Map<TickerExchange, never>;
-  holder.ensureMarkets = async (venue: TickerExchange): Promise<unknown> => {
-    upstream.load += 1;
-    return fakes.get(venue)?.markets ?? null;
-  };
   upstream.load = 0;
   upstream.tick = 0;
+  // The suites run from TypeScript source under `bun test`, whose ESM namespace
+  // objects are frozen — the compiled-CJS monkeypatch this file used before
+  // (assigning into the module object the routes close over) is not available.
+  // Bun's module mock is the equivalent seam: it replaces the two functions for
+  // every importer, including the route modules, and `mock.restore()` puts the
+  // real ones back. The rest of the module is spread through untouched, so
+  // runSweep and the sweep cache keep their real identities.
+  mock.module('@/features/market/ticker/venues', () => ({
+    ...venuesModule,
+    tickerClients: () => fakes as unknown as Map<TickerExchange, never>,
+    ensureMarkets: async (_venue: TickerExchange): Promise<unknown> => {
+      upstream.load += 1;
+      return fakes.get(_venue)?.markets ?? null;
+    },
+  }));
   return () => {
-    holder.tickerClients = origClients;
-    holder.ensureMarkets = origEnsure;
+    mock.restore();
   };
 }
 

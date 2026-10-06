@@ -9,10 +9,9 @@
  * so a hand-edited fixture fails the tamper check.
  *
  * Usage (fresh upstream fetch, per-mode default key):
- *   cd apps/web && npm run record:fixtures
- *   (tsc -p tsconfig.shaper-tests.json, then node on the compiled copy under
- *    .shaper-tests/tests/oracle/; the helper and the fixtures are located by
- *    walking up to the repo root, so no cwd assumption.)
+ *   cd apps/web && bun run record:fixtures
+ *   (bun runs this TypeScript source directly; the helper and the fixtures are
+ *    located by walking up to the repo root, so no cwd assumption.)
  */
 import { existsSync } from 'node:fs';
 import { execFile } from 'node:child_process';
