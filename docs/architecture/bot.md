@@ -15,9 +15,9 @@ and the one used-from-inside path is exactly one HTTP call to grow the service m
 
 | | |
 |---|---|
-| Module | `github.com/anvxxr-arch/fudcourt/backend/bot` (`backend/bot/go.mod`, Go 1.25.0) |
-| Dependencies | **stdlib only** (`backend/bot/go.mod` has no `require` block — the floor every Go service here stands on) |
-| In `go.work` | yes — `./backend/bot` is a `use` entry, so `go build ./...` from the root covers it |
+| Module | `github.com/anvxxr-arch/fudcourt/backend/bot` (root `go.mod`, Go 1.25.0) |
+| Dependencies | **stdlib only** (root `go.mod` has no `require` entry for it — the floor every Go service here stands on) |
+| In the module | yes — one repository-wide module, so `go build ./...` from the root covers it |
 | LOC | **1,572** across **12** `.go` files — 9 production (1,202) + 3 test files (370) |
 | Binary | `backend/bot/bin/fudcourt-bot` — git-ignored (`backend/bot/bin/`) |
 

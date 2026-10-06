@@ -491,8 +491,8 @@ func TestReferenceArtifactIsCurrent(t *testing.T) {
 
 const emitCmdPath = "./backend/api/internal/markets/reference/cmd/emit"
 
-// repoRoot walks up from the test's working directory until it finds go.work,
-// which is the repository root by definition.
+// repoRoot walks up from the test's working directory until it finds go.mod,
+// which is the repository root by definition (the single-module layout).
 func repoRoot(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()
@@ -500,7 +500,7 @@ func repoRoot(t *testing.T) string {
 		t.Fatal(err)
 	}
 	for range 12 {
-		if _, err := os.Stat(filepath.Join(dir, "go.work")); err == nil {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
 			return dir
 		}
 		parent := filepath.Dir(dir)
@@ -509,6 +509,6 @@ func repoRoot(t *testing.T) string {
 		}
 		dir = parent
 	}
-	t.Fatalf("could not find the repository root (go.work) walking up from %s", dir)
+	t.Fatalf("could not find the repository root (go.mod) walking up from %s", dir)
 	return ""
 }
