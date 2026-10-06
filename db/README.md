@@ -6,15 +6,14 @@
 > is marked **NOT DONE**. There are no aspirational claims presented as fact.
 >
 > **Updated 2026-10-03 (DR-040):** Postgres+TimescaleDB is now the SINGLE system
-> of record and Turso/libSQL is dropped. The generated SQLite dump
-> `schema/schema.sql`, its generator `scripts/database/dump-schema.mjs` and the
-> whole `scripts/database/` directory are deleted; `schema/pg-schema.sql` is the
-> only treasury schema. The Turso→Postgres projection
-> (`pg-load.ts`) and its `fudcourt-pgload.{service,timer}` are removed, and the
-> web data module moved from `platform/db/mirror.ts` to `platform/db/pg.ts`.
+> of record and Turso/libSQL is dropped. The generated SQLite dump, its
+> generator and the whole `scripts/database/` directory are deleted;
+> `schema/pg-schema.sql` is the only treasury schema. The Turso→Postgres
+> projection (`pg-load.ts`) and its `fudcourt-pgload.{service,timer}` are
+> removed, and the web data module now lives at `apps/web/src/server/db.ts`.
 >
-> Moved here from `apps/web/db/` (Phase 2 of the domain restructure); DDL semantics
-> were not changed by the move. Column-level documentation stays in
+> Moved here from the old `apps/web/db/` (Phase 2 of the domain restructure); DDL
+> semantics were not changed by the move. Column-level documentation stays in
 > `docs/architecture/SCHEMA.md`.
 >
 > **Note on the restructure:** the tree was renamed underneath this document in
@@ -30,7 +29,7 @@
 | File | Dialect / role | Objects | Shape owner |
 |---|---|---|---|
 | `schema/pg-schema.sql` | Postgres 17 + TimescaleDB — the treasury **system of record** (`public` schema) | the 8 treasury tables + `asset_history`, `price_history` (2 hypertables, 3 indexes) + the `assets_snapshot` trigger that appends every `assets` insert to `asset_history` | hand-written; applied to the `fudcourt` database in the `postgres-hardened` container on `127.0.0.1:5432` |
-| `schema/executor-schema.sql` | Postgres `executor` schema (live execution ledger) | 20 statements: `CREATE SCHEMA`, 10 tables, 9 indexes | the executor runtime (`EXECUTOR_DDL` in `apps/web/src/features/executor/store.ts` READS this file; the Go worker applies a byte-pinned `embed` copy) |
+| `schema/executor-schema.sql` | Postgres `executor` schema (live execution ledger) | 20 statements: `CREATE SCHEMA`, 10 tables, 9 indexes | the executor runtime — the Go `go:embed` copy in `apps/executor/internal/repository/schema.go` READS this file and applies it at startup |
 
 Object lines: `pg-schema.sql` tables `:20,:27,:38,:50,:59,:71,:89,:95,:112,:132`,
 hypertables `:122,:139`, indexes `:123,:127,:140`; `executor-schema.sql` `:24`
@@ -50,7 +49,7 @@ hypertables `:122,:139`, indexes `:123,:127,:140`; `executor-schema.sql` `:24`
 | `apps/reconciler` (Rust, `tokio-postgres`) | the undeployed Rust sync writes the same tables; `fudcourt-reconciled` reads them for `/api/reconcile` |
 | `db/schema/pg-schema.sql` (`assets_snapshot` trigger) | appends each `assets` INSERT to `asset_history`; snapshots are taken by the database, not by application code |
 | `contracts/openapi/fudcourt.yaml:4322,:4399` → SDK `schema.d.ts:2227` | contract comment |
-| docs: `docs/architecture/current.md`, `docs/architecture/final-review.md`, `docs/architecture/domain-map.md`, `docs/records/DECISIONS.md` | docs (line numbers move; deliberately not quoted here) |
+| docs: `docs/architecture/domain-map.md`, `docs/architecture/ARCHITECTURE.md`, `docs/records/DECISIONS.md` | docs (line numbers move; deliberately not quoted here) |
 
 **Verdict:** the authoritative DDL for the treasury tables and the **only**
 treasury schema — the app, the sync and the reconcile service all read and write
@@ -62,18 +61,16 @@ applies this same file to its own throwaway TimescaleDB container.
 
 | Consumer | Kind |
 |---|---|
-| `tests/integration/executor/executor-store-tests.ts` (§59, "the DDL is the tracked file verbatim") | **verbatim pin** — reads this file and asserts `EXECUTOR_DDL` equals it with comment lines dropped; the structural assertions (tables, idempotency, no `timestamptz`) read this file directly |
-| `apps/web/src/features/executor/store.ts` (`EXECUTOR_DDL`, `ensureExecutorSchema`) | **the app READS this file** at module load (`readFileSync`, repo root = cwd/../..); there is no embedded copy on the TS side since 2026-10-02 |
-| `apps/web/src/features/executor/runtime.ts` (`bootstrapExecutor` → `ensureExecutorSchema`) | executes it at boot; entry points `apps/web/scripts/executor/worker.ts` and `runtime.ts` |
-| `tests/e2e/executor/executor-paper-e2e.ts` | live gate that calls `ensureExecutorSchema()` against the real cluster |
-| `apps/executor/internal/repository/schema/executor-schema.sql` + `schema.go` | the Go `embed` copy (`EnsureSchema` applies it at startup), BYTE-pinned to this file by `TestEmbeddedSchemaMatchesTracked`; the comment references in `internal/{execution/records.go, execution/types.go, platform/credentials/credentials.go}` are prose only |
-| docs: `docs/architecture/executor.md`, `docs/architecture/security.md`, `docs/architecture/events.md`, `docs/architecture/ARCHITECTURE.md`, `docs/architecture/current.md`, `docs/records/DECISIONS.md` | docs (line numbers deliberately not quoted here — they move) |
+| `apps/executor/internal/repository/schema.go` (`//go:embed schema/executor-schema.sql`, `EnsureSchema`) | **the only code consumer** — the Go `embed` copy, applied at executor startup, BYTE-pinned to this file by `TestEmbeddedSchemaMatchesTracked` in `apps/executor/internal/repository/schema_test.go` |
+| docs: `docs/architecture/executor.md`, `docs/architecture/security.md`, `docs/architecture/events.md`, `docs/architecture/ARCHITECTURE.md` | docs (line numbers deliberately not quoted here — they move) |
 
-**Verdict:** the authoritative tracked DDL for the `executor` schema, and since the
-2026-10-02 lift the only TS-side copy — `store.ts` reads it instead of embedding it,
-and the §59 test pins the constant to the file verbatim. The one remaining duplicate
-is the Go `embed`, which cannot be removed (`go:embed` refuses parent-directory
-patterns) and is guarded byte-for-byte.
+**Verdict:** the authoritative tracked DDL for the `executor` schema. The
+TypeScript executor runtime that used to read this file and held `EXECUTOR_DDL`
+(`apps/web/src/features/executor/store.ts`, `apps/web/src/features/executor/runtime.ts`,
+`apps/web/scripts/executor/worker.ts`) and its tests were deleted with the TS
+executor, so there is no TS-side copy left. The one remaining duplicate is the Go
+`embed`, which cannot be removed (`go:embed` refuses parent-directory patterns)
+and is guarded byte-for-byte.
 
 ## Authority and segmentation verdict
 
@@ -203,23 +200,21 @@ mistakes the plan for the tree:
 The SQL files carry a few in-file path references written before the tree moved
 to `apps/` + `contracts/` + `db/`. Verified, left alone on purpose (they are
 prose inside comments, not runtime paths):
-- `db/schema/pg-schema.sql:3,:5,:144` name `scripts/tools/…` without the
-  `apps/web/` prefix, and `db/schema/executor-schema.sql:11` names
-  `src/features/executor/store.ts` the same way.
+- `db/schema/pg-schema.sql:5` names the old `frontend/web/src/server/db.ts`
+  prefix; the module is now `apps/web/src/server/db.ts`.
+- `db/schema/executor-schema.sql:12` names the Go copy by its pre-restructure
+  path (`backend/workers/executor/...`); it is
+  `apps/executor/internal/repository/schema/executor-schema.sql`.
 - `db/schema/executor-schema.sql:20` names the drift test without its
   directory; its real path is `apps/executor/internal/repository/schema_test.go`.
 - Go fixture discovery: **fixed 2026-10-01 in `44604bc`**.
-  `apps/data/internal/research/cryptorank/parity_test.go:53-70` and
-  `apps/data/internal/research/paritytest/parity_test.go:47-65` now try
-  `tests/fixtures` → `apps/web/scripts/fixtures` at each ancestor (env
-  `FUDCOURT_DATA_FIXTURES_DIR` still wins), and the parity tests execute
-  instead of skipping. Recorded here because the fix post-dates this file's
-  original path references.
-- The root `README.md` "Verify" snippet was written against an older layout; the
-  `cd` chain and every `scripts/…` path it carries now resolve against
-  `apps/web` and `scripts/verify/`. Its `node scripts/database/dump-schema.mjs
-  --check` line is **dead**: `scripts/database/` was deleted with Turso by
-  DR-040.
+  `apps/data/internal/research/cryptorank/parity_test.go` and
+  `apps/data/internal/research/paritytest/parity_test.go` resolve the canonical
+  `tests/fixtures` root at each ancestor (env `FUDCOURT_DATA_FIXTURES_DIR` still
+  wins), and the parity tests execute instead of skipping. The
+  `apps/web/scripts/fixtures` fallback those tests used to try has since been
+  removed.
+
 **Verified not stale** (checked because the tree is mid-rename):
 `apps/executor/internal/repository/schema_test.go` reaches
 `db/schema/executor-schema.sql` by a relative join that survives the move, and

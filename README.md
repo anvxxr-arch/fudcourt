@@ -12,8 +12,10 @@ never as fabricated rows.
 
 **Start here → [docs/README.md](docs/README.md)** — the documentation index, grouped
 by the question you arrive with: `docs/product/` (PRD, analysis, recommendations),
-`docs/architecture/` (**[ARCHITECTURE](docs/architecture/ARCHITECTURE.md)**, tech stack,
-schema), `docs/operations/` (PLAN, [SECRETS](docs/operations/SECRETS.md), changelog),
+`docs/architecture/` (**[architecture.md](docs/architecture.md)** — the code index: which
+path to change for a given thing — plus **[ARCHITECTURE](docs/architecture/ARCHITECTURE.md)**,
+tech stack, schema),
+`docs/operations/` (PLAN, [SECRETS](docs/operations/SECRETS.md), changelog),
 `docs/records/` ([DECISIONS](docs/records/DECISIONS.md)).
 
 **Layout in one line** ([DR-018](docs/records/DECISIONS.md)): one `src/` tree in

@@ -32,6 +32,7 @@ docs/
 | product | [PRD.md](product/PRD.md) | Product requirements: goals, personas, FR/NFR, scope, out-of-scope |
 | product | [ANALYSIS.md](product/ANALYSIS.md) | Fully comprehensive analysis: architecture, reasoning, evidence, risks |
 | product | [RECOMMENDATIONS.md](product/RECOMMENDATIONS.md) | Ranked recommendations with impact/effort |
+| architecture | [architecture.md](architecture.md) | **Start here for code**: the short index — "I want to change X, which path?" for risk, sizing, adapters, ingestion, runtime, market UI, schema, database, deploy, and the one command that verifies everything |
 | architecture | [ARCHITECTURE.md](architecture/ARCHITECTURE.md) | **The clear map**: product statement, system picture, 14-view shell (18-row registry), 10 data families + trust classes, verification tiers, deploy model |
 | architecture | [TECH-STACK.md](architecture/TECH-STACK.md) | Languages, frameworks, data stores, infra, verification tooling |
 | architecture | [DESIGN-SYSTEM.md](architecture/DESIGN-SYSTEM.md) | The design system: `src/styles/tokens.ts` as SSOT, the generated `:root` block + `tailwind.tokens.json`, the drift/design gates, allowlists, the atom shelf, and the zero-visual-change rule |
@@ -105,7 +106,9 @@ db/schema/      pg-schema.sql (treasury system of record) ·
                 executor-schema.sql (execution ledger)
 deploy/systemd/ 10 unit files (web, api, bot, data, executor, reconciled,
                  reconciler, sync)
-tests/          integration/ · e2e/ · fixtures/ · oracle/ — cross-system suites
+tests/          fixtures/ · integration/ · oracle/ — cross-system suites and the
+                independent oracle (there is no `tests/e2e/`: the executor E2E is
+                `apps/executor/internal/tests/e2e/paper_e2e_test.go`)
 scripts/        verify/ · githooks/ — repo-wide gates and the pre-push hook
 tools/          fud.ts — the one command surface (`node tools/fud.ts verify`)
 (blog)           Payload CMS 3.89 merged INTO apps/web (DR-017): collections +
@@ -115,7 +118,7 @@ tools/          fud.ts — the one command surface (`node tools/fud.ts verify`)
 ```
 `apps/web/` splits routes from React by role (DR-011/DR-018): `src/app/` holds the
 Next route tree (`(frontend)/api/**`, one wrapper per deep link, plus the blog CMS
-tree), `src/components/layout/store-shell.tsx` is the SPA state container,
+tree), `src/features/overview/store-shell.tsx` is the SPA state container,
 `src/ui/` the presentational leaves and `src/styles/` the
 design tokens + view types. The Go sidecar is one package per family under
 `apps/data/internal/research/` —
@@ -125,18 +128,21 @@ crate behind both of its services (`fudcourt-reconciler`, `fudcourt-reconciled`)
 the web-side `src/features/overview/reconcile.ts` kept as the oracle rather than a
 fallback path.
 `apps/web/scripts/` holds the web-app-only tooling and harnesses
-(`checks/check-structure.py` — the layer gate — plus `executor/worker.ts` and `tools/`
-maintenance such as `read-path-probe.ts`); the repo-wide verifiers, fixtures and cross-system suites have moved out of
+(`checks/check-structure.py` — the layer gate — plus `design/` token emission and
+`tools/` maintenance such as `read-path-probe.ts`); the repo-wide verifiers, fixtures and cross-system suites have moved out of
 `apps/web`:
 ```
   scripts/verify/        repo-wide harnesses + one-command gate: check-contract.py,
                          check-deploy.py, verify-<family>.py, verify-sync.py,
                          verify-reconcile.py, monitor.py, verify-all.sh
   scripts/githooks/      pre-push hook
-  apps/web/tests/         web-only suites + probes: shaper/auth/rate-limit/db/executor-ui
-                           tests, verify-limiter.mts, dom_audit.py, verify_all_routes.py,
-                           dbg-smoke.cjs
-  tests/e2e/executor/      executor E2E suites + executor-paper-e2e.ts (+ probe-sizing.cjs)
+  apps/web/tests/         web-only suites + probes: auth, cache-control, db, economy,
+                           executor-ui, imf, mappool, market-route, median, nav,
+                           rate-limit, regime, routing, shaper, signals, ticker-cache
+                           and trade tests (`<name>-tests.ts`), plus
+                           design-system-tests.ts, verify-limiter.mts, dom_audit.py,
+                           verify_all_routes.py, dbg-smoke.cjs, preload.ts
+  apps/executor/internal/tests/e2e/  the executor paper E2E (paper_e2e_test.go)
   tests/integration/       cross-service gates (api contract, executor integration)
   tests/fixtures/          recorded payloads: 26 .gz + expected/ envelopes,
                            sha256 in MANIFEST.json
