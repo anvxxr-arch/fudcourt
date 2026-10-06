@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +18,23 @@ import (
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/platform/session"
 	"github.com/anvxxr-arch/fudcourt/backend/workers/executor/internal/repository"
 )
+
+// ErrorEnvelopeBody is the wire shape of a contained panic
+// (shared/contracts/schemas/error-envelope.json): a machine-readable code, the
+// server's own text and the correlation id of the failing request. The
+// executor has no request-id middleware, so request_id stays empty rather than
+// fabricating a correlation the operator cannot look up.
+type ErrorEnvelopeBody struct {
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	RequestID string `json:"request_id"`
+}
+
+// ErrorEnvelope is the consistent API error response: {"error": {...}} —
+// the same envelope the api module writes through errs.Envelope.
+type ErrorEnvelope struct {
+	Error ErrorEnvelopeBody `json:"error"`
+}
 
 // PlainCredentials is a user-supplied credential set at the connect/test
 // boundary. Plaintext enters the process only through the request body and is
@@ -100,7 +119,9 @@ func New(cfg Config) (*Server, error) {
 // Router returns the executor API mux. Paths are literal except for the two
 // `{id}` segments, parsed in-handler; unimplemented methods reach a handler and
 // answer 405 with an Allow header, exactly as Next does for an unexported
-// method.
+// method. Every route is wrapped in recoverMiddleware, so a panicking handler
+// answers the canonical internal envelope instead of dropping the connection
+// (the api module's httpx.Recover contract, ported here).
 func (s *Server) Router() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/executor/preview", s.handlePreview)
@@ -110,7 +131,35 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("/api/executor/accounts/", s.handleAccountByID)
 	mux.HandleFunc("/api/executor/settings", s.handleSettings)
 	mux.HandleFunc("/api/executor/emergency", s.handleEmergency)
-	return mux
+	return recoverMiddleware(mux)
+}
+
+// recoverMiddleware contains panics at the handler boundary: the caller gets
+// the canonical internal envelope and the stack goes to the log, never the wire
+// (objective §43: no internal stack traces to users). Mirrors
+// backend/api/internal/platform/httpx.Recover — the executor has no
+// platform/httpx package, so the middleware lives here rather than forking a
+// shared dependency between two Go modules.
+func recoverMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				slog.Error("panic contained",
+					"service", "executor",
+					"path", r.URL.Path,
+					"panic", rec,
+					"stack", string(debug.Stack()),
+				)
+				writeJSON(w, http.StatusInternalServerError, ErrorEnvelope{
+					Error: ErrorEnvelopeBody{
+						Code:    "internal",
+						Message: "internal error",
+					},
+				})
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
 }
 
 // --- auth ------------------------------------------------------------------

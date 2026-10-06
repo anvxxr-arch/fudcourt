@@ -1,7 +1,6 @@
 package exchanges
 
 import (
-	"context"
 	"net/http"
 	"time"
 )
@@ -52,21 +51,3 @@ type FixedClock struct{ Millis int64 }
 
 // Now implements Clock.
 func (c FixedClock) Now() int64 { return c.Millis }
-
-// WithClock is a convenience context helper: adapters accept their Clock at
-// construction, so context plumbing is not required — this exists for callers
-// that already thread clocks through contexts.
-type clockKey struct{}
-
-// ContextWithClock returns ctx carrying c.
-func ContextWithClock(ctx context.Context, c Clock) context.Context {
-	return context.WithValue(ctx, clockKey{}, c)
-}
-
-// ClockFromContext returns the Clock in ctx, or SystemClock when absent.
-func ClockFromContext(ctx context.Context) Clock {
-	if c, ok := ctx.Value(clockKey{}).(Clock); ok {
-		return c
-	}
-	return SystemClock{}
-}
