@@ -254,7 +254,7 @@ export default function EconomyDashboard() {
               {calendar.events.slice(0, 8).map((e, i) => (
                 <div key={`${e.slug}-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[8] }}>
                   <div style={{ minWidth: 0 }}>
-                    <Link href={`/economy/indicator/${e.slug}`} style={{ color: color.labelPrimary, textDecoration: 'none', fontSize: fontSize[11] }}>{e.label}</Link>
+                    <Link href={`/economy/indicator/${e.slug}`} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: color.labelPrimary, textDecoration: 'none', fontSize: fontSize[11] }}>{e.label}</Link>
                     <div style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{formatDate(e.releaseAt)}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: space[8] }}>

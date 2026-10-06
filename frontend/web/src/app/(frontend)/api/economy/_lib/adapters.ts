@@ -285,11 +285,11 @@ export type LiquiditySpec = {
 
 export const LIQUIDITY_COMPONENTS: readonly LiquiditySpec[] = [
   { id: 'fed-bs', label: 'Fed balance sheet', seriesId: 'WALCL', unit: 'US$', decimals: 2, direction: 1, scale: 1e6, note: 'Federal Reserve total assets, weekly (WALCL)' },
-  { id: 'boj-bs', label: 'BoJ balance sheet', seriesId: 'JPNASSETS', unit: '¥100M', decimals: 0, direction: 1, scale: 1, note: 'Bank of Japan total assets, monthly (JPNASSETS)' },
-  { id: 'rrp', label: 'Reverse repo', seriesId: 'RRPONTSYD', unit: 'US$B', decimals: 1, direction: -1, scale: 1, note: 'Overnight reverse repurchase agreements, daily (RRPONTSYD). A rising RRP drains reserves.' },
-  { id: 'reserves', label: 'Bank reserves', seriesId: 'WRESBAL', unit: 'US$M', decimals: 0, direction: 1, scale: 1, note: 'Reserve balances with Federal Reserve Banks, weekly (WRESBAL)' },
-  { id: 'tga', label: 'Treasury General Account', seriesId: 'WTREGEN', unit: 'US$M', decimals: 0, direction: -1, scale: 1, note: 'U.S. Treasury General Account, weekly (WTREGEN). A rising TGA drains reserves.' },
-  { id: 'm2', label: 'M2', seriesId: 'M2SL', unit: 'US$B', decimals: 0, direction: 1, scale: 1, note: 'M2 money stock, monthly (M2SL)' },
+  { id: 'boj-bs', label: 'BoJ balance sheet', seriesId: 'JPNASSETS', unit: '¥', decimals: 0, direction: 1, scale: 1e8, note: 'Bank of Japan total assets, monthly (JPNASSETS)' },
+  { id: 'rrp', label: 'Reverse repo', seriesId: 'RRPONTSYD', unit: 'US$', decimals: 1, direction: -1, scale: 1e9, note: 'Overnight reverse repurchase agreements, daily (RRPONTSYD). A rising RRP drains reserves.' },
+  { id: 'reserves', label: 'Bank reserves', seriesId: 'WRESBAL', unit: 'US$', decimals: 0, direction: 1, scale: 1e6, note: 'Reserve balances with Federal Reserve Banks, weekly (WRESBAL)' },
+  { id: 'tga', label: 'Treasury General Account', seriesId: 'WTREGEN', unit: 'US$', decimals: 0, direction: -1, scale: 1e6, note: 'U.S. Treasury General Account, weekly (WTREGEN). A rising TGA drains reserves.' },
+  { id: 'm2', label: 'M2', seriesId: 'M2SL', unit: 'US$', decimals: 0, direction: 1, scale: 1e9, note: 'M2 money stock, monthly (M2SL)' },
   { id: 'dxy', label: 'Broad dollar index', seriesId: 'DTWEXBGS', unit: 'index', decimals: 2, direction: -1, scale: 1, note: 'Nominal broad U.S. dollar index, daily (DTWEXBGS). A stronger dollar tightens global conditions.' },
   { id: 'nfci', label: 'Financial conditions', seriesId: 'NFCI', unit: 'index', decimals: 3, direction: -1, scale: 1, note: 'Chicago Fed National Financial Conditions Index, weekly (NFCI). Positive = tighter than average.' },
   { id: 'credit', label: 'IG credit spread', seriesId: 'BAMLC0A0CM', unit: 'pp', decimals: 2, direction: -1, scale: 1, note: 'ICE BofA US Corporate Index option-adjusted spread, daily (BAMLC0A0CM). Wider = tighter.' },

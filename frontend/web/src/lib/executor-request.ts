@@ -10,11 +10,26 @@
  * NO float arithmetic on quantities/prices in the engines — `decimal.js` is the
  * required arithmetic; `number` here is the WIRE type.
  *
- * Every consumer imports `@/lib/executor` (the barrel) and nothing else across
- * slice boundaries. Single-source rule: shared constants defined here
- * (`EXECUTION_TRANSITIONS`, `canTransition`, `isTerminalExecution`) are defined
- * ONLY here — `executor-response.ts` and the barrel re-export, never redefine.
+ * Slice sub-domains live in `./executor-lifecycle` (execution lifecycle,
+ * PRD §57) and `./executor-sizing` (balance basis, fee/slippage models,
+ * sizing — PRD §10, §12, §22, §52), re-exported below so every consumer keeps
+ * importing `@/lib/executor` (the barrel) and nothing else across slice
+ * boundaries. Single-source rule: shared constants (`EXECUTION_TRANSITIONS`,
+ * `canTransition`, `isTerminalExecution`) are defined ONLY in
+ * `./executor-lifecycle`, sizing shapes ONLY in `./executor-sizing` — this
+ * file, `executor-response.ts`, and the barrel re-export, never redefine.
  */
+export * from './executor-lifecycle';
+export * from './executor-sizing';
+
+import type {
+  BalanceBasis,
+  BalanceSnapshot,
+  FeeModel,
+  SlippageModel,
+  SizingDefinition,
+  SizingMode,
+} from './executor-sizing';
 
 // ---------------------------------------------------------------------------
 // Enumerations (PRD §25, §35, §47, §49, §57, §58, §63, §78, §91, §92)
@@ -49,54 +64,6 @@ export type MarginMode = 'isolated' | 'cross';
 
 /** Position mode (PRD §91). */
 export type PositionMode = 'one_way' | 'hedge';
-
-/** Execution lifecycle (PRD §57). */
-export type ExecutionStatus =
-  | 'DRAFT'
-  | 'CALCULATED'
-  | 'VALIDATED'
-  | 'READY'
-  | 'RUNNING'
-  | 'PARTIALLY_FILLED'
-  | 'FILLED'
-  | 'PAUSED'
-  | 'CANCEL_REQUESTED'
-  | 'CANCELLED'
-  | 'FAILED'
-  | 'RISK_STOPPED'
-  | 'EXPIRED'
-  | 'RECONCILING'
-  | 'STOPPED';
-
-/**
- * Execution lifecycle table (PRD §57) — ONE truth for API intents and worker
- * transitions alike. Terminal states accept nothing.
- */
-export const EXECUTION_TRANSITIONS: Readonly<Record<ExecutionStatus, readonly ExecutionStatus[]>> = {
-  DRAFT: ['CALCULATED', 'CANCELLED', 'FAILED'],
-  CALCULATED: ['VALIDATED', 'FAILED', 'CANCELLED'],
-  VALIDATED: ['READY', 'FAILED', 'CANCELLED'],
-  READY: ['RUNNING', 'CANCELLED', 'FAILED'],
-  RUNNING: ['PARTIALLY_FILLED', 'FILLED', 'PAUSED', 'CANCEL_REQUESTED', 'CANCELLED', 'FAILED', 'RISK_STOPPED', 'EXPIRED', 'RECONCILING', 'STOPPED'],
-  PARTIALLY_FILLED: ['RUNNING', 'FILLED', 'PAUSED', 'CANCEL_REQUESTED', 'CANCELLED', 'FAILED', 'RISK_STOPPED', 'EXPIRED', 'RECONCILING', 'STOPPED'],
-  PAUSED: ['RUNNING', 'CANCEL_REQUESTED', 'CANCELLED', 'FAILED', 'RISK_STOPPED', 'STOPPED'],
-  CANCEL_REQUESTED: ['CANCELLED', 'FAILED', 'PARTIALLY_FILLED'],
-  RECONCILING: ['RUNNING', 'PARTIALLY_FILLED', 'PAUSED', 'CANCELLED', 'FAILED', 'RISK_STOPPED', 'STOPPED'],
-  FILLED: [],
-  CANCELLED: [],
-  FAILED: [],
-  RISK_STOPPED: [],
-  EXPIRED: [],
-  STOPPED: [],
-};
-
-export function canTransition(from: ExecutionStatus, to: ExecutionStatus): boolean {
-  return (EXECUTION_TRANSITIONS[from] ?? []).includes(to);
-}
-
-export function isTerminalExecution(status: ExecutionStatus): boolean {
-  return (EXECUTION_TRANSITIONS[status] ?? []).length === 0;
-}
 
 /** Child order lifecycle (PRD §58). */
 export type ChildOrderStatus =
@@ -165,32 +132,6 @@ export type ExecutionEventName =
   | 'EXECUTION_CANCELLED'
   | 'RECONCILIATION_MISMATCH'
   | 'EXTERNAL_STATE_CHANGE';
-
-// ---------------------------------------------------------------------------
-// Balance basis (PRD §10) — percentage sizing MUST name its source explicitly.
-// ---------------------------------------------------------------------------
-
-export type BalanceBasis =
-  | 'spot_available'
-  | 'spot_equity'
-  | 'futures_available'
-  | 'futures_equity'
-  | 'total_exchange_equity'
-  | 'asset_equity'
-  | 'custom';
-
-/** A resolved balance view, as returned by `resolveBalanceBasis`. */
-export interface BalanceSnapshot {
-  spotAvailable: number | null;
-  spotEquity: number | null;
-  futuresAvailable: number | null;
-  futuresEquity: number | null;
-  totalExchangeEquity: number | null;
-  /** Present only for `asset_equity`: the base-asset holding value in quote terms. */
-  assetEquity?: number | null;
-  /** Present only for `custom`: the caller-supplied reference balance. */
-  custom?: number | null;
-}
 
 // ---------------------------------------------------------------------------
 // Instrument metadata (PRD §70) — every calculated order is rounded to this.
@@ -270,52 +211,6 @@ export interface Market {
   active: boolean;
   metadata: InstrumentMetadata;
 }
-
-// ---------------------------------------------------------------------------
-// Fees / risk models (PRD §22)
-// ---------------------------------------------------------------------------
-
-export interface FeeModel {
-  /** Basis points of notional, e.g. 5 = 0.05%. */
-  makerBps: number;
-  takerBps: number;
-}
-
-export interface FeeSchedule {
-  symbol: string;
-  makerBps: number;
-  takerBps: number;
-}
-
-export interface SlippageModel {
-  /** Estimated slippage in bps of notional, priced into the risk budget. */
-  slippageBps: number;
-  /**
-   * Safety reserve as a fraction of PRICE RISK (0.01 = 1% of `priceRisk`).
-   * Proportional to price risk — not to the budget — so every sizing formula
-   * stays linear in quantity and closed-form solvable, and `projectedRisk` on
-   * fills is computable without knowing the original budget.
-   */
-  safetyReservePct: number;
-}
-
-// ---------------------------------------------------------------------------
-// Sizing (PRD §12, §52) — risk-oriented, capital-oriented, outcome-oriented.
-// ---------------------------------------------------------------------------
-
-export type SizingDefinition =
-  | { mode: 'risk_usd'; value: number }
-  | { mode: 'risk_percent'; value: number; balanceBasis: BalanceBasis }
-  | { mode: 'allocation_usd'; value: number }
-  | { mode: 'allocation_percent'; value: number; balanceBasis: BalanceBasis }
-  | { mode: 'notional_usd'; value: number }
-  | { mode: 'fixed_quantity'; value: number }
-  | { mode: 'fixed_margin'; value: number }
-  | { mode: 'target_profit_usd'; value: number }
-  /** Desired profit as % of the named balance basis (interpretation recorded in DR-020). */
-  | { mode: 'target_profit_percent'; value: number; balanceBasis: BalanceBasis };
-
-export type SizingMode = SizingDefinition['mode'];
 
 // ---------------------------------------------------------------------------
 // Entry / exit definitions (PRD §51, §54)

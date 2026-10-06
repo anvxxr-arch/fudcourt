@@ -116,7 +116,7 @@ export async function GET(req: Request) {
     missing,
     failed,
     upstream: [...new Set(out.map((s) => s.slug.split('-')[0]))].map((iso2) => `${iso2} via its bound source`),
-    derived: `each series read on its own cadence and filtered to observations on/after ${cutoff ?? 'the start of its history'}; series are NOT resampled onto a common grid (a monthly and an annual print cannot be honestly interpolated onto one axis), so each carries its own frequency; ${missing.length} slug(s) unresolved, ${failed.length} read(s) failed`,
+    derived: `each series read on its own cadence and filtered to observations on/after ${cutoff ?? 'the start of its history'}; series are NOT resampled onto a common grid (a monthly and an annual print cannot be honestly interpolated onto one axis), so each carries its own frequency${missing.length + failed.length > 0 ? `; ${missing.length} slug(s) unresolved, ${failed.length} read(s) failed` : ''}`,
     asOf: Math.floor(Date.now() / 1000),
   });
 }
