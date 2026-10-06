@@ -23,6 +23,7 @@ import {
   APR,
   APY,
   Button,
+  CHILD_STATUS,
   ColumnHeader,
   Confidence,
   Currency,
@@ -69,6 +70,15 @@ import {
   parseFinancialInput,
   roundTo,
 } from '@/ui/atoms/financial/format';
+import { EXECUTION_TRANSITIONS } from '@/lib/executor-lifecycle';
+import type { ExecutionStatus as EngineExecutionStatus } from '@/lib/executor-lifecycle';
+import type { ChildOrderStatus as EngineChildOrderStatus } from '@/lib/executor-request-defs';
+import {
+  CHILD_ORDER_STATUSES,
+  EXECUTION_STATUSES,
+  type ChildOrderStatus as MirroredChildOrderStatus,
+  type ExecutionStatus as MirroredExecutionStatus,
+} from '@/ui/atoms/system/lifecycle';
 
 // ---------------------------------------------------------------------------
 // 1. Financial formatting corruption
@@ -228,6 +238,36 @@ test('render: ExecutionStatus exposes a human-readable label for every canonical
   }
   // The canonical vocabulary is covered, not a subset.
   assert.equal(Object.keys(EXECUTION_STATUS).length, 15, 'the execution status map is not the full 15-state vocabulary');
+});
+
+test('vocab: the status maps mirror the engine and the contract', () => {
+  // DR-018 keeps ui/ a leaf, so the atom mirrors lib's status unions in
+  // ui/atoms/system/lifecycle instead of importing them; this is the runtime guard.
+  for (const state of Object.keys(EXECUTION_TRANSITIONS)) {
+    assert.ok(state in EXECUTION_STATUS, `engine state ${state} has no label in EXECUTION_STATUS`);
+  }
+  for (const state of Object.keys(EXECUTION_STATUS)) {
+    assert.ok(state in EXECUTION_TRANSITIONS, `EXECUTION_STATUS has ${state}, the engine does not`);
+  }
+  const contract = JSON.parse(
+    readFileSync(join(process.cwd(), '..', '..', 'contracts', 'schemas', 'trading', 'order.json'), 'utf8'),
+  ) as { $defs: { child_order_status: { enum: string[] }; execution_status: { enum: string[] } } };
+  const childStates = contract.$defs.child_order_status.enum;
+  for (const status of childStates) {
+    assert.ok(status in CHILD_STATUS, `contract child state ${status} has no label in CHILD_STATUS`);
+  }
+  for (const status of Object.keys(CHILD_STATUS)) {
+    assert.ok(childStates.includes(status), `CHILD_STATUS has ${status}, the contract does not`);
+  }
+  // The execution vocabulary is FROZEN in the contract too, so it is the third witness:
+  // the engine's transition table, the atom's label map, and the published schema.
+  const execStates = contract.$defs.execution_status.enum;
+  for (const state of execStates) {
+    assert.ok(state in EXECUTION_STATUS, `contract execution state ${state} has no label in EXECUTION_STATUS`);
+  }
+  for (const state of Object.keys(EXECUTION_STATUS)) {
+    assert.ok(execStates.includes(state), `EXECUTION_STATUS has ${state}, the contract does not`);
+  }
 });
 
 test('render: MarketStatus and HealthStatus say what they mean', () => {
@@ -439,4 +479,26 @@ test('render: the categorical palette does not reuse the semantic market colours
   for (const c of CATEGORICAL) {
     assert.ok(!semantic[c], `the categorical palette reuses a semantic market colour: ${c}`);
   }
+});
+
+// ---------------------------------------------------------------------------
+// The lifecycle mirror is PROVEN, not assumed.
+// ---------------------------------------------------------------------------
+
+// `src/ui/` is a presentational leaf and may not import `@/lib` (DR-018), so
+// `src/ui/atoms/system/lifecycle.ts` mirrors the engine's unions. Mutual assignability is the
+// contract: a state added to the engine without updating the mirror fails `bunx tsc
+// --noEmit`, and so does a state added to the mirror alone. The runtime half is the
+// array/map agreement asserted below.
+type AssertTrue<T extends true> = T;
+type SameStates<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const _mirrorPins: [
+  AssertTrue<SameStates<EngineExecutionStatus, MirroredExecutionStatus>>,
+  AssertTrue<SameStates<EngineChildOrderStatus, MirroredChildOrderStatus>>,
+] = [true, true];
+void _mirrorPins;
+
+test('lifecycle: the mirrored status arrays match the atom label maps', () => {
+  assert.deepEqual([...EXECUTION_STATUSES], Object.keys(EXECUTION_STATUS), 'EXECUTION_STATUSES drifted from the atom label map');
+  assert.deepEqual([...CHILD_ORDER_STATUSES], Object.keys(CHILD_STATUS), 'CHILD_ORDER_STATUSES drifted from the atom label map');
 });

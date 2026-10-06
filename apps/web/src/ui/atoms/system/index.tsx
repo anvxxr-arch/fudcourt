@@ -1,11 +1,14 @@
 /**
  * atoms/system — Timestamp, Duration, Latency, HealthStatus, ExecutionStatus.
  *
- * `ExecutionStatus` uses the CANONICAL lifecycle vocabulary from
+ * `ExecutionStatus` presents the CANONICAL lifecycle vocabulary defined in
  * `src/lib/executor-lifecycle.ts` (mirrored by `apps/executor/internal/execution/lifecycle.go`).
- * No second enum is minted here — a duplicate would be exactly the conflict the plan's stop
- * conditions name. The atom maps each canonical state to a label, a tone and an icon; it
- * knows nothing about exchanges, providers or how a state was reached.
+ * DR-018 keeps `ui/` a leaf, so `src/lib/` cannot be imported from here: the unions live in
+ * `./lifecycle`, a mirror of the lib source that `tests/design-system-atom-tests.ts` pins to
+ * the engine's transitions table and the contract's status enum at runtime, and to mutual
+ * assignability at compile time — a state added to the engine fails those checks rather than
+ * silently failing to render. The atom maps each canonical state to a label, a tone and an
+ * icon; it knows nothing about exchanges, providers or how a state was reached.
  *
  * Presentation only. No atom here fetches API health, reads a venue, or subscribes to
  * anything.
@@ -23,12 +26,10 @@ type BaseProps = {
   theme?: 'light' | 'dark';
 };
 
-/**
- * The canonical execution lifecycle (PRD §57). Imported from the one source of truth rather
- * than re-declared, so a state added to the engine cannot silently fail to render.
- */
-import type { ExecutionStatus as CanonicalExecutionStatus } from '@/lib/executor-lifecycle';
-import type { ChildOrderStatus as CanonicalChildOrderStatus } from '@/lib/executor-request-defs';
+import type {
+  ExecutionStatus as CanonicalExecutionStatus,
+  ChildOrderStatus as CanonicalChildOrderStatus,
+} from './lifecycle';
 
 /** Every canonical state, with its human label and tone. */
 const EXECUTION_STATUS: Record<CanonicalExecutionStatus, { label: string; tone: Tone }> = {
