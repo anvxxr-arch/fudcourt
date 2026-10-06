@@ -8,14 +8,14 @@ package main
 //
 // WHY HERE (recorded decision, reported to the architecture owner):
 //
-//	The dependency rules forbid backend/api from importing this module's
+//	The dependency rules forbid apps/api from importing this module's
 //	internals, and the executor surface needs the planner (one canonical risk
 //	engine + sizing), the sealed credential vault and the `executor.*` store —
 //	all owned by this module. The three candidate boundaries were:
 //	  (a) a NEW shared Go contracts/pure-math module — genuinely clean, but it
 //	      means a new go.mod + go.work entry and moving the canonical planner/risk
 //	      packages, which is a repo-wide decision with its own rollout;
-//	  (b) the executor exposing its own HTTP surface and backend/api proxying —
+//	  (b) the executor exposing its own HTTP surface and apps/api proxying —
 //	      adds a pass-through hop with all the logic still living here;
 //	  (c) this: the executor serves it directly. Chosen because it needs NO new
 //	      module, NO new service and NO new proxy, keeps ONE canonical planner,

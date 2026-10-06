@@ -62,7 +62,7 @@ chain; `value_usd` summed for net worth. Every `INSERT` is snapshotted into the
 | `trades` | `ORDER BY date DESC LIMIT 20` |
 | `net_worth` | derived: `SELECT SUM(value_usd) FROM assets` |
 
-## 2. Neon Postgres (payload CMS, merged into frontend/web) — 3.89
+## 2. Neon Postgres (payload CMS, merged into apps/web) — 3.89
 
 Source of truth: `apps/web/src/cms/migrations/20260917_194354.ts`.
 
@@ -89,7 +89,7 @@ Indexes: btree on `order`, `parent_id`, `slug`, FK columns, `updated_at/created_
 | `POST /api/graphql` introspection | blocked by schema policy |
 | `/api/graphql-playground` | 404 in production (Payload `disablePlaygroundInProduction: true`) |
 
-## 3. API envelope contract (frontend/web)
+## 3. API envelope contract (apps/web)
 
 ### 3.1 Success envelope (all market modes, e.g. `GET /api/cryptorank?mode=…`)
 
@@ -364,7 +364,7 @@ own meaning for every status — and **no 503** (no disabled mode) and **no writ
 | **502** | a transport failure, **an upstream feed with no `<item>`** (empty ≠ valid answer), or the sidecar being unreachable | `{"error":"upstream returned an empty feed","detail":"…"}` |
 | other upstream | the real status is preserved (403/500/503 pass through with the real body prefix) | `{"error":"upstream 403 from the RSS feed","detail":"…"}` |
 
-### 3.3 Proxy routes (frontend/web) — parameter contracts
+### 3.3 Proxy routes (apps/web) — parameter contracts
 
 | Route | Params | Modes/types |
 |-------|--------|-------------|

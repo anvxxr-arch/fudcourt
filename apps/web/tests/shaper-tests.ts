@@ -10,7 +10,7 @@
  *  - every fixture is pinned by sha256 in MANIFEST.json: a hand-edited fixture
  *    fails the tamper check, so a green suite cannot be bought by editing data.
  *
- * Usage: cd frontend/web && npm run test:shapers
+ * Usage: cd apps/web && npm run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -20,9 +20,9 @@ import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { CR_DISABLED, CR_MODES, CR_MODE_UPSTREAM, envelope, type CrLiveMode, type HelperOut } from '@/features/cryptorank';
 
-// The fixtures moved out of frontend/web (spec Phase 7): they are shared by the web
+// The fixtures moved out of apps/web (spec Phase 7): they are shared by the web
 // shaper suites, the TS fixture tools and the Go parity gate, so they now live at
-// the repo-root tests/fixtures. process.cwd() is frontend/web (test:shapers runs
+// the repo-root tests/fixtures. process.cwd() is apps/web (test:shapers runs
 // there), so the tree is two levels up.
 const FIX = path.join(process.cwd(), '..', '..', 'tests', 'fixtures');
 const live = (CR_MODES as readonly string[])

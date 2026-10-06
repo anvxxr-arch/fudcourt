@@ -76,8 +76,8 @@ it is computed.
 |---|---|---|---|
 | [`accounts/wallet.json`](accounts/wallet.json) | CANONICAL | `backend/api [removed: accounts/wallets]` | address is the key in SQL today |
 | [`accounts/exchange-account.json`](accounts/exchange-account.json) | CANONICAL | `backend/api accounts/exchange` (+ executor store) | minted uuid |
-| [`accounts/balance.json`](accounts/balance.json) | CANONICAL | `backend/workers/executor` / `backend/api [removed: finance/ledger]` | via account+asset |
-| [`accounts/account-equity.json`](accounts/account-equity.json) | CANONICAL | `backend/workers/executor` | via account |
+| [`accounts/balance.json`](accounts/balance.json) | CANONICAL | `apps/executor` / `backend/api [removed: finance/ledger]` | via account+asset |
+| [`accounts/account-equity.json`](accounts/account-equity.json) | CANONICAL | `apps/executor` | via account |
 | [`assets/asset.json`](assets/asset.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `asset_id` minted; instance in `contracts/data/reference.json` |
 | [`assets/token.json`](assets/token.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `token_id` minted over `chain/address`; instance in `reference.json` |
 | [`assets/chain.json`](assets/chain.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `chain_id` minted; instance in `reference.json`; `apps/reconciler/src/chains.rs` is still a separate private table |
@@ -86,15 +86,15 @@ it is computed.
 | [`markets/ticker.json`](markets/ticker.json) | CANONICAL | `backend/api [removed: markets/overview]` | via instrument+venue |
 | [`markets/price.json`](markets/price.json) | CANONICAL | **absent** | schema only |
 | [`markets/candle.json`](markets/candle.json) | CANONICAL | `backend/api [removed: markets/overview]` | via instrument+interval+open_time |
-| [`trading/execution.json`](trading/execution.json) | CANONICAL | `backend/workers/executor` | minted uuid |
-| [`trading/order.json`](trading/order.json) | CANONICAL | `backend/workers/executor` | minted `fud_…` |
-| [`trading/fill.json`](trading/fill.json) | CANONICAL | `backend/workers/executor` | dedup key `(account, trade)` |
-| [`trading/position.json`](trading/position.json) | CANONICAL | `backend/workers/executor` (+ derived in `[removed: finance/portfolio]`) | key `(instrument, side)` |
-| [`trading/execution-plan.json`](trading/execution-plan.json) | CANONICAL | `backend/workers/executor` | via execution |
-| [`trading/order-request.json`](trading/order-request.json) | CANONICAL | `backend/workers/executor` | via `fud_…` |
-| [`trading/sizing-definition.json`](trading/sizing-definition.json) | CANONICAL | `backend/workers/executor` | n/a |
-| [`trading/execution-event.json`](trading/execution-event.json) | DERIVED | `backend/workers/executor` | `evt_…` / bigserial |
-| [`trading/risk-profile.json`](trading/risk-profile.json) | CANONICAL | `backend/workers/executor` | `user_id` |
+| [`trading/execution.json`](trading/execution.json) | CANONICAL | `apps/executor` | minted uuid |
+| [`trading/order.json`](trading/order.json) | CANONICAL | `apps/executor` | minted `fud_…` |
+| [`trading/fill.json`](trading/fill.json) | CANONICAL | `apps/executor` | dedup key `(account, trade)` |
+| [`trading/position.json`](trading/position.json) | CANONICAL | `apps/executor` (+ derived in `[removed: finance/portfolio]`) | key `(instrument, side)` |
+| [`trading/execution-plan.json`](trading/execution-plan.json) | CANONICAL | `apps/executor` | via execution |
+| [`trading/order-request.json`](trading/order-request.json) | CANONICAL | `apps/executor` | via `fud_…` |
+| [`trading/sizing-definition.json`](trading/sizing-definition.json) | CANONICAL | `apps/executor` | n/a |
+| [`trading/execution-event.json`](trading/execution-event.json) | DERIVED | `apps/executor` | `evt_…` / bigserial |
+| [`trading/risk-profile.json`](trading/risk-profile.json) | CANONICAL | `apps/executor` | `user_id` |
 | [`finance/ledger-entry.json`](finance/ledger-entry.json) | CANONICAL | `backend/api [removed: finance/ledger]` | natural key |
 | [`finance/ledger-account.json`](finance/ledger-account.json) | CANONICAL | **absent** (SQL only) | `code` |
 | [`finance/treasury-account.json`](finance/treasury-account.json) | CANONICAL | `backend/api [removed: finance/treasury]` | `account_id` |

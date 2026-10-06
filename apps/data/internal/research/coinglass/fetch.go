@@ -23,7 +23,7 @@ import (
 // DefaultCacheDir is the coinglass cache root, *below* the fudcourt-data cache
 // root the deploy unit sets (FUDCOURT_DATA_CACHE_DIR -> ~/.cache/fudcourt-data):
 // "<root>/coinglass". A family must never share another family's cache
-// directory (backend/data/README.md): a shared cache turns an independent
+// directory (apps/data/README.md): a shared cache turns an independent
 // verification fetch into self-confirmation.
 const DefaultCacheDir = "~/.cache/fudcourt-data"
 

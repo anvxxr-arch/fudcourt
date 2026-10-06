@@ -36,7 +36,7 @@
 > `internal/{markets/{instruments,overview}, finance/{portfolio,treasury,transactions,ledger}, accounts/{exchange,wallets}, access/{identity,credentials,authorization,entitlements}, notifications, jobs, audit, platform/{errs,health,httpx}}` (post-regroup).
 > Older paths such as `internal/instruments`, `internal/ledger`, `internal/exchangeaccounts` no
 > longer resolve. **Every citation below is the path that resolved when the file was read**, and
-> owners are named by package (`backend/api [removed: markets/instruments]`) rather than by frozen path. The
+> owners are named by package (`apps/api [removed: markets/instruments]`) rather than by frozen path. The
 > same applies to `apps/web/src/features/{signals/scoreboard.tsx → scoreboard/scoreboard.tsx}`
 > and to `apps/reconciler/src/{db.rs → persistence/db.rs, sync.rs → streams/sync.rs, reconcile.rs →
 > reconciliation/reconcile.rs, server.rs → reconciliation/server.rs}`.
@@ -70,7 +70,7 @@
 >
 > **Path re-verification.** Every repository path in this document was re-tested with `test -f`
 > after the mid-flight regroup: 86 path-like citations, all resolve. (The three apparent misses were
-> a prose package name — `backend/api [removed: markets/instruments]` — and two paths written without their
+> a prose package name — `apps/api [removed: markets/instruments]` — and two paths written without their
 > `features/` / `scripts/` segment, now corrected to
 > `apps/web/src/features/executor/ui.tsx` and
 > `tests/oracle/dump-envelopes.ts` — *the latter has since been relocated by the Phase-8 tests
@@ -97,13 +97,13 @@
 
 ## 0. The one-paragraph summary
 
-FUDCourt has **two and a half pipelines**. The **executor plane** (`backend/workers/executor`) is a
+FUDCourt has **two and a half pipelines**. The **executor plane** (`apps/executor`) is a
 real canonical pipeline: exact decimal strings end-to-end, minted id spaces (`fud_…`, `req_…`,
 `evt_…`), a venue-agnostic order/fill/execution model, and a durable store. The **treasury plane**
-(`backend/sync` Rust + `apps/web/src/server/db.ts` + `db/schema/*.sql`) is a
+(`apps/reconciler` Rust + `apps/web/src/server/db.ts` + `db/schema/*.sql`) is a
 snapshot **product view** written straight to SQL, with number formatting as its compatibility
 contract (`pyfmt.rs`) and no canonical identity at all. The **research/acquisition plane**
-(`backend/data`) is a set of provider-shaped passthroughs: it normalizes *field names* and
+(`apps/data`) is a set of provider-shaped passthroughs: it normalizes *field names* and
 *honest absence* very carefully, and it never mints an internal id. **There is no CANONICAL layer
 between NORMALIZED and ENRICHED for any entity except instruments and the executor id space** — and
 the two id spaces it does have (`InstrumentID`, `VenueKey`) currently have no producer that mints
@@ -139,8 +139,8 @@ Layer vocabulary used throughout (`README.md` in `contracts/schemas/` repeats it
 | Next.js direct-to-upstream (no sidecar) | `apps/web/src/features/market/dex/client.ts:10` (DexScreener), `features/markets/client.ts:13` (CoinGecko), `api/signals/route.ts:6` (`https://data-public.vercel.app`), `features/ticker/venues.ts:82` (ccxt clients) | Four families bypass the Go sidecar entirely. |
 | Executor venue REST | `apps/executor/internal/exchanges/{binance,bybit,mexc}/*.go` + `exchanges/http.go` | Signed venue calls. |
 
-Owner: **`backend/data`** for the five research families; **`backend/sync`** for chain/CEX balance
-streams; **`backend/workers/executor`** for venue trading APIs; **`frontend/web`** for
+Owner: **`apps/data`** for the five research families; **`apps/reconciler`** for chain/CEX balance
+streams; **`apps/executor`** for venue trading APIs; **`apps/web`** for
 dex/markets/signals/ticker (documented acquisition debt, `docs/architecture/domain-map.md` §3.1).
 
 ### 1.2 PARSED
@@ -186,7 +186,7 @@ concrete answer to D-CANON, O1 and O3 below.
 | Canonical entity types | `…/reference/types.go` (`Asset`, `Token`, `Chain`, `Venue`, plus `ProviderID`) | **Live.** These are the shapes `contracts/schemas/{assets,markets}/*.json` describe. |
 | Seed data | `…/reference/seed.go` (`Seed()`: 9 chains, 8 assets, 11 tokens, 12 venues) | **Live.** Curated, not scraped: the provider feeds do not supply ids. |
 | Registry + resolution | `…/reference/registry.go` (`Build`, `Resolve`, `ByID`, `ChainByName`, `TokenByAddress`, `VenueByName`) | **Live.** `Resolve` refuses an unknown provider (`ErrUnknownProvider`) and an unknown identifier (`ErrUnknownIdentifier`), matches the identifier **verbatim**, and never resolves through a symbol. |
-| Cross-service artifact | **`contracts/data/reference.json`** (19,565 bytes) — emitted by `…/reference/cmd/emit`, pinned by `TestReferenceArtifactIsCurrent` | **Live.** This is the file another language reads; it carries `document_version`, `id_rule`, `salt`, the sorted entity lists, the whole resolution table, the honest `unmapped` list (7 known-unknown classes) and `misses` (3 identifiers reported by a feed that the registry refuses to invent an id for). It is what makes "backend/api owns the registry" true for `frontend/web`, `backend/data` and `backend/sync` alike, which cannot import Go. |
+| Cross-service artifact | **`contracts/data/reference.json`** (19,565 bytes) — emitted by `…/reference/cmd/emit`, pinned by `TestReferenceArtifactIsCurrent` | **Live.** This is the file another language reads; it carries `document_version`, `id_rule`, `salt`, the sorted entity lists, the whole resolution table, the honest `unmapped` list (7 known-unknown classes) and `misses` (3 identifiers reported by a feed that the registry refuses to invent an id for). It is what makes "apps/api owns the registry" true for `apps/web`, `apps/data` and `apps/reconciler` alike, which cannot import Go. |
 | Tests | `…/reference/{registry_test.go,document_test.go}` | **Live.** 16 tests: id pinning, determinism under shuffled insertion order, round-trip through the artifact, and document-integrity refusal cases. |
 
 The instrument id space is minted by a SECOND package,
@@ -210,8 +210,8 @@ version control, not through a database.
 | Instrument id | `[removed: markets/instruments/instrument.go]` (`InstrumentID string`), documented canonical form `exchange:marketType:BASE/QUOTE` — evidenced by the fixture `…/instruments/instrument_test.go:13` (`"binance:spot:BTC/USDT"`) | **No producer.** grep `InstrumentID` across the repo → 12 hits in 4 files: the struct field, its own test, `[removed: finance/portfolio]` (derived exposure key, `portfolio.go:50`), and `portfolio_test.go`. Nothing mints it from a venue payload. |
 | Executor id space | `apps/executor/internal/runtime/idempotency/idempotency.go:38-40` (`fud_<executionId>_<seq>`), `:136-138` (`req_…`), `:83-85` (`FillDedupKey(accountID, exchangeTradeID)`); `repository/store.go:125-127` (`evt_…`) | **Live and durable.** This is the one place identity is minted and enforced by a UNIQUE constraint (`executor-schema.sql:122`, `:141`). |
 | Venue key (TS) | `apps/web/src/lib/executor.ts` (`VenueKey`), `:1366` (`venueKey()`) → `` `${exchange}:${marketType}:${symbol}` `` | Mirrors the Go instrument id; declared, used by the executor plane. |
-| Chain identity | **[CANONICAL OWNER]** 9 chains with minted ids (`reference/seed.go`, ids emitted in `contracts/data/reference.json`). Original finding: `apps/reconciler/src/chains.rs:13` (`EVM` table), `:79` (`WALLETS`), `:98` (`LLAMA_IDS`) | A **static Rust registry** — the closest thing to a chain registry in the repo, and it is per-process, not durable. `[INFERENCE]` It cannot serve as the canonical registry because nothing outside `backend/sync` can read it. |
-| Asset identity | **[CANONICAL OWNER]** `apps/api/internal/markets/reference` (`MintID`/`Seed`/`Resolve`), artifact `contracts/data/reference.json`. Original finding, kept as the evidence: `[INFERENCE]` none. grep `canonicalId|provider_id|external_id|asset_id|symbol_map|asset_map|registry` over `apps/web/src/server`, `[removed: shared/sdk/typescript/src]`, `apps/api/internal`, `backend/data`, `apps/reconciler/src`, `database/` → only `platform/executor/exchange.ts:705` ("Capability registry (PRD §50) — static") and a generated field name. | **[CANONICAL OWNER]** ids are now minted (`reference/ids.go`) and the provider mapping is published (`reference.json`). The original finding stands for **SQL only**: no aliases/external_ids/provider_ids table, column or index exists in any `.sql` file (`db/README.md` and all three schemas), so the canonical-id guarantee still cannot be delivered by field renames alone — it needs the artifact to be loaded. |
+| Chain identity | **[CANONICAL OWNER]** 9 chains with minted ids (`reference/seed.go`, ids emitted in `contracts/data/reference.json`). Original finding: `apps/reconciler/src/chains.rs:13` (`EVM` table), `:79` (`WALLETS`), `:98` (`LLAMA_IDS`) | A **static Rust registry** — the closest thing to a chain registry in the repo, and it is per-process, not durable. `[INFERENCE]` It cannot serve as the canonical registry because nothing outside `apps/reconciler` can read it. |
+| Asset identity | **[CANONICAL OWNER]** `apps/api/internal/markets/reference` (`MintID`/`Seed`/`Resolve`), artifact `contracts/data/reference.json`. Original finding, kept as the evidence: `[INFERENCE]` none. grep `canonicalId|provider_id|external_id|asset_id|symbol_map|asset_map|registry` over `apps/web/src/server`, `[removed: contracts/openapi/fudcourt.yaml/src]`, `apps/api/internal`, `apps/data`, `apps/reconciler/src`, `database/` → only `platform/executor/exchange.ts:705` ("Capability registry (PRD §50) — static") and a generated field name. | **[CANONICAL OWNER]** ids are now minted (`reference/ids.go`) and the provider mapping is published (`reference.json`). The original finding stands for **SQL only**: no aliases/external_ids/provider_ids table, column or index exists in any `.sql` file (`db/README.md` and all three schemas), so the canonical-id guarantee still cannot be delivered by field renames alone — it needs the artifact to be loaded. |
 | Provider→canonical mapping | **[CANONICAL OWNER]** the mapping now exists — `…/reference/registry.go` (`Resolve`) over the table emitted in `contracts/data/reference.json`, populated from `…/reference/seed.go`. The gap this row originally recorded was in **SQL**: `db/schema/executor-schema.sql` still has none (the mapping is reference data, not executor state); `pg-schema.sql` now declares it — `canonical_reference` + `canonical_reference_miss` with a `CHECK (canonical_id LIKE kind || ':%')` (DR-036), loaded from the artifact by `…/reference/loader.go`. It is **additive and unwired**: nothing loads it and nothing joins through it yet. Separately, `price_history(symbol, ts, source)` (`:140-141`) remains a symbol-as-identity key, but `price_history` is **dead, not merely unwritten** — it has 0 rows in Postgres (DR-036; its DDL comment `:131` says "Written by the price sampler", and grep finds no `INSERT` into it anywhere, only the retention DELETE at `apps/web/src/server/db.ts`). | **[CANONICAL OWNER]** delivered for Asset/Token/Chain/Venue by `apps/api/internal/markets/reference` (see §1.4 heading); the *SQL* half now exists as the table above — what remains is loading it and re-pointing a consumer, not the absence of a table. |
 
 Provider-specific parsers that **already exist** and the layer they occupy (requested explicitly):
@@ -299,9 +299,9 @@ Conventions for every row: **Identity** gives the internal canonical id and the 
 | **Execution** | One user intent run end-to-end (plan → child orders → fills), with an immutable plan snapshot. | Minted uuid PK; `RiskCalculated`… lifecycle in `executor.executions`; events minted `evt_<executionId>_<seq>`. | trading | **`apps/executor/internal/execution`** | venues + own engine | `executor/records.go:13` (`ExecutionRecord`), `worker/tick.go`; SQL `executor.executions` `executor-schema.sql:58-93`, `execution_plans` `:100-104`, `execution_events` `:147-154`; contract `contracts/events/events.json` |
 | **Transaction** | A user-visible money-movement history row (on-chain event or manual entry). | SQL surrogate `id INTEGER PK AUTOINCREMENT` (`db/schema/pg-schema.sql:64-80`). No canonical id. | portfolio / ledger | **`[removed: finance/transactions]`** | chain scans, manual, venue exports | `[removed: finance/transactions/transactions.go]`; SQL `transactions` `db/schema/pg-schema.sql:64-80`; writer `apps/web/src/app/(frontend)/api/transactions/route.ts:78,116` |
 | **LedgerEntry** | An immutable, signed financial movement of one asset against one account. **The repo's canonical money fact.** | `Entry.ID` string + a natural idempotency key `(AccountID, Kind, ReferenceType, ReferenceID, OccurredAtMs)` (`ledger.go:127-141`) with `Amount`/`CreatedAt` deliberately excluded (`:131`). | ledger | **`[removed: finance/ledger]`** | treasury movements, executions, fees, reconciliation adjustments | `[removed: finance/ledger/ledger.go]`; **schema counterpart is misleading**: SQL `ledger` table (`db/schema/pg-schema.sql:43-50`) is a per-account balance snapshot with **no writer**, and is *not* the entry log |
-| **Signal** | A scored, sourced detection of an opportunity/risk. | Provider `(id, mint)`; identity is composite and provider-owned. | signals | **owner absent** — `frontend/web` read proxy only | `data-public.vercel.app` | `api/signals/route.ts:10` (`SignalRow{id,ts,chain,mint,symbol,score,decision,…}`), `:44` (`ScoreboardPayload`) |
+| **Signal** | A scored, sourced detection of an opportunity/risk. | Provider `(id, mint)`; identity is composite and provider-owned. | signals | **owner absent** — `apps/web` read proxy only | `data-public.vercel.app` | `api/signals/route.ts:10` (`SignalRow{id,ts,chain,mint,symbol,score,decision,…}`), `:44` (`ScoreboardPayload`) |
 | **NewsArticle** | A published article or report from a named outlet. | Absent — `KhRow.slug` (khala) and RSS `link`/`title` (news) are the only keys; cryptorank news carries `ID *float64`. | news | **owner absent** — `apps/data/internal/research/{news,khala,cryptorank}` | Cointelegraph RSS, khala.io, CryptoRank news | `…/research/news/parse.go:23` (`Item`), `khala/shape.go` (`KhRow`/`KhReport`), `cryptorank/types.go:157` (`CrNewsRow`); TS `features/news/client.ts:28` |
-| **MacroSeries** | A named macro time series (e.g. a rates or inflation series). | **Absent — no owner, no code.** | macro | **absent — no owner yet** | none | **Absent.** Evidence: grep `macro`, `fred`, `cpi`, `inflation`, `macroeconomic`, `yield`, `dxy`, `tbill` (case-insensitive) over `backend`, `apps/web/src`, `shared`, `database`, `tests` → **zero** substantive matches (only Rust `*-macro*.json` build artifacts under `backend/sync/target/` and the word "yield" inside unrelated comments). There is no macro provider, table, route, or feature directory. |
+| **MacroSeries** | A named macro time series (e.g. a rates or inflation series). | **Absent — no owner, no code.** | macro | **absent — no owner yet** | none | **Absent.** Evidence: grep `macro`, `fred`, `cpi`, `inflation`, `macroeconomic`, `yield`, `dxy`, `tbill` (case-insensitive) over `backend`, `apps/web/src`, `shared`, `database`, `tests` → **zero** substantive matches (only Rust `*-macro*.json` build artifacts under `apps/reconciler/target/` and the word "yield" inside unrelated comments). There is no macro provider, table, route, or feature directory. |
 | **MacroObservation** | One observation of a macro series at a time. | **Absent — no owner, no code.** | macro | **absent — no owner yet** | none | **Absent** (same grep as MacroSeries). |
 
 > Requested entities with **no implementation at all**: **MacroSeries**, **MacroObservation**.
@@ -339,36 +339,36 @@ exist.
 
 | Entity | (a) Schema path | (b) Wire shape (producer → consumer) | (c) Owner struct | (d) Contract-visible / internal-only |
 |---|---|---|---|---|
-| **Asset** | `common/identifier.json`, `assets/asset.json` | **[CANONICAL OWNER]** `reference.json` is the wire form (`/chains`, `/assets`, `/tokens`, `/venues`, `/mappings`, `/unmapped`); no HTTP route serves it yet. Original: **schema only — no runtime consumer yet.** Today the symbol travels inside `transactions` (`apps/web/src/app/(frontend)/api/transactions/route.ts` → browser) and inside the `assets` snapshot (`backend/sync` → Postgres → `apps/web/src/server/db.ts` → `/api/coins`). | **`apps/api/internal/markets/reference`** → `Asset` (`reference/types.go`) | n/a |
+| **Asset** | `common/identifier.json`, `assets/asset.json` | **[CANONICAL OWNER]** `reference.json` is the wire form (`/chains`, `/assets`, `/tokens`, `/venues`, `/mappings`, `/unmapped`); no HTTP route serves it yet. Original: **schema only — no runtime consumer yet.** Today the symbol travels inside `transactions` (`apps/web/src/app/(frontend)/api/transactions/route.ts` → browser) and inside the `assets` snapshot (`apps/reconciler` → Postgres → `apps/web/src/server/db.ts` → `/api/coins`). | **`apps/api/internal/markets/reference`** → `Asset` (`reference/types.go`) | n/a |
 | **Token** | `assets/token.json` | **[CANONICAL OWNER]** carried in `reference.json` (11 tokens); no route serves it yet. Original: **schema only — no runtime consumer yet.** `DexToken` reaches the browser only from the Next route `api/dex/route.ts` (direct DexScreener call, no sidecar). | `apps/web/src/features/market/dex/client.ts:73` (`DexToken`, TS only) | contract-visible: `chain_id`, `address`, `symbol`; internal-only: none yet |
 | **Chain** | `assets/chain.json` | **[CANONICAL OWNER]** carried in `reference.json` (9 chains); no route serves it yet. Original: **schema only — no runtime consumer yet.** Read today as a free string on `transactions` rows and as a lowercase label in the `assets` snapshot; `apps/reconciler/src/chains.rs` is a private static registry, not a service. | **`apps/api/internal/markets/reference`** → `Chain` (`reference/types.go`) | n/a |
 | **Venue** | `markets/venue.json` | **[CANONICAL OWNER]** carried in `reference.json` (12 venues, `known`, `market_types`); no route serves it yet. Original: **schema only — no runtime consumer yet.** The name string is echoed inside `executor.exchange_accounts.exchange` (`apps/api/internal/accounts/exchange` → executor store) and inside market-data rows. | **`apps/api/internal/markets/reference`** → `Venue` (`reference/types.go`) | contract-visible: `venue_id`, `known`, `market_types`; internal-only: the three inline allowlists |
-| **Instrument** | `markets/instrument.json` | **[CANONICAL OWNER]** `instrument_id` is minted by `[removed: markets/instruments]` (`canonical.go`), not by the reference registry: instruments are unbounded per-venue markets, so they are deliberately NOT emitted into `contracts/data/reference.json`. A consumer gets an instrument id by calling `instruments.ResolveInstrument` with the built registry (`reference.Build()`), or from a future emitted artifact of this package. Contract exists and is **documented in the OpenAPI surface** (`contracts/openapi/fudcourt.yaml:1903` components). Runtime: consumed in-process by `backend/workers/executor` (its own `executor.InstrumentMetadata` analogue), and by `apps/web/src/lib/executor.ts` (`InstrumentMetadata`, TS). **No service currently serves an instrument record over HTTP.** | `backend/api [removed: markets/instruments]` → `Instrument` (`[removed: markets/instruments/instrument.go]`); TS `InstrumentMetadata` (`platform/executor/types.ts:217`) | contract-visible: `instrument_id`, `base_asset`, `quote_asset`, `market_type`, `exchange`, `exchange_symbol`, grid fields; internal-only: `contract_size` consumers inside sizing |
-| **Price** | `markets/price.json` | **schema only — no runtime consumer yet.** `price_history(symbol, ts, source)` has a schema and a retention job but **no writer and no reader**; live prices reach the browser only as product-view rows (`VenueQuote`/`CrCoin`). | **absent — not yet implemented**; nearest is `backend/api [removed: markets/overview]` `Ticker` (`[removed: markets/overview/market.go]`) | contract-visible: `instrument_id`, `source_id`, `observed_at`, `price`; internal-only: `bid`/`ask` presence conventions |
-| **Candle** | `markets/candle.json` | **schema only — no runtime consumer yet.** `ccxt` bars are read per request by `api/ticker/*` and never persisted (no candle table exists in `database/`). | `backend/api [removed: markets/overview]` `Candle` (`[removed: markets/overview/market.go]`) | contract-visible: `instrument_id`, `interval`, `open_time`, OHLCV; internal-only: `exchange`+`symbol` echo |
-| **Account (venue-linked)** | `accounts/exchange-account.json` | `backend/workers/executor` / `apps/executor/internal/repository/store.go` → Postgres `executor.exchange_accounts`; the read path is `api/executor/accounts/route.ts` → browser. `backend/api` produces the *candidate* record type but does not serve it. | `backend/api accounts/exchange` → `ExchangeAccount` (`accounts/exchange/account.go:102`); executor twin `platform/executor/types.ts:893` (`AccountMetadata`) | contract-visible: everything except `credential_id` resolution; **`credential_id` is contract-visible as an opaque handle, never the secret** |
-| **Account (treasury)** | `finance/treasury-account.json` | **schema only — no runtime consumer yet.** No route serves treasury accounts; `accounts(code TEXT PK)` in Postgres has no writer and is **dead** (frozen at the 2026-09-15 import — DR-036). | `backend/api [removed: finance/treasury]` → `Account` (`[removed: finance/treasury/treasury.go]`) | contract-visible: `account_id`, `owner_kind`, `owner_id`, `asset`; internal-only: none |
+| **Instrument** | `markets/instrument.json` | **[CANONICAL OWNER]** `instrument_id` is minted by `[removed: markets/instruments]` (`canonical.go`), not by the reference registry: instruments are unbounded per-venue markets, so they are deliberately NOT emitted into `contracts/data/reference.json`. A consumer gets an instrument id by calling `instruments.ResolveInstrument` with the built registry (`reference.Build()`), or from a future emitted artifact of this package. Contract exists and is **documented in the OpenAPI surface** (`contracts/openapi/fudcourt.yaml:1903` components). Runtime: consumed in-process by `apps/executor` (its own `executor.InstrumentMetadata` analogue), and by `apps/web/src/lib/executor.ts` (`InstrumentMetadata`, TS). **No service currently serves an instrument record over HTTP.** | `apps/api [removed: markets/instruments]` → `Instrument` (`[removed: markets/instruments/instrument.go]`); TS `InstrumentMetadata` (`platform/executor/types.ts:217`) | contract-visible: `instrument_id`, `base_asset`, `quote_asset`, `market_type`, `exchange`, `exchange_symbol`, grid fields; internal-only: `contract_size` consumers inside sizing |
+| **Price** | `markets/price.json` | **schema only — no runtime consumer yet.** `price_history(symbol, ts, source)` has a schema and a retention job but **no writer and no reader**; live prices reach the browser only as product-view rows (`VenueQuote`/`CrCoin`). | **absent — not yet implemented**; nearest is `apps/api [removed: markets/overview]` `Ticker` (`[removed: markets/overview/market.go]`) | contract-visible: `instrument_id`, `source_id`, `observed_at`, `price`; internal-only: `bid`/`ask` presence conventions |
+| **Candle** | `markets/candle.json` | **schema only — no runtime consumer yet.** `ccxt` bars are read per request by `api/ticker/*` and never persisted (no candle table exists in `database/`). | `apps/api [removed: markets/overview]` `Candle` (`[removed: markets/overview/market.go]`) | contract-visible: `instrument_id`, `interval`, `open_time`, OHLCV; internal-only: `exchange`+`symbol` echo |
+| **Account (venue-linked)** | `accounts/exchange-account.json` | `apps/executor` / `apps/executor/internal/repository/store.go` → Postgres `executor.exchange_accounts`; the read path is `api/executor/accounts/route.ts` → browser. `apps/api` produces the *candidate* record type but does not serve it. | `apps/api accounts/exchange` → `ExchangeAccount` (`accounts/exchange/account.go:102`); executor twin `platform/executor/types.ts:893` (`AccountMetadata`) | contract-visible: everything except `credential_id` resolution; **`credential_id` is contract-visible as an opaque handle, never the secret** |
+| **Account (treasury)** | `finance/treasury-account.json` | **schema only — no runtime consumer yet.** No route serves treasury accounts; `accounts(code TEXT PK)` in Postgres has no writer and is **dead** (frozen at the 2026-09-15 import — DR-036). | `apps/api [removed: finance/treasury]` → `Account` (`[removed: finance/treasury/treasury.go]`) | contract-visible: `account_id`, `owner_kind`, `owner_id`, `asset`; internal-only: none |
 | **Account (ledger chart)** | `finance/ledger-account.json` | **schema only — no runtime consumer yet.** Read only through the Postgres mirror projection (`platform/db/pg.ts:51`) and `/api/all`. | **absent — not yet implemented** (bare `code`/`name`/`type`/`statement` columns, `db/schema/pg-schema.sql:3-8`) | contract-visible: `code`, `name`, `type`, `statement`; internal-only: none |
-| **Wallet** | `accounts/wallet.json` | `apps/web/src/app/(frontend)/api/wallets/route.ts` ⇄ Postgres `wallets`; `backend/api [removed: accounts/wallets]` owns the normalizer but is not wired to a route. | `backend/api [removed: accounts/wallets]` → `Wallet` (`[removed: accounts/wallets/wallets.go]`) | contract-visible: `chain_id`, `address`, `label`, `ownership`, `portfolio_linked`; internal-only: `emoji`/`color`/`notes` presentation |
-| **Balance** | `accounts/balance.json` | **schema only — no runtime consumer yet.** Balances reach clients as product views (`/api/all`, `/api/coins`, executor `/api/executor/executions/[id]`) and as untyped `executor.balance_snapshots.payload` jsonb. | `backend/workers/executor` → `Balance` (`executor/records.go:163`) and `AccountEquity` (`:172`); `backend/api [removed: finance/ledger]` `BalanceByAsset` map (`ledger.go:179`) | contract-visible: `account_id`, `asset_id`, `free`, `used`, `total`, `observed_at`; internal-only: snapshot payload |
-| **Position** | `trading/position.json` | `apps/executor/internal/runtime/worker/worker.go` / `backend/workers/executor` → `executor.positions_snapshots.payload` jsonb → `/api/executor/executions/[id]` → browser. | venue truth: `backend/workers/executor` → `Position` (`executor/records.go:182`); derived: `backend/api [removed: finance/portfolio]` → `Position` (`[removed: finance/portfolio/portfolio.go]`) | contract-visible: `instrument_id`, `position_side`, `quantity` (signed), `entry_price`, `leverage`, `liquidation_price`, `observed_at`; internal-only: none |
-| **Order** | `trading/order.json` | `backend/workers/executor` → `executor.child_orders` → `/api/executor/executions/[id]/orders` → browser (`apps/web/src/features/executor/client.ts:76`). | `backend/workers/executor` → `ChildOrderRecord` (`executor/records.go:76`) | contract-visible: `order_id`, `execution_id`, `client_order_id`, `exchange_order_id`, `symbol`, `side`, `type`, `price`, `quantity`, `filled_quantity`, `status`, `submitted_at`; internal-only: `is_exit`, internal sequence |
-| **Fill** | `trading/fill.json` | `backend/workers/executor` → `executor.fills` → `/api/executor/executions/[id]/fills` → browser (`features/executor/client.ts:80`). Contract pinned in OpenAPI. | `backend/workers/executor` → `FillRecord` (`executor/records.go:96`) | contract-visible: `fill_id`, `execution_id`, `child_order_id`, `exchange_trade_id`, `price`, `quantity`, `quote_quantity`, `fee`, `fee_asset`, `occurred_at`; internal-only: none |
-| **Execution** | `trading/execution.json` | `apps/web/src/app/(frontend)/api/executor/preview/route.ts` (produce a plan) → `api/executor/executions` → `backend/workers/executor` (execute) → `executor.executions` → `/api/executor/executions/[id]` → browser. Events: `executor.execution_events` → `contracts/events/events.json` ids; the **event envelope is the only existing cross-service contract** (`contracts/schemas/event-envelope.json`). | `backend/workers/executor` → `ExecutionRecord` (`executor/records.go:13`); TS `ExecutionRecord` (`platform/executor/types.ts:1088`) | contract-visible: `execution_id`, `account_id`, `symbol`, `side`, `intent`, `status`, `mode`, `sizing_mode`, `sizing_value`, risk/quantity/notional/fee figures, timestamps; internal-only: `risk_policy`, `strategy_state` |
-| **Transaction** | `finance/transaction.json` | `apps/web/src/app/(frontend)/api/transactions/route.ts` (writer+reader) ⇄ Postgres `transactions` → browser `features/treasury/transactions.tsx`. | `backend/api [removed: finance/transactions]` → `Transaction` (`[removed: finance/transactions/transactions.go]`) | contract-visible: `id`, `date`, `chain`, `asset`, `event`, `amount_usd`, `direction`, `hash`, `url`, `source`, `memo`, `wallet_to`, `venue_id`, `trade_id`; internal-only: none |
-| **LedgerEntry** | `finance/ledger-entry.json` | **schema only — no runtime consumer yet.** No route serves ledger entries; the SQL `ledger` table is a balance snapshot, not this log. | `backend/api [removed: finance/ledger]` → `Entry` (`[removed: finance/ledger/ledger.go]`) | contract-visible: `id`, `account_id`, `asset`, `amount`, `kind`, `reference_type`, `reference_id`, `occurred_at`, `recorded_at`; internal-only: the idempotency-key derivation |
+| **Wallet** | `accounts/wallet.json` | `apps/web/src/app/(frontend)/api/wallets/route.ts` ⇄ Postgres `wallets`; `apps/api [removed: accounts/wallets]` owns the normalizer but is not wired to a route. | `apps/api [removed: accounts/wallets]` → `Wallet` (`[removed: accounts/wallets/wallets.go]`) | contract-visible: `chain_id`, `address`, `label`, `ownership`, `portfolio_linked`; internal-only: `emoji`/`color`/`notes` presentation |
+| **Balance** | `accounts/balance.json` | **schema only — no runtime consumer yet.** Balances reach clients as product views (`/api/all`, `/api/coins`, executor `/api/executor/executions/[id]`) and as untyped `executor.balance_snapshots.payload` jsonb. | `apps/executor` → `Balance` (`executor/records.go:163`) and `AccountEquity` (`:172`); `apps/api [removed: finance/ledger]` `BalanceByAsset` map (`ledger.go:179`) | contract-visible: `account_id`, `asset_id`, `free`, `used`, `total`, `observed_at`; internal-only: snapshot payload |
+| **Position** | `trading/position.json` | `apps/executor/internal/runtime/worker/worker.go` / `apps/executor` → `executor.positions_snapshots.payload` jsonb → `/api/executor/executions/[id]` → browser. | venue truth: `apps/executor` → `Position` (`executor/records.go:182`); derived: `apps/api [removed: finance/portfolio]` → `Position` (`[removed: finance/portfolio/portfolio.go]`) | contract-visible: `instrument_id`, `position_side`, `quantity` (signed), `entry_price`, `leverage`, `liquidation_price`, `observed_at`; internal-only: none |
+| **Order** | `trading/order.json` | `apps/executor` → `executor.child_orders` → `/api/executor/executions/[id]/orders` → browser (`apps/web/src/features/executor/client.ts:76`). | `apps/executor` → `ChildOrderRecord` (`executor/records.go:76`) | contract-visible: `order_id`, `execution_id`, `client_order_id`, `exchange_order_id`, `symbol`, `side`, `type`, `price`, `quantity`, `filled_quantity`, `status`, `submitted_at`; internal-only: `is_exit`, internal sequence |
+| **Fill** | `trading/fill.json` | `apps/executor` → `executor.fills` → `/api/executor/executions/[id]/fills` → browser (`features/executor/client.ts:80`). Contract pinned in OpenAPI. | `apps/executor` → `FillRecord` (`executor/records.go:96`) | contract-visible: `fill_id`, `execution_id`, `child_order_id`, `exchange_trade_id`, `price`, `quantity`, `quote_quantity`, `fee`, `fee_asset`, `occurred_at`; internal-only: none |
+| **Execution** | `trading/execution.json` | `apps/web/src/app/(frontend)/api/executor/preview/route.ts` (produce a plan) → `api/executor/executions` → `apps/executor` (execute) → `executor.executions` → `/api/executor/executions/[id]` → browser. Events: `executor.execution_events` → `contracts/events/events.json` ids; the **event envelope is the only existing cross-service contract** (`contracts/schemas/event-envelope.json`). | `apps/executor` → `ExecutionRecord` (`executor/records.go:13`); TS `ExecutionRecord` (`platform/executor/types.ts:1088`) | contract-visible: `execution_id`, `account_id`, `symbol`, `side`, `intent`, `status`, `mode`, `sizing_mode`, `sizing_value`, risk/quantity/notional/fee figures, timestamps; internal-only: `risk_policy`, `strategy_state` |
+| **Transaction** | `finance/transaction.json` | `apps/web/src/app/(frontend)/api/transactions/route.ts` (writer+reader) ⇄ Postgres `transactions` → browser `features/treasury/transactions.tsx`. | `apps/api [removed: finance/transactions]` → `Transaction` (`[removed: finance/transactions/transactions.go]`) | contract-visible: `id`, `date`, `chain`, `asset`, `event`, `amount_usd`, `direction`, `hash`, `url`, `source`, `memo`, `wallet_to`, `venue_id`, `trade_id`; internal-only: none |
+| **LedgerEntry** | `finance/ledger-entry.json` | **schema only — no runtime consumer yet.** No route serves ledger entries; the SQL `ledger` table is a balance snapshot, not this log. | `apps/api [removed: finance/ledger]` → `Entry` (`[removed: finance/ledger/ledger.go]`) | contract-visible: `id`, `account_id`, `asset`, `amount`, `kind`, `reference_type`, `reference_id`, `occurred_at`, `recorded_at`; internal-only: the idempotency-key derivation |
 | **Instrument grid / order request / sizing / plan / risk** | `markets/*`, `trading/*` (see README) | Documented in `contracts/openapi/fudcourt.yaml` and consumed by the executor runtime; **no other service consumes them.** | `apps/executor/internal/{orders,sizing,risk,planner}` | contract-visible: the OpenAPI-documented subset only |
-| **Ticker / Quote** | `markets/ticker.json` | `api/ticker/route.ts` (Next, direct ccxt) → browser `features/ticker/ui.tsx`. **Producer and consumer are the same service** — no cross-service hop. | `backend/api [removed: markets/overview]` → `Ticker` (`[removed: markets/overview/market.go]`); TS `VenueQuote` (`features/ticker/client.ts:185`) | contract-visible: `instrument_id`, `venue_id`, `bid`, `ask`, `last`, `observed_at`; internal-only: `exchange` echo |
-| **Protocol** | `defi/protocol.json` | `backend/data` (`/api/llama`) → `apps/web/src/app/(frontend)/api/llama/route.ts` (thin proxy) → browser `features/llama/ui.tsx`. | **absent in Go** — projected as `json.RawMessage` (`apps/data/internal/research/llama/shape.go:210`); TS `LlamaProtocol` (`features/llama/client.ts:41`) | contract-visible: `protocol_id` (the DefiLlama slug today), `name`, `category`, `tvl_usd`, `chains`; internal-only: none |
+| **Ticker / Quote** | `markets/ticker.json` | `api/ticker/route.ts` (Next, direct ccxt) → browser `features/ticker/ui.tsx`. **Producer and consumer are the same service** — no cross-service hop. | `apps/api [removed: markets/overview]` → `Ticker` (`[removed: markets/overview/market.go]`); TS `VenueQuote` (`features/ticker/client.ts:185`) | contract-visible: `instrument_id`, `venue_id`, `bid`, `ask`, `last`, `observed_at`; internal-only: `exchange` echo |
+| **Protocol** | `defi/protocol.json` | `apps/data` (`/api/llama`) → `apps/web/src/app/(frontend)/api/llama/route.ts` (thin proxy) → browser `features/llama/ui.tsx`. | **absent in Go** — projected as `json.RawMessage` (`apps/data/internal/research/llama/shape.go:210`); TS `LlamaProtocol` (`features/llama/client.ts:41`) | contract-visible: `protocol_id` (the DefiLlama slug today), `name`, `category`, `tvl_usd`, `chains`; internal-only: none |
 | **Pool** | `defi/pool.json` | **schema only — no runtime consumer yet.** `DexPair` reaches the browser only through the Next route `api/dex/route.ts`. | `apps/web/src/features/market/dex/client.ts:75` (`DexPair`, TS only) | contract-visible: `pool_id`, `token_id`s, `liquidity_usd`, `price_usd`; internal-only: `labels`, `info` |
-| **NewsArticle** | `research/news-article.json` | `backend/data` (`/api/news`, `/api/cryptorank?mode=news`) → thin Next proxies → browser `features/news/ui.tsx`. | `backend/data internal/research/news` → `Item` (`news/parse.go:23`); khala `KhRow`/`KhReport` (`khala/shape.go`) | contract-visible: `article_id`, `title`, `url`, `published_at`, `source_id`, `summary`; internal-only: `image`, `reading_minutes` |
-| **Coin/Market row** | `research/coin.json`, `research/chain-stats.json`, `research/global-stats.json`, `research/exchange-row.json`, `research/category.json`, `research/chainrank-listing.json` | `backend/data` (`/api/cryptorank`) → thin Next proxy → browser. Provider-shaped product views by design. | `backend/data internal/research/cryptorank` → `Cr*` (`types.go`); `apps/data/internal/research/chainrank` | contract-visible: the fields the UI reads (documented per file); internal-only: provider echo fields |
+| **NewsArticle** | `research/news-article.json` | `apps/data` (`/api/news`, `/api/cryptorank?mode=news`) → thin Next proxies → browser `features/news/ui.tsx`. | `apps/data internal/research/news` → `Item` (`news/parse.go:23`); khala `KhRow`/`KhReport` (`khala/shape.go`) | contract-visible: `article_id`, `title`, `url`, `published_at`, `source_id`, `summary`; internal-only: `image`, `reading_minutes` |
+| **Coin/Market row** | `research/coin.json`, `research/chain-stats.json`, `research/global-stats.json`, `research/exchange-row.json`, `research/category.json`, `research/chainrank-listing.json` | `apps/data` (`/api/cryptorank`) → thin Next proxy → browser. Provider-shaped product views by design. | `apps/data internal/research/cryptorank` → `Cr*` (`types.go`); `apps/data/internal/research/chainrank` | contract-visible: the fields the UI reads (documented per file); internal-only: provider echo fields |
 | **Signal** | `signals/signal.json`, `signals/scoreboard.json` | `apps/web/src/app/(frontend)/api/signals/route.ts` (direct upstream) → browser `features/signals/ui.tsx`, `features/scoreboard/scoreboard.tsx`. Producer and consumer are the same service. | **absent — not yet implemented** (route-local `SignalRow`, `api/signals/route.ts:10`) | contract-visible: `signal_id`, `ts`, `chain`, `mint`, `score`, `decision`; internal-only: all display metrics |
 | **Source** | `common/source.json` | **schema only — no runtime consumer yet.** Provenance travels as loose strings (`Transaction.Source`, envelope `upstream`, `price_history.source`). | **absent — not yet implemented** | n/a |
 | **MacroSeries / MacroObservation** | **no schema written** (see README) | **no runtime path, no owner, no schema** | **absent — not yet implemented** | n/a |
 
 **The one channel that already works end to end** is the event envelope:
-`backend/workers/executor`/`frontend/web` emit `{event_id, event_type, event_version, occurred_at,
+`apps/executor`/`apps/web` emit `{event_id, event_type, event_version, occurred_at,
 payload}` per `contracts/schemas/event-envelope.json`, with `event_type` pinned to
 `contracts/events/events.json` and cross-checked by
 `contracts/scripts/check-contract.mjs`. **Nothing else in the repo is a service-to-service
@@ -387,20 +387,20 @@ service — `apps/api/internal/markets/reference` — in addition to the schemas
 | Domain | Entities it actually contains today | Owning service (today) | Schema dir |
 |---|---|---|---|
 | **access** | Account (identity/session), Session, Credential, Entitlement, Authorization decision | `apps/api/internal/access/*` | `common/` (+ credentials are **excluded** from published schemas, §6) |
-| **accounts** | Account (venue-linked), Wallet, Balance | `apps/api/internal/accounts/*`, `backend/workers/executor` | `accounts/` |
+| **accounts** | Account (venue-linked), Wallet, Balance | `apps/api/internal/accounts/*`, `apps/executor` | `accounts/` |
 | **assets** | Asset, Token (read-only) | *absent owner*; consumed by `finance/*`, `features/dex` | `assets/` |
 | **markets** | Instrument, Price/Ticker, Candle, Quote | `apps/api/internal/markets/*` | `markets/` |
 | **trading** | Execution, Order, Fill, Position (venue) | `apps/executor/internal/*` | `trading/` |
 | **portfolio** | Position (derived), Valuation, Exposure, Holding | `[removed: finance/portfolio]` | `finance/` |
 | **ledger** | LedgerEntry; SQL `ledger`/`accounts` shape (read model) | `[removed: finance/ledger]`; read model `db/schema/pg-schema.sql` | `finance/` |
 | **treasury** | Account (internal capital), Movement, Allocation, Balances | `[removed: finance/treasury]`; read model `pg-schema.sql` | `finance/` |
-| **onchain** | Chain, Token(address), Wallet address | `backend/sync` (registry + streams) | `assets/`, `accounts/` |
+| **onchain** | Chain, Token(address), Wallet address | `apps/reconciler` (registry + streams) | `assets/`, `accounts/` |
 | **defi** | Protocol, Pool | *absent owner*; read via `apps/data/internal/research/llama`, `features/dex` | `defi/` |
 | **research** | CryptoRank surfaces (`Cr*`) — coins, exchanges, ecosystems, RWA, launchpools, tags, media, AI overview | `apps/data/internal/research/cryptorank` | `research/` |
 | **news** | NewsArticle | `apps/data/internal/research/{news,khala}`, `features/news` | `research/` |
 | **macro** | **nothing** | **absent** | *no directory* (an empty directory would be an invented concept) |
-| **signals** | Signal, ScoreboardBucket | `backend/data`? no — `frontend/web` route only | `signals/` |
-| **system** | Source, upstream envelope/provenance, jobs/audit/notifications | `apps/api/internal/{jobs,audit,notifications,platform}`, `backend/data` | `common/` |
+| **signals** | Signal, ScoreboardBucket | `apps/data`? no — `apps/web` route only | `signals/` |
+| **system** | Source, upstream envelope/provenance, jobs/audit/notifications | `apps/api/internal/{jobs,audit,notifications,platform}`, `apps/data` | `common/` |
 
 **Schema directories that exist and why** (no empty directories, no invented concepts):
 
@@ -469,13 +469,13 @@ OpenAPI mirrors the float choice: `SizingDefinition.value` / `PriceDefinition.pr
 
 | File | Symbols | Class |
 |---|---|---|
-| `apps/data/internal/research/cryptorank/types.go` | **All ~110 numeric fields** across 43 structs are `*float64` (`CrGlobal:9-18`, `CrCoin:22-36`, `CrExchangeRow:74-95`, `CrCoinDetail:112-129`, `CrRwaRow:230-245`, …). No `float32` anywhere in `backend/data`. | money, price, quantity, percent, count — **one type for all six classes** |
+| `apps/data/internal/research/cryptorank/types.go` | **All ~110 numeric fields** across 43 structs are `*float64` (`CrGlobal:9-18`, `CrCoin:22-36`, `CrExchangeRow:74-95`, `CrCoinDetail:112-129`, `CrRwaRow:230-245`, …). No `float32` anywhere in `apps/data`. | money, price, quantity, percent, count — **one type for all six classes** |
 | `apps/data/internal/research/cryptorank/shapers.go` | `ShapeCoin:17`, `athPrice:49`, `ChangeFromAnchor:58`, `ShapeExchange:180` (`Rank: ptr(float64(i+1))` — a **count as float**), `ShapeLaunchpoolRow:252` (`jsNumber(jsString(v))`), `ShapeTagRow:631` | derivation arithmetic in binary64 |
 | `apps/data/internal/research/cryptorank/value.go` | `asNum:17`, `asNumLoose:27`, `jsNumber:150`, `jsNumStr:183` | coercion boundary |
 | `apps/data/internal/research/llama/shape.go` | `LlamaChain.TVL:34` (float64), `tvlOf:175` — **TVL is float64 and is the sort key** (`SortByTVLDesc:165`) | money (TVL) |
 | `apps/executor/internal/repository/store.go` | `sizingValue, actualFees float64:494`; `plannedQty, plannedNotional, actualQty, actualNotional float64:495-496`; `riskBudget, avgFill, estFees *float64:497`; `plannedRisk, currentRisk *float64:498`; `price *float64:597`, `quantity, filled float64:598`; `dec:638`, `decPtr:648`, `outDec:661` | **money/price/quantity/risk** — the domain carries decimal strings and this file converts them at the boundary (rationale quoted `store.go:46-51`: "the schema stores double precision (the schema's convention: wire values are numbers) … a decimal string that does not parse is refused … never silently replaced by zero") |
 | `apps/executor/internal/strategies/strategies.go` | `mulberry32:154`, `qJit/iJit float64:177-178`, `r float64:191,211` | **not money** — jitter RNG; converting these to decimal would be wrong. Listed so the audit is not read as "no float64 may exist". |
-| `apps/api/internal/**` | **zero** `float64` struct fields. The only appearance is a JSON-decoded untyped claim: `access/identity/cookie.go:132` (`obj["exp"].(float64)`). Quantified by grep `^\s+\w+\s+(float64|float32)\b` over `backend/api` → no matches. | ✅ the api layer is already float-free |
+| `apps/api/internal/**` | **zero** `float64` struct fields. The only appearance is a JSON-decoded untyped claim: `access/identity/cookie.go:132` (`obj["exp"].(float64)`). Quantified by grep `^\s+\w+\s+(float64|float32)\b` over `apps/api` → no matches. | ✅ the api layer is already float-free |
 
 **Rust `f64`.**
 
@@ -531,7 +531,7 @@ documented refusal path. Today that holds in exactly one place: `repository/stor
 | **F1 hot** | TTL ≤ 60 s, in-process | per-family L1 maps; `FUDCOURT_DATA_TTL` default 60 (`apps/data/main.go:33`) | cryptorank L1 disk (`fetch.go:228`), news in-process TTL, `TICKER_TTL_MS = 60_000` (`ticker/client.ts:171`), `MARKETS_TTL_MS = 60_000` (`features/markets/client.ts:38`) |
 | **F2 warm** | TTL minutes, shared | Valkey L2 `DefaultTTL = 15 s` (`platform/cache/cache.go:92`) with per-family `TTLFromEnv`; key = `fudcourt:<family>:<url>` (`:147`) | chainrank/llama/news L2 |
 | **F3 cold** | TTL hours/day | explicit long TTLs | `MARKETS_TTL_MS = 24 h` for venue market maps (`ticker/instruments.ts:33`), buildId cache 1 h (`fetch.go:556,61`) |
-| **F4 snapshot** | written on a schedule, read as of its own stamp | timer + `updated_at` | `assets` rewritten wholesale by `backend/sync` each run (`db.rs:116` DELETE → inserts), mirrored to PG every 60 s (`pg-schema.sql:4-6`) |
+| **F4 snapshot** | written on a schedule, read as of its own stamp | timer + `updated_at` | `assets` rewritten wholesale by `apps/reconciler` each run (`db.rs:116` DELETE → inserts), mirrored to PG every 60 s (`pg-schema.sql:4-6`) |
 | **F5 historical** | append-only, never rewritten | hypertable + retention | `asset_history` / `price_history` (`db/schema/pg-schema.sql:105-113,150-155`), 90-day DELETE retention (`pg.ts:207-208`) |
 
 **Required companion:** every F1–F3 payload must state its own freshness independently of the
@@ -551,7 +551,7 @@ the body is a truncation/sort of a larger set (`slice` `CrEnvelope` `types.go:44
 
 **Write-path hazards recorded (not fixed here):** the treasury sync is **destructive-replace with
 no key** — `DELETE FROM assets` then N inserts, no UNIQUE on `(wallet, chain, asset)`, no
-`ON CONFLICT` (grep `ON CONFLICT` in `backend/sync` → no matches; `db.rs:116,133`;
+`ON CONFLICT` (grep `ON CONFLICT` in `apps/reconciler` → no matches; `db.rs:116,133`;
 `db/schema/pg-schema.sql:20-29` declares only a surrogate `id`). A crash mid-write leaves a truncated board, and
 `asset_history`'s UPSERT path inherits the missing key (`pg.ts:200-204` relies on
 `(ts, chain, asset, coalesce(wallet,''))` `pg-schema.sql:127-128`).
@@ -578,7 +578,7 @@ catalogue's rule that events never carry secrets (`contracts/events/events.json`
 
 ### D1. Coin vs Token vs Asset — **distinct concepts; today one string**
 Evidence: no `Asset`/`Coin`/`Token` type exists in Go. grep `^type (Asset|Coin|Chain|Venue|Exchange|Price|Balance|Order|Fill|Account|Source|Symbol|Quote|Trade)\b`
-over `backend/api` → only `treasury.Account`. The noun is a bare `string` in 6 packages —
+over `apps/api` → only `treasury.Account`. The noun is a bare `string` in 6 packages —
 `ledger.go:74`, `transactions.go:55`, `portfolio.go:27,62`, `treasury.go:40`,
 `instruments/instrument.go:54-55` — while the provider side has three provider words for the same
 thing: `CrCoin` (CryptoRank, `types.go:21`), `MarketsCoin` (CoinGecko, `features/markets/client.ts:54`),
@@ -733,10 +733,10 @@ flowchart TD
   end
 
   subgraph A["Adapters (RAW) — one per source, no domain logic"]
-    ADC1["backend/data/internal/research/*<br/>fetch.go + platform/cache (L1 disk + L2 Valkey)"]
-    ADC2["frontend/web/src/app/api/{dex,markets,signals,ticker}<br/>(DIRECT — migration target: backend/data)"]
+    ADC1["apps/data/internal/research/*<br/>fetch.go + platform/cache (L1 disk + L2 Valkey)"]
+    ADC2["apps/web/src/app/api/{dex,markets,signals,ticker}<br/>(DIRECT — migration target: apps/data)"]
     ADC3["workers/executor/internal/exchanges/{binance,bybit,mexc}"]
-    ADC4["backend/sync/src/{jsonrpc,streams}"]
+    ADC4["apps/reconciler/src/{jsonrpc,streams}"]
   end
 
   subgraph N["Normalization (PARSED → NORMALIZED)"]
@@ -764,14 +764,14 @@ flowchart TD
   subgraph P["API product views"]
     P1["fudcourt-data :3101<br/>Cr*/Kh/News/Llama/ChainRank envelopes"]
     P2["fudcourt-reconciled :3102<br/>/api/reconcile"]
-    P3["backend/api :3103<br/>identity/admin (auth surface)"]
+    P3["apps/api :3103<br/>identity/admin (auth surface)"]
     P4["Next routes :3100<br/>36 documented paths, OpenAPI + events catalog"]
     P5["executor.* store<br/>executions/orders/fills/events"]
   end
 
   subgraph F["Frontend"]
     F1["Next.js pages + features/* (read-only views)"]
-    F2["[removed: shared/sdk/typescript] (generated over contracts)"]
+    F2["[removed: contracts/openapi/fudcourt.yaml] (generated over contracts)"]
   end
 
   CR --> ADC1 --> N1
@@ -829,7 +829,7 @@ because they are the consumers of this document.
 
 | Phase | What this document says it needs |
 |---|---|
-| **5 — consumer migration** | The 36 OpenAPI paths + 28 event ids are the frozen surface; a consumer may only switch to `backend/api` once the Go surface exposes **all** of: `/api/{chainrank,cryptorank,khala,llama,news,markets,dex,signals,ticker*}`, `/api/{coins,wallets,transactions,reconcile}`, `/api/executor/**`. Today `backend/api` serves **only** `/healthz`, `/readyz`, `/api/auth/{login,callback,logout}`, `/api/admin/members` (`cmd/api/main.go:73-100`). **Re-observed 2026-10-01 (commit `7b8dc2d`):** the `/api/executor/**` entry in that list is no longer missing — the **executor process** (not `backend/api`) serves the 15 `/api/executor/*` routes on its own loopback listener (`FUDCOURT_EXECUTOR_API_ADDR`, default `127.0.0.1:3105`; `apps/executor/executor/api.go:16,59`). So Phase 5's remaining gate is the `backend/api` domain routes, not `executor/**`. |
+| **5 — consumer migration** | The 36 OpenAPI paths + 28 event ids are the frozen surface; a consumer may only switch to `apps/api` once the Go surface exposes **all** of: `/api/{chainrank,cryptorank,khala,llama,news,markets,dex,signals,ticker*}`, `/api/{coins,wallets,transactions,reconcile}`, `/api/executor/**`. Today `apps/api` serves **only** `/healthz`, `/readyz`, `/api/auth/{login,callback,logout}`, `/api/admin/members` (`cmd/api/main.go:73-100`). **Re-observed 2026-10-01 (commit `7b8dc2d`):** the `/api/executor/**` entry in that list is no longer missing — the **executor process** (not `apps/api`) serves the 15 `/api/executor/*` routes on its own loopback listener (`FUDCOURT_EXECUTOR_API_ADDR`, default `127.0.0.1:3105`; `apps/executor/executor/api.go:16,59`). So Phase 5's remaining gate is the `apps/api` domain routes, not `executor/**`. |
 | **6 — deletions** | Deletion candidates this audit establishes: the TS shaper twin `features/cryptorank/shapers.ts` (runtime-dead: only tests + `dump-envelopes.ts` import it), the Python sync twin `tests/oracle/sync-live.py` (Rust parity already verified), the TS reconcile oracle `features/treasury/reconcile.ts` (runtime = Rust). **Each deletion is blocked until the phase that proves byte-parity for its replacement; none may be deleted for being unused-looking.** |
 | **7–8 — contracts/SDK** | The schema tree added this turn is the machine-readable form of §2/§4/§5. Generators may read it, but **`events/` must remain the event source of truth** and `check-contract.mjs` must be extended (not replaced) if new cross-checks are wanted. |
 | **9 — data cutover** | Needs D1/D2/D5 changed together: minting `asset_id`/`token_id`/`instrument_id` without a mapping table would produce a second symbol-keyed system. **Partially unblocked:** `asset_id`/`token_id`/`chain_id`/`venue_id` now have a minting owner and a published mapping (`reference.json`), and `instrument_id` is now **minted** too (`[removed: markets/instruments/canonical.go]`), so Phase 9 is blocked only on (b) the fact that no artifact or route yet serves instrument ids to a consumer (no consumer is re-pointed; see §9.2 O4). The earlier blocker (a) — a SQL-side mapping table — is **DONE**: `db/schema/pg-schema.sql` now declares `canonical_reference` + `canonical_reference_miss` and `apps/api/internal/markets/reference/loader.go` loads them from `reference.json` (DR-036); both are additive and unwired, so nothing resolves through SQL *yet*, but the table now exists. |
@@ -838,9 +838,9 @@ because they are the consumers of this document.
 
 - **O1 — Which service owns the canonical reference data (assets/tokens/chains/venues)?**
   **[ANSWERED]** `apps/api/internal/markets/reference`. The reasoning, which is the reason the
-  question was hard: `backend/data` is stateless passthrough by design (`platform/cache` doc: "a
-  cache is an optimisation; it must never become a dependency"); `backend/api` has no SQL at all;
-  `backend/sync` owns only the `assets` snapshot; the executor owns only `executor.*`. Since no Go
+  question was hard: `apps/data` is stateless passthrough by design (`platform/cache` doc: "a
+  cache is an optimisation; it must never become a dependency"); `apps/api` has no SQL at all;
+  `apps/reconciler` owns only the `assets` snapshot; the executor owns only `executor.*`. Since no Go
   package may be imported across services, the registry publishes its table as
   `contracts/data/reference.json` instead of exposing a type. **Remaining work is plumbing,
   not decision**: nothing serves the document over HTTP, and `instrument_id` (O4) is now **minted**
@@ -923,7 +923,7 @@ Every claim in this document not directly read from a file, collected:
    mirror" — derived from the Go mirror (full list read) plus the TS/Go parity contract, not from
    reading all 685 TS lines one by one.
 8. §7 D-US4: that the duplicated per-file wire types are *safe* to collapse via the generated SDK
-   is an inference about the SDK's coverage (`[removed: shared/sdk/typescript/src/generated/schema.d.ts]`
+   is an inference about the SDK's coverage (`[removed: contracts/openapi/fudcourt.yaml/src/generated/schema.d.ts]`
    exists; it was existence-checked, not diffed field-by-field).
 9. §9.2 O2: **resolved 2026-10-02 (DR-036)** — the writer-less tables were queried in both live
    stores, not inferred: `price_history` has 0 rows in Postgres, `trades` is
@@ -936,7 +936,7 @@ Every claim in this document not directly read from a file, collected:
     for the provider→canonical mapping is a design judgement; no code states it. The mechanical
     facts behind it (the registry is deterministic, 16 tests pin it, `cmd/emit` refuses to drift)
     are observed.
-12. §1.4 (reference registry): that "backend/api owns canonical reference data" follows
+12. §1.4 (reference registry): that "apps/api owns canonical reference data" follows
     `docs/architecture/domain-map.md` §1 and `target.md` §§2,5 — those documents were read, but
     neither names `markets/reference`, so the *choice of that package path* is an inference. The
     ownership claim itself is traced to `reference.go`'s package doc.
@@ -959,36 +959,36 @@ observed output, not an expectation.
 
 | # | Command | Observed |
 |---|---|---|
-| 1 | `node shared/contracts/scripts/check-contract.mjs` | `CONTRACTS_OK enums=3 openapi_paths=36 route_handlers=39 events=28 client_endpoints=17` — exit 0 |
-| 2 | `python3 -c "import json,glob;[json.load(open(f)) for f in glob.glob('shared/contracts/schemas/**/*.json',recursive=True)]"` | no output, exit 0 (56 files parsed) |
+| 1 | `node contracts/scripts/check-contract.mjs` | `CONTRACTS_OK enums=3 openapi_paths=36 route_handlers=39 events=28 client_endpoints=17` — exit 0 |
+| 2 | `python3 -c "import json,glob;[json.load(open(f)) for f in glob.glob('contracts/schemas/**/*.json',recursive=True)]"` | no output, exit 0 (56 files parsed) |
 | 3 | Draft 2020-12 meta-schema check over all 56 schema files (`jsonschema.Draft202012Validator.check_schema`) | `metaschema-valid: 56/56` |
 | 4 | Cross-file `$ref` resolution (offline `referencing` registry built from every `$id`) | 56/56 compile with all refs resolved; 0 unresolved |
 | 5 | Discrimination tests: honest nulls accepted, fabricated `0` rejected on `markets/ticker.json`, minted-id pattern enforced on `trading/order.json`, ledger `amount: "0"`/`"0.00"`/`"-0"` rejected, movement `amount: "0"`/`"-1"` rejected, valuation quantity `"-1"` rejected, exposure notional `"-0.01"` rejected | all as intended (`/tmp/cc_verify.txt` at the time of the run) |
-| 6 | `go build ./backend/api/... ./backend/data/... ./backend/workers/executor/...` | `GO_BUILD_OK` |
+| 6 | `go build ./apps/api/... ./apps/data/... ./apps/executor/...` | `GO_BUILD_OK` |
 | 7 | `go vet` on the same three module patterns | `GO_VET_OK` |
 | 8 | `go test -count=1` per module | api `exit=0 ok=19 fail=0`; data `exit=0 ok=7 fail=0`; executor `exit=0 ok=19 fail=0` |
-| 9 | `python3 frontend/web/scripts/checks/check-structure.py` | `STRUCTURE_OK (140 files …)` — exit 0 |
+| 9 | `python3 apps/web/scripts/checks/check-structure.py` | `STRUCTURE_OK (140 files …)` — exit 0 |
 | 10 | `git hash-object` vs `git rev-parse HEAD:` for the five protected contract files | `error-envelope.json`, `event-envelope.json`, `events/events.json`, `check-contract.mjs` all `IDENTICAL` |
-| 11 | *(reference-registry change)* `go run ./backend/api/internal/markets/reference/cmd/emit` | `REFERENCE_WRITTEN shared/contracts/data/reference.json (19565 bytes)`; shape `chains 9 assets 8 tokens 11 venues 12 mappings 49 misses 3` |
-| 12 | `go test -count=1 ./backend/api/internal/markets/reference/...` | `ok … 0.019s`, `FAIL` count `0`, 16 passing tests. Pins every chain/asset/token/venue id, proves determinism under shuffled seed order, round-trips through the emitted artifact, and covers refusal cases (bad salt, unknown provider, dangling reference, duplicate id). |
-| 13 | `go vet ./backend/api/internal/markets/reference/...` | exit 0, no output |
-| 14 | `go build ./...` run separately in `backend/api`, `backend/data`, `backend/workers/executor` | all three `OK` (see the per-module caveat below) |
-| 15 | `node shared/contracts/scripts/check-contract.mjs` (re-run after the change) | `CONTRACTS_OK enums=3 openapi_paths=36 route_handlers=39 events=28 client_endpoints=17` — exit 0 |
-| 16 | `python3 -c "import json,glob;[json.load(open(f)) for f in glob.glob('shared/contracts/schemas/**/*.json',recursive=True)]"` | no output, exit 0 (56 files parsed) |
+| 11 | *(reference-registry change)* `go run ./apps/api/internal/markets/reference/cmd/emit` | `REFERENCE_WRITTEN contracts/data/reference.json (19565 bytes)`; shape `chains 9 assets 8 tokens 11 venues 12 mappings 49 misses 3` |
+| 12 | `go test -count=1 ./apps/api/internal/markets/reference/...` | `ok … 0.019s`, `FAIL` count `0`, 16 passing tests. Pins every chain/asset/token/venue id, proves determinism under shuffled seed order, round-trips through the emitted artifact, and covers refusal cases (bad salt, unknown provider, dangling reference, duplicate id). |
+| 13 | `go vet ./apps/api/internal/markets/reference/...` | exit 0, no output |
+| 14 | `go build ./...` run separately in `apps/api`, `apps/data`, `apps/executor` | all three `OK` (see the per-module caveat below) |
+| 15 | `node contracts/scripts/check-contract.mjs` (re-run after the change) | `CONTRACTS_OK enums=3 openapi_paths=36 route_handlers=39 events=28 client_endpoints=17` — exit 0 |
+| 16 | `python3 -c "import json,glob;[json.load(open(f)) for f in glob.glob('contracts/schemas/**/*.json',recursive=True)]"` | no output, exit 0 (56 files parsed) |
 | 17 | `jsonschema.Draft202012Validator.check_schema` over all 56 schema files (re-run) | `metaschema-valid: 56/56` |
 | 18 | `git status --porcelain -- <the five protected contract paths>` | empty output — the five protected contract paths are still **untouched** |
-| 19 | *(instrument-minter change)* `go build ./backend/api/...` | exit 0, no output |
-| 20 | `go vet ./backend/api/...` | exit 0, no output |
-| 21 | `go test -count=1 ./backend/api/internal/markets/...` | `ok … instruments 0.007s`; `ok … reference 0.018s`; 0 `FAIL` |
+| 19 | *(instrument-minter change)* `go build ./apps/api/...` | exit 0, no output |
+| 20 | `go vet ./apps/api/...` | exit 0, no output |
+| 21 | `go test -count=1 ./apps/api/internal/markets/...` | `ok … instruments 0.007s`; `ok … reference 0.018s`; 0 `FAIL` |
 | 22 | Mutation proof, run IN PLACE on `canonical.go` with a sha256-verified restore (`6c31dfbfb8ebd651`): bumping `InstrumentIDSalt` to `…/v2` → `TestInstrumentIDGoldenVector` fails `binance spot ETH/USDT minted instrument:1e2a250db4, want the pinned instrument:aed45391cb`; changing the natural-key separator `/` → `|` → the same test fails on both the id AND the pinned natural key. Restored file hash verified identical; suite green again. | both mutations detected |
-| 23 | `node shared/contracts/scripts/check-contract.mjs` | `CONTRACTS_OK enums=3 openapi_paths=36 route_handlers=39 events=28 client_endpoints=17` |
-| 24 | `node shared/contracts/scripts/check-schemas.mjs` | `SCHEMAS_OK` |
-| 25 | `python3 frontend/web/scripts/checks/check-structure.py` | `STRUCTURE_OK (140 files …)` |
+| 23 | `node contracts/scripts/check-contract.mjs` | `CONTRACTS_OK enums=3 openapi_paths=36 route_handlers=39 events=28 client_endpoints=17` |
+| 24 | `node contracts/scripts/check-schemas.mjs` | `SCHEMAS_OK` |
+| 25 | `python3 apps/web/scripts/checks/check-structure.py` | `STRUCTURE_OK (140 files …)` |
 
 **Two caveats on this table.**
 
-- `go test` is invoked **per module** (`./backend/api/...`, `./backend/data/...`,
-  `./backend/workers/executor/...`), not as `go test ./backend/...`: the latter fails with
+- `go test` is invoked **per module** (`./apps/api/...`, `./apps/data/...`,
+  `./apps/executor/...`), not as `go test ./backend/...`: the latter fails with
   `pattern ./backend/...: directory prefix backend does not contain modules listed in go.work or
   their selected dependencies` because `go.work` lists the three module directories individually.
   That is pre-existing and unrelated to this change.

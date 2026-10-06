@@ -5,8 +5,8 @@
 // markets/{instruments,overview}, plus notifications, audit, jobs and
 // platform/{errs,health,httpx}, and the /api/admin/members plane
 // (admin/members/route.ts port). There is no api-side executor package yet: the
-// executor here is orchestration (commands/queries over backend/workers/
-// executor), which no Go code in this module implements today, so no internal/
+// executor here is orchestration (commands/queries over apps/executor),
+// which no Go code in this module implements today, so no internal/
 // executor directory exists — a placeholder would be a lie.
 // The admin context is a route plane here, not an internal package:
 // it reuses identity.TierAdmin ("admin") and the existing handlers in

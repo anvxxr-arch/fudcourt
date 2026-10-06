@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/signals/scoreboard.json",
   "title": "Signal scoreboard (provider cohort statistics)",
-  "description": "The provider's own retrospective statistics over a cohort of signals: per-day buckets of outcome labels and the catch list. EVERY NUMBER HERE IS DERIVED BY THE PROVIDER OR BY THE BROWSER, never by a service in this repo: the payload arrives with `generated_at` from the provider and the cohort hit-rates are computed in frontend/web/src/features/scoreboard/scoreboard.tsx. No owner exists for a canonical version of this. `x24h` is a MULTIPLE (a 3x) not a percentage, which is exactly the kind of unit the type system must not hide.",
+  "description": "The provider's own retrospective statistics over a cohort of signals: per-day buckets of outcome labels and the catch list. EVERY NUMBER HERE IS DERIVED BY THE PROVIDER OR BY THE BROWSER, never by a service in this repo: the payload arrives with `generated_at` from the provider and the cohort hit-rates are computed in apps/web/src/features/scoreboard/scoreboard.tsx. No owner exists for a canonical version of this. `x24h` is a MULTIPLE (a 3x) not a percentage, which is exactly the kind of unit the type system must not hide.",
   "type": "object",
   "additionalProperties": false,
   "required": [

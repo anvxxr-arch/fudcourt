@@ -24,7 +24,7 @@
  *  - every derived series names exactly two legs that exist as real indicators,
  *    because the adapter fetches both and a missing leg is a silent blank column.
  *
- * Usage: cd frontend/web && npm run test:shapers
+ * Usage: cd apps/web && npm run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

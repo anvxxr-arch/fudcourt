@@ -11,7 +11,7 @@ import (
 )
 
 // Parity gate for package sizing: the sizePosition vectors of
-// frontend/web/scripts/tests/executor-plan-tests.ts (§8/§9/§11/§13/§16/§33/§37)
+// apps/web/scripts/tests/executor-plan-tests.ts (§8/§9/§11/§13/§16/§33/§37)
 // plus the nine-mode contract (objective §8.13). Decimal strings compare as
 // normalized decimals — exact.
 

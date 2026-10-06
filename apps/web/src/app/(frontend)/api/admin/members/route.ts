@@ -4,7 +4,7 @@ import { publicOrigin } from '../../_lib/http';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 /**
- * GET|POST /api/admin/members — THIN PROXY to the Go api (backend/api/cmd/api,
+ * GET|POST /api/admin/members — THIN PROXY to the Go api (apps/api/cmd/api,
  * handleAdminMembers). The Go service does the real work: the admin tier check
  * from the signed session cookie (never a client-supplied identity), the guild
  * member listing and the role grant/revoke. This route forwards the request

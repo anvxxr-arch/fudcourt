@@ -117,7 +117,7 @@ is the only TS-side survivor (consumer-facing — composer + trade client), and 
 (`tests/e2e/executor/*`, `tests/integration/executor/*`, `apps/web/tests/executor-proxy-tests.ts`)
 are gone; their assertions are covered by the named Go counterparts in `parity-matrix.md`
 rows 1–9 (253+ test funcs across 19 internal packages). `verify:executor` is
-`go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` (12 hermetic
+`go test -count=1 -race ./apps/executor/internal/tests/e2e/...` (12 hermetic
 tests, <1 s, no PG/Valkey/creds/network). The Linux TS worker systemd unit is retired to
 `deploy/systemd/RETIRED-fudcourt-executor-worker.service.txt`; the entry script is
 preserved as a 5-line tombstone at `apps/web/scripts/executor/worker.ts`.
@@ -125,7 +125,7 @@ preserved as a 5-line tombstone at `apps/web/scripts/executor/worker.ts`.
 What that means in practice (history — kept for the audit trail):
 
 - **Sole live path since 2026-10-05 (DR-043).** Production traffic runs on the Go service
-  (`backend/workers/executor`, unit `fudcourt-executor.service` on `:3104` + `:3105`); the web tier
+  (`apps/executor`, unit `fudcourt-executor.service` on `:3104` + `:3105`); the web tier
   thin-proxies `/api/executor/*` through `src/app/(frontend)/api/executor/_proxy.ts`. Every one of the
   15 routes is a 4-line forwarder (`export async function GET|POST|...(req, { params }) { void (await params); return forwardExecutor(req); }`).
 - The TS oracle suites are retired:
@@ -138,8 +138,8 @@ What that means in practice (history — kept for the audit trail):
   The contract now lives at `apps/web/src/platform/executor/types.ts` (consumer-facing); the Go-side
   counterpart is `internal/core/execution/{types,enums,lifecycle,records}.go` (row 1 of `parity-matrix.md`).
 - Cutover is **CLOSED** by DR-043: every row of `parity-matrix.md` is `DONE`, `bun run test:shapers` is
-  213/213 across 11 files, `go build/vet/test ./backend/workers/executor/...` is green (21 pkgs),
-  `bash scripts/verify/verify-all.sh` is `VERIFY_ALL_OK`, and `find frontend/web/src/platform/executor -type f` → 0.
+  213/213 across 11 files, `go build/vet/test ./apps/executor/...` is green (21 pkgs),
+  `bash scripts/verify/verify-all.sh` is `VERIFY_ALL_OK`, and `find apps/web/src/platform/executor -type f` → 0.
 
 Feature × TS × Go parity matrix (objective §22 skeleton). **Status vocabulary — read first:**
 `DONE` means **a TS oracle test (file + test title, from the §3 suites) is paired with a named Go test

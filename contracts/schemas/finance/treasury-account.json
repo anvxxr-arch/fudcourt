@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/finance/treasury-account.json",
   "title": "TreasuryAccount (internal capital account)",
-  "description": "One internal capital account. INVARIANT: one account holds ONE asset - a multi-asset balance is several accounts, so every movement names the asset it moves (backend/api/internal/finance/treasury/treasury.go Account doc). `owner_kind` is a closed set because an unlisted owner kind would make internal capital unauditable. Balances are obtained from `Balances` (a map of account id -> exact signed decimal) and absence there means UNKNOWN, not zero: Move refuses to touch an account it cannot see rather than inventing a starting balance.",
+  "description": "One internal capital account. INVARIANT: one account holds ONE asset - a multi-asset balance is several accounts, so every movement names the asset it moves (apps/api/internal/finance/treasury/treasury.go Account doc). `owner_kind` is a closed set because an unlisted owner kind would make internal capital unauditable. Balances are obtained from `Balances` (a map of account id -> exact signed decimal) and absence there means UNKNOWN, not zero: Move refuses to touch an account it cannot see rather than inventing a starting balance.",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/trading/risk-profile.json",
   "title": "Risk profile (per user)",
-  "description": "The per-user risk limits the engine sizes and gates against. Stored as one jsonb document keyed by user_id (executor.risk_profiles), not as columns, so this contract is the only description of the shape. EVERY percentage here is a decimal string, and the repo's own Rust-side type carries the same rule with an explicit comment ('percentage fields are decimal strings'). Thresholds are NOT clamped on write - a negative or absurd limit is refused with a field-named error, never silently corrected (the settings route's stated rule). Defaults come from DEFAULT_RISK_PROFILE in frontend/web/src/platform/executor/types.ts.",
+  "description": "The per-user risk limits the engine sizes and gates against. Stored as one jsonb document keyed by user_id (executor.risk_profiles), not as columns, so this contract is the only description of the shape. EVERY percentage here is a decimal string, and the repo's own Rust-side type carries the same rule with an explicit comment ('percentage fields are decimal strings'). Thresholds are NOT clamped on write - a negative or absurd limit is refused with a field-named error, never silently corrected (the settings route's stated rule). Defaults come from DEFAULT_RISK_PROFILE in apps/web/src/platform/executor/types.ts.",
   "type": "object",
   "additionalProperties": false,
   "required": [

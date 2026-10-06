@@ -367,9 +367,9 @@ Notes on the two fails:
 
 ```bash
 PY=/home/dwizzy/farming/.venv/bin/python   # see interpreter note below
-$PY frontend/web/tests/design/fingerprint.py capture --base-url http://127.0.0.1:3211 \
+$PY apps/web/tests/design/fingerprint.py capture --base-url http://127.0.0.1:3211 \
   --out /tmp/design-baseline/fpS1.json
-$PY frontend/web/tests/design/fingerprint.py compare --base-url http://127.0.0.1:3211 \
+$PY apps/web/tests/design/fingerprint.py compare --base-url http://127.0.0.1:3211 \
   --baseline /tmp/design-baseline/fpS1.json --out-json /tmp/design-baseline/fpS-compare-default.json
 ```
 
@@ -416,9 +416,9 @@ directory). `python3` (/usr/bin/python3) has no `playwright`. The interpreter us
 
 Full metadata: `/tmp/design-baseline/build-meta.txt`.
 
-- `cd frontend/web && unset NODE_ENV && bunx tsc --noEmit` — exit **0**, no output
+- `cd apps/web && unset NODE_ENV && bunx tsc --noEmit` — exit **0**, no output
   (`/tmp/design-baseline/tsc.log`, empty).
-- `cd frontend/web && unset NODE_ENV && bun run build` — exit **0**
+- `cd apps/web && unset NODE_ENV && bun run build` — exit **0**
   (`/tmp/design-baseline/build.log`). `.next/BUILD_ID` read from the build that the server
   booted = `WRMvBF2Bc8uvEwzAzz_ap`.
 - Served on **Port 3210** (free at start):
@@ -471,7 +471,7 @@ snapshot dir needs `node_modules` (symlink), `package.json`, `next.config.js`, `
 the app env files (`apps/web/.env.local` plus repo-root `.env`) — without the env files
 `/` and `/ticker` never reach `networkidle` and the capture records only partial DOM.
 **LIVE-UNIT BUILD TRAP (do not run step 1 in place while `fudcourt-web` is live).** The
-`fudcourt-web` user unit runs `next start -p 3100` with `WorkingDirectory=/home/dwizzy/fudcourt/frontend/web`
+`fudcourt-web` user unit runs `next start -p 3100` with `WorkingDirectory=/home/dwizzy/fudcourt/apps/web`
 and `NODE_ENV=production`, i.e. it serves the **same** `apps/web/.next` directory that
 `unset NODE_ENV && bun run build` rewrites — and a build does NOT restart the unit. So a build
 run in place swaps the served build out from under a live process: routes keep answering 200
@@ -479,11 +479,11 @@ from already-rendered HTML while a `/_next/static/chunks/*.js` the HTML still re
 **500**, because the build replaced that file. The mismatch is provable without touching the
 unit: compare the unit's `ExecMainStartTimestamp` with `.next/BUILD_ID`'s mtime
 (`systemctl --user show fudcourt-web -p ExecMainStartTimestamp --value` vs
-`stat -c %y frontend/web/.next/BUILD_ID`) — a BUILD_ID written *after* the unit started means the
+`stat -c %y apps/web/.next/BUILD_ID`) — a BUILD_ID written *after* the unit started means the
 unit is serving a build whose chunks have since been replaced. A peer workstream measured this
 today on `:3100`. The rule: **run the fingerprint's build against a FROZEN COPY of the app**
 (the E.7 recipe — `git archive HEAD` or a worktree snapshot, hardlinked `node_modules`, the env
-files), never in `frontend/web` while the unit is live. If a build in place is unavoidable, say
+files), never in `apps/web` while the unit is live. If a build in place is unavoidable, say
 so explicitly and tell the operator the unit needs a restart afterwards (the restart is the
 operator's call; the fingerprint procedure never restarts or reconfigures the unit). This is a
 property of the whole repo's gates — CI, `scripts/verify/verify-all.sh` and the pre-push hook all
@@ -518,7 +518,7 @@ Every other `(route, prop)` pair was **stable in all 6 pairs** and is compared s
 
 ```bash
 PY=/home/dwizzy/farming/.venv/bin/python
-cd frontend/web && unset NODE_ENV && bunx tsc --noEmit && bun run build
+cd apps/web && unset NODE_ENV && bunx tsc --noEmit && bun run build
 
 # 1. PRE-MIGRATION baseline. Capture it from the UNMIGRATED build with the CURRENT
 #    harness (fpA.json is a legacy index-based capture and is refused — see E.4).
@@ -607,7 +607,7 @@ lagging row count at capture time, not a static-probe loss.)
 - Harness interpreter: `/home/dwizzy/farming/.venv/bin/python`. Harness sha256 at this writing:
   `b2e8fc06f4c4eea79f73a4e17e12413aee59b3c0a4d46bc9bc145cbd880287b1` (the `routes --check`
   release; the migration-cutover hash was `5e02461b1e42f51c999ec25dca293b9b4822c97f7ff66c3d4118c739490796fa`).
-  Re-check coverage with `$PY frontend/web/tests/design/fingerprint.py routes --check` (exit 1 on drift).
+  Re-check coverage with `$PY apps/web/tests/design/fingerprint.py routes --check` (exit 1 on drift).
 - Ports: scratch server on **3211** (killed at the end of this procedure); the deployed
   **3100** systemd unit is never restarted or reconfigured by this procedure.
 - Nothing under `apps/web/src/` is modified by the harness.
@@ -625,13 +625,13 @@ Recipe (writes nothing inside the repo, touches no git worktree/stash/commit):
 BASE=/tmp/design-baseline/head-tree
 git archive HEAD -o /tmp/design-baseline/head-tree.tar
 mkdir -p "$BASE" && tar -x -C "$BASE" -f /tmp/design-baseline/head-tree.tar
-cd "$BASE/frontend/web"
-cp -al /home/dwizzy/fudcourt/frontend/web/node_modules node_modules   # HARDLINK, not symlink (see below)
-cp /home/dwizzy/fudcourt/frontend/web/.env.local .env.local
+cd "$BASE/apps/web"
+cp -al /home/dwizzy/fudcourt/apps/web/node_modules node_modules   # HARDLINK, not symlink (see below)
+cp /home/dwizzy/fudcourt/apps/web/.env.local .env.local
 cp /home/dwizzy/fudcourt/.env .env
 unset NODE_ENV && bunx tsc --noEmit && bun run build
 nohup bun --bun node_modules/next/dist/bin/next start -p 3212 > /tmp/design-baseline/next-3212.log 2>&1 &
-$PY frontend/web/tests/design/fingerprint.py capture --base-url http://127.0.0.1:3212 \
+$PY apps/web/tests/design/fingerprint.py capture --base-url http://127.0.0.1:3212 \
   --out /tmp/design-baseline/baseline-head.json
 ```
 
@@ -663,9 +663,9 @@ Per-route probes (total 3656): `/` 400, `/ticker` 400, `/news` 205, `/khala` 92,
 from the *migrated worktree* against `baseline-head.json`:
 
 ```bash
-cd <migrated worktree>/frontend/web && unset NODE_ENV && bunx tsc --noEmit && bun run build
+cd <migrated worktree>/apps/web && unset NODE_ENV && bunx tsc --noEmit && bun run build
 unset NODE_ENV && bun --bun node_modules/next/dist/bin/next start -p 3213 > /tmp/design-baseline/next-3213.log 2>&1 &
-$PY frontend/web/tests/design/fingerprint.py compare --base-url http://127.0.0.1:3213 \
+$PY apps/web/tests/design/fingerprint.py compare --base-url http://127.0.0.1:3213 \
   --baseline /tmp/design-baseline/baseline-head.json --strict \
   --budget /tmp/design-baseline/budget.json --out-json /tmp/design-baseline/diff-budget.json
 #   exit 0 iff unexpected==0. ANY unexpected diff is a migration bug.
@@ -688,12 +688,12 @@ cite one does not belong in the budget.
 **Provenance-clean rule and the worktree baseline (added 2026-10-02, post-IA-rework).** The rule
 above holds only while the tree is clean: the whole point of a HEAD-bytes baseline is that the
 committed bytes ARE the surface. Once the product IA rework went in and the market families were
-still being edited, the worktree was **dirty** (84 entries under `frontend/web`), so a HEAD-bytes
+still being edited, the worktree was **dirty** (84 entries under `apps/web`), so a HEAD-bytes
 build would have been a surface the design system no longer serves. In that state the defensible
 baseline is the **worktree build**, captured from the worktree and **labelled as such** — never a
 HEAD claim. That baseline is `/tmp/design-baseline/baseline-worktree.json` (`sha256
 d5036b36ffdfde993b5c24601890b10a01ded8974c30c3e3adb038543e0343d9`), from HEAD
-`f50f9a608d25b0e116f37d94555f174f8650ecb8` with worktree `git status --porcelain -- frontend/web`
+`f50f9a608d25b0e116f37d94555f174f8650ecb8` with worktree `git status --porcelain -- apps/web`
 sha1 `1ba0adc1f59260c3182bd61ed5f95b46c72d51e3`, build id `2U-N1k2ze8lB7a0QbQQc_`, served on port
 3214; 17 routes / 2744 probes; same-build default compare `FINGERPRINT: compared=2701 skipped=43
 diffs=0`. Full metadata in `/tmp/design-baseline/worktree-baseline-meta.txt`.

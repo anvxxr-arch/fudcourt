@@ -10,7 +10,7 @@
  * every one of the 15 `route.ts` shells and nothing else.
  *
  * WHY THE AUTH CALL IS SKIPPED ON THE FORWARD PATH. The Go surface
- * (`backend/workers/executor/internal/api`) verifies the SAME signed
+ * (`apps/executor/internal/api`) verifies the SAME signed
  * session cookie from the SAME `FUDCOURT_SESSION_SECRET` (DR-035) and
  * answers the byte-identical 401. If this module pre-authenticated and
  * then forwarded anyway, there would be two authorities and the Go
@@ -36,7 +36,7 @@
 import { NextResponse } from 'next/server';
 /**
  * Loopback address of the Go executor surface. Mirrors the Go side's own
- * default (`backend/workers/executor/cmd/executor/api.go`:
+ * default (`apps/executor/api.go`:
  * FUDCOURT_EXECUTOR_API_ADDR, default 127.0.0.1:3105) and the
  * `Environment=` pin in `deploy/systemd/fudcourt-executor.service`.
  * Resolved ONCE at module load (env is immutable after

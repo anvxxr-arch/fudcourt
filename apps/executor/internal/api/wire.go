@@ -6,7 +6,7 @@
 //
 // The public executor surface needs the session/identity plane, the sealed
 // credential vault, the planner (one canonical risk engine + sizing) and the
-// `executor.*` store — all of which the executor already owns. backend/api is a
+// `executor.*` store — all of which the executor already owns. apps/api is a
 // stdlib-only module forbidden from reaching into `executor.*` tables or this
 // module's internals, so placing the handlers there would add a pass-through hop
 // with the logic still living here. The runtime path is therefore
@@ -17,7 +17,7 @@
 // # ENVELOPE FIDELITY
 //
 // Every response is a behaviour-faithful port of the route handler it shadows
-// (frontend/web/src/app/(frontend)/api/executor/**) and of runtime.ts, and must
+// (apps/web/src/app/(frontend)/api/executor/**) and of runtime.ts, and must
 // stay byte-shape-compatible: same status codes, same `{error, detail}` /
 // `{error, errors[]}` / `{error, detail, category}` / `{error, detail, ...fields}`
 // bodies. The TS handlers remain authoritative until the cutover; the tests in

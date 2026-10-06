@@ -2,7 +2,7 @@
 // Telegram Bot API this service uses: getMe, getUpdates, sendMessage and
 // answerCallbackQuery.
 //
-// It is deliberately hand-rolled rather than a third-party SDK: backend/api
+// It is deliberately hand-rolled rather than a third-party SDK: apps/api
 // carries zero external requires (no go.sum), and a bot that only needs four
 // methods should not be the module that drags in a dependency graph. The wire
 // shapes below mirror the official Bot API types, trimmed to the fields the

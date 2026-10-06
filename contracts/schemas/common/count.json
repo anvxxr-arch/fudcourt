@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/common/count.json",
   "title": "Integer count",
-  "description": "A whole number: a row count, an index, a precision digit count, a sequence number, a number of attempts. NEVER a decimal string and NEVER a float. Violations this contract fixes going forward: backend/data/internal/research/cryptorank/types.go encodes Rank/PairsCount/CurrenciesCount/WalletsCount/MarketsCount as *float64 (provider rank and counts carried in binary64). Correct pattern in the repo: backend/workers/executor/internal/idempotency/idempotency.go sequence numbers (strconv.Itoa) and instruments.Instrument.PricePrecision/QuantityPrecision/MaxLeverage (int).",
+  "description": "A whole number: a row count, an index, a precision digit count, a sequence number, a number of attempts. NEVER a decimal string and NEVER a float. Violations this contract fixes going forward: apps/data/internal/research/cryptorank/types.go encodes Rank/PairsCount/CurrenciesCount/WalletsCount/MarketsCount as *float64 (provider rank and counts carried in binary64). Correct pattern in the repo: apps/executor/internal/idempotency/idempotency.go sequence numbers (strconv.Itoa) and instruments.Instrument.PricePrecision/QuantityPrecision/MaxLeverage (int).",
   "type": "integer",
   "minimum": 0
 }

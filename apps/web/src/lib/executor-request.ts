@@ -14,7 +14,7 @@
  * request defs ONLY in `./executor-request-defs`, risk/plan shapes ONLY in
  * `./executor-risk-plan` — this file and the barrel re-export, never redefine.
  *
- * The Go service `backend/workers/executor` owns the runtime; field renames on
+ * The Go service `apps/executor` owns the runtime; field renames on
  * either side are coupled by `parity-matrix.md` row 1. Money math (PRD §71):
  * NO float arithmetic on quantities/prices in the engines — `decimal.js` is the
  * required arithmetic; `number` here is the WIRE type.

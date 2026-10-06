@@ -3,11 +3,11 @@
 // Every key is optional at the type level; FromEnv decides what is fatal. The
 // bot token is the ONE required key — without it the process cannot talk to
 // Telegram, so startup fails visibly (objective §34, the same fail-visible rule
-// backend/api follows). Everything else degrades: an empty admin list means no
+// apps/api follows). Everything else degrades: an empty admin list means no
 // one is admin, an empty wallet list means /wallets and /balance say so.
 //
 // The token key is FUDCOURT_TELEGRAM_BOT_TOKEN, shared with the executor's
-// notify package (backend/workers/executor/internal/notify) so one bot
+// notify package (apps/executor/internal/notify) so one bot
 // (@fudbase_bot) is configured once. The notify package only SENDS; this
 // service is the receiving half (getUpdates long-poll), so the two do not
 // contend for the same Telegram method.

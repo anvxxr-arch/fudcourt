@@ -37,7 +37,7 @@ One private surface where the owner can answer, at any moment:
 - FR-2.1 `sync-live.py` runs every 5 minutes (`fudcourt-sync.timer`) writing to Postgres `assets` (`FUDCOURT_PG_URL`, DR-040).
 - FR-2.2 **Hard rule:** a failed RPC **raises** — it never becomes `0`. Absent data renders as absent, not zero.
 
-### FR-3 — Market intelligence boards (frontend/web)
+### FR-3 — Market intelligence boards (apps/web)
 - FR-3.1 **CryptoRank integration** — 28 modes reverse-engineered from HTML SSR
   payloads (no API key, by explicit owner decision): home, coins, trending, gainers,
   losers, categories, exchanges (CEX/DEX/perps/transparency), coin detail, listings,
@@ -49,7 +49,7 @@ One private surface where the owner can answer, at any moment:
   `source`/`limit`), Signals proxy, **CoinGecko markets proxy** (`/api/markets`,
   top-250 pool — powers the Price Tracker; the tracker's former
   browser-direct CoinGecko call was re-aligned into this gated route). The
-  ChainRank and Khala families remain API-only on the `backend/data` sidecar
+  ChainRank and Khala families remain API-only on the `apps/data` sidecar
   (`:3101`); their web boards and Next proxy routes were removed (DR-041).
 - FR-3.3 Every board must fail loudly: upstream error → HTTP 502 with the real
   upstream status; never an empty-successful table.
@@ -59,7 +59,7 @@ One private surface where the owner can answer, at any moment:
   their verifier status are tabulated in ARCHITECTURE.md §4 (news: monitor
   smoke only, deep verifier pending — PLAN SG-5.2).
 
-### FR-4 — Blog (served by `frontend/web` at `/blog`, DR-017)
+### FR-4 — Blog (served by `apps/web` at `/blog`, DR-017)
 - FR-4.1 Payload CMS 3.89 collections: posts, media, categories, users on Neon Postgres.
 - FR-4.2 Public REST (`/api/posts|categories|media`) read-only; users list ACL-protected (403).
 - FR-4.3 GraphQL endpoint with introspection disabled; playground disabled in production (Payload default).
@@ -92,9 +92,9 @@ One private surface where the owner can answer, at any moment:
 ### NFR-3 — Operations
 - Local: systemd --user units `fudcourt-web` (dashboard **and** blog), `fudcourt-data`, `fudcourt-reconciled`, `fudcourt-sync.timer`; enabled at boot. `fudcourt-blog` was retired by the DR-017 merge.
 - Build gate: `unset NODE_ENV` before any `bun install`/`bun run build` (env trap).
-- Runtime split (owner direction): acquisition families in Go (`backend/data`), the
-  balance sync in Rust (`backend/sync`), the UI/API surface in TypeScript on Bun
-  (`frontend/web` only — the blog merged into it, DR-017); Python remains the verification-oracle language.
+- Runtime split (owner direction): acquisition families in Go (`apps/data`), the
+  balance sync in Rust (`apps/reconciler`), the UI/API surface in TypeScript on Bun
+  (`apps/web` only — the blog merged into it, DR-017); Python remains the verification-oracle language.
   See docs/records/DECISIONS.md DR-005/DR-006/DR-007/DR-008/DR-009/DR-010/DR-012/DR-013.
 - Git: commits authored `Fox <fox@local>`; debug artifacts never committed.
 

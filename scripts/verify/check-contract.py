@@ -7,7 +7,7 @@
    regression guard for the 2026-09-28 incident where an unguarded DELETE probe
    hit real data, and for the retired x-fud-token that leaked into the client
    bundle).
-3. ONE CONTRACT, TWO IMPLEMENTATIONS: the Go sidecar (backend/data) owns the
+3. ONE CONTRACT, TWO IMPLEMENTATIONS: the Go sidecar (apps/data) owns the
    CryptoRank mode/key tables at runtime, so its table in
    internal/research/cryptorank/modes.go must EQUAL the TS table in src/features/cryptorank/cryptorank-modes.ts --
    mode list, disabled list, the exchange/launchpool/nodesale/RWA whitelists
@@ -36,7 +36,7 @@ WEB = REPO / "apps" / "web"
 # route tree is at SRC/app; a `lib/` no longer exists — putting one back would
 # make the feature lookups below fail loudly, which is the intended behaviour.
 SRC = WEB / "src"
-# Normally backend/data/internal/cryptorank/modes.go; overridable so the parity
+# Normally apps/data/internal/cryptorank/modes.go; overridable so the parity
 # gate can be exercised (and so CI survives a different checkout layout).
 GO_TABLE = Path(os.environ.get(
     "FUDCOURT_DATA_MODES_GO", REPO / "apps" / "data" / "internal" / "research" / "cryptorank" / "modes.go"))
@@ -124,7 +124,7 @@ def check_go_table() -> bool:
         # The TS side is the tracked source of truth and is always present, so a
         # missing Go table is a broken checkout, not an optional comparison: the
         # old skip let all nine rows pass vacuously while still printing CONTRACT_OK.
-        fails.append(f"backend/data mode table not found at {GO_TABLE} — the TS<->Go parity "
+        fails.append(f"apps/data mode table not found at {GO_TABLE} — the TS<->Go parity "
                      "rows cannot run (tracked source missing?)")
         return False
     ts = (SRC / "features" / "cryptorank" / "cryptorank-modes.ts").read_text()
@@ -173,7 +173,7 @@ def check_route_is_proxy(rel: str = "cryptorank", needles=("execFile", "child_pr
     for needle in needles:
         if needle in src:
             fails.append(f"src/app/(frontend)/api/{rel}/route.ts: {needle!r} present — the route must be "
-                         f"a thin proxy to backend/data (Go owns validation)")
+                         f"a thin proxy to apps/data (Go owns validation)")
     if "DATA_URL" not in src:
         fails.append(f"src/app/(frontend)/api/{rel}/route.ts: no DATA_URL upstream base — proxy wiring lost")
     return True
@@ -194,12 +194,12 @@ go_checked = check_go_table()
 check_route_is_proxy()
 # khala: its WEB surface was removed (the /khala board and the /api/khala proxy are
 # gone -- DECISIONS.md DR-041), so there is no TS mode table left to compare against
-# the Go one. The sidecar family (backend/data/internal/research/khala) stays as an
+# the Go one. The sidecar family (apps/data/internal/research/khala) stays as an
 # API-only surface on :3101, verified by scripts/verify/verify-khala.py; the TS<->Go
 # parity this block asserted no longer has a second side.
 kh_parity = "khala web surface removed (sidecar-only, DR-041)"
 # llama: the THIRD sidecar-resident family (PLAN G9 SG-9.3). Same convention as
-# khala -- src/features/market/defi-tvl-client.ts carries the TS mode list, backend/data/internal/research/llama/
+# khala -- src/features/market/defi-tvl-client.ts carries the TS mode list, apps/data/internal/research/llama/
 # modes.go the Go one, and the route must be the verbatim proxy.
 LL_TS = SRC / "features" / "market" / "defi-tvl-client.ts"
 LL_GO = Path(os.environ.get("FUDCOURT_DATA_LLAMA_GO",
@@ -220,7 +220,7 @@ if LL_TS.exists() and LL_GO.exists():
     else:
         ll_parity = f"llama LLAMA_MODES parity ({len(ll_ts_modes)} modes)"
 elif LL_TS.exists() or LL_GO.exists():
-    missing = "backend/data/internal/research/llama/modes.go" if LL_TS.exists() else str(LL_TS)
+    missing = "apps/data/internal/research/llama/modes.go" if LL_TS.exists() else str(LL_TS)
     fails.append(f"llama parity cannot run: {missing} is missing (both sides are tracked)")
     ll_parity = "llama parity FAILED (one side absent)"
 if check_route_is_proxy("llama", ("execFile", "child_process", "limitedFetch",
@@ -228,7 +228,7 @@ if check_route_is_proxy("llama", ("execFile", "child_process", "limitedFetch",
     ll_parity += ", route is a proxy"
 # news: the FOURTH sidecar-resident family (PLAN G12 SG-12.3), and the first
 # whose upstream is a DOCUMENT rather than a JSON API. Same convention as
-# llama -- src/features/news/client.ts carries the TS feed list, backend/data/internal/research/news/
+# llama -- src/features/news/client.ts carries the TS feed list, apps/data/internal/research/news/
 # modes.go the Go one, and the route must be the verbatim proxy. The RSS parser
 # itself must not come back: src/features/market/defi-tvl-client.ts-style mirror has no parse code, and a
 # route that regrows one is the drift this row exists to catch.
@@ -256,7 +256,7 @@ if NW_TS.exists() and NW_GO.exists():
         if not m:
             fails.append(f"src/features/news/client.ts: {name} must be {want} (the Go 400 boundary)")
 elif NW_TS.exists() or NW_GO.exists():
-    missing = "backend/data/internal/research/news/modes.go" if NW_TS.exists() else str(NW_TS)
+    missing = "apps/data/internal/research/news/modes.go" if NW_TS.exists() else str(NW_TS)
     fails.append(f"news parity cannot run: {missing} is missing (both sides are tracked)")
     nw_parity = "news parity FAILED (one side absent)"
 # `parseInt`/`Math.min` were the silent-coercion pair the original TS route used;
@@ -268,13 +268,13 @@ if check_route_is_proxy("news", ("execFile", "child_process", "limitedFetch",
     nw_parity += ", route is a proxy"
 # chainrank: its WEB surface was removed alongside khala's (the /chainrank board and
 # the /api/chainrank proxy are gone -- DECISIONS.md DR-041). The sidecar family
-# (backend/data/internal/research/chainrank) stays API-only on :3101, verified by
+# (apps/data/internal/research/chainrank) stays API-only on :3101, verified by
 # scripts/verify/verify-chainrank.py; with no TS client the parity has no second side.
 ch_parity = "chainrank web surface removed (sidecar-only, DR-041)"
 # coinglass / coinank / coinmarketcap: the three KEYLESS sidecar families, whose web
 # half (the `/api/<family>` proxy + the typing mirror) is now wired. Same convention
 # as llama/news -- src/features/<family>/client.ts carries the TS mode
-# table, backend/data/internal/research/<family>/modes.go the Go one, and the route must be
+# table, apps/data/internal/research/<family>/modes.go the Go one, and the route must be
 # the verbatim proxy. Their modes are camelCase (`openInterest`, `marketPairs`), so
 # the token regex admits uppercase where the older families' all-lowercase one did not.
 # The route must NOT re-implement the family's mechanism: coinglass decrypts an
@@ -320,7 +320,7 @@ def _keyless_parity(prefix, family, needles):
         else:
             row = f"{family} {prefix}_MODES parity ({len(ts_modes)} modes)"
     elif ts.exists() or go.exists():
-        missing = (f"backend/data/internal/research/{family}/modes.go" if ts.exists() else str(ts))
+        missing = (f"apps/data/internal/research/{family}/modes.go" if ts.exists() else str(ts))
         fails.append(f"{family} parity cannot run: {missing} is missing (both sides are tracked)")
         row = f"{family} parity FAILED (one side absent)"
     if check_route_is_proxy(family, needles):

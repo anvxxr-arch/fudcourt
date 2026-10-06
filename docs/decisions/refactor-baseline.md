@@ -45,13 +45,13 @@ Top-level distribution: `frontend/` 384 · `backend/` 269 · `shared/` 68 ·
 
 | Item | Count / state |
 |---|---|
-| Go modules | 4 (`backend/api`, `backend/bot`, `backend/data`, `backend/workers/executor`) |
+| Go modules | 4 (`apps/api`, `apps/bot`, `apps/data`, `apps/executor`) |
 | `go.work` | 1 (+ `go.work.sum`) |
 | Go packages | 48 (8 + 4 + 13 + 23) |
-| Frontend route handlers | 56 under `frontend/web/src/app/(frontend)/api/**` |
-| Contract JSON files | 59 under `shared/contracts/` |
+| Frontend route handlers | 56 under `apps/web/src/app/(frontend)/api/**` |
+| Contract JSON files | 59 under `contracts/` |
 | Docs files | 43 under `docs/` |
-| Rust tracked files | 15 under `backend/sync/` |
+| Rust tracked files | 15 under `apps/reconciler/` |
 | Verify/tool scripts | 21 under `scripts/verify/` (+ 3 testdata) |
 | Fixtures | 63 under `tests/fixtures/` (26 `.gz` bodies + `expected/` golden set) |
 
@@ -60,7 +60,7 @@ Top-level distribution: `frontend/` 384 · `backend/` 269 · `shared/` 68 ·
 One match for the artifact pattern, and it is a **false positive**:
 
 ```
-backend/sync/src/bin/fudcourt-reconciled.rs
+apps/reconciler/src/bin/fudcourt-reconciled.rs
 ```
 
 The `bin/` segment is a Rust source directory (`src/bin/`), not a build
@@ -73,22 +73,22 @@ Two tracked files relate to the shaper-test harness and are **source, not
 output** — they are reviewed in Phase 6E:
 
 ```
-frontend/web/tests/shaper-tests.ts
-frontend/web/tsconfig.shaper-tests.json
+apps/web/tests/shaper-tests.ts
+apps/web/tsconfig.shaper-tests.json
 ```
 
 ## Test / build results at baseline
 
 | Suite | Command | Result |
 |---|---|---|
-| Go — api | `cd backend/api && go test ./...` | **PASS** (7 packages) |
-| Go — bot | `cd backend/bot && go test ./...` | **PASS** (3 packages) |
-| Go — data | `cd backend/data && go test ./...` | **PASS** (11 packages) |
-| Go — executor | `cd backend/workers/executor && go test ./...` | **PASS** (23 packages) |
+| Go — api | `cd apps/api && go test ./...` | **PASS** (7 packages) |
+| Go — bot | `cd apps/bot && go test ./...` | **PASS** (3 packages) |
+| Go — data | `cd apps/data && go test ./...` | **PASS** (11 packages) |
+| Go — executor | `cd apps/executor && go test ./...` | **PASS** (23 packages) |
 | Go — build | `go build ./...` per module | **PASS** (4/4 modules) |
-| Rust | `cd backend/sync && cargo test --release` | **PASS** (17 tests: 5 + 12) |
-| Web typecheck | `cd frontend/web && bunx tsc --noEmit` | **PASS** |
-| Contracts | `node shared/contracts/scripts/check-contract.mjs` | **PASS** — `CONTRACTS_OK enums=3 openapi_paths=37 route_handlers=56 events=28 client_endpoints=17` |
+| Rust | `cd apps/reconciler && cargo test --release` | **PASS** (17 tests: 5 + 12) |
+| Web typecheck | `cd apps/web && bunx tsc --noEmit` | **PASS** |
+| Contracts | `node contracts/scripts/check-contract.mjs` | **PASS** — `CONTRACTS_OK enums=3 openapi_paths=37 route_handlers=56 events=28 client_endpoints=17` |
 | Deploy guard | `python3 scripts/verify/check-deploy.py` | **PASS** — 10 unit files, paths exist, ExecStart absolute, timer pairs present |
 | Full verify | `bash scripts/verify/verify-all.sh` | **PASS** — `VERIFY_ALL_OK` (35s) |
 
@@ -96,9 +96,9 @@ frontend/web/tsconfig.shaper-tests.json
 
 None. Every suite is green at the baseline commit.
 
-`npm run test:web` (`cd frontend/web && bun run test:shapers`) fails with
+`npm run test:web` (`cd apps/web && bun run test:shapers`) fails with
 `Script not found "test:shapers"` — the root `package.json` script is stale
-relative to `frontend/web/package.json`. This is a pre-existing packaging
+relative to `apps/web/package.json`. This is a pre-existing packaging
 defect, not a code failure; the same coverage runs green inside
 `verify-all.sh`. Recorded here rather than fixed, per Phase 0 rules.
 
@@ -106,12 +106,12 @@ defect, not a code failure; the same coverage runs green inside
 
 | Binary | Source | Status |
 |---|---|---|
-| `fudcourt-api` | `backend/api/cmd/api` | builds |
-| `fudcourt-bot` | `backend/bot/cmd/bot` | builds |
-| `fudcourt-data` | `backend/data/cmd/data` | builds |
-| `fudcourt-executor` | `backend/workers/executor/cmd/executor` | builds |
-| `fudcourt-reconciled` | `backend/sync/src/main.rs` + `src/bin/fudcourt-reconciled.rs` | builds |
-| `notifycheck` | `backend/workers/executor/cmd/notifycheck` (untracked at capture) | builds |
+| `fudcourt-api` | `apps/api/cmd/api` | builds |
+| `fudcourt-bot` | `apps/bot/cmd/bot` | builds |
+| `fudcourt-data` | `apps/data/cmd/data` | builds |
+| `fudcourt-executor` | `apps/executor/cmd/executor` | builds |
+| `fudcourt-reconciled` | `apps/reconciler/src/main.rs` + `src/bin/fudcourt-reconciled.rs` | builds |
+| `notifycheck` | `apps/executor/cmd/notifycheck` (untracked at capture) | builds |
 
 ## Pre-existing work (resolved before Phase 1)
 

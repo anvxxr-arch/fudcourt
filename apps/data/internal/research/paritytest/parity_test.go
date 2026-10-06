@@ -62,7 +62,7 @@ func fixturesDir(t *testing.T) string {
 // canonical shared location: the recorder (tests/oracle/record-fixtures.ts)
 // writes there, the shaper tests read there, and this is where the manifest's
 // sha256 per fixture lives. The two frontend-owned candidates that used to sit
-// here (frontend/web/scripts/fixtures, apps/web/scripts/fixtures) were removed
+// here (apps/web/scripts/fixtures, apps/web/scripts/fixtures) were removed
 // with the Phase-9 fixture consolidation — both directories are gone from the
 // tree, so keeping them only widened the walk.
 var fixtureCandidates = []string{

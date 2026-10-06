@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * CryptoRank read proxy. Mode-only input (never a raw path).
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `fudcourt-data` (backend/data, 127.0.0.1:3101). The Go service does the real
+ * `fudcourt-data` (apps/data, 127.0.0.1:3101). The Go service does the real
  * work: mode validation, key/list validation, disabled-mode refusal, the
  * browser-fingerprint fetch (tls-client chrome_131 + HTTP/2 — the only
  * combination measured to beat cryptorank.io's Cloudflare ClientHello

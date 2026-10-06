@@ -34,7 +34,7 @@ import type {
 } from './executor-request';
 import type { AccountPermissions } from './executor-venue';
 // ---------------------------------------------------------------------------
-// Store contract (PRD §59) — `backend/workers/executor/internal/store` implements this.
+// Store contract (PRD §59) — `apps/executor/internal/store` implements this.
 // Every method is scoped by `userId`; ownership is checked server-side (PRD §108).
 // ---------------------------------------------------------------------------
 /**
@@ -124,7 +124,7 @@ export interface ExecutorStore {
   listRunningExecutions(): Promise<ExecutionRecord[]>;
 }
 // ---------------------------------------------------------------------------
-// Worker contract (PRD §64–§68, §114) — `backend/workers/executor/internal/runtime` implements this.
+// Worker contract (PRD §64–§68, §114) — `apps/executor/internal/runtime` implements this.
 // ---------------------------------------------------------------------------
 export interface ExecutorWorkerApi {
   start(): Promise<void>;

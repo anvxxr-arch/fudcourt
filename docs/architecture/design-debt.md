@@ -12,7 +12,7 @@ truth, the generated `apps/web/src/app/(frontend)/globals.css` `:root` block and
 `routes --check` and documented in `docs/architecture/design-inventory.md` §E.
 
 Measured 2026-10-02 against the live worktree (the market-IA rework is uncommitted there).
-Provenance: `git rev-parse HEAD` = `f50f9a608d25b0e116f37d94555f174f8650ecb8`; `git status --porcelain -- frontend/web | sha1sum`
+Provenance: `git rev-parse HEAD` = `f50f9a608d25b0e116f37d94555f174f8650ecb8`; `git status --porcelain -- apps/web | sha1sum`
 = `1ba0adc1f59260c3182bd61ed5f95b46c72d51e3` (84 entries — the worktree is DIRTY, so these are
 worktree measurements, not HEAD-bytes measurements).
 
@@ -36,7 +36,7 @@ The soft report prints only on a failing run, so re-measure it with this one-lin
 gate as a module and runs its own scans; `python3`, no playwright needed):
 
 ```bash
-python3 -c "import importlib.util,sys; s=importlib.util.spec_from_file_location('g','frontend/web/scripts/checks/check-design-tokens.py'); g=importlib.util.module_from_spec(s); sys.modules['g']=g; s.loader.exec_module(g); g.scan_module_files(); g.scan_style_files(); g.print_soft_report()"
+python3 -c "import importlib.util,sys; s=importlib.util.spec_from_file_location('g','apps/web/scripts/checks/check-design-tokens.py'); g=importlib.util.module_from_spec(s); sys.modules['g']=g; s.loader.exec_module(g); g.scan_module_files(); g.scan_style_files(); g.print_soft_report()"
 ```
 
 Result (verbatim):
@@ -54,7 +54,7 @@ Hard counters on the same scan: `color=0 scale=0 dead=0` — the tree is clean o
 gate can fail on. Re-run the hard verdict as the owner's normal gate:
 
 ```bash
-cd frontend/web && python3 scripts/checks/check-design-tokens.py   # DESIGN_TOKENS_OK (files=164 exemptions=6)
+cd apps/web && python3 scripts/checks/check-design-tokens.py   # DESIGN_TOKENS_OK (files=164 exemptions=6)
 ```
 
 > **Snapshot.** The block above is verbatim from the measurement moment. The market-IA rework is
@@ -87,7 +87,7 @@ those files. Measured with an import-resolving scan (a bare name-match over-repo
 `Stat`/`Table`/`Button` also appear as local type names and `useState`):
 
 ```bash
-cd frontend/web && python3 - <<'PY'
+cd apps/web && python3 - <<'PY'
 import re, pathlib
 src = pathlib.Path('src'); used = {}
 for p in src.rglob('*.tsx'):
@@ -150,7 +150,7 @@ are now closed — two adopted, three deleted:
 `Stat` was the sharpest case because it was **actively re-implemented** rather than adopted:
 
 ```bash
-cd frontend/web && grep -rnE "^(export )?function Stat\b" src
+cd apps/web && grep -rnE "^(export )?function Stat\b" src
 ```
 
 - `apps/web/src/ui/stat.tsx` — the shelf atom, now adopted by the `home` surface.
@@ -171,7 +171,7 @@ from a token change. The harness names each as an explicit, reasoned exclusion i
 `EXCLUDED_ROUTES` and fails if a new one appears unlisted:
 
 ```bash
-/home/dwizzy/farming/.venv/bin/python frontend/web/tests/design/fingerprint.py routes --check
+/home/dwizzy/farming/.venv/bin/python apps/web/tests/design/fingerprint.py routes --check
 ```
 
 The 13 page routes with no pixel guarantee (all redirect `307` to `/login` when anonymous):
@@ -210,7 +210,7 @@ The token layer is the source of truth for *values*, but the *leaves* that consu
 hand-rolled in places the atom shelf already covers. Measure raw elements outside the shelf:
 
 ```bash
-cd frontend/web && python3 - <<'PY'
+cd apps/web && python3 - <<'PY'
 import re, pathlib
 pats = {'<table':r"<table[\s>]", '<button':r"<button[\s>]", '<input':r"<input[\s>]",
         '<select':r"<select[\s>]", '<textarea':r"<textarea[\s>]"}
@@ -283,22 +283,22 @@ Run from the repo root. Interpreter for the harness: `/home/dwizzy/farming/.venv
 
 ```bash
 # Hard gate verdict (green = nothing mechanical left):
-cd frontend/web && python3 scripts/checks/check-design-tokens.py
+cd apps/web && python3 scripts/checks/check-design-tokens.py
 
 # Soft-value report (the gate prints it only on failure; this forces it):
-python3 -c "import importlib.util,sys; s=importlib.util.spec_from_file_location('g','frontend/web/scripts/checks/check-design-tokens.py'); g=importlib.util.module_from_spec(s); sys.modules['g']=g; s.loader.exec_module(g); g.scan_module_files(); g.scan_style_files(); g.print_soft_report()"
+python3 -c "import importlib.util,sys; s=importlib.util.spec_from_file_location('g','apps/web/scripts/checks/check-design-tokens.py'); g=importlib.util.module_from_spec(s); sys.modules['g']=g; s.loader.exec_module(g); g.scan_module_files(); g.scan_style_files(); g.print_soft_report()"
 
 # Atom adoption census (the inline script in §2), then list zero-use exports:
-cd frontend/web && grep -rn "@/ui/" src --include=*.tsx
+cd apps/web && grep -rn "@/ui/" src --include=*.tsx
 
 # Harness route coverage vs the app tree (exit 1 on drift):
-/home/dwizzy/farming/.venv/bin/python frontend/web/tests/design/fingerprint.py routes --check
+/home/dwizzy/farming/.venv/bin/python apps/web/tests/design/fingerprint.py routes --check
 
 # Raw-chrome census (the inline script in §4):
-cd frontend/web && grep -rn "<table\|<button\|<input\|<select\|<textarea" src --include=*.tsx
+cd apps/web && grep -rn "<table\|<button\|<input\|<select\|<textarea" src --include=*.tsx
 
 # Local re-implementations of a shelved atom:
-cd frontend/web && grep -rnE "^(export )?function Stat\b" src
+cd apps/web && grep -rnE "^(export )?function Stat\b" src
 ```
 
 The gate and the harness are the two alarms: the gate is the *value* alarm (it fails on a
@@ -313,7 +313,7 @@ the debt above costs — that is this ledger's only job.
 ### 6.1 A build in place arms a trap on the live `:3100` unit
 
 The `fudcourt-web` user unit serves **the same** `apps/web/.next` directory that
-`unset NODE_ENV && bun run build` rewrites (unit: `WorkingDirectory=/home/dwizzy/fudcourt/frontend/web`,
+`unset NODE_ENV && bun run build` rewrites (unit: `WorkingDirectory=/home/dwizzy/fudcourt/apps/web`,
 `NODE_ENV=production`, `next start -p 3100`), and a build does **not** restart the unit. So a build
 run in place swaps the served build out from under a live process: routes keep answering 200 from
 already-rendered HTML while a `/_next/static/chunks/*.js` that HTML still references returns
@@ -324,7 +324,7 @@ Prove the mismatch read-only, without touching the unit:
 
 ```bash
 systemctl --user show fudcourt-web -p ExecMainStartTimestamp --value
-stat -c %y frontend/web/.next/BUILD_ID
+stat -c %y apps/web/.next/BUILD_ID
 ```
 
 A BUILD_ID written **after** the unit started means the unit is serving a build whose chunks have
@@ -333,7 +333,7 @@ since been replaced.
 Two ways to arm it, both avoided by this ledger's own runs:
 
 * `apps/web/tests/design/fingerprint.py` — the §E cutover procedure's step 1 IS
-  `cd frontend/web && unset NODE_ENV && bunx tsc --noEmit && bun run build`. Following it in place
+  `cd apps/web && unset NODE_ENV && bunx tsc --noEmit && bun run build`. Following it in place
   while the unit is live arms the trap.
 * the repo-wide gates — CI, `scripts/verify/verify-all.sh` and the pre-push hook all build. This is
   a property of the whole repo, not of the design system; the design harness merely has a reason to
@@ -341,12 +341,12 @@ Two ways to arm it, both avoided by this ledger's own runs:
 
 **Rule.** Run a fingerprint build against a **frozen copy** of the app (the inventory's E.1/E.7
 recipe: `git archive HEAD` or a worktree snapshot, hardlinked `node_modules`, the env files), never
-in `frontend/web` while the unit is live. If a build in place is unavoidable, say so explicitly and
+in `apps/web` while the unit is live. If a build in place is unavoidable, say so explicitly and
 tell the operator the unit needs a restart afterwards — the restart is the operator's call, and no
 fingerprint procedure restarts or reconfigures the unit.
 
 The baseline behind this ledger's §1–§4 measurements was taken the WRONG-OF-THE-RULE way, which is
-why this note exists: the worktree was built **in place** in `frontend/web` and served on scratch
+why this note exists: the worktree was built **in place** in `apps/web` and served on scratch
 port 3214 directly from `apps/web/.next` (an in-place `bun run build` was part of the sequence).
 That build rewrote the same `.next` the live `:3100` unit serves — the unit was never restarted, and
 `.next/BUILD_ID` advanced to `qC0G2FIyUxOwFNkLOqQUP` during that window. The capture itself is

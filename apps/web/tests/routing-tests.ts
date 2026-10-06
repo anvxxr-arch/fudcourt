@@ -17,7 +17,7 @@
  * it. Dynamic routes (`/market/ticker/[ticker]`) are enumerated separately by
  * `sitemap.ts` from a symbol allowlist, so they are not static entries.
  *
- * Usage: cd frontend/web && npm run test:shapers
+ * Usage: cd apps/web && npm run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

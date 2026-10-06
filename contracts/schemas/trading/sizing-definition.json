@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/trading/sizing-definition.json",
   "title": "Sizing definition",
-  "description": "How the platform decided how big the position is. Nine modes, each with its own required cast: equivalent to a discriminated union, and it is the exact place where the repo's ONE numeric unit-ambiguity lives in the schema too - the single `value` column (executor.executions.sizing_value) is a USD amount, a raw quantity or a PERCENT depending on the mode, so this contract makes `value` untyped decimal and lets `mode` say how to read it. Percent modes REQUIRE balance_basis: the sizing engine refuses a percent mode without a basis rather than guessing which balance was meant. This mirrors shared/contracts/openapi/fudcourt.yaml SizingDefinition, which is the documented HTTP surface.",
+  "description": "How the platform decided how big the position is. Nine modes, each with its own required cast: equivalent to a discriminated union, and it is the exact place where the repo's ONE numeric unit-ambiguity lives in the schema too - the single `value` column (executor.executions.sizing_value) is a USD amount, a raw quantity or a PERCENT depending on the mode, so this contract makes `value` untyped decimal and lets `mode` say how to read it. Percent modes REQUIRE balance_basis: the sizing engine refuses a percent mode without a basis rather than guessing which balance was meant. This mirrors contracts/openapi/fudcourt.yaml SizingDefinition, which is the documented HTTP surface.",
   "oneOf": [
     {
       "type": "object",

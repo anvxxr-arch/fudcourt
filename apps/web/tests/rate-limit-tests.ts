@@ -10,7 +10,7 @@
  *    own harness / a signed-in treasury user must not be locked out;
  *  - a limiter error fails open rather than refusing traffic.
  *
- * Usage: cd frontend/web && npm run test:shapers
+ * Usage: cd apps/web && npm run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

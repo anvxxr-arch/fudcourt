@@ -2,7 +2,7 @@
 // framing, the normalized error envelope, request correlation and panic
 // containment. No business logic (objective §41).
 //
-// JSON framing matches backend/data/platform/httpx exactly (JSON.stringify
+// JSON framing matches apps/data/platform/httpx exactly (JSON.stringify
 // compatible escaping, one trailing "\n") so diffing a Go body against a TS
 // body never fires on framing.
 package httpx

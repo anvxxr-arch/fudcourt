@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/accounts/exchange-account.json",
   "title": "ExchangeAccount (one connected venue account)",
-  "description": "One connected venue CEX account. DISTINCT from a treasury Account and from a chain wallet: a CEX account is an IOU on a venue. INVARIANT (tested, quote from backend/api/internal/accounts/exchange/account.go): 'this record contains no secret material of any kind - json.Marshal of it can therefore never leak credentials. The vault link is CredentialID only.' The sealed material lives in executor.exchange_accounts (api_key_encrypted/api_secret_encrypted/passphrase_encrypted bytea + one 12-byte IV and 16-byte GCM tag per secret, concatenated in column order) and MUST NEVER appear in this object or in any response. Lifecycle is strictly ordered: pending -> active -> disabled -> revoked, enforced by TransitionTo.",
+  "description": "One connected venue CEX account. DISTINCT from a treasury Account and from a chain wallet: a CEX account is an IOU on a venue. INVARIANT (tested, quote from apps/api/internal/accounts/exchange/account.go): 'this record contains no secret material of any kind - json.Marshal of it can therefore never leak credentials. The vault link is CredentialID only.' The sealed material lives in executor.exchange_accounts (api_key_encrypted/api_secret_encrypted/passphrase_encrypted bytea + one 12-byte IV and 16-byte GCM tag per secret, concatenated in column order) and MUST NEVER appear in this object or in any response. Lifecycle is strictly ordered: pending -> active -> disabled -> revoked, enforced by TransitionTo.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -66,7 +66,7 @@
         "disabled",
         "revoked"
       ],
-      "description": "Mirrors Status in account.go. NOTE: a DIFFERENT type with the same name exists in backend/api/internal/access/credentials/credential.go (active/revoked/unknown) - see canonical-model.md D-US2."
+      "description": "Mirrors Status in account.go. NOTE: a DIFFERENT type with the same name exists in apps/api/internal/access/credentials/credential.go (active/revoked/unknown) - see canonical-model.md D-US2."
     },
     "supported_markets": {
       "type": "array",

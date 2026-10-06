@@ -2,6 +2,6 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/common/quantity.json",
   "title": "Exact quantity",
-  "description": "A decimal string count of units (base asset, contracts, shares). A quantity that must never exceed a budget is rounded DOWN onto the instrument grid before it is stored: backend/api/internal/markets/instruments/rounding.go RoundQuantityDown, backend/workers/executor/internal/decimal/decimal.go FloorToScale / FloorToStep. Magnitudes are non-negative where the schema says so; a signed quantity (a net short position) must be documented on the field itself, as executor Position.Quantity is ('signed: positive long').",
+  "description": "A decimal string count of units (base asset, contracts, shares). A quantity that must never exceed a budget is rounded DOWN onto the instrument grid before it is stored: apps/api/internal/markets/instruments/rounding.go RoundQuantityDown, apps/executor/internal/decimal/decimal.go FloorToScale / FloorToStep. Magnitudes are non-negative where the schema says so; a signed quantity (a net short position) must be documented on the field itself, as executor Position.Quantity is ('signed: positive long').",
   "$ref": "./decimal.json"
 }

@@ -40,10 +40,10 @@
  *
  * SHORT-FORM EXPANSIONS (declared by the documents; see canonical-placement.md header and
  * canonical-model.md §7)
- *   `reference/<rest>`  → backend/api/internal/markets/reference/<rest>      (placement header)
- *   `finance/<rest>`    → backend/api/internal/finance/<rest>                (placement header)
- *   `accounts/<rest>`   → backend/api/internal/accounts/<rest>               (placement header)
- *   `markets/<rest>`    → backend/api/internal/markets/<rest>, or, when the token ends in `.json`
+ *   `reference/<rest>`  → apps/api/internal/markets/reference/<rest>      (placement header)
+ *   `finance/<rest>`    → apps/api/internal/finance/<rest>                (placement header)
+ *   `accounts/<rest>`   → apps/api/internal/accounts/<rest>               (placement header)
+ *   `markets/<rest>`    → apps/api/internal/markets/<rest>, or, when the token ends in `.json`
  *                         or starts with a schemas/ directory, contracts/schemas/<rest>
  *                         (`markets/instrument.json` is the schema; `markets/overview/market.go`
  *                          is the Go package)
@@ -51,7 +51,7 @@
  *   `signals/<rest>`, `finance/<rest>.json`, `accounts/<rest>.json` (dir ∈ {assets,accounts,
  *   finance,markets,trading,defi,research,signals} plus a trailing `.json`) → contracts/schemas/<tok>
  *   `schemas/<rest>`    → contracts/schemas/<rest>
- *   These are the expansions the docs declare ("`finance/…` abbreviates backend/api/internal/<same>",
+ *   These are the expansions the docs declare ("`finance/…` abbreviates apps/api/internal/<same>",
  *   "`common/symbol.json` … abbreviate contracts/schemas/<same>"). A token is a FAILURE only
  *   when NONE of its candidate expansions resolves on disk.
  *
@@ -61,32 +61,32 @@
  *   failure — that is the entire point. (Stale paths were rewritten to their post-relocation home
  *   rather than excused; see the note on the 2026-10-01 tightening below.)
  *
- *   1. `frontend/web/scripts/tools/dump-envelopes.ts` (1) — canonical-model.md's "path
- *      re-verification" note: "*it was `frontend/web/scripts/tools/dump-envelopes.ts` when this note
+ *   1. `apps/web/scripts/tools/dump-envelopes.ts` (1) — canonical-model.md's "path
+ *      re-verification" note: "*it was `apps/web/scripts/tools/dump-envelopes.ts` when this note
  *      was written*". The sentence names the file's new home (`tests/oracle/dump-envelopes.ts`) one
  *      clause earlier; the old path is kept as the record of the move.
- *   2. `frontend/web/src/platform/executor/ui.tsx` (1) — the same note's "→" clause, naming the old
- *      path and its new home (`frontend/web/src/features/executor/ui.tsx`) in one sentence.
- *   3. `backend/api/bin/fudcourt-api` (2) — a build artifact (`go build -o bin/fudcourt-api`), absent
+ *   2. `apps/web/src/platform/executor/ui.tsx` (1) — the same note's "→" clause, naming the old
+ *      path and its new home (`apps/web/src/features/executor/ui.tsx`) in one sentence.
+ *   3. `apps/api/bin/fudcourt-api` (2) — a build artifact (`go build -o bin/fudcourt-api`), absent
  *      from a clean tree by design; both citations say so ("build artifact, absent from a clean tree").
  *   4. `db/schema/analytics.sql` (2) — cited as a reference that does NOT exist; the citation
  *      *is* the finding ("**Does not exist** (referenced by an older doc)").
- *  Deliberately NOT on this list, though they look similar: `backend/api markets/instruments` and
+ *  Deliberately NOT on this list, though they look similar: `apps/api markets/instruments` and
  *  its siblings (whitespace ⇒ skipped as prose, never counted), `database/migrations/` (trailing `/`
  *  ⇒ skipped, never counted), and every `{...}` / `…` / glob form. Nothing counted is excused without
  *  a reason. Until 2026-10-01 this list also excused 20 stale executor/script paths (singular
  *  `internal/exchange/*`, `internal/{orders,executor,decimal,idempotency,strategy,worker,lock}`,
- *  `frontend/web/scripts/tools/{dump-envelopes.ts,sync-live.py}`); they were rewritten in the docs
+ *  `apps/web/scripts/tools/{dump-envelopes.ts,sync-live.py}`); they were rewritten in the docs
  *  to their post-`d4119ca` homes, so the allowance list is now history-only.
  *
  * GITIGNORED CITATIONS — a cited path that `.gitignore` excludes can never exist in a clean
- *   checkout: build output (`frontend/web/.next`), the secrets file (`frontend/web/.env.local`), CMS
- *   uploads (`frontend/web/media/`), a module binary (`backend/data/bin/fudcourt-data`). Requiring one
+ *   checkout: build output (`apps/web/.next`), the secrets file (`apps/web/.env.local`), CMS
+ *   uploads (`apps/web/media/`), a module binary (`apps/data/bin/fudcourt-data`). Requiring one
  *   to resolve is a gate bug of its own kind — the check would pass on the developer's dirty tree and
  *   fail in CI, which is the very local/CI divergence this file exists to prevent. Those tokens are
  *   classified with ONE batched `git check-ignore --no-index --stdin` and reported as `ignored=<N>`:
  *   deterministic, and never silent. When git is unavailable nothing is excused and the gate stays
- *   strict. This is the same rationale allowance 3 already carried for `backend/api/bin/fudcourt-api`;
+ *   strict. This is the same rationale allowance 3 already carried for `apps/api/bin/fudcourt-api`;
  *   the general rule replaces the need to hand-list each build artifact as docs cite new ones.
  *
  * WHAT IT CANNOT CATCH (stated here, not implied)
@@ -116,7 +116,7 @@
  *     never update it to today's number (that would rewrite history);
  *   - a verdict presented as the CURRENT state is updated to the newest observed line.
  * Latest observed: `DOCS_OK docs=13 citations=1028 allowances=4 ignored=0` on a developer tree (2026-10-06,
- * after `bot.md` joined `DOCS`). Its `backend/bot/bin/fudcourt-bot` citations are gitignored, so a clean
+ * after `bot.md` joined `DOCS`). Its `apps/bot/bin/fudcourt-bot` citations are gitignored, so a clean
  * checkout classifies them as `ignored` instead of resolving them — the same dirty/clean divergence
  * described below. The prior current-state reading was `docs=12 citations=1216 allowances=4 ignored=0` on a
  * developer tree and `docs=12 citations=1216 allowances=6 ignored=10` on a clean checkout (2026-10-03); the
@@ -185,9 +185,9 @@ const SCHEMA_DIRS = ['common', 'accounts', 'assets', 'markets', 'trading', 'fina
 const ALLOWANCES = new Map([
   // Deliberately retained historical references — the citation is the record of the move / the
   // absence itself, never a stale path that should have been rewritten.
-  ['apps/web/scripts/tools/dump-envelopes.ts', 'deliberately retained historical reference: canonical-model.md "path re-verification" note records "*it was frontend/web/scripts/tools/dump-envelopes.ts when this note was written*" beside the new home tests/oracle/dump-envelopes.ts'],
-  ['apps/web/src/platform/executor/ui.tsx', 'deliberately retained historical reference: the same note names the old path and its new home (frontend/web/src/features/executor/ui.tsx) in one "→" clause'],
-  ['backend/api/bin/fudcourt-api', 'build artifact (go build -o bin/fudcourt-api), absent from a clean tree by design; both citations say so'],
+  ['apps/web/scripts/tools/dump-envelopes.ts', 'deliberately retained historical reference: canonical-model.md "path re-verification" note records "*it was apps/web/scripts/tools/dump-envelopes.ts when this note was written*" beside the new home tests/oracle/dump-envelopes.ts'],
+  ['apps/web/src/platform/executor/ui.tsx', 'deliberately retained historical reference: the same note names the old path and its new home (apps/web/src/features/executor/ui.tsx) in one "→" clause'],
+  ['apps/api/bin/fudcourt-api', 'build artifact (go build -o bin/fudcourt-api), absent from a clean tree by design; both citations say so'],
   ['db/schema/analytics.sql', 'cited reference that does NOT exist — the citation is the finding ("**Does not exist** (referenced by an older doc)")'],
   ['db/client.ts', 'historical reference: the pre-DR-040 frontend db module (platform/db/pg.ts), retired with the treasury move to src/server/db.ts; the citation records the old layout'],
   ['db/README', 'historical reference: the pre-DR-040 db module README, retired with the same move'],
@@ -290,7 +290,7 @@ function gitIgnoredSet(tokens, root) {
   // Ask in BOTH forms. A `.gitignore` directory pattern (`media/`, `.next/`) matches only once git
   // knows the path is a directory, and in a clean checkout that directory is absent — the trailing
   // slash is what tells git to test it as one (without it the pattern silently does not match, which
-  // is how `frontend/web/media` and `frontend/web/.next` slipped through the first pass). Every hit
+  // is how `apps/web/media` and `apps/web/.next` slipped through the first pass). Every hit
   // is mapped back to its bare token.
   const probes = [];
   for (const t of tokens) {

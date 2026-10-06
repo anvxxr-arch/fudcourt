@@ -41,7 +41,7 @@ const healthProbeKey = "health:probe"
 //	          dependencies are usable).
 //
 // Loopback only (DR-002: the only ingress is the Cloudflare tunnel to the web
-// tier, which proxies to backend/api, never to the executor).
+// tier, which proxies to apps/api, never to the executor).
 type healthServer struct {
 	store *repository.Store
 	lock  lock.ExecutionLock

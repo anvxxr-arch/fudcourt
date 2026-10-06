@@ -19,7 +19,7 @@ import (
 // first"): the identity family that actually exists in the web tree —
 // /api/auth/login, /api/auth/callback, /api/auth/logout and the admin control
 // plane /api/admin/members (the session/user-info plane). There is no
-// standalone settings or health route in frontend/web: health is served by this
+// standalone settings or health route in apps/web: health is served by this
 // service's own /healthz and /readyz, and the only settings route
 // (/api/executor/settings) belongs to the executor slice. Every handler below
 // is a behavior-faithful port of the named TS route file: same envelopes,

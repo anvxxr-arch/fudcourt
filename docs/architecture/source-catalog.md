@@ -31,7 +31,7 @@ Provider ≠ account ≠ source, per the scope prompt: **Binance** is a provider
 
 ---
 
-## 1. Research / market-aggregator feeds (Go `backend/data` sidecar, :3101)
+## 1. Research / market-aggregator feeds (Go `apps/data` sidecar, :3101)
 
 All five families are served by `apps/data/main.go` on
 `127.0.0.1:3101` (`/api/cryptorank`, `/api/khala`, `/api/llama`, `/api/news`,
@@ -192,7 +192,7 @@ list**, so the pagination bounds are validated locally (a bad value is a 400 bef
 
 ## 2. Market-data feeds read directly by the Next.js web tier (:3100)
 
-These bypass `backend/data` entirely: the route handler loads a venue client in-process.
+These bypass `apps/data` entirely: the route handler loads a venue client in-process.
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -221,7 +221,7 @@ Provider-vs-source note: `okx` etc. are **providers/venues**; `ticker-ccxt-swap`
 
 ---
 
-## 3. On-chain / RPC feeds — Rust `backend/sync` (5-minute timer)
+## 3. On-chain / RPC feeds — Rust `apps/reconciler` (5-minute timer)
 
 Two binaries share the crate (`apps/reconciler/src/lib.rs`): `fudcourt-sync` (batch sync,
 `src/main.rs`) and `fudcourt-reconciled` (:3102 HTTP, `src/bin/fudcourt-reconciled.rs`).
@@ -269,7 +269,7 @@ becomes a 0 balance/valuation (`sync.rs` doc header, `jsonrpc.rs`).
 
 ---
 
-## 4. CEX execution feeds — Go executor worker (`backend/workers/executor`)
+## 4. CEX execution feeds — Go executor worker (`apps/executor`)
 
 Venue boundary: `internal/exchanges/interface.go` (`Exchange` interface). Adapters:
 `binance/`, `bybit/`, `mexc/`, `paper/`. Symbols are normalized through
@@ -298,7 +298,7 @@ Venue id ↔ default host are the only hardcoded roots; `Config.BaseURL` overrid
 
 ---
 
-## 5. Identity feeds (Go `backend/api` :3103)
+## 5. Identity feeds (Go `apps/api` :3103)
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -328,7 +328,7 @@ These are *stored* sources — the repo both writes and reads them.
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `postgres-system-of-record` | Local Postgres 17 + TimescaleDB 2.30.1, database `fudcourt` (`public`) — Docker `postgres-hardened`, `127.0.0.1:5432` | self-hosted | INTERNAL | **single system of record** for `assets`, `transactions`, `wallets`, `accounts`, `journal`, `ledger`, `trades`, `venues` + the `asset_history`/`price_history` hypertables | writers `tests/oracle/sync-live.py` (psycopg2), `backend/sync` (Rust `tokio-postgres`, uninstalled), `apps/web/src/server/db.ts`; DDL `db/schema/pg-schema.sql` | (system of record) | NEAR_REALTIME | CANONICAL | `FUDCOURT_PG_URL` | active | pooled `pg()` client (`platform/db/pg.ts`) |
+| `postgres-system-of-record` | Local Postgres 17 + TimescaleDB 2.30.1, database `fudcourt` (`public`) — Docker `postgres-hardened`, `127.0.0.1:5432` | self-hosted | INTERNAL | **single system of record** for `assets`, `transactions`, `wallets`, `accounts`, `journal`, `ledger`, `trades`, `venues` + the `asset_history`/`price_history` hypertables | writers `tests/oracle/sync-live.py` (psycopg2), `apps/reconciler` (Rust `tokio-postgres`, uninstalled), `apps/web/src/server/db.ts`; DDL `db/schema/pg-schema.sql` | (system of record) | NEAR_REALTIME | CANONICAL | `FUDCOURT_PG_URL` | active | pooled `pg()` client (`platform/db/pg.ts`) |
 | `postgres-asset-history` | `asset_history` TimescaleDB hypertable | self-hosted | INTERNAL | one row per `assets` INSERT, appended by the `assets_snapshot` trigger (DR-040 — not by application code) | DDL `db/schema/pg-schema.sql:105-128` + trigger `:145-148`; 90-day DELETE in `tests/oracle/sync-live.py` | Balance snapshot (time series) | PERIODIC (per write) | HISTORICAL (90-day retention) | `FUDCOURT_PG_URL` | active | `CREATE TRIGGER assets_snapshot_trg AFTER INSERT ON assets` |
 | `postgres-price-history` | `price_history` hypertable | self-hosted | INTERNAL | `(ts, symbol, source, price)` | DDL only: `db/schema/pg-schema.sql:150-160`; retention DELETE in `tests/oracle/sync-live.py` | Price history (target) | — | HISTORICAL | `FUDCOURT_PG_URL` | **served** (no writer found) | grep: only DDL + retention DELETE reference it |
 | `executor-postgres` | `executor.*` schema | self-hosted Postgres | INTERNAL | accounts+credentials, executions, plans, child orders, fills, events, snapshots, risk profiles, audit logs | DDL `db/schema/executor-schema.sql`; writers `apps/executor/internal/repository/store.go` + the `apps/executor/internal/repository` package (store.go, credentials.go) | (execution system of record) | REALTIME | CANONICAL/EVENT | `FUDCOURT_EXECUTOR_PG_URL` (Go), Postgres DSN via web env | active | `ensureExecutorSchema()` / `EXECUTOR_DDL` |
@@ -407,19 +407,19 @@ document**.
 | Unit | Runs | Feeds it drives | Env file / inline env (names only) |
 |---|---|---|---|
 | `fudcourt-web.service` (:3100) | `next start` via bun | §2 market/DEX/ticker/signals feeds, §9 proxies, CMS, executor control plane | `apps/web/.env.local` |
-| `fudcourt-data.service` (:3101) | `backend/data/bin/fudcourt-data` | §1 CryptoRank/Khala/DefiLlama/News/ChainRank | `FUDCOURT_DATA_ADDR`, `FUDCOURT_DATA_CACHE_DIR`, `FUDCOURT_DATA_VALKEY_ADDR`, `-…/fudcourt/.env` |
-| `fudcourt-api.service` (:3103) | `backend/api/bin/fudcourt-api` (build artifact, absent from a clean tree) | §5 Discord identity | `-…/fudcourt/.env`, `FUDCOURT_API_ADDR` |
+| `fudcourt-data.service` (:3101) | `apps/data/bin/fudcourt-data` | §1 CryptoRank/Khala/DefiLlama/News/ChainRank | `FUDCOURT_DATA_ADDR`, `FUDCOURT_DATA_CACHE_DIR`, `FUDCOURT_DATA_VALKEY_ADDR`, `-…/fudcourt/.env` |
+| `fudcourt-api.service` (:3103) | `apps/api/bin/fudcourt-api` (build artifact, absent from a clean tree) | §5 Discord identity | `-…/fudcourt/.env`, `FUDCOURT_API_ADDR` |
 | `fudcourt-reconciled.service` (:3102) | Rust `fudcourt-reconciled` | §6 reconcile (reads Postgres) | `.env`, `RECONCILE_ADDR` |
 | `fudcourt-sync-rust.service` + `.timer` (5 min) | Rust `fudcourt-sync` | §3 Alchemy/Solana/Hyperliquid/coins.llama.fi → Postgres `assets` (**built, not deployed** — the Python oracle is the deployed sync) | `NODE_ENV=` (unit loads repo `.env` itself) |
 | `fudcourt-sync.service` + `.timer` (5 min) | `python3 sync-live.py` | same pipeline, legacy oracle | inline env only |
 | `fudcourt-executor.service` | Go `fudcourt-executor` (CEX runtime) | §4 venue order/balance/position feeds | `apps/web/.env.local` |
-| `fudcourt-executor-worker.service` | bun `backend/workers/executor` | same feeds, TS runtime — **FALLBACK only** (the Go `fudcourt-executor.service` is the production executor; this unit is retained until the cutover row `verify:executor` (`apps/executor/internal/tests/e2e`) proves green) | `apps/web/.env.local`, `NODE_ENV=production` |
+| `fudcourt-executor-worker.service` | bun `apps/executor` | same feeds, TS runtime — **FALLBACK only** (the Go `fudcourt-executor.service` is the production executor; this unit is retained until the cutover row `verify:executor` (`apps/executor/internal/tests/e2e`) proves green) | `apps/web/.env.local`, `NODE_ENV=production` |
 | `RETIRED-fudcourt-pgload.service.txt` | — | retired Turso → Postgres projection unit (DR-040: the projection is gone; Postgres is the single system of record) | tombstone file |
 | `RETIRED-fudcourt-apicalls.service.txt` | — | retired CryptoRank sidecar (predecessor of `fudcourt-data`) | tombstone file |
 | `RETIRED-fudcourt-blog.service.txt` | — | retired separate blog app (merged by DR-017) | tombstone file |
 **Executor runtime ownership (RESOLVED — was the former "two executor runtimes" gap).** The Go
-worker (`backend/workers/executor`; unit `fudcourt-executor.service`) **is the production
-executor**; the TypeScript worker (`backend/workers/executor`; unit
+worker (`apps/executor`; unit `fudcourt-executor.service`) **is the production
+executor**; the TypeScript worker (`apps/executor`; unit
 `fudcourt-executor-worker.service`) is retained **only as a fallback** until the cutover row
 `verify:executor` proves green, and is **not** the effective default. Parity rows 1–9 of
 `docs/architecture/parity-matrix.md` are `DONE`. `deploy/systemd/fudcourt-executor.service`

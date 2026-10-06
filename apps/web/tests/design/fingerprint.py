@@ -68,7 +68,7 @@ UNEXPECTED diff is a migration bug, not noise.
 Interpreter: run with an interpreter that has playwright installed and a
 Chromium build available, e.g.
 
-    /home/dwizzy/farming/.venv/bin/python frontend/web/tests/design/fingerprint.py ...
+    /home/dwizzy/farming/.venv/bin/python apps/web/tests/design/fingerprint.py ...
 """
 from __future__ import annotations
 

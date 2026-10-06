@@ -10,7 +10,7 @@ import (
 )
 
 // Parity gate for package risk: every named vector of
-// frontend/web/scripts/tests/executor-risk-tests.ts is ported here and asserted on
+// apps/web/scripts/tests/executor-risk-tests.ts is ported here and asserted on
 // normalized decimals (exact equality after decimal normalization).
 
 var (

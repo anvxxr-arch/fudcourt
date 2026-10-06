@@ -18,7 +18,7 @@ use fudcourt_reconciler::streams::sync;
 use std::path::{Path, PathBuf};
 
 /// `load_env()` -- nearest `.env` walking up from the executable (release
-/// binary lives in `backend/sync/target/release/`, so this reaches the repo
+/// binary lives in `apps/reconciler/target/release/`, so this reaches the repo
 /// root exactly like the script's `Path(__file__).resolve().parent` walk).
 /// `os.environ.setdefault` semantics: an existing non-empty var wins.
 fn load_env() {

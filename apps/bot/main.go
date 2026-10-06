@@ -3,7 +3,7 @@
 //
 // It long-polls getUpdates (no public ingress: FUDCourt is loopback-only by
 // DR-002, and a webhook would need one) and dispatches slash commands through
-// the handlers registry. Startup is fail-visible like backend/api: a missing
+// the handlers registry. Startup is fail-visible like apps/api: a missing
 // bot token, or a token Telegram rejects, exits non-zero before the loop
 // starts. A transient poll error backs off and retries instead of crashing.
 package main

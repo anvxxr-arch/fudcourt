@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Live smoke test for fudcourt-data: starts the real server and drives it over HTTP.
 #
-#   cd backend/data && ./scripts/smoke-data.sh
+#   cd apps/data && ./scripts/smoke-data.sh
 #
 # It uses its own port and its own cache dir, so it never disturbs a running
 # fudcourt-data unit (which owns 127.0.0.1:3101 and ~/.cache/fudcourt-data).
@@ -21,7 +21,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "building..."
-go build -o /tmp/fudcourt-data-smoke ./cmd/data || exit 1
+go build -o /tmp/fudcourt-data-smoke . || exit 1
 
 FUDCOURT_DATA_ADDR="127.0.0.1:${PORT}" FUDCOURT_DATA_CACHE_DIR="$CACHE" /tmp/fudcourt-data-smoke >"$LOG" 2>&1 &
 PID=$!

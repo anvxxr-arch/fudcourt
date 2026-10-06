@@ -14,7 +14,7 @@ import (
 // The agreement is between THREE statements the tree makes about venue ids:
 //
 //  1. VenueIDInvariants() - the vocabularies the executor, the ccxt ticker and
-//     the backend/api allowlist actually use, expressed in the venue-id
+//     the apps/api allowlist actually use, expressed in the venue-id
 //     vocabulary the tree uses (seed.go);
 //  2. the registry built from seedVenues() - what the canonical model knows;
 //  3. exchangeaccounts.KnownExchange - the venues this build may PLACE on.

@@ -2,7 +2,7 @@
 /**
  * emit-tokens.ts — the generated-artifact emitter for the design system (DR-037).
  *
- *   cd frontend/web
+ *   cd apps/web
  *   bun scripts/design/emit-tokens.ts            # write the generated artifacts
  *   bun scripts/design/emit-tokens.ts --check    # render in memory, diff against disk
  *

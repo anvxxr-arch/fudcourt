@@ -1,9 +1,9 @@
-# The Telegram bot (`backend/bot`)
+# The Telegram bot (`apps/bot`)
 
 **What it is.** The *receiving* half of the notification channel. `fudcourt` already
 had a sending half — the executor's `internal/notify/telegram.go` pushes
 an execution outcome at Telegram; nothing ever read a reply or answered a question.
-`backend/bot` is that other half: a long-polling command surface, in the same repo,
+`apps/bot` is that other half: a long-polling command surface, in the same repo,
 same language, same house rules.
 
 It is **not** a web surface. It opens no port, registers no route, and is invisible
@@ -15,14 +15,14 @@ and the one used-from-inside path is exactly one HTTP call to grow the service m
 
 | | |
 |---|---|
-| Module | `github.com/anvxxr-arch/fudcourt/backend/bot` (root `go.mod`, Go 1.25.0) |
+| Module | `github.com/anvxxr-arch/fudcourt/apps/bot` (root `go.mod`, Go 1.25.0) |
 | Dependencies | **stdlib only** (root `go.mod` has no `require` entry for it — the floor every Go service here stands on) |
 | In the module | yes — one repository-wide module, so `go build ./...` from the root covers it |
 | LOC | **1,572** across **12** `.go` files — 9 production (1,202) + 3 test files (370) |
-| Binary | `backend/bot/bin/fudcourt-bot` — git-ignored (`backend/bot/bin/`) |
+| Binary | `apps/bot/bin/fudcourt-bot` — git-ignored (`apps/bot/bin/`) |
 
 ```
-backend/bot/
+apps/bot/
   cmd/bot/main.go                 config load → getMe → setMyCommands → drain → poll loop, graceful shutdown
   internal/config/config.go       env-only config; fail-visible on a missing token
   internal/telegram/{types,client}.go   the Bot API client (getMe / getUpdates / sendMessage / answerCallbackQuery)
@@ -99,7 +99,7 @@ itself. (An earlier revision probed `/api/health` and `/health`, which 404'd and
 ## 6. How it is verified
 
 ```bash
-gofmt -l backend/bot && go build ./... && go vet ./backend/bot/... && go test ./backend/bot/...
+gofmt -l apps/bot && go build ./... && go vet ./apps/bot/... && go test ./apps/bot/...
 ```
 
 - **14 unit tests** across `internal/config` (3), `internal/telegram` (5) and

@@ -41,7 +41,7 @@ reconcile). Each call asserts, for that family's own `route.ts`:
 These are not incidental tests. They are the machine-checked statement of
 "the Go sidecar owns validation; the web tier is a thin proxy". Deleting
 the handler to satisfy a file-count metric deletes the thing the gate
-guards. `shared/contracts/scripts/check-contract.mjs` adds a second
+guards. `contracts/scripts/check-contract.mjs` adds a second
 dependency: it maps all 37 documented OpenAPI paths to
 `apps/web/src/app/**/api/<key>/route.ts` and fails when a handler is
 missing. A gateway at `/api/backend/[...path]` satisfies neither.

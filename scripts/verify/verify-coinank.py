@@ -78,7 +78,7 @@ from verifylib import DEFAULT_SIDECAR_BASE as SIDECAR_DEFAULT
 UA = "fudcourt-verify-coinank/1.0 (+verification harness)"
 
 # ---- upstream protocol constants (client-shipped; re-derivable from the public
-# ---- bundle at s.coinank.com/_nuxt/*.js -- see backend/data/internal/research/
+# ---- bundle at s.coinank.com/_nuxt/*.js -- see apps/data/internal/research/
 # ---- coinank/sign.go for the derivation). Kept here so the ORACLE can be
 # ---- fetched independently of the adapter.
 SIGN_UUID = "b2d903dd-b31e-c547-d299-b6d07b7631ab"

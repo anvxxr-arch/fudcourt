@@ -3,14 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
  * CoinAnk read proxy (api.coinank.com). Mode + interval input, never a raw path.
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `fudcourt-data` (backend/data, 127.0.0.1:3101), exactly like
+ * `fudcourt-data` (apps/data, 127.0.0.1:3101), exactly like
  * app/api/coinglass/route.ts and app/api/coinmarketcap/route.ts. The Go side owns the
  * mode table, the upstream URL construction, the computed client signature, the
  * interval allowlist, the TTL cache + single-flight and the honest `upstream`
  * provenance. Everything is forwarded VERBATIM -- status, body and the X-CA-* /
  * Cache-Control headers -- so the public surface on :3100 is
  *   GET /api/coinank?mode=<fundingRate|liquidation|longShort|etf|whales>[&interval=<I>][&fresh=1]
- * with the wire contract the Go side froze (backend/data/internal/research/coinank).
+ * with the wire contract the Go side froze (apps/data/internal/research/coinank).
  *
  * NOTE: every mode is currently DARK -- upstream refuses all five with HTTP 502
  * `{"code":"403",...}`. The 502 is the correct answer and reaches the caller as

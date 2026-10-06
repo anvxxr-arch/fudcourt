@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/common/source.json",
   "title": "Source",
-  "description": "Where a fact came from. Today this is a free-form string with a default ('manual') in transactions.Transaction.Source, documented as provenance that 'survives every operation'; the sidecar has one Source struct per feed (backend/data/internal/research/news/modes.go) and price_history carries a `source` column. This contract keeps the string, names the closed set of kinds, and requires the id form so a row can be traced without re-parsing a label.",
+  "description": "Where a fact came from. Today this is a free-form string with a default ('manual') in transactions.Transaction.Source, documented as provenance that 'survives every operation'; the sidecar has one Source struct per feed (apps/data/internal/research/news/modes.go) and price_history carries a `source` column. This contract keeps the string, names the closed set of kinds, and requires the id form so a row can be traced without re-parsing a label.",
   "type": "object",
   "additionalProperties": false,
   "required": [

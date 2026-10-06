@@ -226,7 +226,7 @@ func TestNoCacheOptionDisablesDiskCache(t *testing.T) {
 // TestResolveCacheDirPrecedence pins the env precedence, including that the
 // family directory is a CHILD of the shared root. Two families sharing one
 // directory would make an independent verification fetch self-confirming
-// (backend/data/README.md).
+// (apps/data/README.md).
 func TestResolveCacheDirPrecedence(t *testing.T) {
 	t.Setenv("FUDCOURT_DATA_COINANK_CACHE_DIR", "")
 	t.Setenv("FUDCOURT_DATA_CACHE_DIR", "/srv/cache")

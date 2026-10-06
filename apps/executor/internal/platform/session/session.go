@@ -4,7 +4,7 @@
 // # WHY THIS EXISTS HERE (deliberate duplication, recorded)
 //
 // The canonical Go implementation of the session cookie lives in
-// backend/api/internal/access/identity (cookie.go). It cannot be reused: the
+// apps/api/internal/access/identity (cookie.go). It cannot be reused: the
 // objective's dependency rules forbid cross-service implementation imports
 // ("Services may share contracts, not implementation"; .ai/restructure-fudcourt.md
 // §DOMAIN DEPENDENCY RULES), and both modules live under internal/, so the
@@ -250,7 +250,7 @@ func RequireTeam(secret, value string, now time.Time) (*Claims, error) {
 }
 
 // TestGoldenTokenCrossTier is a documented cross-tier interop vector: the token
-// below was minted by backend/api's identity.CreateSessionToken (the canonical
+// below was minted by apps/api's identity.CreateSessionToken (the canonical
 // implementation) and MUST verify here, or the executor surface would reject
 // every session the rest of the system issues. Regenerate with:
 //

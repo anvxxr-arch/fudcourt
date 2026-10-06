@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/accounts/account-equity.json",
   "title": "AccountEquity (venue equity bases)",
-  "description": "One venue account's equity report in its own terms. THREE separate bases are kept apart deliberately: spot and futures equity are different measurements of different wallets at one venue, and averaging them would invent a number the venue never published. Any basis the venue does not report is NULL - never 0, never the other basis. Implemented as backend/workers/executor/internal/executor/records.go AccountEquity (*string fields, comment: 'the venue may not report one basis (honest null)').",
+  "description": "One venue account's equity report in its own terms. THREE separate bases are kept apart deliberately: spot and futures equity are different measurements of different wallets at one venue, and averaging them would invent a number the venue never published. Any basis the venue does not report is NULL - never 0, never the other basis. Implemented as apps/executor/internal/executor/records.go AccountEquity (*string fields, comment: 'the venue may not report one basis (honest null)').",
   "type": "object",
   "additionalProperties": false,
   "required": [

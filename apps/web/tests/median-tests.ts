@@ -13,7 +13,7 @@
  *  - nothing usable left (empty, or all null / non-finite / non-positive when
  *    filtered) returns null.
  *
- * Usage: cd frontend/web && npm run test:shapers
+ * Usage: cd apps/web && npm run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

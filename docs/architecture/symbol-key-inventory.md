@@ -208,21 +208,21 @@ Commands run from the repo root this session (outputs summarized; counts are exa
 
 ```sh
 # 1. The SQL identity surface, all three schemas
-grep -n "UNIQUE\|REFERENCES\|PRIMARY KEY" database/schema/*.sql
-grep -n "asset_history_snapshot\|price_history_symbol_ts_source\|canonical_reference" database/schema/pg-schema.sql
+grep -n "UNIQUE\|REFERENCES\|PRIMARY KEY" db/schema/*.sql
+grep -n "asset_history_snapshot\|price_history_symbol_ts_source\|canonical_reference" db/schema/pg-schema.sql
 
 # 2. Every reader/writer of the string keys
-grep -rn "symbol\|exchange\|chain" frontend/web/src/features --include=*.ts --include=*.tsx
-grep -rn "Asset\s*string\|Chain\s*string\|Symbol\s*string\|Exchange\s*string" --include=*.go backend/api/internal
-grep -rn "Symbol\s*string\|Exchange\s*string" --include=*.go backend/workers/executor/internal
-grep -rn "SPL\|MATIC\|native\|symbol" backend/sync/src --include=*.rs
+grep -rn "symbol\|exchange\|chain" apps/web/src/features --include=*.ts --include=*.tsx
+grep -rn "Asset\s*string\|Chain\s*string\|Symbol\s*string\|Exchange\s*string" --include=*.go apps/api/internal
+grep -rn "Symbol\s*string\|Exchange\s*string" --include=*.go apps/executor/internal
+grep -rn "SPL\|MATIC\|native\|symbol" apps/reconciler/src --include=*.rs
 grep -rniI "provider_id\|canonical_id" database/           # → canonical_reference/miss rows only (DR-036)
 
 # 3. Path existence: every concrete path cited here was `test -f`-checked
 #    79 distinct paths, 0 miss (§"path sweep" below).
 
 # 4. The mapping artifact and both resolvers
-python3 -c "import json;d=json.load(open('shared/contracts/data/reference.json'));print(list(d.keys()))"
+python3 -c "import json;d=json.load(open('contracts/data/reference.json'));print(list(d.keys()))"
 grep -n "func ResolveInstrument\|func MintInstrumentID\|func SpineFor" [removed: markets/instruments/canonical.go]
 ```
 

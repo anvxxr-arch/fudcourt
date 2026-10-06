@@ -30,7 +30,7 @@ import type {
 export * from './executor-engine';
 
 // ---------------------------------------------------------------------------
-// Exchange adapter contract (PRD §48) — implemented in `backend/workers/executor/internal/exchanges`.
+// Exchange adapter contract (PRD §48) — implemented in `apps/executor/internal/exchanges`.
 // ---------------------------------------------------------------------------
 
 export interface AccountPermissions {

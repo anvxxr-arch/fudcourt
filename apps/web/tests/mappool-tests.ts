@@ -13,7 +13,7 @@
  *  - a rejection propagates rather than being swallowed, so a failed upstream
  *    surfaces as a failed request instead of a half-filled row.
  *
- * Usage: cd frontend/web && npm run test:shapers
+ * Usage: cd apps/web && npm run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

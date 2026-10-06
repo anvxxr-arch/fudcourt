@@ -53,7 +53,7 @@ export interface CredentialRecord {
   lastUsedAt: number | null;
   revokedAt: number | null;
 }
-/** Decrypted secrets — NEVER leaves `backend/workers/executor/internal/store` (PRD §44, §108). */
+/** Decrypted secrets — NEVER leaves `apps/executor/internal/store` (PRD §44, §108). */
 export interface DecryptedCredentials {
   apiKey: string;
   apiSecret: string;

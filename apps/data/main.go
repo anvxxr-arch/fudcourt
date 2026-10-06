@@ -1,5 +1,5 @@
 // Command fudcourt-data is the standalone Go port of the Next.js CryptoRank read
-// proxy (frontend/web/app/api/cryptorank/route.ts + scripts/cr_fetch.py +
+// proxy (apps/web/app/api/cryptorank/route.ts + scripts/cr_fetch.py +
 // lib/shapers.ts).
 //
 // It binds loopback only; the public ingress stays the Cloudflare tunnel to the
@@ -225,8 +225,8 @@ func (s *server) mux() *http.ServeMux {
 			// khala is a second, independent mode table. It is reported as its
 			// own key rather than folded into `build` so the cryptorank count
 			// stays exactly the number every existing consumer and gate asserts
-			// (cmd/data/main_test.go, backend/data/README.md,
-			// frontend/web/scripts/check-contract.py), and a reader can still see
+			// (cmd/data/main_test.go, apps/data/README.md,
+			// apps/web/scripts/check-contract.py), and a reader can still see
 			// both families from one probe.
 			"khala": fmt.Sprintf("%d modes", khala.ModeCount),
 			// llama is the third independent mode table, reported the same way.
@@ -821,7 +821,7 @@ func writeCoinmarketcapError(w http.ResponseWriter, mode string, err error) {
 
 // handleLlama serves the DeFiLlama read family (api.llama.fi): three modes with
 // two of OUR params validated strictly. It is the Go half of
-// frontend/web/app/api/llama/route.ts, which is now a verbatim proxy here.
+// apps/web/app/api/llama/route.ts, which is now a verbatim proxy here.
 //
 //	chains      full /v2/chains list, re-sorted by tvl desc
 //	protocols   head `top` (default 50, max 200) of /protocols, tvl desc
@@ -1125,7 +1125,7 @@ func writeJSON(w http.ResponseWriter, code int, v interface{}) {
 
 // handleNews serves the Cointelegraph RSS read family: one feed with two of OUR
 // params validated strictly. It is the Go half of
-// frontend/web/app/api/news/route.ts, which is now a verbatim proxy here.
+// apps/web/app/api/news/route.ts, which is now a verbatim proxy here.
 //
 //	source  the feed table's wire name (default cointelegraph)
 //	limit   how many of the parsed items to ship (default 30, 1..100)
@@ -1194,7 +1194,7 @@ func writeNewsError(w http.ResponseWriter, err error) {
 
 // handleChainrank serves the chainrank.fyi read family: two modes over a JSON
 // API, with pagination relayed UNTOUCHED. It is the Go half of
-// frontend/web/app/api/chainrank/route.ts, which is now a verbatim proxy here.
+// apps/web/app/api/chainrank/route.ts, which is now a verbatim proxy here.
 //
 //	stats      the leaderboard's aggregate counters
 //	listings   the board rows, with `page`/`pageSize` passed through verbatim

@@ -1,7 +1,7 @@
 name: go
 # Surface: ONE Go module at the repository root (github.com/anvxxr-arch/fudcourt).
 # The four modules this workflow used to build separately (backend/{api,bot,data},
-# backend/workers/executor) were consolidated in Phase 2: the new module path is a
+# apps/executor) were consolidated in Phase 2: the new module path is a
 # strict prefix of all four old ones, so no import path needed rewriting, and the
 # dependency union is exactly the previous union.
 #

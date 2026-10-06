@@ -11,7 +11,7 @@ import (
 )
 
 // Parity gate for package planner: every named vector of
-// frontend/web/scripts/tests/executor-plan-tests.ts (PRD §8/§9/§13/§14/§16/§33/
+// apps/web/scripts/tests/executor-plan-tests.ts (PRD §8/§9/§13/§14/§16/§33/
 // §37/§38/§116) as Go table tests. Decimal strings compare as normalized
 // decimals — exact.
 

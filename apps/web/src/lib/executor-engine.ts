@@ -21,7 +21,7 @@ import type {
 } from './executor-request';
 
 // ---------------------------------------------------------------------------
-// Engine contract (PRD §25–§37) — `backend/workers/executor/internal/engine` exports this surface.
+// Engine contract (PRD §25–§37) — `apps/executor/internal/engine` exports this surface.
 // ---------------------------------------------------------------------------
 
 /** A child order the strategy wants on the venue. */
@@ -118,7 +118,7 @@ export interface StrategyProgress {
   remainingRiskBudget: number | null;
 }
 
-/** `backend/workers/executor/internal/engine` — deterministic strategy planning + lifecycle. */
+/** `apps/executor/internal/engine` — deterministic strategy planning + lifecycle. */
 export interface ExecutionEngineApi {
   /** Build initial state for a planned execution (pure). */
   createStrategy(args: {

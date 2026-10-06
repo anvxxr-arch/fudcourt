@@ -105,8 +105,8 @@ func (k VenueKind) Valid() bool {
 // MarketType is the instrument market family a venue is modelled for. The two
 // values are the frozen pair of contracts/schemas/markets/instrument.json
 // ($defs.market_type), declared identically in
-// backend/api/internal/markets/instruments/instrument.go and
-// backend/api/internal/accounts/exchange/account.go.
+// apps/api/internal/markets/instruments/instrument.go and
+// apps/api/internal/accounts/exchange/account.go.
 type MarketType string
 
 const (

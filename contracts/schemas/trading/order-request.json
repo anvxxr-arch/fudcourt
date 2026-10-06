@@ -116,7 +116,7 @@
         "RECONCILING",
         "STOPPED"
       ],
-      "description": "Execution lifecycle. FROZEN: this list is cross-checked against frontend/web/src/platform/executor/types.ts and shared/contracts/openapi/fudcourt.yaml by shared/contracts/scripts/check-contract.mjs (CHECKED_ENUMS), so it MUST NOT be re-spelled or reordered, and it MUST NOT be merged with ChildOrderStatus."
+      "description": "Execution lifecycle. FROZEN: this list is cross-checked against apps/web/src/platform/executor/types.ts and contracts/openapi/fudcourt.yaml by contracts/scripts/check-contract.mjs (CHECKED_ENUMS), so it MUST NOT be re-spelled or reordered, and it MUST NOT be merged with ChildOrderStatus."
     },
     "child_order_status": {
       "type": "string",
@@ -265,11 +265,11 @@
         "fatal",
         "unknown"
       ],
-      "description": "Retry taxonomy: only network_retryable / rate_limited / exchange_overload may retry. Mirrors shared/contracts/schemas/error-envelope.json's coarser 12-value `code` set - the envelope is the wire contract, this is the executor's internal classification."
+      "description": "Retry taxonomy: only network_retryable / rate_limited / exchange_overload may retry. Mirrors contracts/schemas/error-envelope.json's coarser 12-value `code` set - the envelope is the wire contract, this is the executor's internal classification."
     },
     "event_name": {
       "type": "string",
-      "description": "A STABLE event id from shared/contracts/events/catalog.json (PascalCase), whose SCREAMING_SNAKE spellings are accepted aliases of the same id. NOT re-enumerated on purpose: events/catalog.json + events/event.schema.json are the single source of truth and are pinned by shared/contracts/scripts/check-contract.mjs; a second list here would be a drift surface. Note the live asymmetry: the executor enum (backend/workers/executor/internal/executor/enums.go) declares 23 of the catalogue's 28 ids - the five account/credential/reconciliation events (CredentialCreated, CredentialRevoked, ExchangeAccountConnected, ReconciliationStarted, ReconciliationCompleted) exist in the catalogue and in the web implementation but have no Go constant yet."
+      "description": "A STABLE event id from contracts/events/catalog.json (PascalCase), whose SCREAMING_SNAKE spellings are accepted aliases of the same id. NOT re-enumerated on purpose: events/catalog.json + events/event.schema.json are the single source of truth and are pinned by contracts/scripts/check-contract.mjs; a second list here would be a drift surface. Note the live asymmetry: the executor enum (apps/executor/internal/executor/enums.go) declares 23 of the catalogue's 28 ids - the five account/credential/reconciliation events (CredentialCreated, CredentialRevoked, ExchangeAccountConnected, ReconciliationStarted, ReconciliationCompleted) exist in the catalogue and in the web implementation but have no Go constant yet."
     },
     "execution_strategy": {
       "type": "string",

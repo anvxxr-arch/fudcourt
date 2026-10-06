@@ -214,12 +214,12 @@ func seedTokens() []seedToken {
 // seedVenues: the twelve venue ids the tree uses.
 //
 // Provenance:
-//   - known=true (binance, bybit, mexc): backend/api/internal/accounts/exchange/
+//   - known=true (binance, bybit, mexc): apps/api/internal/accounts/exchange/
 //     account.go KnownExchange, mirrored by market_types spot+linear_perp which
 //     is the frozen pair this build trades (docs/architecture/current.md).
-//   - binance additionally: backend/workers/executor/internal/execution/
+//   - binance additionally: apps/executor/internal/execution/
 //     types.go ExchangeBinance/Bybit/MEXC and the three adapters under
-//     backend/workers/executor/internal/exchanges/{binance,bybit,mexc}.
+//     apps/executor/internal/exchanges/{binance,bybit,mexc}.
 //   - the other eight: apps/web/src/features/ticker/client.ts TICKER_EXCHANGES
 //     = ['okx','bybit','bitget','mexc','phemex','bingx','bitfinex','htx',
 //     'coinbase','kraken'] - the ccxt venue vocabulary the ticker actually
@@ -282,7 +282,7 @@ func VenueIDInvariants() []VenueIDInvariant {
 			Source:   "apps/executor/internal/execution/types.go ExchangeID constants + apps/executor/internal/exchanges/paper/paper.go venuePaper",
 		},
 		{
-			Name:     "backend/api supported venue allowlist",
+			Name:     "apps/api supported venue allowlist",
 			Provider: ProviderInternal,
 			VenueIDs: []string{"binance", "bybit", "mexc"},
 			Source:   "apps/api/internal/accounts/exchange/account.go KnownExchange",

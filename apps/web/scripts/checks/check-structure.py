@@ -86,7 +86,7 @@ for dead in ("store",):
             f"family code belongs in src/features/<family>/, shared code in src/lib/ or src/server/"
         )
 if (ROOT / "lib").exists():
-    violations.append("frontend/web/lib/ exists — the flat lib bag was retired by DR-018 (src/lib, src/server, src/features)")
+    violations.append("apps/web/lib/ exists — the flat lib bag was retired by DR-018 (src/lib, src/server, src/features)")
 COMPONENT_SHELVES = {"ui", "layout", "navigation", "data-display", "feedback"}
 comp_root = SRC / "components"
 if comp_root.exists():

@@ -3,7 +3,7 @@ package identity
 import "testing"
 
 // TestRequiredTier ports "guard: route policy gates treasury paths to team
-// and admin to admin" from frontend/web/scripts/tests/auth-tests.ts, with the
+// and admin to admin" from apps/web/scripts/tests/auth-tests.ts, with the
 // guard.ts TIER_PAGES / TEAM_API_ROUTES tables expressed as a RoutePolicy.
 func TestRequiredTier(t *testing.T) {
 	policy := RoutePolicy{

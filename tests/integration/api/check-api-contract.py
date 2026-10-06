@@ -3,12 +3,12 @@
 contract, and the web BFF proxy table vs the Go api's.
 
 Why this is not a per-service unit test: it asserts a relationship between two
-modules that neither can see alone. `backend/api` unit tests prove a handler
+modules that neither can see alone. `apps/api` unit tests prove a handler
 answers; `contracts/scripts/check-contract.mjs` proves the documented
 paths match the Next.js route files. NEITHER catches the drift this gate exists
 for:
 
-  1. a route registered in `backend/api/cmd/api/main.go` that the contract
+  1. a route registered in `apps/api/main.go` that the contract
      never documented (a Go-only endpoint a client can never discover), or a
      contract path for a Go-owned surface that Go does not serve;
   2. a web route that proxies to the Go api on a path the Go api does not
@@ -75,7 +75,7 @@ proxies = web_proxy_targets()
 undocumented = sorted(api_paths - doc_paths)
 if undocumented:
     fails.append(
-        "backend/api registers paths the contract does not document "
+        "apps/api registers paths the contract does not document "
         f"(a client cannot discover these): {undocumented}"
     )
 

@@ -5,7 +5,7 @@ import config from '@/cms/payload.config'
 /**
  * Seed: 2 categories + 3 published posts (hero image via sharp SVG->PNG).
  * Idempotent: slugs are upserted, rerunning never duplicates.
- * Run: cd frontend/web && bunx payload run src/cms/seed.ts   (merged app, DR-017)
+ * Run: cd apps/web && bunx payload run src/cms/seed.ts   (merged app, DR-017)
  *
  * PITFALL (why this file is written top-level): `payload run` does
  * `await import(script)` then `process.exit(0)`. A floating `main()`

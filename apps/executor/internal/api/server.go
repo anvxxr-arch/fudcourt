@@ -137,7 +137,7 @@ func (s *Server) Router() http.Handler {
 // recoverMiddleware contains panics at the handler boundary: the caller gets
 // the canonical internal envelope and the stack goes to the log, never the wire
 // (objective §43: no internal stack traces to users). Mirrors
-// backend/api/internal/platform/httpx.Recover — the executor has no
+// apps/api/internal/platform/httpx.Recover — the executor has no
 // platform/httpx package, so the middleware lives here rather than forking a
 // shared dependency between two Go modules.
 func recoverMiddleware(next http.Handler) http.Handler {

@@ -1,6 +1,6 @@
 // Package execution holds the canonical CEX executor domain types (objective
 // §8.9–§8.16): the Go port of the frozen TypeScript contract in
-// frontend/web/src/lib/executor.ts. Where the two disagree, the TS
+// apps/web/src/lib/executor.ts. Where the two disagree, the TS
 // contract and its tests are the parity oracle until cutover (docs/architecture/
 // executor.md).
 //

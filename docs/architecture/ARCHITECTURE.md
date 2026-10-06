@@ -13,7 +13,7 @@
 > `src/app/(frontend)/api/**` (3 auth + 37 data incl. the executor surface and the
 > keyless-proxy families) — the older **21** *(2026-09-29; 18 data + 3 auth)* and **36**
 > *(2026-10-01; 3 auth + 33 data)* counts are kept as the dated measurements they were.
-> `find "frontend/web/src/app/(frontend)/api" -name route.ts` = **40** today, three of them
+> `find "apps/web/src/app/(frontend)/api" -name route.ts` = **40** today, three of them
 > `src/app/(frontend)/api/auth/*`; the **chainrank** and **khala** Next proxy routes are gone
 > with their boards (DR-041). Sitemap: **22** static routes in `src/server/routes.ts` + **30**
 > `TICKER_SYMBOLS` + **125** `COUNTRY_LIST` + **2,416** `INDICATORS` + **33** `CENTRAL_BANKS` + **6** `MARKET_TYPES` + **150** trade-instrument pages + **3** blog slugs ≈ **2,785** `<loc>` entries.
@@ -33,9 +33,9 @@ DR-017) on the homeserver:
 
 | | What it answers | Where |
 |---|---|---|
-| Treasury OS | what do I own / is it accounted for | `frontend/web` views `dashboard, portfolio, wallets, transactions, reconciliation` |
-| Market intelligence | what is the market doing — prices, ranks, chains, DEX, launches, news, signals, research | `frontend/web` views `ticker, tracker, trench, dex, signals, scoreboard, cryptorank, llama, news` (the `chainrank` and `khala` families are sidecar-only, DR-041) |
-| Publishing | what's the story | `frontend/web` → `/blog`, Payload CMS merged in (DR-017) |
+| Treasury OS | what do I own / is it accounted for | `apps/web` views `dashboard, portfolio, wallets, transactions, reconciliation` |
+| Market intelligence | what is the market doing — prices, ranks, chains, DEX, launches, news, signals, research | `apps/web` views `ticker, tracker, trench, dex, signals, scoreboard, cryptorank, llama, news` (the `chainrank` and `khala` families are sidecar-only, DR-041) |
+| Publishing | what's the story | `apps/web` → `/blog`, Payload CMS merged in (DR-017) |
 
 Public entry: **https://fc.dwirijal.my.id** (Cloudflare Tunnel → loopback
 origin; DR-002 — no third-party deploy target, ever).
@@ -48,18 +48,18 @@ origin; DR-002 — no third-party deploy target, ever).
  (LAN or public)    │ (blog served by :3100 at /blog — DR-017)        │
                     └────────────────┬────────────────────────────────┘
                                      ▼
-   ┌──────────────────── frontend/web (Next 16, fudcourt-web) ────────────────────┐
+   ┌──────────────────── apps/web (Next 16, fudcourt-web) ────────────────────┐
    │  src/app/(frontend)/page.tsx = SPA shell (initialPage state + tab nav + db)│
    │  src/app/(frontend)/<view>/page.tsx = deep-link wrapper → <StoreShell …> │
    │  src/app/(frontend)/api/* = 40: 37 data (families §4 + admin §5 + executor)│
    │                            + 3 auth                                     │
    └──────┬────────────────────────────────────────────┬──────────────────────┘
           │ Postgres (treasury, synced every 5 min     │ keyless upstreams:
-          │ by fudcourt-sync.timer → backend/sync,     │ chainrank.fyi RE,
+          │ by fudcourt-sync.timer → apps/reconciler,     │ chainrank.fyi RE,
           │ the Rust port; sync-live.py = oracle)      │ api.llama.fi (served by
           ▼                                            │ fudcourt-data §4 llama),
    ┌────────────────────┐                              │ dexscreener,
-   │ frontend/web (Payload)│  Neon Postgres (DATABASE_URL)│ api.coingecko.com,
+   │ apps/web (Payload)│  Neon Postgres (DATABASE_URL)│ api.coingecko.com,
    │  /blog + /blog/cms│  (same app, same process)    │ cointelegraph RSS,
    └────────────────────┘                              │ data-public.vercel.app
                                                        │ www.khala.io (Framer SSR;
@@ -72,7 +72,7 @@ origin; DR-002 — no third-party deploy target, ever).
           │ cryptorank.io, api.llama.fi and khala.io are NOT fetched here any
           ▼ more — /api/{cryptorank,llama} are thin proxies (no validation,
             no shaping; body+status forwarded verbatim; DR-005/009)
-   ┌───────── backend/data (Go, fudcourt-data :3101) ──────────┐
+   ┌───────── apps/data (Go, fudcourt-data :3101) ──────────┐
    │  three families, three clients (DR-005/006/008):               │
    │  · cryptorank: mode/key validation, disabled-mode refusal      │
    │    (503), disk cache, 429 backoff, tls-client chrome_131       │
@@ -103,12 +103,12 @@ single-flight, and the strict `top`/`days` matrix — with the TS route reduced 
 verbatim proxy. Three families, three clients, three caches: cryptorank needs the
 browser fingerprint, khala and llama need nothing but `net/http`.
 
-The 5-minute treasury sync is now also a Rust service, `backend/sync` ([DR-010](../records/DECISIONS.md)):
+The 5-minute treasury sync is now also a Rust service, `apps/reconciler` ([DR-010](../records/DECISIONS.md)):
 same Postgres pipeline, same Alchemy/Solana/Hyperliquid reads, verified row-for-row
 against the Python oracle `sync-live.py`, which stays installed as the rollback.
 
-### 2a. `backend/api` package layout (as-built, 2026-10-01)
-The primary Go API module (`github.com/anvxxr-arch/fudcourt/backend/api`) is one process
+### 2a. `apps/api` package layout (as-built, 2026-10-01)
+The primary Go API module (`github.com/anvxxr-arch/fudcourt/apps/api`) is one process
 (`cmd/api`: `main.go` route table + `routes.go`/`errors.go`/`cookies.go`/`discord.go` handlers,
 loopback `127.0.0.1:3103`, `/healthz` + `/readyz`). Its `internal/` is grouped by **bounded
 context**, not one flat package per noun:
@@ -125,13 +125,13 @@ A directory exists only where real code lives. There is deliberately **no** `ban
 `sources/`, `finance/assets`, `finance/valuation`, `executor/` or `admin/` package: those names
 are reserved for functionality that does not exist in this module yet, and an empty placeholder
 would misdescribe the tree. `executor/` here is a facade name (commands/queries over the real
-engine in `backend/workers/executor`); the `/api/executor/**` surface is Go-owned since
+engine in `apps/executor`); the `/api/executor/**` surface is Go-owned since
 DR-042/DR-043 (the web tier thin-proxies it, §8b), and the `/api/admin/members` plane is an
 api route plane, not an `internal/admin` package.
 Domain ownership of the tables these packages model is in [domain-map.md](domain-map.md) §1-§2;
 the full judgment record for the grouping is §4 of that file.
 
-## 3. `frontend/web` — SPA shell anatomy
+## 3. `apps/web` — SPA shell anatomy
 
 - `src/features/overview/store-shell.tsx` owns `page` state (`initialPage` prop) and renders one
   view per tab. It takes an `isTeam` prop: **false → market boards only** (no
@@ -318,7 +318,7 @@ implies team implies member.
 
 | Tier | What | Where it runs |
 |---|---|---|
-| Offline | `check-contract.py` (CR_MODES ↔ sweep consistency + **TS↔Go mode-table parity** + **news NEWS_SOURCES parity** + mutation-guard + proxy-shape; the **khala** and **chainrank** parity blocks became “web surface removed (sidecar-only)” rows at DR-041), `test:shapers` (`240 tests` as of 2026-10-01), `tsc`, both builds (Bun), `cargo build/test` (backend/sync), `go build/vet/test` (backend/data: cryptorank + khala + llama + news + chainrank packages — **179** `func Test` as of 2026-10-01, was 111 in the 2026-09-29 figure this row used to carry) | pre-push hook + CI on every push |
+| Offline | `check-contract.py` (CR_MODES ↔ sweep consistency + **TS↔Go mode-table parity** + **news NEWS_SOURCES parity** + mutation-guard + proxy-shape; the **khala** and **chainrank** parity blocks became “web surface removed (sidecar-only)” rows at DR-041), `test:shapers` (`240 tests` as of 2026-10-01), `tsc`, both builds (Bun), `cargo build/test` (apps/reconciler), `go build/vet/test` (apps/data: cryptorank + khala + llama + news + chainrank packages — **179** `func Test` as of 2026-10-01, was 111 in the 2026-09-29 figure this row used to carry) | pre-push hook + CI on every push |
 | Live | per-family verifiers (§4) — plus `verify-khala.py` **green against the served sidecar: 136 pass / 0 fail / 0 skip, 6.7 s** (`--base http://127.0.0.1:3101`; GATED met 2026-09-29, PLAN G8 ✅), cryptorank harness (244 checks; since DR-005 run it against the Go sidecar for a full pass — through :3100 the DR-004 inbound budget stops a ~55-call run, PLAN G7 SG-7.6), route sweep (the 2026-09-29 recorded run was **154/165**: 18 page checks = 13 HTML + `/robots.txt` + `/sitemap.xml` + 3 real-404 retired/unknown · 7 gate-307 · API incl. the whole ticker, llama and news families · mut no-session 401 · session-gated probes · 58 CR; 11 fails = 1 CoinGecko 403 passthrough + 10 session-gated probes unrunnable because no `FUDCOURT_SESSION_SECRET` exists on this host, ANALYSIS K-11 — a point-in-time measurement, not a live claim; DR-041 has since removed the chainrank probes and the khala group F from the sweep), DOM audit of the /tracker board (asserts /api/markets is proxied and the browser never calls CoinGecko) | on demand + this repo's loop |
 | Continuous | `monitor.py` — unit active + 8 endpoint checks (board page, 5 cryptorank modes incl. decoy-refusal 503, markets, news), deterministic output, parallel | cron `f191fe6df16c` every 15 min, silent when `HEALTHY` |
 
@@ -358,7 +358,7 @@ USDT linear perps) and the funds never leave the exchange. Records:
     │ POST /api/executor/preview
     ▼
  ┌───────────────────────────────────────────────────────────────────────┐
- │            frontend/web :3100 — the same Next app, tier `team`            │
+ │            apps/web :3100 — the same Next app, tier `team`            │
  ├───────────────────────────────────────────────────────────────────────┤
  │ src/app/(frontend)/api/executor/**  — 15 thin route handlers          │
  │     ↓ forwardExecutor(req) — the WHOLE handler (DR-043)               │
@@ -370,13 +370,13 @@ USDT linear perps) and the funds never leave the exchange. Records:
     │  cookie + body forwarded verbatim
     ▼
  ┌───────────────────────────────────────────────────────────────────────┐
- │   fudcourt-executor.service — Go (backend/workers/executor)           │
+ │   fudcourt-executor.service — Go (apps/executor)           │
  │   127.0.0.1:3105 /api/executor/*  ·  127.0.0.1:3104 /healthz+/readyz  │
  ├───────────────────────────────────────────────────────────────────────┤
  │ internal/api — the 15 contract routes, one process, Go-owned          │
  │ internal/repository — Postgres store + EnsureSchema (executor        │
  │     schema bootstrap, fatal on failure, TestEmbeddedSchema… byte-     │
- │     exact vs database/schema/executor-schema.sql)                     │
+ │     exact vs db/schema/executor-schema.sql)                     │
  │ internal/runtime/worker — deterministic tick loop seeded from the     │
  │     strategy state; reconcile venue BEFORE acting; crash recovery =   │
  │     first tick with placement disabled                                │
@@ -407,8 +407,8 @@ USDT linear perps) and the funds never leave the exchange. Records:
 
 | Piece | Where | Why |
 |---|---|---|
-| Web app + API | `frontend/web`, `:3100`, `src/app/(frontend)/api/executor/**` → `forwardExecutor` in `src/app/(frontend)/api/executor/_proxy.ts` | one origin, one session, one tier gate (`/executor` and `/api/executor` are `team` — the same tier as the treasury surface it sits beside) |
-| Executor runtime | `backend/workers/executor` (Go), unit `deploy/systemd/fudcourt-executor.service`, `:3104` health + `:3105` executor API | **independent of `fudcourt-web`**: closing the browser or restarting the web unit never stops an execution |
+| Web app + API | `apps/web`, `:3100`, `src/app/(frontend)/api/executor/**` → `forwardExecutor` in `src/app/(frontend)/api/executor/_proxy.ts` | one origin, one session, one tier gate (`/executor` and `/api/executor` are `team` — the same tier as the treasury surface it sits beside) |
+| Executor runtime | `apps/executor` (Go), unit `deploy/systemd/fudcourt-executor.service`, `:3104` health + `:3105` executor API | **independent of `fudcourt-web`**: closing the browser or restarting the web unit never stops an execution |
 | Valkey lease | `apps/executor/internal/platform/lock` | one worker owns one execution; **FAIL-CLOSED** — a lock that fails open means duplicate orders, so any Valkey error makes the lease unusable and the worker does not trade (the inverse of the JSON cache in `src/server/cache.ts`, which fails open) |
 | Postgres store | `apps/executor/internal/repository` → `executor` schema | its own schema, never `public`: the executor owns its writes and the treasury tables belong to the sync, so neither prunes the other's rows. No migration runner — the embedded DDL is asserted byte-identical to `db/schema/executor-schema.sql` by `repository.EnsureSchema` (fatal on failure) with drift guard `TestEmbeddedSchemaMatchesTracked` (byte-exact) |
 | Adapters | `apps/executor/internal/exchanges` | one translation layer per venue; paper and live implement the SAME interface, so the worker has a single code path; paper's `MarketSource` seam delegates marks/fees to the live adapter (DR-042) |
@@ -423,7 +423,7 @@ binds `user_id` (a wrong user reads `null`/`[]` → API 404). Placement requires
 while paper mode and reconciliation keep running, so **paper is the default posture**.
 Offline: Go test suites across `apps/executor/internal/...` (incl. the
 composed hermetic e2e in `internal/tests/e2e`); live: `bun run verify:executor`
-→ `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...`
+→ `go test -count=1 -race ./apps/executor/internal/tests/e2e/...`
 (PLAN G14, DR-043).
 
 **Portfolio ceilings gate creation, not just the settings screen.** `maxOpenRiskPct`

@@ -2,7 +2,7 @@ package api
 
 // Route-table, auth-gate and envelope parity tests for the executor HTTP
 // surface. Each test names the TS route file it pins
-// (frontend/web/src/app/(frontend)/api/executor/**) and asserts the exact
+// (apps/web/src/app/(frontend)/api/executor/**) and asserts the exact
 // envelope the TS handler/runtime produces: status code, body keys and refusal
 // text. Nothing here touches Postgres, Valkey or a network — the venue is the
 // in-repo paper simulator and the clock is pinned.

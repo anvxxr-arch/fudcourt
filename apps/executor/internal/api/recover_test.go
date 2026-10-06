@@ -1,6 +1,6 @@
 package api
 // Panic-containment tests for the executor mux's recoverMiddleware (dd80ca3).
-// The middleware is the executor's port of backend/api/internal/platform/httpx
+// The middleware is the executor's port of apps/api/internal/platform/httpx
 // .Recover: a panicking handler answers the canonical internal envelope and the
 // stack goes to the log, never the wire. These tests pin both halves of that
 // contract at the handler boundary — the 500 envelope on panic and the

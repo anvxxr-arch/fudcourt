@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * CoinGlass read proxy (capi.coinglass.com). Mode + symbol input, never a raw path.
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `fudcourt-data` (backend/data, 127.0.0.1:3101), exactly like
+ * `fudcourt-data` (apps/data, 127.0.0.1:3101), exactly like
  * app/api/cryptorank/route.ts and app/api/llama/route.ts.
  * The Go side owns the mode table, the upstream URL construction, the AES
  * decryption, the 15s TTL cache + single-flight keyed on that URL, the
@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * is forwarded VERBATIM -- status, body and the X-CG-* / Cache-Control headers --
  * so the public surface on :3100 is
  *   GET /api/coinglass?mode=<statistics|openInterest|fundingRate|markets>[&symbol=<SYM>][&fresh=1]
- * with the wire contract the Go side froze (backend/data/internal/research/coinglass).
+ * with the wire contract the Go side froze (apps/data/internal/research/coinglass).
  *
  * Single source of truth: the mode table and every refusal live in Go ONLY.
  * Re-validating here would be a second implementation waiting to drift, which is

@@ -23,7 +23,7 @@ import (
 // DefaultCacheDir is the parent of this family's cache root, mirroring the
 // CoinGlass family: the deploy unit sets FUDCOURT_DATA_CACHE_DIR ->
 // ~/.cache/fudcourt-data and each family owns "<root>/<family>". A family must
-// never share another family's cache directory (backend/data/README.md): a
+// never share another family's cache directory (apps/data/README.md): a
 // shared cache turns an independent verification fetch into self-confirmation.
 //
 // It matters more here than usual. This family and the coinglass family are both

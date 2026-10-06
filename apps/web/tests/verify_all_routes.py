@@ -20,12 +20,12 @@ surface"), read out of the running build, not from memory:
   read-only 404: the handler SELECTs before it would ever DELETE, and the row
   does not exist). This replaces the retired `x-fud-token` probe: that header
   grants nothing any more (docs/architecture/ARCHITECTURE.md §6).
-  The cookie is minted exactly like frontend/web/tests/auth-tests.ts does it:
+  The cookie is minted exactly like apps/web/tests/auth-tests.ts does it:
       payload = base64url(JSON.stringify(SessionUser + exp))
       cookie  = payload + "." + base64url(HMAC-SHA256(secret, payload))
   The secret is discovered from (in order) the listening server's own
   /proc/<pid>/environ, then this process's FUDCOURT_SESSION_SECRET, then
-  frontend/web/.env.local. If none is found (or the server rejects the minted
+  apps/web/.env.local. If none is found (or the server rejects the minted
   cookie) the D2 checks report an ENVIRONMENTAL fail naming that reason — the
   fail-closed 401/D1 checks stay meaningful regardless.
 - cryptorank: all 28 modes + keyed variants + error contract.
@@ -94,7 +94,7 @@ def rec(group, name, st, want, body):
 
 
 # --------------------------------------------------------------------------
-# session minting (mirrors frontend/web/tests/auth-tests.ts createSessionToken)
+# session minting (mirrors apps/web/tests/auth-tests.ts createSessionToken)
 # --------------------------------------------------------------------------
 def _b64url(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()

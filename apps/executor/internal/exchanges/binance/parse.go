@@ -122,7 +122,7 @@ func (b *Binance) normalize(o orderWire, symbol string, request *execution.Order
 }
 
 // mapOrderStatus maps the Binance wire status names to the canonical
-// child-order lifecycle. The parity oracle (frontend/web exchange.ts mapOrderStatus)
+// child-order lifecycle. The parity oracle (apps/web exchange.ts mapOrderStatus)
 // maps ccxt's lowercase states: open→OPEN, closed→FILLED,
 // canceled/cancelled→CANCELLED, rejected→REJECTED, expired→EXPIRED,
 // default→UNKNOWN. This adapter speaks the RAW Binance names and extends the

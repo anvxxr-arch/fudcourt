@@ -1,6 +1,6 @@
 # Design system
 
-One source of truth for every visual value in `frontend/web`, two generated artifacts, and two
+One source of truth for every visual value in `apps/web`, two generated artifacts, and two
 gates that fail when either drifts. Decision record:
 [DR-037](../records/DECISIONS.md). This document is the operating manual; the records file holds
 the reasoning. The read-only baseline it was built against is
@@ -27,7 +27,7 @@ hard-scale/colour sites at landing, shrinking as the migration sessions land.
 ## The model
 
 ```
-frontend/web/src/styles/tokens.ts          ← SSOT: the only place a design value is written
+apps/web/src/styles/tokens.ts          ← SSOT: the only place a design value is written
         │
         │  bun scripts/design/emit-tokens.ts   (deterministic; --check = drift gate)
         ▼
@@ -211,7 +211,7 @@ there is no timestamp, seed, random or environment input, and `--check` re-rende
 `md5 5a794ff17e77e765796cd79a39d916f9`). The drift gate is therefore real and not decoration:
 
 ```
-cd frontend/web
+cd apps/web
 bun scripts/design/emit-tokens.ts            # regenerate
 bun scripts/design/emit-tokens.ts --check    # TOKENS_OK | TOKENS_DRIFT (+diff, exit 1)
 bun run check:design                          # the python migration gate + the --check above
@@ -379,7 +379,7 @@ A token is a two-part change; **no invented tokens**.
    reusing an existing token when a value repeats.
 2. **Add the value to `apps/web/src/styles/tokens.ts`**, in the matching scale and in the sorted
    position the other keys occupy (`space: 18`, `fontSize: 24`). Keep the object `as const`.
-3. **Regenerate:** `cd frontend/web && bun run tokens`. This rewrites the `:root` block and
+3. **Regenerate:** `cd apps/web && bun run tokens`. This rewrites the `:root` block and
    `tailwind.tokens.json`. Commit both artifacts with the token change.
 4. **Re-point the call site(s)** to `color.x` / `space[n]` / `fontSize[n]`, or to the Tailwind class
    the new key produces (`p-18`).

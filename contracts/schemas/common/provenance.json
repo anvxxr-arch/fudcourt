@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/common/provenance.json",
   "title": "Provenance block",
-  "description": "The honesty fields every acquisition-family payload carries so a consumer can tell a complete answer from a truncated one and a fresh body from a cached one. This is the machine-readable form of the repo's house rule that an absent or partial upstream value is never rendered as a plausible number, and that a derived body must say so. Field sources: backend/data/internal/research/cryptorank/types.go CrEnvelope (upstream, fetchedAt, cache, count, upstreamTotal, slice, changeSource), news Envelope (upstream, timestamp), khala Envelope (upstream, fetchedAt, cache, count, upstreamTotal, slice, missingSlugs), llama Envelope (upstream, fetchedAt, upstreamTotal, derived).",
+  "description": "The honesty fields every acquisition-family payload carries so a consumer can tell a complete answer from a truncated one and a fresh body from a cached one. This is the machine-readable form of the repo's house rule that an absent or partial upstream value is never rendered as a plausible number, and that a derived body must say so. Field sources: apps/data/internal/research/cryptorank/types.go CrEnvelope (upstream, fetchedAt, cache, count, upstreamTotal, slice, changeSource), news Envelope (upstream, timestamp), khala Envelope (upstream, fetchedAt, cache, count, upstreamTotal, slice, missingSlugs), llama Envelope (upstream, fetchedAt, upstreamTotal, derived).",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -27,7 +27,7 @@ import type {
 } from './executor-request-defs';
 
 // ---------------------------------------------------------------------------
-// Risk engine contract (PRD §103–§106) — `backend/workers/executor/internal/risk` exports EXACTLY this.
+// Risk engine contract (PRD §103–§106) — `apps/executor/internal/risk` exports EXACTLY this.
 // ---------------------------------------------------------------------------
 
 /** Risk breakdown (PRD §22–§23). All values in quote currency. */
@@ -184,7 +184,7 @@ export interface AutoLeverageResult {
 }
 
 /**
- * `backend/workers/executor/internal/risk` — the pure risk engine. Deterministic, decimal-backed,
+ * `apps/executor/internal/risk` — the pure risk engine. Deterministic, decimal-backed,
  * zero I/O (PRD §102). Signatures are frozen here so every other slice can be
  * built against them in parallel.
  */

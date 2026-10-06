@@ -36,7 +36,7 @@ Payload from `DATABASE_URL` (`apps/web/src/cms/payload.config.ts:44-46`).
 ## 1. Postgres `public` — treasury system of record (`db/schema/pg-schema.sql`) — 8 tables
 
 Writers: the Python oracle `tests/oracle/sync-live.py` (psycopg2, the deployed sync)
-and `backend/sync` (Rust `tokio-postgres`, built but **not deployed** —
+and `apps/reconciler` (Rust `tokio-postgres`, built but **not deployed** —
 `fudcourt-sync-rust.service` is the uninstalled replacement) for `assets`; the Next
 `(frontend)` API routes for `transactions`/`wallets`. Readers:
 `apps/web/src/server/db.ts`, `platform/db/client.ts` `getAll()`, and the
@@ -49,7 +49,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 | table | `assets` (`db/schema/pg-schema.sql:20-29`) |
 | storage | Postgres `public.assets` (system of record, DR-040) |
 | classification | **snapshot** (rewritten wholesale each sync: `DELETE FROM assets` then INSERTs — `db.rs:117,133`) |
-| owning service | `backend/sync` Rust `fudcourt-sync` (`streams/sync.rs`), legacy `sync-live.py` |
+| owning service | `apps/reconciler` Rust `fudcourt-sync` (`streams/sync.rs`), legacy `sync-live.py` |
 | readers | `apps/web/src/server/db.ts,79,82`; `api/coins/route.ts` (`SELECT asset, SUM(value_usd) … FROM assets GROUP BY asset`); `api/all/route.ts` via `getAll()`; `apps/reconciler/src/reconciliation/reconcile.rs:207` |
 | canonical entity | **Balance** (account ≈ wallet address × chain, asset by symbol) + derived valuation |
 | durability | SNAPSHOT (live table keeps only the newest run; history lands in Postgres `asset_history`) |
@@ -174,7 +174,7 @@ history `asset_history` is appended by the `assets_snapshot` trigger, not by a l
 | table | storage | classification | owning service | readers | canonical entity | durability | sensitivity | notes/violations |
 |---|---|---|---|---|---|---|---|---|
 | `public.accounts` (`pg-schema.sql:13-18`) | Postgres | canonical | API routes (`getAll()`) | `getAll()`, `api/all/route.ts` | Account | CANONICAL | INTERNAL | Read-only in-app; dead table (DR-036). |
-| `public.assets` (`:20-29`) | Postgres | snapshot | the sync (`tests/oracle/sync-live.py` / `backend/sync`) | `pg.ts:52,79,82`, `api/coins`, `api/all` | Balance | SNAPSHOT | INTERNAL | Rewritten wholesale each sync; **latest state only** — history lives in `asset_history`. |
+| `public.assets` (`:20-29`) | Postgres | snapshot | the sync (`tests/oracle/sync-live.py` / `apps/reconciler`) | `pg.ts:52,79,82`, `api/coins`, `api/all` | Balance | SNAPSHOT | INTERNAL | Rewritten wholesale each sync; **latest state only** — history lives in `asset_history`. |
 | `public.journal` (`:31-41`) | Postgres | event | (none in-repo) | `getAll()` | LedgerEntry | CANONICAL | INTERNAL | Dead table (DR-036). `to_char(now() AT TIME ZONE 'UTC', …)` default must never fire: a writer always supplies the date. |
 | `public.ledger` (`:43-50`) | Postgres | snapshot | (none in-repo) | `getAll()` | LedgerEntry balance | CANONICAL | INTERNAL | Dead table (DR-036). |
 | `public.trades` (`:52-62`) | Postgres | event | (none in-repo) | `pg.ts:55,81` | Fill/Order | CANONICAL | INTERNAL | Same duplication note as §1 `trades`. |

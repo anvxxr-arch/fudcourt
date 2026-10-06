@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/markets/ticker.json",
   "title": "Ticker (one venue's top-of-book quote)",
-  "description": "One venue's quote for one instrument at one instant. Called Ticker in Go (backend/api/internal/markets/overview/market.go Ticker) and VenueQuote in TS (frontend/web/src/features/ticker/client.ts) - two names, one concept (canonical-model.md D2; Quote is the canonical name, Ticker is the legacy synonym kept in code). ABSENCE IS HONEST by explicit rule: an unreported level is null/empty, never a fabricated zero and never a borrowed trade price (markets/overview/market.go doc, and again in the TS VenueQuote doc: 'a null is a real this venue did not report it, never coerced to 0'). No best-bid/ask means the fields are null, not equal to last.",
+  "description": "One venue's quote for one instrument at one instant. Called Ticker in Go (apps/api/internal/markets/overview/market.go Ticker) and VenueQuote in TS (apps/web/src/features/ticker/client.ts) - two names, one concept (canonical-model.md D2; Quote is the canonical name, Ticker is the legacy synonym kept in code). ABSENCE IS HONEST by explicit rule: an unreported level is null/empty, never a fabricated zero and never a borrowed trade price (markets/overview/market.go doc, and again in the TS VenueQuote doc: 'a null is a real this venue did not report it, never coerced to 0'). No best-bid/ask means the fields are null, not equal to last.",
   "type": "object",
   "additionalProperties": false,
   "required": [

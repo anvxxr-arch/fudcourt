@@ -1,7 +1,7 @@
 /**
  * news (Cointelegraph RSS) — TYPING / DISPLAY MIRROR ONLY.
  *
- * The runtime lives in Go: backend/data/internal/news owns the feed table, the
+ * The runtime lives in Go: apps/data/internal/news owns the feed table, the
  * strict `source`/`limit` validation, the per-process TTL cache + single-flight
  * and the RSS parse. app/api/news/route.ts validates nothing and forwards every
  * status/body verbatim, so this file must never grow a guard: a second

@@ -83,7 +83,7 @@ stable `event_type` ids. Canonical ids are **PascalCase** (the objective
 catalog names); the legacy TS SCREAMING_SNAKE names are accepted aliases of the
 same stable id at `event_version` 1 (emitters SHOULD emit the canonical id;
 consumers MUST accept both spellings — `catalog.json` `alias_policy`).
-Generated copies (`shared/sdk/typescript/src/generated/events.ts`) come from
+Generated copies (`contracts/openapi/fudcourt.yaml/src/generated/events.ts`) come from
 `bun run generate` — never hand-edited.
 
 | Canonical id (`event_type`) | Legacy alias (`ExecutionEventName`) |

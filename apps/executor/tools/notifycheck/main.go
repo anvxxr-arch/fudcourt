@@ -7,8 +7,8 @@
 // internal/notify) is hard to trigger on demand. This exercises the SAME code —
 // notify.FromEnv, notify.Format and Telegram.Send — that the executor runs.
 //
-// Usage, from backend/workers/executor, with the executor's environment in
-// scope (the production unit gets it from frontend/web/.env.local via
+// Usage, from apps/executor, with the executor's environment in
+// scope (the production unit gets it from apps/web/.env.local via
 // EnvironmentFile):
 //
 //	go run ./cmd/notifycheck                       # fixed connectivity probe
@@ -61,7 +61,7 @@ func main() {
 	tg, on, err := notify.FromEnv(os.Getenv)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "notifycheck: %v\n", err)
-		fmt.Fprintf(os.Stderr, "notifycheck: set %s and %s (the executor reads them from frontend/web/.env.local)\n",
+		fmt.Fprintf(os.Stderr, "notifycheck: set %s and %s (the executor reads them from apps/web/.env.local)\n",
 			notify.EnvBotToken, notify.EnvChatID)
 		os.Exit(1)
 	}

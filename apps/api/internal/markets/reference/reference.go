@@ -5,10 +5,10 @@
 //
 // # Ownership (decided, not inferred)
 //
-// backend/api owns canonical reference data. The restructure's own assignment
-// puts markets/venues/assets in backend/api (docs/architecture/domain-map.md
-// section 1; docs/architecture/target.md sections 2 and 5), backend/data is
-// deliberately stateless passthrough (backend/data/platform/cache/cache.go:
+// apps/api owns canonical reference data. The restructure's own assignment
+// puts markets/venues/assets in apps/api (docs/architecture/domain-map.md
+// section 1; docs/architecture/target.md sections 2 and 5), apps/data is
+// deliberately stateless passthrough (apps/data/platform/cache/cache.go:
 // "a cache is an optimisation; it must never become a dependency"), apps/reconciler
 // owns only the `assets` snapshot (apps/reconciler/src/persistence/db.rs), and the
 // executor owns only the executor.* schema. Nothing else can host it.
@@ -53,14 +53,14 @@
 // The repo's rule is that services MUST NOT import each other's implementation,
 // contracts only (docs/architecture/target.md section 3.2, docs/architecture/
 // migration-plan.md; docs/architecture/final-review.md section 5 verifies each
-// Go module imports only its own path). backend/data, apps/reconciler and
-// backend/workers/executor therefore can NEVER import this package. The sharing
+// Go module imports only its own path). apps/data, apps/reconciler and
+// apps/executor therefore can NEVER import this package. The sharing
 // path is contract-first instead:
 //
 //  1. a DATA artifact - contracts/data/reference.json, the whole
 //     reference set plus the whole (provider, provider_id) -> canonical_id
 //     table, emitted deterministically by this package (`go run
-//     ./backend/api/internal/markets/reference/cmd/emit`) and pinned by a test
+//     ./apps/api/internal/markets/reference/cmd/emit`) and pinned by a test
 //     that fails when the checked-in file is stale. A consumer in any language
 //     reads that file; nobody imports Go to get an id.
 //  2. the JSON SCHEMAS - contracts/schemas/{assets/asset.json,
@@ -70,8 +70,8 @@
 //  3. per-service structs stay private: each service keeps its own type and
 //     reads the artifact. No service hands another its struct.
 //
-// The rejected alternative is an HTTP endpoint served by backend/api. It is
-// rejected because backend/api serves no domain routes today (cmd/api/main.go
+// The rejected alternative is an HTTP endpoint served by apps/api. It is
+// rejected because apps/api serves no domain routes today (cmd/api/main.go
 // registers only /healthz, /readyz, /api/auth/{login,callback,logout} and
 // /api/admin/members), and because an id space is a static fact: making it a
 // runtime hop would turn "what is asset X called" into a network dependency

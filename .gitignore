@@ -35,17 +35,12 @@ apps/web/media/
 *.node
 # go: each app builds its own binary into bin/ at runtime via ExecStartPre;
 # the artifacts are never committed
-backend/data/bin/
-backend/api/bin/
-backend/bot/bin/
-backend/workers/executor/bin/
-backend/data/.cache/
 apps/api/bin/
 apps/bot/bin/
 apps/executor/bin/
 apps/data/bin/
+apps/data/.cache/
 # rust: target/ is also covered by the **/target/ rule above
-backend/sync/target/
 apps/reconciler/target/
 # live verifier reports (regenerated on every run; the tracked artifacts live in
 # tests/fixtures/, which is the reviewed record)

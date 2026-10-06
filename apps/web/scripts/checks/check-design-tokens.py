@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Offline design-token gate (DR-037) — the drift alarm for the design system.
 
-    python3 scripts/checks/check-design-tokens.py          # from frontend/web
+    python3 scripts/checks/check-design-tokens.py          # from apps/web
 
 One source of truth (`src/styles/tokens.ts`), generated artifacts (`tailwind.tokens.json`, the
 sentinel block inside `src/app/(frontend)/globals.css`) and this gate are the whole design system.

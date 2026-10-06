@@ -489,7 +489,7 @@ func TestReferenceArtifactIsCurrent(t *testing.T) {
 	}
 }
 
-const emitCmdPath = "./backend/api/internal/markets/reference/cmd/emit"
+const emitCmdPath = "./apps/api/internal/markets/reference/cmd/emit"
 
 // repoRoot walks up from the test's working directory until it finds go.mod,
 // which is the repository root by definition (the single-module layout).

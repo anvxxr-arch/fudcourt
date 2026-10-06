@@ -23,7 +23,7 @@
  *  - the liquidity breadth vote reads `direction`, so a rising component whose
  *    rise TIGHTENS votes to contract.
  *
- * Usage: cd frontend/web && npm run test:shapers
+ * Usage: cd apps/web && npm run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

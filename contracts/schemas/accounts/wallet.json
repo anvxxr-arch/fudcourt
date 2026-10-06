@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/accounts/wallet.json",
   "title": "Wallet (a monitored chain address)",
-  "description": "A chain address the platform watches. The ADDRESS IS THE IDENTITY in the schema today (database/schema/pg-schema.sql `wallets(address TEXT PRIMARY KEY)`), and the address normalizer (backend/api/internal/accounts/wallets/wallets.go NormalizeAddress) is chain-specific: EIP-55 for EVM-family checksums, and rejection of a CEX name as a chain. `ownership` distinguishes our own wallets from watched third parties, and `portfolio_linked` is the flag that decides whether its balances count toward the portfolio view - the migration plan's phase-5 caution is that this flag must not be inferred from `ownership`.",
+  "description": "A chain address the platform watches. The ADDRESS IS THE IDENTITY in the schema today (db/schema/pg-schema.sql `wallets(address TEXT PRIMARY KEY)`), and the address normalizer (apps/api/internal/accounts/wallets/wallets.go NormalizeAddress) is chain-specific: EIP-55 for EVM-family checksums, and rejection of a CEX name as a chain. `ownership` distinguishes our own wallets from watched third parties, and `portfolio_linked` is the flag that decides whether its balances count toward the portfolio view - the migration plan's phase-5 caution is that this flag must not be inferred from `ownership`.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -34,7 +34,7 @@
         "self",
         "external"
       ],
-      "description": "Mirrors backend/api/internal/accounts/wallets/wallets.go Ownership."
+      "description": "Mirrors apps/api/internal/accounts/wallets/wallets.go Ownership."
     },
     "portfolio_linked": {
       "type": "boolean",

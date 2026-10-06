@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/assets/chain.json",
   "title": "Chain",
-  "description": "A settlement domain with its own address format. NOT MODELLED AS AN ENTITY: backend/api/internal/accounts/wallets/wallets.go validates against an inline table of 7 chains (ethereum, bsc, polygon, arbitrum, optimism, base, solana) and refuses CEX names as chains ('a CEX account is an IOU on a venue, not a chain address', objective 8.20); backend/api/internal/finance/transactions/transactions.go carries Chain as an UNCONSTRAINED string with a default of 'Offchain'; backend/sync/src/chains.rs holds a third, private registry enriched with RPC endpoints, token ids and the LLAMA_IDS price mapping. Two of those three disagree, which is why the canonical chain_id is required.",
+  "description": "A settlement domain with its own address format. NOT MODELLED AS AN ENTITY: apps/api/internal/accounts/wallets/wallets.go validates against an inline table of 7 chains (ethereum, bsc, polygon, arbitrum, optimism, base, solana) and refuses CEX names as chains ('a CEX account is an IOU on a venue, not a chain address', objective 8.20); apps/api/internal/finance/transactions/transactions.go carries Chain as an UNCONSTRAINED string with a default of 'Offchain'; apps/reconciler/src/chains.rs holds a third, private registry enriched with RPC endpoints, token ids and the LLAMA_IDS price mapping. Two of those three disagree, which is why the canonical chain_id is required.",
   "type": "object",
   "additionalProperties": false,
   "required": [

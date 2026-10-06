@@ -5,8 +5,8 @@
 //
 // Run from the repository root:
 //
-//	go run ./backend/api/internal/markets/reference/cmd/emit
-//	go run ./backend/api/internal/markets/reference/cmd/emit -check
+//	go run ./apps/api/internal/markets/reference/cmd/emit
+//	go run ./apps/api/internal/markets/reference/cmd/emit -check
 //
 // -check writes nothing and exits non-zero if the checked-in file is stale,
 // which is what the test of the same name calls. The output is deterministic, so
@@ -56,7 +56,7 @@ func main() {
 			// stale" need different fixes: the first is a checkout problem, the
 			// second a regeneration.
 			fmt.Printf("REFERENCE_FAIL missing %s\n", reference.DocumentPath)
-			fmt.Fprintf(os.Stderr, "emit -check: regenerate with: go run ./backend/api/internal/markets/reference/cmd/emit\n")
+			fmt.Fprintf(os.Stderr, "emit -check: regenerate with: go run ./apps/api/internal/markets/reference/cmd/emit\n")
 			os.Exit(1)
 		case readErr != nil:
 			fmt.Printf("REFERENCE_FAIL cannot read %s: %v\n", reference.DocumentPath, readErr)
@@ -68,7 +68,7 @@ func main() {
 			first, line := firstDifference(have, want)
 			fmt.Printf("REFERENCE_FAIL %s is STALE: %d bytes on disk, %d emitted (first difference at byte %d%s)\n",
 				reference.DocumentPath, len(have), len(want), first, line)
-			fmt.Fprintf(os.Stderr, "emit -check: regenerate with: go run ./backend/api/internal/markets/reference/cmd/emit\n")
+			fmt.Fprintf(os.Stderr, "emit -check: regenerate with: go run ./apps/api/internal/markets/reference/cmd/emit\n")
 			os.Exit(1)
 		}
 		fmt.Printf("REFERENCE_OK %d bytes\n", len(want))

@@ -15,7 +15,7 @@
  *    the normalizer's `rows: [] / counts: {}` defaults can never turn a broken
  *    upstream into a plausible-looking "no signals" board.
  *
- * Usage: cd frontend/web && npm run test:shapers
+ * Usage: cd apps/web && npm run test:shapers
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

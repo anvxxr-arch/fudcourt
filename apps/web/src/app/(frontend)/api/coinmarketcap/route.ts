@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * input, never a raw path.
  *
  * Runtime path: this route is a THIN, HONEST PROXY to the Go service
- * `fudcourt-data` (backend/data, 127.0.0.1:3101), exactly like
+ * `fudcourt-data` (apps/data, 127.0.0.1:3101), exactly like
  * app/api/coinglass/route.ts and app/api/coinank/route.ts. The Go side owns the
  * mode table, the upstream URL construction, the LOCAL pagination bounds, the
  * param-scoping matrix, the TTL cache + single-flight and the honest `upstream`
@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * Cache-Control headers -- so the public surface on :3100 is
  *   GET /api/coinmarketcap?mode=<listing|global|marketPairs|exchanges>[&slug=<S>][&start=<n>][&limit=<n>][&fresh=1]
  * with the wire contract the Go side froze
- * (backend/data/internal/research/coinmarketcap).
+ * (apps/data/internal/research/coinmarketcap).
  *
  * The relay-verbatim rule is why this route must NOT clamp pagination: the sidecar
  * validates `start`/`limit` against its own frozen bounds BEFORE any fetch (because

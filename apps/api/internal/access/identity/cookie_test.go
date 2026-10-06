@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// testSecret is the secret frontend/web/scripts/tests/auth-tests.ts pins its HMAC
+// testSecret is the secret apps/web/scripts/tests/auth-tests.ts pins its HMAC
 // vectors to. The two suites must agree byte for byte, so they share the key.
 const testSecret = "test-secret-at-least-32-characters-long!!"
 

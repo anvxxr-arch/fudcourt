@@ -24,7 +24,7 @@ import (
 // DefaultCacheDir is the khala cache root, *below* the fudcourt-data cache root the
 // deploy unit already sets (FUDCOURT_DATA_CACHE_DIR -> ~/.cache/fudcourt-data):
 // "<root>/khala". A family must never share another family's cache directory
-// (backend/data/README.md "keep the oracle's cache separate"): a shared cache
+// (apps/data/README.md "keep the oracle's cache separate"): a shared cache
 // turns an independent verification fetch into self-confirmation. It is a
 // SUBDIR of FUDCOURT_DATA_CACHE_DIR rather than a second cache-root env var so the
 // deploy unit keeps setting exactly one root.

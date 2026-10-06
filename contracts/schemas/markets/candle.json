@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/markets/candle.json",
   "title": "Candle (OHLCV bar)",
-  "description": "One OHLCV bar. Declared in backend/api/internal/markets/overview/market.go Candle with every field a decimal string and 'an unreported volume is empty, not zero'. NO STORE EXISTS: there is no candle table in database/ (grep `candle` over database/ returns none), so bars are read live per request and never persisted. The bar series identity is (instrument, interval, open_time) - the Go field Interval is documented as 'the venue bar size (e.g. 1m), identity of the bar series'.",
+  "description": "One OHLCV bar. Declared in apps/api/internal/markets/overview/market.go Candle with every field a decimal string and 'an unreported volume is empty, not zero'. NO STORE EXISTS: there is no candle table in database/ (grep `candle` over database/ returns none), so bars are read live per request and never persisted. The bar series identity is (instrument, interval, open_time) - the Go field Interval is documented as 'the venue bar size (e.g. 1m), identity of the bar series'.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -21,7 +21,7 @@
     "interval": {
       "type": "string",
       "pattern": "^[0-9]+[mhdw]$",
-      "description": "Venue bar size; the TS allowlist is TICKER_TIMEFRAMES = ['1m','5m','15m','1h','4h','1d','1w'] (frontend/web/src/features/ticker/client.ts), max 500 bars per request."
+      "description": "Venue bar size; the TS allowlist is TICKER_TIMEFRAMES = ['1m','5m','15m','1h','4h','1d','1w'] (apps/web/src/features/ticker/client.ts), max 500 bars per request."
     },
     "open_time": {
       "$ref": "../common/time.json#/$defs/observed_at"

@@ -187,7 +187,7 @@ exist.
 | neon-posts-v | posts_v — Payload draft-version history for posts | NEWS | CANONICAL | DATABASE_URL | MANUAL | HISTORICAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
 | neon-posts-v-version-tags | posts_v_version_tags — version child of post tags | NEWS | CANONICAL | DATABASE_URL | MANUAL | HISTORICAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
 | neon-posts-v-rels | posts_v_rels — version join (post version -> category) | NEWS | CANONICAL | DATABASE_URL | MANUAL | HISTORICAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
-| neon-media | media — upload asset metadata (bytes live on disk frontend/web/media) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
+| neon-media | media — upload asset metadata (bytes live on disk apps/web/media) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
 | neon-categories | categories — editorial content categories (not market categories) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
 | neon-payload-kv | payload_kv — Payload framework key/value store | SYSTEM | CANONICAL | DATABASE_URL | STATIC | CANONICAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
 | neon-payload-locked-documents | payload_locked_documents — Payload document-lock table | SYSTEM | CANONICAL | DATABASE_URL | REALTIME | EPHEMERAL | INTERNAL | active | `apps/web/src/cms/migrations/20260917_194354.ts` |
@@ -211,7 +211,7 @@ exist.
 | hyperliquid-info | Hyperliquid info API — spotClearinghouseState, clearinghouseState, userFills (positions + realized PnL) | PORTFOLIO | RAW | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `apps/reconciler/src/chains.rs` |
 | payload-cms-content | Payload CMS content store — Neon Postgres (posts, categories, media metadata) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/payload.config.ts` |
 | payload-cms-users | Payload CMS admin users — Neon Postgres auth collection | ACCESS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | USER_PRIVATE | active | `apps/web/src/cms/collections/Users.ts` |
-| payload-cms-media-files | Payload CMS media uploads on local disk (frontend/web/media) | NEWS | RAW | session | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/collections/Media.ts` |
+| payload-cms-media-files | Payload CMS media uploads on local disk (apps/web/media) | NEWS | RAW | session | MANUAL | CANONICAL | PUBLIC | active | `apps/web/src/cms/collections/Media.ts` |
 | signals-feed | FUDCourt signals feed (data-public.vercel.app) — index / feed / page / scoreboard modes | RESEARCH | RAW | keyless | FREQUENT | EPHEMERAL | PUBLIC | active | `apps/web/src/app/(frontend)/api/signals/route.ts` |
 
 ## 4. Findings (each independently verified against the live tree)
@@ -271,8 +271,8 @@ curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinank?mode=f
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinmarketcap?mode=global'    # 200 (web proxy)
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=statistics'  # 200
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinank?mode=fundingRate'    # 502 dark
-find frontend/web/src/app \( -name 'route.ts' -o -name 'route.tsx' \) | wc -l              # 43
-grep -rn coinglass frontend/web/src/app | wc -l                        # 6 (client.ts + route.ts, not "no web proxy")
+find apps/web/src/app \( -name 'route.ts' -o -name 'route.tsx' \) | wc -l              # 43
+grep -rn coinglass apps/web/src/app | wc -l                        # 6 (client.ts + route.ts, not "no web proxy")
 curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3103/api/markets                      # 404
 curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3103/api/admin/members                # 401
 ```

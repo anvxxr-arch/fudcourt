@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/markets/price.json",
   "title": "Price observation",
-  "description": "One point on a price series: a value read from a named source at a known time. This is the entity behind database/schema/pg-schema.sql `price_history(ts, symbol, source, price)` - whose unique key is currently (symbol, ts, source), i.e. SYMBOL-AS-IDENTITY, the one schema-level violation of the identity rule; instrument_id is this contract's fix. Named Price series in the repo that are NOT this entity: markets MarkPrice (a venue-published mark) and IndexPrice (a venue-published index) - they are venue-published values and belong to the instrument's venue, not to a sampler.",
+  "description": "One point on a price series: a value read from a named source at a known time. This is the entity behind db/schema/pg-schema.sql `price_history(ts, symbol, source, price)` - whose unique key is currently (symbol, ts, source), i.e. SYMBOL-AS-IDENTITY, the one schema-level violation of the identity rule; instrument_id is this contract's fix. Named Price series in the repo that are NOT this entity: markets MarkPrice (a venue-published mark) and IndexPrice (a venue-published index) - they are venue-published values and belong to the instrument's venue, not to a sampler.",
   "type": "object",
   "additionalProperties": false,
   "required": [

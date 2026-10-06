@@ -10,9 +10,9 @@ import { Posts } from '@/cms/collections/Posts';
 import { Media } from '@/cms/collections/Media';
 import { Categories } from '@/cms/collections/Categories';
 
-// Merged app (DR-017): Payload lives inside frontend/web, whose own root is now the
+// Merged app (DR-017): Payload lives inside apps/web, whose own root is now the
 // server root. `Media.staticDir` is resolved against that root, so uploads land
-// in `frontend/web/media/` — the same relationship the blog had with its own
+// in `apps/web/media/` — the same relationship the blog had with its own
 // `media/` directory, and the file that already existed there was moved across
 // so no upload URL changes.
 

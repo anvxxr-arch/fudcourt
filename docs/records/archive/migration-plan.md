@@ -20,7 +20,7 @@
 > `scripts/verify/check-contract.py`, `scripts/verify/check-deploy.py`
 > all green (the exact baseline table in `current.md` §2 — a dated snapshot, see that file's header).
 
-## Phase 1 — move `apps/apicalls` → `backend/data`, `apps/sync` → `backend/sync`
+## Phase 1 — move `apps/apicalls` → `apps/data`, `apps/sync` → `apps/reconciler`
 
 **Status: ALREADY EXECUTED in the working tree (uncommitted), verified green.**
 > **Amended 2026-10-01:** committed as `4e8ba91 phase 1-2: services/{data,sync} + database/
@@ -30,8 +30,8 @@
 A concurrent actor performed the moves during Phase 0: `git status` shows 103 changes
 (48 `R`, 20 `RM`, 35 `M`). The `RM` files are the expected path rewrites:
 
-- `backend/data/go.mod` module: `github.com/anvxxr-arch/fudcourt/apps/apicalls` →
-  `github.com/anvxxr-arch/fudcourt/backend/data` (all internal import paths updated;
+- `apps/data/go.mod` module: `github.com/anvxxr-arch/fudcourt/apps/apicalls` →
+  `github.com/anvxxr-arch/fudcourt/apps/data` (all internal import paths updated;
   `go build/vet/test ./...` PASS at the new path — re-verified).
 - `deploy/systemd/fudcourt-apicalls.service` + `deploy/systemd/fudcourt-sync-rust.*`:
   `WorkingDirectory`/`ExecStart` now point at `services/...` (check-deploy.py PASS).
@@ -39,10 +39,10 @@ A concurrent actor performed the moves during Phase 0: `git status` shows 103 ch
   there is no `fudcourt-apicalls.service` at all: the unit was retired as
   `deploy/systemd/RETIRED-fudcourt-apicalls.service.txt` when the binary was renamed
   `fudcourt-data` (DR-033), and the live unit is `deploy/systemd/fudcourt-data.service`
-  with `WorkingDirectory`/`ExecStart` on `backend/data/**` (there is no `services/` directory).
-- `.github/workflows/ci.yml`: Go job `working-directory: backend/data`, Rust job
-  `working-directory: backend/sync`; the web job's live-reconcile step builds
-  `../../backend/sync/Cargo.toml`.
+  with `WorkingDirectory`/`ExecStart` on `apps/data/**` (there is no `services/` directory).
+- `.github/workflows/ci.yml`: Go job `working-directory: apps/data`, Rust job
+  `working-directory: apps/reconciler`; the web job's live-reconcile step builds
+  `../../apps/reconciler/Cargo.toml`.
 - No stale `apps/apicalls|apps/sync` strings remain in `*.go`, `*.rs`, `*.ts`, `*.service`,
   `*.timer`, `*.yml`, `*.toml`.
 
@@ -88,11 +88,11 @@ runs on push in CI. Nothing remains open in this phase.
 - **Ordering:** after Phase 1; before Phase 3 (contracts embed the DDL).
 - **Rollback:** revert the move; SQL files are static content.
 
-## Phase 3 — `shared/contracts`
-> **Amended 2026-10-01 (executor surface EXECUTED, verified):** `shared/contracts`
+## Phase 3 — `contracts`
+> **Amended 2026-10-01 (executor surface EXECUTED, verified):** `contracts`
 > (OpenAPI 3.0.3 of the executor surface — 15 paths / 19 operations mirroring
 > `types.ts` + `client.ts` + the route handlers; `events/events.json` 24 stable ids
-> with the 19 TS aliases; event/error JSON Schemas) and `shared/sdk/typescript` (thin typed
+> with the 19 TS aliases; event/error JSON Schemas) and `contracts/openapi/fudcourt.yaml` (thin typed
 > fetch client generated from the contract) exist. Verified: `check-contract.mjs` →
 > `CONTRACTS_OK enums=3 openapi_paths=15 route_handlers=39 events=24`, `tsc --noEmit`
 > clean, and `bun run generate` is **deterministic** (so the generated-SDK drift gate
@@ -101,19 +101,19 @@ is meaningful). The gate is wired into the `contracts` workflow
 `scripts/githooks/pre-push`. **In flight:** the data/sync/api HTTP surfaces are
 being added to the same contract + SDK in a follow-up pass (same ground-truth rules).
 **Re-read 2026-10-01:** the contract has since grown to **36** OpenAPI paths / **28** events;
-re-derive with `node shared/contracts/scripts/check-contract.mjs` rather than trusting this dated line.
+re-derive with `node contracts/scripts/check-contract.mjs` rather than trusting this dated line.
 
 - Author `openapi/` for the four HTTP surfaces (web's 36 `(frontend)/api` routes collapse to api+executor+data+sync
   contracts), `events/` for execution lifecycle (`executor.execution_events` rows) and stream
   normalization, `schemas/` for the table groups in `domain-map.md` §2.
-- Extract `shared/sdk/typescript` from `apps/web/src/features/executor/client.ts` + the other
+- Extract `contracts/openapi/fudcourt.yaml` from `apps/web/src/features/executor/client.ts` + the other
   `features/*/client.ts` typed clients.
 - **Risks:** the shaper tests (`apps/web/tests/*`, plus the executor suites under `tests/{e2e,integration}/executor/`) assert today's response shapes — they double as
   contract fixtures; regenerate from `record:fixtures` output, don't hand-copy.
 - **Ordering:** after Phase 2; before Phases 4–6 (each service port consumes contracts).
 - **Rollback:** contracts are additive new files; consumers not yet cut over.
 
-## Phase 4 — `backend/api` (Go) incremental, Next.js proxy compatibility
+## Phase 4 — `apps/api` (Go) incremental, Next.js proxy compatibility
 > **Amended 2026-10-01 (bounded-context regroup):** `apps/api/internal/` is now grouped by
 > context — `access/{identity,authorization,entitlements,credentials}`,
 > `accounts/{exchange,wallets}`, `finance/{ledger,portfolio,treasury,transactions}`,
@@ -121,7 +121,7 @@ re-derive with `node shared/contracts/scripts/check-contract.mjs` rather than tr
 > `platform/{errs,health,httpx}` (18 internal packages; `cmd/api` unchanged). Pure `git mv`
 > regrouping: no behavior, route, response shape, error code or exported symbol changed, module
 > path unchanged. As-built layout: `ARCHITECTURE.md` §2a, judgment record: `domain-map.md` §4.
-> **Amended 2026-10-01 (domain layer EXECUTED, verified):** `backend/api` exists as a
+> **Amended 2026-10-01 (domain layer EXECUTED, verified):** `apps/api` exists as a
 > Go 1.25 module (`go.work` member) with the bounded contexts under `internal/`
 > (identity, authorization, entitlements, audit, jobs, credentials, exchangeaccounts,
 > instruments, markets, ledger, portfolio, treasury, wallets, transactions,
@@ -135,21 +135,21 @@ re-derive with `node shared/contracts/scripts/check-contract.mjs` rather than tr
 > HMAC session-cookie crypto into Go is the dependency for every authenticated route;
 > the identity port deliberately excluded cookie crypto).
 
-- Create `backend/api` with auth/accounts/members/portfolio/wallets/transactions/treasury/markets
+- Create `apps/api` with auth/accounts/members/portfolio/wallets/transactions/treasury/markets
   handlers moved domain-by-domain from `apps/web/src/app/(frontend)/api/**`.
-- During the transition each Next.js route becomes a thin proxy to `backend/api`
+- During the transition each Next.js route becomes a thin proxy to `apps/api`
   (keeps `bun run build` + existing e2e green); delete the route when its consumer switches.
 - **Risks:** auth (session cookie, Discord) is embedded in `src/platform/auth/*` + middleware
   (`src/middleware.ts`); move auth first or the proxy layer can't authenticate. The
   `admin/members` and `reconcile` routes have UI consumers (`admin/members-table.tsx`,
   `team/reconciliation`).
 - **Ordering:** after Phase 3; strictly before Phase 5 (executor orchestration is part of
-  backend/api and must reach backend/workers/executor through the contract).
+  apps/api and must reach apps/executor through the contract).
 - **Rollback:** flip the Next.js route back to its inline implementation (keep old handler file
   until the proxy is proven); Tunnel ingress unchanged.
 
-## Phase 5 — executor TS → Go incremental port (`backend/workers/executor`)
-> **Amended 2026-10-01 (port IN FLIGHT, measured green):** `backend/workers/executor` is a
+## Phase 5 — executor TS → Go incremental port (`apps/executor`)
+> **Amended 2026-10-01 (port IN FLIGHT, measured green):** `apps/executor` is a
 > Go 1.25 module (`go.work` member). Landed and verified green (`go build/vet/test
 > ./...` fresh pass, 174 test funcs): `internal/{core/execution (records/enums/
 > lifecycle/types), core/orders, core/risk, core/sizing, core/planner,
@@ -174,7 +174,7 @@ re-derive with `node shared/contracts/scripts/check-contract.mjs` rather than tr
 > `src/app/(frontend)/api/executor/_proxy.ts`. The wire contract
 > `apps/web/src/platform/executor/types.ts` is the only TS-side survivor (consumer-facing —
 > composer + trade client). `bun run test:shapers` is 213/213 across 11 files; `go build/vet/test
-> ./backend/workers/executor/...` is green (21 pkgs); `bash scripts/verify/verify-all.sh`
+> ./apps/executor/...` is green (21 pkgs); `bash scripts/verify/verify-all.sh`
 > is `VERIFY_ALL_OK`. Every row of `parity-matrix.md` is `DONE`; the cutover row and the
 > `TS modules deleted` row both close 2026-10-05.
 
@@ -186,10 +186,10 @@ Port order chosen so parity tests can gate each deletion (per module in `current
    `defaultSlices`) with `executor-*-tests.ts` as the parity oracle.
 3. `store.ts` persistence (`executor.*` writes) + `lock.ts`.
 4. `exchange.ts` adapters (binance/bybit/mexc via `CcxtLike` shape) + key handling
-   (`masterKeyFromEnv` — move key custody to backend/workers/executor, web never sees secrets).
+   (`masterKeyFromEnv` — move key custody to apps/executor, web never sees secrets).
 5. `worker.ts` + `apps/web/scripts/executor/worker.ts` last (it composes everything).
 
-- **Rule: parity tests MUST pass before each TS module is deleted** — followed and now closed: every deleted TS module's assertions are covered by the named Go counterparts per `parity-matrix.md` rows 1–9. `verify:executor` is now `go test -count=1 -race ./backend/workers/executor/internal/tests/e2e/...` (12 hermetic tests, <1 s, no PG/Valkey/creds/network). The previous `executor-paper-e2e.ts` integration gate (Bun.sql + real PG on :5433 + real Valkey + real worker) is gone — the hermetic Go harness is the canonical offline proof, the live PG/Valkey/worker proof is no longer an offline gate.
+- **Rule: parity tests MUST pass before each TS module is deleted** — followed and now closed: every deleted TS module's assertions are covered by the named Go counterparts per `parity-matrix.md` rows 1–9. `verify:executor` is now `go test -count=1 -race ./apps/executor/internal/tests/e2e/...` (12 hermetic tests, <1 s, no PG/Valkey/creds/network). The previous `executor-paper-e2e.ts` integration gate (Bun.sql + real PG on :5433 + real Valkey + real worker) is gone — the hermetic Go harness is the canonical offline proof, the live PG/Valkey/worker proof is no longer an offline gate.
 - **Parity baseline (2026-10-01):** `current.md` §5a records the per-suite breakdown
   (155 tests, 0 fail across the 8 executor suites; covered by `test:shapers` 240/240 pre-DR-043) and the
   store DDL byte-identity PASS. `verify:executor` itself is environment-gated
@@ -214,7 +214,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
   handlers are the only proxy-unavailable fallback; the Go proxy module is gone — the Go runtime stays
   live for executions, the rollback adds a TS fallback under the hood).
 
-## Phase 6 — Rust `backend/sync` specialization
+## Phase 6 — Rust `apps/reconciler` specialization
 
 - Promote `fudcourt-sync` (Rust) over the Python twin `tests/oracle/sync-live.py`:
   CI already has the byte-parity harness pattern (`verify/verify-reconcile.py`); add the same
@@ -235,13 +235,13 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 > moved to `src/platform/executor/types.ts` (consumer-facing; the only surviving file under `src/platform/executor/`, no runtime path), the 15 route handlers
 > are 4-line forwarders through `_proxy.ts`, the rest of the TS runtime (`src/platform/executor/{engine,exchange,lock,plan,risk,runtime,store,worker}.ts`) is gone, the
 > TS worker entry is preserved as a 5-line tombstone, and the TS worker unit is retired to
-> `RETIRED-fudcourt-executor-worker.service.txt`. The `client.ts` → `shared/sdk/typescript` re-target
+> `RETIRED-fudcourt-executor-worker.service.txt`. The `client.ts` → `contracts/openapi/fudcourt.yaml` re-target
 > remains a follow-up (not in this pass — the composer/trade clients still import the wire contract
 > directly; recorded as a follow-up in DR-043 "Out of scope").
 
 - Delete `apps/web/src/platform/executor/` and `apps/web/scripts/executor/` remnants (post-5),
-  data-passthrough routes replaced by `backend/data` via `backend/api` (post-4),
-  `src/features/executor/client.ts` re-targeted to `shared/sdk/typescript`.
+  data-passthrough routes replaced by `apps/data` via `apps/api` (post-4),
+  `src/features/executor/client.ts` re-targeted to `contracts/openapi/fudcourt.yaml`.
 - Fix the shell inversion: `src/components/layout/store-shell.tsx` (the DR-018 location — the
   pre-move `src/shell/` path in this bullet no longer exists) may keep importing feature pages
   (UI-only app) but `check-structure.py` should then enforce "no platform→feature imports".
@@ -272,8 +272,8 @@ Port order chosen so parity tests can gate each deletion (per module in `current
   `gate` job; the single `ci.yml` was removed. The split used a combined `go.yml` and `rust.yml`
   rather than the per-service `api`/`executor`/`data`/`sync` names sketched here — each runs all
   Go modules / the Rust crate respectively.
-- **Risks:** the live-reconcile step couples web CI to `backend/sync` build — keep it in the
-  aggregate workflow or on `backend/sync` changes.
+- **Risks:** the live-reconcile step couples web CI to `apps/reconciler` build — keep it in the
+  aggregate workflow or on `apps/reconciler` changes.
 - **Ordering:** after 8. **Rollback:** restore single `ci.yml` (it's current + green).
 
 ## Phase 10 — deploy normalization
@@ -294,7 +294,7 @@ Port order chosen so parity tests can gate each deletion (per module in `current
 
 **Status: core move EXECUTED (2026-10-01), verified green.**
 - All 10 unit files consolidated into `deploy/systemd/` via `git mv` (was
-  `apps/web/infrastructure/`, `backend/data/infrastructure/`, `backend/sync/infrastructure/`), including
+  `apps/web/infrastructure/`, `apps/data/infrastructure/`, `apps/reconciler/infrastructure/`), including
   the `RETIRED-fudcourt-blog.service.txt` tombstone. `ExecStart`/`WorkingDirectory`
   targets are code paths and needed no changes.
 - The `fudcourt-sync` name collision is resolved as of this move: the Rust pair was
@@ -329,8 +329,8 @@ Still open (deliberately not done in the move):
 
 Standing risks across phases:
 - Phases 1-2 are committed (6184d84 baseline snapshot, 4e8ba91 phase 1-2), and the Phase 3+ artifacts
-  this bullet listed as uncommitted — `shared/contracts`, `shared/sdk/typescript`, `backend/api`,
-  `backend/workers/executor`, `go.work` — have since been committed too (under their as-built
+  this bullet listed as uncommitted — `contracts`, `contracts/openapi/fudcourt.yaml`, `apps/api`,
+  `apps/executor`, `go.work` — have since been committed too (under their as-built
   names; there is no `packages/` or `services/` directory). Ongoing phases still land as
   reviewable per-phase increments.
 - Money-path code (Phase 5) requires parity-first deletion; never delete TS before its Go
