@@ -25,6 +25,7 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 | `VERCEL_OIDC_TOKEN` (legacy residue) | — none anymore — | `frontend/web/.env.local` | — | no — **safe to delete this line** |
 | **`FUDCOURT_EXECUTOR_MASTER_KEY`** (added with the CEX Executor, DR-021) | `backend/workers/executor/internal/platform/credentials` — seals/opens every exchange credential (AES-256-GCM); was previously read by `frontend/web/scripts/executor/worker.ts` through the TS `store.ts`, both now retired (DR-043) | `frontend/web/.env.local` (**never** committed; git-ignored) | `fudcourt-executor.service` (:3104 + :3105) | no |
 | `FUDCOURT_EXECUTOR_LIVE` | not a secret — the §108 **kill switch**; `=1` is the only value that enables live order placement; was previously read by the TS worker (retired 2026-10-05, DR-043); the Go worker honours it as well | `frontend/web/.env.local` (absent = paper only) | `fudcourt-executor.service` | no |
+| `FUDCOURT_TELEGRAM_BOT_TOKEN` (the bot's Bot API token) | `backend/bot/internal/config/config.go` (the bot's **only** credential) + `backend/workers/executor/internal/notify/telegram.go` (the sending half — same key) | `./.env` (root) — git-ignored, 0600 | `fudcourt-bot.service` (long-poll) + `fudcourt-executor.service` (notifications) | no |
 
 `./frontend/web/.next/standalone/…/.env` is a *build artifact copy* on local disk
 (`.next/` is git-ignored) — re-created on every build, never edit it. (It was
@@ -75,6 +76,7 @@ Production == this homeserver:
 | CEX Executor API + composer (`frontend/web`) | `fudcourt-web.service` | `127.0.0.1:3100` (`/executor`, `/api/executor`, tier `team`) | `frontend/web/.env.local` (`FUDCOURT_EXECUTOR_MASTER_KEY`; exchange API secrets are **not** in any env file) |
 | CEX Executor worker (TS, **TOMBSTONE — retired 2026-10-05 by DR-043; was retired from runtime by DR-042**) | `fudcourt-executor-worker.service` → renamed to `infrastructure/systemd/RETIRED-fudcourt-executor-worker.service.txt` (preserves history; the unit is **not installed**); the entry script is preserved at `frontend/web/scripts/executor/worker.ts` with a tombstone header. The live executor is the Go service below. | — (was outbound only: venue APIs) | `frontend/web/.env.local` was the unit's `EnvironmentFile`; that file still carries the executor env names (the Go service reads the same ones). Restarting `fudcourt-web` never stopped an execution; the Go service is the runtime now. |
 | CEX Executor **Go** service (`backend/workers/executor`, `7b8dc2d`) | `fudcourt-executor.service` (unit versioned at `infrastructure/systemd/fudcourt-executor.service`) | `127.0.0.1:3104` (`/healthz`+`/readyz`) and `127.0.0.1:3105` (`/api/executor/*`, `FUDCOURT_EXECUTOR_API_ADDR`) | Needs `FUDCOURT_SESSION_SECRET` (it verifies the same `fud_session` cookie the web tier signs — the unit documents this coupling and deliberately does **not** set the secret itself) + `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY`. **Env is fail-visible: the unit cannot start until `FUDCOURT_SESSION_SECRET` and `FUDCOURT_EXECUTOR_PG_URL` are present in the process env** (name-only; no value here). Also reads `VALKEY_ADDR`+`VALKEY_PASSWORD` (distributed leases; the host requires AUTH). **Sole live web path since 2026-10-05 (DR-043):** `fudcourt-web` thin-proxies `/api/executor/*` to `:3105` via `src/app/(frontend)/api/executor/_proxy.ts`; the TS executor runtime (`frontend/web/src/platform/executor/**`) was retired in this pass and the wire contract is the only survivor at `src/platform/executor/types.ts`. |
+| Telegram bot (`backend/bot`, stdlib-only Go) | `fudcourt-bot.service` (unit versioned at `infrastructure/systemd/fudcourt-bot.service`) | — (outbound only: long-poll `getUpdates` to the Bot API; **opens no port**, so it is not in the tunnel ingress) | repo-root `.env` as its `EnvironmentFile` (`FUDCOURT_TELEGRAM_BOT_TOKEN`, name-only above) — the same `.env` the executor reads, so the token has one home. The **receiving half** of the notification channel; see [bot.md](../architecture/bot.md) |
 
 - **No third-party deploy target.** The `fudcourt.vercel.app` domain answers
   `404 DEPLOYMENT_NOT_FOUND` (measured 2026-09-28) — there is nothing deployed
@@ -200,6 +202,23 @@ delete the line from `frontend/web/.env.local`. Nothing reads it.
    revoke/reissue the exchange API keys — the executor stores them sealed, but a
    leaked master key decrypts every account it protects.
 
+**R7. `FUDCOURT_TELEGRAM_BOT_TOKEN` (added with the bot, 2026-10-06).**
+1. BotFather → `/mybots` → the bot → *API Token* → **Revoke current token**. The old
+   token dies immediately, which silently kills both halves of the channel at once.
+2. Replace the single line in the repo-root `.env` (`FUDCOURT_TELEGRAM_BOT_TOKEN=…` —
+   edit in a local editor, never `cat`/`grep` it into logs). There is exactly **one**
+   home: the bot and the executor's `notify` read the same file, so do not create a
+   second copy in `frontend/web/.env.local`.
+3. `systemctl --user restart fudcourt-bot.service` **and**
+   `systemctl --user restart fudcourt-executor.service` — unlike the master-key case
+   (read lazily), a stale token breaks both ends immediately.
+4. Verify (name-only, never print the value):
+   `grep -c '^FUDCOURT_TELEGRAM_BOT_TOKEN=' ./.env` → **1**;
+   `systemctl --user is-active fudcourt-bot.service` → `active`;
+   `getMe` → `@fudbase_bot`; `getMyCommands` → the 8 public commands
+   ([bot.md](../architecture/bot.md) §6). A second concurrent `getUpdates` from the
+   same token answering `409 Conflict` confirms the restarted bot is polling.
+
 ## 6. Production verification checklist (self-hosted)
 
 ```bash
@@ -212,6 +231,7 @@ curl -s -o /dev/null -X DELETE -w '%{http_code}\n' 'http://127.0.0.1:3100/api/tr
 grep -c '^FUDCOURT_SESSION_SECRET=' frontend/web/.env.local   # 1 (existence only -- never print the value)
 python3 frontend/web/tests/verify_all_routes.py               # "# session: signed admin cookie accepted"; ZERO "[ENV: ...]" groups
 cd ../.. && (cd frontend/web && python3 scripts/checks/check-structure.py) && python3 scripts/verify/check-contract.py && (cd frontend/web && bun run test:shapers)   # offline gates
+systemctl --user is-active fudcourt-bot.service    # active (long-polls Telegram; opens no port)
 ```
 
 The `verify_all_routes.py` line is the parity check for the tier split: the sweep
@@ -231,6 +251,7 @@ these checks failing loudly — fix with the matching §5 step (rebuild for ever
 
 | Date | Change | Evidence (no value recorded) |
 |------|--------|------------------------------|
+| 2026-10-06 | **`FUDCOURT_TELEGRAM_BOT_TOKEN`** added to §1/§3/§5 with the `backend/bot` receiver. The name already lived in `./.env` (the executor's `notify` is the sending half); what is new is a second first-party consumer, so the rotation step now names both units. No new home, no new file. | `grep -c '^FUDCOURT_TELEGRAM_BOT_TOKEN=' ./.env` → 1; `getMe` → `@fudbase_bot`; `getMyCommands` → 8 public commands; `systemctl --user is-active fudcourt-bot.service` → active; `.env` stays git-ignored (`.gitignore` `.env*`), 0600 (name/length only — no value recorded) |
 | 2026-10-05 | **K-11** — `FUDCOURT_SESSION_SECRET` set in `frontend/web/.env.local` (§5 R3 step 3): `openssl rand -hex 32`, append-only edit, `systemctl --user restart fudcourt-web`. | `grep -c '^FUDCOURT_SESSION_SECRET='` → 1; listening pid environ shows the name at len 64; sweep now prints `# session: signed admin cookie accepted (secret from listening pid <pid> environ)` and runs the 7 `mut` + 3 `gate-auth` probes (10/10 pass); the fail-closed controls still answer 401. File stays git-ignored (`.gitignore` `.env*`), 0600. |
 
 **Open gap this change does NOT close (tracked as K-12).** `/api/auth/login`

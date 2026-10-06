@@ -58,6 +58,7 @@ docs/
 
 | prd | [cex-executor.md](prd/cex-executor.md) | The CEX Executor PRD: planner, risk, sizing, strategies (market/limit/TWAP/adaptive-TWAP/iceberg/chase-limit/scale), Binance/Bybit/MEXC adapters, worker and state machine |
 | architecture | [executor.md](architecture/executor.md) | CEX executor architecture: the domain map, module boundaries and the Go port table (reality-first — when it and the code disagree, the code wins) |
+| architecture | [bot.md](architecture/bot.md) | The Telegram bot (`backend/bot`): the receiving half of the notification channel — module/unit shape, the 11-command surface (8 public + 3 admin), config names, and the `/healthz` map `/status` probes |
 | architecture | [events.md](architecture/events.md) | Canonical event contracts read off `shared/contracts/` and the executor enums: the envelope and the event catalog (PRD §63) |
 | architecture | [security.md](architecture/security.md) | Security model: Discord session auth, the tier guard, the executor store/lock and audit — every claim names a file |
 | architecture | [parity-matrix.md](architecture/parity-matrix.md) | The TS→Go executor cutover gate: no TS module is deleted until its row is `DONE` and `verify:executor` passes against the Go worker |

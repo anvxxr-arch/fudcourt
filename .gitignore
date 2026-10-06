@@ -32,6 +32,7 @@ frontend/web/media/
 # runtime via ExecStartPre; the artifacts are never committed)
 backend/data/bin/
 backend/api/bin/
+backend/bot/bin/
 backend/workers/executor/bin/
 backend/data/.cache/
 # rust (backend/sync; target/ is also covered by backend/sync/.gitignore)

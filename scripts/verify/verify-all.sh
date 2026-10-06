@@ -81,6 +81,9 @@ go build ./backend/workers/executor/... && go vet ./backend/workers/executor/...
 step "go build/vet/test (backend/data)"
 go build ./backend/data/... && go vet ./backend/data/... && go test ./backend/data/... || fail go-data
 
+step "go build/vet/test (backend/bot)"
+go build ./backend/bot/... && go vet ./backend/bot/... && go test ./backend/bot/... || fail go-bot
+
 step "cargo build/test (backend/sync)"
 (cd backend/sync && cargo fmt --check && cargo build --release --quiet && cargo test --release --quiet) || fail rust
 

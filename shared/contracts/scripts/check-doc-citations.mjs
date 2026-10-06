@@ -115,11 +115,14 @@
  *     ("at the time of that run", "as observed on <date>") or leave it inside the dated row, and
  *     never update it to today's number (that would rewrite history);
  *   - a verdict presented as the CURRENT state is updated to the newest observed line.
- * Latest observed: `DOCS_OK docs=12 citations=1216 allowances=4 ignored=0` on a developer tree and
- * `DOCS_OK docs=12 citations=1216 allowances=6 ignored=10` on a clean checkout (2026-10-03). The two
- * readings differ only in how a gitignored citation and the `backend/api/bin/fudcourt-api` allowance
- * classify: both resolve on a dirty tree and neither can on a clean one — both readings are green,
- * which is the point. (`citations=1167` was the reading after `coinmarketcap` was folded into the
+ * Latest observed: `DOCS_OK docs=13 citations=1028 allowances=4 ignored=0` on a developer tree (2026-10-06,
+ * after `bot.md` joined `DOCS`). Its `backend/bot/bin/fudcourt-bot` citations are gitignored, so a clean
+ * checkout classifies them as `ignored` instead of resolving them — the same dirty/clean divergence
+ * described below. The prior current-state reading was `docs=12 citations=1216 allowances=4 ignored=0` on a
+ * developer tree and `docs=12 citations=1216 allowances=6 ignored=10` on a clean checkout (2026-10-03); the
+ * tree changed between the two runs (DR-043 deleted the TS executor and rewrote the docs that cited it), so
+ * the two citation totals are not comparable — each is a snapshot of its own moment. (`citations=1167` was
+ * the reading after `coinmarketcap` was folded into the
  * catalogs; `citations=1158` when `data-categorization.md` was added to `DOCS`; the earlier `docs=11
  * citations=1031` reading is when `design-debt.md` was added the day it landed, DR-037 follow-up, the
  * `docs=10 citations=985` reading is when `DESIGN-SYSTEM.md` was added, and `docs=9 citations=969
@@ -163,6 +166,8 @@ const DOCS = [
   'docs/architecture/design-debt.md',
   // Added 2026-10-02 with the data-categorization refresh; its cited paths are now gated.
   'docs/architecture/data-categorization.md',
+  // Added 2026-10-06 with the Telegram bot; every repo path it names is now gated.
+  'docs/architecture/bot.md',
   'shared/contracts/schemas/README.md',
 ];
 

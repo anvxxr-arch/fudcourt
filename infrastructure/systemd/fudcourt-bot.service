@@ -1,0 +1,31 @@
+# FUD Court Telegram bot (backend/bot) — @fudbase_bot.
+#
+# The RECEIVING half of the notification channel: the executor's notify package
+# SENDS through @fudbase_bot, and this service long-polls getUpdates for the
+# commands users send to it. There is no listener — FUDCourt is loopback-only
+# (DR-002) and a Telegram webhook would need public ingress, so polling is the
+# deliberate choice.
+#
+# The token arrives via EnvironmentFile (the gitignored repo .env, 0600) as
+# FUDCOURT_TELEGRAM_BOT_TOKEN, the same key the executor uses — one bot,
+# configured once. Swapping the token requires `systemctl --user restart`.
+# The binary is NOT committed: ExecStartPre builds it into backend/bot/bin/,
+# which .gitignore excludes.
+[Unit]
+Description=FUD Court Telegram bot (@fudbase_bot, getUpdates long-poll)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/dwizzy/fudcourt/backend/bot
+EnvironmentFile=/home/dwizzy/fudcourt/.env
+Environment=FUDCOURT_DATA_URL=http://127.0.0.1:3101
+ExecStartPre=/usr/bin/go build -C /home/dwizzy/fudcourt/backend/bot -o bin/fudcourt-bot ./cmd/bot
+ExecStart=/home/dwizzy/fudcourt/backend/bot/bin/fudcourt-bot
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65536
+
+[Install]
+WantedBy=default.target

@@ -1,6 +1,7 @@
 name: go
-# Surface: the three Go modules — backend/data (acquisition sidecar),
-# backend/api (primary backend), backend/executor (execution engine). They are
+# Surface: the four Go modules — backend/data (acquisition sidecar),
+# backend/api (primary backend), backend/bot (the @fudbase_bot Telegram bot),
+# backend/executor (execution engine). They are
 # separate modules joined by go.work; each is still built/vetted/tested on its
 # own so a failure names the owner.
 #
@@ -32,6 +33,7 @@ jobs:
           filters: |
             modules:
               - 'backend/api/**'
+              - 'backend/bot/**'
               - 'backend/workers/executor/**'
               - 'backend/data/**'
               - 'go.work'
@@ -52,6 +54,8 @@ jobs:
           - module: backend/data
             go: '1.24.1'
           - module: backend/api
+            go: '1.25.0'
+          - module: backend/bot
             go: '1.25.0'
           - module: backend/workers/executor
             go: '1.25.0'
