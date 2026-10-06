@@ -35,11 +35,6 @@ export function fmtPct(p: number | null): string {
   return `${p >= 0 ? '+' : ''}${p.toFixed(2)}%`;
 }
 
-/** Signed absolute change, same precision rule as fmtPrice. */
-export function fmtChange(c: number | null): string {
-  if (c === null || !Number.isFinite(c)) return dash;
-  return `${c >= 0 ? '+' : ''}${fmtPrice(c)}`;
-}
 
 /**
  * Compact volume: 12.34M / 4.50B; null -> '—'.
@@ -64,21 +59,6 @@ export function fmtVolume(v: number | null): string {
 export function fmtTime(unix: number | null): string {
   if (unix === null || !Number.isFinite(unix)) return dash;
   return new Date(unix * 1000).toLocaleTimeString(undefined, { hour12: false });
-}
-
-/**
- * A unix second as a UTC date AND time: `2026-10-04 00:02 UTC`.
- *
- * `fmtTime` gives a clock time with no date, which is right for a live intraday
- * quote and wrong for a daily fix: the FX feed stamps one rate per UTC day, so a
- * bare `00:02:32` says which minute but not WHICH DAY, and a reader cannot tell
- * today's rate from one three days stale.
- */
-export function fmtDateTime(unix: number | null): string {
-  if (unix === null || !Number.isFinite(unix)) return dash;
-  const d = new Date(unix * 1000);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
 }
 
 /** A currency code as shown: Yahoo quotes cents-denominated futures as `USX`. */
@@ -132,15 +112,6 @@ export function fmtIndicator(v: number | null, kind: string, decimals: number): 
   }
 }
 
-/**
- * The same rendering with an explicit sign, for a change between two
- * observations of the same series. Null -> '—', exactly like the level: a change
- * over a missing leg is withheld, never computed from a zero.
- */
-export function fmtIndicatorDelta(v: number | null, kind: string, decimals: number): string {
-  if (v === null || !Number.isFinite(v)) return dash;
-  return `${v >= 0 ? '+' : ''}${fmtIndicator(v, kind, decimals)}`;
-}
 
 // The legacy flat hex table `C` lived here until the design-system cutover (DR-037). It is DELETED,
 // not re-exported: `src/styles/tokens.ts` is the one source of truth for design values. This module
