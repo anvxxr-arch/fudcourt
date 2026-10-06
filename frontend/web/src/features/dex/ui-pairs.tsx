@@ -3,7 +3,39 @@ import { alpha, color, fontSize, fontWeight, space } from '@/styles/tokens';
 import { Table, TBody, THead } from '@/ui/table';
 import type { DexPair } from './client';
 import { num, money, pct, age, win } from './ui-format';
-
+import { memo } from 'react';
+// Props are the `pair` object and its index. `visible` is rebuilt each render by
+// the parent's filter, but `rows.filter()` preserves the object identity of every
+// element, so each `pair` reference is the one held in `rows` state. `i` is a
+// number. Neither prop is created per render, so memo holds across re-renders
+// that only touch the toolbar/filter state.
+const PairRow = memo(function PairRow({ pair, i }: { pair: DexPair; i: number }) {
+  const t24 = win(pair.txns, 'h24');
+  const ch24 = win(pair.priceChange, 'h24');
+  return (
+    <tr key={pair.pairAddress + i} style={{ borderBottom: `1px solid ${alpha(color.labelOnAccent, 0.04)}` }}>
+      <td style={{ padding: '5px 6px', whiteSpace: 'nowrap' }}>
+        <span style={{ color: color.blue, textDecoration: 'none', fontWeight: fontWeight.bold }}>
+          {pair.baseToken?.symbol || '—'}
+        </span>
+        <span style={{ color: color.labelTertiary }}>/{pair.quoteToken?.symbol || '—'}</span>
+      </td>
+      <td style={{ padding: '5px 6px', color: color.labelTertiary }}>{pair.dexId || '—'}</td>
+      <td style={{ padding: '5px 6px', color: color.labelPrimary }}>{num(pair.priceUsd, { prefix: '$' })}</td>
+      <td style={{ padding: '5px 6px', color: ch24 == null ? color.labelTertiary : ch24 >= 0 ? color.green : color.red }}>{pct(ch24)}</td>
+      <td style={{ padding: '5px 6px', color: color.labelPrimary }}>{money(win(pair.volume, 'h24') ?? null)}</td>
+      <td style={{ padding: '5px 6px', color: color.labelPrimary }}>{money(pair.liquidity?.usd ?? null)}</td>
+      <td style={{ padding: '5px 6px', color: color.labelTertiary, whiteSpace: 'nowrap' }}>
+        {t24?.buys == null || t24?.sells == null ? '—' : `${t24.buys}/${t24.sells}`}
+      </td>
+      <td style={{ padding: '5px 6px', color: color.labelPrimary }}>{money(pair.marketCap ?? null)}</td>
+      <td style={{ padding: '5px 6px', color: color.labelTertiary }}>{age(pair.pairCreatedAt)}</td>
+      <td style={{ padding: '5px 6px', color: color.labelTertiary }}>
+        {pair.labels && pair.labels.length ? pair.labels.join(',') : '—'}
+      </td>
+    </tr>
+  );
+});
 export function PairsTable({ rows, visible }: { rows: DexPair[]; visible: DexPair[] }) {
   return (
     <>
@@ -19,33 +51,9 @@ export function PairsTable({ rows, visible }: { rows: DexPair[]; visible: DexPai
               </tr>
             </THead>
             <TBody>
-              {visible.slice(0, 100).map((p, i) => {
-                const t24 = win(p.txns, 'h24');
-                const ch24 = win(p.priceChange, 'h24');
-                return (
-                  <tr key={p.pairAddress + i} style={{ borderBottom: `1px solid ${alpha(color.labelOnAccent, 0.04)}` }}>
-                    <td style={{ padding: '5px 6px', whiteSpace: 'nowrap' }}>
-                      <span style={{ color: color.blue, textDecoration: 'none', fontWeight: fontWeight.bold }}>
-                        {p.baseToken?.symbol || '—'}
-                      </span>
-                      <span style={{ color: color.labelTertiary }}>/{p.quoteToken?.symbol || '—'}</span>
-                    </td>
-                    <td style={{ padding: '5px 6px', color: color.labelTertiary }}>{p.dexId || '—'}</td>
-                    <td style={{ padding: '5px 6px', color: color.labelPrimary }}>{num(p.priceUsd, { prefix: '$' })}</td>
-                    <td style={{ padding: '5px 6px', color: ch24 == null ? color.labelTertiary : ch24 >= 0 ? color.green : color.red }}>{pct(ch24)}</td>
-                    <td style={{ padding: '5px 6px', color: color.labelPrimary }}>{money(win(p.volume, 'h24') ?? null)}</td>
-                    <td style={{ padding: '5px 6px', color: color.labelPrimary }}>{money(p.liquidity?.usd ?? null)}</td>
-                    <td style={{ padding: '5px 6px', color: color.labelTertiary, whiteSpace: 'nowrap' }}>
-                      {t24?.buys == null || t24?.sells == null ? '—' : `${t24.buys}/${t24.sells}`}
-                    </td>
-                    <td style={{ padding: '5px 6px', color: color.labelPrimary }}>{money(p.marketCap ?? null)}</td>
-                    <td style={{ padding: '5px 6px', color: color.labelTertiary }}>{age(p.pairCreatedAt)}</td>
-                    <td style={{ padding: '5px 6px', color: color.labelTertiary }}>
-                      {p.labels && p.labels.length ? p.labels.join(',') : '—'}
-                    </td>
-                  </tr>
-                );
-              })}
+              {visible.slice(0, 100).map((p, i) => (
+                <PairRow key={p.pairAddress + i} pair={p} i={i} />
+              ))}
             </TBody>
           </Table>
           {visible.length > 100 && (

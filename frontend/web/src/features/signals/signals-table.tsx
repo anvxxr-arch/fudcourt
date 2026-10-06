@@ -5,7 +5,51 @@ import { Table, TBody, THead } from '@/ui/table';
 import { imgSrc } from '@/lib/img';
 import { DECISION_COLOR, MERGED, ago, n2, shortAddr, usd } from './model';
 import type { ChainKey, Payload, SignalRow } from './model';
-
+import { memo } from 'react';
+// Props are the `row` object (stable: the parent's `rows` array is useMemo'd on
+// [data, q, onlyDecision], so each row identity survives unrelated re-renders)
+// and the `chain` string. Neither is created per render, so memo actually holds.
+const SignalRow = memo(function SignalRow({ row, chain }: { row: SignalRow; chain: ChainKey }) {
+  return (
+    <tr
+      style={{ borderBottom: `1px solid ${alpha(color.separator, 0.4)}` }}
+      onMouseOver={e => { e.currentTarget.style.background = alpha(color.blue, 0.05); }}
+      onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
+    >
+      <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary, whiteSpace: 'nowrap' }}>{ago(row.ts)}</td>
+      {MERGED.includes(chain) && (
+        <td style={{ padding: `${space[8]}px ${space[8]}px`, color: row.chain === 'robinhood' ? chainColor('robinhood') : chainColor('solana'), whiteSpace: 'nowrap' }}>
+          {row.chain === 'robinhood' ? '🪶 rh' : row.chain === 'solana' ? '◎ sol' : row.chain || '—'}
+        </td>
+      )}
+      <td style={{ padding: `${space[8]}px ${space[8]}px`, whiteSpace: 'nowrap' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8] }}>
+          {row.image
+            ? <img src={imgSrc(row.image)} alt="" width={16} height={16} loading="lazy" decoding="async" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
+            : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.separator, display: 'inline-block' }} />}
+          <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{row.symbol || '?'}</span>
+          <span style={{ color: color.labelTertiary }}>{shortAddr(row.mint)}</span>
+        </span>
+      </td>
+      <td style={{ padding: `${space[8]}px ${space[8]}px`, whiteSpace: 'nowrap' }}>
+        {row.decision
+          ? <span style={{ color: DECISION_COLOR[row.decision] || color.labelTertiary }}>{row.decision}</span>
+          : <span style={{ color: color.labelTertiary }}>—</span>}
+      </td>
+      <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.blue }}>{typeof row.score === 'number' ? row.score.toFixed(1) : '—'}</td>
+      <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{usd(row.mcap)}</td>
+      <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof row.liq === 'number' ? usd(row.liq) : '—'}</td>
+      <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof row.price === 'number' ? `$${row.price.toPrecision(4)}` : '—'}</td>
+      <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof row.holdersCount === 'number' ? n2(row.holdersCount) : '—'}</td>
+      <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof row.topHolderPct === 'number' ? `${row.topHolderPct.toFixed(1)}%` : '—'}</td>
+      <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>
+        {row.sightings ? `${row.sightings.n}×/${row.sightings.spanH}h` : typeof row.persistCount === 'number' ? `×${row.persistCount}` : '—'}
+      </td>
+      <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>{row.source || '—'}</td>
+      <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>{row.kind}</td>
+    </tr>
+  );
+});
 export function SignalsTable({ rows, chain, loading, data, error }: {
   rows: SignalRow[];
   chain: ChainKey;
@@ -26,44 +70,7 @@ export function SignalsTable({ rows, chain, loading, data, error }: {
         </THead>
         <TBody>
           {rows.slice(0, 300).map(r => (
-            <tr
-              key={`${r.id}-${r.mint}`}
-              style={{ borderBottom: `1px solid ${alpha(color.separator, 0.4)}` }}
-              onMouseOver={e => { e.currentTarget.style.background = alpha(color.blue, 0.05); }}
-              onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary, whiteSpace: 'nowrap' }}>{ago(r.ts)}</td>
-              {MERGED.includes(chain) && (
-                <td style={{ padding: `${space[8]}px ${space[8]}px`, color: r.chain === 'robinhood' ? chainColor('robinhood') : chainColor('solana'), whiteSpace: 'nowrap' }}>
-                  {r.chain === 'robinhood' ? '🪶 rh' : r.chain === 'solana' ? '◎ sol' : r.chain || '—'}
-                </td>
-              )}
-              <td style={{ padding: `${space[8]}px ${space[8]}px`, whiteSpace: 'nowrap' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8] }}>
-                  {r.image
-                    ? <img src={imgSrc(r.image)} alt="" width={16} height={16} loading="lazy" decoding="async" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
-                    : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.separator, display: 'inline-block' }} />}
-                  <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{r.symbol || '?'}</span>
-                  <span style={{ color: color.labelTertiary }}>{shortAddr(r.mint)}</span>
-                </span>
-              </td>
-              <td style={{ padding: `${space[8]}px ${space[8]}px`, whiteSpace: 'nowrap' }}>
-                {r.decision
-                  ? <span style={{ color: DECISION_COLOR[r.decision] || color.labelTertiary }}>{r.decision}</span>
-                  : <span style={{ color: color.labelTertiary }}>—</span>}
-              </td>
-              <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.blue }}>{typeof r.score === 'number' ? r.score.toFixed(1) : '—'}</td>
-              <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{usd(r.mcap)}</td>
-              <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof r.liq === 'number' ? usd(r.liq) : '—'}</td>
-              <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof r.price === 'number' ? `$${r.price.toPrecision(4)}` : '—'}</td>
-              <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof r.holdersCount === 'number' ? n2(r.holdersCount) : '—'}</td>
-              <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof r.topHolderPct === 'number' ? `${r.topHolderPct.toFixed(1)}%` : '—'}</td>
-              <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>
-                {r.sightings ? `${r.sightings.n}×/${r.sightings.spanH}h` : typeof r.persistCount === 'number' ? `×${r.persistCount}` : '—'}
-              </td>
-              <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>{r.source || '—'}</td>
-              <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>{r.kind}</td>
-            </tr>
+            <SignalRow key={`${r.id}-${r.mint}`} row={r} chain={chain} />
           ))}
         </TBody>
       </Table>
