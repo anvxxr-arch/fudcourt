@@ -40,6 +40,13 @@ apps/bot/bin/
 apps/executor/bin/
 apps/data/bin/
 apps/data/.cache/
+# A bare `go build ./...` from the repo root drops each app's binary HERE,
+# named after its directory (api, bot, data, executor). They were committed
+# once by accident; this guard keeps that from recurring.
+/api
+/bot
+/data
+/executor
 # rust: target/ is also covered by the **/target/ rule above
 apps/reconciler/target/
 # live verifier reports (regenerated on every run; the tracked artifacts live in
