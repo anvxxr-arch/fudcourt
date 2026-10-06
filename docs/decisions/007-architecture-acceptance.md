@@ -358,4 +358,8 @@ accept: `53f99a2` deleted 10 provably unreferenced tokens, `2494a7b` +
 (rendered output byte-identical), and `8606624` wired
 `check-design-system.py` into `verify-all.sh` + web.yml. The header was
 never loosened; everything ends `VERIFY_ALL_OK` (exit 0).
+Counts in §4/§14 (249→325) are snapshots of their re-measure
+dates; as of `556a115` the suite runs **338** web tests, and
+`docs/decisions/refactor-baseline-2026-10-06-reaudit.md` *Final gate* pins
+each measured revision.
 
