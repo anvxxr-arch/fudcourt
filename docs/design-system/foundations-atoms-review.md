@@ -28,7 +28,7 @@ with their reasoning rather than silently changed.
 
 ```
 tsc --noEmit                        0 errors
-bun run test:shapers                337 pass, 0 fail (19 files)
+bun run test:shapers                338 pass, 0 fail (19 files)
 next build                          0 errors
 check-design-tokens.py              DESIGN_TOKENS_OK (365 files, 6 exemptions)
 check-design-system.py              DESIGN_SYSTEM_OK (23 files, 6 scale exemptions)
@@ -269,7 +269,7 @@ command that proves it, so a future reviewer re-runs the check rather than trust
 | No network in atoms | `grep -rn 'fetch(\|XMLHttpRequest\|WebSocket\|axios\|ccxt' src/ui/` → 0 |
 | No Molecule workflow | the only hooks are `CopyButton`'s transient copied flag and `FinancialInput`'s uncontrolled fallback |
 | Existing app builds | `next build` → `✓ Compiled successfully` |
-| Existing tests pass | 337 pass, 0 fail (19 files) |
+| Existing tests pass | 338 pass, 0 fail (19 files) |
 | Design-system tests pass | 70 pass, 0 fail (2 files) |
 | Public exports compile | `tsc --noEmit` → 0 errors |
 | Documentation complete | 5 docs, 73.7 KB total |
@@ -278,7 +278,7 @@ command that proves it, so a future reviewer re-runs the check rather than trust
 The inventory walk is the check that found the financial-input gap. It is the only one of these
 that can notice an atom that was never written.
 
-## 7. Risks carried forward
+## 9. Risks carried forward
 
 1. **No chart engine.** The visualization atoms are primitives. A Molecule phase must either
    adopt an engine or compose these into charts by hand. The vocabulary is stable either way.

@@ -53,7 +53,7 @@ emit-tokens.ts --check              TOKENS_OK (284 vars)
 check-structure.py                  STRUCTURE_OK (359 files, DR-018 layers)
 ```
 
-Of the 337 tests, **67 are new**: 22 theme-parity and contrast tests, 45 atom tests (33 + 12 financial input).
+Of the 338 tests, **68 are new**: 22 theme-parity and contrast tests, 46 atom tests (33 + 12 financial input + 1 lifecycle order).
 
 ---
 
