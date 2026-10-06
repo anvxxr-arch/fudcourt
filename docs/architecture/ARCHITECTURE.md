@@ -94,7 +94,6 @@ install.
    │  src/app/(frontend)/page.tsx = SPA shell (initialPage state + tab nav + db)│
    │  src/app/(frontend)/<view>/page.tsx = deep-link wrapper → <StoreShell …> │
    │  src/app/(frontend)/api/* = 53: 3 auth + 50 data (families §4 + admin §5)│
-   │                            + 3 auth                                     │
    └──────┬────────────────────────────────────────────┬──────────────────────┘
           │ Postgres (treasury, synced every 5 min     │ keyless upstreams:
           │ by fudcourt-sync.timer → apps/reconciler,     │ chainrank.fyi RE,
