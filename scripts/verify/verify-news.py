@@ -32,7 +32,7 @@ import time
 import urllib.error
 import urllib.request
 
-DEFAULT_BASE = "http://127.0.0.1:3100"
+from verifylib import DEFAULT_API_BASE as DEFAULT_BASE
 UPSTREAM = "https://cointelegraph.com/rss"
 ROWS_XML = re.compile(r"<item>(.*?)</item>", re.S)
 TITLE_XML = re.compile(r"<title>(?:<!\[CDATA\[(.*?)\]\]>|(.*?))</title>", re.S)

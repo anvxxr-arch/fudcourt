@@ -71,6 +71,9 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // The Next dev issue badge floats bottom-left and overlaps the public
+  // boards' table headers in QA screenshots; move it out of the way.
+  devIndicators: { position: 'bottom-right' },
 };
 
 // withPayload injects the Payload webpack/turbopack aliases and the admin route

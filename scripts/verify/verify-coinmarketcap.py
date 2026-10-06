@@ -70,7 +70,7 @@ SKIP = 0
 NOTES: list[str] = []
 RESULTS: list[dict] = []
 
-SIDECAR_DEFAULT = "http://127.0.0.1:3101"
+from verifylib import DEFAULT_SIDECAR_BASE as SIDECAR_DEFAULT
 UA = "fudcourt-verify-coinmarketcap/1.0 (+verification harness)"
 UPSTREAM = "https://api.coinmarketcap.com/data-api/v3"
 

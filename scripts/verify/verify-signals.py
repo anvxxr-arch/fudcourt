@@ -26,7 +26,7 @@ import time
 import urllib.error
 import urllib.request
 
-DEFAULT_BASE = "http://127.0.0.1:3100"
+from verifylib import DEFAULT_API_BASE as DEFAULT_BASE
 UPSTREAM = "https://data-public.vercel.app"
 
 # --- the measured contract -------------------------------------------------

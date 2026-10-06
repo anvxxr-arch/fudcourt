@@ -10,7 +10,7 @@
  */
 import { useEffect, useState } from 'react';
 import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
-import { fetchLiquidity, formatCompact, formatDate, formatValue, type LiquidityEnvelope } from '@/features/economy/model';
+import { fetchLiquidity, formatCompact, formatDate, type LiquidityEnvelope } from '@/features/economy/model';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
 import { ECONOMY_NAV } from '@/features/economy/nav';
@@ -94,7 +94,7 @@ export default function LiquidityBoard() {
                   <span key="l" title={c.note}>{c.label}</span>,
                   <span key="v">{c.value === null ? '—' : `${formatCompact(c.value, 2)} ${c.unit}`}</span>,
                   <span key="d" style={{ color: color.labelTertiary }}>{formatDate(c.date)}</span>,
-                  <span key="c" style={{ color: changeColor }}>{c.change === null ? '—' : `${c.change > 0 ? '+' : ''}${formatValue(c.change, 2)}`}</span>,
+                  <span key="c" style={{ color: changeColor }}>{c.change === null ? '—' : `${c.change > 0 ? '+' : ''}${formatCompact(c.change, 2)} ${c.unit}`}</span>,
                   <span key="dir" style={{ color: color.labelTertiary }}>{c.direction > 0 ? 'rising' : 'falling'}</span>,
                 ],
               };

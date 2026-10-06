@@ -94,7 +94,7 @@ RESULTS: list[dict] = []
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root (scripts/verify -> scripts -> root -> .)
 APP_DIR = os.path.join(REPO, "frontend", "web")
-SIDECAR_DEFAULT = "http://127.0.0.1:3101"
+from verifylib import DEFAULT_SIDECAR_BASE as SIDECAR_DEFAULT
 WEB_DEFAULT = "http://127.0.0.1:3100"
 SITE = "https://www.khala.io"
 REPORT_UA = "fudcourt-verify-khala/1.0 (+verification harness)"

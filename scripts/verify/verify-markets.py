@@ -36,7 +36,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-DEFAULT_BASE = "http://127.0.0.1:3100"
+from verifylib import DEFAULT_API_BASE as DEFAULT_BASE
 LLAMA_TRUTH = ("https://coins.llama.fi/prices/current/"
                "coingecko:bitcoin,coingecko:ethereum")
 CR_KEYS = {"BTC": "bitcoin", "ETH": "ethereum"}

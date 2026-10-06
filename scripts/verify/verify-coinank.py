@@ -74,7 +74,7 @@ NOTES: list[str] = []
 RESULTS: list[dict] = []
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SIDECAR_DEFAULT = "http://127.0.0.1:3101"
+from verifylib import DEFAULT_SIDECAR_BASE as SIDECAR_DEFAULT
 UA = "fudcourt-verify-coinank/1.0 (+verification harness)"
 
 # ---- upstream protocol constants (client-shipped; re-derivable from the public
