@@ -1,4 +1,5 @@
 import { getJSON } from '@/lib/fetch';
+import { numParam as num } from '@/lib/num';
 
 /**
  * Shared JSON-envelope transport for market providers.
@@ -66,7 +67,6 @@ export type MarketQuote = {
   trend: (number | null)[];
 };
 
-const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null);
 
 /** Yahoo chart payload -> one quote, or null when it carries no price. */

@@ -24,6 +24,7 @@ import { daysAgo, fetchPolicyRates, SOURCE_UA } from '@/features/market/bis';
 import { fetchFred } from '@/features/market/fred';
 import { fetchWorldBankSeries, pickLatestAndPrior, type WorldBankPoint } from '@/features/market/worldbank';
 import { limitedFetch } from '@/lib/rate-limit';
+import { mapPool } from '@/app/(frontend)/api/economy/_lib/rows';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -32,6 +33,9 @@ export const runtime = 'nodejs';
 const TIMEOUT_MS = 20_000;
 
 type Failed = { symbol: string; reason: string };
+/** One symbol's outcome. The union lets `mapPool`'s ordered results be split back
+ * into the same two arrays the serial loop built, in the same order. */
+type MacroOutcome = { ok: true; quote: MacroQuote } | { ok: false; failure: Failed };
 type Spread = { label: string; long: string; short: string; bp: number | null; note: string };
 type PolicyRow = { area: string; bank: string; region: string; rate: number | null; date: string | null; note: string };
 type IndicatorRow = {
@@ -120,7 +124,7 @@ export async function GET() {
 
   // ---- 1. live quotes (Yahoo) ----------------------------------------------
   const quotes: MacroQuote[] = [];
-  for (const spec of MACRO) {
+  const outcomes = await mapPool(MACRO, 6, async (spec): Promise<MacroOutcome> => {
     let res: Response;
     try {
       res = await limitedFetch(
@@ -129,36 +133,38 @@ export async function GET() {
         { ttlMs: MACRO_TTL_MS }
       );
     } catch (e) {
-      failed.push({ symbol: spec.symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` });
-      continue;
+      return { ok: false, failure: { symbol: spec.symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` } };
     }
     if (!res.ok) {
-      failed.push({ symbol: spec.symbol, reason: `upstream ${res.status}` });
-      continue;
+      return { ok: false, failure: { symbol: spec.symbol, reason: `upstream ${res.status}` } };
     }
     let json: unknown;
     try {
       json = await res.json();
     } catch {
-      failed.push({ symbol: spec.symbol, reason: 'non-JSON body' });
-      continue;
+      return { ok: false, failure: { symbol: spec.symbol, reason: 'non-JSON body' } };
     }
     const quote = parseChart(json, spec.symbol);
     if (!quote) {
-      failed.push({ symbol: spec.symbol, reason: 'no quote in payload' });
-      continue;
+      return { ok: false, failure: { symbol: spec.symbol, reason: 'no quote in payload' } };
     }
     // The curated label beats Yahoo's ("10-Year Bond", "13 WEEK TREASURY BILL")
     // — the board is a curve, not a ticker dump. The raw name stays in the payload.
     // `group`/`unit`/`note` ride along so a consumer in another feature renders the
     // row from the payload instead of importing this family across a boundary.
-    quotes.push({
+    return { ok: true, quote: {
       ...quote,
       name: MACRO_LABELS[spec.symbol] ?? quote.name,
       group: spec.group,
       unit: spec.unit,
       note: spec.note,
-    });
+    } };
+  });
+  // `mapPool` returns in input order, so this split rebuilds exactly the arrays
+  // the serial loop produced -- successes and failures alike, same sequence.
+  for (const o of outcomes) {
+    if (o.ok === true) quotes.push(o.quote);
+    else failed.push(o.failure);
   }
 
   // ---- 2. central-bank policy rates (BIS) ----------------------------------
@@ -182,8 +188,10 @@ export async function GET() {
 
   // ---- 3. US macro indicators (FRED) ---------------------------------------
   const cosd = daysAgo(FRED_LOOKBACK_DAYS);
-  const indicators: IndicatorRow[] = await Promise.all(
-    INDICATORS.map(async (spec): Promise<IndicatorRow> => {
+  const indicators: IndicatorRow[] = await mapPool(
+    INDICATORS,
+    6,
+    async (spec): Promise<IndicatorRow> => {
       const base: IndicatorRow = {
         id: spec.id,
         name: spec.name,
@@ -202,7 +210,7 @@ export async function GET() {
         failed.push({ symbol: `FRED:${spec.id}`, reason: e instanceof Error ? e.message : String(e) });
       }
       return base;
-    })
+    }
   );
 
   // ---- 4. worldwide economy board (World Bank) -----------------------------
@@ -218,8 +226,10 @@ export async function GET() {
   // here so the balance can be derived from them in step 4b.
   const cellByCode = new Map<string, Record<string, WorldCell>>();
   const legPoints = new Map<string, Map<string, readonly WorldBankPoint[]>>();
-  await Promise.all(
-    ECONOMY_INDICATORS.filter((spec) => spec.id !== BALANCE_ID).map(async (spec) => {
+  await mapPool(
+    ECONOMY_INDICATORS.filter((spec) => spec.id !== BALANCE_ID),
+    6,
+    async (spec) => {
       try {
         const series = await fetchWorldBankSeries(spec.id, WORLD_CODES, ECONOMY_FROM_YEAR, WB_AGGREGATE_NAMES);
         for (const s of series) {
@@ -239,7 +249,7 @@ export async function GET() {
       } catch (e) {
         failed.push({ symbol: `WB:${spec.id}`, reason: e instanceof Error ? e.message : String(e) });
       }
-    })
+    }
   );
 
   // ---- 4b. derived budget balance ------------------------------------------

@@ -13,6 +13,7 @@ import {
   type MarketQuote,
 } from '@/features/market/clients';
 import { limitedFetch } from '@/lib/rate-limit';
+import { mapPool } from '@/app/(frontend)/api/economy/_lib/rows';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -21,6 +22,9 @@ export const runtime = 'nodejs';
 const TIMEOUT_MS = 20_000;
 
 type Failed = { symbol: string; reason: string };
+/** One symbol's outcome. The union lets `mapPool`'s ordered results be split back
+ * into the same two arrays the serial loop built, in the same order. */
+type QuoteOutcome = { ok: true; quote: MarketQuote } | { ok: false; failure: Failed };
 
 /**
  * Read-only proxy to the Yahoo Finance chart endpoint (public, keyless) serving
@@ -34,7 +38,7 @@ export async function GET() {
   const quotes: MarketQuote[] = [];
   const failed: Failed[] = [];
 
-  for (const spec of COMMODITIES) {
+  const outcomes = await mapPool(COMMODITIES, 6, async (spec): Promise<QuoteOutcome> => {
     let res: Response;
     try {
       res = await limitedFetch(
@@ -43,29 +47,31 @@ export async function GET() {
         { ttlMs: COMMODITY_TTL_MS }
       );
     } catch (e) {
-      failed.push({ symbol: spec.symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` });
-      continue;
+      return { ok: false, failure: { symbol: spec.symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` } };
     }
     if (!res.ok) {
-      failed.push({ symbol: spec.symbol, reason: `upstream ${res.status}` });
-      continue;
+      return { ok: false, failure: { symbol: spec.symbol, reason: `upstream ${res.status}` } };
     }
     let json: unknown;
     try {
       json = await res.json();
     } catch {
-      failed.push({ symbol: spec.symbol, reason: 'non-JSON body' });
-      continue;
+      return { ok: false, failure: { symbol: spec.symbol, reason: 'non-JSON body' } };
     }
     const quote = parseChart(json, spec.symbol);
     if (!quote) {
-      failed.push({ symbol: spec.symbol, reason: 'no quote in payload' });
-      continue;
+      return { ok: false, failure: { symbol: spec.symbol, reason: 'no quote in payload' } };
     }
     // The curated label beats "Gold Dec 26" -- the board is a market map, not a
     // contract-calendar. Kept alongside the raw Yahoo name in the payload.
     quote.name = COMMODITY_LABELS[spec.symbol] ?? quote.name;
-    quotes.push(quote);
+    return { ok: true, quote };
+  });
+  // `mapPool` returns in input order, so this split rebuilds exactly the arrays
+  // the serial loop produced -- successes and failures alike, same sequence.
+  for (const o of outcomes) {
+    if (o.ok === true) quotes.push(o.quote);
+    else failed.push(o.failure);
   }
 
   if (quotes.length === 0) {

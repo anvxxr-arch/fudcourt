@@ -19,6 +19,7 @@ import { fetchPolicyRates, SOURCE_UA } from '@/features/market/bis';
 import { fetchWorldBank } from '@/features/market/worldbank';
 import { fetchImfFiscal } from '@/features/market/imf';
 import { limitedFetch } from '@/lib/rate-limit';
+import { mapPool } from '@/app/(frontend)/api/economy/_lib/rows';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -40,6 +41,9 @@ type IdrQuote = {
   marketTime: number | null;
 };
 type Policy = { area: string; label: string; rate: number | null; date: string | null; note: string };
+/** One symbol's outcome. The union lets `mapPool`'s ordered results be split back
+ * into the same two arrays the serial loop built, in the same order. */
+type IdrOutcome = { ok: true; quote: IdrQuote } | { ok: false; failure: Failed };
 type EconomyRow = {
   id: string;
   name: string;
@@ -76,7 +80,7 @@ export async function GET() {
 
   // ---- 1. live quotes (Yahoo) ----------------------------------------------
   const quotes: IdrQuote[] = [];
-  for (const spec of IDR_QUOTES) {
+  const outcomes = await mapPool(IDR_QUOTES, 6, async (spec): Promise<IdrOutcome> => {
     let res: Response;
     try {
       res = await limitedFetch(
@@ -85,26 +89,22 @@ export async function GET() {
         { ttlMs: IDR_QUOTE_TTL_MS }
       );
     } catch (e) {
-      failed.push({ symbol: spec.symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` });
-      continue;
+      return { ok: false, failure: { symbol: spec.symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` } };
     }
     if (!res.ok) {
-      failed.push({ symbol: spec.symbol, reason: `upstream ${res.status}` });
-      continue;
+      return { ok: false, failure: { symbol: spec.symbol, reason: `upstream ${res.status}` } };
     }
     let json: unknown;
     try {
       json = await res.json();
     } catch {
-      failed.push({ symbol: spec.symbol, reason: 'non-JSON body' });
-      continue;
+      return { ok: false, failure: { symbol: spec.symbol, reason: 'non-JSON body' } };
     }
     const q = parseChart(json, spec.symbol);
     if (!q) {
-      failed.push({ symbol: spec.symbol, reason: 'no quote in payload' });
-      continue;
+      return { ok: false, failure: { symbol: spec.symbol, reason: 'no quote in payload' } };
     }
-    quotes.push({
+    return { ok: true, quote: {
       symbol: q.symbol,
       name: IDR_QUOTE_LABELS[spec.symbol] ?? q.name,
       group: spec.group,
@@ -115,7 +115,13 @@ export async function GET() {
       changePercent: q.changePercent,
       currency: q.currency,
       marketTime: q.marketTime,
-    });
+    } };
+  });
+  // `mapPool` returns in input order, so this split rebuilds exactly the arrays
+  // the serial loop produced -- successes and failures alike, same sequence.
+  for (const o of outcomes) {
+    if (o.ok === true) quotes.push(o.quote);
+    else failed.push(o.failure);
   }
 
   // ---- 2. the BI-Rate (BIS) ------------------------------------------------

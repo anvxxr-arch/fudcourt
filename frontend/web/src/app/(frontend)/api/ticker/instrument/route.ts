@@ -15,13 +15,11 @@ import {
   tickerClients,
 } from '@/server/ticker';
 
+import { num } from '../../_lib/num';
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
-
-function num(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
 
 /** A venue's answer for one instrument. `last: null` with an `error` is a miss, never a price. */
 type Quote = {

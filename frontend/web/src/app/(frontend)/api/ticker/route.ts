@@ -35,15 +35,12 @@ import {
   tickerClients,
 } from '@/server/ticker';
 import type { Exchange as CcxtExchange } from 'ccxt';
+import { num } from '../_lib/num';
 import { fail } from '../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
-
-function num(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
 
 /**
  * Read-only exchange ticker board (OKX + Bybit, keyless, via CCXT).

@@ -1,13 +1,14 @@
 import { color } from '@/styles/tokens';
 import type { Quote } from './detail-shared';
 
-/** Median of the non-null values, or null when there are none. */
-export function medianOf(values: (number | null)[]): number | null {
-  const clean = values.filter((v): v is number => v !== null).sort((a, b) => a - b);
-  if (clean.length === 0) return null;
-  const mid = Math.floor(clean.length / 2);
-  return clean.length % 2 ? clean[mid] : (clean[mid - 1] + clean[mid]) / 2;
-}
+/**
+ * Median of the non-null values, or null when there are none.
+ *
+ * The definition lives in `client.ts` — one `medianOf` serves the board, the
+ * detail view and the API routes. Re-exported so the detail modules keep a
+ * single import site for every formatter.
+ */
+export { medianOf } from './client';
 
 export function chgColor(p: number | null): string | undefined {
   if (p === null) return color.labelTertiary;

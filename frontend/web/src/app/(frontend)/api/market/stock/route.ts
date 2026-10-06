@@ -6,6 +6,7 @@ import {
   STOCK_SYMBOLS,
   STOCK_TTL_MS,
   isStockRegion,
+  type StockRegion,
 } from '@/features/market/stock-regions';
 import {
   YAHOO_CHART,
@@ -15,6 +16,7 @@ import {
   type MarketQuote,
 } from '@/features/market/clients';
 import { limitedFetch } from '@/lib/rate-limit';
+import { mapPool } from '@/app/(frontend)/api/economy/_lib/rows';
 import { fail } from '../../_lib/http';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +26,9 @@ export const runtime = 'nodejs';
 const TIMEOUT_MS = 20_000;
 
 type Failed = { symbol: string; reason: string };
+/** One symbol's outcome. The union lets `mapPool`'s ordered results be split back
+ * into the same two arrays the serial loop built, in the same order. */
+type QuoteOutcome = { ok: true; quote: MarketQuote } | { ok: false; failure: Failed };
 
 /**
  * Read-only proxy to the Yahoo Finance chart endpoint (public, keyless) serving
@@ -41,13 +46,13 @@ export async function GET(req: Request) {
   if (regionParam !== null && !isStockRegion(regionParam)) {
     return fail('invalid region', 400, `region must be one of: ${STOCK_REGIONS.join(', ')}`);
   }
-  const region = regionParam ?? DEFAULT_STOCK_REGION;
+  const region: StockRegion = regionParam !== null && isStockRegion(regionParam) ? regionParam : DEFAULT_STOCK_REGION;
   const symbols = STOCK_SYMBOLS[region];
 
   const quotes: MarketQuote[] = [];
   const failed: Failed[] = [];
 
-  for (const symbol of symbols) {
+  const outcomes = await mapPool(symbols, 6, async (symbol: string): Promise<QuoteOutcome> => {
     let res: Response;
     try {
       res = await limitedFetch(
@@ -56,29 +61,31 @@ export async function GET(req: Request) {
         { ttlMs: STOCK_TTL_MS }
       );
     } catch (e) {
-      failed.push({ symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` });
-      continue;
+      return { ok: false, failure: { symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` } };
     }
     if (!res.ok) {
-      failed.push({ symbol, reason: `upstream ${res.status}` });
-      continue;
+      return { ok: false, failure: { symbol, reason: `upstream ${res.status}` } };
     }
     let json: unknown;
     try {
       json = await res.json();
     } catch {
-      failed.push({ symbol, reason: 'non-JSON body' });
-      continue;
+      return { ok: false, failure: { symbol, reason: 'non-JSON body' } };
     }
     const quote = parseChart(json, symbol);
     if (!quote) {
-      failed.push({ symbol, reason: 'no quote in payload' });
-      continue;
+      return { ok: false, failure: { symbol, reason: 'no quote in payload' } };
     }
     // The curated label reads better than the raw long name (e.g. 'IDX Composite
     // (IHSG)' over 'IDX COMPOSITE'); the exchange column still carries the venue.
     quote.name = STOCK_LABELS[quote.symbol] ?? quote.name;
-    quotes.push(quote);
+    return { ok: true, quote };
+  });
+  // `mapPool` returns in input order, so this split rebuilds exactly the arrays
+  // the serial loop produced -- successes and failures alike, same sequence.
+  for (const o of outcomes) {
+    if (o.ok === true) quotes.push(o.quote);
+    else failed.push(o.failure);
   }
 
   if (quotes.length === 0) {

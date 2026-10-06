@@ -174,15 +174,22 @@ export function spreadBetween(a: number, b: number): number | null {
  * Reduce several venue figures to one displayed value: the median, which
  * ignores a single outlier venue instead of dragging the number with it.
  *
+ * The canonical definition for the ticker family — `detail-format.ts` and
+ * every board/detail call site share this one. A venue that did not report
+ * a figure passes `null`; that is a real "unknown", never coerced to 0, so
+ * nulls are dropped rather than folded into the average.
+ *
  * `positiveOnly` is not optional decoration — it encodes two different facts.
  * A price must be > 0 (a zero or negative price is a data error, and folding
  * it into the median would print a real-looking number). A 24h change is
  * signed and legitimately negative, so discarding the losers would have
- * turned every losing pair into a blank. Callers state which they mean.
+ * turned every losing pair into a blank. Callers state which they mean; the
+ * default is `false`, because the signed case is the one that silently
+ * corrupts when the flag is forgotten.
  */
-export function medianOf(values: number[], positiveOnly: boolean): number | null {
+export function medianOf(values: readonly (number | null)[], positiveOnly = false): number | null {
   const clean = values
-    .filter(p => Number.isFinite(p) && (positiveOnly ? p > 0 : true))
+    .filter((v): v is number => v !== null && Number.isFinite(v) && (!positiveOnly || v > 0))
     .sort((a, b) => a - b);
   if (clean.length === 0) return null;
   const mid = Math.floor(clean.length / 2);
