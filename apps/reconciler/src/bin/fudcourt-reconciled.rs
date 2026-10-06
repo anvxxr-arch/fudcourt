@@ -27,8 +27,8 @@
 use std::path::{Path, PathBuf};
 
 // The modules live in the crate's library, shared with `fudcourt-sync`.
-use fudcourt_sync::persistence::db;
-use fudcourt_sync::reconciliation::server;
+use fudcourt_reconciler::persistence::db;
+use fudcourt_reconciler::reconciliation::server;
 
 /// Walk up from this binary to the repo-root `.env` and export its keys, the same
 /// rule the sync binary and the Python oracle use. Never prints a value.

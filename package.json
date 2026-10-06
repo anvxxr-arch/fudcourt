@@ -10,6 +10,6 @@
     "check:web-contract": "python3 scripts/verify/check-contract.py",
     "test:web": "cd frontend/web && bun run test:shapers",
     "test:go": "go test ./...",
-    "test:sync": "cd backend/sync && cargo test --release"
+    "test:sync": "cd apps/reconciler && cargo test --release"
   }
 }

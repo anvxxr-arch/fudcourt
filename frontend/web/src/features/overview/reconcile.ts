@@ -1,7 +1,7 @@
 // Pure reconciliation shaper (DR-014).
 //
 // WHY THIS IS A SEPARATE FILE: `/api/reconcile` is now served two ways -- this TS
-// shaper and the Rust service in `backend/sync` -- and the two must agree on live
+// shaper and the Rust service in `apps/reconciler` -- and the two must agree on live
 // data. A shaper that a probe can import and feed recorded rows is what makes
 // that comparison possible at all; the same reason `lib/shapers.ts` exists for
 // the CryptoRank envelopes.

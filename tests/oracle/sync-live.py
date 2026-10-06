@@ -6,7 +6,7 @@ LOCATION: this script is the ORACLE, and an oracle does not live inside the app
 it checks. The Phase-8 tooling move took it out of `frontend/web/scripts/tools/`
 (that directory no longer exists); it is wired by
 `infrastructure/systemd/fudcourt-sync.service` at its current path. Paths named
-below are repo-relative roots (`backend/sync/src/**`), not app-relative ones.
+below are repo-relative roots (`apps/reconciler/src/**`), not app-relative ones.
 
 HARD RULES:
   * exact wallet address, exact balance, exact hash

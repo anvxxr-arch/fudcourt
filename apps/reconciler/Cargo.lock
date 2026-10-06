@@ -187,7 +187,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fudcourt-sync"
+name = "fudcourt-reconciler"
 version = "0.1.0"
 dependencies = [
  "reqwest",

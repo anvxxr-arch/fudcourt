@@ -104,8 +104,8 @@ jobs:
           set -euo pipefail
           bun install --frozen-lockfile
           # Build the Rust service this route proxies to, from this same commit.
-          cargo build --release --manifest-path ../../backend/sync/Cargo.toml
-          ../../backend/sync/target/release/fudcourt-reconciled &
+          cargo build --release --manifest-path ../../apps/reconciler/Cargo.toml
+          ../../apps/reconciler/target/release/fudcourt-reconciled &
           SVC=$!
           trap 'kill $SVC 2>/dev/null || true' EXIT
           for _ in $(seq 1 30); do

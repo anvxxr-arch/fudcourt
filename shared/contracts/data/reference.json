@@ -2,9 +2,9 @@
   "document_version": 1,
   "id_rule": "id = kind \":\" hex(sha256(salt + 0x00 + kind + 0x00 + natural_key))[0:10]; natural_key per kind: chain \"chain/<name>\", asset \"asset/<kind>/<SYMBOL>\", token \"token/<chain-name>/<full-address>\", venue \"venue/<venue-id>\"",
   "salt": "fudcourt/canonical-reference/v1",
-  "generated_by": "backend/api/internal/markets/reference",
+  "generated_by": "apps/api/internal/markets/reference",
   "unmapped": [
-    "solana SPL tokens (full mint not derivable: backend/sync/src/streams/sync.rs truncates the mint to 6 chars)",
+    "solana SPL tokens (full mint not derivable: apps/reconciler/src/streams/sync.rs truncates the mint to 6 chars)",
     "HYPE provider ids (Hyperliquid balances are read but never priced: no slug in the tree)",
     "chain_numeric_id for all chains (no EVM chain id exists anywhere in the tree)",
     "venue URLs and non-conventional display names (no venue metadata table exists)",

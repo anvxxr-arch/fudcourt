@@ -75,13 +75,13 @@ go run ./apps/api/internal/markets/reference/cmd/emit -check || fail reference
 step "go build/vet/test (all packages)"
 go build ./... && go vet ./... && go test ./... || fail go
 
-step "cargo build/test (backend/sync)"
-(cd backend/sync && cargo fmt --check && cargo build --release --quiet && cargo test --release --quiet) || fail rust
+step "cargo build/test (apps/reconciler)"
+(cd apps/reconciler && cargo fmt --check && cargo build --release --quiet && cargo test --release --quiet) || fail rust
 
 # Ordered AFTER the cargo build on purpose: check-deploy requires every ExecStart target to
 # exist, and the two Rust units (fudcourt-sync-rust / fudcourt-reconciled) are NOT
 # self-provisioning the way the Go units are (they carry no ExecStartPre=go build), so
-# backend/sync/target/release/* must already be built — running this before the cargo step
+# apps/reconciler/target/release/* must already be built — running this before the cargo step
 # is red on a clean checkout.
 step "deploy-unit guard (ExecStart paths, timer pairs)"
 python3 scripts/verify/check-deploy.py || fail deploy

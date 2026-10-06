@@ -7,10 +7,10 @@
 
 use serde_json::{json, Map, Value};
 
-use fudcourt_sync::reconciliation::reconcile::{
+use fudcourt_reconciler::reconciliation::reconcile::{
     body, num, reconcile, str_or, summary_map, ReconRow,
 };
-use fudcourt_sync::reconciliation::server::route;
+use fudcourt_reconciler::reconciliation::server::route;
 
 type Row = Map<String, Value>;
 
@@ -301,7 +301,7 @@ async fn routing_table_refuses_everything_it_does_not_serve() {
     // they must not depend on a live database. `/healthz` and `/api/reconcile`
     // therefore answer 500 here (loud, with the real reason) rather than 200,
     // which is itself the rule under test.
-    let db = fudcourt_sync::persistence::db::Db::unreachable();
+    let db = fudcourt_reconciler::persistence::db::Db::unreachable();
     let (st, body) = route(&db, "POST", "/api/reconcile").await;
     assert_eq!(st, 405);
     assert_eq!(body["error"], json!("method not allowed"));

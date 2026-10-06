@@ -1,5 +1,5 @@
 name: rust
-# Surface: backend/sync (Rust) — fudcourt-sync (balance sync) and
+# Surface: apps/reconciler (Rust) — fudcourt-reconciler (balance sync) and
 # fudcourt-reconciled (the /api/reconcile HTTP service behind the web proxy).
 #
 # This workflow always RUNS; the build job is skipped when nothing Rust moved,
@@ -28,16 +28,16 @@ jobs:
         with:
           filters: |
             rust:
-              - 'backend/sync/**'
+              - 'apps/reconciler/**'
               - '.github/workflows/rust.yml'
   build:
-    name: "rust - build, test (backend/sync)"
+    name: "rust - build, test (apps/reconciler)"
     needs: changes
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend/sync
+        working-directory: apps/reconciler
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable

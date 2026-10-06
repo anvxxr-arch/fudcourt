@@ -8,11 +8,11 @@
 //!   * a missing credential STOPS the run loudly; no fallback could ever do
 //!     anything but yield garbage credentials
 
-use fudcourt_sync::oracle;
-use fudcourt_sync::streams::sync;
+use fudcourt_reconciler::oracle;
+use fudcourt_reconciler::streams::sync;
 
 // The pipeline stages and shared primitives come from the library
-// (`fudcourt_sync`): the Postgres client from `persistence`, the sync pipeline
+// (`fudcourt_reconciler`): the Postgres client from `persistence`, the sync pipeline
 // from `streams`, and the Python-parity oracle replay seam at the crate root.
 
 use std::path::{Path, PathBuf};

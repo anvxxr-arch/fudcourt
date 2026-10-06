@@ -111,7 +111,7 @@ func (r *Reference) Document() Document {
 		DocumentVersion: SDKVersion,
 		IDRule:          IDRuleText,
 		Salt:            Salt,
-		GeneratedBy:     "backend/api/internal/markets/reference",
+		GeneratedBy:     "apps/api/internal/markets/reference",
 		Unmapped:        Unmapped(),
 		Note: "Cross-service reference artifact. Consumers MUST NOT import the producing Go package: " +
 			"read this file (or the JSON Schemas under shared/contracts/schemas/) instead. " +

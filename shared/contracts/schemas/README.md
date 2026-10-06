@@ -80,7 +80,7 @@ it is computed.
 | [`accounts/account-equity.json`](accounts/account-equity.json) | CANONICAL | `backend/workers/executor` | via account |
 | [`assets/asset.json`](assets/asset.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `asset_id` minted; instance in `shared/contracts/data/reference.json` |
 | [`assets/token.json`](assets/token.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `token_id` minted over `chain/address`; instance in `reference.json` |
-| [`assets/chain.json`](assets/chain.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `chain_id` minted; instance in `reference.json`; `backend/sync/src/chains.rs` is still a separate private table |
+| [`assets/chain.json`](assets/chain.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `chain_id` minted; instance in `reference.json`; `apps/reconciler/src/chains.rs` is still a separate private table |
 | [`markets/venue.json`](markets/venue.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `venue_id` minted; instance in `reference.json`; the three inline allowlists are now redundant |
 | [`markets/instrument.json`](markets/instrument.json) | CANONICAL | `backend/api [removed: markets/instruments]` | **`instrument_id`, no minter** |
 | [`markets/ticker.json`](markets/ticker.json) | CANONICAL | `backend/api [removed: markets/overview]` | via instrument+venue |

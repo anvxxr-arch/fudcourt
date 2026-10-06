@@ -63,12 +63,12 @@ type seedVenue struct {
 //   - name/kind: the retired accounts/wallets package chainRules
 //     (ethereum, bsc, polygon, arbitrum, optimism, base, solana) plus the sync's
 //     own labels for the two that wallets.go does not model
-//     (backend/sync/src/streams/sync.rs: "Hyperliquid (spot)" / "Hyperliquid
-//     (perp)" rows, and backend/sync/src/chains.rs HYPERLIQUID_INFO).
+//     (apps/reconciler/src/streams/sync.rs: "Hyperliquid (spot)" / "Hyperliquid
+//     (perp)" rows, and apps/reconciler/src/chains.rs HYPERLIQUID_INFO).
 //
-//   - native symbols: backend/sync/src/chains.rs EVM[].native ("ETH", "BNB",
+//   - native symbols: apps/reconciler/src/chains.rs EVM[].native ("ETH", "BNB",
 //     "POL" for Polygon, "ETH" on Arbitrum/Optimism/Base), "SOL" from
-//     backend/sync/src/streams/sync.rs native-SOL row.
+//     apps/reconciler/src/streams/sync.rs native-SOL row.
 //
 //   - offchain: "is not a chain" in the strict sense, but
 //     the retired finance/transactions package defaults
@@ -92,7 +92,7 @@ type seedVenue struct {
 //     surface is `cryptorank-chain`. Two spellings, two entities, both real.
 //
 //     For the same reason NO chain carries a coingecko or defillama id:
-//     backend/sync/src/chains.rs LLAMA_IDS is a SYMBOL -> price-id map ("ETH" ->
+//     apps/reconciler/src/chains.rs LLAMA_IDS is a SYMBOL -> price-id map ("ETH" ->
 //     "coingecko:ethereum"), so those ids denote the ASSET, and asserting them
 //     on a chain would create exactly the collision above. Chains therefore
 //     carry no embedded provider_ids at all - the contract's enum has no
@@ -126,7 +126,7 @@ func seedChains() []seedChain {
 
 // seedAssets: the eight assets the tree names.
 //
-// Provenance: backend/sync/src/chains.rs LLAMA_IDS - a SYMBOL -> price-id map,
+// Provenance: apps/reconciler/src/chains.rs LLAMA_IDS - a SYMBOL -> price-id map,
 // so its values denote the ASSET, not the chain - keys (ETH, BNB, POL, SOL,
 // USDT, USDC), plus USD, which is the unit of every *_usd figure in the
 // database/schema files and of common/money.json. Those six `coingecko:` ids are
@@ -140,10 +140,10 @@ func seedChains() []seedChain {
 // hyperliquid).
 //
 // MATIC vs POL - the leak the audit found, handled here rather than papered
-// over. backend/sync/src/chains.rs:118-120 states it outright: "Polygon's native
+// over. apps/reconciler/src/chains.rs:118-120 states it outright: "Polygon's native
 // balance is valued at the POL (polygon-ecosystem-token) price and the `assets`
 // row is labelled `MATIC`" - the label the Python oracle and the historical
-// table already used, carried by backend/sync/src/streams/sync.rs:106-109 which
+// table already used, carried by apps/reconciler/src/streams/sync.rs:106-109 which
 // pushes the literal ("MATIC", pol_price). The registry therefore holds ONE
 // canonical asset (kind=native, symbol=POL, chain=polygon) and records `MATIC`
 // as an internal provider SPELLING of it, so a caller holding the sync's MATIC
@@ -171,7 +171,7 @@ func seedAssets() []seedAsset {
 		{kind: AssetNative, symbol: "SOL", name: "Solana", chainName: "solana",
 			providers: []string{"coingecko=solana", "defillama=coingecko:solana", "cryptorank=solana"}},
 		// HYPE has no provider id in the tree: the sync reads Hyperliquid
-		// balances without pricing them (backend/sync/src/streams/sync.rs leaves
+		// balances without pricing them (apps/reconciler/src/streams/sync.rs leaves
 		// the SPL/Hyperliquid usd at 0.0 and never calls the price oracle for
 		// HYPE). Recorded as an omission in the UNMAPPED block, not guessed.
 		{kind: AssetNative, symbol: "HYPE", name: "Hyperliquid", chainName: "hyperliquid"},
@@ -184,15 +184,15 @@ func seedAssets() []seedAsset {
 	}
 }
 
-// seedTokens: the eleven ERC-20 deployments backend/sync's EVM table already
+// seedTokens: the eleven ERC-20 deployments apps/reconciler's EVM table already
 // carries, with decimals and verbatim address casing.
 //
-// Provenance: backend/sync/src/chains.rs EVM[].tokens = (symbol, contract,
+// Provenance: apps/reconciler/src/chains.rs EVM[].tokens = (symbol, contract,
 // decimals) for Ethereum, BSC, Polygon, Arbitrum, Optimism and Base. These are
 // the only full contract addresses anywhere in the tree, which is why the token
 // set is exactly this and nothing more: a Solana SPL token could NOT be seeded
 // because the sync truncates the mint to its first six characters
-// (backend/sync/src/streams/sync.rs:193 `let short: String =
+// (apps/reconciler/src/streams/sync.rs:193 `let short: String =
 // mint.chars().take(6).collect()`), discarding the identity it would need. See
 // the UNMAPPED block.
 func seedTokens() []seedToken {
@@ -227,7 +227,7 @@ func seedTokens() []seedToken {
 //     exists but THIS build may not place an order there. binance is NOT in
 //     that list even though the executor trades it, which is exactly the kind of
 //     divergence the agreement test in venues_test.go exists to catch.
-//   - paper: backend/workers/executor/internal/exchanges/paper/paper.go
+//   - paper: apps/executor/internal/exchanges/paper/paper.go
 //     `const venuePaper execution.ExchangeID = "paper"` - a simulated adapter,
 //     not a real venue, so known=false and the name says so.
 //   - market_types is set ONLY where the tree asserts it (the three
@@ -279,13 +279,13 @@ func VenueIDInvariants() []VenueIDInvariant {
 			Name:     "executor adapter vocabulary",
 			Provider: ProviderInternal,
 			VenueIDs: []string{"binance", "bybit", "mexc", "paper"},
-			Source:   "backend/workers/executor/internal/execution/types.go ExchangeID constants + backend/workers/executor/internal/exchanges/paper/paper.go venuePaper",
+			Source:   "apps/executor/internal/execution/types.go ExchangeID constants + apps/executor/internal/exchanges/paper/paper.go venuePaper",
 		},
 		{
 			Name:     "backend/api supported venue allowlist",
 			Provider: ProviderInternal,
 			VenueIDs: []string{"binance", "bybit", "mexc"},
-			Source:   "backend/api/internal/accounts/exchange/account.go KnownExchange",
+			Source:   "apps/api/internal/accounts/exchange/account.go KnownExchange",
 		},
 	}
 }
@@ -303,7 +303,7 @@ func providerValue(s string) (Provider, string, error) {
 //
 //  1. Solana SPL tokens (none seeded). The sync truncates the mint to six
 //     characters before it builds the row label, so the FULL mint never reaches
-//     any durable place in this tree (backend/sync/src/streams/sync.rs:171-196).
+//     any durable place in this tree (apps/reconciler/src/streams/sync.rs:171-196).
 //     A token id MUST be (chain, full address), so there is nothing to seed: the
 //     live value is recoverable only by querying the chain, and inventing an
 //     address would be a fabrication.
@@ -329,7 +329,7 @@ func providerValue(s string) (Provider, string, error) {
 //     provider rows (research/coin.json), not canonical entities.
 func Unmapped() []string {
 	return []string{
-		"solana SPL tokens (full mint not derivable: backend/sync/src/streams/sync.rs truncates the mint to 6 chars)",
+		"solana SPL tokens (full mint not derivable: apps/reconciler/src/streams/sync.rs truncates the mint to 6 chars)",
 		"HYPE provider ids (Hyperliquid balances are read but never priced: no slug in the tree)",
 		"chain_numeric_id for all chains (no EVM chain id exists anywhere in the tree)",
 		"venue URLs and non-conventional display names (no venue metadata table exists)",

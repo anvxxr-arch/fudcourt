@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Cross-implementation sync gate: Python oracle vs Rust `fudcourt-sync` (Phase 6).
+"""Cross-implementation sync gate: Python oracle vs Rust `fudcourt-reconciler`.
 
 Two implementations of the balance sync exist during the parallel run
-(`tests/oracle/sync-live.py` and `backend/sync/src/**`). This gate
+(`tests/oracle/sync-live.py` and `apps/reconciler/src/**`). This gate
 proves they produce the SAME `assets` rows from the SAME inputs — byte for
 byte — which is what makes promoting the Rust binary over the Python twin safe.
 
@@ -41,7 +41,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]  # .../fudcourt  (verify/ -> scripts/ -> root)
 FIXTURE = REPO / "tests" / "oracle" / "fixtures" / "capture.json"
 PY_ORACLE = REPO / "tests" / "oracle" / "sync-live.py"
-RUST_BIN = REPO / "backend" / "sync" / "target" / "release" / "fudcourt-sync"
+RUST_BIN = REPO / "apps" / "reconciler" / "target" / "release" / "fudcourt-reconciler"
 
 BEGIN = "#ASSETS-PROJECTION-BEGIN"
 END = "#ASSETS-PROJECTION-END"
@@ -112,7 +112,7 @@ def main() -> int:
         return 2
     if not rust_bin.exists():
         print(f"rust binary missing: {rust_bin}\n"
-              f"build it: cd backend/sync && cargo build --release")
+              f"build it: cd apps/reconciler && cargo build --release")
         return 2
 
     rows = json.loads(capture.read_text())["responses"]

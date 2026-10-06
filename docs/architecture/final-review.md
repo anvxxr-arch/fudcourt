@@ -429,7 +429,7 @@ against the baseline and against `94a2ee1`/`642e7ef`):
    **byte-identical** `assets` projections from `tests/oracle/fixtures/capture.json` (40 recorded
    responses across rpc/hl/prices), and no database write is issued. The gate and its `oracle.rs`
    seam are the writer's Phase 6 work and are **committed and clean** (re-verified this session:
-   `git ls-files` lists both `verify-sync.py` and `backend/sync/src/oracle.rs`; the gate emits
+   `git ls-files` lists both `verify-sync.py` and `apps/reconciler/src/oracle.rs`; the gate emits
    `SYNC_ORACLE_OK`).
 4. **Commit per phase** before stacking more change (see §10).
 5. **Optional perf work** (only on measurement): executor exchange-metadata caching, connection

@@ -99,7 +99,7 @@ mirror's line; the rows below are the ones that are **not** pure copies.
 | E6 | `repository/credentials.go:34,51` `CredentialRow.Exchange` | venue slug read back from `exchange_accounts.exchange` | **identity** | `LoadCredential` callers; key-restriction endpoints | `venue_id` | **AVAILABLE**, but the credential row must keep the slug for the venue call — a mapping, not a rename [INFERENCE] |
 | E7 | `api/wire.go:105-106,144,162,167`; `api/plan_json.go:19-24,103-104,181` | wire echoes of the same fields; `venueKey(...)` recomputed at `plan_json.go:181` | **identity** on the HTTP surface (15 routes) | `frontend/web/src/lib/executor.ts`; the 15 `/api/executor/*` handlers | `instrument_id`/`venue_id` | **AVAILABLE (instrument)**, gated by the freeze list (`canonical-placement.md:113`) |
 
-## F. Rust — `backend/sync/src/**`
+## F. Rust — `apps/reconciler/src/**`
 
 | # | where | what string | role | consumer(s) that would break | canonical replacement | availability |
 |---|---|---|---|---|---|---|

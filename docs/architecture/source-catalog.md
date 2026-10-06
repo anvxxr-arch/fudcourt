@@ -223,16 +223,16 @@ Provider-vs-source note: `okx` etc. are **providers/venues**; `ticker-ccxt-swap`
 
 ## 3. On-chain / RPC feeds — Rust `backend/sync` (5-minute timer)
 
-Two binaries share the crate (`backend/sync/src/lib.rs`): `fudcourt-sync` (batch sync,
+Two binaries share the crate (`apps/reconciler/src/lib.rs`): `fudcourt-sync` (batch sync,
 `src/main.rs`) and `fudcourt-reconciled` (:3102 HTTP, `src/bin/fudcourt-reconciled.rs`).
 
 ### 3.1 EVM balances via Alchemy (`https://<host>/v2/{ALCHEMY_KEY}`)
 
-Registry: `backend/sync/src/streams.rs`→`chains.rs` (`EVM` table). One source per chain:
+Registry: `apps/reconciler/src/streams.rs`→`chains.rs` (`EVM` table). One source per chain:
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `alchemy-ethereum` | JSON-RPC `eth_getBalance` (native ETH) + `eth_call` `balanceOf` for USDT/USDC | Alchemy | BLOCKCHAIN_RPC | native wei balance, ERC-20 raw balance per token contract | `backend/sync/src/streams/sync.rs:219` (`https://{host}/v2/{ALCHEMY}`) | Balance (native + token) (target) | PERIODIC (5 min) | SNAPSHOT (rewrites `assets`) | `ALCHEMY_KEY` | active | `.env:ALCHEMY_KEY`, capture key `rpc|https://eth-mainnet.g.alchemy.com/v2/{ALCHEMY}|…` |
+| `alchemy-ethereum` | JSON-RPC `eth_getBalance` (native ETH) + `eth_call` `balanceOf` for USDT/USDC | Alchemy | BLOCKCHAIN_RPC | native wei balance, ERC-20 raw balance per token contract | `apps/reconciler/src/streams/sync.rs:219` (`https://{host}/v2/{ALCHEMY}`) | Balance (native + token) (target) | PERIODIC (5 min) | SNAPSHOT (rewrites `assets`) | `ALCHEMY_KEY` | active | `.env:ALCHEMY_KEY`, capture key `rpc|https://eth-mainnet.g.alchemy.com/v2/{ALCHEMY}|…` |
 | `alchemy-bsc` | same, chain BSC / BNB | Alchemy | BLOCKCHAIN_RPC | wei + USDT/USDC raw | same | Balance (target) | PERIODIC | SNAPSHOT | `ALCHEMY_KEY` | active | `chains.rs` `bnb-mainnet.g.alchemy.com` |
 | `alchemy-polygon` | same, Polygon / POL (row labelled `MATIC`) | Alchemy | BLOCKCHAIN_RPC | wei + USDT/USDC raw | same | Balance (target) | PERIODIC | SNAPSHOT | `ALCHEMY_KEY` | active | `chains.rs` note on POL/MATIC label |
 | `alchemy-arbitrum` | same, Arbitrum (native labelled ETH) | Alchemy | BLOCKCHAIN_RPC | wei + USDT/USDC raw | same | Balance (target) | PERIODIC | SNAPSHOT | `ALCHEMY_KEY` | active | `chains.rs` |
@@ -246,20 +246,20 @@ Polygon, Arbitrum, Optimism; USDC on Base. ERC-20 selector `0x70a08231`.
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `solana-balance` | JSON-RPC `getBalance` | Solana public RPC (`api.mainnet-beta.solana.com`) | BLOCKCHAIN_RPC | lamports → SOL | `backend/sync/src/streams/sync.rs` (`SOLANA_RPC`) | Balance (target) | PERIODIC | SNAPSHOT | keyless | active | `chains.rs:SOLANA_RPC`; capture key `rpc|https://api.mainnet-beta.solana.com|getBalance|…` |
+| `solana-balance` | JSON-RPC `getBalance` | Solana public RPC (`api.mainnet-beta.solana.com`) | BLOCKCHAIN_RPC | lamports → SOL | `apps/reconciler/src/streams/sync.rs` (`SOLANA_RPC`) | Balance (target) | PERIODIC | SNAPSHOT | keyless | active | `chains.rs:SOLANA_RPC`; capture key `rpc|https://api.mainnet-beta.solana.com|getBalance|…` |
 | `solana-token-accounts` | JSON-RPC `getTokenAccountsByOwner` (program `Tokenkeg…`) | Solana public RPC | BLOCKCHAIN_RPC | SPL token accounts → mint, `uiAmount` | same | Balance (target) | PERIODIC | SNAPSHOT | keyless | active | `chains.rs:TOKEN_PROGRAM_ID`; capture key present |
 
 ### 3.3 Hyperliquid
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `hyperliquid-state` | `POST https://api.hyperliquid.xyz/info` — `clearinghouseState`, `spotClearinghouseState`, `userFills` | Hyperliquid | DEX/MARKET_DATA | perp positions (`szi`, entry/mark, unrealized PnL, leverage), spot balances, user fills | `backend/sync/src/streams/sync.rs` (`HYPERLIQUID_INFO`) | Position + Balance + Fill (target) | PERIODIC | SNAPSHOT | keyless for these info endpoints (wallet address in body) | active | `chains.rs:HYPERLIQUID_INFO`; capture keys `hl|{"type":"clearinghouseState"…}` |
+| `hyperliquid-state` | `POST https://api.hyperliquid.xyz/info` — `clearinghouseState`, `spotClearinghouseState`, `userFills` | Hyperliquid | DEX/MARKET_DATA | perp positions (`szi`, entry/mark, unrealized PnL, leverage), spot balances, user fills | `apps/reconciler/src/streams/sync.rs` (`HYPERLIQUID_INFO`) | Position + Balance + Fill (target) | PERIODIC | SNAPSHOT | keyless for these info endpoints (wallet address in body) | active | `chains.rs:HYPERLIQUID_INFO`; capture keys `hl|{"type":"clearinghouseState"…}` |
 
 ### 3.4 Price oracle used to value the balances
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `llama-coins-prices` | `GET https://coins.llama.fi/prices/current/{ids}` | DefiLlama (coins) | MARKET_DATA | USD price per CoinGecko-slug id (ETH, BNB, POL, SOL, USDT, USDC) | `backend/sync/src/streams/sync.rs:77` (`LLAMA_IDS` in `chains.rs`) | Price (target) | PERIODIC | NONE | keyless | active | capture key `prices|https://coins.llama.fi/prices/current/coingecko:ethereum,…` |
+| `llama-coins-prices` | `GET https://coins.llama.fi/prices/current/{ids}` | DefiLlama (coins) | MARKET_DATA | USD price per CoinGecko-slug id (ETH, BNB, POL, SOL, USDT, USDC) | `apps/reconciler/src/streams/sync.rs:77` (`LLAMA_IDS` in `chains.rs`) | Price (target) | PERIODIC | NONE | keyless | active | capture key `prices|https://coins.llama.fi/prices/current/coingecko:ethereum,…` |
 
 Same feed used by the Python oracle path (`tests/oracle/sync-live.py:57`,
 `LLAMA_URL`).
@@ -314,11 +314,11 @@ Note: `FUDCOURT_DISCORD_API` is a hermetic-test seam that redirects both endpoin
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `manual-wallets` | wallet registry written by the UI | FUDCourt (user) | WALLET | `address, label, chain, monitored, alias, emoji, color, notes` | `frontend/web/src/app/(frontend)/api/wallets/route.ts` (POST/GET) + `backend/sync/src/streams.rs` `WALLETS` seed | Wallet (target) | MANUAL | CANONICAL (`Postgres wallets`) | session cookie (`requireMutationAuth`) | active | `UPDATE wallets SET …` route code |
+| `manual-wallets` | wallet registry written by the UI | FUDCourt (user) | WALLET | `address, label, chain, monitored, alias, emoji, color, notes` | `frontend/web/src/app/(frontend)/api/wallets/route.ts` (POST/GET) + `apps/reconciler/src/streams.rs` `WALLETS` seed | Wallet (target) | MANUAL | CANONICAL (`Postgres wallets`) | session cookie (`requireMutationAuth`) | active | `UPDATE wallets SET …` route code |
 | `manual-transactions` | transaction ledger entries written by the UI | FUDCourt (user) | MANUAL | `date, chain, asset, event, amount_usd, direction, memo, wallet_to, venue_id, trade_id, hash, url, source` | `.../api/transactions/route.ts` (POST), `.../api/transactions/[id]/route.ts` (PUT/DELETE) | Transaction + LedgerEntry (target) | MANUAL | CANONICAL (`Postgres transactions`) | session cookie | active | `INSERT INTO transactions (…)` route code |
 | `treasury-tables` | `accounts`, `journal`, `ledger`, `venues`, `trades` | FUDCourt (user / operator) | MANUAL / INTERNAL | chart of accounts, journal entries, ledger balances, venue registry, trade log | `database/schema/pg-schema.sql`; read via `platform/db/client.ts:getAll()` | LedgerEntry / Venue / Trade (target) | MANUAL | CANONICAL | session cookie for UI writes (no in-app writer found — see *Gaps*) | served | `DASHBOARD_READS` in `frontend/web/src/server/db.ts` |
 | `computed-networth` | `SUM(value_usd)` over latest `assets` snapshot | FUDCourt (internal) | INTERNAL | net worth, per-asset share | `pg.ts:82` (`netWorth`) | derived PortfolioValuation (target) | NEAR_REALTIME | NONE (computed at read) | keyless (internal) | active | `SELECT SUM(value_usd) as total FROM assets` |
-| `reconcile-report` | expected-vs-current reconciliation | FUDCourt (internal) | INTERNAL | per-wallet rows, `walletSummary` totals | `backend/sync/src/reconciliation/reconcile.rs` → :3102 `/api/reconcile` → `api/reconcile/route.ts` | derived (target) | PERIODIC (on request) | NONE | keyless (loopback proxy) | active | three SELECTs at `reconcile.rs:207,213,219` |
+| `reconcile-report` | expected-vs-current reconciliation | FUDCourt (internal) | INTERNAL | per-wallet rows, `walletSummary` totals | `apps/reconciler/src/reconciliation/reconcile.rs` → :3102 `/api/reconcile` → `api/reconcile/route.ts` | derived (target) | PERIODIC (on request) | NONE | keyless (loopback proxy) | active | three SELECTs at `reconcile.rs:207,213,219` |
 
 ---
 
@@ -338,7 +338,7 @@ These are *stored* sources — the repo both writes and reads them.
 | `cr-disk-cache` | On-disk per-route JSON cache `~/.cache/crfetch` (shared with the Python helper) | self-hosted | INTERNAL | cached `HelperOut` envelopes | `apps/data/internal/research/cryptorank/fetch.go` (`DefaultCacheDir`, `writeCache`) | (cache) | REALTIME | EPHEMERAL | keyless | active | `fudcourt-data.service` `FUDCOURT_DATA_CACHE_DIR` |
 | `fixtures-recorded` | `tests/fixtures/` (26 `.json.gz` payloads) + `MANIFEST.json` | CryptoRank (recorded 2026-09-27) | RESEARCH (frozen) | 26 raw `HelperOut` payloads, sha256-pinned | `tests/oracle/record-fixtures.ts`, manifest `MANIFEST.json` | raw fixture | STATIC | HISTORICAL | `CR_PYTHON` (path only) | active (test oracle) | `sha256` + `jsonBytes` per mode |
 | `fixtures-expected` | `tests/fixtures/expected/` (one JSON per mode) | FUDCourt (frozen envelopes) | INTERNAL | expected envelope output per mode for the Go/TS parity diff | `tests/oracle/dump-envelopes.ts` | test oracle | STATIC | HISTORICAL | keyless | active | `dump:envelopes` script |
-| `oracle-capture` | `tests/oracle/fixtures/capture.json` (40 keys) | recorded RPC/price/Hyperliquid responses | INTERNAL (test) | replay bodies keyed `rpc\|<url with ALCHEMY redacted>\|<method>\|<params>` / `prices\|<url>` / `hl\|<body>` | `backend/sync/src/oracle.rs` | test oracle | STATIC | HISTORICAL | keyless (keys carry `/v2/{ALCHEMY}` placeholder, never a real key) | active | `capture.json` keys + `oracle.rs` doc |
+| `oracle-capture` | `tests/oracle/fixtures/capture.json` (40 keys) | recorded RPC/price/Hyperliquid responses | INTERNAL (test) | replay bodies keyed `rpc\|<url with ALCHEMY redacted>\|<method>\|<params>` / `prices\|<url>` / `hl\|<body>` | `apps/reconciler/src/oracle.rs` | test oracle | STATIC | HISTORICAL | keyless (keys carry `/v2/{ALCHEMY}` placeholder, never a real key) | active | `capture.json` keys + `oracle.rs` doc |
 | `python-sync-oracle` | `tests/oracle/sync-live.py` | FUDCourt (the deployed sync) | INTERNAL | same pipeline as the Rust sync; oracle for cross-implementation gate | `tests/oracle/sync-live.py` | — | PERIODIC | SNAPSHOT | `ALCHEMY_KEY`, `FUDCOURT_PG_URL` | served (the deployed sync) | `fudcourt-sync.service`/`.timer` |
 | `cr-fetch-python-helper` | `tests/oracle/cr_fetch.py` | FUDCourt (legacy producer) | INTERNAL | `HelperOut` stdout per mode (the Go service is its port) | `tests/oracle/cr_fetch.py` | — | on demand | NONE | keyless | served (tooling/oracle only) | `records-fixtures.ts` `HELPER` path |
 | `payload-seed` | `frontend/web/src/cms/seed.ts` | FUDCourt (operator) | CMS | 2 categories + 3 posts + sharp-generated hero images | `src/cms/seed.ts` | NewsArticle/CMS (target) | MANUAL | CANONICAL | `DATABASE_URL` | scaffolded (run by hand: `bunx payload run src/cms/seed.ts`) | file header |

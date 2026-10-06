@@ -9,8 +9,8 @@
 // puts markets/venues/assets in backend/api (docs/architecture/domain-map.md
 // section 1; docs/architecture/target.md sections 2 and 5), backend/data is
 // deliberately stateless passthrough (backend/data/platform/cache/cache.go:
-// "a cache is an optimisation; it must never become a dependency"), backend/sync
-// owns only the `assets` snapshot (backend/sync/src/persistence/db.rs), and the
+// "a cache is an optimisation; it must never become a dependency"), apps/reconciler
+// owns only the `assets` snapshot (apps/reconciler/src/persistence/db.rs), and the
 // executor owns only the executor.* schema. Nothing else can host it.
 //
 // # id rule (deterministic, documented, no randomness)
@@ -53,7 +53,7 @@
 // The repo's rule is that services MUST NOT import each other's implementation,
 // contracts only (docs/architecture/target.md section 3.2, docs/architecture/
 // migration-plan.md; docs/architecture/final-review.md section 5 verifies each
-// Go module imports only its own path). backend/data, backend/sync and
+// Go module imports only its own path). backend/data, apps/reconciler and
 // backend/workers/executor therefore can NEVER import this package. The sharing
 // path is contract-first instead:
 //
@@ -129,7 +129,7 @@ func (k EntityKind) Valid() bool {
 //     ticker/client.ts ships verbatim as TICKER_EXCHANGES. The schema has no
 //     venue provider_ids property at all, so these live in the mapping table.
 //   - ProviderInternal: identifiers this repo itself produces rather than
-//     receives. Today exactly one is registered: the `MATIC` label backend/sync
+//     receives. Today exactly one is registered: the `MATIC` label apps/reconciler
 //     writes into `assets` rows (see the MATIC/POL note in seed.go).
 type Provider string
 

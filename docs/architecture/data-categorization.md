@@ -206,9 +206,9 @@ exist.
 | ccxt-exchange-ticker | CCXT direct exchange ticker feed — 10 keyless CEX venues (okx, bybit, bitget, mexc, phemex, bingx, bitfinex, htx, coinbase, kraken) over spot/swap/future/option | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `frontend/web/src/features/ticker/client.ts` |
 | dexscreener-api | DexScreener public DEX API — token-profiles, token-boosts, boosts-top, search, tokens, token-pairs, orders | MARKET_DATA | RAW | keyless | REALTIME | EPHEMERAL | PUBLIC | active | `frontend/web/src/features/dex/client.ts` |
 | coingecko-markets | CoinGecko /coins/markets top-250 pool (keyless public API) | MARKET_DATA | RAW | keyless | FREQUENT | EPHEMERAL | PUBLIC | active | `frontend/web/src/features/market-data/markets/markets.ts` |
-| alchemy-evm-rpc | Alchemy EVM JSON-RPC — eth_getBalance / eth_call across Ethereum, BSC, Polygon, Arbitrum, Optimism, Base | ONCHAIN | RAW | ALCHEMY_KEY | PERIODIC | SNAPSHOT | PUBLIC | active | `backend/sync/src/streams/sync.rs` |
-| solana-rpc | Solana mainnet-beta JSON-RPC — getBalance, getTokenAccountsByOwner (SPL) | ONCHAIN | RAW | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `backend/sync/src/chains.rs` |
-| hyperliquid-info | Hyperliquid info API — spotClearinghouseState, clearinghouseState, userFills (positions + realized PnL) | PORTFOLIO | RAW | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `backend/sync/src/chains.rs` |
+| alchemy-evm-rpc | Alchemy EVM JSON-RPC — eth_getBalance / eth_call across Ethereum, BSC, Polygon, Arbitrum, Optimism, Base | ONCHAIN | RAW | ALCHEMY_KEY | PERIODIC | SNAPSHOT | PUBLIC | active | `apps/reconciler/src/streams/sync.rs` |
+| solana-rpc | Solana mainnet-beta JSON-RPC — getBalance, getTokenAccountsByOwner (SPL) | ONCHAIN | RAW | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `apps/reconciler/src/chains.rs` |
+| hyperliquid-info | Hyperliquid info API — spotClearinghouseState, clearinghouseState, userFills (positions + realized PnL) | PORTFOLIO | RAW | keyless | PERIODIC | SNAPSHOT | PUBLIC | active | `apps/reconciler/src/chains.rs` |
 | payload-cms-content | Payload CMS content store — Neon Postgres (posts, categories, media metadata) | NEWS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | PUBLIC | active | `frontend/web/src/cms/payload.config.ts` |
 | payload-cms-users | Payload CMS admin users — Neon Postgres auth collection | ACCESS | CANONICAL | DATABASE_URL | MANUAL | CANONICAL | USER_PRIVATE | active | `frontend/web/src/cms/collections/Users.ts` |
 | payload-cms-media-files | Payload CMS media uploads on local disk (frontend/web/media) | NEWS | RAW | session | MANUAL | CANONICAL | PUBLIC | active | `frontend/web/src/cms/collections/Media.ts` |
@@ -246,7 +246,7 @@ and types only: `apps/api/main.go` imports no markets package and `curl :3103/ap
 `systemctl --user show fudcourt-sync.service -p ExecStart` →
 `/usr/bin/python3 tests/oracle/sync-live.py` (active, exit 0); `fudcourt-sync-rust.{service,timer}` are
 not installed. The Alchemy / Solana / Hyperliquid feeds are active **through the Python reader**;
-`backend/sync/src/**` is not the running consumer.
+`apps/reconciler/src/**` is not the running consumer.
 
 **F7 — the dead tables are confirmed writer-less from the tree.** No `INSERT` targets `accounts`,
 `journal`, `ledger`, `trades`, `venues` or `price_history` anywhere in source — only `SELECT`s in

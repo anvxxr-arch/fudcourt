@@ -16,7 +16,7 @@ transcript is `history://source-inventory`.
 | Neon Postgres | `frontend/web/src/cms/migrations/20260917_194354.ts` (+ `.json` snapshot, `index.ts` manifest) | Payload PostgreSQL adapter migration, generated | CMS content store |
 
 Connection facts (names only, no values):
-`backend/sync/src/persistence/db.rs` reads the DSN from `FUDCOURT_PG_URL` (`tokio-postgres`);
+`apps/reconciler/src/persistence/db.rs` reads the DSN from `FUDCOURT_PG_URL` (`tokio-postgres`);
 `frontend/web/src/server/db.ts` Postgres client from `FUDCOURT_PG_URL` (`platform/db/pg.ts`);
 `tests/oracle/sync-live.py` (psycopg2) reads `FUDCOURT_PG_URL` from the repo-root `.env`;
 executor Go worker from `FUDCOURT_EXECUTOR_PG_URL` (`apps/executor/main.go:95`);
@@ -50,7 +50,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 | storage | Postgres `public.assets` (system of record, DR-040) |
 | classification | **snapshot** (rewritten wholesale each sync: `DELETE FROM assets` then INSERTs — `db.rs:117,133`) |
 | owning service | `backend/sync` Rust `fudcourt-sync` (`streams/sync.rs`), legacy `sync-live.py` |
-| readers | `frontend/web/src/server/db.ts,79,82`; `api/coins/route.ts` (`SELECT asset, SUM(value_usd) … FROM assets GROUP BY asset`); `api/all/route.ts` via `getAll()`; `backend/sync/src/reconciliation/reconcile.rs:207` |
+| readers | `frontend/web/src/server/db.ts,79,82`; `api/coins/route.ts` (`SELECT asset, SUM(value_usd) … FROM assets GROUP BY asset`); `api/all/route.ts` via `getAll()`; `apps/reconciler/src/reconciliation/reconcile.rs:207` |
 | canonical entity | **Balance** (account ≈ wallet address × chain, asset by symbol) + derived valuation |
 | durability | SNAPSHOT (live table keeps only the newest run; history lands in Postgres `asset_history`) |
 | sensitivity | INTERNAL (wallet-level holdings; no secrets) |
@@ -65,7 +65,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 | storage | Postgres `public.transactions` (system of record, DR-040) |
 | classification | **canonical** (user-entered ledger of movements; append + edit + delete) |
 | owning service | Next `(frontend)` API: `api/transactions/route.ts` (POST, DELETE, bulk PUT), `api/transactions/[id]/route.ts` (PUT/DELETE) |
-| readers | same routes; `pg.ts:56,76`; `api/all/route.ts`; `backend/sync/src/reconciliation/reconcile.rs:213` |
+| readers | same routes; `pg.ts:56,76`; `api/all/route.ts`; `apps/reconciler/src/reconciliation/reconcile.rs:213` |
 | canonical entity | **Transaction** (and its money movement; the scope's LedgerEntry is separate — see `ledger`) |
 | durability | CANONICAL |
 | sensitivity | INTERNAL (memo/wallet addresses are not secrets) |
@@ -79,7 +79,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 | table | `wallets` (`database/schema/pg-schema.sql:88-102`) |
 | storage | Postgres `public.wallets` (system of record, DR-040) |
 | classification | **canonical** (wallet registry; UI-editable metadata) |
-| owning service | Next API `api/wallets/route.ts` (**UPDATE only** — no INSERT exists anywhere in the tree; rows are created out-of-band); the addresses the sync *reads* are code constants `backend/sync/src/chains.rs` `WALLETS` (Main, Hanif, Akang) |
+| owning service | Next API `api/wallets/route.ts` (**UPDATE only** — no INSERT exists anywhere in the tree; rows are created out-of-band); the addresses the sync *reads* are code constants `apps/reconciler/src/chains.rs` `WALLETS` (Main, Hanif, Akang) |
 | readers | `api/wallets/route.ts` (`SELECT * FROM wallets ORDER BY rowid` → `ORDER BY id` via `toPostgres`); `pg.ts:58,80`; `reconcile.rs:219` |
 | canonical entity | **Wallet** (an account of type WALLET) |
 | durability | CANONICAL |

@@ -1,6 +1,6 @@
 [Unit]
-Description=FUD Court live multi-chain balance sync -> Postgres (Rust)
-Documentation=file:///home/dwizzy/fudcourt/backend/sync/src/main.rs
+Description=FUD Court live multi-chain balance reconciliation -> Postgres (Rust)
+Documentation=file:///home/dwizzy/fudcourt/apps/reconciler/src/main.rs
 Documentation=file:///home/dwizzy/fudcourt/tests/oracle/sync-live.py
 After=network-online.target
 Wants=network-online.target
@@ -11,9 +11,9 @@ Type=oneshot
 # walk the Python oracle does from `__file__`), so WorkingDirectory is only the
 # anchor for a relative invocation — keep it identical to the Python unit so a
 # swap changes exactly one line.
-WorkingDirectory=/home/dwizzy/fudcourt/backend/sync
+WorkingDirectory=/home/dwizzy/fudcourt/apps/reconciler
 Environment=NODE_ENV=
-ExecStart=/home/dwizzy/fudcourt/backend/sync/target/release/fudcourt-sync
+ExecStart=/home/dwizzy/fudcourt/apps/reconciler/target/release/fudcourt-reconciler
 # A failed RPC must not silently zero data; retry after a short backoff.
 Restart=on-failure
 RestartSec=60

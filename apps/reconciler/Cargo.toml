@@ -1,17 +1,17 @@
 [package]
-name = "fudcourt-sync"
+name = "fudcourt-reconciler"
 version = "0.1.0"
 edition = "2021"
-description = "fudcourt Rust services: the live multi-chain balance sync (the Postgres `assets` table) and the /api/reconcile HTTP service (DR-014)"
+description = "fudcourt Rust services: the live multi-chain balance reconciliation (the Postgres `assets` table) and the /api/reconcile HTTP service (DR-014)"
 
 # Single crate, no workspace. The Python original in tests/oracle/sync-live.py
 # is kept in place as the independent oracle (DR-005 pattern).
 [lib]
-name = "fudcourt_sync"
+name = "fudcourt_reconciler"
 path = "src/lib.rs"
 
 [[bin]]
-name = "fudcourt-sync"
+name = "fudcourt-reconciler"
 path = "src/main.rs"
 
 [[bin]]

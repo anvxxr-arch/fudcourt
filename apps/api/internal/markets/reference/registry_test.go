@@ -274,12 +274,12 @@ func TestSchemaLegalProviderSpellingsResolve(t *testing.T) {
 		wantSym  string
 		source   string
 	}{
-		{ProviderDefiLlama, "coingecko:ethereum", "ETH", "backend/sync/src/chains.rs LLAMA_IDS"},
-		{ProviderDefiLlama, "coingecko:binancecoin", "BNB", "backend/sync/src/chains.rs LLAMA_IDS"},
-		{ProviderDefiLlama, "coingecko:polygon-ecosystem-token", "POL", "backend/sync/src/chains.rs LLAMA_IDS"},
-		{ProviderDefiLlama, "coingecko:solana", "SOL", "backend/sync/src/chains.rs LLAMA_IDS"},
-		{ProviderDefiLlama, "coingecko:tether", "USDT", "backend/sync/src/chains.rs LLAMA_IDS"},
-		{ProviderDefiLlama, "coingecko:usd-coin", "USDC", "backend/sync/src/chains.rs LLAMA_IDS"},
+		{ProviderDefiLlama, "coingecko:ethereum", "ETH", "apps/reconciler/src/chains.rs LLAMA_IDS"},
+		{ProviderDefiLlama, "coingecko:binancecoin", "BNB", "apps/reconciler/src/chains.rs LLAMA_IDS"},
+		{ProviderDefiLlama, "coingecko:polygon-ecosystem-token", "POL", "apps/reconciler/src/chains.rs LLAMA_IDS"},
+		{ProviderDefiLlama, "coingecko:solana", "SOL", "apps/reconciler/src/chains.rs LLAMA_IDS"},
+		{ProviderDefiLlama, "coingecko:tether", "USDT", "apps/reconciler/src/chains.rs LLAMA_IDS"},
+		{ProviderDefiLlama, "coingecko:usd-coin", "USDC", "apps/reconciler/src/chains.rs LLAMA_IDS"},
 		{ProviderCryptoRank, "bitcoin", "BTC", "tests/fixtures/coins.json.gz (moved from frontend/web/scripts/fixtures/ by fd17dc6; row exists; asset not seeded - see the miss list)"},
 	}
 	for _, tc := range cases {

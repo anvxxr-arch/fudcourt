@@ -63,7 +63,7 @@ jobs:
         run: python3 ../../scripts/verify/check-contract.py
       # NO deploy-unit guard here, on purpose. Its subject is the whole repo's
       # infrastructure/systemd/ units and the cross-service binaries their ExecStart
-      # lines name (backend/sync/target/release/* exists only after `cargo build` and
+      # lines name (apps/reconciler/target/release/* exists only after `cargo build` and
       # is gitignored), so on a web-only runner with no Rust toolchain it fails for
       # reasons that have nothing to do with this surface. integration.yml's `offline`
       # job runs it via scripts/verify/verify-all.sh, which deliberately orders the
