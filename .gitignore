@@ -23,7 +23,6 @@ tsconfig.tsbuildinfo
 .vercel
 # payload (the CMS merged into frontend/web in DR-017; uploads land in
 # apps/web/media/ after the Phase-6 relocation)
-frontend/web/media/
 apps/web/media/
 # test build output
 .shaper-tests/
@@ -53,7 +52,6 @@ apps/reconciler/target/
 # tests/fixtures/, which is the reviewed record)
 scripts/verify/*-report.json
 tools/*-report.json
-frontend/web/scripts/**/*-report.json
 apps/web/scripts/**/*-report.json
 # python caches (harnesses + verification oracles)
 __pycache__/

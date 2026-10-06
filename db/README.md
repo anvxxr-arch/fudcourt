@@ -177,7 +177,7 @@ introduce a new migration framework unnecessarily"; DR-020):
 
 ## Roadmap / INTENT — NOT DONE
 
-The restructure brief (`.ai/restructure-fudcourt.md`, PHASE 2) targets a
+The restructure brief (`docs/records/archive/migration-plan.md`, PHASE 2) targets a
 `db/` that contains `migrations/`, `schema/`, `seeds/` and `fixtures/`.
 **None of the following exists today** — they are stated here only so nobody
 mistakes the plan for the tree:
