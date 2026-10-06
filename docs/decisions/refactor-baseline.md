@@ -22,7 +22,7 @@ separate real regressions from unrelated in-flight work.
 |---|---|
 | Go — `go build ./...`, `go vet ./...` | **PASS** (clean) |
 | Go — `go test ./...` | **PASS** (43 packages, 0 fail) |
-| Rust — `cargo test` | **PASS** (12 tests) |
+| Rust — `cargo test` | **PASS** (17 tests: 5 + 12) |
 | Web — `bun run test:shapers` | **PASS** (323 pass, 0 fail) |
 | Structure gate | **PASS** — `STRUCTURE_OK` |
 | Design-token gate | **PASS** — `DESIGN_TOKENS_OK` |
@@ -31,23 +31,37 @@ separate real regressions from unrelated in-flight work.
 
 **Working tree at re-audit:** 14 modified + 31 untracked files of
 **in-flight design-system work** (the `ui/atoms`, `ui/foundations`,
-`styles/*.css` and `design-system` test/doc set). That work is what makes
-three gates red *in the worktree*, and it is **out of scope** for this
-refactor:
+`styles/*.css` and `design-system` test/doc set). During the capture
+window that work was mid-edit, so the tree moved while it was being
+measured.
 
-| Gate | At `HEAD` | In worktree |
-|---|---|---|
-| `structure` | PASS | FAIL — `ui/` imports `lib/executor-lifecycle` |
-| `design-tokens` | PASS | FAIL |
-| `web` tests | 323/323 | 316 pass / 7 fail |
+Because the tree was moving, two runs of the web suite disagreed: one
+returned 316 pass / 7 fail, another 323 pass / 0 fail. Those numbers were
+transient artifacts of a moving tree, **not** stable facts about the
+repository, and must not be recorded as a baseline failure set. An
+earlier reading also showed `structure` and `design-tokens` red in the
+worktree; that too was the same in-flight state, not a repository
+condition.
+
+The regression was nonetheless real: the `structure` gate was red at the
+commit the re-audit was taken against (`633ffeb`) and at the
+design-system commit (`9cd063a`), where the two `ui/`→`lib/` violations
+belonged to that workstream rather than to this refactor. It has since
+been repaired.
+At the current `HEAD` (`10ba373`) every gate is green again — verified
+directly: `fud.ts structure` → `STRUCTURE_OK` (359 files, the two `ui/`
+→ `lib/` violations gone); `check-design-tokens.py` → `DESIGN_TOKENS_OK`
+(files=364, exemptions=6); `go test ./...` → 43 ok / 0 FAIL and
+`go vet ./...` clean; `cargo test --release` → 17 passed (5 + 12);
+`fud.ts deploy` → OK (10 units); `fud.ts contracts` → `CONTRACTS_OK` /
+`SCHEMAS_OK` / `DOCS_OK` / `MDTABLES_OK`.
 
 The baseline's stale-script note is also resolved: `npm run test:web`
 now works (it dispatches `fud.ts test web` → `bun run test:shapers`).
-The 7 failures it surfaces are the design-system WIP's, not packaging.
 
-**Conclusion:** no migration regression exists at `HEAD`. The worktree
-failures belong to a separate, uncommitted design-system workstream and
-are recorded here rather than "fixed", per Phase 0 rules.
+**Conclusion:** the transient worktree failures concealed no packaging or
+migration defect of this refactor; the one attributable regression was
+the design-system workstream's, and it is repaired.
 
 ## Toolchain
 
