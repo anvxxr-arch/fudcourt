@@ -35,17 +35,11 @@ import {
   tickerClients,
 } from '@/server/ticker';
 import type { Exchange as CcxtExchange } from 'ccxt';
+import { fail } from '../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
-
-function fail(message: string, status: number, detail?: string) {
-  return NextResponse.json(
-    { error: message, ...(detail ? { detail } : {}) },
-    { status }
-  );
-}
 
 function num(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;

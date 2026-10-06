@@ -15,6 +15,7 @@ import {
   type MarketQuote,
 } from '@/features/market/clients';
 import { limitedFetch } from '@/lib/rate-limit';
+import { fail } from '../../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -23,10 +24,6 @@ export const runtime = 'nodejs';
 const TIMEOUT_MS = 20_000;
 
 type Failed = { symbol: string; reason: string };
-
-function fail(message: string, status: number, detail?: string) {
-  return NextResponse.json({ error: message, ...(detail ? { detail } : {}) }, { status });
-}
 
 /**
  * Read-only proxy to the Yahoo Finance chart endpoint (public, keyless) serving

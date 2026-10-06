@@ -12,19 +12,13 @@ import {
   type MarketsSort,
 } from '@/features/market-data/markets';
 import { limitedFetch } from '@/lib/rate-limit';
+import { fail } from '../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
 
 const TIMEOUT_MS = 20_000;
-
-function fail(message: string, status: number, detail?: string) {
-  return NextResponse.json(
-    { error: message, ...(detail ? { detail: detail } : {}) },
-    { status }
-  );
-}
 
 /** CoinGecko /coins/markets row -> the shape the tracker renders. */
 type CgRow = {

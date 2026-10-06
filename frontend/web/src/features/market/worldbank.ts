@@ -191,24 +191,6 @@ export function parseWorldBankSeries(
   });
 }
 
-/**
- * Newest non-null observation per country — the series reduced to its head.
- * Kept as the narrow entry point for callers that only want the current value
- * (the Indonesia card); it shares this module's single parse path.
- */
-export function parseWorldBank(
-  json: unknown,
-  countries: readonly string[],
-  nameMap?: Readonly<Record<string, string>>
-): WorldBankObs[] {
-  return parseWorldBankSeries(json, countries, nameMap).map((s) => ({
-    country: s.country,
-    countryName: s.countryName,
-    year: s.latest.year,
-    value: s.latest.value,
-  }));
-}
-
 /** Fetch + memoise one indicator's full series for a fixed country list. */
 export async function fetchWorldBankSeries(
   indicator: string,

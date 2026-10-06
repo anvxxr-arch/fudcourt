@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { DEX, DEX_TYPES, DEX_CHAINS, type DexType, type DexChain, type DexPair, type DexProfile, isMint } from '@/features/dex/client';
 import { limitedFetch } from '@/lib/rate-limit';
+import { fail } from '../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -29,13 +30,6 @@ export const runtime = 'nodejs';
  */
 
 const TIMEOUT_MS = 20_000;
-
-function fail(message: string, status: number, detail?: string) {
-  return NextResponse.json(
-    { error: message, ...(detail ? { detail } : {}) },
-    { status }
-  );
-}
 
 /** Fetch upstream, converting a non-2xx into a loud proxy error. */
 type CacheState = 'HIT' | 'MISS' | 'COALESCED';
