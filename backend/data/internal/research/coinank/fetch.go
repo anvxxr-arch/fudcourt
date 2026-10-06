@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research"
 	"github.com/anvxxr-arch/fudcourt/backend/data/platform/httpx"
 )
 
@@ -83,11 +84,7 @@ type CacheInfo struct {
 	Cache  string // "MISS" or "HIT"
 }
 
-// Doer is the subset of *http.Client the fetcher uses (injectable so tests drive
-// every path without touching the network).
-type Doer interface {
-	Do(req *http.Request) (*http.Response, error)
-}
+type Doer = research.Doer
 
 // Options configures a Fetcher.
 type Options struct {

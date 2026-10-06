@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research"
 	"github.com/anvxxr-arch/fudcourt/backend/data/platform/httpx"
 )
 
@@ -63,10 +64,7 @@ type Options struct {
 	Client Doer
 }
 
-// Doer is the subset of *http.Client the fetcher uses.
-type Doer interface {
-	Do(req *http.Request) (*http.Response, error)
-}
+type Doer = research.Doer
 
 // Entry is one cached upstream response.
 //

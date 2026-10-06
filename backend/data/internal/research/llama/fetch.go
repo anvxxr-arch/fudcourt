@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/anvxxr-arch/fudcourt/backend/data/internal/research"
 	"github.com/anvxxr-arch/fudcourt/backend/data/platform/cache"
 	"github.com/anvxxr-arch/fudcourt/backend/data/platform/httpx"
 )
@@ -60,10 +61,7 @@ type Options struct {
 	TTL int
 }
 
-// Doer is the subset of *http.Client the fetcher uses.
-type Doer interface {
-	Do(req *http.Request) (*http.Response, error)
-}
+type Doer = research.Doer
 
 // CacheInfo is where a body came from and what it contained.
 type CacheInfo struct {

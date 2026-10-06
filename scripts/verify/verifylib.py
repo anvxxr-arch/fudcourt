@@ -39,46 +39,43 @@ RESET = "\033[0m"
 
 
 # ------------------------------------------------------------------ verdicts
-def check_counted(name, ok, detail="", *, coerce_bool=True):
-    """`[PASS|FAIL] name -- detail`; bump the caller's PASS/FAIL and RESULTS.
+def _globals():
+    """The caller's module globals: a harness aliases verifylib's helpers
+    into its own namespace, so the frame one hop up is the helper's caller
+    (the harness), whose counters/results we read and bump."""
+    return sys._getframe(1).f_globals
 
-    coinank / coinmarketcap / khala / cryptorank all spell this the same way.
-    coerce_bool=False is cryptorank's variant, which stores and returns `ok`
-    itself rather than bool(ok).
+
+def check(name_or_ok, ok_or_label, detail="", *, counted=False, coerce_bool=True, record=True):
+    """One verdict helper unifying the former check_counted/check_tuple/
+    check_mark/check_bare quartet:
+
+    counted=True:  `[PASS|FAIL] name -- detail`; bump the caller's PASS/FAIL
+        and append to RESULTS. coerce_bool=False is cryptorank's variant:
+        store and return `ok` itself rather than bool(ok).
+    record=True (default): append (ok, label, detail) to the caller's
+        `results` list when one is declared (chainrank/dex/llama/markets/
+        news/reconcile/signals).
+    record=False: never touch `results` (verify-sync.py has no such list).
+
+    Returns ok (coerced to bool when counted and coerce_bool).
     """
-    g = sys._getframe(1).f_globals
-    tag = "PASS" if ok else "FAIL"
-    print(f"[{tag}] {name}" + (f" -- {detail}" if detail else ""))
-    g["RESULTS"].append({"name": name, "ok": bool(ok) if coerce_bool else ok, "detail": detail})
-    if ok:
-        g["PASS"] += 1
-    else:
-        g["FAIL"] += 1
-    return bool(ok) if coerce_bool else ok
-
-
-def check_tuple(ok, label, detail=""):
-    """`  [PASS|FAIL] label  detail`; record into the caller's `results`."""
-    results = sys._getframe(1).f_globals.get("results")
-    if results is not None:
-        results.append((ok, label, detail))
-    print(f"  [{GREEN + 'PASS' + RESET if ok else RED + 'FAIL' + RESET}] {label}"
-          + (f"  {DIM}{detail}{RESET}" if detail else ""))
-    return ok
-
-
-def check_mark(ok, label, detail=""):
-    """check_tuple's verdict, built through an intermediate `mark` (signals)."""
-    results = sys._getframe(1).f_globals.get("results")
-    if results is not None:
-        results.append((ok, label, detail))
-    mark = f"{GREEN}PASS{RESET}" if ok else f"{RED}FAIL{RESET}"
-    print(f"  [{mark}] {label}" + (f"  {DIM}{detail}{RESET}" if detail else ""))
-    return ok
-
-
-def check_bare(ok, label, detail=""):
-    """check_tuple without a results list at all (verify-sync.py)."""
+    if counted:
+        name, ok = name_or_ok, ok_or_label
+        g = sys._getframe(1).f_globals
+        tag = "PASS" if ok else "FAIL"
+        print(f"[{tag}] {name}" + (f" -- {detail}" if detail else ""))
+        g["RESULTS"].append({"name": name, "ok": bool(ok) if coerce_bool else ok, "detail": detail})
+        if ok:
+            g["PASS"] += 1
+        else:
+            g["FAIL"] += 1
+        return bool(ok) if coerce_bool else ok
+    ok, label = name_or_ok, ok_or_label
+    if record:
+        results = sys._getframe(1).f_globals.get("results")
+        if results is not None:
+            results.append((ok, label, detail))
     print(f"  [{GREEN + 'PASS' + RESET if ok else RED + 'FAIL' + RESET}] {label}"
           + (f"  {DIM}{detail}{RESET}" if detail else ""))
     return ok
@@ -86,7 +83,7 @@ def check_bare(ok, label, detail=""):
 
 def skip(name, detail):
     """`[SKIP] name -- detail`; bump the caller's SKIP and RESULTS."""
-    g = sys._getframe(1).f_globals
+    g = _globals()
     print(f"[SKIP] {name} -- {detail}")
     g["RESULTS"].append({"name": name, "ok": None, "detail": detail})
     g["SKIP"] += 1
@@ -94,11 +91,10 @@ def skip(name, detail):
 
 def info(name, detail):
     """`[INFO] name -- detail`; record into the caller's RESULTS and NOTES."""
-    g = sys._getframe(1).f_globals
+    g = _globals()
     print(f"[INFO] {name} -- {detail}")
     g["RESULTS"].append({"name": name, "ok": None, "detail": detail})
     g["NOTES"].append(f"{name}: {detail}")
-
 
 # --------------------------------------------------------------------- notes
 def note_msg(msg):
