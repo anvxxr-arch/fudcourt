@@ -1,50 +1,63 @@
 # deps
 node_modules/
 .pnpm-store/
-
+# build output (path-independent: these names are never source, at any depth)
+**/target/
+**/.next/
+**/dist/
+**/coverage/
+**/bin/
+**/.shaper-tests/
+**/.turbo/
+**/out/
+# Rust and Go both use src/bin/ for SOURCE — un-ignore it explicitly
+!**/src/bin/
 # next
-.next/
-out/
 next-env.d.ts
 tsconfig.tsbuildinfo
-
+*.tsbuildinfo
 # env
 .env*
 !.env.example
-
 # vercel
 .vercel
-
-# payload (the CMS merged into frontend/web in DR-017; uploads land in frontend/web/media/)
+# payload (the CMS merged into frontend/web in DR-017; uploads land in
+# apps/web/media/ after the Phase-6 relocation)
 frontend/web/media/
-
+apps/web/media/
 # test build output
 .shaper-tests/
-
 # logs
 *.log
-
 # os
 .DS_Store
 # compiled addons
 *.node
-# go (backend/* — each module builds its own binary into bin/ at
-# runtime via ExecStartPre; the artifacts are never committed)
+# go: each app builds its own binary into bin/ at runtime via ExecStartPre;
+# the artifacts are never committed
 backend/data/bin/
 backend/api/bin/
 backend/bot/bin/
 backend/workers/executor/bin/
 backend/data/.cache/
-# rust (backend/sync; target/ is also covered by backend/sync/.gitignore)
+apps/api/bin/
+apps/bot/bin/
+apps/executor/bin/
+apps/data/bin/
+# rust: target/ is also covered by the **/target/ rule above
 backend/sync/target/
+apps/reconciler/target/
 # live verifier reports (regenerated on every run; the tracked artifacts live in
-# tests/fixtures/, which is the reviewed record). scripts/verify/ is where the
-# harnesses write them since the Phase-8 relocation; the frontend/web path is the
-# pre-move location, kept so a stale tree cannot re-add one.
+# tests/fixtures/, which is the reviewed record)
 scripts/verify/*-report.json
+tools/*-report.json
 frontend/web/scripts/**/*-report.json
-
+apps/web/scripts/**/*-report.json
 # python caches (harnesses + verification oracles)
 __pycache__/
 *.pyc
 *.bak.*
+# local databases
+*.sqlite
+*.sqlite3
+*.db
