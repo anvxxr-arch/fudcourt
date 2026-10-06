@@ -226,8 +226,9 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'scoreboard' && <ScoreboardPage />}
       {page === 'news' && <NewsPage />}
 
-      {/* Footer prose. It is a sentence, not a log line — the sans stack reads as language
-          where mono at 11px reads as terminal noise. Mono stays on every figure above. */}
+      {/* Footer status line — dot-separated facts, not a sentence. Sans still reads better
+          than mono at 11px, where mono renders as terminal noise; every figure above it
+          keeps mono, so the stack still means "a value" where it matters. */}
       <div style={{ marginTop: space[32], color: themeColor.labelSecondary, fontFamily: fontFamily.sans, fontSize: fontSize[11], borderTop: `1px solid ${themeColor.separator}`, paddingTop: space[8] }}>
         {isTeam ? 'Fox · FUDCOURT OS · auto-refresh 30s · data: Postgres + TimescaleDB · live RPC' : 'Fox · FUDCOURT OS · public boards · data served live from origin APIs · no treasury sync'}
       </div>
