@@ -89,6 +89,46 @@ function test(which?: string): boolean {
   return ok;
 }
 
+/**
+ * The live/network harnesses. NOT part of `verify`, because they touch real
+ * upstreams and take minutes. They are listed here so they are discoverable
+ * from the one entrypoint rather than only from the README.
+ *
+ * `fud live` with no argument lists them; with a family name it runs that one.
+ */
+const LIVE_HARNESSES: Record<string, string> = {
+  cryptorank: 'scripts/verify/verify-cryptorank.py',
+  khala: 'scripts/verify/verify-khala.py',
+  dex: 'scripts/verify/verify-dex.py',
+  coinank: 'scripts/verify/verify-coinank.py',
+  coinmarketcap: 'scripts/verify/verify-coinmarketcap.py',
+  signals: 'scripts/verify/verify-signals.py',
+  markets: 'scripts/verify/verify-markets.py',
+  news: 'scripts/verify/verify-news.py',
+  llama: 'scripts/verify/verify-llama.py',
+  reconcile: 'scripts/verify/verify-reconcile.py',
+  chainrank: 'scripts/verify/verify-chainrank.py',
+  sync: 'scripts/verify/verify-sync.py',
+};
+
+function live(family?: string): boolean {
+  if (family === undefined) {
+    process.stdout.write('live harnesses (network; not part of `verify`):\n');
+    for (const [name, rel] of Object.entries(LIVE_HARNESSES)) {
+      process.stdout.write(`  node tools/fud.ts live ${name.padEnd(14)} -> ${rel}\n`);
+    }
+    process.stdout.write('\nmonitors: scripts/verify/monitor.py, scripts/verify/monitor-coinank.py\n');
+    process.stdout.write('parity:   scripts/verify/parity-reconcile.ts (cwd apps/web)\n');
+    return true;
+  }
+  const rel = LIVE_HARNESSES[family];
+  if (rel === undefined) {
+    process.stderr.write(`fud: unknown live harness '${family}'\navailable: ${Object.keys(LIVE_HARNESSES).join(', ')}\n`);
+    return false;
+  }
+  return run(`live harness: ${family}`, 'python3', [path.join(ROOT, rel)]);
+}
+
 const USAGE = `fud — the FUDCourt command surface
 
   node tools/fud.ts verify            every offline gate (the canonical green check)
@@ -96,6 +136,7 @@ const USAGE = `fud — the FUDCourt command surface
   node tools/fud.ts deploy            the systemd unit guard
   node tools/fud.ts structure         the frontend DR-018 structure gate
   node tools/fud.ts test [go|web|sync]   test suites (all three when omitted)
+  node tools/fud.ts live [family]     the live/network harnesses (list, or run one)
 
 Every subcommand delegates to the script that already owns the check; none of
 them is reimplemented here. Live/network harnesses stay manual on purpose.
@@ -109,6 +150,7 @@ switch (command) {
   case 'deploy': ok = deploy(); break;
   case 'structure': ok = structure(); break;
   case 'test': ok = test(argument); break;
+  case 'live': ok = live(argument); break;
   case undefined:
   case 'help':
   case '--help':
