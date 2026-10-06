@@ -178,6 +178,9 @@ const DOCS = [
   'docs/architecture/data-categorization.md',
   // Added 2026-10-06 with the Telegram bot; every repo path it names is now gated.
   'docs/architecture/bot.md',
+  // The canonical entry point. It is mostly links, but it also names every
+  // top-level home in a table, and an index that rots is worse than no index.
+  'docs/architecture.md',
   'contracts/schemas/README.md',
 ];
 
