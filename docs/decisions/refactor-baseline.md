@@ -10,6 +10,45 @@ Structural migration baseline captured before any restructuring.
   (`ae75218` … `ca97a81`) so the Phase 1 artifact-removal commit could not
   sweep in unrelated edits.
 
+## Re-audit 2026-10-06 (this session)
+The migration described above has since been **executed and accepted**
+(ADR 007, `007-architecture-acceptance.md`). This session re-measured the
+tree at `HEAD` (`633ffeb`) to confirm the acceptance still holds and to
+separate real regressions from unrelated in-flight work.
+
+**At `HEAD` (`git stash --include-untracked`, tree clean):**
+
+| Gate | Result |
+|---|---|
+| Go — `go build ./...`, `go vet ./...` | **PASS** (clean) |
+| Go — `go test ./...` | **PASS** (43 packages, 0 fail) |
+| Rust — `cargo test` | **PASS** (12 tests) |
+| Web — `bun run test:shapers` | **PASS** (323 pass, 0 fail) |
+| Structure gate | **PASS** — `STRUCTURE_OK` |
+| Design-token gate | **PASS** — `DESIGN_TOKENS_OK` |
+| Contracts / schemas / docs / tables / reference | **PASS** |
+| Deploy guard | **PASS** — 10 units |
+
+**Working tree at re-audit:** 14 modified + 31 untracked files of
+**in-flight design-system work** (the `ui/atoms`, `ui/foundations`,
+`styles/*.css` and `design-system` test/doc set). That work is what makes
+three gates red *in the worktree*, and it is **out of scope** for this
+refactor:
+
+| Gate | At `HEAD` | In worktree |
+|---|---|---|
+| `structure` | PASS | FAIL — `ui/` imports `lib/executor-lifecycle` |
+| `design-tokens` | PASS | FAIL |
+| `web` tests | 323/323 | 316 pass / 7 fail |
+
+The baseline's stale-script note is also resolved: `npm run test:web`
+now works (it dispatches `fud.ts test web` → `bun run test:shapers`).
+The 7 failures it surfaces are the design-system WIP's, not packaging.
+
+**Conclusion:** no migration regression exists at `HEAD`. The worktree
+failures belong to a separate, uncommitted design-system workstream and
+are recorded here rather than "fixed", per Phase 0 rules.
+
 ## Toolchain
 
 | Tool | Version |
@@ -94,13 +133,13 @@ apps/web/tsconfig.shaper-tests.json
 
 ### Known baseline failures
 
-None. Every suite is green at the baseline commit.
+None at the baseline commit. Every suite is green.
 
-`npm run test:web` (`cd apps/web && bun run test:shapers`) fails with
-`Script not found "test:shapers"` — the root `package.json` script is stale
-relative to `apps/web/package.json`. This is a pre-existing packaging
-defect, not a code failure; the same coverage runs green inside
-`verify-all.sh`. Recorded here rather than fixed, per Phase 0 rules.
+The `npm run test:web` packaging defect recorded at first capture
+(`Script not found "test:shapers"`) is **resolved**: the root script now
+dispatches through `tools/fud.ts test web`, which runs
+`bun run test:shapers` in `apps/web`. See the re-audit above for the
+current worktree state.
 
 ## Binaries that build
 
