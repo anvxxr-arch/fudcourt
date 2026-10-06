@@ -87,14 +87,15 @@ export const themeColor: { [K in keyof typeof color]: string } = Object.fromEntr
 export const space = { 0: 0, 4: 4, 8: 8, 12: 12, 16: 16, 20: 20, 24: 24, 32: 32, 40: 40 } as const;
 /** px continuous corners, plus the `'50%'` keyword for round avatars/dots. */
 export const radius = { 0: 0, 8: 8, 10: 10, 12: 12, 16: 16, 20: 20, circle: '50%' } as const;
-/** px, HIG type scale (largeTitle 34 … caption2 11). */
-export const fontSize = { 11: 11, 12: 12, 13: 13, 15: 15, 17: 17, 20: 20, 22: 22, 28: 28, 34: 34 } as const;
+/** px, HIG type scale (largeTitle 34 … caption2 11) plus the two glyph steps (10, 8) the caret and sort-indicator atoms ship with. */
+export const fontSize = { 8: 8, 10: 10, 11: 11, 12: 12, 13: 13, 15: 15, 17: 17, 20: 20, 22: 22, 28: 28, 34: 34 } as const;
 export const fontWeight = { regular: 400, medium: 500, semibold: 600, bold: 700 } as const;
-/** unitless CSS ratios (not px). */
-export const lineHeight = { tight: 1.3, normal: 1.6, loose: 1.7 } as const;
+/** unitless CSS ratios (not px). `none` is the single-line box: glyphs get no extra leading. */
+export const lineHeight = { none: 1, tight: 1.3, normal: 1.6, loose: 1.7 } as const;
 /** unitless (px at a 1px advance width). */
 export const letterSpacing = { none: 0, xs: 0.4, sm: 0.5, wide: 1, wider: 2 } as const;
-export const zIndex = { modal: 100 } as const;
+/** Stacking layers: sticky table header (2), floating tooltip (5), modal (100). */
+export const zIndex = { sticky: 2, tooltip: 5, modal: 100 } as const;
 export const fontFamily = { mono: 'ui-monospace, monospace', sans: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, ui-sans-serif, system-ui, sans-serif" } as const;
 /** HIG motion: durations plus the standard easing curve. */
 export const motion = { quick: '100ms', normal: '200ms', deliberate: '250ms', slow: '350ms', ease: 'cubic-bezier(0.32, 0.72, 0, 1)' } as const;

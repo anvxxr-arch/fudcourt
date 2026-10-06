@@ -242,7 +242,7 @@ export const ChartTooltip = forwardRef<HTMLDivElement, ChartTooltipProps>(functi
         borderRadius: 'var(--fc-radius-md)',
         boxShadow: 'var(--fc-elevation-3)',
         pointerEvents: 'none',
-        zIndex: 5,
+        zIndex: 'var(--fc-z-index-tooltip)',
         ...style,
       }}
     >

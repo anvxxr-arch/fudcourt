@@ -101,7 +101,7 @@ export const TableHeader = forwardRef<HTMLTableSectionElement, BaseProps & { chi
         className={['fc-table-header', sticky ? 'fc-table-header-sticky' : '', className].filter(Boolean).join(' ')}
         style={{
           background: cssVar('surface-secondary'),
-          ...(sticky ? { position: 'sticky', top: 0, zIndex: 2 } : null),
+          ...(sticky ? { position: 'sticky', top: 0, zIndex: 'var(--fc-z-index-sticky)' } : null),
           ...style,
         }}
       >
@@ -338,8 +338,8 @@ export const SortIndicator = forwardRef<HTMLSpanElement, SortIndicatorProps>(fun
       className={['fc-sort-indicator', className].filter(Boolean).join(' ')}
       style={{
         display: 'inline-block',
-        fontSize: 8,
-        lineHeight: 1,
+        fontSize: 'var(--fc-font-size-8)',
+        lineHeight: 'var(--fc-line-height-none)',
         color: direction ? cssVar('text-secondary') : cssVar('text-disabled'),
         ...style,
       }}

@@ -127,7 +127,7 @@ export const Trend = forwardRef<HTMLSpanElement, TrendProps>(function Trend(
       style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--fc-space-1)', ...style }}
       title={`Trend ${direction}${text ? ` ${text}` : ''}`}
     >
-      <span aria-hidden="true" style={{ fontFamily: 'var(--fc-font-mono)', fontSize: fs, color: cssVar(role), lineHeight: 1 }}>{cue}</span>
+      <span aria-hidden="true" style={{ fontFamily: 'var(--fc-font-mono)', fontSize: fs, color: cssVar(role), lineHeight: 'var(--fc-line-height-none)' }}>{cue}</span>
       {text ? (
         <DataValue size={size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'} tone={tone === 'neutral' ? 'muted' : tone}>
           {text}

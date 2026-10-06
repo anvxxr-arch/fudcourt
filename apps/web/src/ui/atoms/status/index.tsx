@@ -164,7 +164,7 @@ export const Tag = forwardRef<HTMLSpanElement, TagProps>(function Tag(
             color: 'inherit',
             cursor: 'pointer',
             fontSize: 'var(--fc-font-size-11)',
-            lineHeight: 1,
+            lineHeight: 'var(--fc-line-height-none)',
           }}
         >
           <span aria-hidden="true">{'×'}</span>

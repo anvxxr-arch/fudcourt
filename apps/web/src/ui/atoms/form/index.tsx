@@ -217,7 +217,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
             background: cssVar('surface-primary'),
             color: cssVar('brand-foreground'),
             fontSize: box - 4,
-            lineHeight: 1,
+            lineHeight: 'var(--fc-line-height-none)',
           }}
         >
           {/* The tick is drawn with a CSS border rather than a glyph so it inherits the
@@ -460,7 +460,7 @@ export const SelectTrigger = forwardRef<HTMLButtonElement, SelectTriggerProps>(f
       <span style={{ color: empty ? cssVar('text-muted') : cssVar('text-primary'), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {empty ? placeholder : value}
       </span>
-      <span aria-hidden="true" style={{ flex: '0 0 auto', color: cssVar('text-muted'), fontSize: 10, lineHeight: 1 }}>
+      <span aria-hidden="true" style={{ flex: '0 0 auto', color: cssVar('text-muted'), fontSize: 'var(--fc-font-size-10)', lineHeight: 'var(--fc-line-height-none)' }}>
         ▼
       </span>
     </button>
