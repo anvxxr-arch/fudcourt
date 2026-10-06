@@ -53,6 +53,7 @@ export function PagePanel({ title, children, action, style }: PanelProps) {
 export function PagePanelLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <a
+      className="fc-focusable"
       href={href}
       style={{
         display: 'inline-block',

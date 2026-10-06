@@ -322,6 +322,7 @@ export function ExecutorComposer() {
 
         <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
           <button
+            className="fc-focusable"
             onClick={() => setShowAdvanced((open) => !open)}
             style={{ background: 'transparent', color: color.blue, border: 'none', cursor: 'pointer', fontSize: fontSize[11], fontWeight: fontWeight.bold, padding: 0 }}
           >

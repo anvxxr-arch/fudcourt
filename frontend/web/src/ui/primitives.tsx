@@ -22,7 +22,7 @@ export function Button({ onClick, children, variant = 'primary', size = 'md', di
   const c = colors[variant];
 
   return (
-    <button onClick={onClick} disabled={disabled} style={{
+    <button className="fc-focusable" onClick={onClick} disabled={disabled} style={{
       background: c.bg, color: c.fg, border: 'none',
       padding: sizes[size], borderRadius: radius[8],
       fontWeight: variant === 'primary' ? fontWeight.bold : fontWeight.regular,
@@ -48,7 +48,7 @@ type InputProps = {
 
 export function Input({ value, onChange, placeholder, type = 'text', style, disabled, autoComplete, spellCheck }: InputProps) {
   return (
-    <input type={type} value={value} placeholder={placeholder} disabled={disabled} autoComplete={autoComplete} spellCheck={spellCheck} onChange={e => onChange(e.target.value)}
+    <input className="fc-focusable" type={type} value={value} placeholder={placeholder} disabled={disabled} autoComplete={autoComplete} spellCheck={spellCheck} onChange={e => onChange(e.target.value)}
       style={{
         width: '100%', background: color.bgBase, color: color.labelPrimary,
         border: `1px solid ${color.separator}`, borderRadius: radius[8],
@@ -67,7 +67,7 @@ type SelectProps<T extends string> = {
 
 export function Select<T extends string>({ value, onChange, options, style, disabled }: SelectProps<T>) {
   return (
-    <select value={value} disabled={disabled} onChange={e => onChange(e.target.value as T)}
+    <select className="fc-focusable" value={value} disabled={disabled} onChange={e => onChange(e.target.value as T)}
       style={{
         background: color.bgBase, color: color.labelPrimary, border: `1px solid ${color.separator}`,
         borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box', opacity: disabled ? 0.5 : 1, ...style,
@@ -93,7 +93,7 @@ export function Modal({ title, onClose, children, width = 480 }: ModalProps) {
       <div style={{ background: color.bgElevated, border: `1px solid ${color.separator}`, borderRadius: radius[16], padding: space[24], width, maxWidth: '90vw', fontFamily: fontFamily.mono, transition: 'transform ' + motion.slow + ' ' + motion.ease }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[16] }}>
           <h2 style={{ margin: 0, color: color.blue, fontSize: fontSize[17] }}>{title}</h2>
-          <button onClick={onClose} style={{ background: 'transparent', color: color.labelTertiary, border: 'none', fontSize: fontSize[20], cursor: 'pointer' }}>✕</button>
+          <button className="fc-focusable" onClick={onClose} style={{ background: 'transparent', color: color.labelTertiary, border: 'none', fontSize: fontSize[20], cursor: 'pointer' }}>✕</button>
         </div>
         {children}
       </div>

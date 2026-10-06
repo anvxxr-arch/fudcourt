@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NAV_SECTIONS, TERMINAL, activeSection } from '@/ui/site-nav';
+import { ThemeToggle } from '@/ui/theme-toggle';
 import { alpha, color, fontFamily, fontSize, fontWeight, letterSpacing, motion, radius, space } from '@/styles/tokens';
 
 /**
@@ -33,6 +34,7 @@ export function Navbar() {
         style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: space[8], padding: `${space[8]}px ${space[20]}px` }}
       >
         <Link
+          className="fc-focusable"
           href="/"
           title="FUDCOURT — home"
           style={{
@@ -51,6 +53,7 @@ export function Navbar() {
           const isActive = section.key === active;
           return (
             <Link
+              className="fc-focusable"
               key={section.key}
               href={section.href}
               title={section.blurb}
@@ -74,6 +77,7 @@ export function Navbar() {
             than as a section. The middleware sends an anonymous visitor to
             /login with ?next=/team, so the link is honest for every reader. */}
         <Link
+          className="fc-focusable"
           href={TERMINAL.href}
           title={TERMINAL.blurb}
           style={{
@@ -91,6 +95,8 @@ export function Navbar() {
         >
           {TERMINAL.label}
         </Link>
+
+        <ThemeToggle />
       </nav>
     </header>
   );
