@@ -193,8 +193,8 @@ export async function GET(req: Request) {
       return NextResponse.json({
         ...sb,
         kind: 'scoreboard',
-        generatedAt: sb.generatedAt ?? Math.floor(Date.now() / 1000),
-        cohortDays: sb.cohortDays ?? 0,
+        ...(sb.generatedAt !== undefined ? { generatedAt: sb.generatedAt } : {}),
+        ...(sb.cohortDays !== undefined ? { cohortDays: sb.cohortDays } : {}),
         chains: sb.chains && typeof sb.chains === 'object' ? sb.chains : {},
         upstream: target.toString(),
       });

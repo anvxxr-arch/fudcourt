@@ -94,9 +94,41 @@ export async function GET(req: NextRequest) {
   if (!ALLOWED_CT[ct]) {
     return NextResponse.json({ error: 'not an image' }, { status: 415 });
   }
-  const buf = await res.arrayBuffer();
-  if (buf.byteLength > MAX_BYTES) {
+  const declared = Number(res.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > MAX_BYTES) {
     return NextResponse.json({ error: 'image too large' }, { status: 413 });
+  }
+  let buf: ArrayBuffer;
+  if (res.body) {
+    const reader = res.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let received = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        received += value.byteLength;
+        if (received > MAX_BYTES) {
+          await reader.cancel().catch(() => {});
+          return NextResponse.json({ error: 'image too large' }, { status: 413 });
+        }
+        chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    const merged = new Uint8Array(received);
+    let off = 0;
+    for (const chunk of chunks) {
+      merged.set(chunk, off);
+      off += chunk.byteLength;
+    }
+    buf = merged.buffer.slice(merged.byteOffset, merged.byteOffset + merged.byteLength) as ArrayBuffer;
+  } else {
+    buf = await res.arrayBuffer();
+    if (buf.byteLength > MAX_BYTES) {
+      return NextResponse.json({ error: 'image too large' }, { status: 413 });
+    }
   }
   // All render sites display icons at <=24px: downscale to 64px (2x for DPR)
   // so a 400-800px upstream file never ships to the browser. On any sharp

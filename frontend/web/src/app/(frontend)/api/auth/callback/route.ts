@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { publicOrigin } from '../../_lib/http';
 
 export const dynamic = 'force-dynamic';
 /**
@@ -36,8 +37,9 @@ async function proxy(request: Request): Promise<Response> {
   }
   // The Go listener only sees the loopback hop, so the public scheme/host ride
   // along (Go builds the post-login and failure redirects from these).
-  headers.set('x-forwarded-proto', request.headers.get('x-forwarded-proto') ?? url.protocol.slice(0, -1));
-  headers.set('x-forwarded-host', request.headers.get('x-forwarded-host') ?? url.host);
+  const { scheme, host } = publicOrigin(url);
+  headers.set('x-forwarded-proto', scheme);
+  headers.set('x-forwarded-host', host);
   let upstream: Response;
   try {
     upstream = await fetch(`${FUDCOURT_API}${url.pathname}${url.search}`, {

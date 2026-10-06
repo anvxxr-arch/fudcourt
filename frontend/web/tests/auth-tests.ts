@@ -134,6 +134,11 @@ test('open redirect: isSafeNext only accepts a site-relative path', () => {
     '/a%2Fb',                   // ambiguous once decoded
     '',                          // empty
     'team/balance',             // not rooted
+    '/\\evil.example.com',      // backslash normalizes to protocol-relative
+    '/\\\\evil.example.com',    // double backslash
+    '/\\/evil.example.com',     // escaped backslash then slash
+    '%2F%2Fevil.example.com',   // percent-encoded leading slashes
+    '/%5Cevil.example.com',     // percent-encoded backslash
     null,
     undefined,
   ]) {

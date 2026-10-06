@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/server/db';
+import { failInternal } from '../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -18,10 +19,12 @@ export async function GET() {
        ORDER BY total_usd DESC, asset`
     );
 
-    const total = (coins as any[]).reduce((s, c) => s + Number(c.total_usd || 0), 0);
+    const coinRows = coins as { total_usd: number | string | null }[];
+    const hasNull = coinRows.some((c) => c.total_usd === null || c.total_usd === undefined);
+    const total = hasNull ? null : coinRows.reduce((s, c) => s + Number(c.total_usd ?? 0), 0);
 
     return NextResponse.json({ coins, total });
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return failInternal(e);
   }
 }

@@ -17,6 +17,7 @@
  * A cache miss, a connection error, or unparseable JSON all resolve to null. The
  * caller then does the work it would have done anyway; no path here may throw.
  */
+import 'server-only';
 import type { RedisClient } from 'bun';
 
 /**

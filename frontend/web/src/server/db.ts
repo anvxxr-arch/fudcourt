@@ -17,6 +17,7 @@
  * `asset_history` hypertable, so every writer — the sync, a route, an operator
  * — lands in the time series identically, with no code on this side.
  */
+import 'server-only';
 import type { SQL } from 'bun';
 
 /**
@@ -132,10 +133,6 @@ export async function getAll() {
   return {
     accounts, transactions, journal, ledger, assets, wallets, trades,
     net_worth: Number.isFinite(total) ? total : 0,
-    period: '9 Sep 2026 – sekarang',
-    liabilities: 0,
-    pnl: 0,
-    cashflow: -850,
   };
 }
 

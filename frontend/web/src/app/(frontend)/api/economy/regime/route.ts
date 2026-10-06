@@ -103,7 +103,7 @@ export async function GET(req: Request) {
   // The global scope is anchored on the United States — stated, not implied.
   const anchor = country ?? COUNTRY_BY_ISO3['USA'];
   if (!anchor) {
-    return NextResponse.json({ error: 'no anchor', detail: 'the country table has no US row to anchor the global scope on' }, { status: 500 });
+    return NextResponse.json({ error: 'no anchor', detail: 'the country table has no US row to anchor the global scope on' }, { status: 400 });
   }
 
   const bound = indicatorsForCountry(anchor.iso3);

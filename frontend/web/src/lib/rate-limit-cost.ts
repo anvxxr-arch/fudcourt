@@ -57,6 +57,15 @@ export const ROUTE_COST: Readonly<Record<string, number>> = {
   // the same 2. `forex` is a single call, but the family rule prices the first
   // path segment, and a sub-path must not be a cheaper way into the family.
   market: 2,
+  // The economy module's boards fan out one upstream call PER dimension/series
+  // (regime reads growth/inflation/labor/liquidity/policy, compare runs N
+  // indicators through the same adapters), and /api/economy routes sit at the
+  // same /api/<family> level, so the family rule prices the first segment here.
+  economy: 2,
+  // The signals feed/index/scoreboard payloads carry full row arrays and the
+  // scoreboard's catches table; a silent default would make the fattest
+  // single-route payloads the cheapest way into the upstream.
+  signals: 2,
   // The executor is a money-moving surface (PRD §108 rate limiting, §77 adapter
   // rate limits). `POST /api/executor/executions` plans, sizes and persists an
   // order, and `preview` does the same pricing without persisting — both are far

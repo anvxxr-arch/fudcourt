@@ -1,6 +1,7 @@
 // Single source of truth for robots/sitemap and the public crawl tier.
 // If routes are restructured (e.g. /team, /admin, /member split), edit this
 // array only — app/robots.ts and app/sitemap.ts iterate it.
+import 'server-only';
 export interface PublicRoute {
   path: string;
   title: string;

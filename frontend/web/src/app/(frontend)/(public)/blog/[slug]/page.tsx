@@ -81,7 +81,7 @@ export default async function PostPage({
         lineHeight: lineHeight.loose,
       }}
     >
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <a href="/blog" style={{ color: color.green, textDecoration: 'none', fontSize: fontSize[15] }}>
         ← All posts
       </a>

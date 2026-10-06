@@ -34,7 +34,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ bank: s
   if (!policyIndicator) {
     return NextResponse.json(
       { error: 'no indicator bound', detail: `no policy-rate indicator is bound to BIS area ${bank.area}` },
-      { status: 500 }
+      { status: 400 }
     );
   }
 
