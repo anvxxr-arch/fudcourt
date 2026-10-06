@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
-import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { Loading } from '@/ui/feedback';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import { Toolbar } from '@/ui/toolbar';
@@ -50,8 +50,8 @@ export default function QuoteBoard({
   }, [load]);
 
   const toneColor = (v: number | null): string =>
-    tone(v) === 'up' ? color.blue : tone(v) === 'down' ? color.red : color.labelTertiary;
-  // `TH` already defaults `color` to `color.labelTertiary` and takes `align` as a prop; the
+    tone(v) === 'up' ? themeColor.blue : tone(v) === 'down' ? themeColor.red : themeColor.labelTertiary;
+  // `TH` already defaults `color` to `themeColor.labelTertiary` and takes `align` as a prop; the
   // padding / weight / nowrap are this board's own and ride the atom's last-wins spread.
   const thStyle: CSSProperties = {
     padding: space[8],
@@ -68,9 +68,9 @@ export default function QuoteBoard({
           <button
             onClick={load}
             style={{
-              background: color.bgSecondary,
-              color: color.labelPrimary,
-              border: `1px solid ${color.separator}`,
+              background: themeColor.bgSecondary,
+              color: themeColor.labelPrimary,
+              border: `1px solid ${themeColor.separator}`,
               padding: `${space[8]}px ${space[12]}px`,
               borderRadius: radius[8],
               fontSize: fontSize[11],
@@ -81,10 +81,10 @@ export default function QuoteBoard({
           </button>
         }
       >
-        <h3 style={{ color: color.blue, margin: 0 }}>
+        <h3 style={{ color: themeColor.blue, margin: 0 }}>
           {title}
           {unitHint ? (
-            <span style={{ color: color.labelTertiary, fontSize: fontSize[11], fontWeight: fontWeight.regular }}>
+            <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], fontWeight: fontWeight.regular }}>
               {' '}
               · {unitHint}
             </span>
@@ -92,7 +92,7 @@ export default function QuoteBoard({
         </h3>
       </Toolbar>
 
-      {error && <p style={{ color: color.red, fontSize: fontSize[12] }}>{error}</p>}
+      {error && <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>{error}</p>}
 
       {loading ? (
         <Loading />
@@ -113,8 +113,8 @@ export default function QuoteBoard({
             {quotes.map((q) => (
               <TR key={q.symbol}>
                 <TD style={tdStyle}>
-                  <div style={{ fontWeight: fontWeight.bold, color: color.labelPrimary }}>{q.symbol}</div>
-                  <div style={{ fontSize: fontSize[11], color: color.labelTertiary }}>
+                  <div style={{ fontWeight: fontWeight.bold, color: themeColor.labelPrimary }}>{q.symbol}</div>
+                  <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>
                     {q.name}
                     {q.exchange ? ` · ${q.exchange}` : ''}
                   </div>
@@ -124,30 +124,30 @@ export default function QuoteBoard({
                     <Sparkline points={q.trend} width={72} height={18} />
                   </span>
                 </TD>
-                <TD align="right" style={{ ...tdStyle, color: color.blue }}>
+                <TD align="right" style={{ ...tdStyle, color: themeColor.blue }}>
                   {fmtPrice(q.price)}
                   {q.currency ? (
-                    <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}> {fmtCurrency(q.currency)}</span>
+                    <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}> {fmtCurrency(q.currency)}</span>
                   ) : null}
                 </TD>
                 <TD align="right" style={{ ...tdStyle, color: toneColor(q.change) }}>
                   {q.change === null ? dash : `${q.change >= 0 ? '+' : ''}${fmtPrice(q.change)}`}
                 </TD>
                 <TD align="right" style={{ ...tdStyle, color: toneColor(q.changePercent) }}>{fmtPct(q.changePercent)}</TD>
-                <TD align="right" style={{ ...tdStyle, color: color.labelTertiary }}>
+                <TD align="right" style={{ ...tdStyle, color: themeColor.labelTertiary }}>
                   {q.dayLow === null || q.dayHigh === null ? dash : `${fmtPrice(q.dayLow)} – ${fmtPrice(q.dayHigh)}`}
                 </TD>
-                <TD align="right" style={{ ...tdStyle, color: color.labelPrimary }}>{fmtVolume(q.volume)}</TD>
+                <TD align="right" style={{ ...tdStyle, color: themeColor.labelPrimary }}>{fmtVolume(q.volume)}</TD>
               </TR>
             ))}
           </TBody>
         </Table>
       )}
 
-      <div style={{ marginTop: space[8], color: color.labelTertiary, fontSize: fontSize[11] }}>
+      <div style={{ marginTop: space[8], color: themeColor.labelTertiary, fontSize: fontSize[11] }}>
         {derived}
         {failed.length > 0 && (
-          <span style={{ color: color.orange }}>
+          <span style={{ color: themeColor.orange }}>
             {' '}
             · {failed.length} failed: {failed.map((f) => `${f.symbol} (${f.reason})`).join(', ')}
           </span>

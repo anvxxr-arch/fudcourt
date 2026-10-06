@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { Loading } from '@/ui/feedback';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import { fetchTrackerCoins, type TrackerCoin as Coin } from './client';
@@ -39,20 +39,20 @@ export default function TrackerPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[12] }}>
-        <h3 style={{ color: color.blue, margin: 0 }}>Price Tracker</h3>
-        <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
+        <h3 style={{ color: themeColor.blue, margin: 0 }}>Price Tracker</h3>
+        <button onClick={load} style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       </div>
 
-      {error && <p style={{ color: color.red, fontSize: fontSize[12] }}>{error}</p>}
+      {error && <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>{error}</p>}
 
       {loading ? (
         <Loading label="Loading..." />
       ) : (
         <Table>
           <THead>
-            <TR style={{ color: color.labelTertiary }}>
+            <TR style={{ color: themeColor.labelTertiary }}>
               <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>Coin</TH>
               <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>Price</TH>
               <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>24h %</TH>
@@ -64,15 +64,15 @@ export default function TrackerPage() {
             {coins.map((c) => (
               <TR key={c.baseAsset}>
                 <TD style={{ padding: space[8] }}>
-                  <div style={{ fontWeight: fontWeight.bold, color: color.labelPrimary }}>{c.baseAsset?.toUpperCase()}</div>
-                  <div style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{c.name}</div>
+                  <div style={{ fontWeight: fontWeight.bold, color: themeColor.labelPrimary }}>{c.baseAsset?.toUpperCase()}</div>
+                  <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{c.name}</div>
                 </TD>
-                <TD align="right" mono style={{ padding: space[8], color: color.blue }}>{fmtPrice(c.lastPrice)}</TD>
-                <TD align="right" mono style={{ padding: space[8], color: c.priceChangePercent === null ? color.labelTertiary : c.priceChangePercent >= 0 ? color.blue : color.red }}>
+                <TD align="right" mono style={{ padding: space[8], color: themeColor.blue }}>{fmtPrice(c.lastPrice)}</TD>
+                <TD align="right" mono style={{ padding: space[8], color: c.priceChangePercent === null ? themeColor.labelTertiary : c.priceChangePercent >= 0 ? themeColor.blue : themeColor.red }}>
                   {fmtPct(c.priceChangePercent)}
                 </TD>
-                <TD align="right" mono style={{ padding: space[8], color: color.labelPrimary }}>{c.quoteVolume === null ? '—' : fmtVol(c.quoteVolume)}</TD>
-                <TD align="right" mono style={{ padding: space[8], color: color.labelTertiary }}>{fmtVol(c.marketCap)}</TD>
+                <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>{c.quoteVolume === null ? '—' : fmtVol(c.quoteVolume)}</TD>
+                <TD align="right" mono style={{ padding: space[8], color: themeColor.labelTertiary }}>{fmtVol(c.marketCap)}</TD>
               </TR>
             ))}
           </TBody>

@@ -1,4 +1,4 @@
-import { color, fontSize, fontWeight, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, space } from '@/styles/tokens';
 import { Meter } from '@/ui/meter';
 import type { Quote, QuoteEnvelope, TickerType } from './detail-shared';
 import { chgColor, crossVenueSpread, fmtFunding, fmtOi, fmtPct, fmtPrice, fmtSpread, fmtVol, headlineSettle, medianOf } from './detail-format';
@@ -6,8 +6,8 @@ import { chgColor, crossVenueSpread, fmtFunding, fmtOi, fmtPct, fmtPrice, fmtSpr
 export function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div>
-      <div style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{label}</div>
-      <div style={{ color: tone ?? color.labelPrimary, fontSize: fontSize[15], fontWeight: fontWeight.bold }}>{value}</div>
+      <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{label}</div>
+      <div style={{ color: tone ?? themeColor.labelPrimary, fontSize: fontSize[15], fontWeight: fontWeight.bold }}>{value}</div>
     </div>
   );
 }
@@ -27,7 +27,7 @@ export function DetailStats({ data, type }: { data: QuoteEnvelope; type: TickerT
     <>
       {detailStatsMeter(agree, diverge)}
       <div style={{ display: 'flex', gap: space[20], marginBottom: space[12], flexWrap: 'wrap' }}>
-      <Stat label={`Price (median of ${priced.length})`} value={fmtPrice(data.price, settle)} tone={color.blue} />
+      <Stat label={`Price (median of ${priced.length})`} value={fmtPrice(data.price, settle)} tone={themeColor.blue} />
       <Stat label="Cross-venue spread" value={fmtSpread(spread)} />
       <Stat label="24h change" value={fmtPct(chg)} tone={chgColor(chg)} />
       <Stat label="24h volume" value={fmtVol(medianOf(priced.map(q => q.quoteVolume)))} />
@@ -45,8 +45,8 @@ function detailStatsMeter(agree: number, diverge: number): React.ReactNode {
   return (
     <Meter
       parts={[
-        { label: 'venues agreeing (≤0.1%)', value: agree, color: color.blue },
-        { label: 'diverging (>0.1%)', value: diverge, color: color.orange },
+        { label: 'venues agreeing (≤0.1%)', value: agree, color: themeColor.blue },
+        { label: 'diverging (>0.1%)', value: diverge, color: themeColor.orange },
       ]}
       style={{ marginBottom: space[12] }}
     />

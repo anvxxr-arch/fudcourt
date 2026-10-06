@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { alpha, color, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
+import { alpha, themeColor, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
 import { Banner } from '@/ui/banner';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import { fetchLlamaBoards, type LlamaChain, type LlamaProtocol, type LlamaHistoricalPoint } from './defi-tvl-client';
@@ -23,8 +23,8 @@ function pct(n: number | null | undefined) {
 }
 
 function pctColor(n: number | null | undefined) {
-  if (n == null) return color.labelTertiary;
-  return n >= 0 ? color.green : color.red;
+  if (n == null) return themeColor.labelTertiary;
+  return n >= 0 ? themeColor.green : themeColor.red;
 }
 
 /**
@@ -108,16 +108,16 @@ export default function LlamaPage() {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: space[8], flexWrap: 'wrap', marginBottom: space[8] }}>
-        <h3 style={{ color: color.labelPrimary, fontSize: fontSize[17], fontWeight: fontWeight.bold }}>DeFiLlama — TVL board</h3>
+        <h3 style={{ color: themeColor.labelPrimary, fontSize: fontSize[17], fontWeight: fontWeight.bold }}>DeFiLlama — TVL board</h3>
         <button onClick={load}
-          style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: '5px 12px', borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
+          style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: '5px 12px', borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
         {fetchedAt != null && !stale && (
-          <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{new Date(fetchedAt * 1000).toLocaleTimeString()}</span>
+          <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{new Date(fetchedAt * 1000).toLocaleTimeString()}</span>
         )}
       </div>
-      <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
+      <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
         read-only relay of api.llama.fi (chains + protocols head + TVL history) · tables are derived views — the
         “of N” line is upstream’s own total · em-dash means the field is absent upstream, never zero · CEX
         deposits sit in the protocols table but not in global TVL — upstream’s accounting, relayed as-is
@@ -138,34 +138,34 @@ export default function LlamaPage() {
           { k: 'top chain', v: chains && chains[0] ? chains[0].name : '—' },
           { k: 'top protocol', v: protos && protos[0] ? protos[0].name : '—' },
         ].map((s) => (
-          <div key={s.k} style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px` }}>
-            <div style={{ color: color.labelTertiary, fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>{s.k}</div>
-            <div style={{ color: s.color ?? color.labelPrimary, fontSize: fontSize[17], fontWeight: fontWeight.bold, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.v}</div>
+          <div key={s.k} style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px` }}>
+            <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>{s.k}</div>
+            <div style={{ color: s.color ?? themeColor.labelPrimary, fontSize: fontSize[17], fontWeight: fontWeight.bold, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.v}</div>
           </div>
         ))}
       </div>
 
       {spark && (
-        <div style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[12]}px`, marginBottom: space[12] }}>
-          <div style={{ color: color.labelTertiary, fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs, marginBottom: space[8] }}>
+        <div style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[12]}px`, marginBottom: space[12] }}>
+          <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs, marginBottom: space[8] }}>
             total TVL · {meta.historical}
           </div>
           <svg viewBox="0 0 600 60" width="100%" height="60" preserveAspectRatio="none">
-            <polyline points={spark} fill="none" stroke={color.blue} strokeWidth="1.5" />
+            <polyline points={spark} fill="none" stroke={themeColor.blue} strokeWidth="1.5" />
           </svg>
         </div>
       )}
 
       {loading ? (
-        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>loading defillama…</p>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>loading defillama…</p>
       ) : error && !chains ? (
-        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>tables withheld — the request above failed.</p>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>tables withheld — the request above failed.</p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: space[12] }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[4] }}>
-              <h4 style={{ color: color.labelPrimary, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>chains by TVL</h4>
-              <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>top 15 of {totals.chains} · {meta.chains}</span>
+              <h4 style={{ color: themeColor.labelPrimary, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>chains by TVL</h4>
+              <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>top 15 of {totals.chains} · {meta.chains}</span>
             </div>
             <Table style={{ fontSize: fontSize[12] }}>
               <THead>
@@ -177,10 +177,10 @@ export default function LlamaPage() {
               </THead>
               <TBody>
                 {(chains ?? []).slice(0, 15).map((c, i) => (
-                  <TR key={c.name} style={{ borderTop: `1px solid ${color.separator}`, borderBottom: 0 }}>
-                    <TD style={{ padding: `${space[8]}px`, color: i < 3 ? color.blue : color.labelTertiary, fontWeight: fontWeight.bold }}>{i + 1}</TD>
-                    <TD style={{ padding: `${space[8]}px`, color: color.labelPrimary, fontWeight: fontWeight.semibold }}>{c.name}</TD>
-                    <TD align="right" style={{ padding: `${space[8]}px`, color: color.labelPrimary }}>{usdBig(c.tvl)}</TD>
+                  <TR key={c.name} style={{ borderTop: `1px solid ${themeColor.separator}`, borderBottom: 0 }}>
+                    <TD style={{ padding: `${space[8]}px`, color: i < 3 ? themeColor.blue : themeColor.labelTertiary, fontWeight: fontWeight.bold }}>{i + 1}</TD>
+                    <TD style={{ padding: `${space[8]}px`, color: themeColor.labelPrimary, fontWeight: fontWeight.semibold }}>{c.name}</TD>
+                    <TD align="right" style={{ padding: `${space[8]}px`, color: themeColor.labelPrimary }}>{usdBig(c.tvl)}</TD>
                   </TR>
                 ))}
               </TBody>
@@ -189,8 +189,8 @@ export default function LlamaPage() {
 
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[4] }}>
-              <h4 style={{ color: color.labelPrimary, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>protocols by TVL</h4>
-              <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{meta.protocols}</span>
+              <h4 style={{ color: themeColor.labelPrimary, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>protocols by TVL</h4>
+              <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{meta.protocols}</span>
             </div>
             <Table style={{ fontSize: fontSize[12] }}>
               <THead>
@@ -204,18 +204,18 @@ export default function LlamaPage() {
               </THead>
               <TBody>
                 {(protos ?? []).map((p, i) => (
-                  <TR key={p.slug || p.name} style={{ borderTop: `1px solid ${color.separator}`, borderBottom: 0 }}>
-                    <TD style={{ padding: `${space[8]}px`, color: i < 3 ? color.blue : color.labelTertiary, fontWeight: fontWeight.bold }}>{i + 1}</TD>
+                  <TR key={p.slug || p.name} style={{ borderTop: `1px solid ${themeColor.separator}`, borderBottom: 0 }}>
+                    <TD style={{ padding: `${space[8]}px`, color: i < 3 ? themeColor.blue : themeColor.labelTertiary, fontWeight: fontWeight.bold }}>{i + 1}</TD>
                     <TD style={{ padding: `${space[8]}px` }}>
                       <span
-                        style={{ color: color.labelPrimary, textDecoration: 'none', fontWeight: fontWeight.semibold }}>{p.name}</span>
-                      <div style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>
+                        style={{ color: themeColor.labelPrimary, textDecoration: 'none', fontWeight: fontWeight.semibold }}>{p.name}</span>
+                      <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>
                         {(p.chains ?? []).length === 1 ? '1 chain' : `${(p.chains ?? []).length} chains`}
                       </div>
                     </TD>
-                    <TD align="right" style={{ padding: `${space[8]}px`, color: color.labelPrimary }}>{usdBig(p.tvl)}</TD>
+                    <TD align="right" style={{ padding: `${space[8]}px`, color: themeColor.labelPrimary }}>{usdBig(p.tvl)}</TD>
                     <TD align="right" style={{ padding: `${space[8]}px`, color: pctColor(p.change_1d) }}>{pct(p.change_1d)}</TD>
-                    <TD style={{ padding: `${space[8]}px`, color: color.labelTertiary, fontSize: fontSize[11] }}>{p.category ?? '—'}</TD>
+                    <TD style={{ padding: `${space[8]}px`, color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{p.category ?? '—'}</TD>
                   </TR>
                 ))}
               </TBody>

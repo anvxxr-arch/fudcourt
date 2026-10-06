@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { color, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
 
 /**
  * The one label/value pair. Supersedes the two private copies (economy's
@@ -10,10 +10,10 @@ import { color, fontSize, fontWeight, letterSpacing, space } from '@/styles/toke
  * `tone="muted"` when the value is absent) so a null never prints as zero.
  */
 const TONE = {
-  default: color.labelPrimary,
-  positive: color.green,
-  negative: color.red,
-  muted: color.labelTertiary,
+  default: themeColor.labelPrimary,
+  positive: themeColor.green,
+  negative: themeColor.red,
+  muted: themeColor.labelTertiary,
 } as const;
 
 type ValueProps = {
@@ -28,10 +28,10 @@ type ValueProps = {
 export function Value({ label, value, hint, tone = 'default', unit }: ValueProps) {
   return (
     <div title={hint} style={{ display: 'flex', flexDirection: 'column', gap: space[4], minWidth: 0 }}>
-      <span style={{ fontSize: fontSize[11], color: color.labelTertiary, letterSpacing: letterSpacing.sm, textTransform: 'uppercase' }}>{label}</span>
+      <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, letterSpacing: letterSpacing.sm, textTransform: 'uppercase' }}>{label}</span>
       <span style={{ fontSize: fontSize[17], fontWeight: fontWeight.semibold, color: TONE[tone], fontFamily: 'inherit' }}>
         {value}
-        {unit ? <span style={{ fontSize: fontSize[11], color: color.labelTertiary, marginLeft: space[4] }}>{unit}</span> : null}
+        {unit ? <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, marginLeft: space[4] }}>{unit}</span> : null}
       </span>
     </div>
   );

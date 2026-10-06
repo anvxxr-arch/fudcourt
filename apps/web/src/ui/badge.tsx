@@ -1,13 +1,13 @@
-import { alpha, color, fontSize, radius, space } from '@/styles/tokens';
+import { alpha, themeColor, fontSize, radius, space } from '@/styles/tokens';
 
 const HUE = {
-  accent: color.blue,
-  positive: color.green,
-  negative: color.red,
-  warn: color.orange,
-  attention: color.orange,
-  muted: color.labelTertiary,
-  neutral: color.labelTertiary,
+  accent: themeColor.blue,
+  positive: themeColor.green,
+  negative: themeColor.red,
+  warn: themeColor.orange,
+  attention: themeColor.orange,
+  muted: themeColor.labelTertiary,
+  neutral: themeColor.labelTertiary,
 } as const;
 
 const SIZE = {

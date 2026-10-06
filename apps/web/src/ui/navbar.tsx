@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NAV_SECTIONS, TERMINAL, activeSection } from '@/ui/site-nav';
 import { ThemeToggle } from '@/ui/theme-toggle';
-import { alpha, color, fontFamily, fontSize, fontWeight, letterSpacing, motion, radius, space } from '@/styles/tokens';
+import { alpha, themeColor, fontFamily, fontSize, fontWeight, letterSpacing, motion, radius, space } from '@/styles/tokens';
 
 /**
  * The site's primary navigation bar — the one chrome element every page shares.
@@ -28,7 +28,7 @@ export function Navbar() {
   const active = activeSection(pathname ?? '/');
 
   return (
-    <header style={{ background: color.bgBase, borderBottom: `1px solid ${color.separator}`, fontFamily: fontFamily.mono }}>
+    <header style={{ background: themeColor.bgBase, borderBottom: `1px solid ${themeColor.separator}`, fontFamily: fontFamily.mono }}>
       <nav
         aria-label="Primary"
         style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: space[8], padding: `${space[8]}px ${space[20]}px` }}
@@ -38,7 +38,7 @@ export function Navbar() {
           href="/"
           title="FUDCOURT — home"
           style={{
-            color: color.labelPrimary,
+            color: themeColor.labelPrimary,
             fontSize: fontSize[13],
             fontWeight: fontWeight.bold,
             letterSpacing: letterSpacing.wider,
@@ -59,9 +59,9 @@ export function Navbar() {
               title={section.blurb}
               aria-current={isActive ? 'page' : undefined}
               style={{
-                color: isActive ? color.labelOnAccent : color.labelPrimary,
-                background: isActive ? color.blue : 'transparent',
-                border: `1px solid ${isActive ? color.blue : color.separator}`,
+                color: isActive ? themeColor.labelOnAccent : themeColor.labelPrimary,
+                background: isActive ? themeColor.blue : 'transparent',
+                border: `1px solid ${isActive ? themeColor.blue : themeColor.separator}`,
                 borderRadius: radius[8],
                 padding: `${space[4]}px ${space[8]}px`,
                 fontSize: fontSize[11],
@@ -82,9 +82,9 @@ export function Navbar() {
           title={TERMINAL.blurb}
           style={{
             marginLeft: 'auto',
-            color: color.blue,
-            background: color.bgSecondary,
-            border: `1px solid ${alpha(color.blue, 0.35)}`,
+            color: themeColor.blue,
+            background: themeColor.bgSecondary,
+            border: `1px solid ${alpha(themeColor.blue, 0.35)}`,
             borderRadius: radius[8],
             padding: `${space[4]}px ${space[8]}px`,
             fontSize: fontSize[11],

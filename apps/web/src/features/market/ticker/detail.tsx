@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { color, fontSize, fontWeight, motion, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, motion, radius, space } from '@/styles/tokens';
 import { Loading } from '@/ui/feedback';
 import { fetchTickerInstrument, fetchTickerInstruments } from './client';
 import { TYPES, type InstrumentsEnvelope, type QuoteEnvelope, type TickerType } from './detail-shared';
@@ -122,30 +122,30 @@ export default function TickerDetailPage() {
   const priced = quotes.filter(q => q.last !== null);
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: '5px 12px', borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer',
-    background: active ? color.blue : color.bgSecondary, color: active ? color.labelOnAccent : color.labelPrimary,
-    border: `1px solid ${color.separator}`, fontWeight: active ? fontWeight.bold : fontWeight.regular,
+    background: active ? themeColor.blue : themeColor.bgSecondary, color: active ? themeColor.labelOnAccent : themeColor.labelPrimary,
+    border: `1px solid ${themeColor.separator}`, fontWeight: active ? fontWeight.bold : fontWeight.regular,
   });
   const selectStyle: React.CSSProperties = {
-    background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`,
+    background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`,
     padding: `5px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11],
   };
-  if (!base) return <p style={{ color: color.red, fontSize: fontSize[12] }}>No coin in the URL.</p>;
-  if (metaError) return <p style={{ color: color.red, fontSize: fontSize[12] }}>{metaError}</p>;
+  if (!base) return <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>No coin in the URL.</p>;
+  if (metaError) return <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>{metaError}</p>;
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[12], flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h3 style={{ color: color.blue, margin: 0 }}>
-            <Link href="/market/crypto" style={{ color: color.labelTertiary, textDecoration: 'none', fontSize: fontSize[13] }}>← </Link>
+          <h3 style={{ color: themeColor.blue, margin: 0 }}>
+            <Link href="/market/crypto" style={{ color: themeColor.labelTertiary, textDecoration: 'none', fontSize: fontSize[13] }}>← </Link>
             {base} · centralized exchange instruments
           </h3>
-          <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `${space[4]}px 0 0` }}>
+          <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `${space[4]}px 0 0` }}>
             {summary
               ? `${summary.venues.length} venue${summary.venues.length === 1 ? '' : 's'} list ${meta?.typeLabels[type].toLowerCase() ?? type} for this coin`
               : 'Loading venues…'}
           </p>
         </div>
-        <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
+        <button onClick={load} style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       </div>
@@ -167,7 +167,7 @@ export default function TickerDetailPage() {
       {summary && (summary.expiries.length > 0 || type === 'option') && (
         <div style={{ display: 'flex', gap: space[12], marginBottom: space[12], alignItems: 'center', flexWrap: 'wrap' }}>
           {summary.expiries.length > 0 && (
-            <label style={{ fontSize: fontSize[11], color: color.labelTertiary, display: 'flex', gap: space[8], alignItems: 'center' }}>
+            <label style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, display: 'flex', gap: space[8], alignItems: 'center' }}>
               Expiry
               <select value={expiry} onChange={e => setExpiry(e.target.value)} style={selectStyle} aria-label="Expiry">
                 {summary.expiries.map(e => <option key={e} value={e}>{e}</option>)}
@@ -176,14 +176,14 @@ export default function TickerDetailPage() {
           )}
           {type === 'option' && (
             <>
-              <label style={{ fontSize: fontSize[11], color: color.labelTertiary, display: 'flex', gap: space[8], alignItems: 'center' }}>
+              <label style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, display: 'flex', gap: space[8], alignItems: 'center' }}>
                 Strike
                 <select value={strike} onChange={e => setStrike(e.target.value)} style={selectStyle} aria-label="Strike">
                   {strikes.length === 0 && <option value="">—</option>}
                   {strikes.map(s => <option key={s} value={String(s)}>{s.toLocaleString('en-US')}</option>)}
                 </select>
               </label>
-              <label style={{ fontSize: fontSize[11], color: color.labelTertiary }}>
+              <label style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>
                 <select value={kind} onChange={e => setKind(e.target.value as 'call' | 'put')} style={selectStyle} aria-label="Option kind">
                   <option value="call">Call</option>
                   <option value="put">Put</option>
@@ -194,7 +194,7 @@ export default function TickerDetailPage() {
         </div>
       )}
       {error && (
-        <p style={{ color: color.red, fontSize: fontSize[12] }}>
+        <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>
           {error}
           {stale && data && ' — showing the last successful read; these prices are stale.'}
         </p>
@@ -202,7 +202,7 @@ export default function TickerDetailPage() {
       {loading ? (
         <Loading label="Loading..." />
       ) : !data || priced.length === 0 ? (
-        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>
           No venue is currently pricing this instrument.
           {data && data.notListed.length > 0 && ` Not listed by: ${data.notListed.join(', ')}.`}
         </p>
@@ -213,7 +213,7 @@ export default function TickerDetailPage() {
               directly comparable. Saying so is the honest framing; a reader
               who wants comparable prices can read the settlement column. */}
           {data.settlements.length > 1 && (
-            <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
+            <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
               These venues settle in different currencies ({data.settlements.join(', ')}), so the prices are comparable only up to the basis between them.
             </p>
           )}

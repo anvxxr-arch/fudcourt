@@ -1,4 +1,4 @@
-import { color } from '@/styles/tokens';
+import { themeColor } from '@/styles/tokens';
 /**
  * Display formatters shared by the market hub's asset-class sections. One
  * module so the stock, commodity and forex tables format a number the same
@@ -135,14 +135,14 @@ export const CHAIN_COLOR: Record<string, string> = {
   // so the entry is the chain palette's second home for it — a domain entry, not a design token.
   Robinhood: '#3ddc97',
 };
-/** Chain brand colour, case-insensitive (`'solana'` and `'Solana'` agree). Falls back to `color.labelTertiary`. */
+/** Chain brand colour, case-insensitive (`'solana'` and `'Solana'` agree). Falls back to `themeColor.labelTertiary`. */
 export function chainColor(chain: string | null | undefined): string {
-  if (!chain) return color.labelTertiary;
+  if (!chain) return themeColor.labelTertiary;
   const needle = chain.toLowerCase();
   for (const [name, hex] of Object.entries(CHAIN_COLOR)) {
     if (name.toLowerCase() === needle) return hex;
   }
-  return color.labelTertiary;
+  return themeColor.labelTertiary;
 }
 
 export const EMOJI_PRESETS = ['💰','🎒','🦊','🐋','🤖','🏦','💳','🔒','🌐','💎','👛','🎮','📈','🛡️','✈️','🍕','🎯','🧊'];
@@ -162,7 +162,7 @@ export function getAlias(label: string, walletByLabel: Record<string, Wallet>) {
 }
 
 export function getColor(label: string, walletByLabel: Record<string, Wallet>) {
-  return walletByLabel[label]?.color || color.blue;
+  return walletByLabel[label]?.color || themeColor.blue;
 }
 
 export function groupBy<T>(items: T[], key: (item: T) => string) {

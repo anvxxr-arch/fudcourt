@@ -1,4 +1,4 @@
-import { color, fontFamily, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
+import { themeColor, fontFamily, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
 
 /**
  * Route-segment chrome for the app router's boundary slots (`loading.tsx`,
@@ -17,9 +17,9 @@ export function PagePanel({ title, children, action, style }: PanelProps) {
   return (
     <main
       style={{
-        background: color.bgBase,
+        background: themeColor.bgBase,
         minHeight: '50vh',
-        color: color.labelPrimary,
+        color: themeColor.labelPrimary,
         fontFamily: fontFamily.mono,
         display: 'flex',
         alignItems: 'center',
@@ -30,8 +30,8 @@ export function PagePanel({ title, children, action, style }: PanelProps) {
     >
       <div
         style={{
-          background: color.bgSecondary,
-          border: `1px solid ${color.separator}`,
+          background: themeColor.bgSecondary,
+          border: `1px solid ${themeColor.separator}`,
           borderRadius: radius[12],
           padding: space[24],
           maxWidth: 420,
@@ -39,10 +39,10 @@ export function PagePanel({ title, children, action, style }: PanelProps) {
           textAlign: 'center',
         }}
       >
-        <div style={{ color: color.blue, fontSize: fontSize[17], fontWeight: fontWeight.bold, letterSpacing: letterSpacing.wider }}>
+        <div style={{ color: themeColor.blue, fontSize: fontSize[17], fontWeight: fontWeight.bold, letterSpacing: letterSpacing.wider }}>
           {title}
         </div>
-        <div style={{ color: color.labelTertiary, fontSize: fontSize[12], marginTop: space[8] }}>{children}</div>
+        <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], marginTop: space[8] }}>{children}</div>
         {action != null && <div style={{ marginTop: space[16] }}>{action}</div>}
       </div>
     </main>
@@ -57,9 +57,9 @@ export function PagePanelLink({ href, children }: { href: string; children: Reac
       href={href}
       style={{
         display: 'inline-block',
-        color: color.blue,
-        background: color.bgBase,
-        border: `1px solid ${color.separator}`,
+        color: themeColor.blue,
+        background: themeColor.bgBase,
+        border: `1px solid ${themeColor.separator}`,
         borderRadius: radius[8],
         padding: `${space[8]}px ${space[16]}px`,
         fontSize: fontSize[12],

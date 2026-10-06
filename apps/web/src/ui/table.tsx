@@ -1,4 +1,4 @@
-import { color, fontFamily, fontSize, fontWeight } from '@/styles/tokens';
+import { themeColor, fontFamily, fontSize, fontWeight } from '@/styles/tokens';
 
 type Align = 'left' | 'right' | 'center';
 
@@ -26,7 +26,7 @@ type Align = 'left' | 'right' | 'center';
  *            6 3, `5px 8px` 2, … — and 9 of the top 13 sit in ONE file → NO default.
  *   <td>     padding equally flat (`5px 6px` 10, unset 6, `6px 8px` 3, `5px 5px` 3, 6 3, …)
  *            → NO default. textAlign 26 unset / 10 right → no winner; the `align` prop says it.
- *   <tr>     borderBottom `1px solid color.separator` 21/37 mapped body rows (57%) vs unset 6 —
+ *   <tr>     borderBottom `1px solid themeColor.separator` 21/37 mapped body rows (57%) vs unset 6 —
  *            a clear plurality, and the 21 are cryptorank's 14 tables, which migrated to a
  *            bare `<TR key=…>` and would lose their row rules without it. The sites that want
  *            a different rule already override it (llama `borderBottom: 0` +
@@ -58,7 +58,7 @@ export function TBody({ children }: { children: React.ReactNode }) {
 type TRProps = { children: React.ReactNode; style?: React.CSSProperties };
 
 export function TR({ children, style }: TRProps) {
-  return <tr style={{ borderBottom: `1px solid ${color.separator}`, ...style }}>{children}</tr>;
+  return <tr style={{ borderBottom: `1px solid ${themeColor.separator}`, ...style }}>{children}</tr>;
 }
 
 type THProps = {
@@ -75,7 +75,7 @@ export function TH({ children, align = 'left', style, colSpan, rowSpan }: THProp
     <th
       colSpan={colSpan}
       rowSpan={rowSpan}
-      style={{ textAlign: align, color: color.labelTertiary, fontWeight: fontWeight.semibold, ...style }}
+      style={{ textAlign: align, color: themeColor.labelTertiary, fontWeight: fontWeight.semibold, ...style }}
     >
       {children}
     </th>

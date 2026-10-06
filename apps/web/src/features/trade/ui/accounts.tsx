@@ -19,7 +19,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { alpha, color, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
+import { alpha, themeColor, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
 import { bindingFor } from '@/features/trade/adapters';
 import { capabilityOrderTypeSplit, capabilitiesForVenue } from '@/features/trade/model';
 import {
@@ -79,7 +79,7 @@ export function ConnectedAccountsStrip() {
       title="Connected accounts"
       subtitle="your exchange keys, never ours — the masked key is the only key the API returns"
       right={
-        <Link href="/trade/accounts" style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>
+        <Link href="/trade/accounts" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>
           manage accounts →
         </Link>
       }
@@ -91,22 +91,22 @@ export function ConnectedAccountsStrip() {
       ) : accounts.length === 0 ? (
         <Notice>
           No venue account connected. Connect one in the executor and it appears here —{' '}
-          <Link href="/executor/accounts" style={{ color: color.blue, textDecoration: 'underline' }}>connect a venue →</Link>
+          <Link href="/executor/accounts" style={{ color: themeColor.blue, textDecoration: 'underline' }}>connect a venue →</Link>
         </Notice>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: space[12] }}>
           {accounts.map((account) => (
             <div key={account.id} style={{ display: 'flex', flexDirection: 'column', gap: space[4] }}>
-              <span style={{ fontSize: fontSize[12], color: color.labelPrimary, fontWeight: fontWeight.semibold }}>
+              <span style={{ fontSize: fontSize[12], color: themeColor.labelPrimary, fontWeight: fontWeight.semibold }}>
                 {account.label}
-                <span style={{ color: color.labelTertiary, fontWeight: fontWeight.regular }}> · {account.exchange}</span>
+                <span style={{ color: themeColor.labelTertiary, fontWeight: fontWeight.regular }}> · {account.exchange}</span>
               </span>
-              <span style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{account.apiKeyMasked}</span>
-              <span style={{ fontSize: fontSize[11], color: account.revokedAt === null ? color.labelTertiary : color.red }}>
+              <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{account.apiKeyMasked}</span>
+              <span style={{ fontSize: fontSize[11], color: account.revokedAt === null ? themeColor.labelTertiary : themeColor.red }}>
                 {account.revokedAt === null ? `health ${account.health}` : 'revoked'}
               </span>
               {account.permissions.withdraw === true && (
-                <span style={{ fontSize: fontSize[11], color: color.red, fontWeight: fontWeight.bold }}>
+                <span style={{ fontSize: fontSize[11], color: themeColor.red, fontWeight: fontWeight.bold }}>
                   ⚠ key has withdrawal permission — remove it on the venue
                 </span>
               )}
@@ -133,11 +133,11 @@ function AccountTable({ accounts }: { accounts: TradeAccountLite[] }) {
             account.label,
             venue === null ? account.exchange : `${VENUE_BY_ID[venue].label} · ${VENUE_BY_ID[venue].type}`,
             account.revokedAt === null ? account.health : 'revoked',
-            <span key="k" style={{ color: color.labelTertiary }}>{account.apiKeyMasked}</span>,
+            <span key="k" style={{ color: themeColor.labelTertiary }}>{account.apiKeyMasked}</span>,
             <Perm key="r" value={account.permissions.read} tone="capability" />,
             <Perm key="s" value={account.permissions.spotTrade} tone="capability" />,
             <Perm key="f" value={account.permissions.futuresTrade} tone="capability" />,
-            <span key="w" style={{ color: account.permissions.withdraw === true ? color.red : color.labelPrimary }}>
+            <span key="w" style={{ color: account.permissions.withdraw === true ? themeColor.red : themeColor.labelPrimary }}>
               <Perm value={account.permissions.withdraw} tone="capability" />
               {account.permissions.withdraw === true && (
                 <span style={{ fontWeight: fontWeight.bold }}> · remove it</span>
@@ -155,7 +155,7 @@ function VenueCapabilitySummary({ exchange }: { exchange: string }) {
   const venue = venueOfExchange(exchange);
   if (venue === null) {
     return (
-      <p style={{ margin: 0, fontSize: fontSize[11], color: color.labelTertiary }}>
+      <p style={{ margin: 0, fontSize: fontSize[11], color: themeColor.labelTertiary }}>
         {exchange} is not a venue the trade domain can route to yet, so it has no capability row.
       </p>
     );
@@ -166,15 +166,15 @@ function VenueCapabilitySummary({ exchange }: { exchange: string }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
       {rows.map((row) => (
         <div key={row.marketType}>
-          <span style={{ fontSize: fontSize[11], color: color.labelPrimary, fontWeight: fontWeight.semibold }}>
+          <span style={{ fontSize: fontSize[11], color: themeColor.labelPrimary, fontWeight: fontWeight.semibold }}>
             {MARKET_TYPE_BY_ID[row.marketType].label}
           </span>
-          <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>
+          <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
             {capabilityLine(row)}
           </p>
         </div>
       ))}
-      <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary }}>
+      <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary }}>
         reads · positions {binding.reads.positions.live ? binding.reads.positions.path : `not served yet (${binding.reads.positions.path})`}
         {' · '}balances {binding.reads.balances.live ? binding.reads.balances.path : `not served yet (${binding.reads.balances.path})`}
         {' · '}account {binding.reads.account.path}
@@ -214,7 +214,7 @@ export function TradeAccountsView({ note, showPortfolio = true }: { note?: strin
           ) : accounts.length === 0 ? (
             <Notice>
               No venue account connected yet. BYOK lives in the executor (Phase 18 reuses its sealed key) —{' '}
-              <Link href="/executor/accounts" style={{ color: color.blue, textDecoration: 'underline' }}>connect a venue →</Link>
+              <Link href="/executor/accounts" style={{ color: themeColor.blue, textDecoration: 'underline' }}>connect a venue →</Link>
             </Notice>
           ) : (
             <AccountTable accounts={accounts} />
@@ -238,7 +238,7 @@ export function TradeAccountsView({ note, showPortfolio = true }: { note?: strin
 /** The /trade/accounts page body (Phase 17). */
 export function TradeAccountsPage() {
   return (
-    <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px`, background: color.bgBase, color: color.labelPrimary }}>
+    <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px`, background: themeColor.bgBase, color: themeColor.labelPrimary }}>
       <PageHeader
         title="Trade accounts"
         description="Every venue your trading connects to: the masked key, the permission the venue reports, and a capability summary read from the same matrix the boards use."

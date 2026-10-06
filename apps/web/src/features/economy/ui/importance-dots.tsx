@@ -1,4 +1,4 @@
-import { color, letterSpacing } from '@/styles/tokens';
+import { themeColor, letterSpacing } from '@/styles/tokens';
 
 /**
  * An importance rating out of three: filled dots in the warn hue, the rest in
@@ -7,9 +7,9 @@ import { color, letterSpacing } from '@/styles/tokens';
  */
 export function ImportanceDots({ level }: { level: number }) {
   return (
-    <span aria-label={`importance ${level} of 3`} style={{ color: color.orange, letterSpacing: letterSpacing.none }}>
+    <span aria-label={`importance ${level} of 3`} style={{ color: themeColor.orange, letterSpacing: letterSpacing.none }}>
       {'●'.repeat(Math.max(0, Math.min(3, level)))}
-      <span style={{ color: color.separator }}>{'●'.repeat(Math.max(0, 3 - level))}</span>
+      <span style={{ color: themeColor.separator }}>{'●'.repeat(Math.max(0, 3 - level))}</span>
     </span>
   );
 }

@@ -5,7 +5,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { Button, Card, Select } from '@/ui/primitives';
 import { Banner } from '@/ui/banner';
 import { StatusPill } from '@/ui/status-pill';
@@ -72,11 +72,11 @@ export function ExecutorHistory() {
         <Button onClick={load} disabled={loading}>↻ Refresh</Button>
         <Link
           href="/executor/new"
-          style={{ background: color.blue, color: color.labelOnAccent, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], fontWeight: fontWeight.bold, textDecoration: 'none' }}
+          style={{ background: themeColor.blue, color: themeColor.labelOnAccent, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], fontWeight: fontWeight.bold, textDecoration: 'none' }}
         >
           + New execution
         </Link>
-        <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{loading ? 'loading…' : `${executions.length} shown`}</span>
+        <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{loading ? 'loading…' : `${executions.length} shown`}</span>
       </div>
       {error !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap', fontWeight: fontWeight.bold }}>⚠ {error}</Banner>}
       <Card>
@@ -101,18 +101,18 @@ export function ExecutorHistory() {
             <TBody>
               {executions.map((execution) => (
                 <TR key={execution.id}>
-                  <TD style={{ ...tdStyle, color: color.labelTertiary }}>{formatAgo(execution.createdAt)}</TD>
+                  <TD style={{ ...tdStyle, color: themeColor.labelTertiary }}>{formatAgo(execution.createdAt)}</TD>
                   <TD style={tdStyle}><StatusPill status={execution.status} /></TD>
-                  <TD style={{ ...tdStyle, color: execution.mode === 'live' ? color.red : color.labelTertiary }}>{execution.mode}</TD>
+                  <TD style={{ ...tdStyle, color: execution.mode === 'live' ? themeColor.red : themeColor.labelTertiary }}>{execution.mode}</TD>
                   <TD style={tdStyle}>{execution.symbol}</TD>
-                  <TD style={{ ...tdStyle, color: execution.side === 'buy' ? color.blue : color.red }}>{execution.side.toUpperCase()}</TD>
+                  <TD style={{ ...tdStyle, color: execution.side === 'buy' ? themeColor.blue : themeColor.red }}>{execution.side.toUpperCase()}</TD>
                   <TD style={tdStyle}>{execution.executionStrategy}</TD>
                   <TD align="right" mono style={tdStyle}>{formatQty(execution.plannedQuantity)}</TD>
                   <TD align="right" mono style={tdStyle}>{formatQty(execution.actualQuantity)}</TD>
                   <TD align="right" mono style={tdStyle}>{formatMoney(execution.riskBudget)}</TD>
                   <TD align="right" mono style={tdStyle}>{formatMoney(execution.currentRisk)}</TD>
                   <TD style={tdStyle}>
-                    <Link href={`/executor/${execution.id}`} style={{ color: color.blue, fontSize: fontSize[11] }}>open →</Link>
+                    <Link href={`/executor/${execution.id}`} style={{ color: themeColor.blue, fontSize: fontSize[11] }}>open →</Link>
                   </TD>
                 </TR>
               ))}
@@ -159,11 +159,11 @@ export function ExecutorOverview() {
         <Button onClick={load} disabled={loading}>↻ Refresh</Button>
         <Link
           href="/executor/new"
-          style={{ background: color.blue, color: color.labelOnAccent, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], fontWeight: fontWeight.bold, textDecoration: 'none' }}
+          style={{ background: themeColor.blue, color: themeColor.labelOnAccent, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], fontWeight: fontWeight.bold, textDecoration: 'none' }}
         >
           + New execution
         </Link>
-        <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{loading ? 'loading…' : `${executions.length} total`}</span>
+        <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{loading ? 'loading…' : `${executions.length} total`}</span>
       </div>
       {error !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap', fontWeight: fontWeight.bold }}>⚠ {error}</Banner>}
       {executions.length === 0 && !loading && !error ? (
@@ -180,10 +180,10 @@ export function ExecutorOverview() {
                 .map(([status, n]) => (
                   <div
                     key={status}
-                    style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[12]}px`, fontSize: fontSize[11] }}
+                    style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[12]}px`, fontSize: fontSize[11] }}
                   >
-                    <span style={{ color: color.labelTertiary }}>{status}</span>{' '}
-                    <span style={{ color: color.blue, fontWeight: fontWeight.bold }}>{n}</span>
+                    <span style={{ color: themeColor.labelTertiary }}>{status}</span>{' '}
+                    <span style={{ color: themeColor.blue, fontWeight: fontWeight.bold }}>{n}</span>
                   </div>
                 ))}
             </div>
@@ -207,15 +207,15 @@ export function ExecutorOverview() {
                 <TBody>
                   {recent.map((e) => (
                     <TR key={e.id}>
-                      <TD style={{ ...tdStyle, color: color.labelTertiary }}>{formatAgo(e.createdAt)}</TD>
+                      <TD style={{ ...tdStyle, color: themeColor.labelTertiary }}>{formatAgo(e.createdAt)}</TD>
                       <TD style={tdStyle}><StatusPill status={e.status} /></TD>
                       <TD style={tdStyle}>{e.symbol}</TD>
-                      <TD style={{ ...tdStyle, color: e.side === 'buy' ? color.blue : color.red }}>{e.side.toUpperCase()}</TD>
+                      <TD style={{ ...tdStyle, color: e.side === 'buy' ? themeColor.blue : themeColor.red }}>{e.side.toUpperCase()}</TD>
                       <TD align="right" mono style={tdStyle}>
                         {formatQty(e.actualQuantity)} / {formatQty(e.plannedQuantity)}
                       </TD>
                       <TD style={tdStyle}>
-                        <Link href={`/executor/${e.id}`} style={{ color: color.blue, fontSize: fontSize[11] }}>open →</Link>
+                        <Link href={`/executor/${e.id}`} style={{ color: themeColor.blue, fontSize: fontSize[11] }}>open →</Link>
                       </TD>
                     </TR>
                   ))}
@@ -224,7 +224,7 @@ export function ExecutorOverview() {
             )}
           </Card>
           <p style={noteStyle}>
-            Full sortable history → <Link href="/executor/history" style={{ color: color.blue }}>/executor/history</Link>
+            Full sortable history → <Link href="/executor/history" style={{ color: themeColor.blue }}>/executor/history</Link>
           </p>
         </>
       )}

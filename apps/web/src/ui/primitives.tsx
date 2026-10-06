@@ -1,4 +1,4 @@
-import { color, fontFamily, fontSize, fontWeight, motion, radius, space, target, zIndex } from '@/styles/tokens';
+import { themeColor, fontFamily, fontSize, fontWeight, motion, radius, space, target, zIndex } from '@/styles/tokens';
 
 type ButtonProps = {
   onClick: () => void;
@@ -10,9 +10,9 @@ type ButtonProps = {
 
 export function Button({ onClick, children, variant = 'primary', size = 'md', disabled }: ButtonProps) {
   const colors = {
-    primary: { bg: color.blue, fg: color.labelOnAccent },
-    danger: { bg: color.red, fg: color.labelOnAccent },
-    ghost: { bg: color.bgSecondary, fg: color.labelPrimary },
+    primary: { bg: themeColor.blue, fg: themeColor.labelOnAccent },
+    danger: { bg: themeColor.red, fg: themeColor.labelOnAccent },
+    ghost: { bg: themeColor.bgSecondary, fg: themeColor.labelPrimary },
   };
   const sizes = {
     sm: `${space[8]}px ${space[12]}px`,
@@ -50,8 +50,8 @@ export function Input({ value, onChange, placeholder, type = 'text', style, disa
   return (
     <input className="fc-focusable" type={type} value={value} placeholder={placeholder} disabled={disabled} autoComplete={autoComplete} spellCheck={spellCheck} onChange={e => onChange(e.target.value)}
       style={{
-        width: '100%', background: color.bgBase, color: color.labelPrimary,
-        border: `1px solid ${color.separator}`, borderRadius: radius[8],
+        width: '100%', background: themeColor.bgBase, color: themeColor.labelPrimary,
+        border: `1px solid ${themeColor.separator}`, borderRadius: radius[8],
         padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box', opacity: disabled ? 0.5 : 1, ...style,
       }} />
   );
@@ -69,7 +69,7 @@ export function Select<T extends string>({ value, onChange, options, style, disa
   return (
     <select className="fc-focusable" value={value} disabled={disabled} onChange={e => onChange(e.target.value as T)}
       style={{
-        background: color.bgBase, color: color.labelPrimary, border: `1px solid ${color.separator}`,
+        background: themeColor.bgBase, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`,
         borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box', opacity: disabled ? 0.5 : 1, ...style,
       }}>
       {options.map(o => {
@@ -89,11 +89,11 @@ type ModalProps = {
 
 export function Modal({ title, onClose, children, width = 480 }: ModalProps) {
   return (
-    <div style={{ position: 'fixed', inset: 0, background: color.scrim, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: zIndex.modal, transition: 'opacity ' + motion.deliberate + ' ' + motion.ease }}>
-      <div style={{ background: color.bgElevated, border: `1px solid ${color.separator}`, borderRadius: radius[16], padding: space[24], width, maxWidth: '90vw', fontFamily: fontFamily.mono, transition: 'transform ' + motion.slow + ' ' + motion.ease }}>
+    <div style={{ position: 'fixed', inset: 0, background: themeColor.scrim, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: zIndex.modal, transition: 'opacity ' + motion.deliberate + ' ' + motion.ease }}>
+      <div style={{ background: themeColor.bgElevated, border: `1px solid ${themeColor.separator}`, borderRadius: radius[16], padding: space[24], width, maxWidth: '90vw', fontFamily: fontFamily.mono, transition: 'transform ' + motion.slow + ' ' + motion.ease }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[16] }}>
-          <h2 style={{ margin: 0, color: color.blue, fontSize: fontSize[17] }}>{title}</h2>
-          <button className="fc-focusable" onClick={onClose} style={{ background: 'transparent', color: color.labelTertiary, border: 'none', fontSize: fontSize[20], cursor: 'pointer' }}>✕</button>
+          <h2 style={{ margin: 0, color: themeColor.blue, fontSize: fontSize[17] }}>{title}</h2>
+          <button className="fc-focusable" onClick={onClose} style={{ background: 'transparent', color: themeColor.labelTertiary, border: 'none', fontSize: fontSize[20], cursor: 'pointer' }}>✕</button>
         </div>
         {children}
       </div>
@@ -102,7 +102,7 @@ export function Modal({ title, onClose, children, width = 480 }: ModalProps) {
 }
 
 export function Label({ children }: { children: React.ReactNode }) {
-  return <label style={{ fontSize: fontSize[11], color: color.labelTertiary, display: 'block', marginBottom: space[4] }}>{children}</label>;
+  return <label style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, display: 'block', marginBottom: space[4] }}>{children}</label>;
 }
 
 export { Card } from '@/ui/card';

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { color, fontSize, radius, space, fontWeight } from '@/styles/tokens';
+import { themeColor, fontSize, radius, space, fontWeight } from '@/styles/tokens';
 import { fetchIndicators, type IndicatorsEnvelope, type IndicatorMeta, fetchIndicator, formatDate, formatDelta, formatValue, NO_VALUE, type IndicatorEnvelope } from '@/features/economy/model';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
@@ -24,10 +24,10 @@ import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 
 const FIELD = {
   padding: `${space[8]}px ${space[8]}px`,
-  background: color.bgSecondary,
-  border: `1px solid ${color.separator}`,
+  background: themeColor.bgSecondary,
+  border: `1px solid ${themeColor.separator}`,
   borderRadius: radius[8],
-  color: color.labelPrimary,
+  color: themeColor.labelPrimary,
   fontSize: fontSize[11],
 } as const;
 
@@ -96,35 +96,35 @@ export default function IndicatorExplorer() {
         <Card
           title={`${rows.length} of ${data.registryTotal} series`}
           subtitle="filtered locally — no upstream call per keystroke"
-          right={data.facets.sources.length > 0 ? <span style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{data.facets.categories.length} categories</span> : undefined}
+          right={data.facets.sources.length > 0 ? <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{data.facets.categories.length} categories</span> : undefined}
         >
           <div style={{ maxHeight: 620, overflowY: 'auto' }}>
             <Table>
               <THead>
                 <TR>
                   {['Indicator', 'Country', 'Category', 'Freq', 'Source', 'Imp.'].map((h) => (
-                    <TH key={h} style={{ position: 'sticky', top: 0, background: color.bgSecondary, textAlign: 'left', padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary, fontSize: fontSize[11], borderBottom: `1px solid ${color.separator}` }}>{h}</TH>
+                    <TH key={h} style={{ position: 'sticky', top: 0, background: themeColor.bgSecondary, textAlign: 'left', padding: `${space[8]}px ${space[8]}px`, color: themeColor.labelTertiary, fontSize: fontSize[11], borderBottom: `1px solid ${themeColor.separator}` }}>{h}</TH>
                   ))}
                 </TR>
               </THead>
               <TBody>
                 {rows.slice(0, 400).map((r) => (
                   <TR key={r.slug}>
-                    <TD style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${color.separator}` }}>
-                      <Link href={`/economy/indicator/${r.slug}`} style={{ color: color.blue, textDecoration: 'none' }} title={r.note}>{r.name}</Link>
-                      <div style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{r.slug}</div>
+                    <TD style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${themeColor.separator}` }}>
+                      <Link href={`/economy/indicator/${r.slug}`} style={{ color: themeColor.blue, textDecoration: 'none' }} title={r.note}>{r.name}</Link>
+                      <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{r.slug}</div>
                     </TD>
-                    <TD style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${color.separator}`, color: color.labelTertiary }}>{r.countryName ?? '—'}</TD>
-                    <TD style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${color.separator}`, color: color.labelTertiary }}>{r.category}</TD>
-                    <TD style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${color.separator}`, color: color.labelTertiary }}>{r.frequency}</TD>
-                    <TD style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${color.separator}`, color: color.labelTertiary }}>{r.source}</TD>
-                    <TD style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${color.separator}` }}><ImportanceDots level={r.importance} /></TD>
+                    <TD style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${themeColor.separator}`, color: themeColor.labelTertiary }}>{r.countryName ?? '—'}</TD>
+                    <TD style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${themeColor.separator}`, color: themeColor.labelTertiary }}>{r.category}</TD>
+                    <TD style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${themeColor.separator}`, color: themeColor.labelTertiary }}>{r.frequency}</TD>
+                    <TD style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${themeColor.separator}`, color: themeColor.labelTertiary }}>{r.source}</TD>
+                    <TD style={{ padding: `${space[4]}px ${space[8]}px`, borderBottom: `1px solid ${themeColor.separator}` }}><ImportanceDots level={r.importance} /></TD>
                   </TR>
                 ))}
               </TBody>
             </Table>
           </div>
-          {rows.length > 400 && <p style={{ marginTop: space[8], fontSize: fontSize[11], color: color.labelTertiary }}>showing the first 400 of {rows.length} — narrow the filters to see the rest</p>}
+          {rows.length > 400 && <p style={{ marginTop: space[8], fontSize: fontSize[11], color: themeColor.labelTertiary }}>showing the first 400 of {rows.length} — narrow the filters to see the rest</p>}
         </Card>
       )}
     </main>
@@ -145,7 +145,7 @@ const H = 200;
 
 function Chart({ points }: { points: { date: string; value: number | null }[] }) {
   const vals = points.map((p) => p.value).filter((v): v is number => v !== null && Number.isFinite(v));
-  if (vals.length < 2) return <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>Not enough published observations to chart.</p>;
+  if (vals.length < 2) return <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>Not enough published observations to chart.</p>;
   const min = Math.min(...vals);
   const max = Math.max(...vals);
   const span = max - min || 1;
@@ -165,11 +165,11 @@ function Chart({ points }: { points: { date: string; value: number | null }[] })
   return (
     <div style={{ overflowX: 'auto' }}>
       <svg width={W} height={H + 22} role="img" aria-label="series history">
-        {segments.map((d, i) => <path key={i} d={d} fill="none" stroke={color.blue} strokeWidth={1.6} />)}
-        <text x={0} y={H + 16} fill={color.labelTertiary} fontSize={10}>{points[0]?.date}</text>
-        <text x={W} y={H + 16} fill={color.labelTertiary} fontSize={10} textAnchor="end">{points[points.length - 1]?.date}</text>
-        <text x={0} y={10} fill={color.labelTertiary} fontSize={10}>{formatValue(max, 2)}</text>
-        <text x={0} y={H} fill={color.labelTertiary} fontSize={10}>{formatValue(min, 2)}</text>
+        {segments.map((d, i) => <path key={i} d={d} fill="none" stroke={themeColor.blue} strokeWidth={1.6} />)}
+        <text x={0} y={H + 16} fill={themeColor.labelTertiary} fontSize={10}>{points[0]?.date}</text>
+        <text x={W} y={H + 16} fill={themeColor.labelTertiary} fontSize={10} textAnchor="end">{points[points.length - 1]?.date}</text>
+        <text x={0} y={10} fill={themeColor.labelTertiary} fontSize={10}>{formatValue(max, 2)}</text>
+        <text x={0} y={H} fill={themeColor.labelTertiary} fontSize={10}>{formatValue(min, 2)}</text>
       </svg>
     </div>
   );
@@ -191,7 +191,7 @@ export function IndicatorDetail({ slug }: { slug: string }) {
     return (
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
         <ErrorState title="Could not load this indicator" detail={error} />
-        <p style={{ marginTop: space[12] }}><Link href="/economy/indicator" style={{ color: color.blue }}>← all indicators</Link></p>
+        <p style={{ marginTop: space[12] }}><Link href="/economy/indicator" style={{ color: themeColor.blue }}>← all indicators</Link></p>
       </main>
     );
   }
@@ -218,15 +218,15 @@ export function IndicatorDetail({ slug }: { slug: string }) {
             <Value label="Latest" value={latest?.value == null ? NO_VALUE : formatValue(latest.value, i.decimals)} tone={latest?.value == null ? 'muted' : 'default'} unit={latest?.value == null ? undefined : i.unit} />
             <Value label="Change" value={change === null ? NO_VALUE : formatValue(change, i.decimals)} tone={change === null ? 'muted' : 'default'} hint="vs previous observation" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[4] }}>
-              <span style={{ fontSize: fontSize[11], color: color.labelTertiary, textTransform: 'uppercase' }}>Period</span>
-              <span style={{ fontSize: fontSize[15], color: color.labelPrimary }}>{formatDate(latest?.date)}</span>
+              <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, textTransform: 'uppercase' }}>Period</span>
+              <span style={{ fontSize: fontSize[15], color: themeColor.labelPrimary }}>{formatDate(latest?.date)}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[4] }}>
-              <span style={{ fontSize: fontSize[11], color: color.labelTertiary, textTransform: 'uppercase' }}>Importance</span>
+              <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, textTransform: 'uppercase' }}>Importance</span>
               <span><ImportanceDots level={i.importance} /></span>
             </div>
           </div>
-          <p style={{ margin: `${space[12]}px 0 0`, fontSize: fontSize[12], color: color.labelTertiary }}>{i.note}</p>
+          <p style={{ margin: `${space[12]}px 0 0`, fontSize: fontSize[12], color: themeColor.labelTertiary }}>{i.note}</p>
         </Card>
 
         <Card title="History" subtitle={`${data.observations.length} published observations`}>
@@ -242,7 +242,7 @@ export function IndicatorDetail({ slug }: { slug: string }) {
               cells: [
                 formatDate(o.date),
                 <span key="v">{o.value === null ? '—' : formatValue(o.value, i.decimals)}</span>,
-                <span key="d" style={{ color: color.labelTertiary }}>{o.previous === null || o.value === null ? '—' : formatDelta(o.value - o.previous, i.decimals)}</span>,
+                <span key="d" style={{ color: themeColor.labelTertiary }}>{o.previous === null || o.value === null ? '—' : formatDelta(o.value - o.previous, i.decimals)}</span>,
               ],
             }))}
           />
@@ -255,7 +255,7 @@ export function IndicatorDetail({ slug }: { slug: string }) {
               { cells: ['Reference period', formatDate(data.release?.releaseAt ?? null)] },
               { cells: ['Actual', data.release?.actual === null || data.release?.actual === undefined ? '—' : formatValue(data.release.actual, i.decimals)] },
               { cells: ['Previous', data.release?.previous === null || data.release?.previous === undefined ? '—' : formatValue(data.release.previous, i.decimals)] },
-              { cells: ['Forecast', <span key="f" style={{ color: color.labelTertiary }}>— (not published)</span>] },
+              { cells: ['Forecast', <span key="f" style={{ color: themeColor.labelTertiary }}>— (not published)</span>] },
             ]}
           />
         </Card>
@@ -266,7 +266,7 @@ export function IndicatorDetail({ slug }: { slug: string }) {
           <Card title="Related" subtitle="same category for this country, then the same series elsewhere">
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
               {data.related.map((r) => (
-                <Link key={r.slug} href={`/economy/indicator/${r.slug}`} style={{ padding: `${space[4]}px ${space[8]}px`, border: `1px solid ${color.separator}`, borderRadius: radius[8], color: color.labelPrimary, fontSize: fontSize[11], textDecoration: 'none' }}>
+                <Link key={r.slug} href={`/economy/indicator/${r.slug}`} style={{ padding: `${space[4]}px ${space[8]}px`, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], color: themeColor.labelPrimary, fontSize: fontSize[11], textDecoration: 'none' }}>
                   {r.countryName ? `${r.countryName} · ` : ''}{r.subcategory}
                 </Link>
               ))}
@@ -275,10 +275,10 @@ export function IndicatorDetail({ slug }: { slug: string }) {
         </div>
       )}
 
-      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: color.labelTertiary }}>
+      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
         <strong style={{ fontWeight: fontWeight.medium }}>Upstream:</strong> {data.upstream.join(' · ')}
       </p>
-      <p style={{ marginTop: space[8], fontSize: fontSize[11], color: color.labelTertiary }}>{data.derived}</p>
+      <p style={{ marginTop: space[8], fontSize: fontSize[11], color: themeColor.labelTertiary }}>{data.derived}</p>
     </main>
   );
 }

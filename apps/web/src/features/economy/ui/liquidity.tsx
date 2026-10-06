@@ -9,7 +9,7 @@
  * confidently wrong in exactly the regime it exists to detect.
  */
 import { useEffect, useState } from 'react';
-import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { fetchLiquidity, formatCompact, formatDate, type LiquidityEnvelope } from '@/features/economy/model';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
@@ -41,7 +41,7 @@ export default function LiquidityBoard() {
   if (!data) return <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}><Loading what="liquidity" /></main>;
 
   const idx = data.index;
-  const trendColor = idx?.trend === 'Expanding' ? color.green : idx?.trend === 'Contracting' ? color.red : color.orange;
+  const trendColor = idx?.trend === 'Expanding' ? themeColor.green : idx?.trend === 'Contracting' ? themeColor.red : themeColor.orange;
 
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
@@ -54,13 +54,13 @@ export default function LiquidityBoard() {
       {idx && (
         <Card title="Global Liquidity Index" subtitle="derived position in this basket — not an official gauge">
           <div style={{ display: 'flex', alignItems: 'baseline', gap: space[8] }}>
-            <span style={{ fontSize: fontSize[34], fontWeight: fontWeight.bold, color: color.labelPrimary }}>{idx.value}</span>
+            <span style={{ fontSize: fontSize[34], fontWeight: fontWeight.bold, color: themeColor.labelPrimary }}>{idx.value}</span>
             <span style={{ fontSize: fontSize[17], color: trendColor, fontWeight: fontWeight.semibold }}>{idx.trend}</span>
           </div>
-          <div style={{ height: 8, background: color.separator, borderRadius: radius[8], marginTop: space[8] }}>
+          <div style={{ height: 8, background: themeColor.separator, borderRadius: radius[8], marginTop: space[8] }}>
             <div style={{ width: `${idx.value}%`, height: '100%', background: trendColor, borderRadius: radius[8] }} />
           </div>
-          <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary }}>
+          <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary }}>
             Share of {idx.components} live components moving in their loosening direction. 50 = balanced; above 58 expanding, below 42 contracting.
           </p>
         </Card>
@@ -74,10 +74,10 @@ export default function LiquidityBoard() {
             const flat = data.components.filter((c) => c.change !== null && Math.sign(c.change * c.direction) === 0).length;
             const unreadable = data.components.filter((c) => c.change === null).length;
             return [
-              { label: 'loosening', value: loosening, color: color.green },
-              { label: 'tightening', value: tightening, color: color.red },
-              { label: 'flat', value: flat, color: color.labelTertiary },
-              { label: 'unreadable', value: unreadable, color: color.separator },
+              { label: 'loosening', value: loosening, color: themeColor.green },
+              { label: 'tightening', value: tightening, color: themeColor.red },
+              { label: 'flat', value: flat, color: themeColor.labelTertiary },
+              { label: 'unreadable', value: unreadable, color: themeColor.separator },
             ];
           })()}
         />
@@ -88,14 +88,14 @@ export default function LiquidityBoard() {
             head={['Component', 'Level', 'Date', '30d change', 'Loosens when']}
             rows={data.components.map((c) => {
               const loosening = c.change === null ? null : Math.sign(c.change * c.direction);
-              const changeColor = loosening === null ? color.labelTertiary : loosening > 0 ? color.green : loosening < 0 ? color.red : color.labelTertiary;
+              const changeColor = loosening === null ? themeColor.labelTertiary : loosening > 0 ? themeColor.green : loosening < 0 ? themeColor.red : themeColor.labelTertiary;
               return {
                 cells: [
                   <span key="l" title={c.note}>{c.label}</span>,
                   <span key="v">{c.value === null ? '—' : `${formatCompact(c.value, 2)} ${c.unit}`}</span>,
-                  <span key="d" style={{ color: color.labelTertiary }}>{formatDate(c.date)}</span>,
+                  <span key="d" style={{ color: themeColor.labelTertiary }}>{formatDate(c.date)}</span>,
                   <span key="c" style={{ color: changeColor }}>{c.change === null ? '—' : `${c.change > 0 ? '+' : ''}${formatCompact(c.change, 2)} ${c.unit}`}</span>,
-                  <span key="dir" style={{ color: color.labelTertiary }}>{c.direction > 0 ? 'rising' : 'falling'}</span>,
+                  <span key="dir" style={{ color: themeColor.labelTertiary }}>{c.direction > 0 ? 'rising' : 'falling'}</span>,
                 ],
               };
             })}
@@ -109,7 +109,7 @@ export default function LiquidityBoard() {
         </div>
       )}
 
-      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: color.labelTertiary }}>{data.derived}</p>
+      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: themeColor.labelTertiary }}>{data.derived}</p>
     </main>
   );
 }

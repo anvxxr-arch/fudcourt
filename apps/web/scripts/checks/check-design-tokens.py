@@ -437,6 +437,36 @@ def scan_dead_tokens() -> None:
     for parent, body in EXPORT_BLOCK.findall(TOKENS_TS.read_text(encoding="utf-8")):
         if re.fullmatch(r"(?:\.\.\.\w+\s*,?\s*)+", body.strip()):
             aggregates.add(parent)
+    # A DERIVED VIEW is an export whose every value is a `var(--fc-…)` reference to another
+    # export's emitted custom property — `themeColor` re-points `color` so React inline
+    # styles resolve through the cascade instead of freezing a literal. Its keys are the
+    # parent's keys under a different namespace, so the parent's consumers keep them alive;
+    # demanding a second mention of every key is the same noise the aggregate rule rejects.
+    # A hand-written value inside the view (not a var) is still a real token and is checked.
+    #
+    # Two declaration forms are recognised: an object literal (`{ k: 'var(--fc-…)', … }`) and
+    # a `Object.fromEntries(Object.keys(parent).map(k => [k, \`var(--fc-…-${k})\`]))` builder,
+    # which is how `themeColor` stays key-for-key with `color` by construction.
+    views: dict[str, str] = {}
+    tokens_src = TOKENS_TS.read_text(encoding="utf-8")
+    for parent, body in EXPORT_BLOCK.findall(tokens_src):
+        pairs = re.findall(r"['\"]?(\w+)['\"]?\s*:\s*['\"]([^'\"]+)['\"]", body)
+        if pairs and all(v.startswith("var(--fc-") for _, v in pairs):
+            for candidate, cand_prefix in VAR_SCHEME.items():
+                if all(v.startswith(f"var({cand_prefix}") for _, v in pairs):
+                    views[parent] = candidate
+                    break
+    # The fromEntries form: `Object.fromEntries(Object.keys(X).map((k) => [k, \`var(--fc-P-${k})\`]))`
+    for m in re.finditer(
+        r"export const (\w+)[^=]*=\s*Object\.fromEntries\(\s*Object\.keys\((\w+)\)"
+        r"[^`]*`var\((--fc-[\w-]+)",
+        tokens_src,
+    ):
+        view_name, parent_name, prefix = m.group(1), m.group(2), m.group(3)
+        for candidate, cand_prefix in VAR_SCHEME.items():
+            if prefix == cand_prefix:
+                views[view_name] = candidate
+                break
     # A RAMP is a frozen palette, not a menu of choices: the plan fixes every step of the
     # orange and neutral ramps and the market semantics, and the semantic layer decides
     # which steps are in use. A ramp step that no semantic role currently names is still a
@@ -470,6 +500,14 @@ def scan_dead_tokens() -> None:
             # step — trimming the scale to what is used today is how a design system ends up
             # with a 3-step spacing scale and a thousand one-off values.
             if parent in FROZEN_SCALES:
+                continue
+            # A parent that a derived VIEW re-points is consumed through that view: the view
+            # is what 68 files read, and it emits this parent's custom properties. The view
+            # re-lists the parent's keys BY CONSTRUCTION (`Object.keys(parent).map(...)`), so
+            # every parent key the view can emit is vouched for — but a key the view cannot
+            # reach is still dead. The view's own export is checked separately below, so
+            # nothing is vouched for twice.
+            if parent in views.values():
                 continue
             access = re.compile(
                 rf"\b{re.escape(parent)}\s*(?:\.\s*{re.escape(key)}(?![\w$])"

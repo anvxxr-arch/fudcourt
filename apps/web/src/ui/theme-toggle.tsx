@@ -1,6 +1,6 @@
 'use client';
 
-import { color, radius, target } from '@/styles/tokens';
+import { themeColor, radius, target } from '@/styles/tokens';
 
 /**
  * Flips the `dark` class on `<html>` and persists the choice. The inline
@@ -22,9 +22,9 @@ export function ThemeToggle() {
       style={{
         minWidth: target.min,
         minHeight: target.min,
-        background: color.bgSecondary,
-        color: color.labelPrimary,
-        border: `1px solid ${color.separator}`,
+        background: themeColor.bgSecondary,
+        color: themeColor.labelPrimary,
+        border: `1px solid ${themeColor.separator}`,
         borderRadius: radius[8],
         cursor: 'pointer',
       }}

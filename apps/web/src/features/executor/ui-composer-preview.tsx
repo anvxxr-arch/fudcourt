@@ -4,7 +4,7 @@
  * Split from ui-composer.tsx; re-exported through ./ui-composer (and ./ui).
  */
 import { Card } from '@/ui/primitives';
-import { color, fontSize, fontWeight, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, space } from '@/styles/tokens';
 import { Row } from '@/ui/row';
 import type { PreviewResult } from '@/lib/executor';
 import {
@@ -35,7 +35,7 @@ export function PreviewBlock({ shown, stale }: { shown: PreviewResponse | null; 
     : plan.marketType === 'spot' ? balances.spotEquity : balances.futuresEquity;
   const conflictCount = preview?.conflicts.length ?? 0;
   return (
-    <Card style={{ borderColor: conflictCount > 0 ? color.red : color.separator }}>
+    <Card style={{ borderColor: conflictCount > 0 ? themeColor.red : themeColor.separator }}>
       <h3 style={h3Style}>RISK PREVIEW · §84</h3>
       {preview === null && (
         <p style={noteStyle}>
@@ -46,7 +46,7 @@ export function PreviewBlock({ shown, stale }: { shown: PreviewResponse | null; 
       )}
       {plan !== null && (
         <>
-          <p style={{ color: color.labelPrimary, fontSize: fontSize[13], fontWeight: fontWeight.bold, margin: '0 0 2px' }}>
+          <p style={{ color: themeColor.labelPrimary, fontSize: fontSize[13], fontWeight: fontWeight.bold, margin: '0 0 2px' }}>
             {plan.symbol} · {plan.side.toUpperCase()} · {plan.venueKey}
           </p>
           <p style={noteStyle}>
@@ -101,27 +101,27 @@ export function PreviewBlock({ shown, stale }: { shown: PreviewResponse | null; 
         </>
       )}
       {preview !== null && conflictCount > 0 && (
-        <div style={{ marginTop: space[8], borderTop: `1px solid ${color.red}`, paddingTop: space[8] }}>
-          <p style={{ color: color.red, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[4]}px` }}>
+        <div style={{ marginTop: space[8], borderTop: `1px solid ${themeColor.red}`, paddingTop: space[8] }}>
+          <p style={{ color: themeColor.red, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[4]}px` }}>
             {conflictCount} CONFLICT{conflictCount === 1 ? '' : 'S'} — creation is blocked (PRD §117)
           </p>
           {preview.conflicts.map((conflict) => (
-            <p key={conflict.code} style={{ color: color.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[4]}px` }}>
-              <span style={{ color: color.red, fontWeight: fontWeight.bold }}>{conflict.code}</span> — {conflict.message}
+            <p key={conflict.code} style={{ color: themeColor.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[4]}px` }}>
+              <span style={{ color: themeColor.red, fontWeight: fontWeight.bold }}>{conflict.code}</span> — {conflict.message}
               {conflict.detail !== undefined && (
-                <span style={{ color: color.labelTertiary }}>{' '}({Object.entries(conflict.detail).map(([key, value]) => `${key}=${value}`).join(', ')})</span>
+                <span style={{ color: themeColor.labelTertiary }}>{' '}({Object.entries(conflict.detail).map(([key, value]) => `${key}=${value}`).join(', ')})</span>
               )}
             </p>
           ))}
         </div>
       )}
       {preview !== null && preview.warnings.length > 0 && (
-        <div style={{ marginTop: space[8], borderTop: `1px solid ${color.separator}`, paddingTop: space[8] }}>
-          <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[4]}px` }}>
+        <div style={{ marginTop: space[8], borderTop: `1px solid ${themeColor.separator}`, paddingTop: space[8] }}>
+          <p style={{ color: themeColor.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[4]}px` }}>
             {preview.warnings.length} WARNING{preview.warnings.length === 1 ? '' : 'S'} — shown, not blocking
           </p>
           {preview.warnings.map((warning) => (
-            <p key={warning} style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: '0 0 3px' }}>· {warning}</p>
+            <p key={warning} style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: '0 0 3px' }}>· {warning}</p>
           ))}
         </div>
       )}

@@ -1,6 +1,6 @@
 'use client';
 import { Fragment, useMemo } from 'react';
-import { color, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
 import { TBody, TD, TH, THead, TR, Table } from '@/ui/table';
 import {
   DASH,
@@ -16,14 +16,14 @@ import { theadRowStyle, rowStyle } from './ui-shared';
 /** A yield delta rendered in basis points, coloured by sign; absent -> `—`. */
 export function Bp({ v }: { v: number | null | undefined }) {
   const t = toneOf(v);
-  const c = t === 'negative' ? color.red : t === 'positive' ? color.green : color.labelTertiary;
+  const c = t === 'negative' ? themeColor.red : t === 'positive' ? themeColor.green : themeColor.labelTertiary;
   return <span style={{ color: c }}>{fmtBp(v)}</span>;
 }
 /** Region order the policy-rate table renders in — curated, not alphabetical. */
 const POLICY_REGIONS = ['Americas', 'Europe', 'Asia-Pacific', 'Africa & Middle East'];
 /** Shared style for a table's group-divider row. */
 export const groupRowStyle: React.CSSProperties = {
-  color: color.blue,
+  color: themeColor.blue,
   fontWeight: fontWeight.bold,
   fontSize: fontSize[11],
   letterSpacing: letterSpacing.wider,
@@ -63,11 +63,11 @@ export function PolicyRateTable({ rows }: { rows: PolicyRateRow[] }) {
               </TR>
               {regionRows.map(r => (
                 <TR key={r.area} style={rowStyle}>
-                  <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
+                  <TD style={{ color: themeColor.labelPrimary, fontWeight: fontWeight.bold }}>
                     <span title={r.note}>{r.bank}</span>
                   </TD>
-                  <TD align="right" style={{ color: color.labelPrimary }}>{fmtPolicyRate(r.rate)}</TD>
-                  <TD align="right" style={{ color: color.labelTertiary }}>{r.date || DASH}</TD>
+                  <TD align="right" style={{ color: themeColor.labelPrimary }}>{fmtPolicyRate(r.rate)}</TD>
+                  <TD align="right" style={{ color: themeColor.labelTertiary }}>{r.date || DASH}</TD>
                 </TR>
               ))}
             </Fragment>
@@ -111,11 +111,11 @@ export function IndicatorTable({ rows }: { rows: IndicatorRow[] }) {
               </TR>
               {groupRows.map(r => (
                 <TR key={r.id} style={rowStyle}>
-                  <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
+                  <TD style={{ color: themeColor.labelPrimary, fontWeight: fontWeight.bold }}>
                     <span title={r.note}>{r.name}</span>
                   </TD>
-                  <TD align="right" style={{ color: color.labelPrimary }}>{fmtIndicator(r.value, r.unit, r.decimals)}</TD>
-                  <TD align="right" style={{ color: color.labelTertiary }}>{fmtDate(r.date)}</TD>
+                  <TD align="right" style={{ color: themeColor.labelPrimary }}>{fmtIndicator(r.value, r.unit, r.decimals)}</TD>
+                  <TD align="right" style={{ color: themeColor.labelTertiary }}>{fmtDate(r.date)}</TD>
                 </TR>
               ))}
             </Fragment>

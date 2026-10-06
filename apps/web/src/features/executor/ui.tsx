@@ -20,7 +20,7 @@
  */
 import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
-import { color, fontFamily, fontSize, letterSpacing, radius, space } from '@/styles/tokens';
+import { themeColor, fontFamily, fontSize, letterSpacing, radius, space } from '@/styles/tokens';
 import { noteStyle } from './ui-shared';
 
 // ---------------------------------------------------------------------------
@@ -36,9 +36,9 @@ const NAV_LINKS: ReadonlyArray<{ href: string; label: string }> = [
 
 export function ExecutorFrame({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <main style={{ background: color.bgBase, minHeight: '100vh', color: color.labelPrimary, fontFamily: fontFamily.mono, padding: space[20] }}>
-      <h1 style={{ margin: 0, color: color.blue, letterSpacing: letterSpacing.wider, fontSize: fontSize[17] }}>CEX EXECUTOR</h1>
-      <p style={{ margin: `${space[4]}px 0 0`, color: color.labelTertiary, fontSize: fontSize[11] }}>{title} · {subtitle}</p>
+    <main style={{ background: themeColor.bgBase, minHeight: '100vh', color: themeColor.labelPrimary, fontFamily: fontFamily.mono, padding: space[20] }}>
+      <h1 style={{ margin: 0, color: themeColor.blue, letterSpacing: letterSpacing.wider, fontSize: fontSize[17] }}>CEX EXECUTOR</h1>
+      <p style={{ margin: `${space[4]}px 0 0`, color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{title} · {subtitle}</p>
       <p style={noteStyle}>
         non-custodial · your exchange keys, never ours · every figure on this page is what the risk engine returned
         for your own account — a `—` means the engine did not compute it
@@ -50,9 +50,9 @@ export function ExecutorFrame({ title, subtitle, children }: { title: string; su
               key={link.href}
               href={link.href}
               style={{
-                background: color.bgSecondary,
-                color: color.blue,
-                border: `1px solid ${color.separator}`,
+                background: themeColor.bgSecondary,
+                color: themeColor.blue,
+                border: `1px solid ${themeColor.separator}`,
                 padding: `${space[8]}px ${space[12]}px`,
                 borderRadius: radius[8],
                 fontSize: fontSize[11],
@@ -62,7 +62,7 @@ export function ExecutorFrame({ title, subtitle, children }: { title: string; su
               {link.label}
             </Link>
           ))}
-          <Link href="/team/balance" style={{ color: color.labelTertiary, fontSize: fontSize[11], padding: `${space[8]}px ${space[4]}px` }}>← back to store</Link>
+          <Link href="/team/balance" style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], padding: `${space[8]}px ${space[4]}px` }}>← back to store</Link>
         </div>
         {children}
       </div>

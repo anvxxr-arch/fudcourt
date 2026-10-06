@@ -1,4 +1,4 @@
-import { color, fontSize } from '@/styles/tokens';
+import { themeColor, fontSize } from '@/styles/tokens';
 
 /** The project's single spelling of "the upstream published nothing". */
 const NO_VALUE = '—';
@@ -9,7 +9,7 @@ const NO_VALUE = '—';
  */
 export function Sparkline({ points, width = 120, height = 28 }: { points: (number | null)[]; width?: number; height?: number }) {
   const vals = points.filter((p): p is number => p !== null && Number.isFinite(p));
-  if (vals.length < 2) return <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{NO_VALUE}</span>;
+  if (vals.length < 2) return <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{NO_VALUE}</span>;
   const min = Math.min(...vals);
   const max = Math.max(...vals);
   const span = max - min || 1;
@@ -18,7 +18,7 @@ export function Sparkline({ points, width = 120, height = 28 }: { points: (numbe
   const up = vals[vals.length - 1] >= vals[0];
   return (
     <svg width={width} height={height} role="img" aria-label={`trend ${up ? 'up' : 'down'}`} style={{ display: 'block' }}>
-      <path d={path} fill="none" stroke={up ? color.green : color.red} strokeWidth={1.5} />
+      <path d={path} fill="none" stroke={up ? themeColor.green : themeColor.red} strokeWidth={1.5} />
     </svg>
   );
 }

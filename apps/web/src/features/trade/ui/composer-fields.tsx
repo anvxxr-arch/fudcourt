@@ -5,7 +5,7 @@
  * Split from composer.tsx (verbatim JSX); rendered by TradeComposer inside
  * its Card. Owns no state: every value comes in through props.
  */
-import { color, fontSize, space } from '@/styles/tokens';
+import { themeColor, fontSize, space } from '@/styles/tokens';
 import { VENUE_BY_ID, BASIS_SIZING, type ComposerState, type MarketType, type VenueId } from '@/features/trade/model';
 import type { TradeAccountLite } from '@/features/trade/client';
 import { Button, Input, Select } from '@/ui/primitives';
@@ -80,7 +80,7 @@ export function ComposerFields({
           <Input value={state.quote} onChange={(quote) => patch({ quote })} placeholder="USDT" />
         </Field>
       </div>
-      <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary }}>
+      <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary }}>
         venue symbol: {venueSymbol === null ? 'resolved from the venue token list at call time (not derivable from base+quote)' : venueSymbol}
       </p>
 
@@ -101,7 +101,7 @@ export function ComposerFields({
         </Field>
       </div>
 
-      <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
+      <div style={{ borderTop: `1px solid ${themeColor.separator}`, marginTop: space[8], paddingTop: space[8] }}>
         <div style={pairStyle}>
           <Field label="Entry type">
             <Select
@@ -124,7 +124,7 @@ export function ComposerFields({
         </div>
       </div>
 
-      <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
+      <div style={{ borderTop: `1px solid ${themeColor.separator}`, marginTop: space[8], paddingTop: space[8] }}>
         <div style={pairStyle}>
           <Field label="Sizing mode">
             <Select value={state.sizingMode} onChange={(sizingMode) => patch({ sizingMode })} options={SIZING_OPTIONS} />
@@ -166,7 +166,7 @@ export function ComposerFields({
         )}
       </div>
 
-      <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
+      <div style={{ borderTop: `1px solid ${themeColor.separator}`, marginTop: space[8], paddingTop: space[8] }}>
         <div style={pairStyle}>
           <Field label="Execution mode">
             <Select
@@ -176,7 +176,7 @@ export function ComposerFields({
             />
           </Field>
           <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: space[4] }}>
-            <span style={{ fontSize: fontSize[11], color: state.mode === 'live' ? color.red : color.labelTertiary }}>
+            <span style={{ fontSize: fontSize[11], color: state.mode === 'live' ? themeColor.red : themeColor.labelTertiary }}>
               {state.mode === 'live'
                 ? `live is ${liveEnabled ? 'enabled' : 'BLOCKED by the server kill switch'}`
                 : 'paper — the venue adapter simulates the fills'}
@@ -190,7 +190,7 @@ export function ComposerFields({
           </Button>
         </div>
         {blocking.length > 0 && (
-          <ul style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `${space[8]}px 0 0`, paddingLeft: space[16] }}>
+          <ul style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `${space[8]}px 0 0`, paddingLeft: space[16] }}>
             {blocking.map((item) => <li key={item}>{item}</li>)}
           </ul>
         )}

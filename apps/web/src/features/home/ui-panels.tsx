@@ -1,6 +1,6 @@
 'use client';
 
-import { color, fontWeight, space } from '@/styles/tokens';
+import { themeColor, fontWeight, space } from '@/styles/tokens';
 import { Banner } from '@/ui/banner';
 import { Loading } from '@/ui/feedback';
 import {
@@ -29,7 +29,7 @@ export function MoversColumn({ title, url }: { title: string; url: string }) {
           {data.rows.slice(0, 6).map((r, i) => (
             <div key={`${r.key ?? r.symbol ?? 'row'}-${i}`} style={listRowStyle}>
               <CoinCell image={r.image} symbol={r.symbol} />
-              <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(r.priceUsd)}</span>
+              <span style={{ color: themeColor.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(r.priceUsd)}</span>
               <Change v={r.change24h} />
             </div>
           ))}
@@ -52,8 +52,8 @@ export function FxColumn() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
           {data.pairs.slice(0, 5).map(p => (
             <div key={p.pair} style={listRowStyle}>
-              <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{p.pair}</span>
-              <span style={{ color: color.labelPrimary }}>{fmtRate(p.rate)}</span>
+              <span style={{ color: themeColor.labelPrimary, fontWeight: fontWeight.bold }}>{p.pair}</span>
+              <span style={{ color: themeColor.labelPrimary }}>{fmtRate(p.rate)}</span>
             </div>
           ))}
         </div>
@@ -75,9 +75,9 @@ export function QuoteColumn({ title, url }: { title: string; url: string }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
           {data.quotes.slice(0, 5).map(q => (
             <div key={q.symbol} style={listRowStyle}>
-              <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.name}</span>
+              <span style={{ color: themeColor.labelPrimary, fontWeight: fontWeight.bold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.name}</span>
               <Sparkline points={q.trend ?? []} width={64} height={16} />
-              <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(q.price)}</span>
+              <span style={{ color: themeColor.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(q.price)}</span>
               <Change v={q.changePercent} />
             </div>
           ))}

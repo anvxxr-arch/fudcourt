@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { color, fontSize, fontWeight, lineHeight, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, lineHeight, space } from '@/styles/tokens';
 import { cardStyle, h2Style } from './ui-shared';
 
 export type Destination = { href: string; label: string; blurb: string };
@@ -40,8 +40,8 @@ export function DestinationsSection() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: space[12] }}>
         {DESTINATIONS.map(d => (
           <Link key={d.href} href={d.href} style={{ ...cardStyle, textDecoration: 'none', display: 'block' }}>
-            <div style={{ color: color.labelPrimary, fontSize: fontSize[13], fontWeight: fontWeight.bold }}>{d.label} →</div>
-            <div style={{ color: color.labelTertiary, fontSize: fontSize[11], marginTop: space[8], lineHeight: lineHeight.normal }}>{d.blurb}</div>
+            <div style={{ color: themeColor.labelPrimary, fontSize: fontSize[13], fontWeight: fontWeight.bold }}>{d.label} →</div>
+            <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginTop: space[8], lineHeight: lineHeight.normal }}>{d.blurb}</div>
           </Link>
         ))}
       </div>

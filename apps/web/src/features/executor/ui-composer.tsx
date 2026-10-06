@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { color, fontSize, fontWeight, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, space } from '@/styles/tokens';
 import { Button, Card, Input, Select } from '@/ui/primitives';
 import { Banner } from '@/ui/banner';
 import { Field } from '@/ui/field';
@@ -148,7 +148,7 @@ export function ExecutorComposer() {
         </Field>
         {accounts.length === 0 && (
           <p style={noteStyle}>
-            <Link href="/executor/accounts" style={{ color: color.blue, textDecoration: 'underline' }}>connect an exchange account →</Link>
+            <Link href="/executor/accounts" style={{ color: themeColor.blue, textDecoration: 'underline' }}>connect an exchange account →</Link>
           </p>
         )}
 
@@ -173,8 +173,8 @@ export function ExecutorComposer() {
           </Field>
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
-          <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>ENTRY · STOP · TARGETS</p>
+        <div style={{ borderTop: `1px solid ${themeColor.separator}`, marginTop: space[8], paddingTop: space[8] }}>
+          <p style={{ color: themeColor.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>ENTRY · STOP · TARGETS</p>
           <div style={pairStyle}>
             <Field label="Entry type">
               <Select
@@ -212,8 +212,8 @@ export function ExecutorComposer() {
           />
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
-          <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>SIZING · LEVERAGE</p>
+        <div style={{ borderTop: `1px solid ${themeColor.separator}`, marginTop: space[8], paddingTop: space[8] }}>
+          <p style={{ color: themeColor.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>SIZING · LEVERAGE</p>
           <div style={pairStyle}>
             <Field label="Sizing mode">
               <Select
@@ -251,8 +251,8 @@ export function ExecutorComposer() {
           </div>
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
-          <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>EXECUTION METHOD</p>
+        <div style={{ borderTop: `1px solid ${themeColor.separator}`, marginTop: space[8], paddingTop: space[8] }}>
+          <p style={{ color: themeColor.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>EXECUTION METHOD</p>
           <Field label="Method">
             <Select
  value={state.strategy} onChange={(strategy) => patch({ strategy })} options={STRATEGY_OPTIONS} />
@@ -320,11 +320,11 @@ export function ExecutorComposer() {
           )}
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
+        <div style={{ borderTop: `1px solid ${themeColor.separator}`, marginTop: space[8], paddingTop: space[8] }}>
           <button
             className="fc-focusable"
             onClick={() => setShowAdvanced((open) => !open)}
-            style={{ background: 'transparent', color: color.blue, border: 'none', cursor: 'pointer', fontSize: fontSize[11], fontWeight: fontWeight.bold, padding: 0 }}
+            style={{ background: 'transparent', color: themeColor.blue, border: 'none', cursor: 'pointer', fontSize: fontSize[11], fontWeight: fontWeight.bold, padding: 0 }}
           >
             {showAdvanced ? '▾' : '▸'} ADVANCED CONSTRAINTS
           </button>
@@ -379,14 +379,14 @@ export function ExecutorComposer() {
           )}
         </div>
 
-        <div style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[8], paddingTop: space[8] }}>
+        <div style={{ borderTop: `1px solid ${themeColor.separator}`, marginTop: space[8], paddingTop: space[8] }}>
           <div style={pairStyle}>
             <Field label="Execution mode">
               <Select
  value={state.mode} onChange={(mode) => patch({ mode })} options={MODE_OPTIONS} />
             </Field>
             <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: space[4] }}>
-              <span style={{ color: state.mode === 'live' ? color.red : color.labelTertiary, fontSize: fontSize[11] }}>
+              <span style={{ color: state.mode === 'live' ? themeColor.red : themeColor.labelTertiary, fontSize: fontSize[11] }}>
                 {state.mode === 'live'
                   ? `live is ${liveEnabled ? 'enabled' : 'BLOCKED by the server kill switch'}`
                   : 'paper — the venue adapter simulates the fills'}
@@ -401,14 +401,14 @@ export function ExecutorComposer() {
             <Button onClick={() => { setResult(null); setPreviewError(''); setSubmitError(''); setState(INITIAL); }}>Reset</Button>
           </div>
           {blocking.length > 0 && (
-            <ul style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `${space[8]}px 0 0`, paddingLeft: space[16] }}>
+            <ul style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `${space[8]}px 0 0`, paddingLeft: space[16] }}>
               {blocking.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
           )}
           {state.mode === 'live' && !liveEnabled && (
-            <p style={{ ...noteStyle, color: color.red }}>
+            <p style={{ ...noteStyle, color: themeColor.red }}>
               live creation is refused by the server unless FUDCOURT_EXECUTOR_LIVE=1 (PRD §108) — paper mode works now
             </p>
           )}
@@ -419,10 +419,10 @@ export function ExecutorComposer() {
         {previewError !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap', fontWeight: fontWeight.bold }}>⚠ {previewError}</Banner>}
         {submitError !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap', fontWeight: fontWeight.bold }}>⚠ {submitError}</Banner>}
         {createdId !== '' && (
-          <Card style={{ borderColor: color.blue }}>
+          <Card style={{ borderColor: themeColor.blue }}>
             <h3 style={h3Style}>CREATED · READY</h3>
-            <p style={{ color: color.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
-              execution <span style={{ color: color.blue, textDecoration: 'underline' }}>{createdId}</span> exists and is waiting — start it from its
+            <p style={{ color: themeColor.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
+              execution <span style={{ color: themeColor.blue, textDecoration: 'underline' }}>{createdId}</span> exists and is waiting — start it from its
               own page, or keep composing.
             </p>
             <Button onClick={() => router.push(`/executor/${createdId}`)} variant="primary">go to execution →</Button>

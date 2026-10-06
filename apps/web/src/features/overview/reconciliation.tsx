@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { alpha, color, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
+import { alpha, themeColor, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
 import { EmptyState } from '@/ui/feedback';
 import { Wallet, groupBy, groupSum } from '@/lib/format';
 import { Card } from '@/ui/primitives';
@@ -60,26 +60,26 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
 
   return (
     <div>
-      <h3 style={{ color: color.blue }}>Reconciliation</h3>
-      <p style={{ color: color.labelTertiary, fontSize: fontSize[12], marginBottom: space[16] }}>
-        Cross-check: <b style={{ color: color.labelPrimary }}>current balance</b> = sum(IN) − sum(OUT) per wallet/asset.
+      <h3 style={{ color: themeColor.blue }}>Reconciliation</h3>
+      <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], marginBottom: space[16] }}>
+        Cross-check: <b style={{ color: themeColor.labelPrimary }}>current balance</b> = sum(IN) − sum(OUT) per wallet/asset.
         Non-zero diff = investigate.
       </p>
 
       <div style={{ display: 'flex', gap: space[16], marginBottom: space[20], flexWrap: 'wrap' }}>
-        <Card style={{ borderLeft: `3px solid ${totalAbsDiff < 0.01 ? color.blue : color.red}` }}>
-          <div style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>NET DIFF</div>
-          <div style={{ fontSize: fontSize[22], fontWeight: fontWeight.bold, color: totalAbsDiff < 0.01 ? color.blue : color.red }}>
+        <Card style={{ borderLeft: `3px solid ${totalAbsDiff < 0.01 ? themeColor.blue : themeColor.red}` }}>
+          <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>NET DIFF</div>
+          <div style={{ fontSize: fontSize[22], fontWeight: fontWeight.bold, color: totalAbsDiff < 0.01 ? themeColor.blue : themeColor.red }}>
             ${totalAbsDiff.toFixed(2)}
           </div>
         </Card>
         <Card>
-          <div style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>TOTAL CURRENT</div>
-          <div style={{ fontSize: fontSize[22], fontWeight: fontWeight.bold, color: color.blue }}>${totals.current.toFixed(2)}</div>
+          <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>TOTAL CURRENT</div>
+          <div style={{ fontSize: fontSize[22], fontWeight: fontWeight.bold, color: themeColor.blue }}>${totals.current.toFixed(2)}</div>
         </Card>
         <Card>
-          <div style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>TOTAL EXPECTED</div>
-          <div style={{ fontSize: fontSize[22], fontWeight: fontWeight.bold, color: color.labelPrimary }}>${totals.expected.toFixed(2)}</div>
+          <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>TOTAL EXPECTED</div>
+          <div style={{ fontSize: fontSize[22], fontWeight: fontWeight.bold, color: themeColor.labelPrimary }}>${totals.expected.toFixed(2)}</div>
         </Card>
       </div>
 
@@ -89,17 +89,17 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
           onChange={e => setSearch(e.target.value)}
           placeholder="Search wallet or asset..."
           style={{
-            background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`,
+            background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`,
             borderRadius: radius[8], padding: `${space[8]}px ${space[12]}px`, fontSize: fontSize[13], outline: 'none', flex: 1, minWidth: 200,
           }}
         />
-        <FilterBtn active={filter === 'diff'} onClick={() => setFilter('diff')} tone={color.red}>
+        <FilterBtn active={filter === 'diff'} onClick={() => setFilter('diff')} tone={themeColor.red}>
           Suspicious ({rows.filter(r => Math.abs(r.diff) >= 0.01).length})
         </FilterBtn>
-        <FilterBtn active={filter === 'ok'} onClick={() => setFilter('ok')} tone={color.blue}>
+        <FilterBtn active={filter === 'ok'} onClick={() => setFilter('ok')} tone={themeColor.blue}>
           Balanced ({rows.filter(r => Math.abs(r.diff) < 0.01).length})
         </FilterBtn>
-        <FilterBtn active={filter === 'all'} onClick={() => setFilter('all')} tone={color.blue}>
+        <FilterBtn active={filter === 'all'} onClick={() => setFilter('all')} tone={themeColor.blue}>
           All ({rows.length})
         </FilterBtn>
       </div>
@@ -128,27 +128,27 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
               const isBad = Math.abs(r.diff) >= 0.01;
               const w = walletMap[r.wallet];
               return (
-                <TR key={`${r.wallet}-${r.asset}-${i}`} style={{ borderBottom: `1px solid ${alpha(color.separator, 0x22 / 255)}` }}>
+                <TR key={`${r.wallet}-${r.asset}-${i}`} style={{ borderBottom: `1px solid ${alpha(themeColor.separator, 0x22 / 255)}` }}>
                   <TD style={{ padding: space[8] }}>
                     <span style={{ fontSize: fontSize[17] }}>{w?.emoji || '💰'}</span>{' '}
-                    <b style={{ color: w?.color || color.blue }}>{w?.alias || r.wallet}</b>
+                    <b style={{ color: w?.color || themeColor.blue }}>{w?.alias || r.wallet}</b>
                     {w?.alias && w.alias !== r.wallet && (
-                      <span style={{ color: color.labelTertiary, fontSize: fontSize[11], marginLeft: space[8] }}>({r.wallet})</span>
+                      <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginLeft: space[8] }}>({r.wallet})</span>
                     )}
                   </TD>
                   <TD style={{ padding: space[8] }}>
-                    <span style={{ color: color.blue }}>{r.asset}</span>
+                    <span style={{ color: themeColor.blue }}>{r.asset}</span>
                   </TD>
-                  <TD align="right" mono style={{ padding: space[8], color: color.labelPrimary }}>
+                  <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>
                     {r.current.toFixed(6)}
                   </TD>
-                  <TD align="right" mono style={{ padding: space[8], color: color.blue }}>
+                  <TD align="right" mono style={{ padding: space[8], color: themeColor.blue }}>
                     {r.in_sum.toFixed(2)}
                   </TD>
-                  <TD align="right" mono style={{ padding: space[8], color: color.red }}>
+                  <TD align="right" mono style={{ padding: space[8], color: themeColor.red }}>
                     {r.out_sum.toFixed(2)}
                   </TD>
-                  <TD align="right" mono style={{ padding: space[8], color: color.labelTertiary }}>
+                  <TD align="right" mono style={{ padding: space[8], color: themeColor.labelTertiary }}>
                     {r.expected.toFixed(2)}
                   </TD>
                   <TD
@@ -157,8 +157,8 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
                     style={{
                       padding: space[8],
                       fontWeight: fontWeight.bold,
-                      color: isBad ? color.red : color.blue,
-                      background: isBad ? alpha(color.red, 17 / 255) : 'transparent',
+                      color: isBad ? themeColor.red : themeColor.blue,
+                      background: isBad ? alpha(themeColor.red, 17 / 255) : 'transparent',
                     }}
                   >
                     {isBad ? '⚠️' : ''} {r.diff.toFixed(4)}
@@ -178,9 +178,9 @@ function FilterBtn({ active, onClick, children, tone }: { active: boolean; onCli
     <button
       onClick={onClick}
       style={{
-        background: active ? tone : color.bgSecondary,
-        color: active ? color.labelOnAccent : color.labelPrimary,
-        border: `1px solid ${color.separator}`,
+        background: active ? tone : themeColor.bgSecondary,
+        color: active ? themeColor.labelOnAccent : themeColor.labelPrimary,
+        border: `1px solid ${themeColor.separator}`,
         borderRadius: radius[8],
         padding: `${space[8]}px ${space[16]}px`,
         cursor: 'pointer',

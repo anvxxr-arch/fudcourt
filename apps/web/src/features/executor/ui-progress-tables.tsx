@@ -3,7 +3,7 @@
  * ui-progress-tables.tsx — ChildOrderTable + FillTable + EventTable (PRD §85, §86).
  * Split from ui-progress.tsx; re-exported through ./ui-progress and ./ui.
  */
-import { color, fontWeight } from '@/styles/tokens';
+import { themeColor, fontWeight } from '@/styles/tokens';
 import { Card } from '@/ui/primitives';
 import { StatusPill } from '@/ui/status-pill';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
@@ -42,14 +42,14 @@ export function ChildOrderTable({ orders }: { orders: ChildOrderRecord[] }) {
           <TBody>
             {orders.map((order) => (
               <TR key={order.id}>
-                <TD style={{ ...tdStyle, color: color.labelTertiary }}>{order.clientOrderId}</TD>
+                <TD style={{ ...tdStyle, color: themeColor.labelTertiary }}>{order.clientOrderId}</TD>
                 <TD style={tdStyle}><StatusPill status={order.status} /></TD>
-                <TD style={{ ...tdStyle, color: order.side === 'buy' ? color.blue : color.red }}>{order.side.toUpperCase()}</TD>
+                <TD style={{ ...tdStyle, color: order.side === 'buy' ? themeColor.blue : themeColor.red }}>{order.side.toUpperCase()}</TD>
                 <TD style={tdStyle}>{order.type}</TD>
                 <TD align="right" mono style={tdStyle}>{formatPrice(order.price)}</TD>
                 <TD align="right" mono style={tdStyle}>{formatQty(order.quantity)}</TD>
                 <TD align="right" mono style={tdStyle}>{formatQty(order.filledQuantity)}</TD>
-                <TD style={{ ...tdStyle, color: order.isExit ? color.blue : color.labelTertiary }}>{order.isExit ? 'exit' : 'entry'}</TD>
+                <TD style={{ ...tdStyle, color: order.isExit ? themeColor.blue : themeColor.labelTertiary }}>{order.isExit ? 'exit' : 'entry'}</TD>
               </TR>
             ))}
           </TBody>
@@ -79,12 +79,12 @@ export function FillTable({ fills }: { fills: FillRecord[] }) {
           <TBody>
             {fills.map((fill) => (
               <TR key={fill.id}>
-                <TD style={{ ...tdStyle, color: color.labelTertiary }}>{formatTimestamp(fill.timestamp)}</TD>
+                <TD style={{ ...tdStyle, color: themeColor.labelTertiary }}>{formatTimestamp(fill.timestamp)}</TD>
                 <TD align="right" mono style={tdStyle}>{formatPrice(fill.price)}</TD>
                 <TD align="right" mono style={tdStyle}>{formatQty(fill.quantity)}</TD>
                 <TD align="right" mono style={tdStyle}>{formatMoney(fill.quoteQuantity)}</TD>
                 <TD align="right" mono style={tdStyle}>{formatMoney(fill.fee)} {fill.feeAsset}</TD>
-                <TD style={{ ...tdStyle, color: color.labelTertiary }}>{fill.exchangeTradeId}</TD>
+                <TD style={{ ...tdStyle, color: themeColor.labelTertiary }}>{fill.exchangeTradeId}</TD>
               </TR>
             ))}
           </TBody>
@@ -111,9 +111,9 @@ export function EventTable({ events }: { events: ExecutionEventRecord[] }) {
           <TBody>
             {events.map((event) => (
               <TR key={event.id}>
-                <TD style={{ ...tdStyle, color: color.labelTertiary }}>{formatTimestamp(event.createdAt)}</TD>
-                <TD style={{ ...tdStyle, color: color.blue, fontWeight: fontWeight.bold }}>{event.name}</TD>
-                <TD mono style={{ ...tdStyle, color: color.labelTertiary }}>{JSON.stringify(event.payload)}</TD>
+                <TD style={{ ...tdStyle, color: themeColor.labelTertiary }}>{formatTimestamp(event.createdAt)}</TD>
+                <TD style={{ ...tdStyle, color: themeColor.blue, fontWeight: fontWeight.bold }}>{event.name}</TD>
+                <TD mono style={{ ...tdStyle, color: themeColor.labelTertiary }}>{JSON.stringify(event.payload)}</TD>
               </TR>
             ))}
           </TBody>

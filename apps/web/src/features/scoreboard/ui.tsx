@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { chainColor } from '@/lib/format';
-import { alpha, color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { alpha, themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { Loading } from '@/ui/feedback';
 import { Table, TBody, THead } from '@/ui/table';
 import { Toolbar } from '@/ui/toolbar';
@@ -22,12 +22,12 @@ type Board = {
 
 const CHAIN_LABEL: Record<string, { label: string; color: string }> = {
   solana: { label: '◎ Solana', color: chainColor('solana') },
-  robinhood: { label: '🪶 Robinhood', color: color.blue },
+  robinhood: { label: '🪶 Robinhood', color: themeColor.blue },
 };
 
 const DECISION_COLOR: Record<string, string> = {
-  surfaced: color.blue, watching: color.orange, 'low score': color.labelTertiary,
-  vetoed: color.red, blocked: color.red, bundle: color.orange,
+  surfaced: themeColor.blue, watching: themeColor.orange, 'low score': themeColor.labelTertiary,
+  vetoed: themeColor.red, blocked: themeColor.red, bundle: themeColor.orange,
 };
 
 // Bucket shares are computed from n, which upstream guarantees equals
@@ -88,25 +88,25 @@ export default function ScoreboardPage() {
     <div>
       <Toolbar style={{ flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h2 style={{ color: color.blue, margin: 0, fontSize: fontSize[17] }}>Scoreboard</h2>
-          <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: '2px 0 0' }}>
+          <h2 style={{ color: themeColor.blue, margin: 0, fontSize: fontSize[17] }}>Scoreboard</h2>
+          <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: '2px 0 0' }}>
             daily cohort outcomes{data?.cohortDays ? ` · ${data.cohortDays}d cohort` : ''}
             {data ? ` · generated ${new Date(data.generatedAt * 1000).toISOString().replace('T', ' ').slice(0, 16)}` : ''}
           </p>
         </div>
-        <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
+        <button onClick={load} style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       </Toolbar>
 
       {error && (
-        <p style={{ color: color.red, fontSize: fontSize[12], background: alpha(color.red, 0.08), border: `1px solid ${color.red}`, borderRadius: radius[8], padding: space[8] }}>
+        <p style={{ color: themeColor.red, fontSize: fontSize[12], background: alpha(themeColor.red, 0.08), border: `1px solid ${themeColor.red}`, borderRadius: radius[8], padding: space[8] }}>
           scoreboard failed: {error} — nothing faked
         </p>
       )}
 
       {mismatches > 0 && (
-        <p style={{ color: color.orange, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
+        <p style={{ color: themeColor.orange, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
           ⚠ {mismatches} bucket(s) where run+flat+dump+unknown ≠ n — upstream schema changed, shares shown raw
         </p>
       )}
@@ -117,9 +117,9 @@ export default function ScoreboardPage() {
             key={c}
             onClick={() => setChain(c)}
             style={{
-              background: c === active ? (CHAIN_LABEL[c]?.color || color.blue) : color.bgSecondary,
-              color: c === active ? color.labelOnAccent : color.labelSecondary,
-              border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8],
+              background: c === active ? (CHAIN_LABEL[c]?.color || themeColor.blue) : themeColor.bgSecondary,
+              color: c === active ? themeColor.labelOnAccent : themeColor.labelSecondary,
+              border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8],
               fontSize: fontSize[11], cursor: 'pointer', fontWeight: fontWeight.bold,
             }}
           >
@@ -134,11 +134,11 @@ export default function ScoreboardPage() {
         // Same rule as SignalsPage: a failed fetch must never fall through to
         // the "no data for this chain" branch, which reads as a real empty
         // result rather than a dead upstream.
-        <p style={{ color: color.red, fontSize: fontSize[12] }}>
+        <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>
           no data loaded — cohorts and catches withheld because the upstream fetch failed.
         </p>
       ) : !board ? (
-        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>no scoreboard data for this chain</p>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>no scoreboard data for this chain</p>
       ) : (
         <>
           {totals && (
@@ -152,9 +152,9 @@ export default function ScoreboardPage() {
                 ['run+flat hit rate', totals.hitRate === null ? '—' : `${totals.hitRate.toFixed(1)}%`],
                 ['days', String((board.series || []).length)],
               ].map(([k, v]) => (
-                <div key={k} style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px` }}>
-                  <span style={{ color: color.labelTertiary }}>{k} </span>
-                  <span style={{ color: color.blue, fontWeight: fontWeight.bold }}>{v}</span>
+                <div key={k} style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px` }}>
+                  <span style={{ color: themeColor.labelTertiary }}>{k} </span>
+                  <span style={{ color: themeColor.blue, fontWeight: fontWeight.bold }}>{v}</span>
                 </div>
               ))}
             </div>
@@ -162,48 +162,48 @@ export default function ScoreboardPage() {
 
           {totals && (
             <div style={{ marginBottom: space[16] }}>
-              <h4 style={{ color: color.labelPrimary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>Outcome composition</h4>
+              <h4 style={{ color: themeColor.labelPrimary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>Outcome composition</h4>
               <Meter
                 parts={[
-                  { label: 'run', value: totals.run, color: color.blue },
-                  { label: 'flat', value: totals.flat, color: color.orange },
-                  { label: 'dump', value: totals.dump, color: color.red },
-                  { label: 'unknown', value: totals.unknown, color: color.separator },
+                  { label: 'run', value: totals.run, color: themeColor.blue },
+                  { label: 'flat', value: totals.flat, color: themeColor.orange },
+                  { label: 'dump', value: totals.dump, color: themeColor.red },
+                  { label: 'unknown', value: totals.unknown, color: themeColor.separator },
                 ]}
               />
             </div>
           )}
-          <h4 style={{ color: color.labelPrimary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>Daily cohorts</h4>
+          <h4 style={{ color: themeColor.labelPrimary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>Daily cohorts</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: space[4], marginBottom: space[20] }}>
             {(board.series || []).map(s => {
               const p = parts(s);
               return (
                 <div key={s.day} style={{ display: 'flex', alignItems: 'center', gap: space[8], fontSize: fontSize[11] }}>
-                  <span style={{ color: color.labelTertiary, width: 84, flexShrink: 0 }}>{s.day}</span>
-                  <span style={{ color: color.labelPrimary, width: 46, flexShrink: 0, textAlign: 'right' }}>{s.n}</span>
+                  <span style={{ color: themeColor.labelTertiary, width: 84, flexShrink: 0 }}>{s.day}</span>
+                  <span style={{ color: themeColor.labelPrimary, width: 46, flexShrink: 0, textAlign: 'right' }}>{s.n}</span>
                   <div
                     style={{
                       flex: 1, display: 'flex', height: space[12], borderRadius: radius[8], overflow: 'hidden',
-                      background: color.bgSecondary, border: `1px solid ${color.separator}`,
+                      background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`,
                     }}
                     title={`run ${s.run} · flat ${s.flat} · dump ${s.dump} · unknown ${s.unknown}`}
                   >
-                    <div style={{ width: `${p.pct(s.run)}%`, background: color.blue }} />
-                    <div style={{ width: `${p.pct(s.flat)}%`, background: color.orange }} />
-                    <div style={{ width: `${p.pct(s.dump)}%`, background: color.red }} />
-                    <div style={{ width: `${p.pct(s.unknown)}%`, background: color.separator }} />
+                    <div style={{ width: `${p.pct(s.run)}%`, background: themeColor.blue }} />
+                    <div style={{ width: `${p.pct(s.flat)}%`, background: themeColor.orange }} />
+                    <div style={{ width: `${p.pct(s.dump)}%`, background: themeColor.red }} />
+                    <div style={{ width: `${p.pct(s.unknown)}%`, background: themeColor.separator }} />
                   </div>
-                  <span style={{ color: color.labelTertiary, width: 150, flexShrink: 0 }}>
+                  <span style={{ color: themeColor.labelTertiary, width: 150, flexShrink: 0 }}>
                     {s.run}/{s.flat}/{s.dump}/{s.unknown}
-                    {!p.ok && <span style={{ color: color.orange }}> ≠{s.n}</span>}
+                    {!p.ok && <span style={{ color: themeColor.orange }}> ≠{s.n}</span>}
                   </span>
                 </div>
               );
             })}
           </div>
 
-          <div style={{ display: 'flex', gap: space[12], fontSize: fontSize[11], color: color.labelTertiary, marginBottom: space[20] }}>
-            {[['run', color.blue], ['flat', color.orange], ['dump', color.red], ['unknown', color.separator]].map(([l, c]) => (
+          <div style={{ display: 'flex', gap: space[12], fontSize: fontSize[11], color: themeColor.labelTertiary, marginBottom: space[20] }}>
+            {[['run', themeColor.blue], ['flat', themeColor.orange], ['dump', themeColor.red], ['unknown', themeColor.separator]].map(([l, c]) => (
               <span key={l as string} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                 <span style={{ width: space[8], height: space[8], background: c as string, borderRadius: radius[8], display: 'inline-block' }} />
                 {l as string}
@@ -211,13 +211,13 @@ export default function ScoreboardPage() {
             ))}
           </div>
 
-          <h4 style={{ color: color.labelPrimary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
+          <h4 style={{ color: themeColor.labelPrimary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
             Top catches ({(board.catches || []).length})
           </h4>
           <div style={{ overflowX: 'auto' }}>
             <Table style={{ fontSize: fontSize[11] }}>
               <THead>
-                <tr style={{ color: color.labelTertiary, textAlign: 'left', borderBottom: `1px solid ${color.separator}` }}>
+                <tr style={{ color: themeColor.labelTertiary, textAlign: 'left', borderBottom: `1px solid ${themeColor.separator}` }}>
                   {['day', 'symbol', 'mint', 'score', 'decision', 'peak24', 'x24h'].map(h => (
                     <th key={h} style={{ padding: `${space[8]}px ${space[8]}px`, fontWeight: fontWeight.medium, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
@@ -225,22 +225,22 @@ export default function ScoreboardPage() {
               </THead>
               <TBody>
                 {(board.catches || []).map((c, i) => (
-                  <tr key={`${c.mint}-${c.day}-${i}`} style={{ borderBottom: `1px solid ${alpha(color.separator, 0.4)}` }}>
-                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary, whiteSpace: 'nowrap' }}>{c.day}</td>
-                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary, fontWeight: fontWeight.bold, whiteSpace: 'nowrap' }}>{c.symbol || '?'}</td>
-                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelTertiary }}>
+                  <tr key={`${c.mint}-${c.day}-${i}`} style={{ borderBottom: `1px solid ${alpha(themeColor.separator, 0.4)}` }}>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: themeColor.labelTertiary, whiteSpace: 'nowrap' }}>{c.day}</td>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: themeColor.labelPrimary, fontWeight: fontWeight.bold, whiteSpace: 'nowrap' }}>{c.symbol || '?'}</td>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: themeColor.labelTertiary }}>
                       {c.mint.length > 14 ? `${c.mint.slice(0, 6)}…${c.mint.slice(-4)}` : c.mint}
                     </td>
-                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.blue }}>{c.score?.toFixed(1) ?? '—'}</td>
-                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: DECISION_COLOR[c.decision] || color.labelTertiary }}>{c.decision || '—'}</td>
-                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof c.peak24 === 'number' ? `${c.peak24.toFixed(2)}×` : '—'}</td>
-                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: color.labelPrimary }}>{typeof c.x24h === 'number' ? `${c.x24h.toFixed(2)}×` : '—'}</td>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: themeColor.blue }}>{c.score?.toFixed(1) ?? '—'}</td>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: DECISION_COLOR[c.decision] || themeColor.labelTertiary }}>{c.decision || '—'}</td>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: themeColor.labelPrimary }}>{typeof c.peak24 === 'number' ? `${c.peak24.toFixed(2)}×` : '—'}</td>
+                    <td style={{ padding: `${space[8]}px ${space[8]}px`, color: themeColor.labelPrimary }}>{typeof c.x24h === 'number' ? `${c.x24h.toFixed(2)}×` : '—'}</td>
                   </tr>
                 ))}
               </TBody>
             </Table>
             {(board.catches || []).length === 0 && (
-              <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>no catches in this cohort window</p>
+              <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>no catches in this cohort window</p>
             )}
           </div>
         </>

@@ -1,5 +1,5 @@
 import '@/app/(frontend)/globals.css';
-import { color, fontFamily, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontFamily, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 /**
  * Root not-found. It renders inside Next's BUILTIN root layout (there is no
  * `src/app/layout.tsx`), so the frontend layout's theme script and stylesheet do
@@ -14,9 +14,9 @@ export default function NotFound() {
       <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       <main
         style={{
-          background: color.bgBase,
+          background: themeColor.bgBase,
           minHeight: '50vh',
-          color: color.labelPrimary,
+          color: themeColor.labelPrimary,
           fontFamily: fontFamily.sans,
           display: 'flex',
           alignItems: 'center',
@@ -26,8 +26,8 @@ export default function NotFound() {
       >
         <div
           style={{
-            background: color.bgSecondary,
-            border: `1px solid ${color.separator}`,
+            background: themeColor.bgSecondary,
+            border: `1px solid ${themeColor.separator}`,
             borderRadius: radius[12],
             padding: space[24],
             maxWidth: 420,
@@ -38,7 +38,7 @@ export default function NotFound() {
           <h1
             style={{
               margin: 0,
-              color: color.blue,
+              color: themeColor.blue,
               fontSize: fontSize[17],
               fontWeight: fontWeight.bold,
             }}
@@ -48,7 +48,7 @@ export default function NotFound() {
           <p
             style={{
               margin: `${space[8]}px 0 0`,
-              color: color.labelTertiary,
+              color: themeColor.labelTertiary,
               fontSize: fontSize[12],
             }}
           >
@@ -60,9 +60,9 @@ export default function NotFound() {
               href="/"
               style={{
                 display: 'inline-block',
-                color: color.blue,
-                background: color.bgBase,
-                border: `1px solid ${color.separator}`,
+                color: themeColor.blue,
+                background: themeColor.bgBase,
+                border: `1px solid ${themeColor.separator}`,
                 borderRadius: radius[8],
                 padding: `${space[8]}px ${space[16]}px`,
                 fontSize: fontSize[12],

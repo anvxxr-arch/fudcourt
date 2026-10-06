@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { PagePanel, PagePanelLink } from '@/ui/page-chrome';
-import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 
 export default function FrontendError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
@@ -17,8 +17,8 @@ export default function FrontendError({ error, reset }: { error: Error & { diges
         <button
           onClick={reset}
           style={{
-            color: color.labelOnAccent,
-            background: color.blue,
+            color: themeColor.labelOnAccent,
+            background: themeColor.blue,
             border: 'none',
             borderRadius: radius[8],
             padding: `${space[8]}px ${space[16]}px`,

@@ -16,7 +16,7 @@
  */
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { color, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
 import {
   fetchCalendar,
   fetchCentralBanks,
@@ -123,16 +123,16 @@ export default function EconomyDashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
               {regime.regime ? (
                 <>
-                  <div style={{ fontSize: fontSize[20], fontWeight: fontWeight.bold, color: color.labelPrimary }}>{regime.regime.label}</div>
-                  <div style={{ fontSize: fontSize[11], color: color.labelTertiary }}>
-                    evidence confidence: <span style={{ color: regime.confidence === 'high' ? color.green : regime.confidence === 'medium' ? color.orange : color.red }}>{regime.confidence}</span>
+                  <div style={{ fontSize: fontSize[20], fontWeight: fontWeight.bold, color: themeColor.labelPrimary }}>{regime.regime.label}</div>
+                  <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>
+                    evidence confidence: <span style={{ color: regime.confidence === 'high' ? themeColor.green : regime.confidence === 'medium' ? themeColor.orange : themeColor.red }}>{regime.confidence}</span>
                     {regime.missing.length > 0 ? ` · ${regime.missing.length} dimension(s) unreadable` : ''}
                   </div>
                 </>
               ) : (
                 <>
-                  <div style={{ fontSize: fontSize[15], fontWeight: fontWeight.semibold, color: color.orange }}>No regime stated</div>
-                  <div style={{ fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>{regime.regimeReason}</div>
+                  <div style={{ fontSize: fontSize[15], fontWeight: fontWeight.semibold, color: themeColor.orange }}>No regime stated</div>
+                  <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>{regime.regimeReason}</div>
                 </>
               )}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
@@ -141,17 +141,17 @@ export default function EconomyDashboard() {
                     key={d.id}
                     style={{
                       padding: `${space[4]}px ${space[8]}px`,
-                      border: `1px solid ${color.separator}`,
+                      border: `1px solid ${themeColor.separator}`,
                       borderRadius: radius[8],
                       fontSize: fontSize[11],
-                      color: d.word ? color.labelPrimary : color.labelTertiary,
+                      color: d.word ? themeColor.labelPrimary : themeColor.labelTertiary,
                     }}
                   >
                     {d.label}: {d.word ?? '—'}
                   </span>
                 ))}
               </div>
-              <Link href="/economy/regime" style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>full regime board →</Link>
+              <Link href="/economy/regime" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>full regime board →</Link>
             </div>
           )}
         </Card>
@@ -167,12 +167,12 @@ export default function EconomyDashboard() {
                 return (
                   <div key={s.slug} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[8] }}>
                     <div style={{ minWidth: 0 }}>
-                      <Link href={`/economy/indicator/${s.slug}`} style={{ color: color.labelPrimary, textDecoration: 'none', fontSize: fontSize[12] }}>{s.label}</Link>
-                      <div style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{latest ? formatDate(latest.date) : '—'} · {s.frequency}</div>
+                      <Link href={`/economy/indicator/${s.slug}`} style={{ color: themeColor.labelPrimary, textDecoration: 'none', fontSize: fontSize[12] }}>{s.label}</Link>
+                      <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{latest ? formatDate(latest.date) : '—'} · {s.frequency}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: space[8] }}>
                       <Sparkline points={pts} />
-                      <span style={{ fontSize: fontSize[15], fontWeight: fontWeight.semibold, color: color.labelPrimary, minWidth: 56, textAlign: 'right' }}>
+                      <span style={{ fontSize: fontSize[15], fontWeight: fontWeight.semibold, color: themeColor.labelPrimary, minWidth: 56, textAlign: 'right' }}>
                         {latest ? formatValue(latest.value, s.decimals) : '—'}
                       </span>
                     </div>
@@ -191,24 +191,24 @@ export default function EconomyDashboard() {
               {liquidity.index && (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: space[8] }}>
-                    <span style={{ fontSize: fontSize[28], fontWeight: fontWeight.bold, color: color.labelPrimary }}>{liquidity.index.value}</span>
-                    <span style={{ fontSize: fontSize[12], color: liquidity.index.trend === 'Expanding' ? color.green : liquidity.index.trend === 'Contracting' ? color.red : color.orange }}>
+                    <span style={{ fontSize: fontSize[28], fontWeight: fontWeight.bold, color: themeColor.labelPrimary }}>{liquidity.index.value}</span>
+                    <span style={{ fontSize: fontSize[12], color: liquidity.index.trend === 'Expanding' ? themeColor.green : liquidity.index.trend === 'Contracting' ? themeColor.red : themeColor.orange }}>
                       {liquidity.index.trend}
                     </span>
                   </div>
-                  <div style={{ height: 6, background: color.separator, borderRadius: radius[8], marginTop: space[8] }}>
-                    <div style={{ width: `${liquidity.index.value}%`, height: '100%', background: color.blue, borderRadius: radius[8] }} />
+                  <div style={{ height: 6, background: themeColor.separator, borderRadius: radius[8], marginTop: space[8] }}>
+                    <div style={{ width: `${liquidity.index.value}%`, height: '100%', background: themeColor.blue, borderRadius: radius[8] }} />
                   </div>
-                  <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary }}>share of {liquidity.index.components} live components moving looser · 0–100, derived</p>
+                  <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary }}>share of {liquidity.index.components} live components moving looser · 0–100, derived</p>
                 </div>
               )}
               {liquidity.components.slice(0, 4).map((c) => (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: fontSize[11], color: color.labelTertiary }}>
+                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: fontSize[11], color: themeColor.labelTertiary }}>
                   <span>{c.label}</span>
-                  <span style={{ color: color.labelPrimary }}>{c.change === null ? '—' : `${c.change > 0 ? '+' : ''}${formatValue(c.change, 1)}`}</span>
+                  <span style={{ color: themeColor.labelPrimary }}>{c.change === null ? '—' : `${c.change > 0 ? '+' : ''}${formatValue(c.change, 1)}`}</span>
                 </div>
               ))}
-              <Link href="/economy/liquidity" style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>full liquidity board →</Link>
+              <Link href="/economy/liquidity" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>full liquidity board →</Link>
             </div>
           )}
         </Card>
@@ -223,14 +223,14 @@ export default function EconomyDashboard() {
                 if (!b) return null;
                 return (
                   <div key={slug} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Link href={`/economy/central-bank/${slug}`} style={{ color: color.labelPrimary, textDecoration: 'none', fontSize: fontSize[12] }}>{b.short}</Link>
-                    <span style={{ fontSize: fontSize[13], fontWeight: fontWeight.semibold, color: b.rate === null ? color.labelTertiary : color.labelPrimary }}>
+                    <Link href={`/economy/central-bank/${slug}`} style={{ color: themeColor.labelPrimary, textDecoration: 'none', fontSize: fontSize[12] }}>{b.short}</Link>
+                    <span style={{ fontSize: fontSize[13], fontWeight: fontWeight.semibold, color: b.rate === null ? themeColor.labelTertiary : themeColor.labelPrimary }}>
                       {b.rate === null ? '—' : `${formatValue(b.rate, 2)}%`}
                     </span>
                   </div>
                 );
               })}
-              <Link href="/economy/central-bank" style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>all {banks.banks.length} banks →</Link>
+              <Link href="/economy/central-bank" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>all {banks.banks.length} banks →</Link>
             </div>
           )}
         </Card>
@@ -238,12 +238,12 @@ export default function EconomyDashboard() {
         <Card title="Major Economies" subtitle="country profiles — the aggregator for every series we hold">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: space[8] }}>
             {MAJORS.map((m) => (
-              <Link key={m.iso2} href={`/economy/nation/${m.iso2}`} style={{ padding: `${space[8]}px ${space[8]}px`, border: `1px solid ${color.separator}`, borderRadius: radius[8], color: color.labelPrimary, fontSize: fontSize[12], textDecoration: 'none' }}>
+              <Link key={m.iso2} href={`/economy/nation/${m.iso2}`} style={{ padding: `${space[8]}px ${space[8]}px`, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], color: themeColor.labelPrimary, fontSize: fontSize[12], textDecoration: 'none' }}>
                 {m.name}
               </Link>
             ))}
           </div>
-          <Link href="/economy/nation" style={{ display: 'inline-block', marginTop: space[8], fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>all countries →</Link>
+          <Link href="/economy/nation" style={{ display: 'inline-block', marginTop: space[8], fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>all countries →</Link>
         </Card>
 
         <Card title="Release log snapshot" subtitle="reference periods, newest first — a release log, not a forward schedule">
@@ -254,22 +254,22 @@ export default function EconomyDashboard() {
               {calendar.events.slice(0, 8).map((e, i) => (
                 <div key={`${e.slug}-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[8] }}>
                   <div style={{ minWidth: 0 }}>
-                    <Link href={`/economy/indicator/${e.slug}`} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: color.labelPrimary, textDecoration: 'none', fontSize: fontSize[11] }}>{e.label}</Link>
-                    <div style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{formatDate(e.releaseAt)}</div>
+                    <Link href={`/economy/indicator/${e.slug}`} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: themeColor.labelPrimary, textDecoration: 'none', fontSize: fontSize[11] }}>{e.label}</Link>
+                    <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{formatDate(e.releaseAt)}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: space[8] }}>
                     <ImportanceDots level={e.importance} />
-                    <span style={{ fontSize: fontSize[12], color: color.labelPrimary }}>{e.actual === null ? '—' : formatValue(e.actual, 2)}</span>
+                    <span style={{ fontSize: fontSize[12], color: themeColor.labelPrimary }}>{e.actual === null ? '—' : formatValue(e.actual, 2)}</span>
                   </div>
                 </div>
               ))}
-              <Link href="/economy/calendar" style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>full calendar →</Link>
+              <Link href="/economy/calendar" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>full calendar →</Link>
             </div>
           )}
         </Card>
       </div>
 
-      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal, letterSpacing: letterSpacing.xs }}>
+      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal, letterSpacing: letterSpacing.xs }}>
         Every value is a published observation, never a model estimate. A series the upstream did not publish renders “—” rather than zero, and the liquidity index is a derived position in this module’s own basket, not an official gauge.
       </p>
     </main>

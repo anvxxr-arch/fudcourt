@@ -1,4 +1,4 @@
-import { color, fontSize, fontWeight } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight } from '@/styles/tokens';
 
 /** The project's single spelling of "the upstream published nothing". */
 const NO_VALUE = '—';
@@ -12,11 +12,11 @@ const NO_VALUE = '—';
  */
 export function ChangeChip({ percent }: { percent: number | null }) {
   if (percent === null || !Number.isFinite(percent)) {
-    return <span style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>{NO_VALUE}</span>;
+    return <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>{NO_VALUE}</span>;
   }
   const up = percent >= 0;
   return (
-    <span style={{ color: up ? color.green : color.red, fontSize: fontSize[12], fontWeight: fontWeight.medium }}>
+    <span style={{ color: up ? themeColor.green : themeColor.red, fontSize: fontSize[12], fontWeight: fontWeight.medium }}>
       {up ? '▲' : '▼'} {Math.abs(percent).toFixed(2)}%
     </span>
   );

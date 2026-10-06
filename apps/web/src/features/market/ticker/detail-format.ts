@@ -1,4 +1,4 @@
-import { color } from '@/styles/tokens';
+import { themeColor } from '@/styles/tokens';
 import type { Quote } from './detail-shared';
 
 /**
@@ -11,8 +11,8 @@ import type { Quote } from './detail-shared';
 export { medianOf } from './client';
 
 export function chgColor(p: number | null): string | undefined {
-  if (p === null) return color.labelTertiary;
-  return p >= 0 ? color.blue : color.red;
+  if (p === null) return themeColor.labelTertiary;
+  return p >= 0 ? themeColor.blue : themeColor.red;
 }
 
 /**

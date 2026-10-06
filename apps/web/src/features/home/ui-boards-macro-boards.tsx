@@ -1,7 +1,7 @@
 'use client';
 import { Fragment } from 'react';
 import Link from 'next/link';
-import { color, fontSize, fontWeight, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, space } from '@/styles/tokens';
 import { Banner } from '@/ui/banner';
 import { Loading } from '@/ui/feedback';
 import { TBody, TD, TH, THead, TR, Table } from '@/ui/table';
@@ -41,9 +41,9 @@ export function MacroBoard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
             {rates.map(q => (
               <div key={q.symbol} style={listRowStyle}>
-                <span title={q.note} style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{q.name}</span>
+                <span title={q.note} style={{ color: themeColor.labelPrimary, fontWeight: fontWeight.bold }}>{q.name}</span>
                 <Sparkline points={q.trend ?? []} width={64} height={16} />
-                <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtYield(q.price)}</span>
+                <span style={{ color: themeColor.labelPrimary, whiteSpace: 'nowrap' }}>{fmtYield(q.price)}</span>
                 <Bp v={q.change} />
               </div>
             ))}
@@ -51,9 +51,9 @@ export function MacroBoard() {
           {data.spreads.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[12], marginTop: space[8] }}>
               {data.spreads.map(s => (
-                <span key={s.label} style={{ fontSize: fontSize[11], color: color.labelTertiary }} title={s.note}>
+                <span key={s.label} style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }} title={s.note}>
                   {s.label}{' '}
-                  <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{fmtBpRaw(s.bp)}</span>
+                  <span style={{ color: themeColor.labelPrimary, fontWeight: fontWeight.bold }}>{fmtBpRaw(s.bp)}</span>
                 </span>
               ))}
             </div>
@@ -61,9 +61,9 @@ export function MacroBoard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: space[8], marginTop: space[12] }}>
             {idx.map(q => (
               <div key={q.symbol} style={listRowStyle}>
-                <span title={q.note} style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{q.name}</span>
+                <span title={q.note} style={{ color: themeColor.labelPrimary, fontWeight: fontWeight.bold }}>{q.name}</span>
                 <Sparkline points={q.trend ?? []} width={64} height={16} />
-                <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtNum(q.price, 2)}</span>
+                <span style={{ color: themeColor.labelPrimary, whiteSpace: 'nowrap' }}>{fmtNum(q.price, 2)}</span>
                 <Change v={q.changePercent} />
               </div>
             ))}
@@ -71,7 +71,7 @@ export function MacroBoard() {
           <p style={{ ...noteStyle, marginTop: space[12] }}>
             {data.policyRates.length} policy rates · {data.indicators.length} indicators · {data.economies.length} economies ×{' '}
             {data.worldIndicators.length} world indicators — full tables on the{' '}
-            <Link href="/economy" style={{ color: color.blue, textDecoration: 'underline' }}>economy dashboard →</Link>
+            <Link href="/economy" style={{ color: themeColor.blue, textDecoration: 'underline' }}>economy dashboard →</Link>
           </p>
           <p style={noteStyle}>
             each cell is value · reference year, over its change against the observation ~10 years earlier — a dash there means no
@@ -110,13 +110,13 @@ function IndonesiaLive({ quotes }: { quotes: IndonesiaQuote[] }) {
               </TR>
               {quotes.filter(q => q.group === g).map(q => (
                 <TR key={q.symbol} style={rowStyle}>
-                  <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
+                  <TD style={{ color: themeColor.labelPrimary, fontWeight: fontWeight.bold }}>
                     <span title={q.note}>{q.name}</span>
                   </TD>
-                  <TD align="right" style={{ color: color.labelPrimary }}>
+                  <TD align="right" style={{ color: themeColor.labelPrimary }}>
                     <Sparkline points={q.trend ?? []} width={64} height={16} />
                   </TD>
-                  <TD align="right" style={{ color: color.labelPrimary }}>{fmtNum(q.price, 2)}</TD>
+                  <TD align="right" style={{ color: themeColor.labelPrimary }}>{fmtNum(q.price, 2)}</TD>
                   <TD align="right"><Change v={q.changePercent} /></TD>
                 </TR>
               ))}
@@ -149,13 +149,13 @@ export function IndonesiaBoard() {
           {data.quotes.length > 0 && <IndonesiaLive quotes={data.quotes} />}
           <p style={{ ...noteStyle, marginTop: space[12] }} title={data.policy.note}>
             {data.policy.label}{' '}
-            <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{fmtPolicyRate(data.policy.rate)}</span>
+            <span style={{ color: themeColor.labelPrimary, fontWeight: fontWeight.bold }}>{fmtPolicyRate(data.policy.rate)}</span>
             {data.policy.date ? <span> · as of {data.policy.date}</span> : null}
           </p>
           {economyGroups.length > 0 && (
             <p style={{ ...noteStyle, marginTop: space[12] }}>
               {data.economy.length} annual series across {economyGroups.length} groups (World Bank, IMF Fiscal Monitor) ·{' '}
-              <Link href="/economy" style={{ color: color.blue, textDecoration: 'underline' }}>full Indonesia board →</Link>
+              <Link href="/economy" style={{ color: themeColor.blue, textDecoration: 'underline' }}>full Indonesia board →</Link>
             </p>
           )}
           <p style={noteStyle}>

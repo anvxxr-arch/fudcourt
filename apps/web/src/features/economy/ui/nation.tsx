@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { fetchCountries, type CountriesEnvelope, type CountrySummary, fetchCountry, formatDate, formatDelta, formatValue, NO_VALUE, type CountryEnvelope } from '@/features/economy/model';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
@@ -73,15 +73,15 @@ export default function NationExplorer() {
           style={{
             flex: '1 1 280px',
             padding: `${space[8]}px ${space[8]}px`,
-            background: color.bgSecondary,
-            border: `1px solid ${color.separator}`,
+            background: themeColor.bgSecondary,
+            border: `1px solid ${themeColor.separator}`,
             borderRadius: radius[8],
-            color: color.labelPrimary,
+            color: themeColor.labelPrimary,
             fontSize: fontSize[12],
           }}
         />
         {data && (
-          <span style={{ fontSize: fontSize[11], color: color.labelTertiary }}>
+          <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>
             {filtered.length} of {data.total} countries
           </span>
         )}
@@ -108,15 +108,15 @@ export default function NationExplorer() {
                           justifyContent: 'space-between',
                           gap: space[8],
                           padding: `${space[8]}px ${space[8]}px`,
-                          border: `1px solid ${color.separator}`,
+                          border: `1px solid ${themeColor.separator}`,
                           borderRadius: radius[8],
-                          color: color.labelPrimary,
+                          color: themeColor.labelPrimary,
                           fontSize: fontSize[12],
                           textDecoration: 'none',
                         }}
                       >
                         <span style={{ minWidth: 0 }}>{c.name}</span>
-                        <span style={{ color: color.labelTertiary, fontSize: fontSize[11], fontWeight: fontWeight.medium }}>{c.currency} · {c.indicatorCount}</span>
+                        <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], fontWeight: fontWeight.medium }}>{c.currency} · {c.indicatorCount}</span>
                       </Link>
                     </li>
                   ))}
@@ -154,7 +154,7 @@ export function NationProfile({ code }: { code: string }) {
     return (
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
         <ErrorState title="Could not load this country" detail={error} />
-        <p style={{ marginTop: space[12] }}><Link href="/economy/nation" style={{ color: color.blue }}>← all nations</Link></p>
+        <p style={{ marginTop: space[12] }}><Link href="/economy/nation" style={{ color: themeColor.blue }}>← all nations</Link></p>
       </main>
     );
   }
@@ -197,9 +197,9 @@ export function NationProfile({ code }: { code: string }) {
                 href: `/economy/indicator/${r.slug}`,
                 cells: [
                   r.label.replace(`${c.name} `, ''),
-                  <span key="v" style={{ color: r.value === null ? color.labelTertiary : color.labelPrimary }}>{r.value === null ? '—' : `${formatValue(r.value, r.decimals)}${r.unit ? ` ${r.unit}` : ''}`}</span>,
-                  <span key="d" style={{ color: color.labelTertiary }}>{formatDate(r.date)}</span>,
-                  <span key="p" style={{ color: color.labelTertiary }}>{r.previous === null || r.value === null ? '—' : formatDelta(r.value - r.previous, r.decimals)}</span>,
+                  <span key="v" style={{ color: r.value === null ? themeColor.labelTertiary : themeColor.labelPrimary }}>{r.value === null ? '—' : `${formatValue(r.value, r.decimals)}${r.unit ? ` ${r.unit}` : ''}`}</span>,
+                  <span key="d" style={{ color: themeColor.labelTertiary }}>{formatDate(r.date)}</span>,
+                  <span key="p" style={{ color: themeColor.labelTertiary }}>{r.previous === null || r.value === null ? '—' : formatDelta(r.value - r.previous, r.decimals)}</span>,
                 ],
               }))}
             />
@@ -216,9 +216,9 @@ export function NationProfile({ code }: { code: string }) {
                 href: `/economy/indicator/${r.slug}`,
                 cells: [
                   r.label,
-                  <span key="d" style={{ color: color.labelTertiary }}>{formatDate(r.releaseAt)}</span>,
+                  <span key="d" style={{ color: themeColor.labelTertiary }}>{formatDate(r.releaseAt)}</span>,
                   <span key="a">{r.actual === null ? '—' : formatValue(r.actual, 2)}</span>,
-                  <span key="p" style={{ color: color.labelTertiary }}>{r.previous === null ? '—' : formatValue(r.previous, 2)}</span>,
+                  <span key="p" style={{ color: themeColor.labelTertiary }}>{r.previous === null ? '—' : formatValue(r.previous, 2)}</span>,
                   <ImportanceDots key="i" level={r.importance} />,
                 ],
               }))}
@@ -233,10 +233,10 @@ export function NationProfile({ code }: { code: string }) {
         </div>
       )}
 
-      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: color.labelTertiary }}>
-        <strong style={{ color: color.labelTertiary, fontWeight: fontWeight.medium }}>Sources:</strong> {data.upstream.join(' · ')}
+      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
+        <strong style={{ color: themeColor.labelTertiary, fontWeight: fontWeight.medium }}>Sources:</strong> {data.upstream.join(' · ')}
       </p>
-      <p style={{ marginTop: space[8], fontSize: fontSize[11], color: color.labelTertiary }}>{data.derived}</p>
+      <p style={{ marginTop: space[8], fontSize: fontSize[11], color: themeColor.labelTertiary }}>{data.derived}</p>
     </main>
   );
 }

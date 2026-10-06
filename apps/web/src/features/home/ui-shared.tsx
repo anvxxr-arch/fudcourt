@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { alpha, color, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
+import { alpha, themeColor, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
 import { Banner } from '@/ui/banner';
 import { Loading } from '@/ui/feedback';
 import { imgSrc } from '@/lib/img';
@@ -14,21 +14,21 @@ import {
 // ---- shared styles (token-only; the design gate forbids literals here) ------
 
 export const cardStyle: React.CSSProperties = {
-  background: color.bgSecondary,
-  border: `1px solid ${color.separator}`,
+  background: themeColor.bgSecondary,
+  border: `1px solid ${themeColor.separator}`,
   borderRadius: radius[8],
   padding: space[12],
 };
 export const h2Style: React.CSSProperties = {
   margin: `0 0 ${space[8]}px`,
-  color: color.blue,
+  color: themeColor.blue,
   fontSize: fontSize[15],
   fontWeight: fontWeight.bold,
   letterSpacing: letterSpacing.wide,
 };
 export const h3Style: React.CSSProperties = {
   margin: `0 0 ${space[8]}px`,
-  color: color.blue,
+  color: themeColor.blue,
   fontSize: fontSize[12],
   fontWeight: fontWeight.bold,
   letterSpacing: letterSpacing.wide,
@@ -36,7 +36,7 @@ export const h3Style: React.CSSProperties = {
 /** Sub-heading inside a card, for a block that sits under the card's own h3. */
 export const h4Style: React.CSSProperties = {
   margin: `${space[12]}px 0 ${space[8]}px`,
-  color: color.labelPrimary,
+  color: themeColor.labelPrimary,
   fontSize: fontSize[11],
   fontWeight: fontWeight.bold,
   letterSpacing: letterSpacing.wide,
@@ -44,7 +44,7 @@ export const h4Style: React.CSSProperties = {
 /** A `<summary>` that reads as a control, not as body copy. */
 export const summaryStyle: React.CSSProperties = {
   cursor: 'pointer',
-  color: color.blue,
+  color: themeColor.blue,
   fontSize: fontSize[11],
   fontWeight: fontWeight.bold,
   letterSpacing: letterSpacing.wide,
@@ -52,7 +52,7 @@ export const summaryStyle: React.CSSProperties = {
 };
 export const noteStyle: React.CSSProperties = {
   margin: `${space[8]}px 0 0`,
-  color: color.labelTertiary,
+  color: themeColor.labelTertiary,
   fontSize: fontSize[11],
 };
 export const listRowStyle: React.CSSProperties = {
@@ -63,11 +63,11 @@ export const listRowStyle: React.CSSProperties = {
   fontSize: fontSize[11],
 };
 export const theadRowStyle: React.CSSProperties = {
-  color: color.labelTertiary,
+  color: themeColor.labelTertiary,
   textAlign: 'left',
-  borderBottom: `1px solid ${color.separator}`,
+  borderBottom: `1px solid ${themeColor.separator}`,
 };
-export const rowStyle: React.CSSProperties = { borderBottom: `1px solid ${alpha(color.separator, 0.4)}` };
+export const rowStyle: React.CSSProperties = { borderBottom: `1px solid ${alpha(themeColor.separator, 0.4)}` };
 
 // ---- primitives -------------------------------------------------------------
 
@@ -118,7 +118,7 @@ export function Panel<T>({
 /** A signed percent, coloured by sign; absent -> `—` in the muted tone. */
 export function Change({ v, digits = 2 }: { v: number | null | undefined; digits?: number }) {
   const t = toneOf(v);
-  const c = t === 'negative' ? color.red : t === 'positive' ? color.green : color.labelTertiary;
+  const c = t === 'negative' ? themeColor.red : t === 'positive' ? themeColor.green : themeColor.labelTertiary;
   return <span style={{ color: c }}>{fmtPct(v, digits)}</span>;
 }
 
@@ -137,9 +137,9 @@ export function CoinCell({ image, symbol, name }: { image: string | null; symbol
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[8] }}>
       {image
         ? <img src={imgSrc(image)} alt="" width={16} height={16} loading="lazy" decoding="async" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
-        : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: color.separator, display: 'inline-block' }} />}
-      <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{label}</span>
-      {sub ? <span style={{ color: color.labelTertiary }}>{sub}</span> : null}
+        : <span style={{ width: space[16], height: space[16], borderRadius: radius.circle, background: themeColor.separator, display: 'inline-block' }} />}
+      <span style={{ color: themeColor.labelPrimary, fontWeight: fontWeight.bold }}>{label}</span>
+      {sub ? <span style={{ color: themeColor.labelTertiary }}>{sub}</span> : null}
     </span>
   );
 }

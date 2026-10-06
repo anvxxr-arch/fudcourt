@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { color, fontSize, space } from '@/styles/tokens';
+import { themeColor, fontSize, space } from '@/styles/tokens';
 import { Label } from '@/ui/primitives';
 
 /**
@@ -11,7 +11,7 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
     <div>
       <Label>{label}</Label>
       {children}
-      {hint && <div style={{ fontSize: fontSize[11], color: color.labelTertiary, marginTop: 2 }}>{hint}</div>}
+      {hint && <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, marginTop: 2 }}>{hint}</div>}
     </div>
   );
 }

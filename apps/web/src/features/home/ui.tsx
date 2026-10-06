@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { color, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontFamily, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
 import { Badge } from '@/ui/badge';
 import { Banner } from '@/ui/banner';
 import { Loading } from '@/ui/feedback';
@@ -89,38 +89,38 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
   const live = !!cr.data;
 
   return (
-    <div style={{ background: color.bgBase, minHeight: '100vh', color: color.labelPrimary, fontFamily: fontFamily.mono, padding: space[20] }}>
+    <div style={{ background: themeColor.bgBase, minHeight: '100vh', color: themeColor.labelPrimary, fontFamily: fontFamily.mono, padding: space[20] }}>
       <main style={{ maxWidth: 1080, margin: '0 auto' }}>
         {/* ---- hero ---------------------------------------------------------- */}
-        <header style={{ borderBottom: `1px solid ${color.separator}`, paddingBottom: space[20], marginBottom: space[20] }}>
+        <header style={{ borderBottom: `1px solid ${themeColor.separator}`, paddingBottom: space[20], marginBottom: space[20] }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: space[12], flexWrap: 'wrap' }}>
-            <h1 style={{ margin: 0, color: color.blue, fontSize: fontSize[28], fontWeight: fontWeight.bold, letterSpacing: letterSpacing.wider }}>
+            <h1 style={{ margin: 0, color: themeColor.blue, fontSize: fontSize[28], fontWeight: fontWeight.bold, letterSpacing: letterSpacing.wider }}>
               Crypto market boards you can trust {'—'} every figure verified live
             </h1>
             <Badge variant={live ? 'accent' : 'muted'}>{live ? 'live' : cr.loading ? 'connecting' : 'offline'}</Badge>
           </div>
-          <p style={{ margin: `${space[8]}px 0 0`, color: color.labelTertiary, fontSize: fontSize[13], letterSpacing: letterSpacing.wide }}>
+          <p style={{ margin: `${space[8]}px 0 0`, color: themeColor.labelTertiary, fontSize: fontSize[13], letterSpacing: letterSpacing.wide }}>
             Community · Terminal · Management
           </p>
-          <p style={{ margin: `${space[8]}px 0 0`, color: color.labelPrimary, fontSize: fontSize[15], lineHeight: lineHeight.normal, maxWidth: 720 }}>
+          <p style={{ margin: `${space[8]}px 0 0`, color: themeColor.labelPrimary, fontSize: fontSize[15], lineHeight: lineHeight.normal, maxWidth: 720 }}>
             FUDCOURT cross-checks every figure against a second source before it ships. Missing data shows as{' '}
-            <span style={{ color: color.labelTertiary }}>{DASH}</span>, never <span style={{ color: color.labelTertiary }}>0</span>.
+            <span style={{ color: themeColor.labelTertiary }}>{DASH}</span>, never <span style={{ color: themeColor.labelTertiary }}>0</span>.
           </p>
           <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap', marginTop: space[16] }}>
             <Link
               href="/market"
-              style={{ background: color.blue, color: color.labelOnAccent, borderRadius: radius[8], padding: `${space[8]}px ${space[16]}px`, fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none' }}
+              style={{ background: themeColor.blue, color: themeColor.labelOnAccent, borderRadius: radius[8], padding: `${space[8]}px ${space[16]}px`, fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none' }}
             >
               Open the market hub →
             </Link>
             <Link
               href={isTeam ? '/team/balance' : '/login'}
-              style={{ color: color.blue, fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none', alignSelf: 'center' }}
+              style={{ color: themeColor.blue, fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none', alignSelf: 'center' }}
             >
               {isTeam ? 'Treasury terminal →' : 'Sign in →'}
             </Link>
           </div>
-          <ul style={{ display: 'flex', gap: space[16], flexWrap: 'wrap', listStyle: 'none', margin: `${space[16]}px 0 0`, padding: 0, color: color.labelTertiary, fontSize: fontSize[11] }}>
+          <ul style={{ display: 'flex', gap: space[16], flexWrap: 'wrap', listStyle: 'none', margin: `${space[16]}px 0 0`, padding: 0, color: themeColor.labelTertiary, fontSize: fontSize[11] }}>
             <li>Dual-source parity on every board</li>
             <li>Known-decoy classes rejected, not hidden</li>
             <li>Free to browse {'—'} sign-in only for private terminals</li>
@@ -165,15 +165,15 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
                 {d.coins.slice(0, 5).map(c => (
                   <div key={c.symbol} style={listRowStyle}>
                     <CoinCell image={c.image} symbol={c.symbol} name={c.name} />
-                    <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(c.lastPrice)}</span>
+                    <span style={{ color: themeColor.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(c.lastPrice)}</span>
                     <Change v={c.priceChangePercent} />
-                    <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtUsdCompact(c.marketCap)}</span>
+                    <span style={{ color: themeColor.labelPrimary, whiteSpace: 'nowrap' }}>{fmtUsdCompact(c.marketCap)}</span>
                   </div>
                 ))}
               </div>
               <p style={noteStyle}>
                 {d.derived} · pool {d.pool} · {d.upstream} ·{' '}
-                <Link href="/market" style={{ color: color.blue, textDecoration: 'underline' }}>full board →</Link>
+                <Link href="/market" style={{ color: themeColor.blue, textDecoration: 'underline' }}>full board →</Link>
               </p>
             </>
           )}
@@ -189,15 +189,15 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
                 {d.rows.slice(0, 6).map(r => (
                   <div key={`${r.key ?? r.symbol ?? 'row'}`} style={listRowStyle}>
                     <CoinCell image={r.image} symbol={r.symbol} name={r.name} />
-                    <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(r.priceUsd)}</span>
+                    <span style={{ color: themeColor.labelPrimary, whiteSpace: 'nowrap' }}>{fmtPrice(r.priceUsd)}</span>
                     <Change v={r.change24h} />
-                    <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.volume24hUsd)}</span>
+                    <span style={{ color: themeColor.labelPrimary, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.volume24hUsd)}</span>
                   </div>
                 ))}
               </div>
               <p style={noteStyle}>
                 {d.changeSource} change source · rows the venue publishes without a price render {DASH} · {d.upstream} ·{' '}
-                <Link href="/market" style={{ color: color.blue, textDecoration: 'underline' }}>full board →</Link>
+                <Link href="/market" style={{ color: themeColor.blue, textDecoration: 'underline' }}>full board →</Link>
               </p>
             </>
           )}
@@ -229,16 +229,16 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
                       {p.logo
                         ? <img src={imgSrc(p.logo)} alt="" width={16} height={16} loading="lazy" decoding="async" style={{ width: space[16], height: space[16], borderRadius: radius.circle }} />
                         : null}
-                      <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                      <span style={{ color: themeColor.labelPrimary, fontWeight: fontWeight.bold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
                     </span>
-                    <span style={{ color: color.labelPrimary, whiteSpace: 'nowrap' }}>{fmtUsdCompact(p.tvl)}</span>
+                    <span style={{ color: themeColor.labelPrimary, whiteSpace: 'nowrap' }}>{fmtUsdCompact(p.tvl)}</span>
                     <Change v={p.change_1d} />
                   </div>
                 ))}
               </div>
               <p style={noteStyle}>
                 {d.derived} · {d.upstream} ·{' '}
-                <Link href="/market" style={{ color: color.blue, textDecoration: 'underline' }}>full board →</Link>
+                <Link href="/market" style={{ color: themeColor.blue, textDecoration: 'underline' }}>full board →</Link>
               </p>
             </>
           )}
@@ -276,12 +276,12 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
                   {cr.data.fundingRounds.slice(0, 6).map((r, i) => (
                     <div key={`${r.coinKey || 'unnamed'}-${i}`} style={listRowStyle}>
-                      <span style={{ color: color.labelPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: themeColor.labelPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {r.coinName || DASH}
-                        {r.type ? <span style={{ color: color.labelTertiary }}> · {r.type}</span> : null}
+                        {r.type ? <span style={{ color: themeColor.labelTertiary }}> · {r.type}</span> : null}
                       </span>
-                      <span style={{ color: color.blue, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.raiseUsd)}</span>
-                      <span style={{ color: color.labelTertiary, whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</span>
+                      <span style={{ color: themeColor.blue, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.raiseUsd)}</span>
+                      <span style={{ color: themeColor.labelTertiary, whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</span>
                     </div>
                   ))}
                 </div>
@@ -291,12 +291,12 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
                   {cr.data.upcomingIco.slice(0, 6).map((r, i) => (
                     <div key={`${r.key || 'unnamed'}-${i}`} style={listRowStyle}>
-                      <span style={{ color: color.labelPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: themeColor.labelPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {r.name || DASH}
-                        {r.symbol ? <span style={{ color: color.labelTertiary }}> · {r.symbol}</span> : null}
+                        {r.symbol ? <span style={{ color: themeColor.labelTertiary }}> · {r.symbol}</span> : null}
                       </span>
-                      <span style={{ color: color.blue, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.raiseUsd)}</span>
-                      <span style={{ color: color.labelTertiary, whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</span>
+                      <span style={{ color: themeColor.blue, whiteSpace: 'nowrap' }}>{fmtUsdCompact(r.raiseUsd)}</span>
+                      <span style={{ color: themeColor.labelTertiary, whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</span>
                     </div>
                   ))}
                 </div>
@@ -314,8 +314,8 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
                 {d.items.slice(0, 6).map(it => (
                   <Link key={it.link} href="/news" style={{ ...cardStyle, padding: space[12], textDecoration: 'none', display: 'block' }}>
-                    <div style={{ color: color.labelPrimary, fontSize: fontSize[13], fontWeight: fontWeight.bold, lineHeight: lineHeight.normal }}>{it.title}</div>
-                    <div style={{ color: color.labelTertiary, fontSize: fontSize[11], marginTop: space[8] }}>
+                    <div style={{ color: themeColor.labelPrimary, fontSize: fontSize[13], fontWeight: fontWeight.bold, lineHeight: lineHeight.normal }}>{it.title}</div>
+                    <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginTop: space[8] }}>
                       {it.source || DASH} · {fmtDate(it.pubDate)}
                     </div>
                   </Link>
@@ -332,8 +332,8 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
         {/* ---- 10. destinations ---------------------------------------------- */}
         <DestinationsSection />
 
-        <footer style={{ borderTop: `1px solid ${color.separator}`, marginTop: space[24], paddingTop: space[12] }}>
-          <p style={{ margin: 0, color: color.labelTertiary, fontSize: fontSize[11], lineHeight: lineHeight.normal }}>
+        <footer style={{ borderTop: `1px solid ${themeColor.separator}`, marginTop: space[24], paddingTop: space[12] }}>
+          <p style={{ margin: 0, color: themeColor.labelTertiary, fontSize: fontSize[11], lineHeight: lineHeight.normal }}>
             Read-only market data, no investment advice. Treasury and admin surfaces require a session.
           </p>
         </footer>

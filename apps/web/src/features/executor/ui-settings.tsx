@@ -4,7 +4,7 @@
  * Split from ui-manage.tsx; re-exported through ./ui-manage and ./ui.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { color, fontSize, fontWeight, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, space } from '@/styles/tokens';
 import { Button, Card, Input, Select } from '@/ui/primitives';
 import { Banner } from '@/ui/banner';
 import { Field } from '@/ui/field';
@@ -66,10 +66,10 @@ export function ExecutorSettings() {
         <h3 style={{ ...h3Style, margin: 0 }}>RISK SETTINGS · §88</h3>
         <Button onClick={load} disabled={loading}>↻ Refresh</Button>
         <Button onClick={save} disabled={saving || loading} variant="primary">Save profile</Button>
-        <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{loading ? 'loading…' : ''}</span>
+        <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{loading ? 'loading…' : ''}</span>
       </div>
       {error !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap', fontWeight: fontWeight.bold }}>⚠ {error}</Banner>}
-      {notice !== '' && <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
+      {notice !== '' && <p style={{ color: themeColor.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
 
       <Card>
         <div style={{ ...pairStyle }}>

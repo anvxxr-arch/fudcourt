@@ -1,4 +1,4 @@
-import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 
 /**
  * Composition bar for part-to-whole data already in hand (asset allocation,
@@ -8,7 +8,7 @@ import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
  * Negative magnitudes still render (absolute value) — a divergence column is
  * about size, not sign; the sign belongs to the row's label/value text.
  */
-const HUES = [color.blue, color.green, color.orange, color.red, color.labelSecondary, color.labelTertiary] as const;
+const HUES = [themeColor.blue, themeColor.green, themeColor.orange, themeColor.red, themeColor.labelSecondary, themeColor.labelTertiary] as const;
 export type MeterPart = { label: string; value: number; color?: string };
 type MeterProps = {
   parts: MeterPart[];
@@ -23,7 +23,7 @@ export function Meter({ parts, style }: MeterProps) {
       <div
         role="img"
         aria-label={live.map((p) => `${p.label} ${Math.round((Math.abs(p.value) / total) * 100)}%`).join(', ')}
-        style={{ display: 'flex', height: space[16], borderRadius: radius[8], overflow: 'hidden', border: `1px solid ${color.separator}` }}
+        style={{ display: 'flex', height: space[16], borderRadius: radius[8], overflow: 'hidden', border: `1px solid ${themeColor.separator}` }}
       >
         {live.map((p, i) => (
           <div
@@ -34,7 +34,7 @@ export function Meter({ parts, style }: MeterProps) {
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: `${space[4]}px ${space[12]}px`, marginTop: space[8] }}>
         {live.map((p, i) => (
-          <span key={p.label} style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>
+          <span key={p.label} style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>
             <span style={{ color: p.color ?? HUES[i % HUES.length], fontWeight: fontWeight.bold }}>■</span>{' '}
             {p.label} {Math.round((Math.abs(p.value) / total) * 100)}%
           </span>

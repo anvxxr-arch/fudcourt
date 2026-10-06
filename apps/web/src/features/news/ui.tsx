@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { color, fontSize, fontWeight, lineHeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, lineHeight, radius, space } from '@/styles/tokens';
 import { EmptyState, Loading } from '@/ui/feedback';
 import { Toolbar } from '@/ui/toolbar';
 import { imgSrc } from '@/lib/img';
@@ -44,14 +44,14 @@ export default function NewsPage() {
   return (
     <div>
       <Toolbar actions={
-        <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
+        <button onClick={load} style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       }>
-        <h2 style={{ color: color.blue, margin: 0, fontSize: fontSize[17] }}>Crypto News</h2>
+        <h2 style={{ color: themeColor.blue, margin: 0, fontSize: fontSize[17] }}>Crypto News</h2>
       </Toolbar>
 
-      {error && <p style={{ color: color.red, fontSize: fontSize[12] }}>{error}</p>}
+      {error && <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>{error}</p>}
 
       {loading ? (
         <Loading label="Loading news..." />
@@ -61,8 +61,8 @@ export default function NewsPage() {
             <div
               key={i}
               style={{
-                background: color.bgSecondary,
-                border: `1px solid ${color.separator}`,
+                background: themeColor.bgSecondary,
+                border: `1px solid ${themeColor.separator}`,
                 borderRadius: radius[8],
                 overflow: 'hidden',
               }}
@@ -76,12 +76,12 @@ export default function NewsPage() {
                 }} />
               )}
               <div style={{ padding: space[8] }}>
-                <div style={{ fontSize: fontSize[11], color: color.blue, marginBottom: space[4] }}>{item.source} · {fmtDate(item.pubDate)}</div>
-                <div style={{ fontWeight: fontWeight.bold, fontSize: fontSize[12], color: color.labelPrimary, marginBottom: space[4], lineHeight: lineHeight.tight }}>
+                <div style={{ fontSize: fontSize[11], color: themeColor.blue, marginBottom: space[4] }}>{item.source} · {fmtDate(item.pubDate)}</div>
+                <div style={{ fontWeight: fontWeight.bold, fontSize: fontSize[12], color: themeColor.labelPrimary, marginBottom: space[4], lineHeight: lineHeight.tight }}>
                   {item.title}
                 </div>
                 {item.description && (
-                  <p style={{ fontSize: fontSize[11], color: color.labelTertiary, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  <p style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {item.description}
                   </p>
                 )}

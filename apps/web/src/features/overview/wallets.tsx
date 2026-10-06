@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { color, fontSize, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, radius, space } from '@/styles/tokens';
 import { Wallet, CHAIN_COLOR, EMOJI_PRESETS, COLOR_PRESETS } from '@/lib/format';
 import { Button, Modal, Label, Card } from '@/ui/primitives';
 
@@ -16,8 +16,8 @@ export default function WalletPage({ wallets, balanceByWallet, onSave }: Props) 
 
   return (
     <div>
-      <h3 style={{ color: color.blue }}>Wallet Manager</h3>
-      <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>Customize alias, emoji, color for each wallet. Changes reflect everywhere instantly.</p>
+      <h3 style={{ color: themeColor.blue }}>Wallet Manager</h3>
+      <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>Customize alias, emoji, color for each wallet. Changes reflect everywhere instantly.</p>
       {wallets.map(w => (
         <Card key={w.address}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -25,11 +25,11 @@ export default function WalletPage({ wallets, balanceByWallet, onSave }: Props) 
               <div style={{ fontSize: fontSize[17] }}>
                 <span style={{ fontSize: fontSize[20] }}>{w.emoji}</span>{' '}
                 <b style={{ color: w.color }}>{w.alias || w.label}</b>
-                {w.alias && w.alias !== w.label && <span style={{ color: color.labelTertiary, fontSize: fontSize[11], marginLeft: space[8] }}>({w.label})</span>}
+                {w.alias && w.alias !== w.label && <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginLeft: space[8] }}>({w.label})</span>}
               </div>
-              <div style={{ fontSize: fontSize[11], color: color.labelTertiary, marginTop: space[4], wordBreak: 'break-all' }}>{w.address}</div>
-              <div style={{ fontSize: fontSize[11], color: CHAIN_COLOR[w.chain] || color.labelTertiary, marginTop: 2 }}>{w.chain} · ${balanceByWallet[w.label]?.toFixed(2) || '0.00'}</div>
-              {w.notes && <div style={{ fontSize: fontSize[11], color: color.labelTertiary, marginTop: space[4], fontStyle: 'italic' }}>{w.notes}</div>}
+              <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, marginTop: space[4], wordBreak: 'break-all' }}>{w.address}</div>
+              <div style={{ fontSize: fontSize[11], color: CHAIN_COLOR[w.chain] || themeColor.labelTertiary, marginTop: 2 }}>{w.chain} · ${balanceByWallet[w.label]?.toFixed(2) || '0.00'}</div>
+              {w.notes && <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, marginTop: space[4], fontStyle: 'italic' }}>{w.notes}</div>}
             </div>
             <Button onClick={() => setEdit(w)} variant="ghost" size="sm">✏️ Edit</Button>
           </div>
@@ -46,23 +46,23 @@ export default function WalletPage({ wallets, balanceByWallet, onSave }: Props) 
 function EditWalletModal({ wallet, onSave, onClose }: { wallet: Wallet; onSave: (w: Partial<Wallet>) => void; onClose: () => void }) {
   const [alias, setAlias] = useState(wallet.alias || '');
   const [emoji, setEmoji] = useState(wallet.emoji || '💰');
-  const [swatch, setSwatch] = useState(wallet.color || color.blue);
+  const [swatch, setSwatch] = useState(wallet.color || themeColor.blue);
   const [notes, setNotes] = useState(wallet.notes || '');
 
   return (
     <Modal title="Edit Wallet" onClose={onClose} width={420}>
-      <div style={{ fontSize: fontSize[11], color: color.labelTertiary, wordBreak: 'break-all', marginBottom: space[12] }}>{wallet.address}</div>
+      <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, wordBreak: 'break-all', marginBottom: space[12] }}>{wallet.address}</div>
 
       <Label>Alias</Label>
       <input value={alias} onChange={e => setAlias(e.target.value)} placeholder={wallet.label}
-        style={{ width: '100%', background: color.bgBase, color: color.labelPrimary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[13], marginBottom: space[12], boxSizing: 'border-box' }} />
+        style={{ width: '100%', background: themeColor.bgBase, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[13], marginBottom: space[12], boxSizing: 'border-box' }} />
 
       <Label>Emoji</Label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[4], marginBottom: space[12] }}>
         {EMOJI_PRESETS.map(e => (
           <button key={e} onClick={() => setEmoji(e)} style={{
-            background: emoji === e ? color.blue : color.bgBase, color: emoji === e ? color.labelOnAccent : color.labelPrimary,
-            border: `1px solid ${emoji === e ? color.blue : color.separator}`, borderRadius: radius[8], padding: `${space[4]}px ${space[8]}px`, cursor: 'pointer', fontSize: fontSize[17],
+            background: emoji === e ? themeColor.blue : themeColor.bgBase, color: emoji === e ? themeColor.labelOnAccent : themeColor.labelPrimary,
+            border: `1px solid ${emoji === e ? themeColor.blue : themeColor.separator}`, borderRadius: radius[8], padding: `${space[4]}px ${space[8]}px`, cursor: 'pointer', fontSize: fontSize[17],
           }}>{e}</button>
         ))}
       </div>
@@ -71,7 +71,7 @@ function EditWalletModal({ wallet, onSave, onClose }: { wallet: Wallet; onSave: 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[4], marginBottom: space[12] }}>
         {COLOR_PRESETS.map(c => (
           <button key={c} onClick={() => setSwatch(c)} style={{
-            background: c, border: swatch === c ? `2px solid ${color.labelOnAccent}` : '2px solid transparent',
+            background: c, border: swatch === c ? `2px solid ${themeColor.labelOnAccent}` : '2px solid transparent',
             borderRadius: radius[8], width: space[32], height: space[32], cursor: 'pointer',
           }} />
         ))}
@@ -81,7 +81,7 @@ function EditWalletModal({ wallet, onSave, onClose }: { wallet: Wallet; onSave: 
 
       <Label>Notes</Label>
       <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="optional notes..."
-        style={{ width: '100%', background: color.bgBase, color: color.labelPrimary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], marginBottom: space[16], minHeight: 50, resize: 'vertical', boxSizing: 'border-box' }} />
+        style={{ width: '100%', background: themeColor.bgBase, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], marginBottom: space[16], minHeight: 50, resize: 'vertical', boxSizing: 'border-box' }} />
 
       <div style={{ display: 'flex', gap: space[8], justifyContent: 'flex-end' }}>
         <Button onClick={onClose} variant="ghost" size="md">Cancel</Button>

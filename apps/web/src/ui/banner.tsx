@@ -1,10 +1,10 @@
-import { alpha, color, fontSize, radius, space } from '@/styles/tokens';
+import { alpha, themeColor, fontSize, radius, space } from '@/styles/tokens';
 
 const HUE = {
-  error: color.red,
-  warn: color.orange,
-  info: color.labelTertiary,
-  success: color.green,
+  error: themeColor.red,
+  warn: themeColor.orange,
+  info: themeColor.labelTertiary,
+  success: themeColor.green,
 } as const;
 
 type BannerProps = {

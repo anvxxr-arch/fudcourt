@@ -1,6 +1,6 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
-import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { Banner } from '@/ui/banner';
 import { Loading } from '@/ui/feedback';
 import { fetchDex, fetchDexProfiles, isMint, type DexPair, type DexProfile } from './client';
@@ -159,12 +159,12 @@ export default function DexPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[8], flexWrap: 'wrap', gap: space[8] }}>
-        <h3 style={{ color: color.blue, margin: 0 }}>DexScreener — live market data</h3>
-        <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
+        <h3 style={{ color: themeColor.blue, margin: 0 }}>DexScreener — live market data</h3>
+        <button onClick={load} style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       </div>
-      <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
+      <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
         read-only market data · public DexScreener API · an em-dash means the field is absent upstream, never zero
       </p>
 
@@ -172,8 +172,8 @@ export default function DexPage() {
         {MODES.map((m) => (
           <button key={m.key} onClick={() => setMode(m.key)}
             style={{
-              background: mode === m.key ? color.blue : color.bgSecondary, color: mode === m.key ? color.labelOnAccent : color.labelPrimary,
-              border: `1px solid ${color.separator}`, padding: '5px 10px', borderRadius: radius[8], fontSize: fontSize[11], fontWeight: fontWeight.bold, cursor: 'pointer',
+              background: mode === m.key ? themeColor.blue : themeColor.bgSecondary, color: mode === m.key ? themeColor.labelOnAccent : themeColor.labelPrimary,
+              border: `1px solid ${themeColor.separator}`, padding: '5px 10px', borderRadius: radius[8], fontSize: fontSize[11], fontWeight: fontWeight.bold, cursor: 'pointer',
             }}>{m.label}</button>
         ))}
       </div>
@@ -182,9 +182,9 @@ export default function DexPage() {
         {mode === 'search' && (
           <>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="symbol, name or address…"
-              style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, color: color.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 260 }} />
+              style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, color: themeColor.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 260 }} />
             <select value={searchChain} onChange={(e) => setSearchChain(e.target.value)}
-              style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, color: color.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11] }}>
+              style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, color: themeColor.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11] }}>
               <option value="">all chains (upstream default)</option>
               {SEARCH_CHAINS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -193,13 +193,13 @@ export default function DexPage() {
         {(mode === 'mint' || mode === 'orders') && (
           <>
             <input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="token address (base58 / 0x / name)…"
-              style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, color: color.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 340 }} />
+              style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, color: themeColor.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 340 }} />
             <select value={chain} onChange={(e) => setChain(e.target.value)}
-              style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, color: color.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11] }}>
+              style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, color: themeColor.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11] }}>
               {SEARCH_CHAINS.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             {mode === 'mint' && (
-              <label style={{ color: color.labelTertiary, fontSize: fontSize[11], display: 'inline-flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}>
+              <label style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], display: 'inline-flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}>
                 <input type="checkbox" checked={deepestOnly} onChange={(e) => setDeepestOnly(e.target.checked)} />
                 deepest pair only (tokens/v1)
               </label>
@@ -208,11 +208,11 @@ export default function DexPage() {
         )}
         {rows.length > 0 && (
           <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="filter rows…"
-            style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, color: color.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 200 }} />
+            style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, color: themeColor.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 200 }} />
         )}
       </div>
 
-      <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>{active.hint}</p>
+      <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>{active.hint}</p>
 
       {error && (
         <Banner variant="error" style={{ fontWeight: fontWeight.bold }}>
@@ -223,11 +223,11 @@ export default function DexPage() {
       {loading ? (
         <Loading label="loading dex data…" />
       ) : error ? (
-        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>row list withheld — the request above failed.</p>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>row list withheld — the request above failed.</p>
       ) : (
         <>
           {meta.upstream && meta.returned != null && (
-            <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[4]}px` }}>
+            <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[4]}px` }}>
               {meta.returned} shown{meta.total != null && meta.total !== meta.returned ? ` of ${meta.total}` : ''}
               {rows.length > 0 && ` · liq coverage ${cov('liquidity')} · labels ${cov('labels')} · txns ${cov('txns')}`}
             </p>
@@ -236,16 +236,16 @@ export default function DexPage() {
               actually spanned instead of letting a filtered view imply the
               upstream request was scoped. */}
           {meta.chainsSeen && Object.keys(meta.chainsSeen).length > 0 && (
-            <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[4]}px` }}>
+            <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[4]}px` }}>
               upstream matched {meta.upstreamTotal ?? meta.total} pairs across{' '}
-              <span style={{ color: color.blue }}>{Object.keys(meta.chainsSeen).length} chains</span>
+              <span style={{ color: themeColor.blue }}>{Object.keys(meta.chainsSeen).length} chains</span>
               {meta.filteredBy
                 ? ` — narrowed locally to '${meta.filteredBy}' (upstream ignores a chain param)`
                 : `: ${Object.entries(meta.chainsSeen).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join(', ')}`}
             </p>
           )}
           {meta.note && (
-            <p style={{ color: color.orange, fontSize: fontSize[11], margin: `0 0 ${space[8]}px`, fontWeight: fontWeight.bold }}>⚠ {meta.note}</p>
+            <p style={{ color: themeColor.orange, fontSize: fontSize[11], margin: `0 0 ${space[8]}px`, fontWeight: fontWeight.bold }}>⚠ {meta.note}</p>
           )}
 
           {/* profiles / boosts */}

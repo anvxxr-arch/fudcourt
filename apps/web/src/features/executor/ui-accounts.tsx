@@ -4,7 +4,7 @@
  * Split from ui-manage.tsx; re-exported through ./ui-manage and ./ui.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { color, fontSize, fontWeight, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, space } from '@/styles/tokens';
 import { Button, Card, Input, Select } from '@/ui/primitives';
 import { Banner } from '@/ui/banner';
 import { Perm } from '@/ui/perm';
@@ -73,7 +73,7 @@ function ConnectForm({ onConnected }: { onConnected: () => void }) {
     <Card>
       <h3 style={h3Style}>CONNECT AN EXCHANGE · §43</h3>
       {error !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap', fontWeight: fontWeight.bold }}>⚠ {error}</Banner>}
-      {notice !== '' && <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
+      {notice !== '' && <p style={{ color: themeColor.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: space[8] }}>
         <Field label="Exchange">
           <Select
@@ -167,10 +167,10 @@ export function ExecutorAccounts() {
       <div style={{ display: 'flex', gap: space[8], alignItems: 'center', flexWrap: 'wrap', marginBottom: space[8] }}>
         <h3 style={{ ...h3Style, margin: 0 }}>EXCHANGE ACCOUNTS · §87</h3>
         <Button onClick={load} disabled={loading}>↻ Refresh</Button>
-        <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{loading ? 'loading…' : `${accounts.length} connected`}</span>
+        <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{loading ? 'loading…' : `${accounts.length} connected`}</span>
       </div>
       {error !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap', fontWeight: fontWeight.bold }}>⚠ {error}</Banner>}
-      {notice !== '' && <p style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
+      {notice !== '' && <p style={{ color: themeColor.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
 
       <Card>
         {accounts.length === 0 && !loading && <p style={noteStyle}>no accounts connected yet — add one below to size a trade</p>}
@@ -198,15 +198,15 @@ export function ExecutorAccounts() {
                   <TD style={tdStyle}>
                     <StatusPill status={account.revokedAt === null ? account.health : 'REVOKED'} />
                   </TD>
-                  <TD mono style={{ ...tdStyle, color: color.labelTertiary }}>{account.apiKeyMasked}</TD>
+                  <TD mono style={{ ...tdStyle, color: themeColor.labelTertiary }}>{account.apiKeyMasked}</TD>
                   <TD style={tdStyle}><Perm value={account.permissions.read} /></TD>
                   <TD style={tdStyle}><Perm value={account.permissions.spotTrade} /></TD>
                   <TD style={tdStyle}><Perm value={account.permissions.futuresTrade} /></TD>
                   <TD style={tdStyle}>
                     <Perm value={account.permissions.withdraw} />
-                    {account.permissions.withdraw === true && <span style={{ color: color.red, fontWeight: fontWeight.bold }}> · remove it</span>}
+                    {account.permissions.withdraw === true && <span style={{ color: themeColor.red, fontWeight: fontWeight.bold }}> · remove it</span>}
                   </TD>
-                  <TD style={{ ...tdStyle, color: color.labelTertiary }}>{formatAgo(account.lastUsedAt)}</TD>
+                  <TD style={{ ...tdStyle, color: themeColor.labelTertiary }}>{formatAgo(account.lastUsedAt)}</TD>
                   <TD style={tdStyle}>
                     <div style={{ display: 'flex', gap: space[8] }}>
                       <Button onClick={() => runTest(account)} disabled={busyId === account.id || account.revokedAt !== null}>Test</Button>
@@ -221,9 +221,9 @@ export function ExecutorAccounts() {
       </Card>
 
       {confirming !== null && (
-        <Card style={{ borderColor: color.red }}>
-          <h3 style={{ ...h3Style, color: color.red }}>REVOKE {confirming.label.toUpperCase()}?</h3>
-          <p style={{ color: color.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
+        <Card style={{ borderColor: themeColor.red }}>
+          <h3 style={{ ...h3Style, color: themeColor.red }}>REVOKE {confirming.label.toUpperCase()}?</h3>
+          <p style={{ color: themeColor.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
             This destroys the sealed key for {confirming.exchange} ({confirming.apiKeyMasked}). Any execution that still
             needs it can no longer place or cancel orders through FUDCourt, and the secret cannot be recovered. It
             cannot be undone.

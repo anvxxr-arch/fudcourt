@@ -11,7 +11,7 @@
  */
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { color, fontSize, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, radius, space } from '@/styles/tokens';
 import { fetchCompare, formatDate, formatValue, type CompareEnvelope } from '@/features/economy/model';
 import { Card } from '@/ui/card';
 import { ECONOMY_NAV } from '@/features/economy/nav';
@@ -33,10 +33,10 @@ const PERIODS = ['1y', '2y', '5y', '10y', 'max'] as const;
 
 const FIELD = {
   padding: `${space[8]}px ${space[8]}px`,
-  background: color.bgSecondary,
-  border: `1px solid ${color.separator}`,
+  background: themeColor.bgSecondary,
+  border: `1px solid ${themeColor.separator}`,
   borderRadius: radius[8],
-  color: color.labelPrimary,
+  color: themeColor.labelPrimary,
   fontSize: fontSize[11],
 } as const;
 
@@ -84,7 +84,7 @@ export default function CompareBoard() {
           {COUNTRIES.map((c) => {
             const on = selectedCountries.includes(c);
             return (
-              <button key={c} onClick={() => toggle(selectedCountries, setSelectedCountries, c)} aria-pressed={on} style={{ ...FIELD, cursor: 'pointer', background: on ? color.blue : color.bgSecondary, color: on ? color.labelOnAccent : color.labelPrimary }}>
+              <button key={c} onClick={() => toggle(selectedCountries, setSelectedCountries, c)} aria-pressed={on} style={{ ...FIELD, cursor: 'pointer', background: on ? themeColor.blue : themeColor.bgSecondary, color: on ? themeColor.labelOnAccent : themeColor.labelPrimary }}>
                 {c.toUpperCase()}
               </button>
             );
@@ -98,7 +98,7 @@ export default function CompareBoard() {
             {SERIES.map((s) => {
               const on = selectedSeries.includes(s.id);
               return (
-                <button key={s.id} onClick={() => toggle(selectedSeries, setSelectedSeries, s.id)} aria-pressed={on} style={{ ...FIELD, cursor: 'pointer', background: on ? color.blue : color.bgSecondary, color: on ? color.labelOnAccent : color.labelPrimary }}>
+                <button key={s.id} onClick={() => toggle(selectedSeries, setSelectedSeries, s.id)} aria-pressed={on} style={{ ...FIELD, cursor: 'pointer', background: on ? themeColor.blue : themeColor.bgSecondary, color: on ? themeColor.labelOnAccent : themeColor.labelPrimary }}>
                   {s.label}
                 </button>
               );
@@ -120,21 +120,21 @@ export default function CompareBoard() {
               {data.series.map((s) => {
                 const latest = [...s.points].reverse().find((p) => p.value !== null);
                 return (
-                  <div key={s.slug} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[8], borderBottom: `1px solid ${color.separator}`, paddingBottom: space[8] }}>
+                  <div key={s.slug} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[8], borderBottom: `1px solid ${themeColor.separator}`, paddingBottom: space[8] }}>
                     <div style={{ minWidth: 0 }}>
-                      <Link href={`/economy/indicator/${s.slug}`} style={{ color: color.labelPrimary, textDecoration: 'none', fontSize: fontSize[12] }}>{s.label}</Link>
-                      <div style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{latest ? formatDate(latest.date) : '—'} · {s.frequency} · {s.unit}</div>
+                      <Link href={`/economy/indicator/${s.slug}`} style={{ color: themeColor.labelPrimary, textDecoration: 'none', fontSize: fontSize[12] }}>{s.label}</Link>
+                      <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{latest ? formatDate(latest.date) : '—'} · {s.frequency} · {s.unit}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: space[8] }}>
                       <Sparkline points={s.points.map((p) => p.value)} width={140} />
-                      <span style={{ fontSize: fontSize[15], color: color.labelPrimary, minWidth: 64, textAlign: 'right' }}>{latest ? formatValue(latest.value, s.decimals) : '—'}</span>
+                      <span style={{ fontSize: fontSize[15], color: themeColor.labelPrimary, minWidth: 64, textAlign: 'right' }}>{latest ? formatValue(latest.value, s.decimals) : '—'}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
           </Card>
-          <p style={{ marginTop: space[12], fontSize: fontSize[11], color: color.labelTertiary }}>{data.derived}</p>
+          <p style={{ marginTop: space[12], fontSize: fontSize[11], color: themeColor.labelTertiary }}>{data.derived}</p>
         </div>
       )}
     </main>

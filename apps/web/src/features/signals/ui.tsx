@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { alpha, color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { alpha, themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { Loading } from '@/ui/feedback';
 import { Toolbar } from '@/ui/toolbar';
 import { fetchSignals } from './client';
@@ -89,14 +89,14 @@ export default function SignalsPage() {
     <div>
       <Toolbar style={{ flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h2 style={{ color: color.blue, margin: 0, fontSize: fontSize[17] }}>Signals Feed</h2>
-          <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: '2px 0 0' }}>
+          <h2 style={{ color: themeColor.blue, margin: 0, fontSize: fontSize[17] }}>Signals Feed</h2>
+          <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: '2px 0 0' }}>
             read-only screening output · {data ? `${data.windowH}h window` : '—'}
             {data?.solDelayMin ? ` · solana delayed ${data.solDelayMin}m` : ''}
             {' · '}not trading signals, not financial advice
           </p>
         </div>
-        <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
+        <button onClick={load} style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
           ↻ Refresh
         </button>
       </Toolbar>
@@ -111,9 +111,9 @@ export default function SignalsPage() {
               disabled={!allowed}
               title={allowed ? c.label : `${c.label} is not served by the ${activeMode.label} endpoint`}
               style={{
-                background: chain === c.key ? c.color : color.bgSecondary,
-                color: chain === c.key ? color.labelPrimary : allowed ? color.labelSecondary : alpha(color.labelTertiary, 0.35),
-                border: `1px solid ${color.separator}`,
+                background: chain === c.key ? c.color : themeColor.bgSecondary,
+                color: chain === c.key ? themeColor.labelPrimary : allowed ? themeColor.labelSecondary : alpha(themeColor.labelTertiary, 0.35),
+                border: `1px solid ${themeColor.separator}`,
                 padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11],
                 cursor: allowed ? 'pointer' : 'not-allowed',
                 fontWeight: fontWeight.bold, textDecoration: allowed ? 'none' : 'line-through',
@@ -129,8 +129,8 @@ export default function SignalsPage() {
           onChange={e => setQ(e.target.value)}
           placeholder="filter symbol / name / mint…"
           style={{
-            flex: '1 1 200px', minWidth: 160, background: color.bgSecondary, color: color.labelPrimary,
-            border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[11], outline: 'none',
+            flex: '1 1 200px', minWidth: 160, background: themeColor.bgSecondary, color: themeColor.labelPrimary,
+            border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[11], outline: 'none',
           }}
         />
 
@@ -138,7 +138,7 @@ export default function SignalsPage() {
           aria-label="Filter by decision"
           value={onlyDecision}
           onChange={e => setOnlyDecision(e.target.value)}
-          style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[11] }}
+          style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[11] }}
         >
           <option value="">all decisions</option>
           {decisions.map(d => <option key={d} value={d}>{d}</option>)}
@@ -152,9 +152,9 @@ export default function SignalsPage() {
             onClick={() => setMode(m.key)}
             title={m.hint}
             style={{
-              background: mode === m.key ? color.blue : color.bgSecondary,
-              color: mode === m.key ? color.labelOnAccent : color.labelSecondary,
-              border: `1px solid ${color.separator}`, padding: '5px 10px', borderRadius: radius[8],
+              background: mode === m.key ? themeColor.blue : themeColor.bgSecondary,
+              color: mode === m.key ? themeColor.labelOnAccent : themeColor.labelSecondary,
+              border: `1px solid ${themeColor.separator}`, padding: '5px 10px', borderRadius: radius[8],
               fontSize: fontSize[11], cursor: 'pointer', fontWeight: fontWeight.bold,
             }}
           >
@@ -167,32 +167,32 @@ export default function SignalsPage() {
               onClick={() => setPage(p => Math.max(2, p - 1))}
               disabled={page <= 2}
               style={{
-                background: color.bgSecondary, color: page <= 2 ? alpha(color.labelTertiary, 0.35) : color.labelPrimary,
-                border: `1px solid ${color.separator}`, padding: '5px 10px', borderRadius: radius[8],
+                background: themeColor.bgSecondary, color: page <= 2 ? alpha(themeColor.labelTertiary, 0.35) : themeColor.labelPrimary,
+                border: `1px solid ${themeColor.separator}`, padding: '5px 10px', borderRadius: radius[8],
                 fontSize: fontSize[11], cursor: page <= 2 ? 'not-allowed' : 'pointer', fontWeight: fontWeight.bold,
               }}
             >
               ← prev
             </button>
-            <span style={{ color: color.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold }}>
+            <span style={{ color: themeColor.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold }}>
               page {data.page ?? page} / {data.pages}
             </span>
             <button
               onClick={() => setPage(p => Math.min(data.pages || 10, p + 1))}
               disabled={page >= (data.pages || 10)}
               style={{
-                background: color.bgSecondary, color: page >= (data.pages || 10) ? alpha(color.labelTertiary, 0.35) : color.labelPrimary,
-                border: `1px solid ${color.separator}`, padding: '5px 10px', borderRadius: radius[8],
+                background: themeColor.bgSecondary, color: page >= (data.pages || 10) ? alpha(themeColor.labelTertiary, 0.35) : themeColor.labelPrimary,
+                border: `1px solid ${themeColor.separator}`, padding: '5px 10px', borderRadius: radius[8],
                 fontSize: fontSize[11], cursor: page >= (data.pages || 10) ? 'not-allowed' : 'pointer', fontWeight: fontWeight.bold,
               }}
             >
               next →
             </button>
-            <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>page 1 = feed</span>
+            <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>page 1 = feed</span>
           </span>
         )}
         {data?.windowH !== undefined && (
-          <span style={{ color: color.labelTertiary, fontSize: fontSize[11], alignSelf: 'center' }}>
+          <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], alignSelf: 'center' }}>
             window {data.windowH}h · {stats.liqCoverage}% liq coverage
             {stats.holderCoverage < 100 && ` · ${stats.holderCoverage}% holders`}
             {MERGED.includes(chain) && data.counts.rh !== undefined && data.counts.sol !== undefined &&
@@ -202,7 +202,7 @@ export default function SignalsPage() {
       </div>
 
       {error && (
-        <p style={{ color: color.red, fontSize: fontSize[12], background: alpha(color.red, 0.08), border: `1px solid ${color.red}`, borderRadius: radius[8], padding: space[8] }}>
+        <p style={{ color: themeColor.red, fontSize: fontSize[12], background: alpha(themeColor.red, 0.08), border: `1px solid ${themeColor.red}`, borderRadius: radius[8], padding: space[8] }}>
           upstream failed: {error} — no data faked, retry or check data-public.vercel.app
         </p>
       )}
@@ -217,9 +217,9 @@ export default function SignalsPage() {
             ['liq coverage', `${stats.liqCoverage}%`],
             ['generated', new Date(data.generatedAt * 1000).toISOString().replace('T', ' ').slice(0, 16)],
           ].map(([k, v]) => (
-            <div key={k} style={{ background: color.bgSecondary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px` }}>
-              <span style={{ color: color.labelTertiary }}>{k} </span>
-              <span style={{ color: color.blue, fontWeight: fontWeight.bold }}>{v}</span>
+            <div key={k} style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px` }}>
+              <span style={{ color: themeColor.labelTertiary }}>{k} </span>
+              <span style={{ color: themeColor.blue, fontWeight: fontWeight.bold }}>{v}</span>
             </div>
           ))}
         </div>
@@ -232,13 +232,13 @@ export default function SignalsPage() {
         // table. An empty grid with "no rows match filter" reads as a
         // legitimate empty result, which is exactly the silent fake this
         // project must never produce.
-        <p style={{ color: color.red, fontSize: fontSize[12] }}>
+        <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>
           no data loaded — the table is withheld because the upstream fetch failed.
         </p>
       ) : error && data ? (
         // Stale-but-real data is still worth showing, provided it is labelled
         // with the timestamp it was actually generated at.
-        <p style={{ color: color.orange, fontSize: fontSize[11], marginBottom: space[8] }}>
+        <p style={{ color: themeColor.orange, fontSize: fontSize[11], marginBottom: space[8] }}>
           ⚠ stale — showing the last successful load from{' '}
           {new Date(data.generatedAt * 1000).toISOString().replace('T', ' ').slice(0, 16)}
           , not live data. Refresh failed: {error}

@@ -1,6 +1,6 @@
 'use client';
 import { Fragment, useMemo } from 'react';
-import { color, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
 import { TBody, TD, TH, THead, TR, Table } from '@/ui/table';
 import {
   deltaDir,
@@ -36,14 +36,14 @@ const WORLD_THEME_ORDER = [
 ];
 /** The theme band that spans a column block's headings. */
 const themeHeadStyle: React.CSSProperties = {
-  color: color.blue,
+  color: themeColor.blue,
   fontSize: fontSize[11],
   fontWeight: fontWeight.semibold,
   letterSpacing: letterSpacing.wider,
   textTransform: 'uppercase',
   paddingTop: space[8],
   paddingBottom: space[8],
-  borderBottom: `1px solid ${color.separator}`,
+  borderBottom: `1px solid ${themeColor.separator}`,
 };
 /**
  * Cell padding for the worldwide board. The table component ships NO padding
@@ -66,10 +66,10 @@ const worldCellStyle: React.CSSProperties = {
  * reader loses which values belong together; one hairline at each block boundary
  * carries the grouping the theme band announces.
  */
-const worldBlockStyle: React.CSSProperties = { borderLeft: `1px solid ${color.separator}` };
+const worldBlockStyle: React.CSSProperties = { borderLeft: `1px solid ${themeColor.separator}` };
 /** Colour a change by DIRECTION — a rising debt and a rising lifespan both print `+`. */
 function dirColor(dir: -1 | 0 | 1): string {
-  return dir > 0 ? color.green : dir < 0 ? color.red : color.labelTertiary;
+  return dir > 0 ? themeColor.green : dir < 0 ? themeColor.red : themeColor.labelTertiary;
 }
 /**
  * The worldwide economy board (World Bank, annual).
@@ -167,7 +167,7 @@ export function WorldTable({
                 <TR key={r.code} style={rowStyle}>
                   <TD
                     style={{
-                      color: color.labelPrimary,
+                      color: themeColor.labelPrimary,
                       fontWeight: fontWeight.bold,
                       padding: `${space[4]}px ${space[12]}px ${space[4]}px 0`,
                       whiteSpace: 'nowrap',
@@ -186,9 +186,9 @@ export function WorldTable({
                         align="right"
                         style={blockStart.has(c.id) ? { ...worldCellStyle, ...worldBlockStyle } : worldCellStyle}
                       >
-                        <div style={{ color: color.labelPrimary }}>
+                        <div style={{ color: themeColor.labelPrimary }}>
                           {fmtEconomy(value, c.kind, c.decimals)}{' '}
-                          <span style={{ color: color.labelTertiary }}>{fmtYear(cell?.year)}</span>
+                          <span style={{ color: themeColor.labelTertiary }}>{fmtYear(cell?.year)}</span>
                         </div>
                         <div
                           style={{ color: dirColor(dir), fontSize: fontSize[11] }}

@@ -1,5 +1,5 @@
 'use client';
-import { color } from '@/styles/tokens';
+import { themeColor } from '@/styles/tokens';
 import { chainColor } from '@/lib/format';
 
 export type Sighting = { n: number; spanH: number; sources: number; surfaced: number };
@@ -49,7 +49,7 @@ export type Payload = {
 export const CHAINS = [
   { key: 'solana', label: '◎ Solana', color: chainColor('solana') },
   { key: 'robinhood', label: '🪶 Robinhood Chain', color: chainColor('robinhood') },
-  { key: 'all', label: '⧉ Both', color: color.orange },
+  { key: 'all', label: '⧉ Both', color: themeColor.orange },
 ] as const;
 export type ChainKey = (typeof CHAINS)[number]['key'];
 
@@ -65,12 +65,12 @@ export const MODES = [
 export type Mode = (typeof MODES)[number]['key'];
 
 export const DECISION_COLOR: Record<string, string> = {
-  surfaced: color.blue,
-  watching: color.orange,
-  'low score': color.labelTertiary,
-  vetoed: color.red,
-  blocked: color.red,
-  bundle: color.orange,
+  surfaced: themeColor.blue,
+  watching: themeColor.orange,
+  'low score': themeColor.labelTertiary,
+  vetoed: themeColor.red,
+  blocked: themeColor.red,
+  bundle: themeColor.orange,
 };
 
 // A missing metric is NOT zero. Upstream omits fields per row (e.g. liq on

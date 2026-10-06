@@ -15,7 +15,7 @@ import { ErrorState } from '@/ui/feedback';
 import { Loading } from '@/ui/feedback';
 import { Notice } from '@/ui/notice';
 import { Value } from '@/ui/value';
-import { color, fontSize, lineHeight, space } from '@/styles/tokens';
+import { themeColor, fontSize, lineHeight, space } from '@/styles/tokens';
 import {
   formatPrice,
   formatUsd,
@@ -46,7 +46,7 @@ export function PortfolioCard({
       title="Portfolio"
       subtitle={connected ? 'connected venue account' : 'no venue account connected'}
       right={
-        <Link href="/executor/accounts" style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>
+        <Link href="/executor/accounts" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>
           {connected ? 'manage accounts →' : 'connect a venue →'}
         </Link>
       }
@@ -95,7 +95,7 @@ export function MarketBoardCard({
         title={entry ? `${entry.label} markets` : 'Markets'}
         subtitle="cross-venue price, each venue's own quote and their divergence — read live"
         right={
-          <Link href="/market/crypto" style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>
+          <Link href="/market/crypto" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>
             full board →
           </Link>
         }
@@ -183,7 +183,7 @@ export function AccountPanelsGrid({
           <Value label="Committed risk" value={formatUsd(committedNotional)} tone={committedNotional === null ? 'muted' : 'default'} hint="Sum of planned notional over live executions. — when none are working." />
           <Value label="Portfolio risk" value={NO_VALUE} tone="muted" hint="Sum of committed risk over the whole portfolio; needs venue balances." />
         </div>
-        <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>
+        <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
           Risk is a deterministic calculation over entry, stop and size (plan Phase 13). It is never inferred from a model.
         </p>
       </Card>

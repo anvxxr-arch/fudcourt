@@ -42,7 +42,9 @@ export const color = {
   labelOnAccent: '#FFFFFF',
   scrim: 'rgba(0, 0, 0, 0.35)',
 } as const;
-/** `.dark` flip of `color`, key-for-key (see header). Consumed by the emitter only. */
+/**
+ * The `.dark` flip of `color`, key-for-key (see header). Consumed by the emitter only.
+ */
 export const darkColor: { [K in keyof typeof color]: string } = {
   bgBase: '#000000',
   bgSecondary: '#1C1C1E',
@@ -59,6 +61,28 @@ export const darkColor: { [K in keyof typeof color]: string } = {
   labelOnAccent: '#FFFFFF',
   scrim: 'rgba(0, 0, 0, 0.6)',
 };
+/**
+ * `color`, re-pointed at the CSS custom properties the emitter writes.
+ *
+ * WHY THIS EXISTS: `color` above holds the LIGHT hexes as literals, because the emitter
+ * reads them to generate the `:root` block. But 68 files and ~821 inline styles consume
+ * `color.bgBase` directly in React, and a literal baked into a `style` attribute is frozen
+ * at build time — `.dark` on `<html>` cannot reach it. That is exactly why the header,
+ * the nav bar and every page shell stayed white in dark mode while `body` and the
+ * `--fc-*` variables flipped correctly.
+ *
+ * Re-pointing the values at `var(--fc-color-…)` makes every one of those call sites
+ * theme-aware with ZERO source edits: the same `color.bgBase` expression now resolves
+ * through the cascade, so `.dark` re-points it. This is the same mapping the emitter
+ * already writes into `tailwind.tokens.json` (`tokensJson()`), so the two representations
+ * cannot drift.
+ *
+ * `color` itself is untouched and remains the literal source of truth; `darkColor` remains
+ * the `.dark` overrides. This view is the bridge for React consumers.
+ */
+export const themeColor: { [K in keyof typeof color]: string } = Object.fromEntries(
+  Object.keys(color).map((k) => [k, `var(--fc-color-${k})`]),
+) as { [K in keyof typeof color]: string };
 /** px, 8pt grid + 4pt sub-step. */
 export const space = { 0: 0, 4: 4, 8: 8, 12: 12, 16: 16, 20: 20, 24: 24, 32: 32, 40: 40 } as const;
 /** px continuous corners, plus the `'50%'` keyword for round avatars/dots. */
@@ -435,11 +459,20 @@ export const designTokens = {
  * clamped to [0,1]; anything other than a 6-digit `#rrggbb` throws, so a typo
  * surfaces at the call site rather than as a transparent box in production.
  * Never called with `color.scrim` (already rgba — used verbatim).
+ *
+ * A `var(--fc-color-…)` reference is accepted too, because `themeColor` hands those out
+ * instead of literals. A var cannot be decomposed into channels at build time, so the tint
+ * is expressed as `color-mix(in srgb, <var> <pct>%, transparent)` — the browser resolves it
+ * at paint time, which also means the tint follows the `.dark` flip rather than freezing the
+ * light channel values into the stylesheet.
  */
 export function alpha(hex: string, a: number): string {
+  const clamped = Math.min(1, Math.max(0, a));
+  if (hex.startsWith('var(')) {
+    return `color-mix(in srgb, ${hex} ${Math.round(clamped * 100)}%, transparent)`;
+  }
   const match = /^#([0-9a-fA-F]{6})$/.exec(hex);
   if (!match) throw new Error('alpha(): expected a #rrggbb colour, got ' + hex);
   const value = parseInt(match[1], 16);
-  const clamped = Math.min(1, Math.max(0, a));
   return 'rgba(' + ((value >> 16) & 0xff) + ', ' + ((value >> 8) & 0xff) + ', ' + (value & 0xff) + ', ' + clamped + ')';
 }

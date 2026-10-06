@@ -22,7 +22,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import {
   errorMessage,
   fetchExecutions,
@@ -97,11 +97,11 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: space[8], marginBottom: space[16] }}>
         <Link
           href="/executor/accounts"
-          style={{ background: color.blue, color: color.labelOnAccent, padding: `${space[8]}px ${space[16]}px`, borderRadius: radius[8], fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none' }}
+          style={{ background: themeColor.blue, color: themeColor.labelOnAccent, padding: `${space[8]}px ${space[16]}px`, borderRadius: radius[8], fontSize: fontSize[12], fontWeight: fontWeight.bold, textDecoration: 'none' }}
         >
           {connected ? 'Manage connected venues →' : 'Connect a venue →'}
         </Link>
-        <span style={{ fontSize: fontSize[11], color: color.labelTertiary }}>
+        <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>
           Your exchange keys, never ours — the masked key is the only key the API returns.
         </span>
       </div>

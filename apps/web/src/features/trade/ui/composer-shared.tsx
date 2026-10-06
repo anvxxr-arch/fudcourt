@@ -7,14 +7,14 @@
  * live here so the entry and section modules cannot drift apart.
  */
 import type { CSSProperties } from 'react';
-import { color, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
 import { VENUE_MARKET_TYPES, type MarketType, type VenueId } from '@/features/trade/model';
 import type { BalanceBasis, SizingMode } from '@/lib/executor';
 
 export const pairStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: space[8] };
 
 export const h3Style: CSSProperties = {
-  color: color.blue,
+  color: themeColor.blue,
   fontSize: fontSize[12],
   fontWeight: fontWeight.bold,
   margin: `0 0 ${space[8]}px`,

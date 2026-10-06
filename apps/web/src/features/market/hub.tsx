@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties } from 'react';
 import Link from 'next/link';
-import { color, fontSize, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, radius, space } from '@/styles/tokens';
 import dynamic from 'next/dynamic';
 const TickerPage = dynamic(() => import('@/features/market/ticker/ui'), { ssr: false });
 const TrackerPage = dynamic(() => import('@/features/overview/tracker'), { ssr: false });
@@ -77,10 +77,10 @@ const STOCK_TABS = [
 ] as const;
 
 const tabStyle = (active: boolean): CSSProperties => ({
-  background: active ? color.blue : color.bgTertiary,
-  color: active ? color.labelOnAccent : color.labelSecondary,
+  background: active ? themeColor.blue : themeColor.bgTertiary,
+  color: active ? themeColor.labelOnAccent : themeColor.labelSecondary,
   padding: `${space[8]}px ${space[16]}px`,
-  border: `1px solid ${color.separator}`,
+  border: `1px solid ${themeColor.separator}`,
   borderRadius: radius[8],
   cursor: 'pointer',
   fontSize: fontSize[12],
@@ -92,8 +92,8 @@ function Overview() {
     display: 'flex',
     flexDirection: 'column',
     gap: space[4],
-    background: color.bgSecondary,
-    border: `1px solid ${color.separator}`,
+    background: themeColor.bgSecondary,
+    border: `1px solid ${themeColor.separator}`,
     borderRadius: radius[8],
     padding: space[12],
     textDecoration: 'none',
@@ -102,8 +102,8 @@ function Overview() {
     <div style={{ display: 'grid', gap: space[12] }}>
       {SECTIONS.map((s) => (
         <Link key={s.key} href={s.href} style={cardStyle}>
-          <strong style={{ color: color.blue }}>{s.label}</strong>
-          <span style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>{s.blurb}</span>
+          <strong style={{ color: themeColor.blue }}>{s.label}</strong>
+          <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>{s.blurb}</span>
         </Link>
       ))}
     </div>

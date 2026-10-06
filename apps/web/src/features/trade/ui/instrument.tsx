@@ -15,7 +15,7 @@
  */
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { alpha, color, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
+import { alpha, themeColor, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
 import {
   errorMessage,
   fetchInstrumentDetail,
@@ -76,10 +76,10 @@ export function TradeInstrument({ marketType, instrumentId }: { marketType: Mark
       {/* The trail the plan's routes follow: type → instrument. */}
       <nav aria-label="Instrument trail" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: space[8], marginBottom: space[12] }}>
         <TrailLink href="/trade" label="Trade" />
-        <span aria-hidden="true" style={{ color: alpha(color.labelTertiary, 0.7) }}>/</span>
+        <span aria-hidden="true" style={{ color: alpha(themeColor.labelTertiary, 0.7) }}>/</span>
         <TrailLink href={`/trade/${marketType}`} label={entry.label} />
-        <span aria-hidden="true" style={{ color: alpha(color.labelTertiary, 0.7) }}>/</span>
-        <span style={{ color: color.labelPrimary, fontSize: fontSize[11] }}>{label}</span>
+        <span aria-hidden="true" style={{ color: alpha(themeColor.labelTertiary, 0.7) }}>/</span>
+        <span style={{ color: themeColor.labelPrimary, fontSize: fontSize[11] }}>{label}</span>
       </nav>
 
       {tickerType === null ? (
@@ -95,7 +95,7 @@ export function TradeInstrument({ marketType, instrumentId }: { marketType: Mark
           title="Cross-venue quotes"
           subtitle="each venue's own quote for this instrument, read live — never a built symbol"
           right={
-            <Link href={`/market/crypto/${base}`} style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>
+            <Link href={`/market/crypto/${base}`} style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>
               full coin page →
             </Link>
           }
@@ -129,7 +129,7 @@ export function TradeInstrument({ marketType, instrumentId }: { marketType: Mark
                 }))}
               />
               {(detail.value.notListed.length > 0 || detail.value.failed.length > 0) && (
-                <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>
+                <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
                   {detail.value.notListed.length > 0 && <>not listed: {detail.value.notListed.join(', ')}. </>}
                   {detail.value.failed.length > 0 && <>failed: {detail.value.failed.join(', ')}.</>}
                 </p>
@@ -152,7 +152,7 @@ export function TradeInstrument({ marketType, instrumentId }: { marketType: Mark
             <Value label="Market type" value={entry.label} />
             <Value label="Ticker type" value={tickerType ?? '—'} tone={tickerType === null ? 'muted' : 'default'} hint="The vocabulary the public ticker board speaks, or — when it has none." />
           </div>
-          <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: color.labelTertiary, lineHeight: lineHeight.normal }}>
+          <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
             A venue spells this instrument its own way ({detail.value?.quotes[0]?.symbol ?? 'e.g. BTCUSDT'}); the adapter resolves
             that form. No view builds a native symbol, and no route carries one.
           </p>
@@ -168,9 +168,9 @@ function TrailLink({ href, label }: { href: string; label: string }) {
       href={href}
       style={{
         padding: `${space[4]}px ${space[8]}px`,
-        border: `1px solid ${color.separator}`,
+        border: `1px solid ${themeColor.separator}`,
         borderRadius: radius[8],
-        color: color.labelTertiary,
+        color: themeColor.labelTertiary,
         fontSize: fontSize[11],
         textDecoration: 'none',
       }}

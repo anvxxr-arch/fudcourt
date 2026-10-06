@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { Button, Card } from '@/ui/primitives';
 import { Meter } from '@/ui/meter';
 import { Banner } from '@/ui/banner';
@@ -124,7 +124,7 @@ export function ExecutorProgress({ executionId }: { executionId: string }) {
       <Card>
         {error !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap', fontWeight: fontWeight.bold }}>⚠ {error}</Banner>}
         {error === '' && <p style={noteStyle}>loading execution {executionId}…</p>}
-        <Link href="/executor/history" style={{ color: color.blue, fontSize: fontSize[11] }}>← back to history</Link>
+        <Link href="/executor/history" style={{ color: themeColor.blue, fontSize: fontSize[11] }}>← back to history</Link>
       </Card>
     );
   }
@@ -136,13 +136,13 @@ export function ExecutorProgress({ executionId }: { executionId: string }) {
 
   return (
     <>
-      <Card style={{ borderColor: color.blue }}>
+      <Card style={{ borderColor: themeColor.blue }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: space[8], flexWrap: 'wrap' }}>
           <div>
             <h3 style={{ ...h3Style, margin: 0 }}>{execution.executionStrategy.toUpperCase()} · {execution.status}</h3>
             <p style={{ ...noteStyle, marginTop: space[4] }}>
               {execution.symbol} · {execution.side.toUpperCase()} · {execution.intent} · {execution.mode.toUpperCase()}
-              {' · '}{execution.exchange} · <span style={{ color: color.labelTertiary }}>{execution.id}</span>
+              {' · '}{execution.exchange} · <span style={{ color: themeColor.labelTertiary }}>{execution.id}</span>
             </p>
           </div>
           <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap' }}>
@@ -166,8 +166,8 @@ export function ExecutorProgress({ executionId }: { executionId: string }) {
         </div>
 
         {confirmingCancel && (
-          <div style={{ marginTop: space[8], border: `1px solid ${color.red}`, borderRadius: radius[8], padding: space[8] }}>
-            <p style={{ color: color.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
+          <div style={{ marginTop: space[8], border: `1px solid ${themeColor.red}`, borderRadius: radius[8], padding: space[8] }}>
+            <p style={{ color: themeColor.labelPrimary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
               Cancel this execution and the child orders it manages? It cancels open orders — it does <b>not</b> close
               a position that has already opened (PRD §75); closing is a separate, explicit action.
             </p>
@@ -184,12 +184,12 @@ export function ExecutorProgress({ executionId }: { executionId: string }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: space[8], margin: `0 0 ${space[4]}px` }}>
             <Meter
               parts={[
-                { label: 'filled', value: Math.max(0, fillFraction(execution) ?? 0), color: color.blue },
-                { label: 'remaining', value: Math.max(0, 1 - (fillFraction(execution) ?? 0)), color: color.separator },
+                { label: 'filled', value: Math.max(0, fillFraction(execution) ?? 0), color: themeColor.blue },
+                { label: 'remaining', value: Math.max(0, 1 - (fillFraction(execution) ?? 0)), color: themeColor.separator },
               ]}
               style={{ flex: 1, minWidth: 120 }}
             />
-            <span style={{ color: color.blue, fontWeight: fontWeight.bold, fontSize: fontSize[12] }}>
+            <span style={{ color: themeColor.blue, fontWeight: fontWeight.bold, fontSize: fontSize[12] }}>
               {formatCompletionPct(fillFraction(execution))}
             </span>
           </div>

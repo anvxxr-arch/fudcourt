@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     twitter: { card: 'summary_large_image', title: seo.title, description: seo.description, images: ['/og-cover.png'] },
   };
 }
-import { color, fontFamily, fontSize, lineHeight, space , fontWeight } from '@/styles/tokens';
+import { themeColor, fontFamily, fontSize, lineHeight, space, fontWeight } from '@/styles/tokens';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,12 +82,12 @@ export default async function PostPage({
       }}
     >
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
-      <a href="/blog" style={{ color: color.green, textDecoration: 'none', fontSize: fontSize[15] }}>
+      <a href="/blog" style={{ color: themeColor.green, textDecoration: 'none', fontSize: fontSize[15] }}>
         ← All posts
       </a>
       <h1 style={{ fontSize: fontSize[28], margin: `${space[24]}px 0 ${space[8]}px` }}>{post.title}</h1>
-      <p style={{ color: color.labelTertiary, fontSize: fontSize[13], margin: `${space[8]}px 0 0` }}>
-        By <span style={{ fontWeight: fontWeight.semibold, color: color.labelPrimary }}>FudCourt Team</span>
+      <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[13], margin: `${space[8]}px 0 0` }}>
+        By <span style={{ fontWeight: fontWeight.semibold, color: themeColor.labelPrimary }}>FudCourt Team</span>
         {post.publishedAt && (
           <>
             {' '}·{' '}
@@ -102,19 +102,19 @@ export default async function PostPage({
         )}
       </p>
       {post.excerpt && (
-        <p style={{ color: color.labelTertiary, fontStyle: 'italic', marginTop: space[20] }}>{post.excerpt}</p>
+        <p style={{ color: themeColor.labelTertiary, fontStyle: 'italic', marginTop: space[20] }}>{post.excerpt}</p>
       )}
-      <hr style={{ border: 0, borderTop: `1px solid ${color.separator}`, margin: `${space[32]}px 0` }} />
+      <hr style={{ border: 0, borderTop: `1px solid ${themeColor.separator}`, margin: `${space[32]}px 0` }} />
       <article>{post.content ? <RichText data={post.content} /> : <p>No content.</p>}</article>
       {POST_CTA[slug] && (
-        <section style={{ marginTop: space[40], borderTop: `1px solid ${color.separator}`, paddingTop: space[24] }}>
+        <section style={{ marginTop: space[40], borderTop: `1px solid ${themeColor.separator}`, paddingTop: space[24] }}>
           <h2 style={{ fontSize: fontSize[20], marginBottom: space[8] }}>{POST_CTA[slug].heading}</h2>
-          <p style={{ color: color.labelTertiary, marginBottom: space[16] }}>{POST_CTA[slug].body}</p>
+          <p style={{ color: themeColor.labelTertiary, marginBottom: space[16] }}>{POST_CTA[slug].body}</p>
           <div style={{ display: 'flex', gap: space[16], flexWrap: 'wrap' }}>
-            <a href="/market" style={{ color: color.green, fontWeight: fontWeight.bold, textDecoration: 'none' }}>
+            <a href="/market" style={{ color: themeColor.green, fontWeight: fontWeight.bold, textDecoration: 'none' }}>
               See a gated board &rarr;
             </a>
-            <a href={POST_CTA[slug].nextHref} style={{ color: color.green, textDecoration: 'none' }}>
+            <a href={POST_CTA[slug].nextHref} style={{ color: themeColor.green, textDecoration: 'none' }}>
               {POST_CTA[slug].nextLabel}
             </a>
           </div>

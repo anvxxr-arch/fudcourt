@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { color, fontSize, fontWeight, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, space } from '@/styles/tokens';
 import { Banner } from '@/ui/banner';
 import { Meter } from '@/ui/meter';
 import { Loading } from '@/ui/feedback';
@@ -53,10 +53,10 @@ export function SignalQuality() {
                 <h3 style={{ ...h4Style, marginTop: 0 }}>{chain} — {b.day}</h3>
                 <Meter
                   parts={[
-                    { label: 'ran', value: b.run, color: color.green },
-                    { label: 'flat', value: b.flat, color: color.labelTertiary },
-                    { label: 'dumped', value: b.dump, color: color.red },
-                    { label: 'unknown', value: b.unknown, color: color.separator },
+                    { label: 'ran', value: b.run, color: themeColor.green },
+                    { label: 'flat', value: b.flat, color: themeColor.labelTertiary },
+                    { label: 'dumped', value: b.dump, color: themeColor.red },
+                    { label: 'unknown', value: b.unknown, color: themeColor.separator },
                   ]}
                 />
               </div>
@@ -66,8 +66,8 @@ export function SignalQuality() {
           {best && (
             <p style={noteStyle}>
               best cohort catch:{' '}
-              <span style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>{best.symbol || DASH}</span>{' '}
-              <span style={{ color: color.blue }}>{fmtX(best.x24h)}</span> peak 24h · score{' '}
+              <span style={{ color: themeColor.labelPrimary, fontWeight: fontWeight.bold }}>{best.symbol || DASH}</span>{' '}
+              <span style={{ color: themeColor.blue }}>{fmtX(best.x24h)}</span> peak 24h · score{' '}
               {fmtNum(best.score, 1)} · {best.decision || DASH} · {best.day}
             </p>
           )}
@@ -112,12 +112,12 @@ export function ProofStrip() {
   }
   if (items.length === 0) return null;
   return (
-    <p style={{ margin: `${space[12]}px 0 0`, color: color.labelTertiary, fontSize: fontSize[11] }}>
+    <p style={{ margin: `${space[12]}px 0 0`, color: themeColor.labelTertiary, fontSize: fontSize[11] }}>
       live now:{' '}
       {items.map((it, i) => (
         <span key={it.label}>
           {i > 0 ? ' · ' : null}
-          <Link href={it.href} style={{ color: color.blue, textDecoration: 'none', fontWeight: fontWeight.bold }}>
+          <Link href={it.href} style={{ color: themeColor.blue, textDecoration: 'none', fontWeight: fontWeight.bold }}>
             {it.value} {it.label.toLowerCase()}
           </Link>
         </span>

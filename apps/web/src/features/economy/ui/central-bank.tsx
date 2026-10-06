@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { color, fontSize, space, fontWeight, radius } from '@/styles/tokens';
+import { themeColor, fontSize, space, fontWeight, radius } from '@/styles/tokens';
 import { fetchCentralBanks, formatDate, formatValue, NO_VALUE, type CentralBanksEnvelope, fetchCentralBank, type CentralBankEnvelope } from '@/features/economy/model';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
@@ -63,9 +63,9 @@ export default function CentralBankIndex() {
                   href: `/economy/central-bank/${b.slug}`,
                   cells: [
                     b.name,
-                    <span key="r" style={{ color: b.rate === null ? color.labelTertiary : color.labelPrimary }}>{b.rate === null ? '—' : `${formatValue(b.rate, 2)}%`}</span>,
-                    <span key="d" style={{ color: color.labelTertiary }}>{formatDate(b.date)}</span>,
-                    <span key="a" style={{ color: color.labelTertiary }}>{b.area}</span>,
+                    <span key="r" style={{ color: b.rate === null ? themeColor.labelTertiary : themeColor.labelPrimary }}>{b.rate === null ? '—' : `${formatValue(b.rate, 2)}%`}</span>,
+                    <span key="d" style={{ color: themeColor.labelTertiary }}>{formatDate(b.date)}</span>,
+                    <span key="a" style={{ color: themeColor.labelTertiary }}>{b.area}</span>,
                   ],
                 }))}
               />
@@ -74,7 +74,7 @@ export default function CentralBankIndex() {
           {data.failed.length > 0 && (
             <ErrorState title={`${data.failed.length} area(s) unresolved`} detail={data.failed.map((f) => `${f.symbol}: ${f.reason}`).join(' · ')} />
           )}
-          <p style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{data.derived}</p>
+          <p style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{data.derived}</p>
         </div>
       )}
     </main>
@@ -94,7 +94,7 @@ const H = 180;
 
 function Chart({ points }: { points: { date: string; value: number | null }[] }) {
   const vals = points.map((p) => p.value).filter((v): v is number => v !== null && Number.isFinite(v));
-  if (vals.length < 2) return <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>Not enough observations to chart.</p>;
+  if (vals.length < 2) return <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>Not enough observations to chart.</p>;
   const min = Math.min(...vals);
   const max = Math.max(...vals);
   const span = max - min || 1;
@@ -106,11 +106,11 @@ function Chart({ points }: { points: { date: string; value: number | null }[] })
   return (
     <div style={{ overflowX: 'auto' }}>
       <svg width={W} height={H + 22} role="img" aria-label="policy rate history">
-        <path d={path} fill="none" stroke={color.blue} strokeWidth={1.6} />
-        <text x={0} y={H + 16} fill={color.labelTertiary} fontSize={10}>{points[0]?.date}</text>
-        <text x={W} y={H + 16} fill={color.labelTertiary} fontSize={10} textAnchor="end">{points[points.length - 1]?.date}</text>
-        <text x={0} y={10} fill={color.labelTertiary} fontSize={10}>{formatValue(max, 2)}%</text>
-        <text x={0} y={H} fill={color.labelTertiary} fontSize={10}>{formatValue(min, 2)}%</text>
+        <path d={path} fill="none" stroke={themeColor.blue} strokeWidth={1.6} />
+        <text x={0} y={H + 16} fill={themeColor.labelTertiary} fontSize={10}>{points[0]?.date}</text>
+        <text x={W} y={H + 16} fill={themeColor.labelTertiary} fontSize={10} textAnchor="end">{points[points.length - 1]?.date}</text>
+        <text x={0} y={10} fill={themeColor.labelTertiary} fontSize={10}>{formatValue(max, 2)}%</text>
+        <text x={0} y={H} fill={themeColor.labelTertiary} fontSize={10}>{formatValue(min, 2)}%</text>
       </svg>
     </div>
   );
@@ -132,7 +132,7 @@ export function CentralBankDetail({ bank }: { bank: string }) {
     return (
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
         <ErrorState title="Could not load this central bank" detail={error} />
-        <p style={{ marginTop: space[12] }}><Link href="/economy/central-bank" style={{ color: color.blue }}>← all central banks</Link></p>
+        <p style={{ marginTop: space[12] }}><Link href="/economy/central-bank" style={{ color: themeColor.blue }}>← all central banks</Link></p>
       </main>
     );
   }
@@ -151,11 +151,11 @@ export function CentralBankDetail({ bank }: { bank: string }) {
             <Value label="Policy rate" value={b.rate === null ? NO_VALUE : formatValue(b.rate, 2)} tone={b.rate === null ? 'muted' : 'default'} unit={b.rate === null ? undefined : '%'} />
             <Value label="Last change" value={delta === null ? NO_VALUE : formatValue(delta, 2)} tone={delta === null ? 'muted' : 'default'} unit={delta === null ? undefined : 'pp'} hint="vs the previous distinct level" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[4] }}>
-              <span style={{ fontSize: fontSize[11], color: color.labelTertiary, textTransform: 'uppercase' }}>As of</span>
-              <span style={{ fontSize: fontSize[15], color: color.labelPrimary }}>{formatDate(b.date)}</span>
+              <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, textTransform: 'uppercase' }}>As of</span>
+              <span style={{ fontSize: fontSize[15], color: themeColor.labelPrimary }}>{formatDate(b.date)}</span>
             </div>
           </div>
-          <p style={{ margin: `${space[12]}px 0 0`, fontSize: fontSize[12], color: color.labelTertiary }}>{b.note}</p>
+          <p style={{ margin: `${space[12]}px 0 0`, fontSize: fontSize[12], color: themeColor.labelTertiary }}>{b.note}</p>
         </Card>
         <Card title="Rate history" subtitle={`${data.history.length} daily observations`}>
           <Chart points={data.history} />
@@ -165,7 +165,7 @@ export function CentralBankDetail({ bank }: { bank: string }) {
       <div style={{ marginTop: space[12] }}>
         <Card title="Decisions" subtitle="each level change, newest first — derived from the rate series itself">
           {data.changes.length === 0 ? (
-            <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>No level change in the window.</p>
+            <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>No level change in the window.</p>
           ) : (
             <DataTable
               head={['Date', 'From', 'To', 'Move']}
@@ -174,7 +174,7 @@ export function CentralBankDetail({ bank }: { bank: string }) {
                   formatDate(c.date),
                   <span key="f">{formatValue(c.from, 2)}%</span>,
                   <span key="t">{formatValue(c.to, 2)}%</span>,
-                  <span key="m" style={{ color: c.to > c.from ? color.red : color.green }}>{c.to > c.from ? 'hike' : 'cut'} {formatValue(Math.abs(c.to - c.from), 2)}pp</span>,
+                  <span key="m" style={{ color: c.to > c.from ? themeColor.red : themeColor.green }}>{c.to > c.from ? 'hike' : 'cut'} {formatValue(Math.abs(c.to - c.from), 2)}pp</span>,
                 ],
               }))}
             />
@@ -187,17 +187,17 @@ export function CentralBankDetail({ bank }: { bank: string }) {
           <Card title="Related monetary series">
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
               {data.related.map((r) => (
-                <Link key={r.slug} href={`/economy/indicator/${r.slug}`} style={{ padding: `${space[4]}px ${space[8]}px`, border: `1px solid ${color.separator}`, borderRadius: radius[8], color: color.labelPrimary, fontSize: fontSize[11], textDecoration: 'none' }}>{r.name}</Link>
+                <Link key={r.slug} href={`/economy/indicator/${r.slug}`} style={{ padding: `${space[4]}px ${space[8]}px`, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], color: themeColor.labelPrimary, fontSize: fontSize[11], textDecoration: 'none' }}>{r.name}</Link>
               ))}
             </div>
           </Card>
         </div>
       )}
 
-      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: color.labelTertiary }}>
+      <p style={{ marginTop: space[16], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
         <strong style={{ fontWeight: fontWeight.medium }}>Upstream:</strong> {data.upstream.join(' · ')}
       </p>
-      <p style={{ marginTop: space[8], fontSize: fontSize[11], color: color.labelTertiary }}>{data.derived}</p>
+      <p style={{ marginTop: space[8], fontSize: fontSize[11], color: themeColor.labelTertiary }}>{data.derived}</p>
     </main>
   );
 }

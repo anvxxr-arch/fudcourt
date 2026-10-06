@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { color, fontFamily, fontSize, fontWeight, motion, radius, space } from '@/styles/tokens';
+import { themeColor, fontFamily, fontSize, fontWeight, motion, radius, space } from '@/styles/tokens';
 import { Loading } from '@/ui/feedback';
 import { fetchTickerBoard } from './client';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
@@ -157,10 +157,10 @@ export default function TickerPage() {
   // the venues agree for practical purposes, over 0.1% is a real divergence
   // worth looking at before trusting the displayed median.
   const spreadColor = (r: TickerRow) => {
-    if (r.spread === null) return color.labelTertiary;
-    if (r.spread < 0.01) return color.blue;
-    if (r.spread < 0.1) return color.labelPrimary;
-    return color.red;
+    if (r.spread === null) return themeColor.labelTertiary;
+    if (r.spread < 0.01) return themeColor.blue;
+    if (r.spread < 0.1) return themeColor.labelPrimary;
+    return themeColor.red;
   };
 
   const toggleSort = (key: Sort) => {
@@ -171,9 +171,9 @@ export default function TickerPage() {
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: '5px 12px', borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer',
-    background: active ? color.blue : color.bgSecondary,
-    color: active ? color.labelOnAccent : color.labelPrimary,
-    border: `1px solid ${color.separator}`,
+    background: active ? themeColor.blue : themeColor.bgSecondary,
+    color: active ? themeColor.labelOnAccent : themeColor.labelPrimary,
+    border: `1px solid ${themeColor.separator}`,
     fontWeight: active ? fontWeight.bold : fontWeight.regular,
   });
 
@@ -181,8 +181,8 @@ export default function TickerPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: space[12], flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h3 style={{ color: color.blue, margin: 0 }}>Exchange Ticker</h3>
-          <p style={{ color: color.labelTertiary, fontSize: fontSize[11], margin: `${space[4]}px 0 0` }}>
+          <h3 style={{ color: themeColor.blue, margin: 0 }}>Exchange Ticker</h3>
+          <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `${space[4]}px 0 0` }}>
             Centralized-exchange instruments relayed from {venues.join(', ') || '—'} and cross-checked between venues. Not a market-cap ranking.
           </p>
         </div>
@@ -192,9 +192,9 @@ export default function TickerPage() {
             onChange={e => setSearch(e.target.value)}
             placeholder="Filter symbol"
             aria-label="Filter symbol"
-            style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 120 }}
+            style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 120 }}
           />
-          <button onClick={load} style={{ background: color.bgSecondary, color: color.labelPrimary, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
+          <button onClick={load} style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
             ↻ Refresh
           </button>
         </div>
@@ -214,7 +214,7 @@ export default function TickerPage() {
       </div>
 
       {error && (
-        <p style={{ color: color.red, fontSize: fontSize[12] }}>
+        <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>
           {error}
           {stale && rows.length > 0 && ' — showing the last successful read; these prices are stale.'}
         </p>
@@ -226,7 +226,7 @@ export default function TickerPage() {
         <div style={{ opacity: stale ? 0.45 : 1, transition: 'opacity ' + motion.quick }}>
           <Table>
             <THead>
-              <TR style={{ borderBottom: `1px solid ${color.separator}`, color: color.labelTertiary }}>
+              <TR style={{ borderBottom: `1px solid ${themeColor.separator}`, color: themeColor.labelTertiary }}>
                 <TH style={{ padding: space[8] }}><span onClick={() => toggleSort('symbol')} style={{ cursor: 'pointer' }}>Pair{arrow('symbol')}</span></TH>
                 <TH style={{ padding: space[8] }}>Instrument</TH>
                 <TH align="right" style={{ padding: space[8] }}><span onClick={() => toggleSort('price')} style={{ cursor: 'pointer' }}>Price{arrow('price')}</span></TH>
@@ -238,35 +238,35 @@ export default function TickerPage() {
             </THead>
             <TBody>
               {shown.map((r) => (
-                <TR key={`${r.type}|${r.symbol}`} style={{ borderBottom: `1px solid ${color.separator}` }}>
+                <TR key={`${r.type}|${r.symbol}`} style={{ borderBottom: `1px solid ${themeColor.separator}` }}>
                   <TD style={{ padding: space[8] }}>
                     <Link
                       href={`/market/crypto/${r.base}`}
-                      style={{ fontWeight: fontWeight.bold, color: color.blue, textDecoration: 'none' }}
+                      style={{ fontWeight: fontWeight.bold, color: themeColor.blue, textDecoration: 'none' }}
                       title={`Open ${r.base} detail`}
                     >
                       {r.base}
                     </Link>
-                    <div style={{ fontSize: fontSize[11], color: color.labelTertiary }}>{r.quote}</div>
+                    <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{r.quote}</div>
                   </TD>
                   <TD style={{ padding: space[8] }}>
-                    <div style={{ color: color.labelPrimary, fontSize: fontSize[11] }}>{TYPE_LABELS[r.type]}</div>
+                    <div style={{ color: themeColor.labelPrimary, fontSize: fontSize[11] }}>{TYPE_LABELS[r.type]}</div>
                     {instrumentLabel(r) && (
-                      <div style={{ fontSize: fontSize[11], color: color.labelTertiary, fontFamily: fontFamily.mono }}>{instrumentLabel(r)}</div>
+                      <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, fontFamily: fontFamily.mono }}>{instrumentLabel(r)}</div>
                     )}
                   </TD>
-                  <TD align="right" mono style={{ padding: space[8], color: color.blue, fontWeight: fontWeight.bold }}>{fmtPrice(r.price, r.instrument.settle)}</TD>
-                  <TD align="right" mono style={{ padding: space[8], color: r.change24h === null ? color.labelTertiary : r.change24h >= 0 ? color.blue : color.red }}>
+                  <TD align="right" mono style={{ padding: space[8], color: themeColor.blue, fontWeight: fontWeight.bold }}>{fmtPrice(r.price, r.instrument.settle)}</TD>
+                  <TD align="right" mono style={{ padding: space[8], color: r.change24h === null ? themeColor.labelTertiary : r.change24h >= 0 ? themeColor.blue : themeColor.red }}>
                     {fmtPct(r.change24h)}
                   </TD>
-                  <TD align="right" mono style={{ padding: space[8], color: color.labelPrimary }}>{fmtVol(r.quoteVolume)}</TD>
+                  <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>{fmtVol(r.quoteVolume)}</TD>
                   <TD align="right" mono style={{ padding: space[8], color: spreadColor(r), fontFamily: fontFamily.mono }}>
                     <span title="Cross-venue divergence in percent, relative to the median of the venues that answered">{fmtSpread(r.spread)}</span>
                   </TD>
                   <TD align="right" style={{ padding: space[8] }}>
-                    <div style={{ color: color.labelPrimary }}>{r.venues.map(v => v.exchange).join(' · ')}</div>
+                    <div style={{ color: themeColor.labelPrimary }}>{r.venues.map(v => v.exchange).join(' · ')}</div>
                     {r.failed.length > 0 && (
-                      <div style={{ fontSize: fontSize[11], color: color.red }}>no quote: {r.failed.join(', ')}</div>
+                      <div style={{ fontSize: fontSize[11], color: themeColor.red }}>no quote: {r.failed.join(', ')}</div>
                     )}
                   </TD>
                 </TR>
@@ -277,7 +277,7 @@ export default function TickerPage() {
       )}
 
       {!loading && shown.length === 0 && !error && (
-        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>No pair matches “{search}”.</p>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>No pair matches “{search}”.</p>
       )}
     </div>
   );

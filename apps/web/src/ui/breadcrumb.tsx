@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { buildTrail, type Crumb } from '@/ui/site-nav';
-import { alpha, color, fontFamily, fontSize, space } from '@/styles/tokens';
+import { alpha, themeColor, fontFamily, fontSize, space } from '@/styles/tokens';
 
 /**
  * The breadcrumb trail for the current pathname, plus its `BreadcrumbList`
@@ -48,7 +48,7 @@ export function Breadcrumb({ labels, origin }: { labels?: Readonly<Record<string
           margin: 0,
           padding: 0,
           fontSize: fontSize[11],
-          color: color.labelTertiary,
+          color: themeColor.labelTertiary,
         }}
       >
         {trail.map((crumb, i) => {
@@ -56,15 +56,15 @@ export function Breadcrumb({ labels, origin }: { labels?: Readonly<Record<string
           return (
             <li key={crumb.href} style={{ display: 'flex', alignItems: 'center', gap: space[8] }}>
               {/* The separator is decoration; the <ol> already carries the order.
-                  It is a tint of the muted text, NOT `color.separator`: separator is a
+                  It is a tint of the muted text, NOT `themeColor.separator`: separator is a
                   hairline value, and a hairline read as text is invisible. */}
-              {i > 0 && <span aria-hidden="true" style={{ color: color.labelSecondary }}>/</span>}
+              {i > 0 && <span aria-hidden="true" style={{ color: themeColor.labelSecondary }}>/</span>}
               {isCurrent ? (
-                <span aria-current="page" style={{ color: color.labelPrimary }}>
+                <span aria-current="page" style={{ color: themeColor.labelPrimary }}>
                   {crumb.label}
                 </span>
               ) : (
-                <Link href={crumb.href} style={{ color: color.labelSecondary, textDecoration: 'none' }}>
+                <Link href={crumb.href} style={{ color: themeColor.labelSecondary, textDecoration: 'none' }}>
                   {crumb.label}
                 </Link>
               )}

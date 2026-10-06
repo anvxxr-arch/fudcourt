@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Wallet, Asset, buildWalletMap, getAlias, getColor, groupSum } from '@/lib/format';
-import { color, fontFamily, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
+import { themeColor, fontFamily, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
 import { Banner } from '@/ui/banner';
 import { Loading } from '@/ui/feedback';
 import { viewPath } from '@/lib/view-routes';
@@ -84,7 +84,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
   }, [page]);
 
   if (error && !db) return (
-    <div style={{ background: color.bgBase, padding: space[20], fontFamily: fontFamily.mono, minHeight: '100vh' }}>
+    <div style={{ background: themeColor.bgBase, padding: space[20], fontFamily: fontFamily.mono, minHeight: '100vh' }}>
       <Banner>Error: {error}</Banner>
     </div>
   );
@@ -143,11 +143,11 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
   const boardHeader = !isTeam ? BOARD_HEADERS[boardKey] : undefined;
 
   return (
-    <main style={{ background: color.bgBase, minHeight: '100vh', color: color.labelPrimary, padding: space[20], fontFamily: fontFamily.mono }}>
+    <main style={{ background: themeColor.bgBase, minHeight: '100vh', color: themeColor.labelPrimary, padding: space[20], fontFamily: fontFamily.mono }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h1 style={{ margin: 0, color: color.blue, letterSpacing: letterSpacing.wider }}>{boardHeader ? boardHeader.title : 'FUDCOURT'}</h1>
-          <p style={{ margin: `${space[4]}px 0 0`, color: color.labelSecondary, fontSize: fontSize[12] }}>
+          <h1 style={{ margin: 0, color: themeColor.blue, letterSpacing: letterSpacing.wider }}>{boardHeader ? boardHeader.title : 'FUDCOURT'}</h1>
+          <p style={{ margin: `${space[4]}px 0 0`, color: themeColor.labelSecondary, fontSize: fontSize[12] }}>
             {boardHeader ? boardHeader.sub : 'Community · Terminal · Management'}
             {/* Treasury fetch state (period / sync / spinner) only exists on a
                 team shell — a public board never requests it, so showing it
@@ -166,10 +166,10 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
             {/* Executor is its own multi-route area (PRD §81), not a board tab. */}
             <a
               href={viewPath('executor')}
-              style={{ background: color.bgSecondary, color: color.blue, border: `1px solid ${color.separator}`, padding: `${space[8]}px ${space[16]}px`, borderRadius: radius[8], fontWeight: fontWeight.bold, cursor: 'pointer', textDecoration: 'none' }}>
+              style={{ background: themeColor.bgSecondary, color: themeColor.blue, border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[16]}px`, borderRadius: radius[8], fontWeight: fontWeight.bold, cursor: 'pointer', textDecoration: 'none' }}>
               EXECUTOR
             </a>
-            <button onClick={load} style={{ background: color.blue, color: color.labelOnAccent, border: 'none', padding: `${space[8]}px ${space[16]}px`, borderRadius: radius[8], fontWeight: fontWeight.bold, cursor: 'pointer' }}>
+            <button onClick={load} style={{ background: themeColor.blue, color: themeColor.labelOnAccent, border: 'none', padding: `${space[8]}px ${space[16]}px`, borderRadius: radius[8], fontWeight: fontWeight.bold, cursor: 'pointer' }}>
               SYNC
             </button>
           </div>
@@ -183,9 +183,9 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
             href={viewPath(t.key)}
             onClick={(e) => { e.preventDefault(); setPage(t.key); }}
             style={{
-              background: page === t.key ? color.blue : color.bgSecondary,
-              color: page === t.key ? color.labelOnAccent : color.labelPrimary,
-              padding: `${space[8]}px ${space[16]}px`, border: `1px solid ${color.separator}`,
+              background: page === t.key ? themeColor.blue : themeColor.bgSecondary,
+              color: page === t.key ? themeColor.labelOnAccent : themeColor.labelPrimary,
+              padding: `${space[8]}px ${space[16]}px`, border: `1px solid ${themeColor.separator}`,
               borderRadius: radius[8], cursor: 'pointer', fontSize: fontSize[12],
               textDecoration: 'none',
             }}>
@@ -226,7 +226,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'scoreboard' && <ScoreboardPage />}
       {page === 'news' && <NewsPage />}
 
-      <div style={{ marginTop: space[32], color: color.labelSecondary, fontSize: fontSize[11], borderTop: `1px solid ${color.separator}`, paddingTop: space[8] }}>
+      <div style={{ marginTop: space[32], color: themeColor.labelSecondary, fontSize: fontSize[11], borderTop: `1px solid ${themeColor.separator}`, paddingTop: space[8] }}>
         {isTeam ? 'Fox · FUDCOURT OS · auto-refresh 30s · data: Postgres + TimescaleDB · live RPC' : 'Fox · FUDCOURT OS · public boards · data served live from origin APIs · no treasury sync'}
       </div>
     </main>

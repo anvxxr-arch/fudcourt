@@ -1,13 +1,13 @@
-import { color } from '@/styles/tokens';
+import { themeColor } from '@/styles/tokens';
 
 /** The project's single spelling of "the upstream published nothing". */
 const NO_VALUE = '—';
 
 const TONE = {
   /** Executor's account-permission reading: a stated `false` is a denial (red). */
-  risk: { yes: color.blue, no: color.red },
+  risk: { yes: themeColor.blue, no: themeColor.red },
   /** Capability reading: `false` is a stated limitation, not a failure (muted). */
-  capability: { yes: color.green, no: color.labelTertiary },
+  capability: { yes: themeColor.green, no: themeColor.labelTertiary },
 } as const;
 
 /**
@@ -21,7 +21,7 @@ const TONE = {
  */
 export function Perm({ value, tone = 'risk' }: { value: boolean | null; tone?: keyof typeof TONE }) {
   if (value === null) {
-    return <span style={{ color: color.labelTertiary }} title="the source does not report this flag">{NO_VALUE}</span>;
+    return <span style={{ color: themeColor.labelTertiary }} title="the source does not report this flag">{NO_VALUE}</span>;
   }
   return <span style={{ color: value ? TONE[tone].yes : TONE[tone].no }}>{value ? '✓' : '✕'}</span>;
 }

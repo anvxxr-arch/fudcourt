@@ -1,7 +1,7 @@
 'use client';
 import { getJSON } from '@/lib/fetch';
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
-import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { Loading } from '@/ui/feedback';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import { Toolbar } from '@/ui/toolbar';
@@ -59,7 +59,7 @@ export default function ForexBoard() {
     const t = setInterval(load, 60_000);
     return () => clearInterval(t);
   }, [load]);
-  // `TH` already defaults `color` to `color.labelTertiary` and takes `align` as a prop; this
+  // `TH` already defaults `color` to `themeColor.labelTertiary` and takes `align` as a prop; this
   // board's headers carry `fontWeight.regular` on top of that (the shelf's shared style is
   // capture-only and still defaults `semibold`), which rides the atom's last-wins spread.
   const thStyle: CSSProperties = { padding: space[8], fontWeight: fontWeight.regular };
@@ -72,9 +72,9 @@ export default function ForexBoard() {
           <button
             onClick={load}
             style={{
-              background: color.bgSecondary,
-              color: color.labelPrimary,
-              border: `1px solid ${color.separator}`,
+              background: themeColor.bgSecondary,
+              color: themeColor.labelPrimary,
+              border: `1px solid ${themeColor.separator}`,
               padding: `${space[8]}px ${space[12]}px`,
               borderRadius: radius[8],
               fontSize: fontSize[11],
@@ -85,16 +85,16 @@ export default function ForexBoard() {
           </button>
         }
       >
-        <h3 style={{ color: color.blue, margin: 0 }}>
+        <h3 style={{ color: themeColor.blue, margin: 0 }}>
           Forex — major pairs
-          <span style={{ color: color.labelTertiary, fontSize: fontSize[11], fontWeight: fontWeight.regular }}>
+          <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], fontWeight: fontWeight.regular }}>
             {' '}
             · base {base}
             {updated ? ` · updated ${fmtTime(updated)}` : ''}
           </span>
         </h3>
       </Toolbar>
-      {error && <p style={{ color: color.red, fontSize: fontSize[12] }}>{error}</p>}
+      {error && <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>{error}</p>}
       {loading ? (
         <Loading />
       ) : (
@@ -109,15 +109,15 @@ export default function ForexBoard() {
           <TBody>
             {pairs.map((p) => (
               <TR key={p.pair}>
-                <TD style={{ ...tdStyle, fontWeight: fontWeight.bold, color: color.labelPrimary }}>{p.pair}</TD>
-                <TD align="right" style={{ ...tdStyle, color: color.blue }}>{fmtRate(p.rate)}</TD>
-                <TD align="right" style={{ ...tdStyle, color: color.labelTertiary }}>{fmtRate(p.inverse)}</TD>
+                <TD style={{ ...tdStyle, fontWeight: fontWeight.bold, color: themeColor.labelPrimary }}>{p.pair}</TD>
+                <TD align="right" style={{ ...tdStyle, color: themeColor.blue }}>{fmtRate(p.rate)}</TD>
+                <TD align="right" style={{ ...tdStyle, color: themeColor.labelTertiary }}>{fmtRate(p.inverse)}</TD>
               </TR>
             ))}
           </TBody>
         </Table>
       )}
-      {derived && <p style={{ color: color.labelTertiary, fontSize: fontSize[11], marginTop: space[8] }}>{derived}</p>}
+      {derived && <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginTop: space[8] }}>{derived}</p>}
     </div>
   );
 }

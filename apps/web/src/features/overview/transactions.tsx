@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { alpha, color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { alpha, themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { EVENT_PRESETS, CHAIN_COLOR } from '@/lib/format';
 import { Button, Input, Select, Modal, Label } from '@/ui/primitives';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
@@ -125,7 +125,7 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
             </>
           )}
         </div>
-        <span style={{ color: color.labelTertiary, fontSize: fontSize[11] }}>{filtered.length} of {transactions.length} shown</span>
+        <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{filtered.length} of {transactions.length} shown</span>
       </div>
 
       <div style={{ display: 'flex', gap: space[8], marginBottom: space[12], flexWrap: 'wrap' }}>
@@ -151,14 +151,14 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
         </THead>
         <TBody>
           {filtered.map(t => (
-            <TR key={t.id} style={{ background: selected.includes(t.id) ? alpha(color.blue, 0.08) : undefined }}>
+            <TR key={t.id} style={{ background: selected.includes(t.id) ? alpha(themeColor.blue, 0.08) : undefined }}>
               <TD style={{ padding: space[8], width: 30 }}><input type="checkbox" checked={selected.includes(t.id)} onChange={() => toggle(t.id)} /></TD>
               <TD style={{ padding: space[8] }}>{t.date}</TD>
-              <TD style={{ padding: space[8], color: CHAIN_COLOR[t.chain] || color.labelTertiary }}>{t.chain || '—'}</TD>
-              <TD style={{ padding: space[8], color: color.labelTertiary }}>{t.venue_id || '—'}</TD>
+              <TD style={{ padding: space[8], color: CHAIN_COLOR[t.chain] || themeColor.labelTertiary }}>{t.chain || '—'}</TD>
+              <TD style={{ padding: space[8], color: themeColor.labelTertiary }}>{t.venue_id || '—'}</TD>
               <TD style={{ padding: space[8] }}>{t.event}</TD>
-              <TD style={{ padding: space[8], color: color.labelTertiary, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.memo || '—'}</TD>
-              <TD align="right" mono style={{ padding: space[8], color: t.amount_usd > 0 ? color.blue : color.red }}>
+              <TD style={{ padding: space[8], color: themeColor.labelTertiary, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.memo || '—'}</TD>
+              <TD align="right" mono style={{ padding: space[8], color: t.amount_usd > 0 ? themeColor.blue : themeColor.red }}>
                 {t.amount_usd > 0 ? '+' : ''}{Number(t.amount_usd || 0).toFixed(2)}
               </TD>
               <TD align="center" style={{ padding: space[8] }}>
@@ -170,7 +170,7 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
         </TBody>
       </Table>
 
-      {filtered.length === 0 && <p style={{ color: color.labelTertiary, textAlign: 'center', padding: space[20] }}>No transactions found</p>}
+      {filtered.length === 0 && <p style={{ color: themeColor.labelTertiary, textAlign: 'center', padding: space[20] }}>No transactions found</p>}
       {edit && <TxForm title={`Edit #${edit.id}`} initial={edit} onSave={(u) => patch(edit.id, u)} onClose={() => setEdit(null)} />}
     </div>
   );
@@ -201,7 +201,7 @@ function TxForm({ title, initial, onSave, onClose }: {
   return (
     <Modal title={title} onClose={onClose} width={480}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: space[8], marginBottom: space[8] }}>
-        <div><Label>Date</Label><input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', background: color.bgBase, color: color.labelPrimary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box' }} /></div>
+        <div><Label>Date</Label><input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', background: themeColor.bgBase, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box' }} /></div>
         <div><Label>Chain</Label><Select value={chain} onChange={setChain} options={CHAIN_OPTIONS} /></div>
         <div><Label>Venue</Label><Input value={venue} onChange={setVenue} placeholder="e.g. Binance" /></div>
       </div>
@@ -210,7 +210,7 @@ function TxForm({ title, initial, onSave, onClose }: {
         <div><Label>Amount (USD)</Label><Input value={amount} onChange={setAmount} placeholder="e.g. -100" type="number" /></div>
         <div><Label>Wallet To</Label><Input value={to} onChange={setTo} placeholder="address" /></div>
       </div>
-      <div style={{ marginBottom: space[12] }}><Label>Memo</Label><textarea value={memo} onChange={e => setMemo(e.target.value)} placeholder="..." style={{ width: '100%', background: color.bgBase, color: color.labelPrimary, border: `1px solid ${color.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], minHeight: space[40], resize: 'vertical', boxSizing: 'border-box' }} /></div>
+      <div style={{ marginBottom: space[12] }}><Label>Memo</Label><textarea value={memo} onChange={e => setMemo(e.target.value)} placeholder="..." style={{ width: '100%', background: themeColor.bgBase, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], minHeight: space[40], resize: 'vertical', boxSizing: 'border-box' }} /></div>
       <div style={{ display: 'flex', gap: space[8], justifyContent: 'flex-end' }}>
         <Button onClick={onClose} variant="ghost" size="md">Cancel</Button>
         <Button onClick={() => onSave({ date, chain, venue_id: venue, event, amount_usd: amount, memo, wallet_to: to, source: 'manual' })}>💾 Save</Button>

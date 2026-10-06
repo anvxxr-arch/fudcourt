@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { TIER_COLOR } from './palette';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import { fetchMembers, setMemberRole, type MemberRow as Row, type MemberRole } from './client';
@@ -58,11 +58,11 @@ export default function MemberTable() {
 
   return (
     <div>
-      {note && <p style={{ color: color.red, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>{note}</p>}
+      {note && <p style={{ color: themeColor.red, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>{note}</p>}
       {error !== null ? (
-        <p style={{ color: color.red, fontSize: fontSize[12] }}>{error}</p>
+        <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>{error}</p>
       ) : rows === null ? (
-        <p style={{ color: color.labelTertiary, fontSize: fontSize[12] }}>Loading guild members…</p>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>Loading guild members…</p>
       ) : (
         <Table>
           <THead>
@@ -74,14 +74,14 @@ export default function MemberTable() {
           </THead>
           <TBody>
             {rows.map(row => (
-              <TR key={row.id} style={{ borderBottom: 'none', borderTop: `1px solid ${color.separator}` }}>
+              <TR key={row.id} style={{ borderBottom: 'none', borderTop: `1px solid ${themeColor.separator}` }}>
                 <TD style={{ padding: `${space[8]}px ${space[8]}px` }}>
                   {row.globalName ?? row.username}
                   {row.globalName && row.globalName !== row.username && (
-                    <span style={{ color: color.labelTertiary }}> ({row.username})</span>
+                    <span style={{ color: themeColor.labelTertiary }}> ({row.username})</span>
                   )}
                 </TD>
-                <TD style={{ padding: `${space[8]}px ${space[8]}px`, color: TIER_COLOR[row.tier] ?? color.labelPrimary }}>{row.tier}</TD>
+                <TD style={{ padding: `${space[8]}px ${space[8]}px`, color: TIER_COLOR[row.tier] ?? themeColor.labelPrimary }}>{row.tier}</TD>
                 <TD style={{ padding: `${space[8]}px ${space[8]}px`, display: 'flex', gap: space[8], flexWrap: 'wrap' }}>
                   {actions(row)}
                 </TD>
@@ -114,9 +114,9 @@ function btn(
       disabled={busy === key}
       onClick={() => run(row, role, action)}
       style={{
-        background: adding ? color.blue : 'transparent',
-        color: adding ? color.labelOnAccent : color.red,
-        border: `1px solid ${adding ? color.blue : color.red}`,
+        background: adding ? themeColor.blue : 'transparent',
+        color: adding ? themeColor.labelOnAccent : themeColor.red,
+        border: `1px solid ${adding ? themeColor.blue : themeColor.red}`,
         borderRadius: radius[8], padding: `${space[4]}px ${space[8]}px`, fontSize: fontSize[11], cursor: 'pointer',
         fontFamily: 'inherit', opacity: busy === key ? 0.5 : 1,
       }}>
