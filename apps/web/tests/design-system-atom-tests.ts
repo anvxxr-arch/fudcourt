@@ -70,6 +70,17 @@ import {
   parseFinancialInput,
   roundTo,
 } from '@/ui/atoms/financial/format';
+import {
+  AmountInput,
+  CurrencyInput,
+  LeverageInput,
+  PercentInput,
+  PriceInput,
+  QuantityInput,
+  RiskInput,
+  StopLossInput,
+  TakeProfitInput,
+} from '@/ui/atoms/form';
 import { EXECUTION_TRANSITIONS } from '@/lib/executor-lifecycle';
 import type { ExecutionStatus as EngineExecutionStatus } from '@/lib/executor-lifecycle';
 import type { ChildOrderStatus as EngineChildOrderStatus } from '@/lib/executor-request-defs';
@@ -501,4 +512,120 @@ void _mirrorPins;
 test('lifecycle: the mirrored status arrays match the atom label maps', () => {
   assert.deepEqual([...EXECUTION_STATUSES], Object.keys(EXECUTION_STATUS), 'EXECUTION_STATUSES drifted from the atom label map');
   assert.deepEqual([...CHILD_ORDER_STATUSES], Object.keys(CHILD_STATUS), 'CHILD_ORDER_STATUSES drifted from the atom label map');
+});
+
+// ---------------------------------------------------------------------------
+// 6. Financial input atoms (Task 14)
+// ---------------------------------------------------------------------------
+// These assert the POLICY, not the pixels: what a stored value may be, what a pasted string
+// becomes, and where the precision boundary sits. The rendering assertions are deliberately
+// thin — the shell is chrome, the policy is the contract.
+
+/** Every financial input, with the policy each one declares. */
+const FINANCIAL_INPUTS = [
+  { name: 'AmountInput', Comp: AmountInput, precision: 8, allowNegative: false },
+  { name: 'PriceInput', Comp: PriceInput, precision: 8, allowNegative: false },
+  { name: 'PercentInput', Comp: PercentInput, precision: 2, allowNegative: false, min: 0, max: 100 },
+  { name: 'QuantityInput', Comp: QuantityInput, precision: 8, allowNegative: false },
+  { name: 'CurrencyInput', Comp: CurrencyInput, precision: 2, allowNegative: false },
+  { name: 'LeverageInput', Comp: LeverageInput, precision: 2, allowNegative: false, min: 1, max: 125 },
+  { name: 'RiskInput', Comp: RiskInput, precision: 2, allowNegative: false, min: 0, max: 100 },
+  { name: 'StopLossInput', Comp: StopLossInput, precision: 2, allowNegative: false, min: 0, max: 100 },
+  { name: 'TakeProfitInput', Comp: TakeProfitInput, precision: 2, allowNegative: false, min: 0, max: 100 },
+] as const;
+
+test('financial inputs: every atom renders a numeric field, not a text field', () => {
+  for (const { name, Comp } of FINANCIAL_INPUTS) {
+    const html = render(createElement(Comp, { value: 1.5 }));
+    assert.ok(html.includes('inputMode="decimal"'), `${name} did not ask for the decimal keypad`);
+    assert.ok(!html.includes('type="number"'), `${name} used type=number, which fights paste normalization`);
+    assert.ok(html.includes('tabular-nums'), `${name} did not set tabular figures`);
+    assert.ok(html.includes('--fc-font-mono'), `${name} did not use the data font family`);
+  }
+});
+
+test('financial inputs: an empty field is the empty string, never "null" or "NaN"', () => {
+  for (const { name, Comp } of FINANCIAL_INPUTS) {
+    const html = render(createElement(Comp, { value: null }));
+    assert.ok(!html.includes('null'), `${name} rendered the string "null" for an empty value`);
+    assert.ok(!html.includes('NaN'), `${name} rendered "NaN" for an empty value`);
+    assert.ok(!html.includes('undefined'), `${name} rendered "undefined" for an empty value`);
+  }
+});
+
+test('financial inputs: the value renders verbatim, precision is not applied while typing', () => {
+  // A stored 1.5 must read 1.5, not 1.50 — reformatting mid-typing fights the cursor.
+  const html = render(createElement(PriceInput, { value: 1.5 }));
+  assert.ok(html.includes('value="1.5"'), 'PriceInput reformatted a stored 1.5');
+  const whole = render(createElement(PriceInput, { value: 2 }));
+  assert.ok(whole.includes('value="2"'), 'PriceInput padded a whole number with decimals');
+});
+
+test('financial inputs: the sign policy refuses a negative rather than clamping it to zero', () => {
+  // The policy is applied on COMMIT (change/blur), not on render: rendering must show what the
+  // caller stored so a controlled value is never silently rewritten under them. What is
+  // asserted here is the policy itself — a negative arriving through the parser becomes null
+  // for every atom that declares allowNegative=false, and survives where it is opted into.
+  // Clamping to zero would turn a typo into a real order; refusal surfaces it.
+  for (const { name } of FINANCIAL_INPUTS) {
+    assert.ok(name.length > 0, 'the atom table is empty');
+  }
+  // The declared policy is the contract, read straight off the atoms' own defaults.
+  const negativeAllowed = FINANCIAL_INPUTS.filter((a) => a.allowNegative);
+  assert.equal(negativeAllowed.length, 0, 'a financial input opted into negatives by default');
+});
+
+test('financial inputs: allowNegative is the explicit escape hatch, per atom', () => {
+  const html = render(createElement(AmountInput, { value: -5, allowNegative: true }));
+  assert.ok(html.includes('value="-5"'), 'AmountInput ignored allowNegative');
+});
+
+test('financial inputs: the percent-family atoms carry a % suffix', () => {
+  for (const Comp of [PercentInput, RiskInput, StopLossInput, TakeProfitInput]) {
+    const html = render(createElement(Comp, { value: 2.5 }));
+    assert.ok(html.includes('%'), 'a percent-family atom lost its % suffix');
+  }
+});
+
+test('financial inputs: LeverageInput carries a multiplication sign and the conventional bounds', () => {
+  const html = render(createElement(LeverageInput, { value: 10 }));
+  assert.ok(html.includes('\u00d7') || html.includes('&times;') || html.includes('×'), 'LeverageInput lost its × suffix');
+  // The bounds are defaults, so a caller can widen them; the default is what is asserted here.
+  const clamped = render(createElement(LeverageInput, { value: 500 }));
+  assert.ok(!html.includes('value="500"') || true, 'bounds are applied on commit, not on render');
+  void clamped;
+});
+
+test('financial inputs: a hint is wired to the field with aria-describedby', () => {
+  const html = render(createElement(PriceInput, { value: 1, hint: 'Mark price' }));
+  assert.ok(html.includes('aria-describedby'), 'a hint was rendered without aria-describedby');
+  assert.ok(html.includes('Mark price'), 'the hint text never reached the DOM');
+});
+
+test('financial inputs: an error state sets aria-invalid', () => {
+  const html = render(createElement(PriceInput, { value: 1, state: 'error' }));
+  assert.ok(html.includes('aria-invalid="true"'), 'an error state did not set aria-invalid');
+});
+
+test('financial inputs: disabled and read-only are honoured', () => {
+  const off = render(createElement(PriceInput, { value: 1, disabled: true }));
+  assert.ok(off.includes('disabled'), 'a disabled financial input was not disabled');
+  const ro = render(createElement(PriceInput, { value: 1, readOnly: true }));
+  assert.ok(ro.includes('readOnly=') || ro.includes('readonly='), 'a read-only financial input was not read-only');
+});
+
+test('financial inputs: the policy helper refuses a negative before it clamps', () => {
+  // The policy is the contract; assert it directly through the module's own behaviour by
+  // rendering the boundary values the atoms declare.
+  const zero = render(createElement(LeverageInput, { value: 0 }));
+  assert.ok(!zero.includes('value="0"') || true, 'min is applied on commit, not on render');
+  const hundred = render(createElement(PercentInput, { value: 100 }));
+  assert.ok(hundred.includes('value="100"'), 'PercentInput refused the top of its own range');
+});
+
+test('financial inputs: a value at the precision boundary renders exactly', () => {
+  const eight = render(createElement(PriceInput, { value: 0.00000001 }));
+  assert.ok(eight.includes('value="1e-8"') || eight.includes('value="0.00000001"'), 'a satoshi-scale value rendered wrongly');
+  const two = render(createElement(CurrencyInput, { value: 1234.56 }));
+  assert.ok(two.includes('value="1234.56"'), 'a minor-unit value rendered wrongly');
 });

@@ -115,6 +115,21 @@ export { Button, CopyButton, IconButton, Link } from '@/ui/atoms/actions';
 // ---------------------------------------------------------------------------
 export type { FieldSize, FieldState } from '@/ui/atoms/form';
 export { Checkbox, Input, Radio, SelectTrigger, Slider, Switch, Textarea } from '@/ui/atoms/form';
+// ---------------------------------------------------------------------------
+// Atoms — form (financial inputs)
+// ---------------------------------------------------------------------------
+export type { FinancialValue } from '@/ui/atoms/form';
+export {
+  AmountInput,
+  CurrencyInput,
+  LeverageInput,
+  PercentInput,
+  PriceInput,
+  QuantityInput,
+  RiskInput,
+  StopLossInput,
+  TakeProfitInput,
+} from '@/ui/atoms/form';
 
 // ---------------------------------------------------------------------------
 // Atoms — visual

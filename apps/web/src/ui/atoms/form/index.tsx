@@ -466,3 +466,22 @@ export const SelectTrigger = forwardRef<HTMLButtonElement, SelectTriggerProps>(f
     </button>
   );
 });
+
+// ---------------------------------------------------------------------------
+// Financial input atoms (Task 14)
+// ---------------------------------------------------------------------------
+// Declared in a sibling module so the generic form controls above stay free of the
+// financial parsing core; re-exported here so `@/ui/atoms/form` remains the one entry
+// point for every field-shaped atom.
+export {
+  AmountInput,
+  PriceInput,
+  PercentInput,
+  QuantityInput,
+  CurrencyInput,
+  LeverageInput,
+  RiskInput,
+  StopLossInput,
+  TakeProfitInput,
+} from './financial';
+export type { FinancialValue } from './financial';
