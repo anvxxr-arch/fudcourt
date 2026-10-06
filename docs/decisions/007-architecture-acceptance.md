@@ -31,14 +31,16 @@ restructure looking live. Found and fixed:
 | `apps/web/tests/*.ts` (16 files) | `Usage: cd frontend/web && npm run test:shapers` — the repo is Bun-only (`bun.lock`, no `package-lock.json`), so the documented command did not run |
 | `README.md`, `apps/data/README.md`, `db/README.md` | root README mapped `infrastructure/` for the systemd units (it is `deploy/`); apps/data's run/verify blocks said `cd backend/data` and built `./cmd/data`; db/README named the removed `pg-load.ts` by its pre-move path |
 
-Re-measured after the fix: **8** references remain repo-wide, every one
-of them the record of a change rather than a pointer to a live file —
-`007` naming the `backend/api` → `apps/api` module-path rename,
-`canonical-placement.md`'s `git show` commands over historical commits
-and its record of a past grep finding, `tsconfig.shaper-tests.json`'s
-"moved out of frontend/web" provenance note, and `db/README.md`'s
-documentation of the two rename commits. Those are the
-"references on historical docs/ADR are allowed" case the plan permits.
+Re-measured after the fix, and again on 2026-10-06: **7** references
+remain repo-wide, every one of them the record of a change rather than
+a pointer to a live file — `007` naming the `backend/api` → `apps/api`
+module-path rename, `canonical-placement.md`'s `git show` commands over
+historical commits and its record of a past grep finding, and
+`db/README.md`'s documentation of the two rename commits. (The eighth
+was `tsconfig.shaper-tests.json`'s "moved out of frontend/web"
+provenance note; `5cb1036` deleted that file, so the count is 7.) Those
+are the "references on historical docs/ADR are allowed" case the plan
+permits.
 
 The `.md` slice counts in `data-categorization.md` were also stale —
 `routes` said 43 while the JSON holds 45 (the two ticker detail
@@ -124,11 +126,11 @@ two binaries (`fudcourt-reconciler`, `fudcourt-reconciled`).
 |---|---|
 | Go | `go build ./...`, `go vet ./...` clean; `go test ./...` 43 packages ok, 0 fail |
 | Rust | `cargo build --release --bins` both binaries; 17 tests across 5 suites; `cargo fmt --check` clean |
-| Web | `bunx tsc --noEmit` clean; 249/249 shaper tests; `bun run build` emits every route |
-| Contracts | `CONTRACTS_OK` (3 enums, 37 paths, 56 handlers, 28 events, 17 endpoints), `SCHEMAS_OK` (56 files, 344 refs, 148 enums), `DOCS_OK` (1072 citations), `MDTABLES_OK` |
-| Integration | `API_CONTRACT_OK`, `check-deploy OK` (10 units), `STRUCTURE_OK`, `DESIGN_TOKENS_OK`, `TOKENS_OK`, `REFERENCE_OK` |
+| Web | `bunx tsc --noEmit` clean; 325/325 shaper tests (re-measured 2026-10-06); `bun run build` emits every route |
+| Contracts | `CONTRACTS_OK` (3 enums, 37 paths, 56 handlers, 28 events, 17 endpoints), `SCHEMAS_OK` (56 files, 344 refs, 148 enums), `DOCS_OK` (1162 citations, re-measured 2026-10-06; 1072 at acceptance), `MDTABLES_OK` |
+| Integration | `API_CONTRACT_OK`, `check-deploy OK` (10 units), `STRUCTURE_OK`, `DESIGN_TOKENS_OK`, `TOKENS_OK`, `REFERENCE_OK` — re-audit 2026-10-06: green again after `9cd063a`'s gate regressions, repaired by `1d6960e` (structure) and `cea116c` (design-tokens) |
 | Oracle | `SYNC_ORACLE_OK` — Python vs Rust byte-identical, 34 rows / 40 request keys |
-| Aggregate | `verify-all.sh VERIFY_ALL_OK` |
+| Aggregate | `verify-all.sh VERIFY_ALL_OK` — `npm run verify` exit 0, re-audit 2026-10-06 |
 
 ### 5. Frontend organised by domain, not by vendor
 
@@ -218,7 +220,7 @@ delete the gate's subject, not reduce the documentation.
 |---|---|
 | API response shapes | 37 OpenAPI paths all mapped to handlers |
 | Route URLs | 56 handlers, none collapsed or renamed |
-| Frontend UX | 249/249 shaper tests; build emits every route |
+| Frontend UX | 325/325 shaper tests (2026-10-06); build emits every route |
 | Fixture parity | oracle gate byte-identical |
 | Generated artifacts | `reference.json` drift-gated, `REFERENCE_OK` |
 
@@ -310,7 +312,7 @@ Stale references fixed in the same pass:
   `src/features/market/coingecko-markets.ts`.
 - Three counts: route handlers "3 auth + 37 data = 40" → 53 under
   `(frontend)/api` + 3 CMS = 56 (matching `check-contract.mjs`);
-  `test:shapers` 240 → 268; `apps/data` Go `func Test` 179 → 262.
+  `test:shapers` 240 → 325; `apps/data` Go `func Test` 179 → 262.
 
 `§1a Repository map — where to change what` is the new section: a
 15-row table from intent to path, plus the `tools/fud.ts` subcommand
@@ -331,3 +333,19 @@ harness rather than a ninth) is stated in the row.
 
 Every deviation has a measurement behind it and an ADR or commit message
 recording it. None is an omission.
+
+## Re-audit 2026-10-06
+
+Fresh baseline at `docs/decisions/refactor-baseline-2026-10-06-reaudit.md`.
+Commit `9cd063a` (the design-system wave) committed two gate regressions
+— `src/ui/atoms/system/index.tsx` imported `lib/`, and the design-token
+gate failed on its new files — and both are now repaired and re-measured
+green: `1d6960e` fixed the structure violation, `cea116c` the
+design-token gate, and `npm run verify` ends `VERIFY_ALL_OK` (exit 0).
+On `cea116c` the verdict is WEAKENED-with-false-positive-fixes: its
+`var()`-token and colour-guard recognitions align the checker with the
+gate's own header, but its numeric carve-outs
+(fontWeight/zIndex/fontSize/lineHeight:1) and FROZEN_SCALES/ramp
+dead-token exemptions widen the rules past the header's documented
+exemptions, so some previously-detectable violations now pass.
+
