@@ -1,0 +1,690 @@
+/** CryptoRank venue shapers (exchange rows) plus the market envelope
+ * builder. Split verbatim from ./cryptorank-shapers-funding (now a
+ * barrel). Fundraise row shapers are single-sourced from
+ * ./cryptorank-shapers-fundraise; shared helpers and coin shapers from
+ * ./cryptorank-shapers-coins; sector-board shapers from
+ * ./cryptorank-shapers-boards.
+ */
+import { CR_MODE_UPSTREAM } from './cryptorank-modes';
+import type { CrLiveMode } from './cryptorank-modes';
+import type {
+  CrExchangeRow,
+  CrEnvelope,
+  CrCategoryInfo,
+  CrChainInfo,
+  CrTagInfo,
+  CrConverterRow,
+  CrMediaRow,
+  CrAiOverview,
+} from './cryptorank-types';
+import {
+  asNum,
+  asStr,
+  changeFromAnchor,
+  shapeChainRow,
+  shapeCoin,
+  shapeCoinDetail,
+  shapeGlobal,
+  shapeListing,
+  shapeTrending,
+} from './cryptorank-shapers-coins';
+import type { HelperOut, RawCoin } from './cryptorank-shapers-coins';
+import {
+  shapeEcosystemRow,
+  shapeEcosystemInfo,
+  shapeRwaRow,
+  shapeRwaAsset,
+  shapeQuarterYear,
+  shapePrediction,
+  shapeNewsRow,
+  shapeTagRow,
+} from './cryptorank-shapers-boards';
+import {
+  shapeFunding,
+  shapeIco,
+  shapeLaunchpoolRow,
+  shapeNodesaleRow,
+} from './cryptorank-shapers-fundraise';
+export function shapeExchange(r: Record<string, unknown>, i: number): CrExchangeRow {
+  const volumes = (r.volumes ?? {}) as Record<string, Record<string, number>>;
+  const day = (volumes.day ?? {}) as Record<string, number>;
+  const week = (volumes.week ?? {}) as Record<string, number>;
+  const month = (volumes.month ?? {}) as Record<string, number>;
+  return {
+    rank: i + 1,
+    key: typeof r.key === 'string' ? r.key : '',
+    name: typeof r.name === 'string' ? r.name : '',
+    image: typeof r.icon === 'string' ? r.icon : null,
+    dayVolUsd: asNum(day.toUSD),
+    weekVolUsd: asNum(week.toUSD),
+    monthVolUsd: asNum(month.toUSD),
+    percentVolume: asNum(r.percentVolume),
+    pairsCount: asNum(r.pairsCount),
+    currenciesCount: asNum(r.currenciesCount),
+    exchangeType: typeof r.exchangeType === 'string' ? r.exchangeType : null,
+  };
+}
+
+/** /price/<key> HTML: coin + priceStatistics + histPrices anchor for 24h. */
+export function envelope(
+  kind: CrLiveMode,
+  h: HelperOut,
+  opts: { key?: string; upstream?: string } = {},
+): CrEnvelope {
+  const pp = (h.pageProps ?? {}) as Record<string, unknown>;
+  const base = {
+    kind,
+    upstream: opts.upstream ?? CR_MODE_UPSTREAM[kind],
+    fetchedAt: h.fetchedAt ?? Math.floor(Date.now() / 1000),
+    cache: h.cache ?? 'MISS',
+  };
+
+  if (kind === 'home') {
+    const fundingRaw = Array.isArray(pp.fallbackRecentFundingRounds)
+      ? (pp.fallbackRecentFundingRounds as Record<string, unknown>[])
+      : [];
+    const icoRaw = Array.isArray(pp.upcomingIco) ? (pp.upcomingIco as Record<string, unknown>[]) : [];
+    return {
+      ...base,
+      count: fundingRaw.length + icoRaw.length,
+      slice:
+        `homepage slice: ${fundingRaw.length} most recent rounds + ${icoRaw.length} upcoming IDOs; ` +
+        'the full fundraising boards (/funding-rounds, /ico*) are WAF-challenged to every non-browser client',
+      global: shapeGlobal(pp),
+      fundingRounds: fundingRaw.map(shapeFunding),
+      upcomingIco: icoRaw.map(shapeIco),
+    };
+  }
+
+  if (kind === 'coins') {
+    const coins = Array.isArray(pp.coins) ? (pp.coins as RawCoin[]) : [];
+    return {
+      ...base,
+      count: coins.length,
+      upstreamTotal: coins.length,
+      changeSource: 'unavailable',
+      rows: coins.map((r) => shapeCoin(r, null)),
+    };
+  }
+
+  if (kind === 'trending') {
+    const table = (pp.fallbackTableData ?? {}) as Record<string, unknown>;
+    const rows = Array.isArray(table.data) ? (table.data as RawCoin[]) : [];
+    return {
+      ...base,
+      count: rows.length,
+      upstreamTotal: asNum(table.total) ?? rows.length,
+      changeSource: 'direct',
+      rows: rows.map(shapeTrending),
+    };
+  }
+
+  if (kind === 'categories') {
+    const fallbackCoins = pp.fallbackCoins;
+    if (!Array.isArray(fallbackCoins)) {
+      throw new Error('categories: missing fallbackCoins');
+    }
+    const cat = (pp.category ?? {}) as Record<string, unknown>;
+    const gl = (pp.gainersLosersData ?? {}) as Record<string, number>;
+    const info: CrCategoryInfo = {
+      slug: opts.key ?? 'chain',
+      name: typeof cat.name === 'string' ? cat.name : (opts.key ?? 'chain'),
+      gainers: asNum(gl.gainers),
+      losers: asNum(gl.losers),
+    };
+    const catRows = fallbackCoins.map((r) => shapeCoin(r, null));
+    // change24h: category fallbackCoins carry NO hist anchor -> unavailable
+    // upstream, so every row renders null and the board labels it.
+    return {
+      ...base,
+      count: catRows.length,
+      slice: `category '${info.slug}' overview — ${catRows.length} coins by mcap; category breadth gainers ${info.gainers ?? '—'} / losers ${info.losers ?? '—'}`,
+      changeSource: 'unavailable',
+      category: info,
+      rows: catRows,
+    };
+  }
+
+  if (kind === 'exchanges') {
+    const fd = pp.fallbackData;
+    if (!Array.isArray(fd)) {
+      throw new Error('exchanges: missing fallbackData');
+    }
+    if (opts.key === 'cex-transparency') {
+      // Reserve-transparency rows carry NO volume fields (different schema):
+      // volume stays null (honest), reserves map to their own columns.
+      const trRows: CrExchangeRow[] = fd.map((r, i) => ({
+        rank: i + 1,
+        key: asStr(r.key) ?? '',
+        name: asStr(r.name) ?? '',
+        image: asStr(r.icon),
+        dayVolUsd: null,
+        weekVolUsd: null,
+        monthVolUsd: null,
+        percentVolume: null,
+        pairsCount: null,
+        currenciesCount: null,
+        exchangeType: null,
+        reservesUsd: asNum(r.reserves),
+        cleanReservesUsd: asNum(r.cleanReserves),
+        stablecoinsPercent: asNum(r.stablecoinsPercent),
+        walletsCount: asNum(r.walletsCount),
+        auditorName: asStr(r.auditorName),
+        auditDate: asStr(r.auditDate),
+      }));
+      return {
+        ...base,
+        count: trRows.length,
+        slice: `${trRows.length} exchanges with published reserve wallets — cryptorank reported proof-of-reserves (their aggregation, NOT an independent attestation); 12/14 keys cross-check against their own spot list; volume absent on this surface (null, never 0)`,
+        rows: trRows,
+      };
+    }
+    const exRows = fd.map((r, i) => shapeExchange(r, i));
+    const variant =
+      opts.key === 'dex/spot' ? 'DEX spot' : opts.key === 'perpetuals' ? 'perpetuals (futures)' : 'spot CEX';
+    return {
+      ...base,
+      count: exRows.length,
+      slice: `top ${exRows.length} ${variant} — cryptorank's OWN reported 24h volume (their methodology, not independent); per-row % share of listed total`,
+      rows: exRows,
+    };
+  }
+
+  if (kind === 'listings') {
+    const ra = pp.recentlyAddedCoins;
+    const ms = pp.mostSearchedCoins;
+    const mv = pp.mostVisitedCoins;
+    if (!Array.isArray(ra) || !Array.isArray(ms) || !Array.isArray(mv)) {
+      throw new Error('listings: missing widget arrays');
+    }
+    // How many rows upstream actually shipped a usable anchor for -- the same
+    // condition shapeListing() derives with. Reported per widget so consumers
+    // (the harness) can assert non-null == anchors: a world-state-proof
+    // equality that catches both missed derivation and fabrication. Measured
+    // 2026-09-28: a freshly-landed recentlyAdded batch (<24h old) ships no
+    // '24H' key at all -> 0 anchors, 0 derived, 0 == 0.
+    const anchorCount = (rows: unknown[], period: string): number => {
+      let n = 0;
+      for (const row of rows) {
+        const hp = ((row as { histPrices?: Record<string, Record<string, unknown>> | null }).histPrices ?? {}) as Record<string, Record<string, unknown> | undefined>;
+        const a = asNum(hp[period]?.USD);
+        if (a !== null && a !== 0) n += 1;
+      }
+      return n;
+    };
+    const cov = (period: string) => ({
+      recentlyAdded: anchorCount(ra, period),
+      mostSearched: anchorCount(ms, period),
+      mostVisited: anchorCount(mv, period),
+    });
+    return {
+      ...base,
+      count: ra.length + ms.length + mv.length,
+      slice:
+        `three /listings widgets: ${ra.length} recently added + ${ms.length} most searched + ${mv.length} most visited; ` +
+        'chg24h/chg7d derived from histPrices["24H"]/["7D"] anchors where the widget ships them, em-dash otherwise; ' +
+        'anchor24h/anchor7d report how many rows upstream shipped each anchor (derived count must equal them)',
+      changeSource: 'derived-from-histPrices-24H',
+      anchor24h: cov('24H'),
+      anchor7d: cov('7D'),
+      listings: {
+        recentlyAdded: ra.map(shapeListing),
+        mostSearched: ms.map(shapeListing),
+        mostVisited: mv.map(shapeListing),
+      },
+    };
+  }
+
+  if (kind === 'coin') {
+    if (!pp.coin) {
+      throw new Error('coin: missing pageProps.coin');
+    }
+    const detail = shapeCoinDetail(pp, opts.key ?? 'bitcoin');
+    return {
+      ...base,
+      count: 1,
+      slice: `coin detail '${detail.key}' — price from page payload; change24h derived from histPrices['24H'] anchor`,
+      changeSource: 'derived-from-histPrices-24H',
+      detail,
+    };
+  }
+
+  if (kind === 'blockchains') {
+    const chains = pp.blockchains;
+    if (!Array.isArray(chains)) {
+      throw new Error('blockchains: missing blockchains array');
+    }
+    const chainRows = chains.map((r) => shapeChainRow(r));
+    return {
+      ...base,
+      count: chainRows.length,
+      slice: `chain directory from /blockchains — ${chainRows.length} chains (slug feed for ?key= chain detail); explorer links are upstream's own`,
+      chainRows,
+    };
+  }
+
+  if (kind === 'chain') {
+    const bc = (pp.blockchain ?? null) as Record<string, unknown> | null;
+    const fc = pp.fallbackCoins;
+    if (!bc || !Array.isArray(fc)) {
+      throw new Error('chain: missing blockchain/fallbackCoins');
+    }
+    const info: CrChainInfo = {
+      slug: opts.key ?? 'ethereum',
+      name: asStr(bc.name) ?? (opts.key ?? 'ethereum'),
+      network: asStr(bc.network),
+      marketCap: asNum(bc.marketCap),
+      explorerUrl: asStr(bc.explorerUrl),
+      ecosystem: asStr(bc.ecosystem),
+    };
+    const chainCoins = fc.map((r) => shapeCoin(r, null));
+    // change24h: ecosystem rows ship no hist anchor on this surface -> null
+    return {
+      ...base,
+      count: chainCoins.length,
+      upstreamTotal: chainCoins.length,
+      slice:
+        `chain '${info.slug}' ecosystem — ${chainCoins.length} tokens by mcap ` +
+        '(native coin lives outside the ecosystem list upstream); chg columns unavailable, never faked',
+      changeSource: 'unavailable',
+      chain: info,
+      rows: chainCoins,
+    };
+  }
+
+  if (kind === 'launchpool') {
+    const fd = pp.fallbackData as { data?: unknown; total?: unknown } | null;
+    if (!fd || !Array.isArray(fd.data)) {
+      throw new Error('launchpool: missing fallbackData.data');
+    }
+    const lpRows = (fd.data as Record<string, unknown>[]).map(shapeLaunchpoolRow);
+    const total = typeof fd.total === 'number' ? fd.total : null;
+    const variant = opts.key === 'upcoming' ? 'upcoming' : opts.key === 'active' ? 'active' : 'past';
+    return {
+      ...base,
+      count: lpRows.length,
+      upstreamTotal: total,
+      slice:
+        `${variant} launchpool events — ${lpRows.length} rows shown` +
+        (total ? ` of ${total} upstream (SSR ships page 1 only; upstream ignores ?page=)` : '') +
+        '; windows are upstream ISO dates, null = not announced (em-dash)',
+      launchpoolRows: lpRows,
+    };
+  }
+
+  if (kind === 'nodesale') {
+    // nodesale pages ship `initialData` (launchpool uses `fallbackData`).
+    const fd = (pp.initialData ?? pp.fallbackData) as {
+      data?: unknown;
+      total?: unknown;
+    } | null;
+    if (!fd || !Array.isArray(fd.data)) {
+      throw new Error('nodesale: missing initialData/fallbackData.data');
+    }
+    const ndRows = (fd.data as Record<string, unknown>[]).map(shapeNodesaleRow);
+    const total = typeof fd.total === 'number' ? fd.total : null;
+    const variant = opts.key === 'upcoming' ? 'upcoming' : opts.key === 'active' ? 'active' : 'past';
+    return {
+      ...base,
+      count: ndRows.length,
+      upstreamTotal: total,
+      slice:
+        `${variant} node sales — ${ndRows.length} rows shown` +
+        (total ? ` of ${total} upstream (SSR ships page 1 only; upstream ignores ?page=)` : '') +
+        '; node prices are upstream tier ranges in USD (never market price); windows null = not announced (em-dash)',
+      nodesaleRows: ndRows,
+    };
+  }
+
+  if (kind === 'ecosystems') {
+    const fe = pp.fallbackEcosystems as { data?: unknown; count?: unknown } | null;
+    if (!fe || !Array.isArray(fe.data)) {
+      throw new Error('ecosystems: missing fallbackEcosystems.data');
+    }
+    const ecoRows = (fe.data as Record<string, unknown>[]).map(shapeEcosystemRow);
+    const count = typeof fe.count === 'number' ? fe.count : null;
+    return {
+      ...base,
+      count: ecoRows.length,
+      upstreamTotal: count,
+      slice:
+        `ecosystem index — ${ecoRows.length} of ${count ?? '?'} ecosystems ` +
+        '(SSR ships page 1 only); mcap/tvl/change figures are cryptorank\'s OWN ' +
+        'ecosystem aggregates (their methodology)',
+      ecosystemRows: ecoRows,
+    };
+  }
+
+  if (kind === 'ecosystem') {
+    const fc = pp.fallbackCoins as { data?: unknown; count?: unknown } | null;
+    if (!fc || !Array.isArray(fc.data)) {
+      throw new Error('ecosystem: missing fallbackCoins.data');
+    }
+    const info = shapeEcosystemInfo(pp, opts.key ?? 'ethereum');
+    const coinRows = (fc.data as Record<string, unknown>[]).map((r) =>
+      shapeCoin(r, null),
+    );
+    const count = typeof fc.count === 'number' ? fc.count : null;
+    return {
+      ...base,
+      count: coinRows.length,
+      upstreamTotal: count,
+      slice:
+        `'${info.name}' ecosystem — ${coinRows.length} of ${count ?? '?'} coins ` +
+        '(SSR page 1); eco rows carry NO price upstream -> chg columns null, never ' +
+        'faked; native coin quote above is upstream\'s own',
+      changeSource: 'unavailable',
+      ecosystem: info,
+      rows: coinRows,
+    };
+  }
+
+  if (kind === 'rwa') {
+    const af = pp.assetsFallback as { data?: unknown; total?: unknown } | null;
+    if (!af || !Array.isArray(af.data)) {
+      throw new Error('rwa: missing assetsFallback.data');
+    }
+    const rows = (af.data as Record<string, unknown>[]).map(shapeRwaRow);
+    const total = typeof af.total === 'number' ? af.total : null;
+    return {
+      ...base,
+      count: rows.length,
+      upstreamTotal: total,
+      slice:
+        `RWA assets — ${rows.length} of ${total ?? '?'} upstream (SSR page 1); ` +
+        'price = upstream quote (marketState may be CLOSED = last session close); ' +
+        'tokenized* = cryptorank tokenized-asset metrics (their methodology)',
+      rwaRows: rows,
+    };
+  }
+
+  if (kind === 'rwaasset') {
+    const af = pp.assetFallback as { data?: unknown } | null;
+    if (!af || !af.data || typeof af.data !== 'object') {
+      throw new Error('rwaasset: missing assetFallback.data');
+    }
+    const asset = shapeRwaAsset(
+      af.data as Record<string, unknown>,
+      opts.key ?? '',
+    );
+    return {
+      ...base,
+      count: 1,
+      slice:
+        `asset detail '${asset.ticker || asset.slug}' — upstream quote at ` +
+        `${asset.quoteUpdatedAt ?? 'unknown time'} (marketState ${asset.marketState ?? '?'}); ` +
+        'exchange/sector = upstream metadata',
+      rwaAsset: asset,
+    };
+  }
+
+  if (kind === 'quarterly') {
+    const btc = pp.initialQuarterlyReturnsBtc;
+    const eth = pp.initialQuarterlyReturnsEth;
+    if (!Array.isArray(btc) || !Array.isArray(eth)) {
+      throw new Error('quarterly: missing initialQuarterlyReturnsBtc/Eth');
+    }
+    return {
+      ...base,
+      count: btc.length + eth.length,
+      slice:
+        `BTC (${btc.length} years) + ETH (${eth.length} years) quarterly open/close — ` +
+        'upstream values; return% is computed in the UI from these numbers (labelled); ' +
+        'isFull=false = quarter in progress; 2026 closes verified vs independent ' +
+        'daily history (0.03-0.40% on 2026-09-27)',
+      quarterlyBtc: btc.map(shapeQuarterYear),
+      quarterlyEth: eth.map(shapeQuarterYear),
+    };
+  }
+
+  if (kind === 'prediction') {
+    const { agg, rows } = shapePrediction(pp);
+    const tb = pp.tableFallbackData as { total?: unknown } | null;
+    const total = tb && typeof tb.total === 'number' ? tb.total : null;
+    return {
+      ...base,
+      count: rows.length,
+      upstreamTotal: total,
+      prediction: agg,
+      predictionRows: rows,
+      slice:
+        `prediction markets — ${rows.length} of ${total ?? '?'} listings (SSR page 1); ` +
+        'volume/markets/OI aggregates + platform split are upstream figures (window NOT ' +
+        'disclosed upstream); row volume24h is explicitly 24h; external links go to ' +
+        'the venue (kalshi/polymarket)',
+    };
+  }
+
+  if (kind === 'news') {
+    const list = pp.news;
+    if (!Array.isArray(list)) {
+      throw new Error('news: missing news array');
+    }
+    const newsRows = list.map(shapeNewsRow);
+    return {
+      ...base,
+      count: newsRows.length,
+      slice:
+        `${newsRows.length} latest items — links out to the original publishers; ` +
+        'upstream ships the first page only (?page= is a no-op upstream); ' +
+        'date null = pinned promo slot (em-dash); status = upstream sentiment tag',
+      newsRows,
+    };
+  }
+
+  if (kind === 'tags') {
+    const list = pp.tags;
+    if (!Array.isArray(list)) {
+      throw new Error('tags: missing tags array');
+    }
+    const tagRows = list.map(shapeTagRow);
+    return {
+      ...base,
+      count: tagRows.length,
+      upstreamTotal: tagRows.length,
+      slice:
+        `${tagRows.length} tags (topic taxonomy, distinct from categories) — ` +
+        'breadth stats + avgPriceChange are upstream tag averages; rankedCoins = index-card top coins',
+      tagRows,
+    };
+  }
+
+  if (kind === 'tag') {
+    const tg = (pp.tag ?? null) as Record<string, unknown> | null;
+    const coins = pp.coins;
+    const gl = (pp.gainersLosersData ?? {}) as Record<string, number>;
+    if (!tg || !Array.isArray(coins)) {
+      throw new Error('tag: missing tag/coins');
+    }
+    const info: CrTagInfo = {
+      slug: asStr(tg.slug) ?? (opts.key ?? 'layer-1'),
+      name: asStr(tg.name) ?? (opts.key ?? 'layer-1'),
+      subtitle: asStr(tg.subtitle),
+    };
+    const tagCoins = (coins as RawCoin[]).map((r) => shapeCoin(r, null));
+    // change24h: measured 0/65 rows ship histPrices or priceChange24h on this
+    // surface -> every row renders null and the board labels it upstream-absent.
+    return {
+      ...base,
+      count: tagCoins.length,
+      upstreamTotal: tagCoins.length,
+      changeSource: 'unavailable',
+      slice:
+        `tag '${info.slug}' — ${tagCoins.length} coins by mcap; ` +
+        `breadth ${gl.gainers ?? '—'} gainers / ${gl.losers ?? '—'} losers; ` +
+        'chg columns absent upstream (measured), never faked',
+      tag: info,
+      rows: tagCoins,
+    };
+  }
+
+  if (kind === 'converter') {
+    const icc = pp.initialCompactCoins;
+    if (!Array.isArray(icc)) {
+      throw new Error('converter: missing initialCompactCoins');
+    }
+    const convRows: CrConverterRow[] = (icc as Record<string, unknown>[]).map((r) => ({
+      key: asStr(r.key) ?? '',
+      name: asStr(r.name) ?? '',
+      symbol: asStr(r.symbol) ?? '',
+      icon: asStr(r.icon),
+      priceUsd: asNum(r.price),
+    }));
+    return {
+      ...base,
+      count: convRows.length,
+      upstreamTotal: convRows.length,
+      changeSource: 'unavailable',
+      slice:
+        `full price list — all ${convRows.length} coins with live price ` +
+        '(converter page payload: /all-coins-list ships only the top 100); ' +
+        'price only — no 24h change upstream (em-dash, never 0)',
+      converterRows: convRows,
+    };
+  }
+
+  if (kind === 'media') {
+    const fd = pp.fallbackData as { data?: unknown; count?: unknown } | null;
+    if (!fd || !Array.isArray(fd.data)) {
+      throw new Error('media: missing fallbackData.data');
+    }
+    const mediaRows: CrMediaRow[] = (fd.data as Record<string, unknown>[]).map((r) => ({
+      id: asStr(r.id) ?? '',
+      title: asStr(r.title) ?? '',
+      channelTitle: asStr(r.channelTitle),
+      publishedAt: asStr(r.publishedAt),
+      durationSeconds: asNum(r.durationSeconds),
+      tags: Array.isArray(r.tags) ? (r.tags as unknown[]).map(String).slice(0, 6) : [],
+    }));
+    const total = typeof fd.count === 'number' ? fd.count : null;
+    return {
+      ...base,
+      count: mediaRows.length,
+      upstreamTotal: total,
+      changeSource: 'unavailable',
+      slice:
+        `video feed — ${mediaRows.length} of ${total ?? '?'} videos (SSR page 1 only); ` +
+        'id = YouTube video id (ground truth: youtube oembed title+channel match, verified); ' +
+        'duration/published straight from upstream',
+      mediaRows,
+    };
+  }
+
+  if (kind === 'newstag') {
+    const tg = (pp.tag ?? null) as Record<string, unknown> | null;
+    const list = pp.news;
+    if (!tg || !Array.isArray(list)) {
+      // GET maps tag=null to a real 404 before shaping; reaching here with a
+      // missing array is a schema break, not a missing tag.
+      throw new Error('newstag: missing news array');
+    }
+    const info: CrTagInfo = {
+      slug: asStr(tg.key) ?? (opts.key ?? 'defi'),
+      name: asStr(tg.name) ?? (opts.key ?? 'defi'),
+      subtitle: null,
+    };
+    const newsRows = list.map(shapeNewsRow);
+    const rel = Array.isArray(pp.tags)
+      ? (pp.tags as Record<string, unknown>[])
+          .map((t) => ({ slug: asStr(t.key) ?? '', name: asStr(t.name) ?? '' }))
+          .filter((t) => t.slug)
+      : [];
+    return {
+      ...base,
+      count: newsRows.length,
+      upstreamTotal: newsRows.length,
+      slice:
+        `articles tagged '${info.slug}' — ${newsRows.length} shown (upstream ships no tag total); ` +
+        'unknown slugs are answered locally as 404 from upstream\'s tag=null soft-404 marker ' +
+        '(never an unfiltered feed under a tag label); relatedCoins prices llama-verified',
+      newsRows,
+      tag: info,
+      relatedTags: rel,
+    };
+  }
+
+  if (kind === 'aioverview') {
+    const ov = (pp.overviewData ?? null) as Record<string, unknown> | null;
+    if (!ov) {
+      throw new Error('aioverview: missing overviewData');
+    }
+    const market = (ov.market ?? {}) as Record<string, unknown>;
+    const funding = (ov.fundingRound ?? {}) as Record<string, unknown>;
+    const drop = (ov.dropHunting ?? {}) as Record<string, unknown>;
+    const vest = (ov.vesting ?? {}) as Record<string, unknown>;
+    const aiOverview: CrAiOverview = {
+      market: {
+        summary: asStr(market.aiSummary),
+        updatedAt: asStr(market.updatedAt),
+      },
+      news: (Array.isArray(ov.news) ? (ov.news as Record<string, unknown>[]) : []).map((n) => ({
+        id: asNum(n.id),
+        title: asStr(n.title) ?? '',
+        date: asStr(n.date),
+        isBullish:
+          typeof n.isBullish === 'boolean' ? n.isBullish : null,
+      })),
+      funding: {
+        summary: asStr(funding.aiSummary),
+        rounds: (Array.isArray(funding.rounds)
+          ? (funding.rounds as Record<string, unknown>[])
+          : []
+        ).map((r) => ({
+          key: asStr(r.key),
+          name: asStr(r.name) ?? '',
+          stage: asStr(r.stage),
+          raisedUsd: asNum(r.raised),
+        })),
+      },
+      dropHunting: {
+        summary: asStr(drop.aiSummary),
+        activities: (Array.isArray(drop.activities)
+          ? (drop.activities as Record<string, unknown>[])
+          : []
+        ).map((a) => {
+          const coin = (a.coin ?? null) as Record<string, unknown> | null;
+          return {
+            key: asStr(a.key) ?? '',
+            type: asStr(a.type),
+            coinName: coin ? asStr(coin.name) : null,
+          };
+        }),
+      },
+      vesting: {
+        summary: asStr(vest.aiSummary),
+        unlocks: (Array.isArray(vest.vesting)
+          ? (vest.vesting as Record<string, unknown>[])
+          : []
+        ).map((v) => {
+          const coin = (v.coin ?? null) as Record<string, unknown> | null;
+          return {
+            date: asStr(v.date),
+            unlockPercent: asNum(v.unlockPercent),
+            coinName: coin ? asStr(coin.name) : null,
+          };
+        }),
+      },
+    };
+    return {
+      ...base,
+      count: aiOverview.news.length + aiOverview.funding.rounds.length +
+        aiOverview.dropHunting.activities.length + aiOverview.vesting.unlocks.length,
+      slice:
+        'upstream AI digest — summaries are cryptorank\'s own generated text ' +
+        '(their words, labelled as theirs); structured slices are plain rows; ' +
+        'cross-surface coherence vs mode=home enforced in harness ' +
+        '(mcap/volume/dominance <= 0.5%), CoinGecko total-cap sanity band 5%',
+      aiOverview,
+    };
+  }
+
+  // gainers / losers -- same upstream row shape, change derived from anchor
+  const rows = Array.isArray(pp.fallbackData) ? (pp.fallbackData as RawCoin[]) : [];
+  return {
+    ...base,
+    count: rows.length,
+    upstreamTotal: rows.length,
+    changeSource: 'derived-from-histPrices-24H',
+    rows: rows.map((r) => shapeCoin(r, changeFromAnchor(r))),
+  };
+}

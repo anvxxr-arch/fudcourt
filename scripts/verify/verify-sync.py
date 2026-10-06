@@ -46,7 +46,7 @@ RUST_BIN = REPO / "backend" / "sync" / "target" / "release" / "fudcourt-sync"
 BEGIN = "#ASSETS-PROJECTION-BEGIN"
 END = "#ASSETS-PROJECTION-END"
 
-from verifylib import check_bare as check
+from verifylib import check
 from verifylib import GREEN, RED, RESET
 
 

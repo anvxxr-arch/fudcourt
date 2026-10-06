@@ -25,8 +25,13 @@ import { repoRoot as discoverRepoRoot, parseOpenApiEnums } from './lib.mjs';
 const repoRoot = discoverRepoRoot();
 
 // The executor type surface moved in the frontend refactor:
-// frontend/web/src/platform/executor/types.ts -> frontend/web/src/lib/executor-request.ts (barrel at lib/executor.ts re-exports).
-const TYPES_TS = path.join(repoRoot, 'frontend/web/src/lib/executor-request.ts');
+// frontend/web/src/platform/executor/types.ts -> executor-request.ts (+ lifecycle split);
+// barrel at lib/executor.ts re-exports. parseLiteralUnion does not follow `export *`,
+// so read the defining slices directly and check the unions against their concat.
+const TYPES_TS = [
+  'frontend/web/src/lib/executor-request.ts',
+  'frontend/web/src/lib/executor-lifecycle.ts',
+].map((p) => path.join(repoRoot, p));
 const OPENAPI_YAML = path.join(repoRoot, 'shared/contracts/openapi/fudcourt.yaml');
 const CATALOG_JSON = path.join(repoRoot, 'shared/contracts/events/catalog.json');
 const EVENT_SCHEMA_JSON = path.join(repoRoot, 'shared/contracts/events/event.schema.json');
@@ -84,7 +89,7 @@ let catalog;
 let eventSchema;
 let clientTs;
 try {
-  typesTs = readFileSync(TYPES_TS, 'utf8');
+  typesTs = TYPES_TS.map((p) => readFileSync(p, 'utf8')).join('\n');
   openapiYaml = readFileSync(OPENAPI_YAML, 'utf8');
   catalog = JSON.parse(readFileSync(CATALOG_JSON, 'utf8'));
   eventSchema = JSON.parse(readFileSync(EVENT_SCHEMA_JSON, 'utf8'));
