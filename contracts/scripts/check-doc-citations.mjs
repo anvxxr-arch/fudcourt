@@ -27,6 +27,16 @@
  *    document to the `DOCS` array is the only way to bring one under the gate — the list is
  *    explicit, never a walk.)
  *
+ * MACHINE-READABLE SIDECARS (added 2026-10-06)
+ *   `docs/architecture/data-categorization.json` — every path-shaped token in each row's
+ *   `code_path` and `evidence`. The `.md` beside it is in DOCS and gated; the JSON was not, so 73
+ *   of its 155 rows carried `frontend/web/...` paths through the entire restructure while this gate
+ *   reported DOCS_OK (`03d50c0`). A token resolves when the file exists, when it is a RELATIVE
+ *   FRAGMENT of a path given earlier in the same string (`repository/port_pg.go` after
+ *   `apps/executor/internal/`), or when its repo-relative tail matches a real file (an absolute host
+ *   path, `/home/<user>/fudcourt/tests/oracle/sync-live.py`). A bare filename (`modes.go`) is a
+ *   symbol reference and is skipped. Reported as `sidecar_rows=<N> sidecar_paths=<M>`.
+ *
  * WHAT COUNTS AS A CITATION
  *   A backticked token that resolves to a repo path: it starts with a known top-level directory
  *   (`backend/`, `frontend/`, `shared/`, `scripts/`, `tests/`, `database/`, `infrastructure/`,
@@ -129,7 +139,7 @@
  * allowances=6` / `docs=8 citations=904` are the current-state snapshots taken before that widening —
  * the older three are left as history).
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { repoRoot as discoverRepoRoot } from './lib.mjs';
@@ -309,6 +319,110 @@ function gitIgnoredSet(tokens, root) {
 }
 
 // ---------------------------------------------------------------------------
+// Machine-readable sidecars
+// ---------------------------------------------------------------------------
+/**
+ * `data-categorization.json` — the sidecar `data-categorization.md` §0 calls
+ * "the machine-readable form (with the full `code_path` and `evidence` per
+ * row)". The `.md` is in DOCS and gated; the JSON was not, so 73 of its 155
+ * rows carried `frontend/web/...` paths through the whole restructure while
+ * the gate reported DOCS_OK. Found 2026-10-06 in `03d50c0`.
+ *
+ * Every path-shaped token in `code_path` and `evidence` is checked here. A
+ * token resolves when it exists on disk OR when it is a relative fragment —
+ * a continuation of a path already given earlier in the same string
+ * (`.../executions/[id]/cancel/route.ts` after `.../executions/[id]`,
+ * `repository/port_pg.go` after `apps/executor/internal/`). A fragment is
+ * proven by matching it as a SUFFIX of a real file, so a fragment that
+ * matches nothing is still a failure.
+ */
+const SIDECARS = [
+  {
+    file: 'docs/architecture/data-categorization.json',
+    fields: ['code_path', 'evidence'],
+    // Same extension set the markdown walk implies, so a token is only
+    // considered when it looks like a source/data file.
+    ext: /(?:ts|tsx|go|rs|py|sql|json|mjs|cjs|md|yaml|yml|service|sh)$/,
+  },
+];
+// Every repo file, once, for fragment suffix matching. Built lazily so a
+// `--root` copy only walks itself.
+let repoFiles = null;
+function allRepoFiles() {
+  if (repoFiles) return repoFiles;
+  repoFiles = new Set();
+  const stack = [repoRoot];
+  while (stack.length) {
+    const dir = stack.pop();
+    let entries;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    for (const e of entries) {
+      const abs = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name === 'node_modules' || e.name === 'target' || e.name === '.next' || e.name === '.git') continue;
+        stack.push(abs);
+      } else {
+        repoFiles.add(path.relative(repoRoot, abs));
+      }
+    }
+  }
+  return repoFiles;
+}
+let sidecarRows = 0;
+let sidecarTokens = 0;
+for (const sc of SIDECARS) {
+  const abs = path.join(repoRoot, sc.file);
+  if (!existsSync(abs)) {
+    fail(sc.file, 'sidecar itself is missing from the tree');
+    continue;
+  }
+  let rows;
+  try {
+    rows = JSON.parse(readFileSync(abs, 'utf8'));
+  } catch (e) {
+    fail(sc.file, `not valid JSON: ${e.message}`);
+    continue;
+  }
+  if (!Array.isArray(rows)) {
+    fail(sc.file, 'expected a JSON array of rows');
+    continue;
+  }
+  for (const [i, row] of rows.entries()) {
+    const id = row && typeof row.id === 'string' ? row.id : `#${i}`;
+    sidecarRows++;
+    for (const field of sc.fields) {
+      const text = row && typeof row[field] === 'string' ? row[field] : '';
+      if (!text) continue;
+      for (const m of text.matchAll(/[\w./()-]+\.[A-Za-z]+\b/g)) {
+        // Strip BOTH ends: the tokenizer's character class admits `(`, so a
+        // path written as "(apps/executor/.../schema.go:124)" keeps its opener.
+        let tok = m[0].replace(/^[()\[\]{},]+/, '').replace(/[()\[\]{},]+$/, '');
+        if (!sc.ext.test(tok)) continue;
+        // A bare filename (`modes.go`) is a symbol reference, not a path.
+        if (!tok.includes('/')) continue;
+        sidecarTokens++;
+        if (existsSync(path.join(repoRoot, tok))) continue;
+        const files = allRepoFiles();
+        // A relative fragment (`repository/port_pg.go` after
+        // `apps/executor/internal/`) or an absolute host path
+        // (`/home/<user>/fudcourt/tests/oracle/sync-live.py`) both resolve by
+        // matching a real file as a suffix.
+        // Try the token as-is, then its repo-relative tail: an absolute host
+        // path (`/home/<user>/fudcourt/tests/oracle/sync-live.py`) is a real
+        // citation of a real file, it just carries a prefix this gate cannot
+        // know. The tail is only accepted when it still contains a `/`, so a
+        // bare filename can never be rescued by an arbitrary suffix match.
+        const tails = tok.startsWith('/')
+          ? [tok, ...tok.split('/').slice(1).map((_, i, a) => a.slice(i).join('/'))]
+          : [tok];
+        if (tails.some((t) => t.includes('/') && [...files].some((f) => f.endsWith(t)))) continue;
+        fail(`${sc.file} [${id}].${field}`, `cited path '${tok}' does not exist and matches no repo file as a suffix`);
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Verdict
 // ---------------------------------------------------------------------------
 if (failures.length > 0) {
@@ -318,4 +432,4 @@ if (failures.length > 0) {
 }
 const allowanceCount = [...allowed.values()].reduce((a, b) => a + b, 0);
 const ignoredCount = [...ignored.values()].reduce((a, b) => a + b, 0);
-console.log(`DOCS_OK docs=${docsScanned} citations=${citations} allowances=${allowanceCount} ignored=${ignoredCount}`);
+console.log(`DOCS_OK docs=${docsScanned} citations=${citations} allowances=${allowanceCount} ignored=${ignoredCount} sidecar_rows=${sidecarRows} sidecar_paths=${sidecarTokens}`);

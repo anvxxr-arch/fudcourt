@@ -50,6 +50,33 @@ and only a named list of documents will certify a tree it did not
 read.** The fix was to widen the scan, not to add the files to the
 allowance list.
 
+**Root cause closed, same day.** Widening the scan by hand fixes this
+instance; it does not stop the next one. `check-doc-citations.mjs` now
+also walks `docs/architecture/data-categorization.json` — the sidecar
+`data-categorization.md` §0 calls "the machine-readable form (with the
+full `code_path` and `evidence` per row)" — and requires every
+path-shaped token in those two fields to resolve. Reported as
+`sidecar_rows=155 sidecar_paths=249` on the `DOCS_OK` line.
+
+A token resolves when the file exists, when it is a **relative
+fragment** of a path already given earlier in the same string
+(`repository/port_pg.go` after `apps/executor/internal/`), or when its
+repo-relative tail matches a real file (an absolute host path,
+`/home/<user>/fudcourt/tests/oracle/sync-live.py`). A bare filename
+(`modes.go`) is a symbol reference and is skipped. Proven on a hermetic
+copy: the unperturbed tree passes with counts identical to the repo; a
+re-injected `frontend/web/...` path fails; a `backend/data/...` path
+fails; a plausible-but-nonexistent `features/market/quotes.ts` fails;
+malformed JSON fails cleanly rather than crashing; and the fragment,
+absolute-path and bare-filename cases still pass.
+
+`data-categorization.json` is the only doc sidecar in the tree that
+carries path prose — checked by scanning every `docs/**/*.json` for
+path-shaped tokens (218 hits, all in this one file). The
+`contracts/schemas/**` JSON files are already covered by
+`check-schemas.mjs`, which validates their `$ref` graph.
+
+
 ### 2. One Go module
 
 ```

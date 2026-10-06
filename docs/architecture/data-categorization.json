@@ -1228,7 +1228,7 @@
     "sensitivity": "PUBLIC",
     "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/coinglass/route.ts:34-72",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CG-Upstream/X-CG-Cache/X-CG-Cipher. apps/data/cmd/data/main.go `mux.HandleFunc(\"/api/coinglass\")`; modes statistics|openInterest|fundingRate|markets, keyless by decryption",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CG-Upstream/X-CG-Cache/X-CG-Cipher. apps/data/main.go `mux.HandleFunc(\"/api/coinglass\")`; modes statistics|openInterest|fundingRate|markets, keyless by decryption",
     "path": "/api/coinglass",
     "methods": [
       "GET"
@@ -1249,7 +1249,7 @@
     "sensitivity": "PUBLIC",
     "status": "dark",
     "code_path": "apps/web/src/app/(frontend)/api/coinank/route.ts:34-70",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CA-Upstream/X-CA-Cache. apps/data/cmd/data/main.go `mux.HandleFunc(\"/api/coinank\")`; modes fundingRate|liquidation|longShort|etf|whales, keyless by client signature. Route is live but every mode is upstream's 502 `403` (DR-038) -- status dark mirrors the family",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CA-Upstream/X-CA-Cache. apps/data/main.go `mux.HandleFunc(\"/api/coinank\")`; modes fundingRate|liquidation|longShort|etf|whales, keyless by client signature. Route is live but every mode is upstream's 502 `403` (DR-038) -- status dark mirrors the family",
     "path": "/api/coinank",
     "methods": [
       "GET"
@@ -1270,7 +1270,7 @@
     "sensitivity": "PUBLIC",
     "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/coinmarketcap/route.ts:37-74",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CMC-Upstream/X-CMC-Cache. apps/data/cmd/data/main.go `mux.HandleFunc(\"/api/coinmarketcap\")`; modes listing|global|marketPairs|exchanges, keyless with no credential; start/limit bounds are the sidecar's, validated before any fetch (DR-039)",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CMC-Upstream/X-CMC-Cache. apps/data/main.go `mux.HandleFunc(\"/api/coinmarketcap\")`; modes listing|global|marketPairs|exchanges, keyless with no credential; start/limit bounds are the sidecar's, validated before any fetch (DR-039)",
     "path": "/api/coinmarketcap",
     "methods": [
       "GET"
@@ -1291,7 +1291,7 @@
     "sensitivity": "PUBLIC",
     "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/cryptorank/route.ts:43-49",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. apps/data/cmd/data/main.go:216; route.ts:26-28 note modes funding/unlocks refused upstream (disabled)",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. apps/data/main.go:216; route.ts:26-28 note modes funding/unlocks refused upstream (disabled)",
     "path": "/api/cryptorank",
     "methods": [
       "GET"
@@ -1312,7 +1312,7 @@
     "sensitivity": "PUBLIC",
     "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/llama/route.ts:27-35",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. apps/data/cmd/data/main.go:222; modes chains|protocols|historical",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. apps/data/main.go:222; modes chains|protocols|historical",
     "path": "/api/llama",
     "methods": [
       "GET"
@@ -1333,7 +1333,7 @@
     "sensitivity": "PUBLIC",
     "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/news/route.ts:34-41",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. apps/data/cmd/data/main.go:225; strict source/limit, 15s TTL",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. apps/data/main.go:225; strict source/limit, 15s TTL",
     "path": "/api/news",
     "methods": [
       "GET"
@@ -1354,7 +1354,7 @@
     "sensitivity": "PUBLIC",
     "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/dex/route.ts:44-105",
-    "evidence": "route.ts:2 imports DEX from '@/features/dex/client'; features/dex/client.ts:10 `export const DEX = 'https://api.dexscreener.com'`; direct fetch via limitedFetch",
+    "evidence": "route.ts:2 imports DEX from '@/features/dex/client'; apps/web/src/features/market/dex/client.ts:10 `export const DEX = 'https://api.dexscreener.com'`; direct fetch via limitedFetch",
     "path": "/api/dex",
     "methods": [
       "GET"
@@ -1375,7 +1375,7 @@
     "sensitivity": "PUBLIC",
     "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/markets/route.ts:60-100",
-    "evidence": "route.ts:100 `limitedFetch(marketsUpstreamUrl(),...)`; features/markets/client.ts:13 `MARKETS_UPSTREAM='https://api.coingecko.com/api/v3/coins/markets'`",
+    "evidence": "route.ts:100 `limitedFetch(marketsUpstreamUrl(),...)`; apps/web/src/features/market/ticker/client.ts:13 `MARKETS_UPSTREAM='https://api.coingecko.com/api/v3/coins/markets'`",
     "path": "/api/markets",
     "methods": [
       "GET"
@@ -1396,7 +1396,7 @@
     "sensitivity": "PUBLIC",
     "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/market/stock/route.ts:42-102",
-    "evidence": "route.ts:56 `limitedFetch(chartUrl(symbol),...)`; features/market/quotes.ts:18 `YAHOO_CHART='https://query1.finance.yahoo.com/v8/finance/chart'`; region OUR param strict 400",
+    "evidence": "route.ts:56 `limitedFetch(chartUrl(symbol),...)`; features/market/clients-quotes.ts:18 `YAHOO_CHART='https://query1.finance.yahoo.com/v8/finance/chart'`; region OUR param strict 400",
     "path": "/api/market/stock",
     "methods": [
       "GET"
@@ -1417,7 +1417,7 @@
     "sensitivity": "PUBLIC",
     "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/market/commodity/route.ts:33-85",
-    "evidence": "route.ts:40-44 `limitedFetch(chartUrl(spec.symbol),...)`; features/market/quotes.ts:18 YAHOO_CHART",
+    "evidence": "route.ts:40-44 `limitedFetch(chartUrl(spec.symbol),...)`; features/market/clients-quotes.ts:18 YAHOO_CHART",
     "path": "/api/market/commodity",
     "methods": [
       "GET"
@@ -1438,7 +1438,7 @@
     "sensitivity": "PUBLIC",
     "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/market/forex/route.ts:32-76",
-    "evidence": "route.ts:35 `limitedFetch(FOREX_UPSTREAM,...)`; features/market/forex/client.ts:18 `FOREX_UPSTREAM='https://open.er-api.com/v6/latest/USD'`; daily feed",
+    "evidence": "route.ts:35 `limitedFetch(FOREX_UPSTREAM,...)`; features/market/clients-macro-rates.ts:18 `FOREX_UPSTREAM='https://open.er-api.com/v6/latest/USD'`; daily feed",
     "path": "/api/market/forex",
     "methods": [
       "GET"
@@ -1459,7 +1459,7 @@
     "sensitivity": "PUBLIC",
     "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/market/macro/route.ts:62-218",
-    "evidence": "route.ts `limitedFetch(chartUrl(spec.symbol))` one call per symbol; features/market/sources/bis.ts `BIS_CBPOL='https://stats.bis.org/api/v1/data/WS_CBPOL'` (answers 406 without the SDMX Accept header, measured); sources/fred.ts `FRED_CSV='https://fred.stlouisfed.org/graph/fredgraph.csv'` (yoy/change/level transform applied server-side); sources/worldbank.ts `WORLDBANK_API='https://api.worldbank.org/v2'` (ONE indicator per call — a `;`-separated list is rejected with Invalid value, measured); curve spreads computed locally from the quotes, never read from upstream",
+    "evidence": "route.ts `limitedFetch(chartUrl(spec.symbol))` one call per symbol; features/market/bis.ts `BIS_CBPOL='https://stats.bis.org/api/v1/data/WS_CBPOL'` (answers 406 without the SDMX Accept header, measured); features/market/fred.ts `FRED_CSV='https://fred.stlouisfed.org/graph/fredgraph.csv'` (yoy/change/level transform applied server-side); features/market/worldbank.ts `WORLDBANK_API='https://api.worldbank.org/v2'` (ONE indicator per call — a `;`-separated list is rejected with Invalid value, measured); curve spreads computed locally from the quotes, never read from upstream",
     "path": "/api/market/macro",
     "methods": [
       "GET"
@@ -1480,7 +1480,7 @@
     "sensitivity": "PUBLIC",
     "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/market/indonesia/route.ts:58-182",
-    "evidence": "route.ts `limitedFetch(chartUrl(spec.symbol))` one call per symbol for IDR=X / EURIDR=X / JPYIDR=X / CNYIDR=X / ^JKSE / ^JKLQ45; `fetchPolicyRates(['ID'])` -> BI-Rate 5.75 @ 2026-09-28 (measured); `fetchWorldBank(id,['IDN'],2015)` one call per indicator — 19/19 resolved live, each row carrying its own reference year; specs in features/market/indonesia/client.ts",
+    "evidence": "route.ts `limitedFetch(chartUrl(spec.symbol))` one call per symbol for IDR=X / EURIDR=X / JPYIDR=X / CNYIDR=X / ^JKSE / ^JKLQ45; `fetchPolicyRates(['ID'])` -> BI-Rate 5.75 @ 2026-09-28 (measured); `fetchWorldBank(id,['IDN'],2015)` one call per indicator — 19/19 resolved live, each row carrying its own reference year; specs in features/market/clients-indonesia.ts",
     "path": "/api/market/indonesia",
     "methods": [
       "GET"
@@ -1903,7 +1903,7 @@
     "sensitivity": "INTERNAL",
     "status": "dead",
     "code_path": "db/schema/pg-schema.sql:20",
-    "evidence": "DDL pg-schema.sql:20; writer apps/web/src/platform/db/pg.ts:75 (SELECT * FROM accounts) + loadFromMirror upsert/prune; table dead (DR-036)",
+    "evidence": "DDL pg-schema.sql:20; writer apps/web/src/server/db.ts:75 (SELECT * FROM accounts) + loadFromMirror upsert/prune; table dead (DR-036)",
     "slice": "db"
   },
   {
@@ -2047,7 +2047,7 @@
     "sensitivity": "PUBLIC",
     "status": "dead",
     "code_path": "db/schema/pg-schema.sql:132",
-    "evidence": "DDL pg-schema.sql:132 + hypertable :139 + unique price_history_symbol_ts_source :140; grep -rn 'INSERT INTO price_history' over source globs -> 0 hits; only retention DELETE at apps/web/src/platform/db/pg.ts:208; DR-036: 0 rows; DDL comment :131 names a 'price sampler' that does not exist",
+    "evidence": "DDL pg-schema.sql:132 + hypertable :139 + unique price_history_symbol_ts_source :140; grep -rn 'INSERT INTO price_history' over source globs -> 0 hits; only retention DELETE at apps/web/src/server/db.ts:208; DR-036: 0 rows; DDL comment :131 names a 'price sampler' that does not exist",
     "slice": "db"
   },
   {
@@ -2095,7 +2095,7 @@
     "sensitivity": "INTERNAL",
     "status": "active",
     "code_path": "db/schema/executor-schema.sql:38",
-    "evidence": "DDL executor-schema.sql:38 `CREATE SCHEMA IF NOT EXISTS executor;`; applied at startup by TS ensureExecutorSchema() (apps/web/src/platform/executor/store.ts) and Go repository.EnsureSchema() (apps/executor/internal/repository/schema.go:124)",
+    "evidence": "DDL executor-schema.sql:38 `CREATE SCHEMA IF NOT EXISTS executor;`; applied at startup by the Go executor's repository.EnsureSchema() (apps/executor/internal/repository/schema.go:124)",
     "slice": "db"
   },
   {
@@ -2560,7 +2560,7 @@
     "sensitivity": "PUBLIC",
     "status": "scaffolded",
     "code_path": "apps/api/internal/markets/reference/seed.go:seedVenues (seed.go:238-251); VenueIDInvariants seed.go:271-275; registry.go:330 (venueCCXT)",
-    "evidence": "grep -rn ccxt apps/api/internal/markets/ -> seed.go:238-251 lists binance/bybit/mexc/okx/bitget/phemex/bingx/bitfinex/htx/coinbase/kraken with ccxtID; grep for http/fetch in apps/api/internal/markets/** returns only types.go:194 (a struct URL field) -> NO live HTTP fetch in this package. UNWIRED: apps/api/cmd/api/main.go imports only access/identity+platform/{health,httpx} (main.go:26-33), so no route serves the registry; curl localhost:3103/api/markets -> 404; docs/architecture/canonical-acceptance.md:44 'no service serves the document over HTTP (no route), and no consumer has been re-pointed'. Emitted artifact contracts/data/reference.json exists (19565 bytes, venues=12) gated by `go run ./apps/api/internal/markets/reference/cmd/emit -check`."
+    "evidence": "grep -rn ccxt apps/api/internal/markets/ -> seed.go:238-251 lists binance/bybit/mexc/okx/bitget/phemex/bingx/bitfinex/htx/coinbase/kraken with ccxtID; grep for http/fetch in apps/api/internal/markets/** returns only types.go:194 (a struct URL field) -> NO live HTTP fetch in this package. UNWIRED: apps/api/main.go imports only access/identity+platform/{health,httpx} (main.go:26-33), so no route serves the registry; curl localhost:3103/api/markets -> 404; docs/architecture/canonical-acceptance.md:44 'no service serves the document over HTTP (no route), and no consumer has been re-pointed'. Emitted artifact contracts/data/reference.json exists (19565 bytes, venues=12) gated by `go run ./apps/api/internal/markets/reference/cmd/emit -check`."
   },
   {
     "id": "ccxt-exchange-ticker",
@@ -2575,7 +2575,7 @@
     "durability": "EPHEMERAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "apps/web/src/features/market/ticker/client.ts:loadVenue; apps/web/src/features/ticker/client.ts:TICKER_EXCHANGES/TICKER_VENUES; apps/web/src/app/(frontend)/api/ticker/route.ts",
+    "code_path": "apps/web/src/features/market/ticker/client.ts:loadVenue; apps/web/src/features/market/ticker/client.ts:TICKER_EXCHANGES/TICKER_VENUES; apps/web/src/app/(frontend)/api/ticker/route.ts",
     "evidence": "curl -s -m 20 -o /dev/null -w '%{http_code}' https://www.okx.com/api/v5/public/time -> 200; https://api.bybit.com/v5/market/time -> 200; curl -s -m 120 localhost:3100/api/ticker -> 200 (86.95s cold venue sweep, measured). ccxt is loaded per-venue from node_modules (venues.ts:findCcxtRoot/loadVenue), never via the barrel; binance/kucoin/gate excluded per client.ts:TICKER_VENUES comment (TLS-intercepted / connect timeout)."
   },
   {
@@ -2671,7 +2671,7 @@
     "durability": "CANONICAL",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "apps/web/src/cms/payload.config.ts:44-46 (postgresAdapter({pool:{connectionString: process.env.DATABASE_URL}})); apps/web/src/cms/collections/{Posts,Categories,Media}.ts",
+    "code_path": "apps/web/src/cms/payload.config.ts:44-46 (postgresAdapter({pool:{connectionString: process.env.DATABASE_URL}})); apps/web/src/cms/collections/Posts.ts, apps/web/src/cms/collections/Categories.ts, apps/web/src/cms/collections/Media.ts",
     "evidence": "read payload.config.ts: postgresAdapter + connectionString DATABASE_URL. DATABASE_URL host (credentials stripped) = ep-blue-wildflower-b387o1og-pooler.c-4.ap-southeast-1.aws.neon.tech -> Neon confirmed. curl localhost:3100/blog/cms/api/posts?limit=1 -> 200; /blog/cms/api/categories?limit=1 -> 200. Posts access.read public for status=published, drafts require auth (Posts.ts)."
   },
   {
