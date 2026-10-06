@@ -102,6 +102,40 @@ increases a position. `intensity` (`muted` | `vivid`) picks which market colour 
 
 State model: `default` `hover` `focus` `filled` `disabled` `read-only` `error` `warning`
 `success` `loading`. Sizes `sm` 32 `md` 40 `lg` 48.
+### Financial input atoms
+| Atom | Precision | Bounds | Suffix | Negative |
+|---|---|---|---|---|
+| `AmountInput` | 8 | — | — | refused |
+| `PriceInput` | 8 | — | — | refused |
+| `PercentInput` | 2 | 0–100 | `%` | refused |
+| `QuantityInput` | 8 | — | — | refused |
+| `CurrencyInput` | 2 | — | — | refused |
+| `LeverageInput` | 2 | 1–125 | `×` | refused |
+| `RiskInput` | 2 | 0–100 | `%` | refused |
+| `StopLossInput` | 2 | 0–100 | `%` | refused |
+| `TakeProfitInput` | 2 | 0–100 | `%` | refused |
+All nine share one shell, so they share one contract:
+
+- **The value is `number | null`, never a string and never `NaN`.** `null` means "no value",
+  which is distinct from `0` — a cleared field and a zero field mean different things to a
+  risk engine. `NaN` and `Infinity` are refused at the door rather than stored and discovered
+  later by a calculation.
+- **A negative is refused, not clamped to zero.** Clamping would silently turn a typo into a
+  real order. A caller who needs a signed value passes `allowNegative` and owns the sign.
+- **Bounds are defaults, not law.** A caller trading an instrument with a different ceiling
+  passes `max` and the default stands aside.
+- **Precision is applied on commit, not per keystroke.** A user typing `1.` keeps their
+  trailing dot long enough to type the next digit; the field reformats on blur.
+- **Paste is normalized.** Grouping separators and whitespace are stripped and a leading
+  currency symbol removed, so `$1,234.56` arrives as `1234.56`. The paste is only intercepted
+  when the text was understood — otherwise the native paste stands so the user sees what they
+  pasted and can correct it.
+- **Every field is Geist Mono with tabular figures** and `inputMode="decimal"`, so a typed
+  price does not reflow as digits arrive and the numeric keypad opens on mobile.
+
+**Not here, deliberately:** the order calculator, the position calculator, the leverage preset
+group, the risk preset group, the AssetSelector popover and the AssetPairSelector dialog.
+Each composes atoms into behaviour, and Section 02 owns them.
 
 ---
 
@@ -212,11 +246,21 @@ never stripped of its prefix. A value shorter than the budget renders whole — 
 | `Duration` | `compact` `long` `clock` |
 | `Latency` | the band is a **word**: Good / Degraded / Critical |
 | `HealthStatus` | `healthy` `degraded` `down` `unknown`, with a `subject` |
-| `ExecutionStatus` | the canonical 15-state lifecycle from `executor-lifecycle.ts` |
-| `ChildOrderStatus` | the canonical 10-state child lifecycle from `executor-request-defs.ts` |
+| `ExecutionStatus` | the 15-state lifecycle, mirrored in `atoms/system/lifecycle.ts` |
+| `ChildOrderStatus` | the 10-state child lifecycle, mirrored in `atoms/system/lifecycle.ts` |
 
-`ExecutionStatus` imports the canonical vocabulary rather than re-declaring it, so a state
-added to the engine cannot silently fail to render. An unrecognised state renders the
+`ExecutionStatus` and `ChildOrderStatus` declare their own copy of the two status unions in
+`atoms/system/lifecycle.ts`, because the DR-018 structure gate forbids `src/ui/` importing
+`src/lib/` — a presentational leaf may not reach for the domain. The engine at
+`lib/executor-lifecycle.ts` (and `lib/executor-request-defs.ts` for the child states) remains
+canonical for all runtime behaviour: the transition table, `canTransition` and
+`isTerminalExecution` live only there and are not duplicated. The no-silent-drift guarantee
+therefore no longer comes from an import. It is enforced in
+`tests/design-system-atom-tests.ts` by a compile-time mutual-assignability assertion over the
+engine and mirror unions, plus runtime cross-checks of the atom's label maps against the
+engine's `EXECUTION_TRANSITIONS` table and the frozen contract schema's `execution_status` /
+`child_order_status` enums. A state added to either side without the other fails those checks.
+An unrecognised state renders the
 `Unknown` treatment rather than throwing — a forward-compatible engine must not crash a
 dashboard.
 

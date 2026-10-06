@@ -21,6 +21,7 @@
 | 9 | Visual + status atoms | `src/ui/atoms/visual/`, `src/ui/atoms/status/` |
 | 10 | Action atoms | `src/ui/atoms/actions/` |
 | 11 | Generic form atoms | `src/ui/atoms/form/` |
+| 11b | Financial input atoms | `src/ui/atoms/form/financial.tsx` |
 | 12 | Financial formatting core | `src/ui/atoms/financial/format.ts` |
 | 13 | Financial display atoms | `src/ui/atoms/financial/` |
 | 14 | Market atoms | `src/ui/atoms/market/` |
@@ -52,7 +53,7 @@ emit-tokens.ts --check              TOKENS_OK (284 vars)
 check-structure.py                  STRUCTURE_OK (359 files, DR-018 layers)
 ```
 
-Of the 325 tests, **55 are new**: 22 theme-parity and contrast tests, 33 atom tests.
+Of the 337 tests, **67 are new**: 22 theme-parity and contrast tests, 45 atom tests (33 + 12 financial input).
 
 ---
 
@@ -122,6 +123,31 @@ That last one also surfaced a **wrong contract access** in the test itself — t
 at `.enum`, not on the `$def` — which had been silently throwing a `TypeError`.
 
 ---
+
+## The gap the final audit closed
+
+The task list claimed Task 14 complete. It was not. The nine financial **input** atoms —
+`AmountInput`, `PriceInput`, `PercentInput`, `QuantityInput`, `CurrencyInput`,
+`LeverageInput`, `RiskInput`, `StopLossInput`, `TakeProfitInput` — were never written. The
+barrel exported the financial **display** atoms and the generic form controls, and nothing in
+between, and no gate asserted the inventory, so the omission was invisible to every check that
+ran: the build passed, the tests passed, the token gates passed.
+
+A Definition-of-Done audit that walks the plan's REQUIRED ATOM INVENTORY against the barrel
+one name at a time found it. That audit is now the thing that catches this class of defect.
+A gate that only asks "does the build pass" cannot notice an atom that was never written.
+
+The atoms are implemented as one private shell with nine named wrappers, because each name
+carries a product decision the generic cannot: the value read back is `number | null` (never a
+string, never `NaN`), a negative is **refused** rather than clamped to zero (clamping would
+turn a typo into a real order), bounds are defaults a caller may widen, precision is applied
+on commit rather than per keystroke, and paste strips grouping separators and a leading
+currency symbol. Twelve tests cover the contract.
+
+Three failed on the first run and all three were the tests' fault: React renders `inputMode`
+camelCase in static markup, `readOnly` renders as `readOnly=""`, and the sign policy is a
+commit-time policy — rendering must show what the caller stored, because a controlled value
+must never be silently rewritten under them.
 
 ## One failure no test caught
 

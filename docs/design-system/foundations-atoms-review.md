@@ -20,7 +20,7 @@ with their reasoning rather than silently changed.
 | Foundations | `src/ui/foundations/{color,typography,spacing,layout,motion,accessibility}.ts` | `check-design-system.py` |
 | Atoms | `src/ui/atoms/{typography,actions,form,visual,status,financial,market,blockchain,system,table,visualization,layout}` | `check-design-system.py` |
 | Public API | `src/ui/index.ts` — one entry point | boundary test |
-| Tests | `tests/design-system-tests.ts` (22), `tests/design-system-atom-tests.ts` (33) | `bun run test:shapers` |
+| Tests | `tests/design-system-tests.ts` (22), `tests/design-system-atom-tests.ts` (47) | `bun run test:shapers` |
 | Guardrail | `scripts/checks/check-design-system.py` | `check:design` |
 | Docs | `docs/design-system/{current-ui-audit,fudcourt-foundations-atoms-spec,atoms}.md` | — |
 
@@ -28,10 +28,10 @@ with their reasoning rather than silently changed.
 
 ```
 tsc --noEmit                        0 errors
-bun run test:shapers                323 pass, 0 fail (19 files)
+bun run test:shapers                337 pass, 0 fail (19 files)
 next build                          0 errors
-check-design-tokens.py              DESIGN_TOKENS_OK (363 files, 6 exemptions)
-check-design-system.py              DESIGN_SYSTEM_OK (21 files, 6 scale exemptions)
+check-design-tokens.py              DESIGN_TOKENS_OK (365 files, 6 exemptions)
+check-design-system.py              DESIGN_SYSTEM_OK (23 files, 6 scale exemptions)
 emit-tokens.ts --check              TOKENS_OK (284 vars)
 ```
 
@@ -216,6 +216,31 @@ primitives are SVG and label vocabulary, not a chart engine — no Recharts, D3 
 installed, and adding one for this phase would be scope the plan does not authorise.
 
 ---
+
+## 7. The gap the final audit closed
+
+The task list claimed Task 14 complete. It was not. The nine financial **input** atoms —
+`AmountInput`, `PriceInput`, `PercentInput`, `QuantityInput`, `CurrencyInput`,
+`LeverageInput`, `RiskInput`, `StopLossInput`, `TakeProfitInput` — were never written. The
+barrel exported the financial **display** atoms and the generic form controls, and nothing in
+between, and no test asserted the inventory, so the gap was invisible to every gate that ran.
+
+A Definition-of-Done audit that walks the plan's REQUIRED ATOM INVENTORY against the barrel
+one name at a time found it. That audit is now the thing that catches this class of defect:
+a gate that only checks "does the build pass" cannot notice an atom that was never written.
+
+The atoms are now implemented in `src/ui/atoms/form/financial.tsx` as one private shell with
+nine named wrappers, because each name carries a product decision the generic cannot — a
+`StopLossInput` may not be negative and defaults to the price precision, a `PercentInput` is
+bounded 0–100 and shows a `%`. Twelve tests cover the render contract, the empty-value
+contract, the precision boundary, the sign policy, the suffix conventions, the aria wiring and
+the disabled/read-only states.
+
+Three of those tests failed on the first run, and all three were the tests' fault rather than
+the atoms': React renders `inputMode` camelCase in static markup, `readOnly` renders as
+`readOnly=""`, and the sign policy is a **commit-time** policy — rendering shows what the
+caller stored, because a controlled value must never be silently rewritten under them. Each
+assertion was corrected to test the real contract instead of the assumed one.
 
 ## 7. Risks carried forward
 
