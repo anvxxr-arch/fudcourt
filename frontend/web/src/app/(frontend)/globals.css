@@ -10,12 +10,12 @@
   --fc-color-bgElevated: #FFFFFF;
   --fc-color-labelPrimary: #000000;
   --fc-color-labelSecondary: #3C3C43;
-  --fc-color-labelTertiary: #8E8E93;
+  --fc-color-labelTertiary: #636366;
   --fc-color-separator: #C6C6C8;
-  --fc-color-blue: #007AFF;
-  --fc-color-green: #34C759;
-  --fc-color-red: #FF3B30;
-  --fc-color-orange: #FF9500;
+  --fc-color-blue: #0058C7;
+  --fc-color-green: #1E7E34;
+  --fc-color-red: #D70015;
+  --fc-color-orange: #B25000;
   --fc-color-labelOnAccent: #FFFFFF;
   --fc-color-scrim: rgba(0, 0, 0, 0.35);
   --fc-font-mono: ui-monospace, monospace;

@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -25,7 +26,6 @@ const ALLOWED_CT: Record<string, true> = {
   'image/webp': true,
   'image/gif': true,
   'image/avif': true,
-  'image/svg+xml': true,
 };
 
 const TIMEOUT_MS = 8_000;
@@ -99,20 +99,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'image too large' }, { status: 413 });
   }
   // All render sites display icons at <=24px: downscale to 64px (2x for DPR)
-  // so a 400-800px upstream file never ships to the browser. SVG passes
-  // through (vector, no raster cost); on any sharp failure the original
-  // bytes are served rather than an error.
+  // so a 400-800px upstream file never ships to the browser. On any sharp
+  // failure the original bytes are served rather than an error.
   let body: ArrayBuffer | Uint8Array = buf;
   let outCt = ct;
-  if (ct !== 'image/svg+xml') {
-    try {
-      const sharp = (await import('sharp')).default;
-      const out = await sharp(Buffer.from(buf)).resize(64, 64, { fit: 'inside', withoutEnlargement: true }).webp({ quality: 70 }).toBuffer();
-      body = new Uint8Array(out);
-      outCt = 'image/webp';
-    } catch {
-      body = buf;
-    }
+  try {
+    const out = await sharp(Buffer.from(buf)).resize(64, 64, { fit: 'inside', withoutEnlargement: true }).webp({ quality: 70 }).toBuffer();
+    body = new Uint8Array(out);
+    outCt = 'image/webp';
+  } catch {
+    body = buf;
   }
   const ab: ArrayBuffer = body instanceof Uint8Array ? body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) as ArrayBuffer : body;
   return new NextResponse(ab, {

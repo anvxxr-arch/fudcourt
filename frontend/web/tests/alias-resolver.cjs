@@ -23,5 +23,12 @@ Module._resolveFilename = function (request, parent, isMain, options) {
   if (typeof request === 'string' && request.startsWith('@/')) {
     return original.call(this, path.join(OUT, 'src', request.slice(2)), parent, isMain, options);
   }
+  // `server-only` throws when imported outside a React Server Component. The
+  // offline suites import server modules directly (server/auth.ts, server/db.ts)
+  // to test their pure logic, so the guard resolves to the package's empty
+  // twin — the same file Next's react-server condition picks.
+  if (request === 'server-only') {
+    return original.call(this, path.join(__dirname, '..', 'node_modules', 'server-only', 'empty.js'), parent, isMain, options);
+  }
   return original.call(this, request, parent, isMain, options);
 };

@@ -46,3 +46,4 @@ frontend/web/scripts/**/*-report.json
 # python caches (harnesses + verification oracles)
 __pycache__/
 *.pyc
+*.bak.*
