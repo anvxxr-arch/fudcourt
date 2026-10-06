@@ -47,6 +47,14 @@ import {
   space,
   target,
   zIndex,
+  // FUDCourt generation
+  criticalDark,
+  designTokens,
+  fcRadius,
+  lightSemantic,
+  darkSemantic,
+  fcType,
+  primitiveTokens,
 } from '../../src/styles/tokens';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -76,7 +84,63 @@ const cssVars: Array<{ name: string; value: string }> = [
   ...Object.entries(zIndex).map(([k, v]) => ({ name: `--fc-z-index-${k}`, value: String(v) })),
   ...Object.entries(motion).map(([k, v]) => ({ name: `--fc-motion-${k}`, value: v })),
   ...Object.entries(target).map(([k, v]) => ({ name: `--fc-target-${k}`, value: `${v}px` })),
+  // --- FUDCourt generation -------------------------------------------------
+  // Primitive ramps: every raw hex, under the `--fc-` namespace so the semantic layer
+  // can reference them and the contrast tests can read them back.
+  ...Object.entries(primitiveTokens).map(([k, v]) => ({ name: `--fc-${k}`, value: v })),
+  // Semantic roles, resolved to the primitive's hex. A component reads `--fc-surface-primary`
+  // and never learns which neutral it is.
+  ...Object.entries(lightSemantic).map(([k, v]) => ({
+    name: `--fc-${k}`,
+    value: resolveSemantic(v, 'light'),
+  })),
+  // Spacing / radius / elevation / motion / breakpoints / grid / icons / component dims.
+  ...Object.entries(designTokens)
+    .filter(([k]) => !(k in primitiveTokens))
+    .map(([k, v]) => ({ name: `--fc-${k}`, value: renderScale(k, v) })),
+  // Typography: one var per variant per property, so CSS can compose them.
+  ...Object.entries(fcType).flatMap(([variant, t]) => [
+    { name: `--fc-type-${variant}-size`, value: `${t.size}px` },
+    { name: `--fc-type-${variant}-line`, value: `${t.line}px` },
+    { name: `--fc-type-${variant}-weight`, value: String(t.weight) },
+    { name: `--fc-type-${variant}-family`, value: `var(--fc-font-${t.family})` },
+  ]),
 ];
+/**
+ * Resolve a semantic token's primitive NAME to the hex it names, per theme.
+ *
+ * The critical foregrounds are the one ramp with DIFFERENT values per theme (light
+ * `positive-critical` is `#285A42`, dark is `#7CB399`), so the ramp consulted depends on
+ * the theme. Every other primitive is theme-independent and resolves the same way.
+ *
+ * A semantic token may also carry a literal rgba tint directly (the `*-subtle` surface
+ * fills); a literal is passed through verbatim, because tokens.ts is the colour-exempt
+ * file where a derived tint is written down once.
+ *
+ * A name that exists in neither ramp is a hard error: a silently-missing token renders
+ * as `var(--fc-x)` and an invisible border, which is the failure this prevents.
+ */
+function resolveSemantic(name: string, theme: 'light' | 'dark'): string {
+  if (name.startsWith('rgba(') || name.startsWith('rgb(')) return name;
+  const ramp = theme === 'dark' ? { ...primitiveTokens, ...criticalDark } : (primitiveTokens as Record<string, string>);
+  const hex = ramp[name];
+  if (hex === undefined) {
+    throw new Error(`semantic token '${name}' (${theme}) names no primitive — add it to primitiveTokens`);
+  }
+  return hex;
+}
+/** A non-colour scale entry rendered for CSS: numbers get `px`, strings verbatim. */
+function renderScale(key: string, value: unknown): string {
+  if (typeof value === 'number') {
+    // Durations, easings and unitless ratios are the exception: the FUDCourt scales that
+    // carry a `px` meaning are the ones whose names say so.
+    if (key.startsWith('motion-') || key.startsWith('ease-') || key === 'realtime-flash') {
+      return `${value}ms`;
+    }
+    return `${value}px`;
+  }
+  return String(value);
+}
 
 function renderRootBlock(): string {
   const lines = [SENTINEL_START, ':root {'];
@@ -84,6 +148,12 @@ function renderRootBlock(): string {
   lines.push('}');
   lines.push('.dark {');
   for (const [k, v] of Object.entries(darkColor)) lines.push(`  --fc-color-${k}: ${v};`);
+  // FUDCourt semantic overrides: the SAME key set as `:root`, different primitive
+  // mappings. Emitting them here is what makes `.dark` a first-class theme rather than
+  // a partial patch, and it is what the parity test reads back.
+  for (const [k, v] of Object.entries(darkSemantic)) {
+    lines.push(`  --fc-${k}: ${resolveSemantic(v, 'dark')};`);
+  }
   lines.push('}');
   lines.push('@media (prefers-reduced-motion: reduce) {');
   lines.push('  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }');
@@ -95,14 +165,25 @@ function renderRootBlock(): string {
 function tokensJson(): Record<string, unknown> {
   const colors: Record<string, string> = {};
   for (const k of Object.keys(color)) colors[k] = `var(--fc-color-${k})`;
+  // The FUDCourt semantic layer, so a Tailwind utility can reach a semantic role
+  // (`bg-surface-primary`, `text-text-muted`) without knowing a primitive.
+  for (const k of Object.keys(lightSemantic)) colors[k] = `var(--fc-${k})`;
   const spacing: Record<string, string> = {};
   for (const [k, v] of Object.entries(space)) spacing[k] = `${v}px`;
+  for (const [k, v] of Object.entries(designTokens)) {
+    if (typeof v === 'number' && !k.startsWith('motion-') && !k.startsWith('ease-') && k !== 'realtime-flash') {
+      spacing[k] = `${v}px`;
+    }
+  }
   const borderRadius: Record<string, string> = {};
   for (const k of Object.keys(radius)) borderRadius[k] = `var(--fc-radius-${k})`;
+  for (const k of Object.keys(fcRadius)) borderRadius[k] = `var(--fc-${k})`;
   const fontSizeMap: Record<string, string> = {};
   for (const k of Object.keys(fontSize)) fontSizeMap[k] = `var(--fc-font-size-${k})`;
   const fontFamilyMap: Record<string, string[]> = {};
   for (const k of Object.keys(fontFamily)) fontFamilyMap[k] = [`var(--fc-font-${k})`];
+  fontFamilyMap['sans'] = ['var(--fc-font-sans)'];
+  fontFamilyMap['mono'] = ['var(--fc-font-mono)'];
   return { colors, spacing, borderRadius, fontSize: fontSizeMap, fontFamily: fontFamilyMap };
 }
 

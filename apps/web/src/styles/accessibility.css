@@ -1,0 +1,96 @@
+/**
+ * accessibility.css — the FUDCourt accessibility contract as CSS.
+ *
+ * Target: WCAG 2.2 AA globally, AAA for critical financial foregrounds (the critical
+ * foreground tokens live in `tokens.ts` and are enforced by the contrast tests). This file
+ * carries the three things that must be true regardless of which atom is on screen:
+ *
+ *   1. a focus indicator that is never removed, only replaced with an equal-or-better one,
+ *   2. a screen-reader-only utility that keeps content in the accessibility tree,
+ *   3. the forced-colors contract, so a Windows high-contrast user gets borders and focus.
+ *
+ * The focus ring is `--fc-focus-ring` (orange-500 light / orange-400 dark), 2px with a 2px
+ * offset, which clears the plan's ≥3:1 focus-indicator target against both theme
+ * backgrounds. It is applied on `:focus-visible` so a pointer user never sees it and a
+ * keyboard user always does.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Focus. `:focus-visible` rather than `:focus`: a mouse click on a button must
+ * not paint a ring, a Tab must. `:focus` is kept as a fallback for browsers
+ * without `:focus-visible` support, with the same treatment.
+ * ------------------------------------------------------------------------- */
+.fc-focus-ring:focus-visible,
+.fc-focus-ring:focus {
+  outline: var(--fc-focus-ring-width) solid var(--fc-focus-ring);
+  outline-offset: var(--fc-focus-ring-offset);
+}
+
+/* ---------------------------------------------------------------------------
+ * Screen-reader-only. Content stays in the accessibility tree (so a screen
+ * reader announces it) but is removed from the visual layout. The 1px box and
+ * `clip-path` are what keep it out of the scrollable area — `display: none` and
+ * `visibility: hidden` would remove it from the tree entirely, which is the
+ * bug this utility exists to prevent.
+ * ------------------------------------------------------------------------- */
+.fc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Becomes visible when focused — the skip-link pattern. */
+.fc-sr-only-focusable:focus,
+.fc-sr-only-focusable:focus-visible {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+}
+
+/* ---------------------------------------------------------------------------
+ * Disabled semantics. A disabled control is not merely dimmed — it is removed
+ * from the tab order and marked not-editable, so a keyboard user cannot land
+ * on something that will not respond. `pointer-events: none` is what stops a
+ * stray click from firing a handler a component forgot to guard.
+ * ------------------------------------------------------------------------- */
+.fc-disabled,
+.fc-disabled > * {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.fc-disabled {
+  opacity: 0.55;
+}
+
+/* ---------------------------------------------------------------------------
+ * Forced colors (Windows high contrast). The design system's borders are
+ * semantic and would vanish in a forced-colors palette, so every atom that
+ * draws a boundary also carries this class and gets a system-colour border
+ * back. Focus keeps its ring: the outline colour is forced, the width is not.
+ * ------------------------------------------------------------------------- */
+@media (forced-colors: active) {
+  .fc-forced-border {
+    border: 1px solid CanvasText;
+  }
+
+  .fc-focus-ring:focus-visible,
+  .fc-focus-ring:focus {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  .fc-sr-only {
+    clip-path: none;
+  }
+}

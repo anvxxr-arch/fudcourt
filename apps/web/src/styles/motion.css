@@ -1,0 +1,70 @@
+/**
+ * motion.css — the FUDCourt minimal utility motion layer.
+ *
+ * Philosophy: minimal, utility-first, fast, predictable, non-distracting. Durations and
+ * easings are tokens (`--fc-motion-*`, `--fc-ease-*`); this file composes them into the five
+ * semantic presets the plan names, so a component picks a PRESET rather than choosing a
+ * duration and a curve by hand.
+ *
+ * `transition-all` is deliberately absent. A preset names the properties it animates, which
+ * is what keeps a hover from animating a layout property it has no business touching.
+ */
+
+/* interactive — a control responding to pointer/focus. Fast, no layout change. */
+.fc-motion-interactive {
+  transition-property: background-color, border-color, color, box-shadow, opacity;
+  transition-duration: var(--fc-motion-fast);
+  transition-timing-function: var(--fc-ease-standard);
+}
+
+/* overlay — a popover or dialog entering/leaving. */
+.fc-motion-overlay {
+  transition-property: opacity, transform;
+  transition-duration: var(--fc-motion-panel);
+  transition-timing-function: var(--fc-ease-enter);
+}
+
+/* navigation — a view or panel swap. */
+.fc-motion-navigation {
+  transition-property: opacity, transform;
+  transition-duration: var(--fc-motion-base);
+  transition-timing-function: var(--fc-ease-standard);
+}
+
+/* panel — a resizable/collapsible region settling. */
+.fc-motion-panel {
+  transition-property: width, height, flex-basis, transform;
+  transition-duration: var(--fc-motion-panel);
+  transition-timing-function: var(--fc-ease-standard);
+}
+
+/* realtime — the semantic flash on a live value. Short by contract. */
+.fc-motion-realtime {
+  transition-property: background-color, color;
+  transition-duration: var(--fc-realtime-flash);
+  transition-timing-function: var(--fc-ease-standard);
+}
+
+/* ---------------------------------------------------------------------------
+ * Reduced motion. The generated block in globals.css collapses every transition
+ * and animation to 0.01ms; this rule goes one step further for the presets that
+ * carry a transform, removing the movement entirely rather than making it
+ * instantaneous. A reduced-motion user still gets the state change — colour,
+ * opacity — just not the travel.
+ * ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .fc-motion-interactive,
+  .fc-motion-overlay,
+  .fc-motion-navigation,
+  .fc-motion-panel,
+  .fc-motion-realtime {
+    transition-property: opacity, background-color, color;
+    transition-duration: 0.01ms;
+  }
+
+  .fc-motion-overlay,
+  .fc-motion-navigation,
+  .fc-motion-panel {
+    transform: none !important;
+  }
+}

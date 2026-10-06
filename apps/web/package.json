@@ -6,7 +6,7 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "bun --bun next start -p 3000",
-    "test:shapers": "bun test --preload ./tests/preload.ts --timeout 20000 $(ls tests/*-tests.ts | grep -v design-system-tests | sed 's|^|./|')",
+    "test:shapers": "bun test --preload ./tests/preload.ts --timeout 20000 ./tests/*-tests.ts",
     "verify:executor": "cd ../.. && go test -count=1 -race ./apps/executor/internal/tests/e2e/...",
     "record:fixtures": "cd ../.. && bun tests/oracle/record-fixtures.ts",
     "dump:envelopes": "cd ../.. && bun tests/oracle/dump-envelopes.ts",

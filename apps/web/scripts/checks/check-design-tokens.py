@@ -355,10 +355,24 @@ def scan_dead_tokens() -> None:
         text = re.sub(rf"{re.escape(SENTINEL_START)}[\s\S]*?{re.escape(SENTINEL_END)}", "", text)
         haystacks.append(text)
 
+    # A DERIVED AGGREGATE is an export whose body is only spreads of other exports
+    # (`...primitiveTokens, ...fcSpace, …`). Its keys are NOT independent tokens — they are
+    # the parents' keys re-listed for a consumer that wants one flat namespace. Vouching for
+    # them individually would demand a second, redundant mention of every key; the honest
+    # rule is that the PARENT's consumers keep them alive. A hand-written key inside an
+    # aggregate (not a spread) is still a real token and is still checked.
+    aggregates: set[str] = set()
+    for parent, body in EXPORT_BLOCK.findall(TOKENS_TS.read_text(encoding="utf-8")):
+        if re.fullmatch(r"(?:\.\.\.\w+\s*,?\s*)+", body.strip()):
+            aggregates.add(parent)
     for parent, entries in exports.items():
         for key, raw_value in entries.items():
             # `0`-valued scale entries are anchors, not choices — see the header.
             if raw_value.strip() in ("0", "'0'", '"0"', "0.0"):
+                continue
+            # A key that only appears inside a derived aggregate is vouched for by its
+            # parent ramp, not by this export — skip it here.
+            if parent in aggregates and raw_value.strip().startswith("..."):
                 continue
             access = re.compile(
                 rf"\b{re.escape(parent)}\s*(?:\.\s*{re.escape(key)}(?![\w$])"

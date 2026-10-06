@@ -1,0 +1,148 @@
+/**
+ * theme.css — the FUDCourt semantic theme layer.
+ *
+ * The custom properties themselves are GENERATED into
+ * `src/app/(frontend)/globals.css` between the design-tokens sentinels by
+ * `scripts/design/emit-tokens.ts` — this file does not redeclare them. What lives here is
+ * the part of the theme that is behaviour rather than data:
+ *
+ *   1. the font faces (self-hosted, no CDN, no duplicate copies),
+ *   2. the base element rules that apply the semantic roles,
+ *   3. the realtime-flash keyframes the `Price` atom opts into,
+ *   4. the status-atom keyframes,
+ *   5. the reduced-motion contract.
+ *
+ * Imported once from the design system's stylesheet entry. Nothing here references a
+ * primitive by name — a raw hex in this file would be a gate violation.
+ *
+ * The font faces are imported from `globals.css` directly (not from here): Turbopack
+ * resolves a package specifier from the entry stylesheet but not from a nested `@import`,
+ * and the fonts must load before any of the classes below resolve a `var(--fc-…)`.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Base element rules. Every value is a semantic role, so a theme flip needs no
+ * second rule — the `.dark` block in globals.css re-points the same var.
+ * ------------------------------------------------------------------------- */
+.fc-root {
+  background-color: var(--fc-background);
+  color: var(--fc-text-primary);
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-body-md-size);
+  line-height: var(--fc-type-body-md-line);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Financial numerics never shift width when a digit changes. */
+.fc-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* ---------------------------------------------------------------------------
+ * Selection. A themed selection rather than the browser default, which would
+ * otherwise be the UA blue in both themes.
+ * ------------------------------------------------------------------------- */
+::selection {
+  background-color: var(--fc-selection);
+  color: var(--fc-text-primary);
+}
+
+/* ---------------------------------------------------------------------------
+ * Realtime flash. A semantic flash of 150–250ms then back to neutral — the
+ * plan's "never animate live trading numbers like slot-machine wheels". The
+ * `Price` atom opts in by toggling the class; the colour it flashes to is the
+ * direction's semantic role, so a positive tick and a negative tick are
+ * distinguishable without reading the number.
+ * ------------------------------------------------------------------------- */
+@keyframes fc-flash-positive {
+  from {
+    background-color: var(--fc-positive-subtle);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@keyframes fc-flash-negative {
+  from {
+    background-color: var(--fc-negative-subtle);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.fc-flash-positive {
+  animation: fc-flash-positive var(--fc-realtime-flash) var(--fc-ease-standard);
+}
+
+.fc-flash-negative {
+  animation: fc-flash-negative var(--fc-realtime-flash) var(--fc-ease-standard);
+}
+
+/* ---------------------------------------------------------------------------
+ * Status-atom keyframes. Referenced by `StatusDot` (live pulse), `Spinner`
+ * (rotation), `Skeleton` (pulse) and `Progress` (indeterminate slide).
+ * ------------------------------------------------------------------------- */
+@keyframes fc-dot-pulse {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fc-skeleton-pulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fc-progress-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Reduced motion. The generated block in globals.css already collapses
+ * transitions and animations to 0.01ms; this rule goes further and removes the
+ * movement entirely, so a reduced-motion user gets the state change with no
+ * visual event at all. A busy indicator keeps its colour but stops travelling.
+ * ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .fc-flash-positive,
+  .fc-flash-negative {
+    animation: none;
+    background-color: transparent;
+  }
+
+  .fc-status-dot-live > span:first-child,
+  .fc-spinner > span:first-child,
+  .fc-skeleton {
+    animation: none;
+  }
+
+  .fc-spinner > span:first-child {
+    border-top-color: var(--fc-brand-primary);
+  }
+
+  .fc-skeleton {
+    opacity: 0.8;
+  }
+}

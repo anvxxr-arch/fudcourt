@@ -1,0 +1,150 @@
+/**
+ * typography.css — the FUDCourt type scale as composable classes.
+ *
+ * The scale itself is data (`fcType` in `src/styles/tokens.ts`), emitted as
+ * `--fc-type-<variant>-size|line|weight|family` custom properties. This file turns each
+ * variant into one class so a component applies a whole variant with a single name rather
+ * than re-deriving four properties.
+ *
+ * The rule the plan is explicit about: Geist Mono is for financial and technical numerics
+ * ONLY. `data-*` variants are mono + tabular; every other variant is Plus Jakarta Sans.
+ * Narrative numbers in article text do NOT get mono — `body-*` stays sans.
+ */
+
+/* Display — the largest statements. Rare: a hero metric, a page title. */
+.fc-display-xl {
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-display-xl-size);
+  line-height: var(--fc-type-display-xl-line);
+  font-weight: var(--fc-type-display-xl-weight);
+  letter-spacing: -0.02em;
+}
+
+.fc-display-lg {
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-display-lg-size);
+  line-height: var(--fc-type-display-lg-line);
+  font-weight: var(--fc-type-display-lg-weight);
+  letter-spacing: -0.02em;
+}
+
+/* Headings. */
+.fc-heading-xl {
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-heading-xl-size);
+  line-height: var(--fc-type-heading-xl-line);
+  font-weight: var(--fc-type-heading-xl-weight);
+  letter-spacing: -0.01em;
+}
+
+.fc-heading-lg {
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-heading-lg-size);
+  line-height: var(--fc-type-heading-lg-line);
+  font-weight: var(--fc-type-heading-lg-weight);
+  letter-spacing: -0.01em;
+}
+
+.fc-heading-md {
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-heading-md-size);
+  line-height: var(--fc-type-heading-md-line);
+  font-weight: var(--fc-type-heading-md-weight);
+}
+
+.fc-heading-sm {
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-heading-sm-size);
+  line-height: var(--fc-type-heading-sm-line);
+  font-weight: var(--fc-type-heading-sm-weight);
+}
+
+/* Body. */
+.fc-body-lg {
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-body-lg-size);
+  line-height: var(--fc-type-body-lg-line);
+  font-weight: var(--fc-type-body-lg-weight);
+}
+
+.fc-body-md {
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-body-md-size);
+  line-height: var(--fc-type-body-md-line);
+  font-weight: var(--fc-type-body-md-weight);
+}
+
+.fc-body-sm {
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-body-sm-size);
+  line-height: var(--fc-type-body-sm-line);
+  font-weight: var(--fc-type-body-sm-weight);
+}
+
+/* Labels — UI control text, table headers, field captions. */
+.fc-label-lg {
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-label-lg-size);
+  line-height: var(--fc-type-label-lg-line);
+  font-weight: var(--fc-type-label-lg-weight);
+}
+
+.fc-label-md {
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-label-md-size);
+  line-height: var(--fc-type-label-md-line);
+  font-weight: var(--fc-type-label-md-weight);
+}
+
+.fc-label-sm {
+  font-family: var(--fc-font-sans);
+  font-size: var(--fc-type-label-sm-size);
+  line-height: var(--fc-type-label-sm-line);
+  font-weight: var(--fc-type-label-sm-weight);
+}
+
+/* Data — Geist Mono + tabular. Every frequently-changing financial numeric. */
+.fc-data-display {
+  font-family: var(--fc-font-mono);
+  font-size: var(--fc-type-data-display-size);
+  line-height: var(--fc-type-data-display-line);
+  font-weight: var(--fc-type-data-display-weight);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.fc-data-lg {
+  font-family: var(--fc-font-mono);
+  font-size: var(--fc-type-data-lg-size);
+  line-height: var(--fc-type-data-lg-line);
+  font-weight: var(--fc-type-data-lg-weight);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.fc-data-md {
+  font-family: var(--fc-font-mono);
+  font-size: var(--fc-type-data-md-size);
+  line-height: var(--fc-type-data-md-line);
+  font-weight: var(--fc-type-data-md-weight);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.fc-data-sm {
+  font-family: var(--fc-font-mono);
+  font-size: var(--fc-type-data-sm-size);
+  line-height: var(--fc-type-data-sm-line);
+  font-weight: var(--fc-type-data-sm-weight);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.fc-data-xs {
+  font-family: var(--fc-font-mono);
+  font-size: var(--fc-type-data-xs-size);
+  line-height: var(--fc-type-data-xs-line);
+  font-weight: var(--fc-type-data-xs-weight);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
