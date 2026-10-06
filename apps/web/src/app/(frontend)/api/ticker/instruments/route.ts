@@ -24,6 +24,19 @@ import {
   type TypeInstrumentSummary,
 } from '@/features/market/ticker/venues';
 
+/**
+ * Browser/shared-cache lifetime for a SUCCESSFUL body, derived from the same
+ * TICKER_TTL_MS the in-process validated cache uses, so the two never
+ * disagree: a body the route would still serve from its own cache is also
+ * fresh for a downstream cache. The board route (/api/ticker) has carried
+ * this header since the perf pass; the two detail endpoints did not, which
+ * meant every navigation re-requested metadata the server had just served.
+ *
+ * Only successful bodies carry it — a 400 (bad strike, unknown base) or a
+ * 502 (upstream failure) must never be cached, and those return early
+ * without it.
+ */
+const CACHE_CONTROL = `public, max-age=${Math.floor(TICKER_TTL_MS / 1000)}`;
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
@@ -121,14 +134,16 @@ export async function GET(req: Request) {
   const key = `symbol=${symbol}`;
   const cached = takeValid(key);
   if (cached) {
-    return NextResponse.json(cached.body, { headers: { 'X-Cache': 'HIT' } });
+    return NextResponse.json(cached.body, {
+      headers: { 'X-Cache': 'HIT', 'Cache-Control': CACHE_CONTROL },
+    });
   }
   const pending = validInflight.get(key);
   if (pending) {
     const shared = await pending;
     return NextResponse.json(shared.body, {
       status: shared.status,
-      headers: { 'X-Cache': 'COALESCED' },
+      headers: { 'X-Cache': 'COALESCED', 'Cache-Control': CACHE_CONTROL },
     });
   }
 
@@ -254,7 +269,10 @@ export async function GET(req: Request) {
     if (winner.status === 200) {
       storeValid(key, { at: Date.now(), body: winner.body });
     }
-    return NextResponse.json(winner.body, { status: winner.status, headers: { 'X-Cache': 'MISS' } });
+    return NextResponse.json(winner.body, {
+      status: winner.status,
+      headers: { 'X-Cache': 'MISS', 'Cache-Control': CACHE_CONTROL },
+    });
   } finally {
     validInflight.delete(key);
   }
