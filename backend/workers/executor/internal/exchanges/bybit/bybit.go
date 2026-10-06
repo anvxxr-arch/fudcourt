@@ -526,18 +526,18 @@ func (b *Bybit) GetOrder(ctx context.Context, symbol, exchangeOrderID string) (e
 func (b *Bybit) GetOpenOrders(ctx context.Context, symbol string) ([]execution.NormalizedOrder, error) {
 	venueSymbol, err := exchanges.ToVenueSymbol(symbol, execution.ExchangeBybit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get open orders: %w", err)
 	}
 	q := url.Values{}
 	q.Set("category", b.category())
 	q.Set("symbol", venueSymbol)
 	var result json.RawMessage
 	if err := b.do(ctx, http.MethodGet, "/v5/order/realtime", q, nil, &result); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get open orders: %w", err)
 	}
 	rows, err := parseOrders(result)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse open orders: %w", err)
 	}
 	orders := make([]execution.NormalizedOrder, 0, len(rows))
 	for _, row := range rows {
@@ -558,18 +558,18 @@ func (b *Bybit) GetOpenOrders(ctx context.Context, symbol string) ([]execution.N
 func (b *Bybit) GetFills(ctx context.Context, symbol string) ([]execution.Fill, error) {
 	venueSymbol, err := exchanges.ToVenueSymbol(symbol, execution.ExchangeBybit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get fills: %w", err)
 	}
 	q := url.Values{}
 	q.Set("category", b.category())
 	q.Set("symbol", venueSymbol)
 	var result json.RawMessage
 	if err := b.do(ctx, http.MethodGet, "/v5/execution/list", q, nil, &result); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get fills: %w", err)
 	}
 	rows, err := parseExecutions(result)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse fills: %w", err)
 	}
 	fills := make([]execution.Fill, 0, len(rows))
 	for _, row := range rows {
@@ -659,7 +659,7 @@ func mapOrderLookupFailure(err error) error {
 	if errors.As(err, &ve) && ve.Code == codeOrderNotExist {
 		return fmt.Errorf("%w: %w", exchanges.ErrOrderNotFound, err)
 	}
-	return err
+	return fmt.Errorf("look up order: %w", err)
 }
 
 // signedQuantity renders the signed one-way quantity: Buy → +size, Sell → -size.

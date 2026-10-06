@@ -486,7 +486,7 @@ func (m *MEXC) fetchOrCancelOrder(ctx context.Context, op, symbol, exchangeOrder
 func (m *MEXC) GetOpenOrders(ctx context.Context, symbol string) ([]execution.NormalizedOrder, error) {
 	venueSym, err := exchanges.ToVenueSymbol(symbol, execution.ExchangeMEXC)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get open orders: %w", err)
 	}
 	path := pathSpotOpenOrders
 	if m.mkt != execution.MarketSpot {
@@ -494,14 +494,14 @@ func (m *MEXC) GetOpenOrders(ctx context.Context, symbol string) ([]execution.No
 	}
 	payload, _, err := m.do(ctx, "get open orders", http.MethodGet, path, url.Values{"symbol": {venueSym}}, true)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get open orders: %w", err)
 	}
 	items, err := parseOrderList(payload, symbol)
 	if errors.Is(err, errMalformedPayload) {
 		return nil, m.malformed("get open orders")
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse open orders: %w", err)
 	}
 	return items, nil
 }
@@ -518,7 +518,7 @@ func (m *MEXC) GetOpenOrders(ctx context.Context, symbol string) ([]execution.No
 func (m *MEXC) GetFills(ctx context.Context, symbol string) ([]execution.Fill, error) {
 	venueSym, err := exchanges.ToVenueSymbol(symbol, execution.ExchangeMEXC)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get fills: %w", err)
 	}
 	path := pathSpotMyTrades
 	if m.mkt != execution.MarketSpot {
@@ -526,7 +526,7 @@ func (m *MEXC) GetFills(ctx context.Context, symbol string) ([]execution.Fill, e
 	}
 	payload, _, err := m.do(ctx, "get fills", http.MethodGet, path, url.Values{"symbol": {venueSym}}, true)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get fills: %w", err)
 	}
 	fills, err := parseFills(payload, m.clock.Now())
 	if err != nil {
@@ -659,11 +659,11 @@ func validateOrderRequest(req execution.OrderRequest) error {
 		return fmt.Errorf("%w: unknown order type %q", exchanges.ErrInvalidOrder, req.OrderType)
 	}
 	if err := positiveDecimal(req.Quantity, "quantity"); err != nil {
-		return err
+		return fmt.Errorf("validate order request: %w", err)
 	}
 	if req.OrderType == "limit" {
 		if err := positiveDecimal(req.Price, "price"); err != nil {
-			return err
+			return fmt.Errorf("validate order request: %w", err)
 		}
 	} else if req.Price != "" {
 		return fmt.Errorf("%w: market orders must not carry a price", exchanges.ErrInvalidOrder)

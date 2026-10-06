@@ -3,6 +3,7 @@ package mexc
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -361,13 +362,13 @@ func parseOrderType(obj rawJSON, fallback string) string {
 func parseOrderList(raw json.RawMessage, symbol string) ([]execution.NormalizedOrder, error) {
 	objs, err := objectList(raw)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse open orders: %w", err)
 	}
 	orders := make([]execution.NormalizedOrder, 0, len(objs))
 	for _, obj := range objs {
 		order, err := parseOrder(obj, orderFallback{symbol: symbol})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parse open orders: %w", err)
 		}
 		orders = append(orders, order)
 	}
@@ -589,7 +590,7 @@ func parseTicker(payload json.RawMessage, symbol string, now int64) (execution.T
 func parseFills(payload json.RawMessage, nowMs int64) ([]execution.Fill, error) {
 	items, err := objectList(payload)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse fills: %w", err)
 	}
 	fills := make([]execution.Fill, 0, len(items))
 	for _, item := range items {

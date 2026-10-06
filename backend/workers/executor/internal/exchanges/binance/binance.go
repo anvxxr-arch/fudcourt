@@ -16,6 +16,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -488,13 +489,13 @@ func (b *Binance) fetchOrMutate(ctx context.Context, method, path, symbol, excha
 func (b *Binance) GetOpenOrders(ctx context.Context, symbol string) ([]execution.NormalizedOrder, error) {
 	vsym, err := exchanges.ToVenueSymbol(symbol, venueID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get open orders: %w", err)
 	}
 	q := &query{}
 	q.add("symbol", vsym)
 	var raws []orderWire
 	if err := b.call(ctx, http.MethodGet, "/api/v3/openOrders", q, true, "GET /api/v3/openOrders", &raws); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get open orders: %w", err)
 	}
 	out := make([]execution.NormalizedOrder, 0, len(raws))
 	for _, raw := range raws {
@@ -510,13 +511,13 @@ func (b *Binance) GetOpenOrders(ctx context.Context, symbol string) ([]execution
 func (b *Binance) GetFills(ctx context.Context, symbol string) ([]execution.Fill, error) {
 	vsym, err := exchanges.ToVenueSymbol(symbol, venueID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get fills: %w", err)
 	}
 	q := &query{}
 	q.add("symbol", vsym)
 	var raws []tradeWire
 	if err := b.call(ctx, http.MethodGet, "/api/v3/myTrades", q, true, "GET /api/v3/myTrades", &raws); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get fills: %w", err)
 	}
 	out := make([]execution.Fill, 0, len(raws))
 	for _, t := range raws {
