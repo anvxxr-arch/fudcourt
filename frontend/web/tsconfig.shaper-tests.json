@@ -59,6 +59,7 @@
     "tests/routing-tests.ts",
     "tests/imf-tests.ts",
     "tests/mappool-tests.ts",
+    "tests/market-route-tests.ts",
     "tests/median-tests.ts",
     "tests/economy-tests.ts",
     "tests/regime-tests.ts",

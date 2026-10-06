@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/server/db';
 import { requireMutationAuth } from '@/server/auth';
+import { failInternal } from '../../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -36,9 +37,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     await query(`UPDATE transactions SET ${sets.join(', ')} WHERE id = ?`, params_arr);
 
     const rows = await query('SELECT * FROM transactions WHERE id = ?', [id]);
-    return NextResponse.json(rows[0] || {});
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    if (rows.length === 0) return NextResponse.json({ error: 'not found' }, { status: 404 });
+    return NextResponse.json(rows[0]);
+  } catch (e: unknown) {
+    return failInternal(e);
   }
 }
 
@@ -73,9 +75,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await query(`UPDATE transactions SET ${sets.join(', ')} WHERE id = ?`, params_arr);
 
     const rows = await query('SELECT * FROM transactions WHERE id = ?', [id]);
-    return NextResponse.json(rows[0] || {});
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    if (rows.length === 0) return NextResponse.json({ error: 'not found' }, { status: 404 });
+    return NextResponse.json(rows[0]);
+  } catch (e: unknown) {
+    return failInternal(e);
   }
 }
 
@@ -91,7 +94,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     await query('DELETE FROM transactions WHERE id = ?', [id]);
     return NextResponse.json({ deleted: true, id, row: before[0] });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return failInternal(e);
   }
 }

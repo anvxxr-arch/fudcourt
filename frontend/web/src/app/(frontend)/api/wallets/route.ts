@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/server/db';
 import { requireMutationAuth } from '@/server/auth';
+import { failInternal } from '../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -9,8 +10,8 @@ export async function GET() {
   try {
     const wallets = await query('SELECT * FROM wallets ORDER BY rowid');
     return NextResponse.json(wallets);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return failInternal(e);
   }
 }
 
@@ -34,8 +35,9 @@ export async function POST(req: Request) {
     await query(`UPDATE wallets SET ${sets.join(', ')} WHERE address = ?`, params);
     
     const updated = await query('SELECT * FROM wallets WHERE address = ?', [address]);
-    return NextResponse.json(updated[0] || {});
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    if (updated.length === 0) return NextResponse.json({ error: 'not found' }, { status: 404 });
+    return NextResponse.json(updated[0]);
+  } catch (e: unknown) {
+    return failInternal(e);
   }
 }

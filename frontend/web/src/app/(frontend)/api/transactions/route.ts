@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/server/db';
 import { requireMutationAuth } from '@/server/auth';
+import { fail, failInternal } from '../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -8,8 +9,19 @@ export const revalidate = 0;
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '100');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const intParam = (name: string, raw: string | null, dflt: number, min: number, max: number): number | string => {
+      if (raw === null) return dflt;
+      if (!/^\d+$/.test(raw)) return `${name} must be an integer, got '${raw}'`;
+      const v = Number(raw);
+      if (v < min || v > max) return `${name} must be between ${min} and ${max}, got ${v}`;
+      return v;
+    };
+    const limitVal = intParam('limit', searchParams.get('limit'), 100, 1, 500);
+    if (typeof limitVal === 'string') return fail(limitVal, 400, 'limit');
+    const limit = limitVal;
+    const offsetVal = intParam('offset', searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
+    if (typeof offsetVal === 'string') return fail(offsetVal, 400, 'offset');
+    const offset = offsetVal;
     const search = searchParams.get('search') || '';
     const chain = searchParams.get('chain') || '';
     const venue = searchParams.get('venue') || '';
@@ -57,8 +69,8 @@ export async function GET(request: Request) {
       total: (countRes[0] as any).c,
       limit, offset, search, chain, venue, direction, fromDate, toDate
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return failInternal(e);
   }
 }
 
@@ -72,11 +84,15 @@ export async function POST(req: Request) {
     if (body.bulk && Array.isArray(body.transactions)) {
       const results = [];
       for (const tx of body.transactions) {
-        const amt = parseFloat(tx.amount_usd) || 0;
+        const parsedAmt = Number(tx.amount_usd);
+        if (tx.amount_usd === undefined || tx.amount_usd === null || tx.amount_usd === '' || !Number.isFinite(parsedAmt)) {
+          return fail(`amount_usd must be a finite number, got '${tx.amount_usd ?? ''}'`, 400, 'amount_usd');
+        }
+        const amt = parsedAmt;
         const dir = tx.direction || (amt >= 0 ? 'IN' : 'OUT');
-        await query(
+        const insertedRows = await query(
           `INSERT INTO transactions (date, chain, asset, event, amount_usd, direction, memo, wallet_to, venue_id, trade_id, hash, url, source)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
           [
             tx.date || new Date().toISOString().slice(0, 10),
             tx.chain || 'Offchain',
@@ -93,8 +109,7 @@ export async function POST(req: Request) {
             tx.source || 'manual'
           ]
         );
-        const r = await query('SELECT * FROM transactions ORDER BY id DESC LIMIT 1');
-        results.push(r[0]);
+        results.push(insertedRows[0]);
       }
       return NextResponse.json({ inserted: results.length, transactions: results });
     }
@@ -109,12 +124,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'date and event required' }, { status: 400 });
     }
 
-    const amt = parseFloat(amount_usd) || 0;
+    const parsedAmt = Number(amount_usd);
+    if (amount_usd === undefined || amount_usd === null || amount_usd === '' || !Number.isFinite(parsedAmt)) {
+      return fail(`amount_usd must be a finite number, got '${amount_usd ?? ''}'`, 400, 'amount_usd');
+    }
+    const amt = parsedAmt;
     const dir = direction || (amt >= 0 ? 'IN' : 'OUT');
-
-    await query(
+    const insertedRows = await query(
       `INSERT INTO transactions (date, chain, asset, event, amount_usd, direction, memo, wallet_to, venue_id, trade_id, hash, url, source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
       [
         date || new Date().toISOString().slice(0, 10),
         chain || 'Offchain',
@@ -132,10 +150,9 @@ export async function POST(req: Request) {
       ]
     );
 
-    const rows = await query('SELECT * FROM transactions ORDER BY id DESC LIMIT 1');
-    return NextResponse.json(rows[0]);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json(insertedRows[0]);
+  } catch (e: unknown) {
+    return failInternal(e);
   }
 }
 
@@ -155,8 +172,8 @@ export async function DELETE(req: Request) {
     await query(`DELETE FROM transactions WHERE id IN (${placeholders})`, ids);
 
     return NextResponse.json({ deleted: true, count: ids.length });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return failInternal(e);
   }
 }
 
@@ -196,7 +213,7 @@ export async function PUT(req: Request) {
     await query(`UPDATE transactions SET ${sets.join(', ')} WHERE id IN (${placeholders})`, params);
 
     return NextResponse.json({ updated: true, count: ids.length });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    return failInternal(e);
   }
 }
