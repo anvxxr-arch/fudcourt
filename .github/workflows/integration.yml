@@ -4,7 +4,7 @@ name: integration
 #
 #   1. the OFFLINE aggregate (`scripts/verify/verify-all.sh`) — every fast gate
 #      in one pass: structure, web contract, deploy units, contracts drift,
-#      the three Go modules, the Rust crate, hook syntax, web
+#      the single Go module, the Rust crate, hook syntax, web
 #      typecheck + shaper fixtures.
 #   2. the LIVE reconcile contract: starts a Postgres+TimescaleDB service,
 #      applies the schema, seeds a row set, builds the Rust service from this
@@ -39,9 +39,8 @@ jobs:
         with:
           go-version: '1.25.0'
           cache-dependency-path: |
-            backend/api/go.sum
-            backend/workers/executor/go.sum
-            backend/data/go.sum
+            go.mod
+            go.sum
       - uses: dtolnay/rust-toolchain@stable
       - name: Install apps/web deps (structure/contract gates read the tree; shaper tests need deps)
         working-directory: apps/web
@@ -81,7 +80,7 @@ jobs:
         run: |
           set -euo pipefail
           psql -h 127.0.0.1 -U postgres -d fudcourt -v ON_ERROR_STOP=1 \
-            -f database/schema/pg-schema.sql
+            -f db/schema/pg-schema.sql
           psql -h 127.0.0.1 -U postgres -d fudcourt -v ON_ERROR_STOP=1 <<'SQL'
           INSERT INTO wallets (address, label, chain) VALUES
             ('0xseed000000000000000000000000000000000001', 'Main', 'Ethereum'),

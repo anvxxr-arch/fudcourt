@@ -6,7 +6,7 @@ name: contracts
 # workflow's filter) rather than being checked in isolation here.
 #
 # This workflow always RUNS; the check job is skipped when nothing under
-# shared/ moved. See web.yml for why the filter is a job, not a `paths:`.
+# contracts/ moved. See web.yml for why the filter is a job, not a `paths:`.
 on:
   push:
     branches: [main]

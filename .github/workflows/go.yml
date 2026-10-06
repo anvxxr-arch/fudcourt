@@ -1,13 +1,17 @@
 name: go
-# Surface: the four Go modules — backend/data (acquisition sidecar),
-# backend/api (primary backend), backend/bot (the @fudbase_bot Telegram bot),
-# backend/executor (execution engine). They are
-# separate modules joined by go.work; each is still built/vetted/tested on its
-# own so a failure names the owner.
+# Surface: ONE Go module at the repository root (github.com/anvxxr-arch/fudcourt).
+# The four modules this workflow used to build separately (backend/{api,bot,data},
+# backend/workers/executor) were consolidated in Phase 2: the new module path is a
+# strict prefix of all four old ones, so no import path needed rewriting, and the
+# dependency union is exactly the previous union.
 #
-# This workflow always RUNS; the module jobs are skipped by the `changes` gate
-# when nothing under backend/ moved, so a CSS-only PR compiles no Go. See
-# web.yml for why the filter is a job and not a workflow-level `paths:`.
+# A single `go build/vet/test ./...` from the root therefore covers every
+# package, and a failure names its package in the output — which is the same
+# information the old per-module matrix carried, without four toolchain setups.
+#
+# This workflow always RUNS; the build job is skipped by the `changes` gate when
+# nothing Go moved, so a CSS-only PR compiles no Go. See web.yml for why the
+# filter is a job and not a workflow-level `paths:`.
 on:
   push:
     branches: [main]
@@ -18,12 +22,11 @@ defaults:
     shell: bash
 jobs:
   changes:
-    name: "go - which module changed"
+    name: "go - did Go move"
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
     outputs:
-      modules: ${{ steps.filter.outputs.modules }}
       go: ${{ steps.filter.outputs.go }}
     steps:
       - uses: actions/checkout@v5
@@ -31,50 +34,26 @@ jobs:
         id: filter
         with:
           filters: |
-            modules:
-              - 'apps/api/**'
-              - 'apps/bot/**'
-              - 'apps/executor/**'
-              - 'apps/data/**'
-              - 'go.work'
-              - 'go.work.sum'
-              - '.github/workflows/go.yml'
             go:
               - '**/*.go'
+              - 'go.mod'
+              - 'go.sum'
+              - '.github/workflows/go.yml'
   build:
-    name: "go - build, vet, test (${{ matrix.module }})"
+    name: "go - build, vet, test"
     needs: changes
-    if: needs.changes.outputs.modules == 'true' || needs.changes.outputs.go == 'true'
+    if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # backend/data keeps its measured floor (fhttp/tls-client): go 1.24.1.
-          - module: backend/data
-            go: '1.24.1'
-          - module: backend/api
-            go: '1.25.0'
-          - module: backend/bot
-            go: '1.25.0'
-          - module: backend/workers/executor
-            go: '1.25.0'
-    defaults:
-      run:
-        working-directory: ${{ matrix.module }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go }}
-          # backend/api has zero external requires and therefore NO go.sum (it is
-          # neither present nor tracked), so naming it here made the cache key point
-          # at a file that cannot exist. Every module that really has one lives at
-          # <module>/go.sum; backend/api simply resolves to nothing and the cache
-          # still keys on its go.mod via the glob.
+          # The module's own floor: bogdanfinn/tls-client + fhttp require >= 1.24.1,
+          # and the toolchain directive in go.mod pins the rest.
+          go-version: '1.25.0'
           cache-dependency-path: |
-            **/go.mod
-            **/go.sum
+            go.mod
+            go.sum
       - name: Build
         run: go build ./...
       - name: Vet
@@ -92,5 +71,5 @@ jobs:
           echo "build result: ${{ needs.build.result }}"
           case "${{ needs.build.result }}" in
             success|skipped) exit 0 ;;
-            *) echo "::error::go modules failed"; exit 1 ;;
+            *) echo "::error::go surface failed"; exit 1 ;;
           esac
