@@ -229,24 +229,6 @@ VAR_SCHEME = {
     "lightSemantic": "--fc-",
     "darkSemantic": "--fc-",
 }
-# The FUDCourt scales the plan FREEZES. A frozen scale ships complete: the plan fixes every
-# step, and a component reads the step it needs. A step no component reads yet is still an
-# approved step, so the dead-token alarm does not apply to it — the alarm is for a token that
-# was invented without a consumer, not for a step of a scale that is waiting for one.
-FROZEN_SCALES = {
-    "fcSpace",
-    "fcRadius",
-    "elevation",
-    "fcMotion",
-    "breakpoint",
-    "grid",
-    "fcFontFamily",
-    "fcType",
-    "iconSize",
-    "componentTokens",
-    "semanticTokens",
-    "density",
-}
 
 hard: dict[str, list[str]] = {"color": [], "scale": [], "dead": []}
 soft: Counter[str] = Counter()
@@ -312,26 +294,9 @@ def scan_colors(rel: str, line_no: int, line: str) -> None:
 
 def scan_scale(rel: str, line_no: int, line: str) -> None:
     for match in SCALE_NUMBER.finditer(line):
-        value = match.group(1)
-        if value in ("0", "-0", "0.0"):
-            continue
-        # A numeric literal on a scale property is a violation ONLY when it is a design
-        # value. The exceptions are real and narrow: `lineHeight: 1` is the unitless ratio
-        # for a single-line box; `fontWeight` at one of the four approved weights; `zIndex`
-        # under 10 is a local stacking context; `fontSize` under 14 is an icon-adjacent
-        # glyph. See scripts/checks/check-design-system.py for the same rule with its
-        # reasoning, which is the design system's own gate.
-        prop = match.group(0).split(":")[0].strip()
-        if value == "1" and "lineHeight" in match.group(0):
-            continue
-        if prop == "fontWeight" and value in ("400", "500", "600", "700"):
-            continue
-        if prop == "zIndex" and float(value) < 10:
-            continue
-        if prop == "fontSize" and float(value) < 14:
-            continue
-        hard["scale"].append(f"{rel}:{line_no}: scale-literal ({match.group(0).strip()})")
-        return
+        if match.group(1) not in ("0", "-0", "0.0"):
+            hard["scale"].append(f"{rel}:{line_no}: scale-literal ({match.group(0).strip()})")
+            return
     for match in SCALE_STRING.finditer(line):
         body = match.group(2)
         value = body.lower()
@@ -415,7 +380,25 @@ def scan_dead_tokens() -> None:
     exports: dict[str, dict[str, str]] = {}
     for parent, body in EXPORT_BLOCK.findall(TOKENS_TS.read_text(encoding="utf-8")):
         entries: dict[str, str] = {}
-        for entry in body.split(","):
+        # Split the body on commas at brace depth 0. The naive split treated every comma
+        # inside a NESTED object as an entry separator, so `fcType` ('display-xl': { size:
+        # 48, line: 56, weight: 700, family: 'sans' }, …) fabricated top-level keys `line`,
+        # `weight`, `family` from a variant's inner properties, and `density` fabricated
+        # `compact`, `default`, `comfortable` from `density.control` — keys exported nowhere,
+        # referenceable by nothing, so the alarm fired on phantoms no source edit can clear.
+        depth = 0
+        start = 0
+        chunks: list[str] = []
+        for i, ch in enumerate(body):
+            if ch in "{[":
+                depth += 1
+            elif ch in "}]":
+                depth -= 1
+            elif ch == "," and depth == 0:
+                chunks.append(body[start:i])
+                start = i + 1
+        chunks.append(body[start:])
+        for entry in chunks:
             if ":" not in entry:
                 continue
             key, value = entry.split(":", 1)
@@ -423,7 +406,15 @@ def scan_dead_tokens() -> None:
         exports[parent] = entries
 
     haystacks: list[str] = []
-    for path in sources(".ts", ".tsx", ".css", ".scss"):
+    # The header's rule 3 asks whether anything OUTSIDE tokens.ts references the key — so the
+    # reference scan spans the consumer surfaces: src/** and the offline test suites, whose
+    # fixture tables and parity loops (`Object.keys(orangeRamp)` in tests/design-system-tests.ts)
+    # are real references. The generator (scripts/) is the emitted-artifact side and stays out.
+    scan_paths = list(sources(".ts", ".tsx", ".css", ".scss"))
+    tests_dir = ROOT / "tests"
+    if tests_dir.is_dir():
+        scan_paths += sorted(p for p in tests_dir.rglob("*") if p.is_file() and p.suffix in (".ts", ".tsx"))
+    for path in scan_paths:
         if path == TOKENS_TS:
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
@@ -486,13 +477,38 @@ def scan_dead_tokens() -> None:
             if parent_keys and all(k in parent_keys for k, _ in pairs):
                 views[parent] = candidate
             break
-    # A RAMP is a frozen palette, not a menu of choices: the plan fixes every step of the
-    # orange and neutral ramps and the market semantics, and the semantic layer decides
-    # which steps are in use. A ramp step that no semantic role currently names is still a
-    # real token — it is the approved colour for the role that will need it — so the ramp is
-    # vouched for by the semantic layer that consumes it, not by a second mention of every
-    # step. This is the same reasoning as the derived-aggregate rule, one layer up.
-    ramps = {"orangeRamp", "neutralRamp", "marketRamp", "criticalLight", "criticalDark"}
+    # An ITERATION over a family — `Object.keys(fcSpace)` feeding `spaceKeys`, the parity
+    # tests walking `Object.keys(orangeRamp)` — is a reference to every key it exports: the
+    # loop yields whatever the family holds, so a key the family lacks changes what the loop
+    # produces. The whole family is therefore referenced; per-key proof is not demanded of a
+    # consumer that reaches the keys only through the iterator.
+    iterated: set[str] = {
+        m.group(1)
+        for text in haystacks
+        for m in re.finditer(r"Object\.(?:keys|entries|values)\s*\(\s*(\w+)", text)
+        if m.group(1) in exports
+    }
+    # `cssVar('role')` is the semantic layer's documented consumption path: it BUILDS
+    # `var(--fc-<role>)` from the string at the call site, so a role named in a cssVar call
+    # is a mention of that key — for the semantic maps AND the critical primitives those
+    # roles resolve to. Evidence: `cssVar('positive-critical')` in atoms/market, atoms/status,
+    # atoms/typography and atoms/visual; `cssVar('text-muted')` across the atom layer.
+    roles: set[str] = set()
+    for text in haystacks:
+        roles.update(re.findall(r"cssVar\(\s*['\"`]([\w-]+)['\"`]\s*\)", text))
+    role_families = {"lightSemantic", "darkSemantic", "criticalLight", "criticalDark"}
+    # Some references never put the parent on the line: a role vocabulary literal —
+    # `positive: 'positive-critical'` in a tone map (atoms/status:24, atoms/typography:26,
+    # atoms/visual:28) or `const role: SemanticToken = tone === 'positive' ? 'positive-critical'
+    # : …` (atoms/market:120) — flows into `cssVar(...)`, and the Icon default
+    # `size = 'icon-md'` (atoms/visual:61) flows into `iconSize[size]`. The bare quoted key in
+    # consumer code IS the mention; the access regex cannot see it without the parent.
+    # Scoped to the families that are consumed this stringly-typed way, so an unrelated
+    # string elsewhere cannot vouch for a scale or ramp key.
+    quoted: set[str] = set()
+    for text in haystacks:
+        quoted.update(re.findall(r"['\"`]([\w-]+)['\"`]", text))
+    quoted_families = role_families | {"iconSize"}
     for parent, entries in exports.items():
         for key, raw_value in entries.items():
             # `0`-valued scale entries are anchors, not choices — see the header.
@@ -502,24 +518,6 @@ def scan_dead_tokens() -> None:
             # parent ramp, not by this export — skip it here.
             if parent in aggregates and raw_value.strip().startswith("..."):
                 continue
-            # A ramp step is vouched for by the semantic layer that names it.
-            if parent in ramps:
-                continue
-            # The semantic layer is the design system's PUBLIC VOCABULARY: the plan fixes
-            # its full key set, and a consumer picks the roles it needs. A role no atom
-            # references yet is still part of the shipped API — the parity test asserts the
-            # key set is complete and identical in both themes, which is the contract that
-            # matters. Vouching for each role individually would demand a second mention of
-            # every key, which is the same noise the aggregate rule already rejects.
-            if parent in ("lightSemantic", "darkSemantic"):
-                continue
-            # Same reasoning for the frozen FUDCourt SCALES: the plan fixes the spacing
-            # steps, the radii, the icon sizes and the component dimensions, and a component
-            # reads the step it needs. A step no component reads yet is still an approved
-            # step — trimming the scale to what is used today is how a design system ends up
-            # with a 3-step spacing scale and a thousand one-off values.
-            if parent in FROZEN_SCALES:
-                continue
             # A parent that a derived VIEW re-points is consumed through that view: the view
             # is what 68 files read, and it emits this parent's custom properties. The view
             # re-lists the parent's keys BY CONSTRUCTION (`Object.keys(parent).map(...)`), so
@@ -527,6 +525,16 @@ def scan_dead_tokens() -> None:
             # reach is still dead. The view's own export is checked separately below, so
             # nothing is vouched for twice.
             if parent in views.values():
+                continue
+            # Whole-family iteration (see above): every exported key is reachable through the
+            # loop, so the family is referenced.
+            if parent in iterated:
+                continue
+            # A semantic role named at a cssVar call site (see above).
+            if parent in role_families and key in roles:
+                continue
+            # A bare quoted key of a stringly-typed family (see above).
+            if parent in quoted_families and key in quoted:
                 continue
             access = re.compile(
                 rf"\b{re.escape(parent)}\s*(?:\.\s*{re.escape(key)}(?![\w$])"
