@@ -95,7 +95,7 @@ export function TradeInstrument({ marketType, instrumentId }: { marketType: Mark
           title="Cross-venue quotes"
           subtitle="each venue's own quote for this instrument, read live — never a built symbol"
           right={
-            <Link href={`/market/ticker/${base}`} style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>
+            <Link href={`/market/crypto/${base}`} style={{ fontSize: fontSize[11], color: color.blue, textDecoration: 'none' }}>
               full coin page →
             </Link>
           }

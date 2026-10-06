@@ -241,7 +241,7 @@ export default function TickerPage() {
                 <TR key={`${r.type}|${r.symbol}`} style={{ borderBottom: `1px solid ${color.separator}` }}>
                   <TD style={{ padding: space[8] }}>
                     <Link
-                      href={`/market/ticker/${r.base}`}
+                      href={`/market/crypto/${r.base}`}
                       style={{ fontWeight: fontWeight.bold, color: color.blue, textDecoration: 'none' }}
                       title={`Open ${r.base} detail`}
                     >

@@ -5,11 +5,11 @@ surface"), read out of the running build, not from memory:
 
 - Pages: live HTML -> 200. The market hub absorbed the standalone boards, so
   `/ticker`, `/tracker`, `/llama`, `/markets`, `/market/ticker`, `/dex`,
-  `/trench`, `/ticker/:ticker` are deliberate 307s into the hub (next.config.js,
-  ARCHITECTURE.md §3) and are asserted as such. `/coin` and `/balance` were
-  removed and must answer a REAL 404, and an off-allowlist ticker
-  (`/market/ticker/FOO`) must be a real 404 too, never a soft-404 that renders a
-  200 shell.
+  `/trench`, `/ticker/:ticker` and `/market/ticker/:ticker` are deliberate 307s
+  into the hub (next.config.js, ARCHITECTURE.md §3) and are asserted as such.
+  `/coin` and `/balance` were removed and must answer a REAL 404, and an
+  off-allowlist ticker (`/market/crypto/FOO`) must be a real 404 too, never a
+  soft-404 that renders a 200 shell.
 - Treasury reads (/api/all, /coins, /wallets, /reconcile, /transactions) are
   session-gated (lib/guard.ts TEAM_API_ROUTES + middleware.ts): anonymous ->
   JSON 401. Gated pages (/team/**, /member, /admin) -> 307 to /login?next=…
@@ -194,7 +194,7 @@ print(f"# session: {SESSION_WHY}", flush=True)
 
 print("=== A. pages ===", flush=True)
 for p in ["/", "/market", "/market/crypto", "/market/trench", "/market/forex",
-          "/market/stock", "/market/commodity", "/market/ticker/BTC",
+          "/market/stock", "/market/commodity", "/market/crypto/BTC",
           "/news", "/scoreboard", "/signals"]:
     st, b = hit(p, timeout=60)
     rec("page", p, st, 200, b)
@@ -202,16 +202,37 @@ for p in ["/", "/market", "/market/crypto", "/market/trench", "/market/forex",
 # 307s into the hub (next.config.js, documented in ARCHITECTURE.md §3). Assert
 # the redirect status so a dropped or renamed redirect is caught, not 404'd.
 for src in ["/ticker", "/tracker", "/llama", "/markets", "/market/ticker",
-            "/dex", "/trench", "/ticker/BTC", "/ticker/ETH"]:
+            "/dex", "/trench", "/ticker/BTC", "/ticker/ETH",
+            "/market/ticker/BTC", "/market/ticker/ETH"]:
     st, b = hit(src, timeout=60)
     rec("page", f"{src} -> 307 into the hub", st, 307, b)
-# Real 404s: two removed routes, and an off-allowlist ticker -- the old path
-# 307s into the hub, whose detail route then answers the real 404 (never a
-# soft-404 that renders a 200 shell).
-for p, why in [("/coin", "route removed"), ("/balance", "route removed"),
-               ("/market/ticker/FOO", "off the ticker allowlist")]:
+# Real 404s: two removed routes. Their handlers are gone, so Next's own
+# catch-all answers and the status is a true 404.
+for p, why in [("/coin", "route removed"), ("/balance", "route removed")]:
     st, b = hit(p, timeout=60)
     rec("page", f"{p} -> 404 (real 404, {why})", st, 404, b)
+# An off-allowlist coin on the detail route. `notFound()` fires and the
+# (frontend)/not-found boundary renders, but Next 16.3.6 answers HTTP 200 for
+# EVERY notFound() in this app -- /blog/<unknown>, /economy/nation/ZZ and
+# /trade/notatype behave identically (measured 2026-10-06). So the assertion is
+# on the BODY, which is the thing that actually distinguishes a real 404 page
+# from a soft-404 that renders the live detail shell for a coin nobody quotes.
+# The status-line defect is app-wide and tracked separately; asserting 404 here
+# would be a knowingly red test.
+st, b = hit("/market/crypto/FOO", timeout=60)
+# Markers that exist ONLY in the live detail shell, not in the not-found
+# boundary: the metadata description ("Cross-checked ... prices across
+# centralized exchanges") is present on both, because Next renders the
+# generateMetadata head either way. "Loading venues" and the empty-table copy
+# are the component's own output.
+soft = ("Loading venues" in b) or ("No venue lists this type for this coin" in b)
+notfound_body = ("NOT FOUND" in b) or ("does not exist" in b)
+# rec() compares status against `want`, so the body verdict is recorded through
+# the name: a FAIL line here means the detail shell rendered for an unquoted
+# coin, which is the soft-404 this probe exists to catch.
+name = "/market/crypto/FOO -> not-found body, no detail shell" if (not soft and notfound_body) \
+    else f"/market/crypto/FOO -> SOFT-404 (detail shell rendered: soft={soft}, notfound_body={notfound_body})"
+rec("page", name, st, (200, 404), b)
 for p in ["/robots.txt", "/sitemap.xml"]:
     st, b = hit(p, timeout=60)
     rec("page", p, st, 200, b)

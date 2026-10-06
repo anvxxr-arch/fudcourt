@@ -93,7 +93,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...staticRoutes,
     ...blogPostPages,
     ...tickerCoins.map((coin) => ({
-      url: `https://fc.dwirijal.my.id/market/ticker/${coin}`,
+      url: `https://fc.dwirijal.my.id/market/crypto/${coin}`,
       lastModified: new Date(),
       changeFrequency: 'hourly' as const,
       priority: 0.6,

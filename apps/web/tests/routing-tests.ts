@@ -14,7 +14,7 @@
  * either registered in `PUBLIC_ROUTES` or disallowed by `robots.ts`. Nothing
  * else is a valid state, and the disallow list is read from `robots.ts` itself
  * rather than restated here, so un-disallowing a path re-opens this check for
- * it. Dynamic routes (`/market/ticker/[ticker]`) are enumerated separately by
+ * it. Dynamic routes (`/market/crypto/[ticker]`) are enumerated separately by
  * `sitemap.ts` from a symbol allowlist, so they are not static entries.
  *
  * Usage: cd apps/web && npm run test:shapers

@@ -54,7 +54,7 @@ test('nav: the terminal is an action, not a section', () => {
 test('nav: the active section is matched on a segment boundary', () => {
   assert.equal(activeSection('/market'), 'market');
   assert.equal(activeSection('/market/crypto'), 'market');
-  assert.equal(activeSection('/market/ticker/btc'), 'market');
+  assert.equal(activeSection('/market/crypto/btc'), 'market');
   assert.equal(activeSection('/economy'), 'economy');
   assert.equal(activeSection('/economy/nation/id'), 'economy');
   assert.equal(activeSection('/economy/regime'), 'economy');

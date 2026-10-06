@@ -19,11 +19,16 @@ const nextConfig = {
       { source: '/portfolio', destination: '/team/portfolio', permanent: false },
       // The ticker area moved under the market hub (asset-class sections). The
       // old standalone paths redirect so external links and the sitemap never
-      // 404. /market/crypto is the board; /market/ticker is the detail namespace.
+      // 404. /market/crypto is the board and its coin detail pages live at
+      // /market/crypto/[ticker]; the former /market/ticker namespace is gone.
       { source: '/ticker', destination: '/market/crypto', permanent: false },
-      { source: '/ticker/:ticker', destination: '/market/ticker/:ticker', permanent: false },
+      { source: '/ticker/:ticker', destination: '/market/crypto/:ticker', permanent: false },
       { source: '/markets', destination: '/market', permanent: false },
       { source: '/market/ticker', destination: '/market/crypto', permanent: false },
+      // The old detail namespace's own deep links: /market/ticker/BTC now lives
+      // at /market/crypto/BTC. Kept as a redirect rather than a 404 because
+      // those URLs were in the sitemap and are linked from the trade board.
+      { source: '/market/ticker/:ticker', destination: '/market/crypto/:ticker', permanent: false },
       // The standalone boards folded into the market hub as tabs: /tracker and
       // /llama are the crypto section's Prices and DeFi TVL tabs, /dex and
       // /trench are the trench section's Pairs and Trench tabs. Their page

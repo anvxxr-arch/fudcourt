@@ -88,18 +88,18 @@ from playwright.sync_api import sync_playwright
 # Reconciled 2026-10-02 against the post-IA-rework tree (the `/market` hub
 # replaced `/ticker`, `/llama`, `/dex`, `/trench`, `/tracker`). Additions are
 # the routes that IA serves which the migration-era list never named: `/blog`,
-# `/blog/[slug]`, and a concrete coin for the dynamic `/market/ticker/[ticker]`.
+# `/blog/[slug]`, and a concrete coin for the dynamic `/market/crypto/[ticker]`.
 # The last is the design system's own surface too — it is `TickerDetailPage`
 # (`src/features/market/ticker/detail`), the chrome the retired standalone `/ticker`
 # page used, now mounted under the hub — so leaving it unprobed would have
 # exempted the largest surviving ticker surface from the fingerprint guarantee.
 # A concrete instrument is used because the route 404s on an unknown symbol
 # (`TICKER_COIN` allowlist in the page); `BTC` is one the app quotes (verified:
-# `/market/ticker/BTC` → 200 on the deployed unit). `/blog/[slug]` is likewise
+# `/market/crypto/BTC` → 200 on the deployed unit). `/blog/[slug]` is likewise
 # probed at a slug that exists in the CMS.
 ROUTES = [
     "/", "/market", "/market/crypto", "/market/trench", "/market/forex",
-    "/market/stock", "/market/commodity", "/market/ticker/BTC", "/news",
+    "/market/stock", "/market/commodity", "/market/crypto/BTC", "/news",
     "/scoreboard", "/signals", "/login",
     "/blog", "/blog/never-fake-rules",
 ]
@@ -434,7 +434,7 @@ def _probe_matches_route(probe: str, route: str) -> bool:
     """True when `probe` (a concrete probe path) addresses `route`, where a
     dynamic `route` segment matches any one probe segment (`[ticker]` matches
     `BTC`). Segment counts must be equal, so `[ticker]` never matches
-    `/market/ticker/BTC/x` and a catch-all does not swallow siblings."""
+    `/market/crypto/BTC/x` and a catch-all does not swallow siblings."""
     p_segs = [s for s in probe.split("/") if s]
     r_segs = [s for s in route.split("/") if s]
     if len(p_segs) != len(r_segs):
