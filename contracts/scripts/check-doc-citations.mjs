@@ -7,8 +7,8 @@
  * rename happens elsewhere, and the prose keeps pointing at a path that no longer exists. It is the
  * third member of the family, with the same verdict idiom as its siblings:
  *
- *   node shared/contracts/scripts/check-doc-citations.mjs            # the repo tree
- *   node shared/contracts/scripts/check-doc-citations.mjs --root D   # hermetic copy at D
+ *   node contracts/scripts/check-doc-citations.mjs            # the repo tree
+ *   node contracts/scripts/check-doc-citations.mjs --root D   # hermetic copy at D
  *
  * `--root D` reads `D/<doc>` for each document below and resolves citations against `D`, so the gate
  * can be proven to fail on a perturbed copy without touching the repository (as check-schemas.mjs
@@ -19,7 +19,7 @@
  *   docs/architecture/{canonical-model,canonical-placement,source-catalog,data-catalog,
  *     data-classification,database-classification,canonical-acceptance,symbol-key-inventory}.md
  *   docs/architecture/DESIGN-SYSTEM.md
- *   shared/contracts/schemas/README.md
+ *   contracts/schemas/README.md
  *   (`symbol-key-inventory.md` was added here after `fd49b3a`; it had been written and committed
  *    while this list still held eight, so its cited paths went unchecked. `DESIGN-SYSTEM.md` was
  *    added the same day it landed (DR-037) — it cites the token module, the emitter, the two gates
@@ -44,15 +44,15 @@
  *   `finance/<rest>`    → backend/api/internal/finance/<rest>                (placement header)
  *   `accounts/<rest>`   → backend/api/internal/accounts/<rest>               (placement header)
  *   `markets/<rest>`    → backend/api/internal/markets/<rest>, or, when the token ends in `.json`
- *                         or starts with a schemas/ directory, shared/contracts/schemas/<rest>
+ *                         or starts with a schemas/ directory, contracts/schemas/<rest>
  *                         (`markets/instrument.json` is the schema; `markets/overview/market.go`
  *                          is the Go package)
  *   `common/<rest>`, `assets/<rest>`, `trading/<rest>`, `defi/<rest>`, `research/<rest>`,
  *   `signals/<rest>`, `finance/<rest>.json`, `accounts/<rest>.json` (dir ∈ {assets,accounts,
- *   finance,markets,trading,defi,research,signals} plus a trailing `.json`) → shared/contracts/schemas/<tok>
- *   `schemas/<rest>`    → shared/contracts/schemas/<rest>
+ *   finance,markets,trading,defi,research,signals} plus a trailing `.json`) → contracts/schemas/<tok>
+ *   `schemas/<rest>`    → contracts/schemas/<rest>
  *   These are the expansions the docs declare ("`finance/…` abbreviates backend/api/internal/<same>",
- *   "`common/symbol.json` … abbreviate shared/contracts/schemas/<same>"). A token is a FAILURE only
+ *   "`common/symbol.json` … abbreviate contracts/schemas/<same>"). A token is a FAILURE only
  *   when NONE of its candidate expansions resolves on disk.
  *
  * NAMED ALLOWANCES — the four tokens that legitimately do not resolve, each deliberately retained
@@ -168,7 +168,7 @@ const DOCS = [
   'docs/architecture/data-categorization.md',
   // Added 2026-10-06 with the Telegram bot; every repo path it names is now gated.
   'docs/architecture/bot.md',
-  'shared/contracts/schemas/README.md',
+  'contracts/schemas/README.md',
 ];
 
 const TOP_LEVEL = [
@@ -176,7 +176,7 @@ const TOP_LEVEL = [
   'tests/', 'database/', 'infrastructure/', '.github/',
   'apps/', 'core/', 'contracts/', 'db/', 'tools/', 'deploy/', 'docs/',
 ];
-// Directory names under shared/contracts/schemas/ (the layout block in schemas/README.md §1).
+// Directory names under contracts/schemas/ (the layout block in schemas/README.md §1).
 const SCHEMA_DIRS = ['common', 'accounts', 'assets', 'markets', 'trading', 'finance', 'defi', 'research', 'signals'];
 
 // ---------------------------------------------------------------------------
@@ -222,9 +222,9 @@ function candidatesFor(token) {
     return out;
   }
   if (seg === 'schemas') {
-    out.push(`shared/contracts/schemas/${rest}`);
+    out.push(`contracts/schemas/${rest}`);
   } else if (SCHEMA_DIRS.includes(seg) && (isJson || seg === 'common' || seg === 'research' || seg === 'defi')) {
-    out.push(`shared/contracts/schemas/${token}`);
+    out.push(`contracts/schemas/${token}`);
   }
   if (['reference', 'finance', 'accounts', 'markets', 'access'].includes(seg)) {
     out.push(seg === 'reference'

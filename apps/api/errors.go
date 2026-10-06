@@ -8,7 +8,7 @@ import (
 )
 
 // errNotFound is the canonical "no route, no resource" refusal. Codes are
-// stable (shared/contracts/schemas/error-envelope.json).
+// stable (contracts/schemas/error-envelope.json).
 var errNotFound = errs.New(errs.CategoryNotFound, "NOT_FOUND", "no such resource")
 
 // routeRefusal is the refusal body of a migrated TS route. Ground truth is the

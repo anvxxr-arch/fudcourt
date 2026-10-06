@@ -12,7 +12,7 @@
     "hyperliquid/offchain chain provider ids (absent from LLAMA_IDS; no CryptoRank chain row)",
     "CryptoRank coin keys beyond the eight seeded assets (provider rows, not canonical entities)"
   ],
-  "note": "Cross-service reference artifact. Consumers MUST NOT import the producing Go package: read this file (or the JSON Schemas under shared/contracts/schemas/) instead. An id is opaque; resolve through `mappings`, never by parsing an id or matching a symbol.",
+  "note": "Cross-service reference artifact. Consumers MUST NOT import the producing Go package: read this file (or the JSON Schemas under contracts/schemas/) instead. An id is opaque; resolve through `mappings`, never by parsing an id or matching a symbol.",
   "chains": [
     {
       "natural_key": "chain/arbitrum",

@@ -16,7 +16,7 @@ every claim restated here.
 > `assets/token.json` and `markets/venue.json` are backed by
 > `apps/api/internal/markets/reference`, which mints `asset_id`/`chain_id`/`token_id`/`venue_id`
 > and publishes the `(provider, provider_id) → canonical_id` table as
-> **`shared/contracts/data/reference.json`**. That artifact is the machine-readable instance of these
+> **`contracts/data/reference.json`**. That artifact is the machine-readable instance of these
 > four schemas; the schemas stay the normative *shape*, and `markets/instrument.json`'s
 > `instrument_id` and `markets/price.json` remain unproduced.
 
@@ -43,7 +43,7 @@ consumed today, and no directory **in this tree** is empty. (Neither claim is ab
 which is not a child — see the next paragraph.)
 
 **`events/` is not in this tree.** The event catalogue (`catalog.json`, `event.schema.json`) is a
-**sibling** of `schemas/` under `shared/contracts/` — it is [`../events/`](../events/), not
+**sibling** of `schemas/` under `contracts/` — it is [`../events/`](../events/), not
 `schemas/events/`, and it is a different contract (see §3). `schemas/event-envelope.json` is the
 only event artifact that lives here.
 
@@ -78,7 +78,7 @@ it is computed.
 | [`accounts/exchange-account.json`](accounts/exchange-account.json) | CANONICAL | `backend/api accounts/exchange` (+ executor store) | minted uuid |
 | [`accounts/balance.json`](accounts/balance.json) | CANONICAL | `backend/workers/executor` / `backend/api [removed: finance/ledger]` | via account+asset |
 | [`accounts/account-equity.json`](accounts/account-equity.json) | CANONICAL | `backend/workers/executor` | via account |
-| [`assets/asset.json`](assets/asset.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `asset_id` minted; instance in `shared/contracts/data/reference.json` |
+| [`assets/asset.json`](assets/asset.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `asset_id` minted; instance in `contracts/data/reference.json` |
 | [`assets/token.json`](assets/token.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `token_id` minted over `chain/address`; instance in `reference.json` |
 | [`assets/chain.json`](assets/chain.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `chain_id` minted; instance in `reference.json`; `apps/reconciler/src/chains.rs` is still a separate private table |
 | [`markets/venue.json`](markets/venue.json) | **CANONICAL** | **`apps/api/internal/markets/reference`** (new) | `venue_id` minted; instance in `reference.json`; the three inline allowlists are now redundant |
@@ -126,7 +126,7 @@ it is computed.
 | Describes | something that **happened** | something that **is** |
 | Ids | 28 stable `event_type` ids (PascalCase) + SCREAMING_SNAKE aliases | entity ids (`*_id`) |
 | Versioning | `event_version` starts at 1; additive changes keep it, breaking bumps it | none — these are the current shape |
-| Drift gate | `shared/contracts/scripts/check-contract.mjs` (c) pins catalogue ↔ `event.schema.json`, and (a) pins `ExecutionStatus`/`ChildOrderStatus`/`ExecutionEventName` ↔ `apps/web/src/lib/executor.ts` and the OpenAPI enums | **not** covered by a gate yet (see §5) |
+| Drift gate | `contracts/scripts/check-contract.mjs` (c) pins catalogue ↔ `event.schema.json`, and (a) pins `ExecutionStatus`/`ChildOrderStatus`/`ExecutionEventName` ↔ `apps/web/src/lib/executor.ts` and the OpenAPI enums | **not** covered by a gate yet (see §5) |
 | Extra keys | payload is free-form and additive by policy | objects are **closed** (`additionalProperties: false`) where the value set is closed, so an unknown key is a schema error, not an extension |
 
 Two deliberate refusals to duplicate:
@@ -162,7 +162,7 @@ Two deliberate refusals to duplicate:
 | Concept | Why there is no schema |
 |---|---|
 | **MacroSeries / MacroObservation** | No code, no provider, no table, no route, no feature directory. Case-insensitive greps for `macro`, `fred`, `cpi`, `inflation`, `macroeconomic`, `yield`, `dxy`, `tbill` over `backend`, `apps/web/src`, `shared`, `database`, `tests` return zero substantive matches. Writing `macro/` would describe a system that does not exist. |
-| **A `reference.json` schema** | The registry artifact (`shared/contracts/data/reference.json`) is generated and self-describing (`document_version`, `id_rule`, `salt`), but it is a **data** file, not a schema, and it lives under `data/` not `schemas/`. Describing it here would duplicate the entity schemas it instantiates. |
+| **A `reference.json` schema** | The registry artifact (`contracts/data/reference.json`) is generated and self-describing (`document_version`, `id_rule`, `salt`), but it is a **data** file, not a schema, and it lives under `data/` not `schemas/`. Describing it here would duplicate the entity schemas it instantiates. |
 | **An `instrument_id` producer** | `markets/instrument.json` remains the one CANONICAL schema whose id the registry does **not** mint. Recorded, not silently closed (`canonical-model.md` O4). |
 | **Payload schemas for events** | See §3 (2). |
 | **Credential / secret shapes** | Deliberately not published: the sealed envelope and the revealed secret are server-side-only by contract (`[removed: access/credentials/envelope.go]` — "SERVER-SIDE ONLY: it must never be serialized to a client, written to a log or put in a URL"). `accounts/exchange-account.json` carries the masked handle only. |
@@ -180,8 +180,8 @@ python3 -c "import json,glob;[json.load(open(f)) for f in glob.glob('shared/cont
 
 These schemas are **not** wired into a generator or a route yet: `events/` remains the event source
 of truth, and `openapi/fudcourt.yaml` remains the HTTP contract. The same is true of the reference
-registry: `shared/contracts/data/reference.json` has a producer
+registry: `contracts/data/reference.json` has a producer
 (`apps/api/internal/markets/reference/cmd/emit`) and a drift test
 (`TestReferenceArtifactIsCurrent`), but **no HTTP route and no consumer** yet. Extending
-`shared/contracts/scripts/check-contract.mjs` to validate these files is Phase 7/8 work
+`contracts/scripts/check-contract.mjs` to validate these files is Phase 7/8 work
 (`canonical-model.md` §9.1); nothing in this directory changes behaviour today.

@@ -57,13 +57,13 @@
 // backend/workers/executor therefore can NEVER import this package. The sharing
 // path is contract-first instead:
 //
-//  1. a DATA artifact - shared/contracts/data/reference.json, the whole
+//  1. a DATA artifact - contracts/data/reference.json, the whole
 //     reference set plus the whole (provider, provider_id) -> canonical_id
 //     table, emitted deterministically by this package (`go run
 //     ./backend/api/internal/markets/reference/cmd/emit`) and pinned by a test
 //     that fails when the checked-in file is stale. A consumer in any language
 //     reads that file; nobody imports Go to get an id.
-//  2. the JSON SCHEMAS - shared/contracts/schemas/{assets/asset.json,
+//  2. the JSON SCHEMAS - contracts/schemas/{assets/asset.json,
 //     assets/token.json, assets/chain.json, markets/venue.json} define the
 //     shape. This package's structs are held to them field for field by
 //     TestContractParity, which fails naming the offending field.
@@ -119,7 +119,7 @@ func (k EntityKind) Valid() bool {
 
 // Provider names an upstream (or repo-internal) identifier space. The first
 // seven values are EXACTLY the enum in
-// shared/contracts/schemas/assets/asset.json (asset.provider_ids[].provider),
+// contracts/schemas/assets/asset.json (asset.provider_ids[].provider),
 // and Asset.ProviderIDs / Chain.ProviderIDs may only use those - the contract
 // parity test enforces it. The last two are outside that schema on purpose and
 // may therefore only appear in the top-level resolution table, never inside an

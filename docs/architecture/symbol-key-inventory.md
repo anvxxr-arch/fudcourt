@@ -7,7 +7,7 @@ Those documents answer "what is this dataset/table/column"; this one answers "wh
 string, at which line, is load-bearing as an identity, and what would replace it".
 
 Canonical minting and the mapping artifact: `apps/api/internal/markets/reference/**`,
-`[removed: markets/instruments/canonical.go]`, `shared/contracts/data/reference.json`
+`[removed: markets/instruments/canonical.go]`, `contracts/data/reference.json`
 (9 chains, 8 assets, 11 tokens, 12 venues, 49 mappings, 3 misses — re-read this turn), DR-034 and
 DR-036 in `docs/records/DECISIONS.md`.
 
@@ -155,11 +155,11 @@ file; the fields are the replacement columns the migration will write):
 
 | # | where | what it declares |
 |---|---|---|
-| I1 | `shared/contracts/schemas/assets/asset.json` | `asset_id` **required**, `symbol` required, `chain_id` optional, `provider_ids[]` |
-| I2 | `shared/contracts/schemas/finance/transaction.json` | `chain` required + `chain_id` optional, `asset` + `asset_id` optional, `venue_id` |
-| I3 | `shared/contracts/schemas/markets/instrument.json` | `instrument_id`, `venue_id`, `exchange` required; `base_asset`/`quote_asset` as **asset refs** |
-| I4 | `shared/contracts/schemas/trading/execution.json` | `execution_id`+`account_id` required; `exchange` required, `venue_id`/`instrument_id` optional, `symbol` required |
-| I5 | `shared/contracts/schemas/finance/{valuation,ledger-entry,treasury-account}.json` | `asset` required, `asset_id` optional on all three |
+| I1 | `contracts/schemas/assets/asset.json` | `asset_id` **required**, `symbol` required, `chain_id` optional, `provider_ids[]` |
+| I2 | `contracts/schemas/finance/transaction.json` | `chain` required + `chain_id` optional, `asset` + `asset_id` optional, `venue_id` |
+| I3 | `contracts/schemas/markets/instrument.json` | `instrument_id`, `venue_id`, `exchange` required; `base_asset`/`quote_asset` as **asset refs** |
+| I4 | `contracts/schemas/trading/execution.json` | `execution_id`+`account_id` required; `exchange` required, `venue_id`/`instrument_id` optional, `symbol` required |
+| I5 | `contracts/schemas/finance/{valuation,ledger-entry,treasury-account}.json` | `asset` required, `asset_id` optional on all three |
 
 ---
 

@@ -11,8 +11,8 @@
  * text and never noticed, because the raw text looks fine. This is the only gate that
  * can catch that class, so it is the one place it is checked.
  *
- *   node shared/contracts/scripts/check-table-shape.mjs            # the repo tree
- *   node shared/contracts/scripts/check-table-shape.mjs --root D   # hermetic copy at D
+ *   node contracts/scripts/check-table-shape.mjs            # the repo tree
+ *   node contracts/scripts/check-table-shape.mjs --root D   # hermetic copy at D
  *
  * Same verdict idiom as its siblings (check-schemas.mjs, check-contract.mjs,
  * check-doc-citations.mjs): one `MDTABLE_FAIL <file>:<line>: <reason>` line per

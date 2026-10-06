@@ -43,7 +43,7 @@ rows), not unfinished work. As-built tree: `docs/architecture/final-review.md` �
 | streams & reconciliation | websocket ingestion, event normalization, reconcile maths | `backend/sync` |
 ## 3. Dependency rules (allowed / forbidden)
 RFC 2119. These rules are the acceptance criteria for later phases. **Enforcement status
-(2026-10-01):** the Go layering is enforced by `shared/contracts/scripts/check-contract.mjs` +
+(2026-10-01):** the Go layering is enforced by `contracts/scripts/check-contract.mjs` +
 `tests/integration/api/check-api-contract.py` + CI; the web layering is enforced by
 `apps/web/scripts/checks/check-structure.py`. The rules below marked **OPEN** are the ones
 the checks do not yet cover.
@@ -78,13 +78,13 @@ the checks do not yet cover.
   (`TestEmbeddedSchemaMatchesTracked`, byte-exact) because `go:embed` refuses parent-directory
   patterns. Not adopted: a migration tool (DR-020's rationale is unchanged).
 ## 4. Contracts (`shared/contracts`) — LANDED (partial)
-- `openapi/` — HTTP surfaces. Present: `shared/contracts/openapi/fudcourt.yaml` (`CONTRACTS_OK`,
+- `openapi/` — HTTP surfaces. Present: `contracts/openapi/fudcourt.yaml` (`CONTRACTS_OK`,
   36 paths). The api/executor/data/sync surfaces are being folded into the one document.
-- `events/` — `shared/contracts/events/{catalog.json,event.schema.json}` (28 stable ids), execution
+- `events/` — `contracts/events/{catalog.json,event.schema.json}` (28 stable ids), execution
   lifecycle events + stream normalization envelopes.
-- `schemas/` — `shared/contracts/schemas/**` (56 files) + `shared/contracts/data/reference.json`.
+- `schemas/` — `contracts/schemas/**` (56 files) + `contracts/data/reference.json`.
 Compatibility rule: additive changes only per release; breaking changes REQUIRE a versioned path.
-Consumers: `shared/sdk/typescript` (generated), gated by `shared/contracts/scripts/check-contract.mjs`
+Consumers: `shared/sdk/typescript` (generated), gated by `contracts/scripts/check-contract.mjs`
 and `check-schemas.mjs`.
 ## 5. Persistence ownership — LANDED (as targets)
 | Tables | Owner |

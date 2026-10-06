@@ -12,7 +12,7 @@ import (
 // DocumentPath is where the emitted document lives, relative to the repository
 // root. It is the cross-service sharing artifact described in the package doc:
 // a consumer in any language reads this file instead of importing this package.
-const DocumentPath = "shared/contracts/data/reference.json"
+const DocumentPath = "contracts/data/reference.json"
 
 // Document is the serialized form of a whole registry: every entity, the whole
 // resolution table, and the honest list of known-but-unresolved identifiers.
@@ -114,7 +114,7 @@ func (r *Reference) Document() Document {
 		GeneratedBy:     "apps/api/internal/markets/reference",
 		Unmapped:        Unmapped(),
 		Note: "Cross-service reference artifact. Consumers MUST NOT import the producing Go package: " +
-			"read this file (or the JSON Schemas under shared/contracts/schemas/) instead. " +
+			"read this file (or the JSON Schemas under contracts/schemas/) instead. " +
 			"An id is opaque; resolve through `mappings`, never by parsing an id or matching a symbol.",
 	}
 	for _, c := range r.Chains {

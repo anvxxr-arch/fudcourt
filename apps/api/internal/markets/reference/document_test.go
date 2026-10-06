@@ -460,7 +460,7 @@ func TestBuildRefusesCorruptSeeds(t *testing.T) {
 }
 
 // TestReferenceArtifactIsCurrent ties the package to the checked-in artifact:
-// shared/contracts/data/reference.json must be exactly what this build emits.
+// contracts/data/reference.json must be exactly what this build emits.
 // A stale artifact is a red test, because the artifact is the channel other
 // services read - a stale one means they are resolving against an id space this
 // build no longer mints.

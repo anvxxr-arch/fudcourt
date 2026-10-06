@@ -1,6 +1,6 @@
 // Package reference — the SQL half of the canonical mapping.
 //
-// This file turns the published artifact shared/contracts/data/reference.json into
+// This file turns the published artifact contracts/data/reference.json into
 // the rows of the Postgres table database/schema/pg-schema.sql declares
 // (`canonical_reference` + `canonical_reference_miss`). It is the loader the
 // canonical id space has been missing: before it, a database consumer could only

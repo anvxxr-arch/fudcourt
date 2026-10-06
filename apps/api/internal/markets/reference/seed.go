@@ -18,7 +18,7 @@ type seedAsset struct {
 	name      string
 	chainName string // "" = no home chain
 	// providers are the SCHEMA-LEGAL pairs (the provider enum of
-	// shared/contracts/schemas/assets/asset.json). They become the entity's
+	// contracts/schemas/assets/asset.json). They become the entity's
 	// provider_ids list AND mapping rows.
 	providers []string
 	// mappings are pairs that may ONLY live in the top-level resolution table,

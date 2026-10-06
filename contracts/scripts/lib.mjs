@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * lib.mjs — shared helpers for the shared/contracts/scripts gates.
+ * lib.mjs — shared helpers for the contracts/scripts gates.
  *
  * Two things every gate in this directory used to re-implement on its own:
  *   - how to find the repository root from a script in this directory;
@@ -12,12 +12,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * Absolute path of the repository root (three levels up from this file:
- * shared/contracts/scripts -> repo root).
+ * Absolute path of the repository root (two levels up from this file:
+ * contracts/scripts -> repo root).
  */
 export function repoRoot() {
   const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-  return path.resolve(scriptDir, '..', '..', '..');
+  return path.resolve(scriptDir, '..', '..');
 }
 
 /**

@@ -15,7 +15,7 @@ var (
 	NameAddressShape = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*\.[a-z0-9][a-z0-9._-]*$`)
 )
 
-// AssetKind is the closed vocabulary of shared/contracts/schemas/assets/asset.json
+// AssetKind is the closed vocabulary of contracts/schemas/assets/asset.json
 // (the `kind` enum). native = a chain's own coin; fiat = an off-chain currency
 // (USD is the unit of every *_usd figure in the repo); stablecoin is the
 // classification the provider data already carries.
@@ -47,7 +47,7 @@ func (k AssetKind) Valid() bool {
 	return false
 }
 
-// ChainKind is the closed vocabulary of shared/contracts/schemas/assets/chain.json
+// ChainKind is the closed vocabulary of contracts/schemas/assets/chain.json
 // (the `kind` enum).
 type ChainKind string
 
@@ -77,7 +77,7 @@ func (k ChainKind) Valid() bool {
 	return false
 }
 
-// VenueKind is the closed vocabulary of shared/contracts/schemas/markets/venue.json
+// VenueKind is the closed vocabulary of contracts/schemas/markets/venue.json
 // (the `kind` enum). A DEX is not a trading venue in this build: the executor's
 // adapters are binance/bybit/mexc only, so a dex-kind venue is data-only.
 type VenueKind string
@@ -103,7 +103,7 @@ func (k VenueKind) Valid() bool {
 }
 
 // MarketType is the instrument market family a venue is modelled for. The two
-// values are the frozen pair of shared/contracts/schemas/markets/instrument.json
+// values are the frozen pair of contracts/schemas/markets/instrument.json
 // ($defs.market_type), declared identically in
 // backend/api/internal/markets/instruments/instrument.go and
 // backend/api/internal/accounts/exchange/account.go.
@@ -136,7 +136,7 @@ type ProviderID struct {
 	ProviderID string   `json:"provider_id"`
 }
 
-// Asset is the contract of shared/contracts/schemas/assets/asset.json, field for
+// Asset is the contract of contracts/schemas/assets/asset.json, field for
 // field. Every json tag here is the schema property name; the parity test reads
 // the schema and fails naming any field that drifts.
 //
@@ -154,7 +154,7 @@ type Asset struct {
 	ProviderIDs []ProviderID `json:"provider_ids,omitempty"`
 }
 
-// Token is the contract of shared/contracts/schemas/assets/token.json, field for
+// Token is the contract of contracts/schemas/assets/token.json, field for
 // field. TokenID is keyed by (chain, FULL address): the truncated `SPL:<mint6>`
 // label the Rust sync prints is a DISPLAY concern and must never be passed here.
 type Token struct {
@@ -168,7 +168,7 @@ type Token struct {
 	Decimals    *int    `json:"decimals,omitempty"`
 }
 
-// Chain is the contract of shared/contracts/schemas/assets/chain.json, field for
+// Chain is the contract of contracts/schemas/assets/chain.json, field for
 // field. `name` is the lowercase canonical label
 // the retired accounts/wallets package keys its address rules on.
 type Chain struct {
@@ -181,7 +181,7 @@ type Chain struct {
 	ProviderIDs    []ProviderID `json:"provider_ids,omitempty"`
 }
 
-// Venue is the contract of shared/contracts/schemas/markets/venue.json, field for
+// Venue is the contract of contracts/schemas/markets/venue.json, field for
 // field. `known` is the load-bearing field: it says whether THIS build can place
 // an order there, which is a different question from whether the venue appears
 // in the data.

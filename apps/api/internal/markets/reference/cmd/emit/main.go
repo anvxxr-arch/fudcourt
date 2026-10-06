@@ -1,5 +1,5 @@
 // Command emit writes the canonical reference document to
-// shared/contracts/data/reference.json (or to stdout with -stdout), so the id
+// contracts/data/reference.json (or to stdout with -stdout), so the id
 // space can be shared across services and languages WITHOUT anyone importing
 // the producing Go package.
 //

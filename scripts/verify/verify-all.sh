@@ -5,7 +5,7 @@
 #   bash scripts/verify/verify-all.sh        # from anywhere in the repo
 #
 # Covers: structure gate (DR-018), web contract gate, deploy-unit guard,
-# shared/contracts drift gate, the three
+# contracts drift gate, the three
 # Go modules (build/vet/test), the Rust crate (build/test), the sync oracle gate
 # (Python vs Rust byte-identical replay, tests/oracle/fixtures — offline), the
 # cross-service API conformance check, the hook syntax check, and apps/web
@@ -58,16 +58,16 @@ step "design-token artifact drift (globals.css block + tailwind.tokens.json are 
 step "web contract gate (CR_MODES + mutation-auth guards)"
 python3 scripts/verify/check-contract.py || fail web-contract
 
-step "shared/contracts drift gate"
-node shared/contracts/scripts/check-contract.mjs || fail contracts
+step "contracts drift gate"
+node contracts/scripts/check-contract.mjs || fail contracts
 
-step "shared/contracts canonical-schema gate (parse, dialect, refs, README index, structure)"
-node shared/contracts/scripts/check-schemas.mjs || fail schemas
+step "contracts canonical-schema gate (parse, dialect, refs, README index, structure)"
+node contracts/scripts/check-schemas.mjs || fail schemas
 
 step "canonical doc-citation gate (cited repo paths resolve)"
-node shared/contracts/scripts/check-doc-citations.mjs || fail doc-citations
+node contracts/scripts/check-doc-citations.mjs || fail doc-citations
 step "markdown table-shape gate (a row must not exceed its header; GFM drops excess cells)"
-node shared/contracts/scripts/check-table-shape.mjs || fail table-shape
+node contracts/scripts/check-table-shape.mjs || fail table-shape
 
 step "canonical reference artifact drift (reference.json is generated)"
 go run ./apps/api/internal/markets/reference/cmd/emit -check || fail reference

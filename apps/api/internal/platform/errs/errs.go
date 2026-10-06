@@ -88,7 +88,7 @@ func Status(category Category) int {
 	return 500
 }
 
-// EnvelopeBody is the wire shape (shared/contracts/schemas/error-envelope.json).
+// EnvelopeBody is the wire shape (contracts/schemas/error-envelope.json).
 type EnvelopeBody struct {
 	Code      string `json:"code"`
 	Message   string `json:"message"`

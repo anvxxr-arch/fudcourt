@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
  * check-schemas.mjs — offline drift gate for the canonical JSON-Schema tree
- * (shared/contracts/schemas/**), the counterpart of check-contract.mjs (which pins
+ * (contracts/schemas/**), the counterpart of check-contract.mjs (which pins
  * openapi/events/executor types). Same verdict idiom: collect every failure, print
  * one `SCHEMA_FAIL <file>: <reason>` line per failure and exit 1; print a single
  * `SCHEMAS_OK files=<N> refs=<M> enums=<E>` summary on success.
  *
- *   node shared/contracts/scripts/check-schemas.mjs            # the repo tree
- *   node shared/contracts/scripts/check-schemas.mjs --root D   # hermetic copy at D
+ *   node contracts/scripts/check-schemas.mjs            # the repo tree
+ *   node contracts/scripts/check-schemas.mjs --root D   # hermetic copy at D
  *
- * `--root D` reads `D/shared/contracts/schemas/**` and `D/shared/contracts/schemas/
+ * `--root D` reads `D/contracts/schemas/**` and `D/contracts/schemas/
  * README.md`, so the gate can be proven to fail against a perturbed copy without
  * touching the repository. It is also what makes every check below demonstrable.
  *
@@ -76,7 +76,7 @@ for (let i = 0; i < argv.length; i++) {
     process.exit(1);
   }
 }
-const SCHEMAS_DIR = path.join(repoRoot, 'shared', 'contracts', 'schemas');
+const SCHEMAS_DIR = path.join(repoRoot, 'contracts', 'schemas');
 const README = path.join(SCHEMAS_DIR, 'README.md');
 const ID_PREFIX = 'https://fudcourt.local/contracts/schemas/';
 const DIALECT = 'https://json-schema.org/draft/2020-12/schema';

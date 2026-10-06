@@ -86,7 +86,7 @@ Already moved in earlier commits on this branch (verified via `git log`):
 
 ## 3. Files created
 
-- **Phase 3 (contracts):** `shared/contracts/{openapi/fudcourt.yaml, events/{catalog.json,event.schema.json}, schemas/{error,event}-envelope.json, scripts/check-contract.mjs}`; `shared/sdk/typescript/**` (committed `d4d87e7`).
+- **Phase 3 (contracts):** `contracts/{openapi/fudcourt.yaml, events/{catalog.json,event.schema.json}, schemas/{error,event}-envelope.json, scripts/check-contract.mjs}`; `shared/sdk/typescript/**` (committed `d4d87e7`).
 - **Phase 4 (api):** `backend/api/**` — 18 internal packages, 112 test funcs (committed `3702c6c`);
   regrouped 2026-10-01 into bounded contexts (`access/`, `accounts/`, `finance/`, `markets/` —
   `ARCHITECTURE.md` §2a, `domain-map.md` §4). Pure `git mv`: same package count, same 112 test
@@ -115,7 +115,7 @@ ledger; portfolio is derived; append-only events). Current-state highlights:
 - **One shared artifact.** Services share `shared/contracts` only. Verified: each Go module
   (`backend/{api,workers/executor,data}`) imports **only its own** module path — zero cross-service
   implementation imports (§7 evidence).
-- **Contract is machine-checked.** `shared/contracts/scripts/check-contract.mjs` gates enums
+- **Contract is machine-checked.** `contracts/scripts/check-contract.mjs` gates enums
   (OpenAPI ⇄ `types.ts`) and route coverage; the new `tests/integration/api/check-api-contract.py`
   gates the Go api's live route table ⇄ contract ⇄ web BFF proxy table (§6).
 - **CI is domain-aware with a stable required check.** Each workflow always runs and ends in a
@@ -150,7 +150,7 @@ Items 1–4 are now RESOLVED. The executor cutover is closed (DR-043, 2026-10-05
 | 7 | exchange adapters use a common abstraction | MET | `internal/exchanges/{interface,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package |
 | 8 | PostgreSQL is the durable execution truth | MET | `database/schema/executor-schema.sql` (10 tables) + `internal/repository`; **proven live this session** — the DSN-gated `TestStoreEndToEnd`/`TestStoreNewFailLoud` run green against a throwaway local Postgres with that schema applied (`4959f8f`) |
 | 9 | Valkey only ephemeral coordination | MET | `internal/platform/lock/{valkey,memory}.go`; durable state is Postgres |
-| 10 | API contracts centralized | MET | `shared/contracts/{openapi,events,schemas}`; `CONTRACTS_OK` gate |
+| 10 | API contracts centralized | MET | `contracts/{openapi,events,schemas}`; `CONTRACTS_OK` gate |
 | 11 | cross-service tests outside `frontend/web` | MET | `tests/integration/api/check-api-contract.py`, `tests/oracle/fixtures/` |
 | 12 | each deployable has clear ownership | MET | `infrastructure/systemd/` 12 units; `check-deploy` OK |
 | 13 | CI is domain-aware | MET | `.github/workflows/{web,go,rust,contracts,integration}.yml` |
@@ -175,7 +175,7 @@ the only vestige.
 | canonical risk engine | 1 | exactly one `risk.go` → `apps/executor/internal/risk/risk.go` (+31 test funcs) |
 | canonical sizing implementation | 1 | exactly one `sizing.go` → `apps/executor/internal/sizing/sizing.go` (+16 test funcs) |
 | canonical exchange abstraction | 1 | `apps/executor/internal/exchanges/{interface,types,symbols,classify}.go` + `binance/bybit/mexc/paper`; no venue branching outside the package (85 test funcs) |
-| contract source of truth | 1 | `shared/contracts/`: `openapi/fudcourt.yaml`, `events/{catalog,event.schema}.json`, `schemas/{error,event}-envelope.json`, gated by `CONTRACTS_OK` |
+| contract source of truth | 1 | `contracts/`: `openapi/fudcourt.yaml`, `events/{catalog,event.schema}.json`, `schemas/{error,event}-envelope.json`, gated by `CONTRACTS_OK` |
 | core executor logic inside `frontend/web` | 0 | **MET (DR-043, 2026-10-05)** — `find frontend/web/src/platform/executor -type f` → 1 (only `types.ts`; the wire contract has no runtime path: types only, no imports, no executables, no DB, no HTTP). The 9 deleted TS-runtime test files' assertions are covered by the named Go counterparts per `parity-matrix.md` rows 1–9 (253+ test funcs across 19 internal packages). |
 | independently deployable: web / api / data / executor / sync | 5 | `infrastructure/systemd/fudcourt-{web,api,data,executor,sync}.service` all present; `check-deploy` OK; `/api` independently built (`go build ./...` OK) |
 | ownership discoverable | — | gate `check-structure.py` OK (DR-018 layers), i.e. a stray cross-boundary file fails CI |
@@ -288,7 +288,7 @@ working tree or in the branch's committed history (none caused by this session's
 against the baseline and against `94a2ee1`/`642e7ef`):
 1. `apps/api/main.go:5` — a comment line missing its `//` (`notifications, jobs.`),
    a Go **syntax error** that failed `go build ./backend/api/...`. Fixed (line is a comment again).
-2. `shared/contracts/openapi/fudcourt.yaml` — referenced **29 undefined components**
+2. `contracts/openapi/fudcourt.yaml` — referenced **29 undefined components**
    (`RateLimited`, `MutationUnauthorized`, and 27 data-surface schemas), so `bun run generate`
    failed and the whole SDK/contract gate was red. Fixed by defining every referenced component.
 3. **`apps/executor/executor` test did not compile at HEAD** — commit `642e7ef` landed

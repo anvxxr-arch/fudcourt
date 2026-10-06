@@ -1,5 +1,5 @@
 // Package api implements the executor's HTTP surface: the 15 `/api/executor/*`
-// paths of shared/contracts/openapi/fudcourt.yaml, served by the executor
+// paths of contracts/openapi/fudcourt.yaml, served by the executor
 // process itself (cmd/executor mounts this mux on its loopback listener).
 //
 // # WHY IT LIVES IN THE EXECUTOR MODULE

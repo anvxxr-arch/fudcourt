@@ -4,7 +4,7 @@ contract, and the web BFF proxy table vs the Go api's.
 
 Why this is not a per-service unit test: it asserts a relationship between two
 modules that neither can see alone. `backend/api` unit tests prove a handler
-answers; `shared/contracts/scripts/check-contract.mjs` proves the documented
+answers; `contracts/scripts/check-contract.mjs` proves the documented
 paths match the Next.js route files. NEITHER catches the drift this gate exists
 for:
 
@@ -33,7 +33,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 GO_MAIN = ROOT / "apps" / "api" / "main.go"
-OPENAPI = ROOT / "shared" / "contracts" / "openapi" / "fudcourt.yaml"
+OPENAPI = ROOT / "contracts" / "openapi" / "fudcourt.yaml"
 WEB_API = ROOT / "apps" / "web" / "src" / "app" / "(frontend)" / "api"
 
 fails: list[str] = []

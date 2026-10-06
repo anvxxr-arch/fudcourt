@@ -20,7 +20,7 @@ import (
 )
 
 // ErrorEnvelopeBody is the wire shape of a contained panic
-// (shared/contracts/schemas/error-envelope.json): a machine-readable code, the
+// (contracts/schemas/error-envelope.json): a machine-readable code, the
 // server's own text and the correlation id of the failing request. The
 // executor has no request-id middleware, so request_id stays empty rather than
 // fabricating a correlation the operator cannot look up.

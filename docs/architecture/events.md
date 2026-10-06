@@ -1,15 +1,15 @@
 # Events — canonical contracts
-> Reality-first: everything here is read off `shared/contracts/` (landed),
+> Reality-first: everything here is read off `contracts/` (landed),
 > `apps/web/src/platform/executor/types.ts` and
 > `apps/executor/internal/execution/enums.go`. Written 2026-10-01.
-> Sources: `shared/contracts/events/catalog.json`,
-> `shared/contracts/events/event.schema.json`,
-> `shared/contracts/schemas/event-envelope.json`,
-> `shared/contracts/events/README.md`, PRD §63.
+> Sources: `contracts/events/catalog.json`,
+> `contracts/events/event.schema.json`,
+> `contracts/schemas/event-envelope.json`,
+> `contracts/events/README.md`, PRD §63.
 
 ## 1. Canonical envelope
 Every domain event is the envelope of
-`shared/contracts/schemas/event-envelope.json`:
+`contracts/schemas/event-envelope.json`:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -30,7 +30,7 @@ are never invented outside the schema.
 within the same version — unknown payload keys are allowed and MUST be ignored.
 A **breaking** change (renaming/removing a key, changing a type or meaning)
 bumps `event_version`. (Verbatim rule in `event-envelope.json` description and
-`catalog.json` `payload_policy`; `shared/contracts/README.md` compatibility
+`catalog.json` `payload_policy`; `contracts/README.md` compatibility
 rule: additive changes only per release, breaking changes require a versioned
 path.)
 
@@ -78,7 +78,7 @@ product here"); the row shape is `ExecutionEventRecord` (`types.ts`:
 `id`, `executionId`, `name`, `payload`, `createdAt`).
 
 ## 3. Alias map ↔ objective catalog names
-`shared/contracts/events/catalog.json` is the single source of truth for
+`contracts/events/catalog.json` is the single source of truth for
 stable `event_type` ids. Canonical ids are **PascalCase** (the objective
 catalog names); the legacy TS SCREAMING_SNAKE names are accepted aliases of the
 same stable id at `event_version` 1 (emitters SHOULD emit the canonical id;
@@ -116,7 +116,7 @@ Five further canonical ids exist with **no** legacy alias (they are new to the
 catalog, payloads must not contain key material):
 `CredentialCreated`, `CredentialRevoked`, `ExchangeAccountConnected`,
 `ReconciliationStarted`, `ReconciliationCompleted` — 28 catalog entries total
-(`shared/contracts/events/catalog.json`; 24 as recorded in the
+(`contracts/events/catalog.json`; 24 as recorded in the
 `docs/architecture/migration-plan.md` Phase 3 amendment, before the four
 2026-10-01 additions).
 
@@ -125,9 +125,9 @@ catalog, payloads must not contain key material):
 passphrases, signed payloads, auth headers. This is stated in three places and
 enforced by redaction on the audit side:
 
-- `shared/contracts/schemas/event-envelope.json`: payload "Never contains
+- `contracts/schemas/event-envelope.json`: payload "Never contains
   credentials or secrets."
-- `shared/contracts/events/catalog.json` `payload_policy`: "Events MUST NOT
+- `contracts/events/catalog.json` `payload_policy`: "Events MUST NOT
   carry credentials or secrets of any kind." (and `CredentialCreated`: "Payload
   MUST NOT contain key material.")
 - Audit-side enforcement: the `Redact` rule in

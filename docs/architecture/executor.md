@@ -70,7 +70,7 @@ lifecycle (PRD §57); **child orders** are the venue-facing artifacts with their
 own lifecycle (PRD §58) and their own rows (`executor.child_orders`,
 `database/schema/executor-schema.sql`; `UNIQUE (execution_id, client_order_id)`).
 Cancel cancels orders and NEVER closes a position (PRD §75;
-`shared/contracts/openapi/fudcourt.yaml` lifecycle notes).
+`contracts/openapi/fudcourt.yaml` lifecycle notes).
 
 No-venue-conditionals rule (§8.16): core executor code MUST NOT branch on the
 venue. `apps/executor/internal/exchanges/interface.go` states it verbatim —
@@ -192,7 +192,7 @@ PRD §62/§66):
 
 | Key | Form | Makes idempotent | Evidence |
 |---|---|---|---|
-| request id | `request_id` correlation id of the originating request | replays of one API call correlate to one logical request; carried on every event (`shared/contracts/schemas/event-envelope.json`) and error (`shared/contracts/schemas/error-envelope.json`) | event/error envelope schemas |
+| request id | `request_id` correlation id of the originating request | replays of one API call correlate to one logical request; carried on every event (`contracts/schemas/event-envelope.json`) and error (`contracts/schemas/error-envelope.json`) | event/error envelope schemas |
 | execution id | execution uuid | one execution aggregate per user intent; lifecycle intents addressed to it refuse illegal repeats | `executor-schema.sql` `executions`; `internal/core/execution/execution.go` |
 | client order id | `fud_<executionID>_<sequence>` | a retried/duplicated/replayed placement maps onto the SAME venue order instead of a second one | PRD §66; `types.ts:747`; `internal/runtime/idempotency/idempotency.go` (parse-strict: foreign/zero-padded ids refused, never mis-parsed); `UNIQUE (execution_id, client_order_id)` in `executor-schema.sql` |
 | fill dedup key | `(account_id, exchange_trade_id)` | one venue trade ingested once; `insertFill` resolves null on conflict ("already ingested") | PRD §62; `store.ts` `fillDedupKey` + `UNIQUE (account_id, exchange_trade_id)` in `executor-schema.sql`; Go `FillDedupKey` |

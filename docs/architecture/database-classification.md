@@ -151,7 +151,7 @@ routes below. Every writer writes Postgres directly (DR-040).
 | table | `venues` (`database/schema/pg-schema.sql:82-86`) |
 | storage | Postgres `public.venues` (system of record, DR-040) |
 | classification | **canonical** (venue registry; `id` is a text slug, not a provider id) |
-| owning service | **none found in-repo**. **DEAD — the TABLE only (DR-036):** 12 rows, seeded once at the 2026-09-15 import. The venue *entity* is alive despite the unwritten table: `shared/contracts/data/reference.json` mints 12 `venue_id`s, `apps/api/internal/accounts/exchange/account.go:122` `KnownExchange` validates the slug, and the executor's venue boundary (`apps/executor/internal/exchanges/`) resolves it in code — so a cleanup retires the TABLE, never the identity |
+| owning service | **none found in-repo**. **DEAD — the TABLE only (DR-036):** 12 rows, seeded once at the 2026-09-15 import. The venue *entity* is alive despite the unwritten table: `contracts/data/reference.json` mints 12 `venue_id`s, `apps/api/internal/accounts/exchange/account.go:122` `KnownExchange` validates the slug, and the executor's venue boundary (`apps/executor/internal/exchanges/`) resolves it in code — so a cleanup retires the TABLE, never the identity |
 | readers | `pg.ts:57` (read, but **not** in `DASHBOARD_READS`); `transactions.venue_id` implies a foreign key that does not exist |
 | canonical entity | **Venue** |
 | durability | CANONICAL |

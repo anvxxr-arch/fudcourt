@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * check-contract.mjs — offline drift gate for shared/contracts.
+ * check-contract.mjs — offline drift gate for contracts.
  *
  * Asserts (no network, no deps, node/bun runnable):
  *   (a) every enum value of ExecutionStatus / ChildOrderStatus /
- *       ExecutionEventName in shared/contracts/openapi/fudcourt.yaml matches
+ *       ExecutionEventName in contracts/openapi/fudcourt.yaml matches
  *       the literal union parsed from apps/web/src/lib/executor.ts;
  *   (b) every path documented in the OpenAPI exists as a route handler
  *       (route.ts under the Next.js app api tree) exporting every documented
@@ -32,9 +32,9 @@ const TYPES_TS = [
   'apps/web/src/lib/executor-lifecycle.ts',
   'apps/web/src/lib/executor-request-defs.ts',
 ].map((p) => path.join(repoRoot, p));
-const OPENAPI_YAML = path.join(repoRoot, 'shared/contracts/openapi/fudcourt.yaml');
-const CATALOG_JSON = path.join(repoRoot, 'shared/contracts/events/catalog.json');
-const EVENT_SCHEMA_JSON = path.join(repoRoot, 'shared/contracts/events/event.schema.json');
+const OPENAPI_YAML = path.join(repoRoot, 'contracts/openapi/fudcourt.yaml');
+const CATALOG_JSON = path.join(repoRoot, 'contracts/events/catalog.json');
+const EVENT_SCHEMA_JSON = path.join(repoRoot, 'contracts/events/event.schema.json');
 const CLIENT_TS = path.join(repoRoot, 'apps/web/src/features/executor/client.ts');
 const APP_DIR = path.join(repoRoot, 'apps/web/src/app');
 

@@ -180,8 +180,8 @@ Every provider-specific parsed struct/type in the tree, and whether it stays ins
 | `apps/web/src/features/market/clients.ts` — `LlamaChain:32`, `LlamaProtocol:41`, `LlamaHistoricalPoint:54`, `LlamaEnvelope:64` | DefiLlama | **No** | envelope + component | **leaks** |
 | `apps/web/src/features/cryptorank/cryptorank.ts` + `shapers.ts` — 25 `Cr*` interfaces (`CrCoin:233`, `CrGlobal:219`), `shapeCoin:93`, `envelope:276` | CryptoRank | **No** | `shapers.ts` is imported only by `apps/web/tests/shaper-tests.ts:22` and `tests/oracle/dump-envelopes.ts:54` — the **runtime path is Go**; `client.ts` types do reach `features/cryptorank/ui.tsx` | **leaks at the type level** (UI); the shaper module itself is test-only |
 | `apps/web/src/features/executor/client.ts` + `shapers.ts` | none (own API) | n/a | imports `@/platform/executor/types` — the executor's **own** frozen contract, not a provider's | contained |
-| `shared/contracts/schemas/**` — `assets/asset.json:59-82` (`provider_ids`), `markets/instrument.json:22,36`, `markets/venue.json:22,30`, `common/identifier.json:5`, `defi/protocol.json:15,99` | — | — | provider names appear **as enumerated mapping values and descriptive text**, never as field names: `provider_ids` is an object keyed by provider, and `identifier.json` states the rule that a provider id is never identity | **contained (correct pattern)** |
-| `shared/contracts/openapi/fudcourt.yaml` | contains provider names | — | path/operation names, not payload shapes `[INFERENCE]` (file not read line-by-line in this pass) | contained `[INFERENCE]` |
+| `contracts/schemas/**` — `assets/asset.json:59-82` (`provider_ids`), `markets/instrument.json:22,36`, `markets/venue.json:22,30`, `common/identifier.json:5`, `defi/protocol.json:15,99` | — | — | provider names appear **as enumerated mapping values and descriptive text**, never as field names: `provider_ids` is an object keyed by provider, and `identifier.json` states the rule that a provider id is never identity | **contained (correct pattern)** |
+| `contracts/openapi/fudcourt.yaml` | contains provider names | — | path/operation names, not payload shapes `[INFERENCE]` (file not read line-by-line in this pass) | contained `[INFERENCE]` |
 
 **Summary.** All four Go venue adapters (Binance/Bybit/MEXC/paper) are **properly contained**:
 their wire structs are unexported, converted inside the package, and never appear in a contract,
@@ -190,7 +190,7 @@ DexScreener, CoinGecko and ccxt shapes all cross into the frontend, either as
 route envelopes (by design, with provenance) or as TypeScript types imported directly by
 components (`features/{dex,ticker,llama,news,cryptorank}`). One Rust path leaks
 provider-derived *values* into a durable column (`assets.asset` labels `MATIC`, `SPL:<mint6>`).
-The new `shared/contracts/schemas/**` tree is the only place that models providers correctly —
+The new `contracts/schemas/**` tree is the only place that models providers correctly —
 as an enumerated mapping key, never as a field name.
 
 ---

@@ -1,5 +1,5 @@
 name: contracts
-# Surface: the API/event source of truth — shared/contracts (OpenAPI + event
+# Surface: the API/event source of truth — contracts (OpenAPI + event
 # catalog). A contracts change is
 # cross-cutting: it can invalidate the Go services and the web client, which is
 # exactly why it also triggers web.yml and go.yml (see the hints in that
@@ -43,7 +43,7 @@ jobs:
         with:
           node-version: 22
       - name: "Contracts drift gate (OpenAPI refs/enums vs types.ts, route coverage, event catalog)"
-        run: node shared/contracts/scripts/check-contract.mjs
+        run: node contracts/scripts/check-contract.mjs
   gate:
     name: "contracts - gate (required)"
     needs: [check]

@@ -3,12 +3,12 @@
 > **What this document is.** The canonical data model the repo actually implements today, layer by
 > layer, entity by entity — with the exact code location of every claim, and an explicit "absent —
 > no owner yet" wherever a layer or an entity has no implementation. It is the grounding document
-> for `shared/contracts/schemas/**` (added in the same change) and the input to Phases 5–9 of
+> for `contracts/schemas/**` (added in the same change) and the input to Phases 5–9 of
 > `migration-plan.md`.
 >
 > **What this document is not.** It is not a migration and it authorizes no renames. The
 > reference-registry change noted above *did* add code (`apps/api/internal/markets/reference/`)
-> and a generated artifact (`shared/contracts/data/reference.json`); it renamed nothing, changed no
+> and a generated artifact (`contracts/data/reference.json`); it renamed nothing, changed no
 > behaviour, and its evidence is rows 11–18 of §11. Everything
 > below is descriptive plus a named DECISION per duplicate concept; the required changes are
 > recorded, not performed (`migration-plan.md` Phase 5+).
@@ -113,7 +113,7 @@ them outside tests. That absence, not any individual bug, is the architecture's 
 
 ## 1. The pipeline: seven layers, per layer location or absence
 
-Layer vocabulary used throughout (`README.md` in `shared/contracts/schemas/` repeats it):
+Layer vocabulary used throughout (`README.md` in `contracts/schemas/` repeats it):
 
 | # | Layer | Definition |
 |---|---|---|
@@ -183,10 +183,10 @@ concrete answer to D-CANON, O1 and O3 below.
 | What it provides | Location | State |
 |---|---|---|
 | Id rule | `apps/api/internal/markets/reference/ids.go` (`MintID`, `MintIDWithSalt`, `Salt`, `IDHexLen`) — `id = kind ":" hex(sha256(salt 0x00 kind 0x00 naturalKey)[0:10])` | **Live.** Deterministic; the natural key per kind is documented in the package doc (`reference.go`) and travels inside the emitted document (`document.go` `Document.IDRule`). |
-| Canonical entity types | `…/reference/types.go` (`Asset`, `Token`, `Chain`, `Venue`, plus `ProviderID`) | **Live.** These are the shapes `shared/contracts/schemas/{assets,markets}/*.json` describe. |
+| Canonical entity types | `…/reference/types.go` (`Asset`, `Token`, `Chain`, `Venue`, plus `ProviderID`) | **Live.** These are the shapes `contracts/schemas/{assets,markets}/*.json` describe. |
 | Seed data | `…/reference/seed.go` (`Seed()`: 9 chains, 8 assets, 11 tokens, 12 venues) | **Live.** Curated, not scraped: the provider feeds do not supply ids. |
 | Registry + resolution | `…/reference/registry.go` (`Build`, `Resolve`, `ByID`, `ChainByName`, `TokenByAddress`, `VenueByName`) | **Live.** `Resolve` refuses an unknown provider (`ErrUnknownProvider`) and an unknown identifier (`ErrUnknownIdentifier`), matches the identifier **verbatim**, and never resolves through a symbol. |
-| Cross-service artifact | **`shared/contracts/data/reference.json`** (19,565 bytes) — emitted by `…/reference/cmd/emit`, pinned by `TestReferenceArtifactIsCurrent` | **Live.** This is the file another language reads; it carries `document_version`, `id_rule`, `salt`, the sorted entity lists, the whole resolution table, the honest `unmapped` list (7 known-unknown classes) and `misses` (3 identifiers reported by a feed that the registry refuses to invent an id for). It is what makes "backend/api owns the registry" true for `frontend/web`, `backend/data` and `backend/sync` alike, which cannot import Go. |
+| Cross-service artifact | **`contracts/data/reference.json`** (19,565 bytes) — emitted by `…/reference/cmd/emit`, pinned by `TestReferenceArtifactIsCurrent` | **Live.** This is the file another language reads; it carries `document_version`, `id_rule`, `salt`, the sorted entity lists, the whole resolution table, the honest `unmapped` list (7 known-unknown classes) and `misses` (3 identifiers reported by a feed that the registry refuses to invent an id for). It is what makes "backend/api owns the registry" true for `frontend/web`, `backend/data` and `backend/sync` alike, which cannot import Go. |
 | Tests | `…/reference/{registry_test.go,document_test.go}` | **Live.** 16 tests: id pinning, determinism under shuffled insertion order, round-trip through the artifact, and document-integrity refusal cases. |
 
 The instrument id space is minted by a SECOND package,
@@ -210,9 +210,9 @@ version control, not through a database.
 | Instrument id | `[removed: markets/instruments/instrument.go]` (`InstrumentID string`), documented canonical form `exchange:marketType:BASE/QUOTE` — evidenced by the fixture `…/instruments/instrument_test.go:13` (`"binance:spot:BTC/USDT"`) | **No producer.** grep `InstrumentID` across the repo → 12 hits in 4 files: the struct field, its own test, `[removed: finance/portfolio]` (derived exposure key, `portfolio.go:50`), and `portfolio_test.go`. Nothing mints it from a venue payload. |
 | Executor id space | `apps/executor/internal/runtime/idempotency/idempotency.go:38-40` (`fud_<executionId>_<seq>`), `:136-138` (`req_…`), `:83-85` (`FillDedupKey(accountID, exchangeTradeID)`); `repository/store.go:125-127` (`evt_…`) | **Live and durable.** This is the one place identity is minted and enforced by a UNIQUE constraint (`executor-schema.sql:122`, `:141`). |
 | Venue key (TS) | `apps/web/src/lib/executor.ts` (`VenueKey`), `:1366` (`venueKey()`) → `` `${exchange}:${marketType}:${symbol}` `` | Mirrors the Go instrument id; declared, used by the executor plane. |
-| Chain identity | **[CANONICAL OWNER]** 9 chains with minted ids (`reference/seed.go`, ids emitted in `shared/contracts/data/reference.json`). Original finding: `apps/reconciler/src/chains.rs:13` (`EVM` table), `:79` (`WALLETS`), `:98` (`LLAMA_IDS`) | A **static Rust registry** — the closest thing to a chain registry in the repo, and it is per-process, not durable. `[INFERENCE]` It cannot serve as the canonical registry because nothing outside `backend/sync` can read it. |
-| Asset identity | **[CANONICAL OWNER]** `apps/api/internal/markets/reference` (`MintID`/`Seed`/`Resolve`), artifact `shared/contracts/data/reference.json`. Original finding, kept as the evidence: `[INFERENCE]` none. grep `canonicalId|provider_id|external_id|asset_id|symbol_map|asset_map|registry` over `apps/web/src/server`, `[removed: shared/sdk/typescript/src]`, `apps/api/internal`, `backend/data`, `apps/reconciler/src`, `database/` → only `platform/executor/exchange.ts:705` ("Capability registry (PRD §50) — static") and a generated field name. | **[CANONICAL OWNER]** ids are now minted (`reference/ids.go`) and the provider mapping is published (`reference.json`). The original finding stands for **SQL only**: no aliases/external_ids/provider_ids table, column or index exists in any `.sql` file (`database/README.md` and all three schemas), so the canonical-id guarantee still cannot be delivered by field renames alone — it needs the artifact to be loaded. |
-| Provider→canonical mapping | **[CANONICAL OWNER]** the mapping now exists — `…/reference/registry.go` (`Resolve`) over the table emitted in `shared/contracts/data/reference.json`, populated from `…/reference/seed.go`. The gap this row originally recorded was in **SQL**: `database/schema/executor-schema.sql` still has none (the mapping is reference data, not executor state); `pg-schema.sql` now declares it — `canonical_reference` + `canonical_reference_miss` with a `CHECK (canonical_id LIKE kind || ':%')` (DR-036), loaded from the artifact by `…/reference/loader.go`. It is **additive and unwired**: nothing loads it and nothing joins through it yet. Separately, `price_history(symbol, ts, source)` (`:140-141`) remains a symbol-as-identity key, but `price_history` is **dead, not merely unwritten** — it has 0 rows in Postgres (DR-036; its DDL comment `:131` says "Written by the price sampler", and grep finds no `INSERT` into it anywhere, only the retention DELETE at `apps/web/src/server/db.ts`). | **[CANONICAL OWNER]** delivered for Asset/Token/Chain/Venue by `apps/api/internal/markets/reference` (see §1.4 heading); the *SQL* half now exists as the table above — what remains is loading it and re-pointing a consumer, not the absence of a table. |
+| Chain identity | **[CANONICAL OWNER]** 9 chains with minted ids (`reference/seed.go`, ids emitted in `contracts/data/reference.json`). Original finding: `apps/reconciler/src/chains.rs:13` (`EVM` table), `:79` (`WALLETS`), `:98` (`LLAMA_IDS`) | A **static Rust registry** — the closest thing to a chain registry in the repo, and it is per-process, not durable. `[INFERENCE]` It cannot serve as the canonical registry because nothing outside `backend/sync` can read it. |
+| Asset identity | **[CANONICAL OWNER]** `apps/api/internal/markets/reference` (`MintID`/`Seed`/`Resolve`), artifact `contracts/data/reference.json`. Original finding, kept as the evidence: `[INFERENCE]` none. grep `canonicalId|provider_id|external_id|asset_id|symbol_map|asset_map|registry` over `apps/web/src/server`, `[removed: shared/sdk/typescript/src]`, `apps/api/internal`, `backend/data`, `apps/reconciler/src`, `database/` → only `platform/executor/exchange.ts:705` ("Capability registry (PRD §50) — static") and a generated field name. | **[CANONICAL OWNER]** ids are now minted (`reference/ids.go`) and the provider mapping is published (`reference.json`). The original finding stands for **SQL only**: no aliases/external_ids/provider_ids table, column or index exists in any `.sql` file (`database/README.md` and all three schemas), so the canonical-id guarantee still cannot be delivered by field renames alone — it needs the artifact to be loaded. |
+| Provider→canonical mapping | **[CANONICAL OWNER]** the mapping now exists — `…/reference/registry.go` (`Resolve`) over the table emitted in `contracts/data/reference.json`, populated from `…/reference/seed.go`. The gap this row originally recorded was in **SQL**: `database/schema/executor-schema.sql` still has none (the mapping is reference data, not executor state); `pg-schema.sql` now declares it — `canonical_reference` + `canonical_reference_miss` with a `CHECK (canonical_id LIKE kind || ':%')` (DR-036), loaded from the artifact by `…/reference/loader.go`. It is **additive and unwired**: nothing loads it and nothing joins through it yet. Separately, `price_history(symbol, ts, source)` (`:140-141`) remains a symbol-as-identity key, but `price_history` is **dead, not merely unwritten** — it has 0 rows in Postgres (DR-036; its DDL comment `:131` says "Written by the price sampler", and grep finds no `INSERT` into it anywhere, only the retention DELETE at `apps/web/src/server/db.ts`). | **[CANONICAL OWNER]** delivered for Asset/Token/Chain/Venue by `apps/api/internal/markets/reference` (see §1.4 heading); the *SQL* half now exists as the table above — what remains is loading it and re-pointing a consumer, not the absence of a table. |
 
 Provider-specific parsers that **already exist** and the layer they occupy (requested explicitly):
 
@@ -261,8 +261,8 @@ Provider-specific parsers that **already exist** and the layer they occupy (requ
 | CryptoRank envelope | `…/cryptorank/types.go:438` (`CrEnvelope`), `envelope.go:36`; `marshal.go:12` (`Num` = present-null vs omitted key), `:43` (`marshalNoEscape`), `:57` (`Row` union) | `kind/upstream/fetchedAt/cache/count/upstreamTotal/slice/changeSource` |
 | Khala / News / Llama / ChainRank envelopes | `…/research/{khala/shape.go, news/shape.go:41, llama/shape.go:112, chainrank/shape.go}` | `fetchedAt`, `upstream`, `count` vs `total`, `derived` label (llama `:68` in TS) |
 | Feature response types | `features/{ticker,markets,dex,signals,news,llama,executor}/client.ts` | labels like `slice`, `derived`, `failed[]` |
-| Executor API views | `shared/contracts/openapi/fudcourt.yaml:1903` (`components.schemas`), route-local admin views `apps/api/routes.go:244,257,264,297` | OpenAPI is the frozen contract for 36 paths. |
-| Event wire | `shared/contracts/events/catalog.json`, `events/event.schema.json`, `schemas/event-envelope.json` | 28 stable event ids + aliases; `event_version: 1`. |
+| Executor API views | `contracts/openapi/fudcourt.yaml:1903` (`components.schemas`), route-local admin views `apps/api/routes.go:244,257,264,297` | OpenAPI is the frozen contract for 36 paths. |
+| Event wire | `contracts/events/catalog.json`, `events/event.schema.json`, `schemas/event-envelope.json` | 28 stable event ids + aliases; `event_version: 1`. |
 
 ---
 
@@ -276,9 +276,9 @@ Conventions for every row: **Identity** gives the internal canonical id and the 
 
 | Entity | Definition | Identity (canonical + provider mapping) | Domain | Primary owner | Providers feeding it | Code counterpart |
 |---|---|---|---|---|---|---|
-| **Asset** | A fungible unit of value in a portfolio/ledger, named by symbol within a chain or in USD terms. | **[CANONICAL OWNER]** `asset:<10 hex>` = `sha256(salt 0x00 "asset" 0x00 "asset/<kind>/<SYMBOL>")[0:10]` (`reference/ids.go` `MintID`, `reference.go` package doc); natural key `asset/<kind>/<SYMBOL>` where `<kind>` is one of native, fiat, stablecoin; provider ids per asset in `shared/contracts/data/reference.json` (`provider_ids`). 8 assets seeded (`reference/seed.go`). | assets | **`apps/api/internal/markets/reference`** | CoinGecko (`markets`), CoinRank/CryptoRank, chain RPCs (Rust sync) | `[removed: finance/ledger/ledger.go]` (`Entry.Asset`), `[removed: finance/transactions/transactions.go]`, `[removed: finance/portfolio/portfolio.go]`, `[removed: finance/treasury/treasury.go]`, `[removed: markets/instruments/instrument.go]`; SQL `assets.asset` `database/schema/pg-schema.sql:12` |
+| **Asset** | A fungible unit of value in a portfolio/ledger, named by symbol within a chain or in USD terms. | **[CANONICAL OWNER]** `asset:<10 hex>` = `sha256(salt 0x00 "asset" 0x00 "asset/<kind>/<SYMBOL>")[0:10]` (`reference/ids.go` `MintID`, `reference.go` package doc); natural key `asset/<kind>/<SYMBOL>` where `<kind>` is one of native, fiat, stablecoin; provider ids per asset in `contracts/data/reference.json` (`provider_ids`). 8 assets seeded (`reference/seed.go`). | assets | **`apps/api/internal/markets/reference`** | CoinGecko (`markets`), CoinRank/CryptoRank, chain RPCs (Rust sync) | `[removed: finance/ledger/ledger.go]` (`Entry.Asset`), `[removed: finance/transactions/transactions.go]`, `[removed: finance/portfolio/portfolio.go]`, `[removed: finance/treasury/treasury.go]`, `[removed: markets/instruments/instrument.go]`; SQL `assets.asset` `database/schema/pg-schema.sql:12` |
 | **Token** | One on-chain contract instance: an address/mint on a specific chain. Distinct from Asset because the same asset has many contracts (bridged/wrapped). | **[CANONICAL OWNER]** `token:<10 hex>` over natural key `token/<chain-name>/<FULL address, verbatim casing>` (`reference/ids.go`; 11 tokens seeded). The id is **not** lossy: the full address is the natural key, so the Rust SPL truncation below cannot corrupt it. Original finding: **Absent.** `[INFERENCE]` the intended id is `chain:address`; today identity is the raw address, and Rust **truncates** SPL mints to 6 chars (`apps/reconciler/src/streams/sync.rs:186-192`, `format!("SPL:{short}")`) so the id is lossy. | onchain / assets | **owner absent** — nearest: `apps/web/src/features/market/dex` (read-only) | DexScreener, Solana/EVM RPC | `features/dex/client.ts:73` (`DexToken{address,name,symbol}`), `:65` (family classifier for base58/hex/name mints) |
-| **Chain** | A settlement domain (L1/L2) with its own address format. | **[CANONICAL OWNER]** `chain:<10 hex>` over natural key `chain/<lowercase name>`; 9 chains seeded with `kind` (`evm`/`svm`/`offchain`) and `display_name`, emitted in `shared/contracts/data/reference.json`. Original finding: **Absent as a durable entity** — `apps/reconciler/src/chains.rs:13` (`EVM`), `:79` (`WALLETS`) was twice-removed state. | onchain | **`apps/api/internal/markets/reference`** (ids); `[removed: accounts/wallets]` still validates the label | Solana/EVM RPC, Hyperliquid, CryptoRank (`CrChainRow`), ChainRank | `[removed: accounts/wallets/wallets.go]` (`chainRules`, 7 chains), `[removed: finance/transactions/transactions.go]` (`Chain` free-form + `DefaultChain="Offchain"` `:35`); `…/cryptorank/types.go:132` (`CrChainRow.Slug`) |
+| **Chain** | A settlement domain (L1/L2) with its own address format. | **[CANONICAL OWNER]** `chain:<10 hex>` over natural key `chain/<lowercase name>`; 9 chains seeded with `kind` (`evm`/`svm`/`offchain`) and `display_name`, emitted in `contracts/data/reference.json`. Original finding: **Absent as a durable entity** — `apps/reconciler/src/chains.rs:13` (`EVM`), `:79` (`WALLETS`) was twice-removed state. | onchain | **`apps/api/internal/markets/reference`** (ids); `[removed: accounts/wallets]` still validates the label | Solana/EVM RPC, Hyperliquid, CryptoRank (`CrChainRow`), ChainRank | `[removed: accounts/wallets/wallets.go]` (`chainRules`, 7 chains), `[removed: finance/transactions/transactions.go]` (`Chain` free-form + `DefaultChain="Offchain"` `:35`); `…/cryptorank/types.go:132` (`CrChainRow.Slug`) |
 | **Venue** | A place orders can be placed and balances held: a CEX, or a DEX protocol instance. | **[CANONICAL OWNER]** `venue:<10 hex>` over natural key `venue/<venue-id>` (the id the tree already uses); 12 venues seeded, `known` + `market_types` carried. The three inline allowlists still exist (§7) and are now *redundant*, not authoritative. Original finding: **Absent as an entity** — identity was a hard-coded lowercase name enforced three times. | markets / trading | **`apps/api/internal/markets/reference`** | Binance/Bybit/MEXC REST, ccxt, DexScreener | `accounts/exchange/account.go:122-125` (`KnownExchange`), `[removed: markets/instruments]/symbol.go:50-51,88-91`, `[removed: accounts/wallets/wallets.go]`; SQL `venues(id TEXT PK)` `database/schema/pg-schema.sql:82-86` — **no writer in the repo** |
 | **Instrument** | One tradable market on one venue, with its price/quantity grid. **This is the only near-complete canonical entity in the repo.** | **[CANONICAL OWNER]** `instrument_id = "instrument:" + sha256("fudcourt/canonical-instrument/v1" NUL "instrument" NUL naturalKey)[0:10]`, naturalKey = `instrument/<venue_id>/<market_type>/<base_asset_id>/<quote_asset_id>/<settlement_asset_id>` — resolved components only, never a spelling (`[removed: markets/instruments/canonical.go]`). The legacy spelling `InstrumentID` = `exchange:marketType:BASE/QUOTE` (`instrument.go:53`; form evidenced `instrument_test.go:13`) is retained unchanged as `InstrumentSpelling`. Provider mapping: `ExchangeSymbol` (`:60`) + `CanonicalSymbol`/`VenueSymbol` (`symbol.go:35,81`) resolve the spelling; `ResolveInstrument` bridges it to the minted id. | markets | **`[removed: markets/instruments]`** (`canonical.go`) | ccxt market maps, venue `exchangeInfo` | `[removed: markets/instruments/instrument.go]` (+`canonical.go` for minting, `rounding.go:130,160` for grid rounding); executor mirror `platform/executor/types.ts:54,1366` |
 | **Price** | A point observation of value at a time from a named source. | **Absent as a type.** Current carriers are per-struct decimal strings and a schema table keyed by `symbol` — the exact anti-pattern. | markets | **owner absent** — `[removed: markets/overview]` holds the shape | all market providers | `[removed: markets/overview/market.go]` (`Ticker.Bid/Ask/Last`, decimal strings), `:84` (`MarkPrice`), `:93` (`IndexPrice`); SQL `price_history(symbol, ts, source, price double precision)` `pg-schema.sql:132-141` — **no writer** |
@@ -296,7 +296,7 @@ Conventions for every row: **Identity** gives the internal canonical id and the 
 | **Position** | A held directional exposure. **Two distinct implementations exist, in different domains** (§7). | Venue position: `(symbol, positionSide)` — no synthetic id (`records.go:183,191`). Derived position: `InstrumentID` (`portfolio.go:50`). | trading / portfolio | **split**: `apps/executor/internal/exchanges` (venue truth) + `[removed: finance/portfolio]` (derived) | venues | `executor/records.go:182` (`Position{Quantity,EntryPrice,LiquidationPrice}` decimal strings); `[removed: finance/portfolio/portfolio.go]` (`Position{InstrumentID,Quantity,EntryPrice,UnrealizedPnl}`) |
 | **Order** | An instruction to trade, at a venue or as a managed child. | Minted: `clientOrderId = fud_<executionId>_<seq>` (`idempotency.go:38-40`); venue id recorded alongside (`ExchangeOrderID`). UNIQUE `(execution_id, client_order_id)`. | trading | **`apps/executor/internal/orders`** (+ `idempotency`) | venues | `executor/records.go:76` (`ChildOrderRecord`), `:206` (`NormalizedOrder`), `:223` (`OrderRequest`); SQL `executor.child_orders` `executor-schema.sql:106-123` |
 | **Fill** | One executed trade at a venue for one order. | Dedup key is the guarantee: UNIQUE `(account_id, exchange_trade_id)` (`executor-schema.sql:141`), computed by `idempotency.FillDedupKey` `:83-85`. | trading | **`apps/executor/internal/exchanges`** (ingest) | venues | `executor/records.go:96` (`FillRecord`), `:237` (`Fill`); also `portfolio.EntryFill/ExitFill` `pnl.go:21,30` (P&L inputs, not the Fill entity) |
-| **Execution** | One user intent run end-to-end (plan → child orders → fills), with an immutable plan snapshot. | Minted uuid PK; `RiskCalculated`… lifecycle in `executor.executions`; events minted `evt_<executionId>_<seq>`. | trading | **`apps/executor/internal/execution`** | venues + own engine | `executor/records.go:13` (`ExecutionRecord`), `worker/tick.go`; SQL `executor.executions` `executor-schema.sql:58-93`, `execution_plans` `:100-104`, `execution_events` `:147-154`; contract `shared/contracts/events/catalog.json` |
+| **Execution** | One user intent run end-to-end (plan → child orders → fills), with an immutable plan snapshot. | Minted uuid PK; `RiskCalculated`… lifecycle in `executor.executions`; events minted `evt_<executionId>_<seq>`. | trading | **`apps/executor/internal/execution`** | venues + own engine | `executor/records.go:13` (`ExecutionRecord`), `worker/tick.go`; SQL `executor.executions` `executor-schema.sql:58-93`, `execution_plans` `:100-104`, `execution_events` `:147-154`; contract `contracts/events/catalog.json` |
 | **Transaction** | A user-visible money-movement history row (on-chain event or manual entry). | SQL surrogate `id INTEGER PK AUTOINCREMENT` (`database/schema/pg-schema.sql:64-80`). No canonical id. | portfolio / ledger | **`[removed: finance/transactions]`** | chain scans, manual, venue exports | `[removed: finance/transactions/transactions.go]`; SQL `transactions` `database/schema/pg-schema.sql:64-80`; writer `apps/web/src/app/(frontend)/api/transactions/route.ts:78,116` |
 | **LedgerEntry** | An immutable, signed financial movement of one asset against one account. **The repo's canonical money fact.** | `Entry.ID` string + a natural idempotency key `(AccountID, Kind, ReferenceType, ReferenceID, OccurredAtMs)` (`ledger.go:127-141`) with `Amount`/`CreatedAt` deliberately excluded (`:131`). | ledger | **`[removed: finance/ledger]`** | treasury movements, executions, fees, reconciliation adjustments | `[removed: finance/ledger/ledger.go]`; **schema counterpart is misleading**: SQL `ledger` table (`database/schema/pg-schema.sql:43-50`) is a per-account balance snapshot with **no writer**, and is *not* the entry log |
 | **Signal** | A scored, sourced detection of an opportunity/risk. | Provider `(id, mint)`; identity is composite and provider-owned. | signals | **owner absent** — `frontend/web` read proxy only | `data-public.vercel.app` | `api/signals/route.ts:10` (`SignalRow{id,ts,chain,mint,symbol,score,decision,…}`), `:44` (`ScoreboardPayload`) |
@@ -318,7 +318,7 @@ Conventions for every row: **Identity** gives the internal canonical id and the 
 and MUST NOT import each other's Go/Rust/TS implementations.** So an entity is shared through four
 separate artifacts, and they must be listed separately or "shared" is meaningless:
 
-- **(a) canonical JSON Schema** — the path added by this change under `shared/contracts/schemas/`.
+- **(a) canonical JSON Schema** — the path added by this change under `contracts/schemas/`.
   This is the *normative* shape; it is what a generator or a reviewer reads.
 - **(b) wire shape over HTTP** — which service *produces* the body, which service/route *consumes*
   it, and on which route. This is the only runtime channel between services today.
@@ -327,7 +327,7 @@ separate artifacts, and they must be listed separately or "shared" is meaningles
 - **(d) contract-visible vs internal-only fields** — a field is contract-visible only if some
   cross-service consumer reads it; everything else belongs to the owner and may change freely.
 - **(e) an emitted id document** — for the two id spaces this model mints: the reference registry
-  publishes `shared/contracts/data/reference.json`, which any language can read. Instruments are
+  publishes `contracts/data/reference.json`, which any language can read. Instruments are
   deliberately NOT in it (see the `Instrument` row below): they are unbounded per-venue markets,
   not reference data, so their ids are minted on demand by
   `[removed: markets/instruments]` and have no emitted document yet.
@@ -343,7 +343,7 @@ exist.
 | **Token** | `assets/token.json` | **[CANONICAL OWNER]** carried in `reference.json` (11 tokens); no route serves it yet. Original: **schema only — no runtime consumer yet.** `DexToken` reaches the browser only from the Next route `api/dex/route.ts` (direct DexScreener call, no sidecar). | `apps/web/src/features/market/dex/client.ts:73` (`DexToken`, TS only) | contract-visible: `chain_id`, `address`, `symbol`; internal-only: none yet |
 | **Chain** | `assets/chain.json` | **[CANONICAL OWNER]** carried in `reference.json` (9 chains); no route serves it yet. Original: **schema only — no runtime consumer yet.** Read today as a free string on `transactions` rows and as a lowercase label in the `assets` snapshot; `apps/reconciler/src/chains.rs` is a private static registry, not a service. | **`apps/api/internal/markets/reference`** → `Chain` (`reference/types.go`) | n/a |
 | **Venue** | `markets/venue.json` | **[CANONICAL OWNER]** carried in `reference.json` (12 venues, `known`, `market_types`); no route serves it yet. Original: **schema only — no runtime consumer yet.** The name string is echoed inside `executor.exchange_accounts.exchange` (`apps/api/internal/accounts/exchange` → executor store) and inside market-data rows. | **`apps/api/internal/markets/reference`** → `Venue` (`reference/types.go`) | contract-visible: `venue_id`, `known`, `market_types`; internal-only: the three inline allowlists |
-| **Instrument** | `markets/instrument.json` | **[CANONICAL OWNER]** `instrument_id` is minted by `[removed: markets/instruments]` (`canonical.go`), not by the reference registry: instruments are unbounded per-venue markets, so they are deliberately NOT emitted into `shared/contracts/data/reference.json`. A consumer gets an instrument id by calling `instruments.ResolveInstrument` with the built registry (`reference.Build()`), or from a future emitted artifact of this package. Contract exists and is **documented in the OpenAPI surface** (`shared/contracts/openapi/fudcourt.yaml:1903` components). Runtime: consumed in-process by `backend/workers/executor` (its own `executor.InstrumentMetadata` analogue), and by `apps/web/src/lib/executor.ts` (`InstrumentMetadata`, TS). **No service currently serves an instrument record over HTTP.** | `backend/api [removed: markets/instruments]` → `Instrument` (`[removed: markets/instruments/instrument.go]`); TS `InstrumentMetadata` (`platform/executor/types.ts:217`) | contract-visible: `instrument_id`, `base_asset`, `quote_asset`, `market_type`, `exchange`, `exchange_symbol`, grid fields; internal-only: `contract_size` consumers inside sizing |
+| **Instrument** | `markets/instrument.json` | **[CANONICAL OWNER]** `instrument_id` is minted by `[removed: markets/instruments]` (`canonical.go`), not by the reference registry: instruments are unbounded per-venue markets, so they are deliberately NOT emitted into `contracts/data/reference.json`. A consumer gets an instrument id by calling `instruments.ResolveInstrument` with the built registry (`reference.Build()`), or from a future emitted artifact of this package. Contract exists and is **documented in the OpenAPI surface** (`contracts/openapi/fudcourt.yaml:1903` components). Runtime: consumed in-process by `backend/workers/executor` (its own `executor.InstrumentMetadata` analogue), and by `apps/web/src/lib/executor.ts` (`InstrumentMetadata`, TS). **No service currently serves an instrument record over HTTP.** | `backend/api [removed: markets/instruments]` → `Instrument` (`[removed: markets/instruments/instrument.go]`); TS `InstrumentMetadata` (`platform/executor/types.ts:217`) | contract-visible: `instrument_id`, `base_asset`, `quote_asset`, `market_type`, `exchange`, `exchange_symbol`, grid fields; internal-only: `contract_size` consumers inside sizing |
 | **Price** | `markets/price.json` | **schema only — no runtime consumer yet.** `price_history(symbol, ts, source)` has a schema and a retention job but **no writer and no reader**; live prices reach the browser only as product-view rows (`VenueQuote`/`CrCoin`). | **absent — not yet implemented**; nearest is `backend/api [removed: markets/overview]` `Ticker` (`[removed: markets/overview/market.go]`) | contract-visible: `instrument_id`, `source_id`, `observed_at`, `price`; internal-only: `bid`/`ask` presence conventions |
 | **Candle** | `markets/candle.json` | **schema only — no runtime consumer yet.** `ccxt` bars are read per request by `api/ticker/*` and never persisted (no candle table exists in `database/`). | `backend/api [removed: markets/overview]` `Candle` (`[removed: markets/overview/market.go]`) | contract-visible: `instrument_id`, `interval`, `open_time`, OHLCV; internal-only: `exchange`+`symbol` echo |
 | **Account (venue-linked)** | `accounts/exchange-account.json` | `backend/workers/executor` / `apps/executor/internal/repository/store.go` → Postgres `executor.exchange_accounts`; the read path is `api/executor/accounts/route.ts` → browser. `backend/api` produces the *candidate* record type but does not serve it. | `backend/api accounts/exchange` → `ExchangeAccount` (`accounts/exchange/account.go:102`); executor twin `platform/executor/types.ts:893` (`AccountMetadata`) | contract-visible: everything except `credential_id` resolution; **`credential_id` is contract-visible as an opaque handle, never the secret** |
@@ -354,10 +354,10 @@ exist.
 | **Position** | `trading/position.json` | `apps/executor/internal/runtime/worker/worker.go` / `backend/workers/executor` → `executor.positions_snapshots.payload` jsonb → `/api/executor/executions/[id]` → browser. | venue truth: `backend/workers/executor` → `Position` (`executor/records.go:182`); derived: `backend/api [removed: finance/portfolio]` → `Position` (`[removed: finance/portfolio/portfolio.go]`) | contract-visible: `instrument_id`, `position_side`, `quantity` (signed), `entry_price`, `leverage`, `liquidation_price`, `observed_at`; internal-only: none |
 | **Order** | `trading/order.json` | `backend/workers/executor` → `executor.child_orders` → `/api/executor/executions/[id]/orders` → browser (`apps/web/src/features/executor/client.ts:76`). | `backend/workers/executor` → `ChildOrderRecord` (`executor/records.go:76`) | contract-visible: `order_id`, `execution_id`, `client_order_id`, `exchange_order_id`, `symbol`, `side`, `type`, `price`, `quantity`, `filled_quantity`, `status`, `submitted_at`; internal-only: `is_exit`, internal sequence |
 | **Fill** | `trading/fill.json` | `backend/workers/executor` → `executor.fills` → `/api/executor/executions/[id]/fills` → browser (`features/executor/client.ts:80`). Contract pinned in OpenAPI. | `backend/workers/executor` → `FillRecord` (`executor/records.go:96`) | contract-visible: `fill_id`, `execution_id`, `child_order_id`, `exchange_trade_id`, `price`, `quantity`, `quote_quantity`, `fee`, `fee_asset`, `occurred_at`; internal-only: none |
-| **Execution** | `trading/execution.json` | `apps/web/src/app/(frontend)/api/executor/preview/route.ts` (produce a plan) → `api/executor/executions` → `backend/workers/executor` (execute) → `executor.executions` → `/api/executor/executions/[id]` → browser. Events: `executor.execution_events` → `shared/contracts/events/catalog.json` ids; the **event envelope is the only existing cross-service contract** (`shared/contracts/schemas/event-envelope.json`). | `backend/workers/executor` → `ExecutionRecord` (`executor/records.go:13`); TS `ExecutionRecord` (`platform/executor/types.ts:1088`) | contract-visible: `execution_id`, `account_id`, `symbol`, `side`, `intent`, `status`, `mode`, `sizing_mode`, `sizing_value`, risk/quantity/notional/fee figures, timestamps; internal-only: `risk_policy`, `strategy_state` |
+| **Execution** | `trading/execution.json` | `apps/web/src/app/(frontend)/api/executor/preview/route.ts` (produce a plan) → `api/executor/executions` → `backend/workers/executor` (execute) → `executor.executions` → `/api/executor/executions/[id]` → browser. Events: `executor.execution_events` → `contracts/events/catalog.json` ids; the **event envelope is the only existing cross-service contract** (`contracts/schemas/event-envelope.json`). | `backend/workers/executor` → `ExecutionRecord` (`executor/records.go:13`); TS `ExecutionRecord` (`platform/executor/types.ts:1088`) | contract-visible: `execution_id`, `account_id`, `symbol`, `side`, `intent`, `status`, `mode`, `sizing_mode`, `sizing_value`, risk/quantity/notional/fee figures, timestamps; internal-only: `risk_policy`, `strategy_state` |
 | **Transaction** | `finance/transaction.json` | `apps/web/src/app/(frontend)/api/transactions/route.ts` (writer+reader) ⇄ Postgres `transactions` → browser `features/treasury/transactions.tsx`. | `backend/api [removed: finance/transactions]` → `Transaction` (`[removed: finance/transactions/transactions.go]`) | contract-visible: `id`, `date`, `chain`, `asset`, `event`, `amount_usd`, `direction`, `hash`, `url`, `source`, `memo`, `wallet_to`, `venue_id`, `trade_id`; internal-only: none |
 | **LedgerEntry** | `finance/ledger-entry.json` | **schema only — no runtime consumer yet.** No route serves ledger entries; the SQL `ledger` table is a balance snapshot, not this log. | `backend/api [removed: finance/ledger]` → `Entry` (`[removed: finance/ledger/ledger.go]`) | contract-visible: `id`, `account_id`, `asset`, `amount`, `kind`, `reference_type`, `reference_id`, `occurred_at`, `recorded_at`; internal-only: the idempotency-key derivation |
-| **Instrument grid / order request / sizing / plan / risk** | `markets/*`, `trading/*` (see README) | Documented in `shared/contracts/openapi/fudcourt.yaml` and consumed by the executor runtime; **no other service consumes them.** | `apps/executor/internal/{orders,sizing,risk,planner}` | contract-visible: the OpenAPI-documented subset only |
+| **Instrument grid / order request / sizing / plan / risk** | `markets/*`, `trading/*` (see README) | Documented in `contracts/openapi/fudcourt.yaml` and consumed by the executor runtime; **no other service consumes them.** | `apps/executor/internal/{orders,sizing,risk,planner}` | contract-visible: the OpenAPI-documented subset only |
 | **Ticker / Quote** | `markets/ticker.json` | `api/ticker/route.ts` (Next, direct ccxt) → browser `features/ticker/ui.tsx`. **Producer and consumer are the same service** — no cross-service hop. | `backend/api [removed: markets/overview]` → `Ticker` (`[removed: markets/overview/market.go]`); TS `VenueQuote` (`features/ticker/client.ts:185`) | contract-visible: `instrument_id`, `venue_id`, `bid`, `ask`, `last`, `observed_at`; internal-only: `exchange` echo |
 | **Protocol** | `defi/protocol.json` | `backend/data` (`/api/llama`) → `apps/web/src/app/(frontend)/api/llama/route.ts` (thin proxy) → browser `features/llama/ui.tsx`. | **absent in Go** — projected as `json.RawMessage` (`apps/data/internal/research/llama/shape.go:210`); TS `LlamaProtocol` (`features/llama/client.ts:41`) | contract-visible: `protocol_id` (the DefiLlama slug today), `name`, `category`, `tvl_usd`, `chains`; internal-only: none |
 | **Pool** | `defi/pool.json` | **schema only — no runtime consumer yet.** `DexPair` reaches the browser only through the Next route `api/dex/route.ts`. | `apps/web/src/features/market/dex/client.ts:75` (`DexPair`, TS only) | contract-visible: `pool_id`, `token_id`s, `liquidity_usd`, `price_usd`; internal-only: `labels`, `info` |
@@ -369,9 +369,9 @@ exist.
 
 **The one channel that already works end to end** is the event envelope:
 `backend/workers/executor`/`frontend/web` emit `{event_id, event_type, event_version, occurred_at,
-payload}` per `shared/contracts/schemas/event-envelope.json`, with `event_type` pinned to
-`shared/contracts/events/catalog.json` and cross-checked by
-`shared/contracts/scripts/check-contract.mjs`. **Nothing else in the repo is a service-to-service
+payload}` per `contracts/schemas/event-envelope.json`, with `event_type` pinned to
+`contracts/events/catalog.json` and cross-checked by
+`contracts/scripts/check-contract.mjs`. **Nothing else in the repo is a service-to-service
 contract** — every other arrow in §8 is service→browser.
 
 ---
@@ -379,7 +379,7 @@ contract** — every other arrow in §8 is service→browser.
 ## 3. Domain taxonomy
 
 Only domains with real entities are listed with entities; the schema tree in
-`shared/contracts/schemas/` mirrors this table and contains **only** these directories.
+`contracts/schemas/` mirrors this table and contains **only** these directories.
 
 **[CANONICAL OWNER]** The `assets` and `markets` rows of this taxonomy now have an owning
 service — `apps/api/internal/markets/reference` — in addition to the schemas they already had.
@@ -404,12 +404,12 @@ service — `apps/api/internal/markets/reference` — in addition to the schemas
 
 **Schema directories that exist and why** (no empty directories, no invented concepts):
 
-`shared/contracts/schemas/` contains exactly these directories, each with at least one file:
+`contracts/schemas/` contains exactly these directories, each with at least one file:
 `common/`, `accounts/`, `assets/`, `markets/`, `trading/`, `finance/`, `defi/`, `research/`,
 `signals/`. **`macro/` is deliberately NOT created** — it would describe a system with no provider,
 no table, no route and no owner (see §2 MacroSeries/MacroObservation and O6 in §9). The full
 index, including each file's layer and its relation to the existing `events/` catalogue, is
-`shared/contracts/schemas/README.md`.
+`contracts/schemas/README.md`.
 
 ---
 
@@ -419,7 +419,7 @@ index, including each file's layer and its relation to the existing `events/` ca
 
 | Name | Meaning | Required producer | Existing carriers that conform |
 |---|---|---|---|
-| `occurred_at` | When the fact happened **in the world** (venue fill time, chain block time, event time). | the source, never us | `ledger.Entry.OccurredAtMs` (`[removed: finance/ledger/ledger.go]`), `audit.Record.OccurredAtMs` (`audit/audit.go:81`, positively validated `:101-104`), `notifications.Request.OccurredAt` (`:97`), `treasury.Movement.OccurredAt` (`:67`), `executor.fills.timestamp` (`executor-schema.sql:140`, venue-supplied — e.g. Binance `time`/`workingTime` `exchange/binance/parse.go:74-76`), `event-envelope.occurred_at` (`shared/contracts/schemas/event-envelope.json`) |
+| `occurred_at` | When the fact happened **in the world** (venue fill time, chain block time, event time). | the source, never us | `ledger.Entry.OccurredAtMs` (`[removed: finance/ledger/ledger.go]`), `audit.Record.OccurredAtMs` (`audit/audit.go:81`, positively validated `:101-104`), `notifications.Request.OccurredAt` (`:97`), `treasury.Movement.OccurredAt` (`:67`), `executor.fills.timestamp` (`executor-schema.sql:140`, venue-supplied — e.g. Binance `time`/`workingTime` `exchange/binance/parse.go:74-76`), `event-envelope.occurred_at` (`contracts/schemas/event-envelope.json`) |
 | `observed_at` | When **we** looked and read the value (quote snapshot time). | us, or the venue's own quote stamp | `markets.Ticker.Ts` (`[removed: markets/overview/market.go]`), `Candle.OpenTime` (`:55`), `FundingRate.NextFundingAt` (`:107`), `VenueQuote.at` (`ticker/client.ts:203`), `AccountEquity.Timestamp` (`executor/records.go:177`) |
 | `received_at` | When the payload reached **our** process, regardless of the value's own time. | us | **absent as a named field.** The only approximation is `fetchedAt` (`…/cryptorank/types.go:443`; `HelperOut.FetchedAt` `fetch.go:49`), which is set at fetch and **reused verbatim by an L2 cache hit** (`platform/cache/cache.go:151-162`; llama `llama/fetch.go:314-318`) — i.e. a HIT reports the *original* fetch time, not the time of this read. Correct for freshness, but it means `fetchedAt` is not `received_at`. |
 | `recorded_at` | When the row was written to durable storage. | us (DB default or explicit) | `ledger.Entry.CreatedAt` (`:80`, explicitly excluded from the dedup key `:131`), `assets.updated_at DEFAULT datetime('now')` (`database/schema/pg-schema.sql:20-29`), `journal/transactions/wallets.created_at` (`:30,:67,:82`), `executor.*.created_at` bigint (`executor-schema.sql:45,90,103,152,161,169,184`), `execution_events.created_at` (`:152`) |
@@ -463,7 +463,7 @@ one of them (em-dash rendering), which is the part that is right.
 
 OpenAPI mirrors the float choice: `SizingDefinition.value` / `PriceDefinition.price` /
 `TakeProfitDefinition.price` / `ScaleLevel.price` are `type: number`
-(`shared/contracts/openapi/fudcourt.yaml:2097,2155,2166,2186,…`).
+(`contracts/openapi/fudcourt.yaml:2097,2155,2166,2186,…`).
 
 **Go `float64`.**
 
@@ -569,7 +569,7 @@ no key** — `DELETE FROM assets` then N inserts, no UNIQUE on `(wallet, chain, 
 
 **Assignment rule:** a field belongs to the *most restrictive* class of the inputs it can reveal.
 `executor.execution_events.payload` is **S3, not S4**, even though market prices appear in it; the
-catalogue's rule that events never carry secrets (`shared/contracts/events/catalog.json`,
+catalogue's rule that events never carry secrets (`contracts/events/catalog.json`,
 `payload_policy`) is the enforcement point for S0/S1.
 
 ---
@@ -589,7 +589,7 @@ thing: `CrCoin` (CryptoRank, `types.go:21`), `MarketsCoin` (CoinGecko, `features
 - **Asset** — the economic thing (what a balance, ledger entry and portfolio holding is denominated in). Canonical id required; symbol is a display attribute.
 - **Token** — one contract instance of an asset on one chain (`chain:address`). An asset has N tokens.
 - **Coin** — **not an entity.** It is provider nomenclature for a row on a *market-data* surface; the repo's own model for that row is market-data + asset, i.e. `MarketsCoin`/`CrCoin` are PRODUCT VIEW rows, not domain entities.
-**Required change:** (a) mint `asset_id` and a `token_id`; (b) add the `provider_id` mapping table — **now present** (`canonical_reference` in `pg-schema.sql`, DR-036; additive and unwired); (c) keep every existing `Asset string` field as the *symbol* and add the id alongside — an additive migration, because a rename would break `shared/contracts/openapi/fudcourt.yaml` and 6 packages. **Blocked on:** the `*_id` columns and a re-pointed consumer (O3's persistence half is now answered by DR-036); the loader exists, nothing runs it yet.
+**Required change:** (a) mint `asset_id` and a `token_id`; (b) add the `provider_id` mapping table — **now present** (`canonical_reference` in `pg-schema.sql`, DR-036; additive and unwired); (c) keep every existing `Asset string` field as the *symbol* and add the id alongside — an additive migration, because a rename would break `contracts/openapi/fudcourt.yaml` and 6 packages. **Blocked on:** the `*_id` columns and a re-pointed consumer (O3's persistence half is now answered by DR-036); the loader exists, nothing runs it yet.
 
 ### D2. Ticker vs Price vs Quote — **two distinct concepts; today three names for two things**
 Evidence: `markets.Ticker` (`overview/market.go:38`) is a *venue quote snapshot* with `Ts`;
@@ -661,7 +661,7 @@ states, `types.ts:72-91`, with `EXECUTION_TRANSITIONS` `:93` / `canTransition:11
 `ChildOrderRecord` (`records.go:76`) has its own 10-state lifecycle and is keyed by
 `client_order_id`. Fills reference the child order (`:99`).
 **DECISION: distinct, already correctly modelled.** One Execution → N Orders → N Fills.
-**Required change:** *no change.* Note for the contracts: `shared/contracts/openapi/fudcourt.yaml`
+**Required change:** *no change.* Note for the contracts: `contracts/openapi/fudcourt.yaml`
 already keeps `ExecutionStatus` and `ChildOrderStatus` separate and pinned to `types.ts`
 (`check-contract.mjs` CHECKED_ENUMS) — the schema tree must not invent a merged status enum.
 
@@ -686,7 +686,7 @@ the table now exists).
 *Historical — why the decision was made (state as of 2026-10-01, before DR-036):*
 - grep `(?i)(external_id|provider_id|canonical_id|instrument_id|asset_id|coin_id|token_id|aliases|asset_aliases|external_ids|provider_ids|mapping|identifier)` over the whole repo → **no SQL/DDL hits**; only Go/TS identifiers and docs.
 - grep `(?i)(create\s+table|enum|taxonomy|categor|tags|types|kind)` over `database/` → **no mapping/taxonomy table**; the only taxonomy in the repo was Payload CMS (`categories`, `posts_tags`, `posts_rels` — `apps/web/src/cms/migrations/20260917_194354.ts:28-33,111-118`) and `database/README.md:150-152` excludes it from the trading surface.
-- The closest existing artifacts: `instruments.CanonicalSymbol` (`symbol.go:35`), the event-id catalogue (`shared/contracts/events/catalog.json`), and `VenueKey` (`platform/executor/types.ts:1366`).
+- The closest existing artifacts: `instruments.CanonicalSymbol` (`symbol.go:35`), the event-id catalogue (`contracts/events/catalog.json`), and `VenueKey` (`platform/executor/types.ts:1366`).
 
 *Current — re-run 2026-10-02, after DR-036 (`canonical_reference` + `canonical_reference_miss` are declared in `database/schema/pg-schema.sql:168-232`):*
 - the same first grep now has **13 SQL hits, all 13 in `database/schema/pg-schema.sql`** (the DDL and its comments) — the "no SQL/DDL hits" claim is falsified by the table the decision itself authorized.
@@ -699,7 +699,7 @@ The correction matters because the first version of this block read as *reproduc
 `chain_id`, `venue_id`, `instrument_id`) that MUST NOT be the symbol, MUST NOT be the provider id,
 and MUST have a mapping row per `(provider, provider_id) → canonical_id`.
 **DECISION (implemented):** owner **`apps/api/internal/markets/reference`**; mapping table
-**`shared/contracts/data/reference.json`** (a generated, version-controlled artifact — chosen
+**`contracts/data/reference.json`** (a generated, version-controlled artifact — chosen
 because the services that must consume it cannot import each other's code, and because no service
 in the tree owns a durable store it could host the table in). Four of the five id kinds are minted
 today: `asset_id`, `token_id`, `chain_id`, `venue_id`. **`instrument_id` is now minted too** (`[removed: markets/instruments/canonical.go]` — the sentence here previously said "API exists, no minter"; see O4), and `Price`/`Balance`/`Trade`-class ids are still not covered at all.
@@ -811,7 +811,7 @@ flowchart TD
 
 **[CANONICAL OWNER]** `C1` now exists: `apps/api/internal/markets/reference` mints
 `asset_id`/`token_id`/`chain_id`/`venue_id` and publishes the provider mapping as
-`shared/contracts/data/reference.json`. What is still missing around it is *plumbing*, not design —
+`contracts/data/reference.json`. What is still missing around it is *plumbing*, not design —
 no service serves the document over HTTP, no consumer reads it yet, and although DR-036 added the
 SQL-side table (`canonical_reference` + loader) it is unwired: nothing loads it and nothing joins
 through it. `C2`'s box still has no
@@ -842,7 +842,7 @@ because they are the consumers of this document.
   cache is an optimisation; it must never become a dependency"); `backend/api` has no SQL at all;
   `backend/sync` owns only the `assets` snapshot; the executor owns only `executor.*`. Since no Go
   package may be imported across services, the registry publishes its table as
-  `shared/contracts/data/reference.json` instead of exposing a type. **Remaining work is plumbing,
+  `contracts/data/reference.json` instead of exposing a type. **Remaining work is plumbing,
   not decision**: nothing serves the document over HTTP, and `instrument_id` (O4) is now **minted**
   (`[removed: markets/instruments/canonical.go]`) but is not yet served by any artifact or
   route, so no consumer can obtain one.
@@ -869,7 +869,7 @@ because they are the consumers of this document.
   `[removed: finance/ledger]`, `accounts/**` and `executor.fills` — Phase 6 retires tables, not identities. `]`
 - **O3 — Where does `(provider, provider_id) → canonical_id` live, and who writes it?**
   **[ANSWERED — deliberately "operator-curated".]** It lives in `…/reference/seed.go` (curated Go
-  data) and ships as `shared/contracts/data/reference.json`; `apps/api/internal/markets/reference`
+  data) and ships as `contracts/data/reference.json`; `apps/api/internal/markets/reference`
   writes it, and `cmd/emit` regenerates the artifact. **A first-writer-wins runtime resolver was
   rejected**: the seed is reviewed like source, so two providers that disagree cannot silently
   create two ids for one asset. Consequently there is **no** `aliases[]` free-for-all and no runtime
@@ -992,7 +992,7 @@ observed output, not an expectation.
   `pattern ./backend/...: directory prefix backend does not contain modules listed in go.work or
   their selected dependencies` because `go.work` lists the three module directories individually.
   That is pre-existing and unrelated to this change.
-- **`shared/contracts/openapi/fudcourt.yaml` was modified concurrently, by another actor, while
+- **`contracts/openapi/fudcourt.yaml` was modified concurrently, by another actor, while
   this document was being written** (a comment-only edit at the `/api/reconcile` operation:
   `lib/reconcile.ts` → `apps/web/src/features/overview/reconcile.ts`, `lib/guard.ts` →
   `apps/web/src/server/auth.ts`). This workstream did not touch it, and the contract gate
