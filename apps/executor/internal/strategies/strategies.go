@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/platform/decimal"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/runtime/idempotency"
 )

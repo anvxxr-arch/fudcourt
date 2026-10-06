@@ -61,7 +61,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/runtime/worker"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

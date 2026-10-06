@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/planner"
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/sizing"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/planner"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/sizing"
 )
 
 // decodeNum renders a JSON number token as a decimal string, exactly as

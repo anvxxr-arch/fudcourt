@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 // uuid returns a deterministic-ish uuid-shaped string for tests.

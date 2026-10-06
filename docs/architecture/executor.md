@@ -10,7 +10,7 @@
 ## 1. Domain map — what the executor is made of
 The execution lifecycle (PRD §57) is one table, owned today by
 `frontend/web/src/platform/executor/types.ts` (`EXECUTION_TRANSITIONS` — the wire contract moved, DR-043)
-and ported 1:1 by `apps/executor/internal/core/execution/lifecycle.go` (`ExecutionTransitions`,
+and ported 1:1 by `apps/executor/internal/execution/lifecycle.go` (`ExecutionTransitions`,
 "the ONE lifecycle truth for API intents and worker transitions alike").
 Terminal states accept nothing:
 
@@ -134,7 +134,7 @@ What that means in practice (history — kept for the audit trail):
   `tests/e2e/executor/executor-paper-e2e.ts` (the §127 integration gate), and
   `frontend/web/tests/executor-proxy-tests.ts` are gone. The only surviving TS test referencing the contract
   shape is `frontend/web/tests/executor-ui-tests.ts` (still in `test:shapers`).
-- Go code mirrors the frozen TS contract field-for-field (`apps/executor/internal/core/execution/records.go`).
+- Go code mirrors the frozen TS contract field-for-field (`apps/executor/internal/execution/records.go`).
   The contract now lives at `frontend/web/src/platform/executor/types.ts` (consumer-facing); the Go-side
   counterpart is `internal/core/execution/{types,enums,lifecycle,records}.go` (row 1 of `parity-matrix.md`).
 - Cutover is **CLOSED** by DR-043: every row of `parity-matrix.md` is `DONE`, `bun run test:shapers` is

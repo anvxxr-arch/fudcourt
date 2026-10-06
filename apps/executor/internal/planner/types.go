@@ -12,9 +12,9 @@ package planner
 import (
 	"fmt"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/risk"
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/sizing"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/risk"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/sizing"
 )
 
 // Conflict is the frozen PRD §14 conflict shape (risk.ConstraintConflict):

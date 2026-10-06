@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/exchanges"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/platform/decimal"
 )

@@ -8,7 +8,7 @@ package api
 import (
 	"encoding/json"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 // num maps a non-nullable decimal string to a wire number. An empty string is

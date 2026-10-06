@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 // fakeRetryable declares retry semantics like a limiter/simulator would.

@@ -1,8 +1,8 @@
 package sizing
 
 import (
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/risk"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/risk"
 )
 
 // LeverageSpec is the leverage request half of the TS LeverageDefinition

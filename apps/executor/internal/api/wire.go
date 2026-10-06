@@ -27,7 +27,7 @@ package api
 import (
 	"encoding/json"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 // --- account envelopes -----------------------------------------------------

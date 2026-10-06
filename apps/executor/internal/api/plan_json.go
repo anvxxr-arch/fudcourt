@@ -9,9 +9,9 @@ package api
 import (
 	"encoding/json"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/planner"
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/risk"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/planner"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/risk"
 )
 
 // WireInstrument is the wire InstrumentMetadata.

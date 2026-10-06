@@ -3,7 +3,7 @@ package risk
 import (
 	"math/big"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 // defaultMMR is the maintenance margin rate used when the venue does not report

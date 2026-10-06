@@ -217,7 +217,7 @@ func seedTokens() []seedToken {
 //   - known=true (binance, bybit, mexc): backend/api/internal/accounts/exchange/
 //     account.go KnownExchange, mirrored by market_types spot+linear_perp which
 //     is the frozen pair this build trades (docs/architecture/current.md).
-//   - binance additionally: backend/workers/executor/internal/core/execution/
+//   - binance additionally: backend/workers/executor/internal/execution/
 //     types.go ExchangeBinance/Bybit/MEXC and the three adapters under
 //     backend/workers/executor/internal/exchanges/{binance,bybit,mexc}.
 //   - the other eight: frontend/web/src/features/ticker/client.ts TICKER_EXCHANGES
@@ -279,7 +279,7 @@ func VenueIDInvariants() []VenueIDInvariant {
 			Name:     "executor adapter vocabulary",
 			Provider: ProviderInternal,
 			VenueIDs: []string{"binance", "bybit", "mexc", "paper"},
-			Source:   "backend/workers/executor/internal/core/execution/types.go ExchangeID constants + backend/workers/executor/internal/exchanges/paper/paper.go venuePaper",
+			Source:   "backend/workers/executor/internal/execution/types.go ExchangeID constants + backend/workers/executor/internal/exchanges/paper/paper.go venuePaper",
 		},
 		{
 			Name:     "backend/api supported venue allowlist",

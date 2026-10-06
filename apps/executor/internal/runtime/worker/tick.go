@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/orders"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/orders"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/exchanges"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/runtime/idempotency"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/strategies"

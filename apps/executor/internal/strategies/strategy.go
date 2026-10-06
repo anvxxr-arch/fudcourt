@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 // ActionKind names one intent a strategy can express.

@@ -5,9 +5,9 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/risk"
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/sizing"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/risk"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/sizing"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/platform/decimal"
 )
 

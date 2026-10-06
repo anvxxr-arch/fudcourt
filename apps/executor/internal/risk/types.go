@@ -24,7 +24,7 @@ package risk
 import (
 	"math/big"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 // EntryType names how the entry leg fills (types.ts 'market' | 'limit'); the

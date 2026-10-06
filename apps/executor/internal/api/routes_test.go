@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/exchanges/paper"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/platform/session"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/repository"

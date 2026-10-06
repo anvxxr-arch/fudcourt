@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/planner"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/planner"
 )
 
 // profileKeys is PROFILE_KEYS in runtime.ts: the eight profile fields and their

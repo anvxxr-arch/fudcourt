@@ -9,7 +9,7 @@ package exchanges
 import (
 	"context"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 // Exchange is the canonical venue interface (objective §8.16). Implementations:

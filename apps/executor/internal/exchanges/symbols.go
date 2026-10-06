@@ -3,7 +3,7 @@ package exchanges
 import (
 	"strings"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 // Symbol normalization (PRD §49). The canonical internal symbol is

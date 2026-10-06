@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 // liveRec is runningRec in LIVE mode — the shape the §108 kill switch governs.

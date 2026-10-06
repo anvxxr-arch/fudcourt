@@ -217,7 +217,7 @@ function candidatesFor(token) {
     // canonical docs use for the Go executor packages and the frontend db module.
     // Try the literal path first, then the pre-migration home, so a citation stays
     // valid across the relocation.
-    if (seg === 'core') out.push(`apps/executor/internal/core/${rest}`);
+    if (seg === 'core') out.push(`apps/executor/internal/${rest}`);
     if (seg === 'db') out.push(`frontend/web/src/server/${rest}`);
     return out;
   }

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 func TestToVenueSymbol(t *testing.T) {

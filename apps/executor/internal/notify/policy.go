@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 // notifiable maps the events worth waking someone for to the glyph that leads
 // their message. The language is the executor's, not a new vocabulary: every
-// key is a canonical ExecutionEventName from internal/core/execution/enums.go,
+// key is a canonical ExecutionEventName from internal/execution/enums.go,
 // and policy_test.go asserts that (the immutable event list is the contract —
 // this map may only ever be a SUBSET of it).
 //

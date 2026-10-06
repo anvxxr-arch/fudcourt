@@ -41,7 +41,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/exchanges"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/exchanges/binance"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/exchanges/bybit"

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/core/execution"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 )
 
 // Classify maps a Go error to the normalized taxonomy, mirroring
