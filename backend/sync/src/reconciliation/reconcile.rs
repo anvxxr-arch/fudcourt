@@ -200,30 +200,56 @@ pub fn summary_map(rows: &[ReconRow]) -> Value {
     Value::Object(out)
 }
 
+/// Flatten a `simple_query` result into the same one-JSON-row-per-row shape
+/// `Db::query` produces, for use on the dedicated snapshot connection.
+async fn simple_rows(client: &tokio_postgres::Client, sql: &str) -> Result<Vec<Row>, String> {
+    let msgs = client
+        .simple_query(sql)
+        .await
+        .map_err(|e| format!("DB: {e}"))?;
+    let mut out: Vec<Row> = Vec::new();
+    for m in msgs {
+        if let tokio_postgres::SimpleQueryMessage::Row(r) = m {
+            let mut row = Row::new();
+            for (i, col) in r.columns().iter().enumerate() {
+                let v = match r.get(i) {
+                    Some(s) => Value::String(s.to_string()),
+                    None => Value::Null,
+                };
+                row.insert(col.name().to_string(), v);
+            }
+            out.push(row);
+        }
+    }
+    Ok(out)
+}
 /// Run the three SELECTs and reconcile. Any database failure is returned as an
 /// error string; the caller answers 500 with it, never a partial board.
 pub async fn load(db: &Db) -> Result<(Vec<ReconRow>, Value, Vec<Value>), String> {
-    let assets = db
-        .query(
-            "SELECT wallet, chain, asset, quantity, value_usd, updated_at FROM assets ORDER BY wallet, chain, asset",
-            None,
-        )
+    // One REPEATABLE READ snapshot: the three SELECTs see the SAME
+    // generation, never a mix of a half-written board and its transactions.
+    // A dedicated connection keeps concurrent snapshots from interleaving.
+    let (assets, transactions, wallets) = db
+        .with_snapshot(|client| async move {
+            let a = simple_rows(
+                &client,
+                "SELECT wallet, chain, asset, quantity, value_usd, updated_at FROM assets ORDER BY wallet, chain, asset",
+            )
+            .await?;
+            let t = simple_rows(
+                &client,
+                "SELECT id, date, chain, asset, event, amount_usd, direction, memo, wallet_to, hash, url, source FROM transactions ORDER BY date ASC",
+            )
+            .await?;
+            let w = simple_rows(
+                &client,
+                "SELECT address, label, alias, emoji, color, chain FROM wallets ORDER BY label",
+            )
+            .await?;
+            Ok((a, t, w))
+        })
         .await?;
-    let transactions = db
-        .query(
-            "SELECT id, date, chain, asset, event, amount_usd, direction, memo, wallet_to, hash, url, source FROM transactions ORDER BY date ASC",
-            None,
-        )
-        .await?;
-    let wallets: Vec<Value> = db
-        .query(
-            "SELECT address, label, alias, emoji, color, chain FROM wallets ORDER BY label",
-            None,
-        )
-        .await?
-        .into_iter()
-        .map(Value::Object)
-        .collect();
+    let wallets: Vec<Value> = wallets.into_iter().map(Value::Object).collect();
 
     let (rows, wallets_out) = reconcile(&assets, &transactions, wallets);
     let summary = summary_map(&rows);

@@ -445,23 +445,46 @@ pub async fn run(env: &Env) -> Result<(), String> {
     }
     // ---- write ----
     let db = Db::connect(&env.pg_dsn).await?;
-    db.delete_assets().await?;
+    // A run with RPC errors is NOT a success: the honest board is the one from
+    // the last fully-successful run. Bail (loudly, non-zero) before touching
+    // `assets`, exactly like the Python oracle's failed-run path.
+    if !errors.is_empty() {
+        return Err(format!(
+            "refusing to write assets: {} RPC error(s); the board keeps the last good snapshot",
+            errors.len()
+        ));
+    }
+    // The board replace is ONE transaction (DELETE + all INSERTs + the 90-day
+    // retentions), the same atomic replace the Python oracle does. The
+    // single-flight advisory lock is taken on that same connection, so a
+    // concurrent run bails loudly before it can interleave.
+    let mut rendered: Vec<(String, String, String, String, String)> = Vec::new();
     for r in &rows {
         let share = if tot != 0.0 {
             repr(round2(r.usd / tot * 100.0))
         } else {
             "0".to_string()
         };
-        db.insert_asset(
-            &r.chain,
-            &r.asset,
-            &repr(round10(r.qty)),
-            &repr(round4(r.usd)),
-            &share,
-            &r.owner,
-        )
-        .await?;
+        rendered.push((
+            r.chain.clone(),
+            r.asset.clone(),
+            repr(round10(r.qty)),
+            repr(round4(r.usd)),
+            share,
+        ));
     }
+    let mut asset_rows: Vec<crate::persistence::db::AssetRow<'_>> = Vec::new();
+    for ((chain, asset, qty, usd, share), r) in rendered.iter().zip(rows.iter()) {
+        asset_rows.push(crate::persistence::db::AssetRow {
+            chain: chain.as_str(),
+            asset: asset.as_str(),
+            quantity: qty.as_str(),
+            value_usd: usd.as_str(),
+            share_pct: share.as_str(),
+            wallet: r.owner.as_str(),
+        });
+    }
+    db.replace_assets(&asset_rows).await?;
 
     println!("\n=== POSTGRES assets (LIVE) ===");
     let mut s = 0.0f64;
