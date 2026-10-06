@@ -75,28 +75,30 @@ export function Navbar() {
 
         {/* The terminal is gated, so it is offered as the bar's one action rather
             than as a section. The middleware sends an anonymous visitor to
-            /login with ?next=/team, so the link is honest for every reader. */}
-        <Link
-          className="fc-focusable"
-          href={TERMINAL.href}
-          title={TERMINAL.blurb}
-          style={{
-            marginLeft: 'auto',
-            color: themeColor.blue,
-            background: themeColor.bgSecondary,
-            border: `1px solid ${alpha(themeColor.blue, 0.35)}`,
-            borderRadius: radius[8],
-            padding: `${space[4]}px ${space[8]}px`,
-            fontSize: fontSize[11],
-            fontWeight: fontWeight.semibold,
-            textDecoration: 'none',
-            transition: 'background ' + motion.normal + ' ' + motion.ease,
-          }}
-        >
-          {TERMINAL.label}
-        </Link>
-
-        <ThemeToggle />
+            /login with ?next=/team, so the link is honest for every reader.
+            `marginLeft: auto` lives on this WRAPPER, not on the link, so the link and the
+            theme toggle form one right-hand cluster instead of two separated islands. */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: space[8] }}>
+          <Link
+            className="fc-focusable"
+            href={TERMINAL.href}
+            title={TERMINAL.blurb}
+            style={{
+              color: themeColor.blue,
+              background: themeColor.bgSecondary,
+              border: `1px solid ${alpha(themeColor.blue, 0.35)}`,
+              borderRadius: radius[8],
+              padding: `${space[4]}px ${space[8]}px`,
+              fontSize: fontSize[11],
+              fontWeight: fontWeight.semibold,
+              textDecoration: 'none',
+              transition: 'background ' + motion.normal + ' ' + motion.ease,
+            }}
+          >
+            {TERMINAL.label}
+          </Link>
+          <ThemeToggle />
+        </div>
       </nav>
     </header>
   );

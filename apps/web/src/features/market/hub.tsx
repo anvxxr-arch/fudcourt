@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties } from 'react';
 import Link from 'next/link';
-import { themeColor, fontSize, radius, space } from '@/styles/tokens';
+import { themeColor, fontFamily, fontSize, lineHeight, radius, space } from '@/styles/tokens';
 import dynamic from 'next/dynamic';
 const TickerPage = dynamic(() => import('@/features/market/ticker/ui'), { ssr: false });
 const TrackerPage = dynamic(() => import('@/features/overview/tracker'), { ssr: false });
@@ -103,7 +103,10 @@ function Overview() {
       {SECTIONS.map((s) => (
         <Link key={s.key} href={s.href} style={cardStyle}>
           <strong style={{ color: themeColor.blue }}>{s.label}</strong>
-          <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>{s.blurb}</span>
+          {/* The blurb is prose, not data. It inherits the shell's mono stack, which reads as
+              terminal noise at 12px — the sans stack is what the type scale is designed for
+              at this size, and it keeps mono meaning "a figure" everywhere else on the board. */}
+          <span style={{ color: themeColor.labelTertiary, fontFamily: fontFamily.sans, fontSize: fontSize[12], lineHeight: lineHeight.normal }}>{s.blurb}</span>
         </Link>
       ))}
     </div>

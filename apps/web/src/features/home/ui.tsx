@@ -102,7 +102,9 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
           <p style={{ margin: `${space[8]}px 0 0`, color: themeColor.labelTertiary, fontSize: fontSize[13], letterSpacing: letterSpacing.wide }}>
             Community · Terminal · Management
           </p>
-          <p style={{ margin: `${space[8]}px 0 0`, color: themeColor.labelPrimary, fontSize: fontSize[15], lineHeight: lineHeight.normal, maxWidth: 720 }}>
+          {/* Prose, not a figure: the sans stack at the body size. Mono stays on the
+              eyebrow above and on every value below, so it keeps meaning "data". */}
+          <p style={{ margin: `${space[8]}px 0 0`, color: themeColor.labelPrimary, fontFamily: fontFamily.sans, fontSize: fontSize[15], lineHeight: lineHeight.normal, maxWidth: 720 }}>
             FUDCOURT cross-checks every figure against a second source before it ships. Missing data shows as{' '}
             <span style={{ color: themeColor.labelTertiary }}>{DASH}</span>, never <span style={{ color: themeColor.labelTertiary }}>0</span>.
           </p>
