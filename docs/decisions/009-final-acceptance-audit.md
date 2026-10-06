@@ -113,7 +113,7 @@ navigation target resolves:
 | Stale paths | grep for 10 legacy path prefixes across runtime code | **0 matches** |
 
 ## The one red gate, and why it is not this refactor's
-`fud.ts structure` fails with two violations, both in
+`fud.ts structure` failed with two violations, both in
 `apps/web/src/ui/atoms/system/index.tsx` importing `lib/executor-lifecycle`
 and `lib/executor-request-defs` across the DR-018 `ui/`-must-be-dependency-free
 boundary.
@@ -128,6 +128,29 @@ Recorded, not fixed: repairing the `ui/`→`lib/` boundary means either moving
 the canonical lifecycle vocabulary out of `lib/` or accepting a type-only
 re-export, and both are decisions for the design-system workstream that owns
 those files.
+
+**Resolved since this audit** by `1d6960e` — "refactor(web): declare the
+execution lifecycle vocabulary in the atom layer, proven by test". The atom no
+longer imports `@/lib`; it imports the two unions from a new sibling,
+`apps/web/src/ui/atoms/system/lifecycle.ts`, and `fud.ts structure` returns
+`STRUCTURE_OK`. The design-system workstream chose neither — it declared a
+**type-only mirror inside the `ui/` layer** rather than re-exporting or
+relocating anything: the new module
+declares its own copy of `ExecutionStatus` and `ChildOrderStatus` and adds two
+`readonly` arrays (`EXECUTION_STATUSES`, `CHILD_ORDER_STATUSES`) that exist only
+in the `ui/` layer. It does **not** copy `EXECUTION_TRANSITIONS`, `canTransition`
+or `isTerminalExecution`, so `lib/executor-lifecycle.ts` remains canonical for
+every runtime behaviour.
+
+**This is a deliberate duplicate source of truth, not an accident.** The
+duplication is pinned in `apps/web/tests/design-system-atom-tests.ts` by a
+compile-time mutual-assignability assertion over the engine and mirror unions,
+plus runtime cross-checks of the atom's label maps against the engine's
+`EXECUTION_TRANSITIONS` table and the frozen contract schema's
+`execution_status` / `child_order_status` enums. A state added to either side
+without the other fails those checks. A future reader should not "fix" the
+duplication by reintroducing the import — that is the violation the gate exists
+to catch.
 
 ## Size targets (metrics, not gates)
 | Metric | Baseline | Now |
