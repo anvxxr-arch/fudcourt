@@ -17,6 +17,39 @@ JSON, YAML, systemd units): **0**. The one remaining occurrence is the
 explanatory comment in `go.yml` that names the four modules Phase 2
 consolidated, which is history rather than a live path.
 
+**Correction, 2026-10-06 (`03d50c0`).** That claim was scoped too
+narrowly and was wrong on re-audit. Phase 14's exit gate scanned *code*
+files, and `check-doc-citations.mjs` gates the 13 markdown documents in
+its `DOCS` array — so references in **ungated** surfaces survived the
+restructure looking live. Found and fixed:
+
+| Surface | Was wrong |
+|---|---|
+| `contracts/openapi/fudcourt.yaml` | `info.description` named the deleted `frontend/web/src/platform/executor/types.ts` as the frozen ground truth and described the contract as belonging to `backend/api` + `backend/workers/executor` + `shared/sdk/typescript`; 19 more in-description pointers to `backend/data`, `database/schema/pg-schema.sql`, `shared/contracts/events/catalog.json` and the pre-move TS auth/treasury files |
+| `contracts/{README,schemas/README,events/README}.md` | the schemas README was still titled `# shared/contracts/schemas`; its ownership column named `backend/api` / `backend/data` for 15 schemas; the contracts README described a pre-DR-042 TS-owned contract and told the reader to run `node shared/contracts/scripts/check-contract.mjs` |
+| `docs/architecture/data-categorization.json` | 73 of 155 rows carried `frontend/web/...` in `code_path`/`evidence`. The companion `.md` is gated and was clean; the JSON sidecar the `.md` calls "the machine-readable form" was not, so the drift was invisible to the gate |
+| `apps/web/tests/*.ts` (16 files) | `Usage: cd frontend/web && npm run test:shapers` — the repo is Bun-only (`bun.lock`, no `package-lock.json`), so the documented command did not run |
+| `README.md`, `apps/data/README.md`, `db/README.md` | root README mapped `infrastructure/` for the systemd units (it is `deploy/`); apps/data's run/verify blocks said `cd backend/data` and built `./cmd/data`; db/README named the removed `pg-load.ts` by its pre-move path |
+
+Re-measured after the fix: **8** references remain repo-wide, every one
+of them the record of a change rather than a pointer to a live file —
+`007` naming the `backend/api` → `apps/api` module-path rename,
+`canonical-placement.md`'s `git show` commands over historical commits
+and its record of a past grep finding, `tsconfig.shaper-tests.json`'s
+"moved out of frontend/web" provenance note, and `db/README.md`'s
+documentation of the two rename commits. Those are the
+"references on historical docs/ADR are allowed" case the plan permits.
+
+The `.md` slice counts in `data-categorization.md` were also stale —
+`routes` said 43 while the JSON holds 45 (the two ticker detail
+endpoints added later); the totals, status roll-up and category roll-up
+are now recomputed from the JSON rather than hand-maintained.
+
+The lesson is recorded rather than hidden: **a gate that scans only code
+and only a named list of documents will certify a tree it did not
+read.** The fix was to widen the scan, not to add the files to the
+allowance list.
+
 ### 2. One Go module
 
 ```
