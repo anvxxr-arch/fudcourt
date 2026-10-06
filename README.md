@@ -1,10 +1,10 @@
 # fudcourt
 
 Personal treasury OS + CryptoRank read proxy + Payload blog — Next.js 16
-monorepo (**one** Next app, `frontend/web`, serving the dashboard and the CMS blog)
+monorepo (**one** Next app, `apps/web`, serving the dashboard and the CMS blog)
 plus a Go acquisition sidecar
-(`backend/data`, [DR-005](docs/records/DECISIONS.md)) and a Rust service pair
-(`backend/sync`, [DR-010](docs/records/DECISIONS.md)/[DR-014](docs/records/DECISIONS.md)),
+(`apps/data`, [DR-005](docs/records/DECISIONS.md)) and a Rust service pair
+(`apps/reconciler`, [DR-010](docs/records/DECISIONS.md)/[DR-014](docs/records/DECISIONS.md)),
 run on the homeserver
 (`192.168.100.6`) with an evidence-first verification stack. Every number on the board is either
 exactly reconciled or shown as `—`; upstream errors fail loud (502/503),
@@ -17,9 +17,15 @@ schema), `docs/operations/` (PLAN, [SECRETS](docs/operations/SECRETS.md), change
 `docs/records/` ([DECISIONS](docs/records/DECISIONS.md)).
 
 **Layout in one line** ([DR-018](docs/records/DECISIONS.md)): one `src/` tree in
-`frontend/web` — `src/app/` routes only, `src/features/<family>/` one vertical slice per
-data family, `src/platform/` shared infrastructure, `src/components/` (ui + layout) and
-`src/styles/` leaves — enforced by `frontend/web/scripts/checks/check-structure.py`.
+`apps/web` — `src/app/` routes only, `src/features/<family>/` one vertical slice per
+data family, `src/lib/` + `src/server/` shared infrastructure, `src/ui/` and
+`src/styles/` leaves — enforced by `apps/web/scripts/checks/check-structure.py`.
+
+**Repository layout:** `apps/` holds every deployable (`api`, `bot`, `data`,
+`executor`, `web`, `reconciler`), `contracts/` the cross-service schemas and their
+gates, `db/` the DDL, `tests/` the shared fixtures and oracles, `tools/` the one
+command surface, `scripts/` the verification harnesses, `infrastructure/` the
+systemd units, `docs/` everything written down.
 
 > **Hosting:** self-hosted on the homeserver — production = the systemd units
 > (`fudcourt-web` :3100 — dashboard + blog, `fudcourt-data` :3101,
@@ -32,9 +38,9 @@ data family, `src/platform/` shared infrastructure, `src/components/` (ui + layo
 
 ```bash
 # from the repo root
-cd backend/data && go build -o bin/fudcourt-data ./cmd/data && ./bin/fudcourt-data
+cd apps/data && go build -o bin/fudcourt-data . && ./bin/fudcourt-data
                                          # CryptoRank sidecar -> :3101 (unit: infrastructure/systemd/fudcourt-data.service)
-cd ../../frontend/web && bun install && bun run dev # dashboard + blog + proxy -> :3000
+cd ../web && bun install && bun run dev # dashboard + blog + proxy -> :3000
                                           # (prod unit: :3100, served by Bun — DR-008/DR-017)
                                           # blog: /blog (public), /blog/cms/admin (Payload)
 unset NODE_ENV                           # dev/build must never inherit production
@@ -47,7 +53,7 @@ payload.
 The sidecar is also the home of the **`llama`** family (DeFiLlama TVL, 3 modes,
 strict `top`/`days`), the **`news`** family (Cointelegraph RSS: strict
 `source`/`limit`, the RSS parse, cached on the feed URL), the **`chainrank`**
-family (chainrank.fyi reads, pagination relayed verbatim) and `backend/sync` holds
+family (chainrank.fyi reads, pagination relayed verbatim) and `apps/reconciler` holds
 the Rust port of the 5-minute balance sync. The same sidecar is the home of the **`khala`**
 family — research reports from **khala.io** (Framer SSR, keyless), three modes
 (`reports`/`report`/`latest`), one Go package with a plain `net/http` client; the Go side
@@ -60,43 +66,55 @@ Secrets live only in git-ignored `.env` files — see [docs/operations/SECRETS.m
 for the inventory and rotation steps (never print a value).
 
 ## Verify
+
+One command:
+
 ```bash
-bun run verify   # = bash scripts/verify/verify-all.sh: EVERY offline gate in one pass
-                 # (structure, web contract, deploy units, contracts drift + sdk drift,
-                 #  go build/vet/test x3 modules, cargo build/test, hook syntax,
-                 #  frontend/web typecheck + shaper fixtures)
+node tools/fud.ts verify     # every offline gate in one pass
+bun run verify               # the same, through the root package.json
 ```
-The gates individually (each line runs from the cwd its `cd` leaves it in):
+
+Covers: the frontend structure gate (DR-018), the web contract gate, the deploy-unit
+guard, the four contract drift gates, `go build/vet/test` over the single root
+module, `cargo build/test` for the reconciler, the sync oracle gate (Python vs Rust
+byte-identical replay), the cross-service API conformance check, the pre-push hook
+syntax check, and `apps/web` typecheck + shaper fixture tests.
+
+The subcommands, when you want one gate rather than all of them:
+
 ```bash
-cd backend/data
-go build -o bin/fudcourt-data ./cmd/data  # build the sidecar (go >= 1.24.1)
-go test ./...                            # offline: mode-table + shaping tests
-cd ../sync && cargo test --release  # offline: the Rust sync crate (parity-checked
-                                      # against the repo-root path tests/oracle/sync-live.py)
-cd ../../frontend/web
-python3 scripts/checks/check-structure.py    # offline: DR-018 layer gate (the one gate left inside the app)
-bun run test:shapers                # offline: shaper + auth + inbound rate-limit tests
-bunx tsc --noEmit && bun run build  # typecheck + Next 16 build (Bun is the runner: DR-007)
-cd ../..                            # back to the repo root: the repo-wide gates live in scripts/
-python3 scripts/verify/check-contract.py     # offline: CR_MODES + TS-Go mode-table parity + mutation-auth guards
-python3 scripts/verify/check-deploy.py       # offline: every unit ExecStart path must exist
-python3 scripts/verify/verify-sync.py         # OFFLINE: sync oracle gate — Python sync-live.py vs
-                                              # Rust fudcourt-sync byte-identical replay (tests/oracle fixtures)
-python3 scripts/verify/verify-cryptorank.py  # LIVE: 244-check upstream harness (3-gate decoy detector)
-python3 scripts/verify/monitor.py            # LIVE: deterministic smoke monitor (cron every 15m)
-python3 scripts/verify/verify-khala.py       # LIVE: khala harness (136 checks; green on :3101)
-python3 scripts/verify/verify-llama.py       # LIVE: DeFiLlama harness (51 checks; green on :3101/:3100)
-python3 scripts/verify/verify-news.py        # LIVE: Cointelegraph RSS harness (50 checks; green on :3101/:3100)
-python3 scripts/verify/verify-chainrank.py   # LIVE: chainrank harness (50 checks; green on :3101/:3100)
-node scripts/database/dump-schema.mjs --check  # schema drift alarm vs database/schema/schema.sql
+node tools/fud.ts contracts      # the four contract drift gates
+node tools/fud.ts deploy         # systemd unit guard (ExecStart paths, timer pairs)
+node tools/fud.ts structure      # frontend DR-018 layer gate
+node tools/fud.ts test go        # go test ./...
+node tools/fud.ts test web       # apps/web: typecheck + shaper fixtures
+node tools/fud.ts test sync      # apps/reconciler: cargo test --release
 ```
-CI is five path-filtered workflows (the single `ci.yml` this line used to name was split in
-Phase 9) — `web.yml` (contract/structure gates,
-typecheck, shaper fixtures, build), `go.yml` (build/vet/test per Go module),
-`rust.yml` (`backend/sync`), `contracts.yml` (contracts drift + generated SDK) and
+
+`tools/fud.ts` is a dispatcher, not a reimplementation: every subcommand shells out
+to the script that already owns the check, so each gate has exactly one
+implementation. It is plain ESM TypeScript with no imports beyond node builtins, so
+it runs under `node --experimental-strip-types` (what CI has) or `bun` with no
+dependency install.
+
+The live/network harnesses stay manual on purpose — they touch upstreams and are
+slow:
+
+```bash
+python3 scripts/verify/verify-cryptorank.py  # LIVE: 244-check upstream harness
+python3 scripts/verify/monitor.py            # LIVE: deterministic smoke monitor
+python3 scripts/verify/verify-khala.py       # LIVE: khala harness (136 checks)
+python3 scripts/verify/verify-llama.py       # LIVE: DeFiLlama harness (51 checks)
+python3 scripts/verify/verify-news.py        # LIVE: Cointelegraph RSS harness
+python3 scripts/verify/verify-chainrank.py   # LIVE: chainrank harness (50 checks)
+```
+
+CI is five path-filtered workflows — `web.yml` (contract/structure gates, typecheck,
+shaper fixtures, build), `go.yml` (build/vet/test on the single root module),
+`rust.yml` (`apps/reconciler`), `contracts.yml` (contract drift + generated SDK) and
 `integration.yml` (the offline aggregate `scripts/verify/verify-all.sh` — the
-deploy-unit guard runs there, not in `web.yml`, ordered after `cargo build` —
-plus the live reconcile contract). Each ends in a required `gate` job.
+deploy-unit guard runs there, not in `web.yml`, ordered after `cargo build` — plus
+the live reconcile contract). Each ends in a required `gate` job.
 
 ## House rules
 

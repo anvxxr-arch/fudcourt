@@ -1,15 +1,15 @@
 {
   "name": "fudcourt",
   "private": true,
-  "description": "Monorepo root. Scripts delegate to per-app/per-service tooling; deliberately NO dependencies and NO root lockfile — each app owns its install (apps/web: bun.lock; backend: go.sum / Cargo.lock).",
+  "description": "Monorepo root. One command surface (tools/fud.ts); deliberately NO dependencies and NO root lockfile — each app owns its install (apps/web: bun.lock; Go: go.sum at the root; Rust: apps/reconciler/Cargo.lock).",
   "scripts": {
-    "verify": "bash scripts/verify/verify-all.sh",
-    "check:contracts": "node contracts/scripts/check-contract.mjs",
-    "check:deploy": "python3 scripts/verify/check-deploy.py",
-    "check:structure": "cd apps/web && python3 scripts/checks/check-structure.py",
-    "check:web-contract": "python3 scripts/verify/check-contract.py",
-    "test:web": "cd apps/web && bun run test:shapers",
-    "test:go": "go test ./...",
-    "test:sync": "cd apps/reconciler && cargo test --release"
+    "verify": "node --experimental-strip-types tools/fud.ts verify",
+    "contracts": "node --experimental-strip-types tools/fud.ts contracts",
+    "deploy": "node --experimental-strip-types tools/fud.ts deploy",
+    "structure": "node --experimental-strip-types tools/fud.ts structure",
+    "test": "node --experimental-strip-types tools/fud.ts test",
+    "test:go": "node --experimental-strip-types tools/fud.ts test go",
+    "test:web": "node --experimental-strip-types tools/fud.ts test web",
+    "test:sync": "node --experimental-strip-types tools/fud.ts test sync"
   }
 }

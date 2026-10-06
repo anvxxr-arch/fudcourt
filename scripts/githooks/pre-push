@@ -51,8 +51,8 @@ if echo "$changed" | grep -q '^apps/web/'; then
 fi
 
 if echo "$changed" | grep -qE '^shared/|^apps/web/'; then
-  echo "[pre-push] contracts drift gate (shared/contracts)..."
-  if ! node shared/contracts/scripts/check-contract.mjs; then rc=1; fi
+  echo "[pre-push] contracts drift gate (contracts/)..."
+  if ! node contracts/scripts/check-contract.mjs; then rc=1; fi
 fi
 if echo "$changed" | grep -qE '^apps/|^core/|\.go$'; then
   echo "[pre-push] go build/vet/test (single module)..."
@@ -63,9 +63,9 @@ if echo "$changed" | grep -qE '^apps/|^core/|\.go$'; then
   fi
 fi
 
-if echo "$changed" | grep -qE '^backend/sync/|\.rs$'; then
-  echo "[pre-push] cargo build/test (backend/sync)..."
-  if ! (cd backend/sync && cargo build --release && cargo test --release); then
+if echo "$changed" | grep -qE '^apps/reconciler/|\.rs$'; then
+  echo "[pre-push] cargo build/test (apps/reconciler)..."
+  if ! (cd apps/reconciler && cargo build --release && cargo test --release); then
     echo "[pre-push] RUST BUILD/TEST FAILED"; rc=1
   fi
   echo "[pre-push] sync oracle gate (Python oracle vs Rust replay)..."
