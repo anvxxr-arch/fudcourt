@@ -1,17 +1,17 @@
 'use client';
 /**
- * ui-progress.tsx — ExecutorProgress + progress tables (PRD §85, §86).
+ * ui-progress.tsx — ExecutorProgress + progress helpers (PRD §85, §86).
  * Split from ui.tsx; re-exported through ./ui.
+ * Progress tables live in ./ui-progress-tables and are re-exported here so
+ * ALL existing importers keep working unchanged.
  */
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { color, fontFamily, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { color, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { Button, Card } from '@/ui/primitives';
 import { Meter } from '@/ui/meter';
 import { Banner } from '@/ui/banner';
 import { Row } from '@/ui/row';
-import { StatusPill } from '@/ui/status-pill';
-import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import {
   isTerminalExecution,
   type ChildOrderRecord,
@@ -38,7 +38,10 @@ import {
   resumeExecution,
   startExecution,
 } from './client';
-import { diff, h3Style, noteStyle, tdStyle, thStyle } from './ui-shared';
+import { diff, h3Style, noteStyle } from './ui-shared';
+import { ChildOrderTable, EventTable, FillTable } from './ui-progress-tables';
+
+export { ChildOrderTable, EventTable, FillTable } from './ui-progress-tables';
 
 // ---------------------------------------------------------------------------
 // ExecutorProgress — §85, §86
@@ -60,109 +63,6 @@ function ElapsedRows({ execution }: { execution: ExecutionRecord }) {
       <Row label="Elapsed" value={formatDuration(elapsed)} />
       <Row label="Remaining" value={formatDuration(remaining)} />
     </>
-  );
-}
-
-function ChildOrderTable({ orders }: { orders: ChildOrderRecord[] }) {
-  return (
-    <Card>
-      <h3 style={h3Style}>CHILD ORDERS · {orders.length}</h3>
-      {orders.length === 0 && <p style={noteStyle}>no child orders yet — the worker plans them when the execution starts</p>}
-      {orders.length > 0 && (
-        <Table>
-          <THead>
-            <TR>
-              <TH style={thStyle}>Client Order Id</TH>
-              <TH style={thStyle}>Status</TH>
-              <TH style={thStyle}>Side</TH>
-              <TH style={thStyle}>Type</TH>
-              <TH align="right" style={thStyle}>Price</TH>
-              <TH align="right" style={thStyle}>Qty</TH>
-              <TH align="right" style={thStyle}>Filled</TH>
-              <TH style={thStyle}>Leg</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {orders.map((order) => (
-              <TR key={order.id}>
-                <TD style={{ ...tdStyle, color: color.labelTertiary }}>{order.clientOrderId}</TD>
-                <TD style={tdStyle}><StatusPill status={order.status} /></TD>
-                <TD style={{ ...tdStyle, color: order.side === 'buy' ? color.blue : color.red }}>{order.side.toUpperCase()}</TD>
-                <TD style={tdStyle}>{order.type}</TD>
-                <TD align="right" mono style={tdStyle}>{formatPrice(order.price)}</TD>
-                <TD align="right" mono style={tdStyle}>{formatQty(order.quantity)}</TD>
-                <TD align="right" mono style={tdStyle}>{formatQty(order.filledQuantity)}</TD>
-                <TD style={{ ...tdStyle, color: order.isExit ? color.blue : color.labelTertiary }}>{order.isExit ? 'exit' : 'entry'}</TD>
-              </TR>
-            ))}
-          </TBody>
-        </Table>
-      )}
-    </Card>
-  );
-}
-
-function FillTable({ fills }: { fills: FillRecord[] }) {
-  return (
-    <Card>
-      <h3 style={h3Style}>FILLS · {fills.length}</h3>
-      {fills.length === 0 && <p style={noteStyle}>no fills recorded</p>}
-      {fills.length > 0 && (
-        <Table>
-          <THead>
-            <TR>
-              <TH style={thStyle}>Time</TH>
-              <TH align="right" style={thStyle}>Price</TH>
-              <TH align="right" style={thStyle}>Qty</TH>
-              <TH align="right" style={thStyle}>Quote</TH>
-              <TH align="right" style={thStyle}>Fee</TH>
-              <TH style={thStyle}>Trade Id</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {fills.map((fill) => (
-              <TR key={fill.id}>
-                <TD style={{ ...tdStyle, color: color.labelTertiary }}>{formatTimestamp(fill.timestamp)}</TD>
-                <TD align="right" mono style={tdStyle}>{formatPrice(fill.price)}</TD>
-                <TD align="right" mono style={tdStyle}>{formatQty(fill.quantity)}</TD>
-                <TD align="right" mono style={tdStyle}>{formatMoney(fill.quoteQuantity)}</TD>
-                <TD align="right" mono style={tdStyle}>{formatMoney(fill.fee)} {fill.feeAsset}</TD>
-                <TD style={{ ...tdStyle, color: color.labelTertiary }}>{fill.exchangeTradeId}</TD>
-              </TR>
-            ))}
-          </TBody>
-        </Table>
-      )}
-    </Card>
-  );
-}
-
-function EventTable({ events }: { events: ExecutionEventRecord[] }) {
-  return (
-    <Card>
-      <h3 style={h3Style}>EVENT LOG · {events.length}</h3>
-      {events.length === 0 && <p style={noteStyle}>no events recorded</p>}
-      {events.length > 0 && (
-        <Table>
-          <THead>
-            <TR>
-              <TH style={thStyle}>Time</TH>
-              <TH style={thStyle}>Event</TH>
-              <TH style={thStyle}>Payload</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {events.map((event) => (
-              <TR key={event.id}>
-                <TD style={{ ...tdStyle, color: color.labelTertiary }}>{formatTimestamp(event.createdAt)}</TD>
-                <TD style={{ ...tdStyle, color: color.blue, fontWeight: fontWeight.bold }}>{event.name}</TD>
-                <TD mono style={{ ...tdStyle, color: color.labelTertiary }}>{JSON.stringify(event.payload)}</TD>
-              </TR>
-            ))}
-          </TBody>
-        </Table>
-      )}
-    </Card>
   );
 }
 
