@@ -23,7 +23,7 @@ separate real regressions from unrelated in-flight work.
 | Go — `go build ./...`, `go vet ./...` | **PASS** (clean) |
 | Go — `go test ./...` | **PASS** (43 packages, 0 fail) |
 | Rust — `cargo test` | **PASS** (17 tests: 5 + 12) |
-| Web — `bun run test:shapers` | **PASS** (323 pass, 0 fail) |
+| Web — `bun run test:shapers` | **PASS** (338 pass, 0 fail) |
 | Structure gate | **PASS** — `STRUCTURE_OK` |
 | Design-token gate | **PASS** — `DESIGN_TOKENS_OK` |
 | Contracts / schemas / docs / tables / reference | **PASS** |
@@ -48,9 +48,10 @@ commit the re-audit was taken against (`633ffeb`) and at the
 design-system commit (`9cd063a`), where the two `ui/`→`lib/` violations
 belonged to that workstream rather than to this refactor. It has since
 been repaired.
-At the current `HEAD` (`10ba373`) every gate is green again — verified
-directly: `fud.ts structure` → `STRUCTURE_OK` (359 files, the two `ui/`
-→ `lib/` violations gone); `check-design-tokens.py` → `DESIGN_TOKENS_OK`
+At that repaired `HEAD` (`10ba373`, since superseded) every gate is green
+again — verified directly: `fud.ts structure` → `STRUCTURE_OK` (359 files
+at `10ba373`, the two `ui/`→`lib/` violations gone);
+`check-design-tokens.py` → `DESIGN_TOKENS_OK`
 (files=364, exemptions=6); `go test ./...` → 43 ok / 0 FAIL and
 `go vet ./...` clean; `cargo test --release` → 17 passed (5 + 12);
 `fud.ts deploy` → OK (10 units); `fud.ts contracts` → `CONTRACTS_OK` /

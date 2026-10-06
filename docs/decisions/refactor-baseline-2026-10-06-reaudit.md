@@ -121,7 +121,7 @@ Top-level distribution (tracked files): `apps/` 647 · `contracts/` 67 ·
 | Contract schema JSON under `contracts/` | 56 (matches `SCHEMAS_OK files=56`) |
 | systemd units in `deploy/systemd/` | 10 (matches `check-deploy: 10 unit files`) |
 | CI workflows | 5 |
-| `apps/web/tests/*-tests.ts` | 19 files, 323 tests |
+| `apps/web/tests/*-tests.ts` | 19 files, 323 tests (at this snapshot) |
 | `docs/architecture/` | 29 files |
 | `docs/decisions/` | 4 ADRs (005, 006, 007, plus the original `refactor-baseline.md`) |
 
@@ -165,7 +165,7 @@ Explicit checks:
 | 3 | `npm run deploy` | **PASS** (exit 0) | `check-deploy: OK (10 unit files: paths exist, ExecStart absolute, timer pairs present)`. |
 | 4 | `npm run structure` | **FAIL** (exit 1) | `STRUCTURE_FAIL`: `src/ui/atoms/system/index.tsx:31 ui/ imports lib/executor-lifecycle`; `src/ui/atoms/system/index.tsx:32 ui/ imports lib/executor-request-defs` — DR-018 boundary (`ui/` must stay dependency-free). **Resolved since** by `1d6960e`; the gate is `STRUCTURE_OK` at current HEAD. |
 | 5 | `npm run test:go` | **PASS** (exit 0) | 43 packages `ok`, 0 FAIL (`go test ./...`). |
-| 6 | `npm run test:web` | **PASS** (exit 0) | `323 pass / 0 fail`, 19 files, 45.66s. |
+| 6 | `npm run test:web` | **PASS** (exit 0) | `323 pass / 0 fail`, 19 files, 45.66s (this snapshot's measurement; **338 pass** at `f9b7086` — see *Final gate* below). |
 | 7 | `npm run test:sync` | **PASS** (exit 0) | Rust reconciler: 5 + 12 tests pass (17 total), 0 fail. |
 | 8 | `go build ./...` (root) | **PASS** (exit 0) | Whole module builds clean. |
 
@@ -275,7 +275,7 @@ that have drifted on their own. Both are listed.
 | §4 Go `go test ./...` **43 packages ok, 0 fail** | 43 ok, 0 fail | **no — exact** |
 | §4 Rust **17 tests** across suites | 17 pass, 0 fail | **no — exact** |
 | §4 `bunx tsc --noEmit` clean | `test:web` runs the typecheck + shaper suite | **no — holds** |
-| §4 Web **249/249 shaper tests** | **323 pass / 0 fail** | **yes** (+74 since acceptance) |
+| §4 Web **249/249 shaper tests** | **323 pass / 0 fail** (at this snapshot) | **yes** (+74 since acceptance; **338** at `f9b7086`) |
 | §4 Contracts `CONTRACTS_OK` (3 enums, 37 paths, 56 handlers, 28 events, 17 endpoints) | identical string | **no — holds** |
 | §4 `SCHEMAS_OK` (56 files, 344 refs, 148 enums) | identical | **no — holds** |
 | §4 `DOCS_OK` (**1072 citations**) | 1161 citations | **yes** (+89) |
@@ -288,12 +288,14 @@ that have drifted on their own. Both are listed.
 | §7 `deploy/systemd/` **10 unit files** | 10 | **no — holds** |
 | §12 **8 top-level directories** | 10 (`apps contracts tests docs scripts deploy .ai .github db tools`) | **yes** — `db/` and `tools/` are top-level and counted here (+2; §12's count likely excluded dotdirs) |
 | §14 route handlers **56** (`53` frontend API + `3` CMS) | 56 (53 + 3) | **no — holds** |
-| §14 `test:shapers` **268** | 323 | **yes** (+55) |
+| §14 `test:shapers` **268** | 323 (at this snapshot) | **yes** (+55; **338** at `f9b7086`) |
 | §14 `apps/data` `func Test` **262** | 262 | **no — holds** |
 
 **Summary of real drift (committed tree):** shaper/web tests 249 → 323,
 `DOCS_OK` citations 1072 → 1161, `test:shapers` 268 → 323, and the top-level
-directory count 8 → 10. **Drift from the dirty tree only:** `structure` and
+directory count 8 → 10 — all measured at this snapshot's commit `633ffeb`;
+the web figure has since reached **338** (see *Final gate* below).
+**Drift from the dirty tree only:** `structure` and
 `design-tokens` gates fail, cascading into `npm run verify`. Everything else
 in ADR-007 that was re-measured still holds with the same numbers.
 
@@ -409,7 +411,7 @@ excluded by this scan's scope.)
 | `npm run verify` | FAIL | **PASS** (`VERIFY_ALL_OK`) |
 | `npm run structure` | FAIL | **PASS** (`STRUCTURE_OK`) |
 | `design-tokens` gate | FAIL | **PASS** (`DESIGN_TOKENS_OK`) |
-| `npm run test:web` | 323 pass | **338 pass** |
+| `npm run test:web` | 323 pass (snapshot) | **338 pass** |
 | `DOCS_OK` citations | 1161 | **1162** |
 | `MDTABLES_OK` files/rows | 67 / 2724 | **73 / 3026** |
 | Go / Rust / contracts / deploy / build | PASS | PASS (unchanged) |
