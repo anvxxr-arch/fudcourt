@@ -1,5 +1,5 @@
 'use client';
-import { Fragment } from 'react';
+import { Fragment, useMemo } from 'react';
 import { color, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
 import { TBody, TD, TH, THead, TR, Table } from '@/ui/table';
 import {
@@ -94,19 +94,40 @@ export function WorldTable({
   columns: WorldIndicatorRow[];
   groups: string[];
 }) {
-  const present = groups.filter(g => rows.some(r => r.region === g));
+  const present = useMemo(() => groups.filter(g => rows.some(r => r.region === g)), [groups, rows]);
   // A column renders only where THIS table can actually fill it. The aggregates
   // table has no current-account or reserves series upstream, and a column that is
   // mostly blank costs width without carrying information — so the bar is half the
   // table's rows. A cell missing WITHIN a rendered column still shows as an em
   // dash; a column that is mostly dashes is not a column, it is a gap.
-  const filled = columns.filter(c => rows.filter(r => r.cells[c.id]?.value != null).length * 2 >= rows.length);
-  const blocks = WORLD_THEME_ORDER.map(theme => ({ theme, cols: filled.filter(c => c.theme === theme) })).filter(
-    b => b.cols.length > 0
+  const filled = useMemo(
+    () => columns.filter(c => rows.filter(r => r.cells[c.id]?.value != null).length * 2 >= rows.length),
+    [columns, rows]
+  );
+  const blocks = useMemo(
+    () => WORLD_THEME_ORDER.map(theme => ({ theme, cols: filled.filter(c => c.theme === theme) })).filter(
+      b => b.cols.length > 0
+    ),
+    [filled]
   );
   const cols = blocks.flatMap(b => b.cols);
   /** The first column of each theme block, which carries the block's opening rule. */
   const blockStart = new Set(blocks.map(b => b.cols[0].id));
+  /**
+   * Rows bucketed by region, built once per `rows` change. The render loop then
+   * reads a group's slice out of the map instead of re-scanning every row for
+   * every group — the same O(rows × groups) walk the header derivations above
+   * used to repeat on each pass.
+   */
+  const rowsByRegion = useMemo(() => {
+    const map = new Map<string, WorldRow[]>();
+    for (const group of present) map.set(group, []);
+    for (const r of rows) {
+      const bucket = map.get(r.region);
+      if (bucket) bucket.push(r);
+    }
+    return map;
+  }, [rows, present]);
   return (
     <div style={{ overflowX: 'auto', marginTop: space[12] }}>
       <Table style={{ fontSize: fontSize[11] }}>
@@ -142,46 +163,44 @@ export function WorldTable({
                   {group.toUpperCase()}
                 </TD>
               </TR>
-              {rows
-                .filter(r => r.region === group)
-                .map(r => (
-                  <TR key={r.code} style={rowStyle}>
-                    <TD
-                      style={{
-                        color: color.labelPrimary,
-                        fontWeight: fontWeight.bold,
-                        padding: `${space[4]}px ${space[12]}px ${space[4]}px 0`,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {r.name}
-                    </TD>
-                    {cols.map(c => {
-                      const cell = r.cells[c.id];
-                      const value = cell?.value ?? null;
-                      const prior = cell?.prior ?? null;
-                      const dir = deltaDir(value, prior);
-                      return (
-                        <TD
-                          key={c.id}
-                          align="right"
-                          style={blockStart.has(c.id) ? { ...worldCellStyle, ...worldBlockStyle } : worldCellStyle}
+              {(rowsByRegion.get(group) ?? []).map(r => (
+                <TR key={r.code} style={rowStyle}>
+                  <TD
+                    style={{
+                      color: color.labelPrimary,
+                      fontWeight: fontWeight.bold,
+                      padding: `${space[4]}px ${space[12]}px ${space[4]}px 0`,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {r.name}
+                  </TD>
+                  {cols.map(c => {
+                    const cell = r.cells[c.id];
+                    const value = cell?.value ?? null;
+                    const prior = cell?.prior ?? null;
+                    const dir = deltaDir(value, prior);
+                    return (
+                      <TD
+                        key={c.id}
+                        align="right"
+                        style={blockStart.has(c.id) ? { ...worldCellStyle, ...worldBlockStyle } : worldCellStyle}
+                      >
+                        <div style={{ color: color.labelPrimary }}>
+                          {fmtEconomy(value, c.kind, c.decimals)}{' '}
+                          <span style={{ color: color.labelTertiary }}>{fmtYear(cell?.year)}</span>
+                        </div>
+                        <div
+                          style={{ color: dirColor(dir), fontSize: fontSize[11] }}
+                          title={prior ? `vs ${prior.year}: ${fmtEconomy(prior.value, c.kind, c.decimals)}` : 'no earlier observation to compare'}
                         >
-                          <div style={{ color: color.labelPrimary }}>
-                            {fmtEconomy(value, c.kind, c.decimals)}{' '}
-                            <span style={{ color: color.labelTertiary }}>{fmtYear(cell?.year)}</span>
-                          </div>
-                          <div
-                            style={{ color: dirColor(dir), fontSize: fontSize[11] }}
-                            title={prior ? `vs ${prior.year}: ${fmtEconomy(prior.value, c.kind, c.decimals)}` : 'no earlier observation to compare'}
-                          >
-                            {fmtDelta(value, prior, c.kind, c.decimals)}
-                          </div>
-                        </TD>
-                      );
-                    })}
-                  </TR>
-                ))}
+                          {fmtDelta(value, prior, c.kind, c.decimals)}
+                        </div>
+                      </TD>
+                    );
+                  })}
+                </TR>
+              ))}
             </Fragment>
           ))}
         </TBody>

@@ -1,5 +1,5 @@
 'use client';
-import { Fragment } from 'react';
+import { Fragment, useMemo } from 'react';
 import { color, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
 import { TBody, TD, TH, THead, TR, Table } from '@/ui/table';
 import {
@@ -37,7 +37,14 @@ export const groupRowStyle: React.CSSProperties = {
  * without knowing when it was last set. An area BIS did not return stays `—`.
  */
 export function PolicyRateTable({ rows }: { rows: PolicyRateRow[] }) {
-  const regions = POLICY_REGIONS.filter(r => rows.some(x => x.region === r));
+  const regionGroups = useMemo(
+    () =>
+      POLICY_REGIONS.filter(region => rows.some(x => x.region === region)).map(region => ({
+        region,
+        regionRows: rows.filter(r => r.region === region),
+      })),
+    [rows],
+  );
   return (
     <div style={{ overflowX: 'auto', marginTop: space[12] }}>
       <Table style={{ fontSize: fontSize[11] }}>
@@ -49,12 +56,12 @@ export function PolicyRateTable({ rows }: { rows: PolicyRateRow[] }) {
           </TR>
         </THead>
         <TBody>
-          {regions.map(region => (
+          {regionGroups.map(({ region, regionRows }) => (
             <Fragment key={region}>
               <TR>
                 <TD colSpan={3} style={groupRowStyle}>{region.toUpperCase()}</TD>
               </TR>
-              {rows.filter(r => r.region === region).map(r => (
+              {regionRows.map(r => (
                 <TR key={r.area} style={rowStyle}>
                   <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
                     <span title={r.note}>{r.bank}</span>
@@ -78,7 +85,14 @@ export function PolicyRateTable({ rows }: { rows: PolicyRateRow[] }) {
  * verbatim beside its observation date. Grouped by theme; nothing is recomputed.
  */
 export function IndicatorTable({ rows }: { rows: IndicatorRow[] }) {
-  const groups = Array.from(new Set(rows.map(r => r.group)));
+  const groups = useMemo(
+    () =>
+      Array.from(new Set(rows.map(r => r.group))).map(group => ({
+        group,
+        groupRows: rows.filter(r => r.group === group),
+      })),
+    [rows],
+  );
   return (
     <div style={{ overflowX: 'auto', marginTop: space[12] }}>
       <Table style={{ fontSize: fontSize[11] }}>
@@ -90,12 +104,12 @@ export function IndicatorTable({ rows }: { rows: IndicatorRow[] }) {
           </TR>
         </THead>
         <TBody>
-          {groups.map(group => (
+          {groups.map(({ group, groupRows }) => (
             <Fragment key={group}>
               <TR>
                 <TD colSpan={3} style={groupRowStyle}>{group.toUpperCase()}</TD>
               </TR>
-              {rows.filter(r => r.group === group).map(r => (
+              {groupRows.map(r => (
                 <TR key={r.id} style={rowStyle}>
                   <TD style={{ color: color.labelPrimary, fontWeight: fontWeight.bold }}>
                     <span title={r.note}>{r.name}</span>

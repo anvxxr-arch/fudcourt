@@ -3,14 +3,15 @@
 import { useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { color, fontSize, radius, space } from '@/styles/tokens';
-import TickerPage from '@/features/ticker/ui';
-import TrackerPage from '@/features/overview/tracker';
-import DexPage from '@/features/dex/ui';
-import TrenchPage from '@/features/dex/trench';
-import ForexBoard from '@/features/market/forex';
-import CommodityBoard from '@/features/market/commodity';
-import StockBoard from '@/features/market/stock';
-import LlamaPage from '@/features/llama/ui';
+import dynamic from 'next/dynamic';
+const TickerPage = dynamic(() => import('@/features/ticker/ui'), { ssr: false });
+const TrackerPage = dynamic(() => import('@/features/overview/tracker'), { ssr: false });
+const DexPage = dynamic(() => import('@/features/dex/ui'), { ssr: false });
+const TrenchPage = dynamic(() => import('@/features/dex/trench'), { ssr: false });
+const ForexBoard = dynamic(() => import('@/features/market/forex'), { ssr: false });
+const CommodityBoard = dynamic(() => import('@/features/market/commodity'), { ssr: false });
+const StockBoard = dynamic(() => import('@/features/market/stock'), { ssr: false });
+const LlamaPage = dynamic(() => import('@/features/llama/ui'), { ssr: false });
 import type { StockRegion } from '@/features/market/stock';
 
 // The Market hub — one surface over the market sections, keyed by asset class:

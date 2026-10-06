@@ -6,16 +6,17 @@ import { color, fontFamily, fontSize, fontWeight, letterSpacing, radius, space }
 import { Banner } from '@/ui/banner';
 import { Loading } from '@/ui/feedback';
 import { viewPath } from '@/lib/view-routes';
+import dynamic from 'next/dynamic';
 import { loadOverviewBundle, saveWallet, type OverviewCoin, type OverviewReconRow, type OverviewTransaction } from './client';
-import DashboardPage from '@/features/overview/dashboard';
-import PortfolioPage from '@/features/overview/portfolio';
-import WalletPage from '@/features/overview/wallets';
-import TransactionPage from '@/features/overview/transactions';
-import ReconciliationPage from '@/features/overview/reconciliation';
-import SignalsPage from '@/features/signals/ui';
-import ScoreboardPage from '@/features/scoreboard/ui';
-import MarketHub from '@/features/market/hub';
-import NewsPage from '@/features/news/ui';
+const DashboardPage = dynamic(() => import('@/features/overview/dashboard'), { ssr: false });
+const PortfolioPage = dynamic(() => import('@/features/overview/portfolio'), { ssr: false });
+const WalletPage = dynamic(() => import('@/features/overview/wallets'), { ssr: false });
+const TransactionPage = dynamic(() => import('@/features/overview/transactions'), { ssr: false });
+const ReconciliationPage = dynamic(() => import('@/features/overview/reconciliation'), { ssr: false });
+const SignalsPage = dynamic(() => import('@/features/signals/ui'), { ssr: false });
+const ScoreboardPage = dynamic(() => import('@/features/scoreboard/ui'), { ssr: false });
+const MarketHub = dynamic(() => import('@/features/market/hub'), { ssr: false });
+const NewsPage = dynamic(() => import('@/features/news/ui'), { ssr: false });
 
 type DbData = {
   assets: Asset[];
