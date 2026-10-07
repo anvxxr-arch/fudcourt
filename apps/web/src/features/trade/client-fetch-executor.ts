@@ -149,3 +149,43 @@ export async function fetchTradeAccounts(signal?: AbortSignal): Promise<TradeAcc
   }
   return Array.isArray(body.accounts) ? (body.accounts as TradeAccountLite[]) : [];
 }
+
+/**
+ * The handful of fill fields the trades board reads. A fill is the venue's own
+ * record of one match, deduped on `exchangeTradeId` (PRD §62) — the ground truth
+ * a trade is built from, not a derived guess.
+ */
+export type FillLite = {
+  id: string;
+  executionId: string;
+  childOrderId: string | null;
+  exchangeTradeId: string;
+  price: number;
+  quantity: number;
+  quoteQuantity: number;
+  fee: number;
+  feeAsset: string;
+  timestamp: number;
+};
+
+/**
+ * GET /api/executor/executions/{id}/fills — the deduped fill history of one
+ * execution (PRD §62).
+ *
+ * Returns an empty list on 401/403 (not signed in), the same "not connected"
+ * state the portfolio call reports, and throws on any other failure so a real
+ * error is never rendered as "no fills".
+ */
+export async function fetchFills(executionId: string, signal?: AbortSignal): Promise<FillLite[]> {
+  let body: { fills?: FillLite[] };
+  try {
+    body = await getJSON<{ fills?: FillLite[] }>(`/api/executor/executions/${encodeURIComponent(executionId)}/fills`, {
+      signal: bounded(signal),
+      cache: 'no-store',
+    });
+  } catch (err) {
+    if (err instanceof Error && /HTTP 40[13]$/.test(err.message)) return [];
+    throw err;
+  }
+  return Array.isArray(body.fills) ? body.fills : [];
+}

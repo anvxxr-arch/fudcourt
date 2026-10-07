@@ -68,6 +68,7 @@ node tools/fud.ts live [fam]  # the live/network harnesses (list, or run one)
 | portfolio time series | `apps/web/src/server/treasury.ts` — the sessionized read layer over `asset_history` (DR-045) |
 | cost basis & P&L | `apps/web/src/server/pnl.ts` — USD-level FIFO over `transactions`, plus the implied price series (DR-046) |
 | derived journal | `apps/web/src/server/journal.ts` — balanced double-entry entries, trial balance and flows computed from `transactions` (DR-047) |
+| trade log | `apps/web/src/features/trade/ui/trades.tsx` — the venue's own fills (`executor.fills`, deduped on `exchangeTradeId`) flattened per execution (DR-048) |
 | run everything | `node tools/fud.ts verify` |
 
 ## Decisions that shaped this layout

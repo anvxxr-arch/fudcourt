@@ -39,6 +39,7 @@ import { CapabilityBoard } from '@/features/trade/ui/capability-board';
 import { ConnectedAccountsStrip } from '@/features/trade/ui/accounts';
 import { TradeComposer } from '@/features/trade/ui/composer';
 import { AccountPanelsGrid, idle, MarketBoardCard, PortfolioCard, type Panel } from '@/features/trade/ui/dashboard-panels';
+import { TradesBoard } from '@/features/trade/ui/trades';
 import { MarketTypeTabs, ReferenceGrid, TradeFlowCard } from '@/features/trade/ui/dashboard-reference';
 
 // Single-sourced shared constants stay reachable from the historic entry path.
@@ -141,6 +142,13 @@ export default function TradeDashboard({ marketType }: { marketType?: MarketType
           liveExecutions={liveExecutions}
           committedNotional={committedNotional}
         />
+      )}
+
+      {/* Trades — the venue's own fills, aggregated (DR-048). */}
+      {!isMargin && (
+        <div style={{ marginTop: space[12] }}>
+          <TradesBoard executions={executions} connected={connected} />
+        </div>
       )}
 
       {/* Venue + execution-strategy reference: the domain's vocabulary. */}

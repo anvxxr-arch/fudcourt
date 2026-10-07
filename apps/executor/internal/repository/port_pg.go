@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
@@ -196,15 +197,27 @@ func (s *Store) ListExecutions(ctx context.Context, userID string, status *execu
 	}
 	defer rows.Close()
 	out := []execution.ExecutionRecord{}
+	skipped := 0
 	for rows.Next() {
 		rec, err := scanExec(rows.Scan)
 		if err != nil {
-			return nil, fmt.Errorf("repository: list executions: %w", err)
+			// One unreadable row must not blind the whole list. A row that does
+			// not match the record contract (a hand-edited value, a schema drift,
+			// a fixture written outside the writer) degrades to a warning and is
+			// skipped — the healthy rows are still served. Never a silent empty
+			// list: every skip is logged, and a run that skips everything logs a
+			// loud summary so total corruption cannot masquerade as "no rows".
+			skipped++
+			slog.Warn("repository: skipping unreadable execution row", "error", err)
+			continue
 		}
 		out = append(out, rec)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("repository: list executions: %w", err)
+	}
+	if skipped > 0 {
+		slog.Warn("repository: execution list served with skipped rows", "user_id", userID, "served", len(out), "skipped", skipped)
 	}
 	return out, nil
 }
