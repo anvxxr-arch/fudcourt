@@ -49,6 +49,18 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 0.6,
   },
   {
+    // The public proof of treasury (F11): the aggregate total, a per-chain
+    // breakdown and a SHA-256 commitment to the private holdings behind them.
+    // Public by design — it publishes aggregates and a digest, never a wallet
+    // address or a per-asset position. Registered here so it is crawlable and
+    // so `routing-tests.ts` sees the `(public)/proof` page.
+    path: '/proof',
+    title: 'Proof of treasury — the public commitment | FUDCOURT',
+    description:
+      'The treasury\u2019s public commitment: an aggregate total, a per-chain breakdown and a SHA-256 digest over the full snapshot. Only aggregates are published; the holdings behind the digest stay private and can be revealed later.',
+    priority: 0.6,
+  },
+  {
     // The blog joined this app in DR-017. Its index is public and crawlable
     // (individual posts at /blog/<slug>, authored in Payload, carry no fixed
     // list, so they are not enumerated here — the index links them).

@@ -29,6 +29,8 @@ export const VIEW_PATHS: Record<string, string> = {
   news: '/news',
   // The risk feed (F10): prediction-market pricing joined with the headlines.
   risk: '/risk',
+  // The public proof of treasury (F11): aggregates + a digest, no private detail.
+  proof: '/proof',
   // CEX Executor (PRD §81): a multi-route area (/executor/new, /:id, …), not a
   // single shell tab — this entry is the canonical deep link for nav callers.
   executor: '/executor',

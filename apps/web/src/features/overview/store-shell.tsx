@@ -22,6 +22,7 @@ const ScoreboardPage = dynamic(() => import('@/features/scoreboard/ui'), { ssr: 
 const MarketHub = dynamic(() => import('@/features/market/hub'), { ssr: false });
 const NewsPage = dynamic(() => import('@/features/news/ui'), { ssr: false });
 const RiskFeedPage = dynamic(() => import('@/features/risk/ui'), { ssr: false });
+const ProofPage = dynamic(() => import('@/features/proof/ui'), { ssr: false });
 
 type DbData = {
   assets: Asset[];
@@ -123,6 +124,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     { key: 'scoreboard', label: 'Scoreboard' },
     { key: 'risk', label: 'Risk feed' },
     { key: 'news', label: 'News' },
+    { key: 'proof', label: 'Proof of treasury' },
   ];
   // Team shell shows treasury tabs first, then the shared market boards.
   // Public/member shells show boards only — never wallet addresses,
@@ -151,6 +153,10 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     risk: {
       title: 'What the market prices, beside what is being reported',
       sub: 'Prediction-market mids, thin books marked wide; the headline join is lexical, never causal.',
+    },
+    proof: {
+      title: 'The treasury, committed — aggregates public, holdings private',
+      sub: 'A total, a per-chain split and a SHA-256 digest over the full snapshot; unpriced holdings are named, never counted as zero.',
     },
   };
   const boardKey = page.startsWith('market') ? 'market' : page;
@@ -244,6 +250,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'scoreboard' && <ScoreboardPage />}
       {page === 'risk' && <RiskFeedPage />}
       {page === 'news' && <NewsPage />}
+      {page === 'proof' && <ProofPage />}
 
       {/* Footer status line — dot-separated facts, not a sentence. Sans still reads better
           than mono at 11px, where mono renders as terminal noise; every figure above it

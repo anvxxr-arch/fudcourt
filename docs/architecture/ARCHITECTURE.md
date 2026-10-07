@@ -240,6 +240,7 @@ the full judgment record for the grouping is §4 of that file.
 | public | scoreboard | `/scoreboard` | `ScoreboardPage` | `/api/signals?type=scoreboard` |
 | public | news | `/news` | `NewsPage` | `/api/news?limit=30` |
 | public | risk | `/risk` | `RiskFeedPage` (`features/risk/ui.tsx`) | `/api/cryptorank?mode=prediction` · `/api/news?source=cointelegraph&limit=40` (both thin verbatim proxies; the join is a pure local read in `features/risk/model.ts`) |
+| public | proof | `/proof` | `ProofPage` (`features/proof/ui.tsx`) | `/api/proof` (public read — the aggregate total, a per-chain split and a SHA-256 commitment over the full snapshot; publishes no wallet label and no per-asset position, and REFUSES rather than state a total it cannot stand behind — the pure read is `lib/proof.ts`) |
 
 Legacy `/portfolio` now **307s** to `/team/portfolio` (it used to rewrite to `/`,
 the landing page). The boards that folded into
