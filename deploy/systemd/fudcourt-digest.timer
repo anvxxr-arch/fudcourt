@@ -1,0 +1,20 @@
+# FUD Court digest timer — drives fudcourt-digest.service.
+#
+# DEPLOYED as `~/.config/systemd/user/fudcourt-digest.timer`. Pairs with
+# deploy/systemd/fudcourt-digest.service (F12).
+#
+# Cadence is WEEKLY: the service narrates a rolling 7-day window of the treasury
+# series, so a weekly run gives consecutive digests that do not overlap. Monday
+# 06:00 UTC lands after the weekend's syncs have settled; `Persistent=true` makes
+# a missed run (host down) fire once on the next boot rather than skip a week.
+[Unit]
+Description=Run the FUD Court weekly treasury digest every Monday
+
+[Timer]
+OnCalendar=Mon 06:00
+Persistent=true
+AccuracySec=1min
+Unit=fudcourt-digest.service
+
+[Install]
+WantedBy=timers.target

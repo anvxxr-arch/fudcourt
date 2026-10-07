@@ -1,0 +1,46 @@
+# FUD Court weekly treasury digest -> blog (Payload)
+#
+# DEPLOYED as `~/.config/systemd/user/fudcourt-digest.service`, paired with
+# deploy/systemd/fudcourt-digest.timer. A copy lives in-repo so the cadence and
+# the script path are reviewable in a diff, not only on the host.
+#
+# WHY ITS OWN UNIT (DR-046's rule): this is a derived, WRITE-side projection —
+# treasury series in, a CMS post out. It must never be able to mark the sync
+# failed, hence a separate pair rather than an `ExecStartPost` on the sync unit.
+#
+# HOW IT RUNS. Bun executes the TypeScript directly (`bun --bun run`): the
+# script uses top-level await, and payload's own `run` CLI would execute it
+# through tsx as CommonJS on this host (the package carries no `"type":
+# "module"`), rejecting top-level await outright. Bun runs the same file as
+# native ESM and resolves the `@/` alias from tsconfig.json.
+#
+# ENV. `apps/web/.env.local` carries BOTH halves this needs: `FUDCOURT_PG_URL`
+# (the local treasury series) and `DATABASE_URL` + `PAYLOAD_SECRET` (the CMS
+# store, Neon). It is the same EnvironmentFile `fudcourt-web` reads.
+#
+# A refusal is a FAILED run, by design: the script prints the stated reason and
+# exits 1 when the window cannot support a digest, so the timer shows a red unit
+# rather than silently publishing nothing.
+[Unit]
+Description=FUD Court weekly treasury digest -> blog
+Documentation=file:///home/dwizzy/fudcourt/apps/web/src/cms/publish-digest.ts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/dwizzy/fudcourt/apps/web
+# A systemd *user* unit's PATH does not include ~/.bun/bin, and the script is
+# invoked through bun by absolute path; PATH is set for the script's own
+# subprocesses (payload may shell out).
+Environment=PATH=/home/dwizzy/.bun/bin:/usr/local/bin:/usr/bin:/bin
+Environment=NODE_ENV=
+EnvironmentFile=/home/dwizzy/fudcourt/apps/web/.env.local
+ExecStart=/home/dwizzy/.bun/bin/bun --bun run /home/dwizzy/fudcourt/apps/web/src/cms/publish-digest.ts
+# A transient Postgres or CMS blip must not silently drop a week's digest.
+Restart=on-failure
+RestartSec=60
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

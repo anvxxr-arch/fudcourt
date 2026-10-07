@@ -373,7 +373,9 @@ implies team implies member.
   at `deploy/systemd/fudcourt-data.service`),
   `fudcourt-reconciled` (**Rust** `/api/reconcile` service, `127.0.0.1:3102`, unit
   versioned at `deploy/systemd/fudcourt-reconciled.service`; DR-014),
-  `fudcourt-sync.timer` (5 min). **`fudcourt-blog` is retired (DR-017)**: the blog
+  `fudcourt-sync.timer` (5 min), `fudcourt-digest.timer` (weekly, Mon 06:00 UTC —
+  renders the treasury digest into the blog; unit versioned at
+  `deploy/systemd/fudcourt-digest.service`). **`fudcourt-blog` is retired (DR-017)**: the blog
   is served by `fudcourt-web` at `/blog`, so there is no second Next process.
 - Origin binds loopback; the **only** path in is the tunnel ingress
   `fc.dwirijal.my.id → http://127.0.0.1:3100` (proxied CNAME, zone

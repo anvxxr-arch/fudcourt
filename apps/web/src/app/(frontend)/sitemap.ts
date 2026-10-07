@@ -1,20 +1,39 @@
 import type { MetadataRoute } from 'next';
+import config from '@payload-config';
+import { getPayload } from 'payload';
 import { PUBLIC_ROUTES } from '@/server/routes';
 import { TICKER_SYMBOLS } from '@/features/market/ticker/client';
 import { COUNTRY_LIST, INDICATORS, CENTRAL_BANKS } from '@/features/economy/model';
 import { MARKET_TYPES } from '@/features/trade/model';
 import { INSTRUMENTS } from '@/features/trade/model';
 
-// Published blog posts. Same rule as the rest: a bounded, known set —
-// enumerated here, never crawled. A slug not in this list has no page
-// (the route 404s), so it must not appear here.
-const BLOG_POST_SLUGS = [
-  'never-fake-rules',
-  'the-decoy-that-passed-parity',
-  'how-a-board-is-gated',
-];
+// Published blog posts are read from the CMS, not a hand-kept list. The blog
+// index and the post route are `force-dynamic` and read Payload, so the sitemap
+// must read the SAME source or it drifts the moment a post is published — and it
+// did: the weekly treasury digest (F12) is auto-published with a dated slug, so a
+// hardcoded allowlist could never carry it. The old rule still holds, just from a
+// live source: a slug in the sitemap is one the post route actually serves (that
+// route queries PUBLISHED posts by slug), so the sitemap never advertises a dead
+// URL. Regenerated hourly rather than per request — posts change rarely.
+export const revalidate = 3600;
 
-export default function sitemap(): MetadataRoute.Sitemap {
+/** The published posts' slugs, straight from the CMS the blog pages read. */
+async function publishedPosts(): Promise<{ slug: string; updatedAt?: string }[]> {
+  const payload = await getPayload({ config });
+  const { docs } = await payload.find({
+    collection: 'posts',
+    where: { status: { equals: 'published' } },
+    sort: '-publishedAt',
+    limit: 200,
+    depth: 0,
+  });
+  return docs.map((p: any) => ({
+    slug: String(p.slug),
+    updatedAt: p.updatedAt ? String(p.updatedAt) : undefined,
+  }));
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes = PUBLIC_ROUTES.map((route) => ({
     url: `https://fc.dwirijal.my.id${route.path === '/' ? '' : route.path}`,
     lastModified: new Date(),
@@ -82,9 +101,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
   );
 
-  const blogPostPages = BLOG_POST_SLUGS.map((slug) => ({
-    url: `https://fc.dwirijal.my.id/blog/${slug}`,
-    lastModified: new Date(),
+  const blogPostPages = (await publishedPosts()).map((post) => ({
+    url: `https://fc.dwirijal.my.id/blog/${post.slug}`,
+    lastModified: post.updatedAt ? new Date(post.updatedAt) : new Date(),
     changeFrequency: 'weekly' as const,
     priority: 0.7,
   }));

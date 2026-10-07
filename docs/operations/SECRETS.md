@@ -12,14 +12,14 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 
 | Name | Consumers (first-party) | Home (file) | Production consumer | CI needs it? |
 |------|------------------------|-------------|---------------------|--------------|
-| `FUDCOURT_PG_URL` (Postgres DSN, DR-040) | `apps/web/src/platform/db/client.ts`, `apps/reconciler/src/persistence/db.rs`, `tests/oracle/sync-live.py` | `./.env` (root) + `apps/web/.env.local` (documented in `apps/web/.env.example`) | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`) | no |
+| `FUDCOURT_PG_URL` (Postgres DSN, DR-040) | `apps/web/src/platform/db/client.ts`, `apps/reconciler/src/persistence/db.rs`, `tests/oracle/sync-live.py` | `./.env` (root) + `apps/web/.env.local` (documented in `apps/web/.env.example`) | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`) + `fudcourt-digest.timer` (weekly) | no |
 | `ALCHEMY_KEY` | `tests/oracle/sync-live.py` (live ETH RPC) + the forensic `apps/web/scripts/archive/*.mjs` one-offs (**deleted 2026-09-29**, after the rotation was recorded) | `./.env` (root) | `fudcourt-sync.timer` | no |
 | `FUDCOURT_BOT_TOKEN` | `src/app/(frontend)/api/auth/callback` + `src/app/(frontend)/(admin)` (reads guild member roles with the bot) | `apps/web/.env.local` | `fudcourt-web` | no |
 | `FUDCOURT_CLIENT_SECRET` | `src/app/(frontend)/api/auth/callback` (OAuth code exchange) | `apps/web/.env.local` | `fudcourt-web` | no |
 | `FUDCOURT_SESSION_SECRET` | `src/platform/auth/session.ts` (HMAC key for the `fud_session` cookie) | `apps/web/.env.local` | `fudcourt-web` | no |
 | `FUD_MUTATION_TOKEN` + `NEXT_PUBLIC_FUD_MUTATION_TOKEN` | **RETIRED** — superseded by the session tier. `NEXT_PUBLIC_…` was inlined at build time and shipped in a public JS chunk; the pair is safe to delete from `.env.local` and `.env` | — | — | no |
-| `DATABASE_URL` (Neon) | Payload blog (now `apps/web/src/cms`, DR-017) | `apps/web/.env.local` | `fudcourt-web` (:3100) | no (build works without it — verified) |
-| `PAYLOAD_SECRET` | Payload blog (sessions/cookies) | `apps/web/.env.local` | `fudcourt-web` (:3100) | no |
+| `DATABASE_URL` (Neon) | Payload blog (now `apps/web/src/cms`, DR-017) | `apps/web/.env.local` | `fudcourt-web` (:3100) + `fudcourt-digest.timer` | no (build works without it — verified) |
+| `PAYLOAD_SECRET` | Payload blog (sessions/cookies) | `apps/web/.env.local` | `fudcourt-web` (:3100) + `fudcourt-digest.timer` | no |
 | `CR_PYTHON` | interpreter for the **verifier oracle** `tests/oracle/cr_fetch.py` (no longer a runtime path — DR-005: the route proxies to `fudcourt-data`) | code default (`~/.venvs/crfetch/bin/python`) | `verify-cryptorank.py` runs on this host | no |
 | `FUDCOURT_DATA_URL` | upstream base of the CryptoRank route's proxy target | code default (`http://127.0.0.1:3101`) | `fudcourt-web` (`:3100`) | no |
 | `VERCEL_OIDC_TOKEN` (legacy residue) | — none anymore — | `apps/web/.env.local` | — | no — **safe to delete this line** |
@@ -73,6 +73,7 @@ Production == this homeserver:
 | Board + CryptoRank proxy (`apps/web`) | `fudcourt-web.service` | `127.0.0.1:3100` | `apps/web/.env.local` (+ repo-root `.env` for shared vars) |
 | Blog / Payload (merged into `apps/web`, DR-017) | `fudcourt-web.service` | `127.0.0.1:3100` (`/blog`, `/blog/cms/*`) | `apps/web/.env.local` |
 | Live balance sync | `fudcourt-sync.timer` (5 min) | — (outbound only) | repo-root `.env` via `load_env()` |
+| Weekly treasury digest → blog (F12) | `fudcourt-digest.timer` (Mon 06:00 UTC, oneshot) | — (writes the CMS) | `apps/web/.env.local` (`FUDCOURT_PG_URL` + `DATABASE_URL` + `PAYLOAD_SECRET`) |
 | CEX Executor API + composer (`apps/web`) | `fudcourt-web.service` | `127.0.0.1:3100` (`/executor`, `/api/executor`, tier `team`) | `apps/web/.env.local` (`FUDCOURT_EXECUTOR_MASTER_KEY`; exchange API secrets are **not** in any env file) |
 | CEX Executor worker (TS, **TOMBSTONE — retired 2026-10-05 by DR-043; was retired from runtime by DR-042**) | `fudcourt-executor-worker.service` → renamed to `deploy/systemd/RETIRED-fudcourt-executor-worker.service.txt` (preserves history; the unit is **not installed**); the entry script is preserved at `apps/web/scripts/executor/worker.ts` with a tombstone header. The live executor is the Go service below. | — (was outbound only: venue APIs) | `apps/web/.env.local` was the unit's `EnvironmentFile`; that file still carries the executor env names (the Go service reads the same ones). Restarting `fudcourt-web` never stopped an execution; the Go service is the runtime now. |
 | CEX Executor **Go** service (`apps/executor`, `7b8dc2d`) | `fudcourt-executor.service` (unit versioned at `deploy/systemd/fudcourt-executor.service`) | `127.0.0.1:3104` (`/healthz`+`/readyz`) and `127.0.0.1:3105` (`/api/executor/*`, `FUDCOURT_EXECUTOR_API_ADDR`) | Needs `FUDCOURT_SESSION_SECRET` (it verifies the same `fud_session` cookie the web tier signs — the unit documents this coupling and deliberately does **not** set the secret itself) + `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY`. **Env is fail-visible: the unit cannot start until `FUDCOURT_SESSION_SECRET` and `FUDCOURT_EXECUTOR_PG_URL` are present in the process env** (name-only; no value here). Also reads `VALKEY_ADDR`+`VALKEY_PASSWORD` (distributed leases; the host requires AUTH). **Sole live web path since 2026-10-05 (DR-043):** `fudcourt-web` thin-proxies `/api/executor/*` to `:3105` via `src/app/(frontend)/api/executor/_proxy.ts`; the TS executor runtime (`apps/web/src/platform/executor/**`) was retired in this pass and the wire contract is the only survivor at `src/platform/executor/types.ts`. |
@@ -153,7 +154,9 @@ Production == this homeserver:
 2. Update BOTH homes: repo-root `.env` and `apps/web/.env.local`.
 3. Verify: `python3 tests/oracle/sync-live.py` (RC 0, real sync); then
    `systemctl --user restart fudcourt-web` and `curl -s -o /dev/null -w
-   '%{http_code}' http://127.0.0.1:3100/cryptorank` → 200.
+   '%{http_code}' http://127.0.0.1:3100/cryptorank` → 200. The weekly
+   digest reads the same DSN, so also `systemctl --user restart
+   fudcourt-digest.timer` (its next run picks up the new DSN).
 
 **R3. Discord OAuth trio + session secret.** (Added with the tier split; the
 old `FUD_MUTATION_TOKEN` pair is retired and can simply be deleted from
@@ -176,7 +179,9 @@ old `FUD_MUTATION_TOKEN` pair is retired and can simply be deleted from
    Rotating it invalidates all blog sessions (expected; re-login).
 3. Verify: `systemctl --user restart fudcourt-web` then
    `curl -s -o /dev/null -w '%{http_code}'
-   'http://127.0.0.1:3100/blog/cms/api/posts?limit=1&depth=0'` → 200.
+   'http://127.0.0.1:3100/blog/cms/api/posts?limit=1&depth=0'` → 200. The
+   weekly digest writes the same CMS, so also `systemctl --user restart
+   fudcourt-digest.timer`.
 
 **R5. `VERCEL_OIDC_TOKEN`** — legacy residue from the retired Vercel target;
 delete the line from `apps/web/.env.local`. Nothing reads it.

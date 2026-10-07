@@ -26,16 +26,34 @@ const POST_CTA: Record<string, { heading: string; body: string; nextHref: string
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const seo = POST_SEO[slug];
-  if (!seo) return { title: 'FudCourt Blog', description: 'Market-integrity research, post-mortems and playbooks from the FudCourt team.' };
   const path = `/blog/${slug}`;
+  const seo = POST_SEO[slug];
+  // A post the hand-authored map does not carry — the auto-published weekly
+  // digest (F12), or any future post — falls back to the post's OWN title and
+  // excerpt from the CMS. Returning the generic site title here would ship an
+  // indistinguishable <title> for every new post (measured: the digest page
+  // titled "FudCourt Blog" while its h1 carried the real title).
+  const meta = seo
+    ? seo
+    : await (async () => {
+        const payload = await getPayload({ config });
+        const { docs } = await payload.find({
+          collection: 'posts',
+          where: { slug: { equals: slug }, status: { equals: 'published' } },
+          limit: 1,
+          depth: 0,
+        });
+        const post: any = docs[0];
+        return post ? { title: String(post.title), description: String(post.excerpt ?? '') } : null;
+      })();
+  if (!meta) return { title: 'FudCourt Blog', description: 'Market-integrity research, post-mortems and playbooks from the FudCourt team.' };
   return {
-    title: seo.title,
-    description: seo.description,
+    title: meta.title,
+    description: meta.description,
     authors: [{ name: 'FudCourt Team' }],
     alternates: { canonical: path },
-    openGraph: { title: seo.title, description: seo.description, url: path, siteName: 'FUDCOURT', type: 'article', images: ['/og-cover.png'] },
-    twitter: { card: 'summary_large_image', title: seo.title, description: seo.description, images: ['/og-cover.png'] },
+    openGraph: { title: meta.title, description: meta.description, url: path, siteName: 'FUDCOURT', type: 'article', images: ['/og-cover.png'] },
+    twitter: { card: 'summary_large_image', title: meta.title, description: meta.description, images: ['/og-cover.png'] },
   };
 }
 import { themeColor, fontFamily, fontSize, lineHeight, space, fontWeight } from '@/styles/tokens';
