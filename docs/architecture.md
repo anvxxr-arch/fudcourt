@@ -52,6 +52,22 @@ node tools/fud.ts live [fam]  # the live/network harnesses (list, or run one)
 | deploy or operate | `docs/operations/` + `deploy/systemd/` |
 | know why something is the way it is | `docs/decisions/` (ADRs) and `docs/records/DECISIONS.md` |
 
+## "I want to change X" — the short answers
+
+| I want to fix… | Go here |
+|---|---|
+| risk calculation | `apps/executor/internal/risk` — `risk.go`, `solve.go`, `leverage.go`, `types.go` |
+| order sizing | `apps/executor/internal/sizing` |
+| the Binance adapter | `apps/executor/internal/exchanges/binance` |
+| CryptoRank ingestion | `apps/data/internal/research/cryptorank` |
+| the executor runtime | `apps/executor` — top-level `main.go`, `api.go`, `lease.go`, `health.go`, plus `apps/executor/internal/runtime/worker` |
+| the market UI | `apps/web/src/features/market` |
+| the schema | `contracts/` — schemas, `contracts/openapi/fudcourt.yaml`, `contracts/events/events.json` |
+| the database | `db/schema/pg-schema.sql` (treasury) · `db/schema/executor-schema.sql` (execution ledger) |
+| deployment | `deploy/systemd/` |
+| portfolio time series | `apps/web/src/server/treasury.ts` — the sessionized read layer over `asset_history` (DR-045) |
+| run everything | `node tools/fud.ts verify` |
+
 ## Decisions that shaped this layout
 
 | ADR | Decision |

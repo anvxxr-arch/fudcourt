@@ -13,6 +13,8 @@ const PortfolioPage = dynamic(() => import('@/features/overview/portfolio'), { s
 const WalletPage = dynamic(() => import('@/features/overview/wallets'), { ssr: false });
 const TransactionPage = dynamic(() => import('@/features/overview/transactions'), { ssr: false });
 const ReconciliationPage = dynamic(() => import('@/features/overview/reconciliation'), { ssr: false });
+const TreasuryPage = dynamic(() => import('@/features/treasury/ui'), { ssr: false });
+const LeaderboardPage = dynamic(() => import('@/features/treasury/leaderboard'), { ssr: false });
 const SignalsPage = dynamic(() => import('@/features/signals/ui'), { ssr: false });
 const ScoreboardPage = dynamic(() => import('@/features/scoreboard/ui'), { ssr: false });
 const MarketHub = dynamic(() => import('@/features/market/hub'), { ssr: false });
@@ -98,6 +100,8 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
   const TEAM_TABS = [
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'portfolio', label: 'Portfolio' },
+    { key: 'treasury', label: 'Time Machine' },
+    { key: 'leaderboard', label: 'Leaderboard' },
     { key: 'wallets', label: `Wallets (${wallets.length})` },
     { key: 'transactions', label: `Transactions (${db?.transactions.length || 0})` },
     { key: 'reconciliation', label: 'Reconciliation' },
@@ -204,6 +208,8 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
         <PortfolioPage assets={assets}
           getAlias={(l) => getAlias(l, walletByLabel)} />
       )}
+      {page === 'treasury' && isTeam && <TreasuryPage />}
+      {page === 'leaderboard' && isTeam && <LeaderboardPage />}
       {page === 'wallets' && isTeam && (
         <WalletPage wallets={wallets} balanceByWallet={balanceByWallet} onSave={async (w) => {
           await saveWallet(w);

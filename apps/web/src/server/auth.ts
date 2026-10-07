@@ -177,6 +177,10 @@ const TEAM_API_ROUTES = [
   '/api/reconcile',
   '/api/transactions',
   '/api/executor',
+  // The treasury time-series surface (history/analytics/breakdown/diff over
+  // `asset_history`). It reads the same private holdings the routes above
+  // gate, so it carries the same tier.
+  '/api/treasury',
 ];
 
 function under(pathname: string, base: string): boolean {

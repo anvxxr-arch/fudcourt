@@ -9,6 +9,10 @@ export const VIEW_PATHS: Record<string, string> = {
   wallets: '/team/wallets',
   transactions: '/team/transactions',
   reconciliation: '/team/reconciliation',
+  // The Net-Worth Time Machine (DR-040): charts `asset_history` over a window.
+  treasury: '/team/treasury',
+  // The treasury leaderboard (DR-045): ranks chains/wallets/assets by window.
+  leaderboard: '/team/leaderboard',
   market: '/market',
   'market-crypto': '/market/crypto',
   'market-forex': '/market/forex',
