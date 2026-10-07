@@ -1,0 +1,38 @@
+# FUD Court implied-price materialization -> Postgres `price_history`
+#
+# DEPLOYED as `~/.config/systemd/user/fudcourt-prices.service`, paired with
+# deploy/systemd/fudcourt-prices.timer. A copy lives in-repo so the cadence and
+# the script path are reviewable in a diff, not only on the host.
+#
+# WHY ITS OWN UNIT (DR-046): `fudcourt-sync` is the Python oracle whose exit
+# status is the cross-check for the Rust service. The implied-price backfill is a
+# derived read-side projection, so it must never be able to mark the sync failed
+# — hence a separate pair, offset from the sync cadence, rather than an
+# `ExecStartPost` on the sync unit.
+#
+# RUNTIME DEPENDENCY: `psycopg2` (host package `python3-psycopg2`, apt 2.9.x; the
+# pip equivalent is in tests/oracle/requirements.txt), the same dependency the
+# sync already needs. Without it the run exits 3 and prints the install hint.
+#
+# The write is idempotent (`ON CONFLICT (symbol, ts, source) DO NOTHING`), so a
+# missed or repeated run is harmless — it inserts only new observations.
+[Unit]
+Description=FUD Court implied-price backfill -> Postgres price_history
+Documentation=file:///home/dwizzy/fudcourt/scripts/tools/backfill-prices.py
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# The script walks up from its own location to the repo-root `.env` for
+# FUDCOURT_PG_URL; WorkingDirectory is only an anchor for a relative invocation.
+WorkingDirectory=/home/dwizzy/fudcourt
+Environment=NODE_ENV=
+ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/scripts/tools/backfill-prices.py
+# A transient Postgres blip must not leave the series stale; retry with backoff.
+Restart=on-failure
+RestartSec=60
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

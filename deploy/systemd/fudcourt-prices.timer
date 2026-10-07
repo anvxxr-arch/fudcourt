@@ -1,0 +1,21 @@
+# FUD Court implied-price backfill timer — drives fudcourt-prices.service.
+#
+# DEPLOYED as `~/.config/systemd/user/fudcourt-prices.timer`. Pairs with
+# deploy/systemd/fudcourt-prices.service (DR-046).
+#
+# Cadence is 5 minutes, the same as `fudcourt-sync` (whose writes it derives
+# from), but `OnBootSec` is deliberately offset to 3min so a boot does not fire
+# the backfill before the first sync has written anything to derive from. The
+# write is idempotent, so a run that finds no new observations is a no-op.
+[Unit]
+Description=Run FUD Court implied-price backfill every 5 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=fudcourt-prices.service
+
+[Install]
+WantedBy=timers.target
