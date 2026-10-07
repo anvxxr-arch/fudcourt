@@ -22,6 +22,7 @@ import { fetchRegime, formatDate, formatValue, type RegimeEnvelope } from '@/fea
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
 import { ECONOMY_NAV } from '@/features/economy/nav';
+import { ExposureSection } from '@/features/economy/ui/exposure';
 import { ErrorState } from '@/ui/feedback';
 import { Loading } from '@/ui/feedback';
 import { PageHeader } from '@/ui/page-header';
@@ -158,6 +159,10 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
             be audited.
           </p>
         </Card>
+      </div>
+
+      <div style={{ marginTop: space[12] }}>
+        <ExposureSection country={country} />
       </div>
 
       {data.failed.length > 0 && (

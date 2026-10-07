@@ -186,6 +186,12 @@ const TEAM_API_ROUTES = [
   '/api/pnl',
   // The derived double-entry journal (DR-047). Same private ledger, same tier.
   '/api/journal',
+  // The macro regime joined with the treasury's own exposure to it (plan Phase
+  // 13). The regime alone is public at /api/economy/regime — it describes asset
+  // CLASSES. This route adds the holdings behind them, so it carries the tier
+  // the holdings themselves carry. Registered here rather than gated in the
+  // handler so an unauthenticated call gets the middleware's 401 JSON.
+  '/api/economy/exposure',
 ];
 
 function under(pathname: string, base: string): boolean {
