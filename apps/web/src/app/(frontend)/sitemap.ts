@@ -19,18 +19,31 @@ export const revalidate = 3600;
 
 /** The published posts' slugs, straight from the CMS the blog pages read. */
 async function publishedPosts(): Promise<{ slug: string; updatedAt?: string }[]> {
-  const payload = await getPayload({ config });
-  const { docs } = await payload.find({
-    collection: 'posts',
-    where: { status: { equals: 'published' } },
-    sort: '-publishedAt',
-    limit: 200,
-    depth: 0,
-  });
-  return docs.map((p: any) => ({
-    slug: String(p.slug),
-    updatedAt: p.updatedAt ? String(p.updatedAt) : undefined,
-  }));
+  // A build WITHOUT `PAYLOAD_SECRET` (CI, a fresh checkout) must still succeed:
+  // `getPayload` throws "missing secret key" before it reads anything, and the
+  // sitemap is prerendered at build time (the ISR `revalidate` below does not
+  // make it request-time-only). So the CMS read DEGRADES to no posts rather than
+  // failing the build — the static `PUBLIC_ROUTES` and the bounded allowlists
+  // are always emitted, and production (which has the secret) prerenders WITH
+  // the posts. This mirrors the repo rule that a build without the env pair is
+  // read-only by construction, never broken.
+  try {
+    const payload = await getPayload({ config });
+    const { docs } = await payload.find({
+      collection: 'posts',
+      where: { status: { equals: 'published' } },
+      sort: '-publishedAt',
+      limit: 200,
+      depth: 0,
+    });
+    return docs.map((p: any) => ({
+      slug: String(p.slug),
+      updatedAt: p.updatedAt ? String(p.updatedAt) : undefined,
+    }));
+  } catch (err) {
+    console.warn(`sitemap: CMS read skipped (${(err as Error).message}); emitting registry + allowlist routes only`);
+    return [];
+  }
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

@@ -40,6 +40,16 @@ Checks:
      It is the tell that the pinned Chrome-131 TLS/h2 fingerprint was rotated
      upstream and the sidecar needs a refresh; the FAIL line says exactly that.
 
+  11. /api/cryptorank?mode=prediction -> 200 + non-empty (the prediction-market
+     odds feed behind the /risk board; upstream cryptorank.io/prediction-markets).
+     A rotated page shape returns 200 with count=0, which this catches.
+
+  12. /api/economy/regime -> 200 + non-empty `dimensions` + a truthy `upstream`
+     list (FRED graph CSV + World Bank v2 + BIS WS_CBPOL, all keyless). The macro
+     boards under /economy read those three upstreams; a schema change upstream
+     returns 200 with empty dimensions -- the silent empty envelope the
+     never-fake doctrine forbids -- so the check asserts the list is populated.
+
 Override target with MONITOR_BASE (used by the failure-path self-test). The two
 direct probes are overridable too: SIDECAR_HEALTH / RECONCILE_HEALTH.
 """
@@ -93,6 +103,8 @@ CHECKS = [
     ("mode=funding (decoy refusal)", "/api/cryptorank?mode=funding", 503, False),
     ("markets (coingecko)", "/api/markets?seartc&limit=5", 200, True),
     ("news (cointelegraph rss)", "/api/news?limit=5", 200, True),
+    ("mode=prediction (risk feed)", "/api/cryptorank?mode=prediction", 200, True),
+    ("economy regime (fred/worldbank/bis)", "/api/economy/regime", 200, True),
 ]
 
 
@@ -162,10 +174,14 @@ def check(args):
         else:
             # envelope shapes differ per mode: home has count/global (no rows),
             # list modes carry rows. Empty data MUST still fail loudly.
-            # Families name their list field differently (CR: rows,
-            # markets: coins, news: items) -- presence of any is enough.
+            # Families name their list field differently (CR: rows, markets:
+            # coins, news: items, prediction: predictionRows, economy regime:
+            # dimensions) -- presence of any non-empty one is enough.
             cnt = body.get("count") if body.get("count") is not None else body.get("total")
-            rows = body.get("rows") or body.get("coins") or body.get("items")
+            rows = (
+                body.get("rows") or body.get("coins") or body.get("items")
+                or body.get("predictionRows") or body.get("dimensions")
+            )
             if cnt is None and rows is None:
                 problems.append(f"FAIL {name}: no count/rows in envelope")
             elif cnt is not None and int(cnt) < 1:
