@@ -1,0 +1,36 @@
+# FUD Court signal -> risk-sized paper plan (DR-050)
+#
+# DEPLOYED as `~/.config/systemd/user/fudcourt-signals.service`, paired with
+# deploy/systemd/fudcourt-signals.timer. A copy lives in-repo so the cadence and
+# the script path are reviewable in a diff, not only on the host.
+#
+# WHY ITS OWN UNIT (DR-046's rule, applied again): this is a derived read-side
+# projection (signals in, plans out). It must never be able to mark the sync
+# failed -- hence a separate pair, offset from the sync cadence, rather than an
+# `ExecStartPost` on the sync unit.
+#
+# RUNTIME DEPENDENCY: `psycopg2` (host package `python3-psycopg2`), the same the
+# sync already needs. Without it the run exits 3 and prints the install hint.
+#
+# The write is idempotent: `signal_plans` keys on (chain, mint), so a repeated
+# run refreshes the sighting and never re-plans the same token.
+[Unit]
+Description=FUD Court signal -> risk-sized paper plan
+Documentation=file:///home/dwizzy/fudcourt/scripts/tools/signal-pipeline.py
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# The script walks up from its own location to the repo-root `.env` for
+# FUDCOURT_PG_URL and the sizing knobs; WorkingDirectory is only an anchor.
+WorkingDirectory=/home/dwizzy/fudcourt
+Environment=NODE_ENV=
+ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/scripts/tools/signal-pipeline.py
+# A transient Postgres or signals blip must not silently drop a day's signals.
+Restart=on-failure
+RestartSec=60
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

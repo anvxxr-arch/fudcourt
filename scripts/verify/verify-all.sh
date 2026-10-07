@@ -92,6 +92,8 @@ step "sync oracle gate (Python oracle vs Rust replay, byte-identical projection)
 quiet_step sync-oracle python3 scripts/verify/verify-sync.py || fail sync-oracle
 step "cross-service API conformance (Go api routes <-> contract <-> web proxies)"
 python3 tests/integration/api/check-api-contract.py || fail api-contract
+step "signal pipeline sizing (pure plan_for, offline)"
+python3 scripts/verify/check-signal-pipeline.py || fail signal-pipeline
 step "pre-push hook syntax"
 bash -n scripts/githooks/pre-push || fail hook-syntax
 

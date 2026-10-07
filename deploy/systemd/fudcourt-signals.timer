@@ -1,0 +1,21 @@
+# FUD Court signal-pipeline timer — drives fudcourt-signals.service.
+#
+# DEPLOYED as `~/.config/systemd/user/fudcourt-signals.timer`. Pairs with
+# deploy/systemd/fudcourt-signals.service (DR-050).
+#
+# Cadence is 5 minutes, the same as `fudcourt-sync` (whose treasury writes it
+# sizes against), but `OnBootSec` is deliberately offset to 2min so a run lands
+# on a settled equity figure rather than a half-written one. The plan is keyed
+# on (chain, mint), so a run that finds no new surfaced token writes nothing new.
+[Unit]
+Description=Run FUD Court signal -> paper plan every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=fudcourt-signals.service
+
+[Install]
+WantedBy=timers.target
