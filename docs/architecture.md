@@ -57,6 +57,7 @@ node tools/fud.ts live [fam]  # the live/network harnesses (list, or run one)
 | ADR | Decision |
 |---|---|
 | [005](decisions/005-no-shared-go-logic.md) | no `core/` — zero cross-app imports, so `internal/` is the boundary |
-| [006](decisions/006-proxy-collapse-deferred.md) | the sidecar proxy routes stay — the contract gates are the contract |
+| [006](decisions/006-proxy-collapse-deferred.md) | the sidecar proxy routes stay — the contract gates are the contract (superseded by 010) |
+| [010](decisions/010-proxy-collapse-executed.md) | the collapse executed: one catch-all gateway, 502 envelope and tier-gate auth boundary preserved |
 | [007](decisions/007-architecture-acceptance.md) | the acceptance scorecard, measured against the tree as committed |
 | [refactor-baseline](decisions/refactor-baseline.md) | the pre-refactor baseline this layout was migrated from |

@@ -55,7 +55,8 @@ docs/
 | records | [DECISIONS.md](records/DECISIONS.md) | Decision records (DR-xxx): context, options, gate evidence, outcome |
 | records | [archive/](records/archive/) | The restructure workstream's own history: the pre-migration `current`/`target` snapshots, the migration plan and the final review. Kept as the record of what changed and why; superseded by the tree itself |
 | decisions | [005-no-shared-go-logic.md](decisions/005-no-shared-go-logic.md) | Why no `core/` was extracted: measured zero cross-app Go imports |
-| decisions | [006-proxy-collapse-deferred.md](decisions/006-proxy-collapse-deferred.md) | Why the 56 route handlers were not collapsed: they are the machine-checked contract surface |
+| decisions | [006-proxy-collapse-deferred.md](decisions/006-proxy-collapse-deferred.md) | Why the 56 route handlers were not collapsed at first: they are the machine-checked contract surface (superseded by 010) |
+| decisions | [010-proxy-collapse-executed.md](decisions/010-proxy-collapse-executed.md) | How the collapse was finally executed: one catch-all gateway that keeps the 502 envelope and the tier-gate auth boundary |
 | decisions | [refactor-baseline.md](decisions/refactor-baseline.md) | The measured before-state this restructure started from |
 | decisions | [007-architecture-acceptance.md](decisions/007-architecture-acceptance.md) | The end state: every acceptance criterion with its evidence, and every deviation with its measurement |
 | architecture | [cryptorank-data-types.md](architecture/cryptorank-data-types.md) | CryptoRank data-type inventory: 81 endpoints / 16 tags with per-endpoint tier + credit cost, the free **Sandbox** tier (21 endpoints at $0), the keyless HTML path the repo runs, and the v2→v3 migration |

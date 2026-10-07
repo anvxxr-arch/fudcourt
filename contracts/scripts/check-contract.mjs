@@ -154,6 +154,26 @@ for (const file of routeFiles) {
   handlerMap.set(routeKey, { file: rel, methods });
 }
 
+// The collapsed pure-passthrough surface (ADR-006) is one catch-all gateway:
+// a documented path with no specific handler is valid IFF the gateway serves
+// its first segment and exports the documented method. Read its routing table.
+const GATEWAY_TS = path.join(APP_DIR, '(frontend)', 'api', '[...path]', 'route.ts');
+let gateway = null;
+try {
+  const src = readFileSync(GATEWAY_TS, 'utf8');
+  const names = src.match(/const DATA_FAMILY_NAMES\s*=\s*\[([^\]]*)\]/);
+  const families = names ? [...names[1].matchAll(/'([a-z0-9-]+)'/g)].map((x) => x[1]) : [];
+  const methods = new Set();
+  for (const m of src.matchAll(/export (?:async )?function (GET|POST|PUT|DELETE|PATCH)\b/g)) methods.add(m[1]);
+  gateway = {
+    file: path.relative(repoRoot, GATEWAY_TS),
+    segments: new Set([...families, 'reconcile', 'executor']),
+    methods,
+  };
+} catch {
+  // No gateway on disk: every documented path must then have its own handler.
+}
+
 const openapiPaths = parseYamlPaths(openapiYaml);
 let pathChecks = 0;
 for (const [openapiPath, methods] of openapiPaths) {
@@ -161,7 +181,19 @@ for (const [openapiPath, methods] of openapiPaths) {
   pathChecks += 1;
   const handler = handlerMap.get(routeKey);
   if (!handler) {
-    failures.push(`path ${openapiPath}: no route handler at apps/web/src/app/**/api/${routeKey}/route.ts`);
+    const firstSeg = routeKey.split('/')[0];
+    if (gateway && gateway.segments.has(firstSeg)) {
+      for (const method of methods) {
+        if (!gateway.methods.has(method)) {
+          failures.push(`path ${openapiPath}: gateway ${gateway.file} does not export ${method}`);
+        }
+      }
+      continue;
+    }
+    failures.push(
+      `path ${openapiPath}: no route handler at apps/web/src/app/**/api/${routeKey}/route.ts ` +
+        `and no gateway segment serves '${firstSeg}'`,
+    );
     continue;
   }
   for (const method of methods) {

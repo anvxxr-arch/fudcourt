@@ -2,8 +2,10 @@
 
 ## Status
 
-Accepted — the 56 route handlers are **not** collapsed. The reduction the
-plan targets is achieved elsewhere (see *What was done instead*).
+Superseded by [010](010-proxy-collapse-executed.md) — the collapse was
+executed on 2026-10-07 with a catch-all gateway that answers all three
+blockers below. Kept as the record of why it was deferred, and of what a
+contract-preserving execution had to solve.
 
 ## Context
 

@@ -1142,7 +1142,7 @@
     "durability": "CANONICAL",
     "sensitivity": "INTERNAL",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/reconcile/route.ts:28-67",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:124-143",
     "evidence": "route.ts:28 `const RECONCILE = process.env.RECONCILE_URL ?? 'http://127.0.0.1:3102'`; route.ts:22-23 'Auth is UNCHANGED ... /api/reconcile is a team-tier read'; guard.ts:23-40 TEAM_API_ROUTES / /executor -> team; requiredTierForPath() ",
     "path": "/api/reconcile",
     "methods": [
@@ -1227,7 +1227,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/coinglass/route.ts:34-72",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:92-122",
     "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CG-Upstream/X-CG-Cache/X-CG-Cipher. apps/data/main.go `mux.HandleFunc(\"/api/coinglass\")`; modes statistics|openInterest|fundingRate|markets, keyless by decryption",
     "path": "/api/coinglass",
     "methods": [
@@ -1248,7 +1248,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "dark",
-    "code_path": "apps/web/src/app/(frontend)/api/coinank/route.ts:34-70",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:92-122",
     "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CA-Upstream/X-CA-Cache. apps/data/main.go `mux.HandleFunc(\"/api/coinank\")`; modes fundingRate|liquidation|longShort|etf|whales, keyless by client signature. Route is live but every mode is upstream's 502 `403` (DR-038) -- status dark mirrors the family",
     "path": "/api/coinank",
     "methods": [
@@ -1269,7 +1269,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/coinmarketcap/route.ts:37-74",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:92-122",
     "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CMC-Upstream/X-CMC-Cache. apps/data/main.go `mux.HandleFunc(\"/api/coinmarketcap\")`; modes listing|global|marketPairs|exchanges, keyless with no credential; start/limit bounds are the sidecar's, validated before any fetch (DR-039)",
     "path": "/api/coinmarketcap",
     "methods": [
@@ -1290,7 +1290,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/cryptorank/route.ts:43-49",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:92-122",
     "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. apps/data/main.go:216; route.ts:26-28 note modes funding/unlocks refused upstream (disabled)",
     "path": "/api/cryptorank",
     "methods": [
@@ -1311,7 +1311,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/llama/route.ts:27-35",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:92-122",
     "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. apps/data/main.go:222; modes chains|protocols|historical",
     "path": "/api/llama",
     "methods": [
@@ -1332,7 +1332,7 @@
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/news/route.ts:34-41",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:92-122",
     "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through. apps/data/main.go:225; strict source/limit, 15s TTL",
     "path": "/api/news",
     "methods": [
@@ -1584,8 +1584,8 @@
     "durability": "CANONICAL",
     "sensitivity": "SECRET",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/accounts/route.ts:10-35",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/accounts",
     "methods": [
       "GET",
@@ -1606,8 +1606,8 @@
     "durability": "CANONICAL",
     "sensitivity": "SECRET",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/accounts/[id]/route.ts:12-29",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/accounts/[id]",
     "methods": [
       "GET",
@@ -1628,8 +1628,8 @@
     "durability": "NONE",
     "sensitivity": "SECRET",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/accounts/[id]/test/route.ts:10-16",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/accounts/[id]/test",
     "methods": [
       "POST"
@@ -1649,8 +1649,8 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/emergency/route.ts:14-25",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/emergency",
     "methods": [
       "POST"
@@ -1670,8 +1670,8 @@
     "durability": "CANONICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/route.ts:12-42",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions",
     "methods": [
       "GET",
@@ -1692,8 +1692,8 @@
     "durability": "CANONICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/route.ts:10-18",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]",
     "methods": [
       "GET"
@@ -1713,8 +1713,8 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/cancel/route.ts:15-21",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/cancel",
     "methods": [
       "POST"
@@ -1734,8 +1734,8 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/pause/route.ts:10-16",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/pause",
     "methods": [
       "POST"
@@ -1755,8 +1755,8 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/resume/route.ts:10-16",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/resume",
     "methods": [
       "POST"
@@ -1776,8 +1776,8 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/start/route.ts:10-16",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/start",
     "methods": [
       "POST"
@@ -1797,8 +1797,8 @@
     "durability": "EVENT",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/events/route.ts:10-17",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/events",
     "methods": [
       "GET"
@@ -1818,8 +1818,8 @@
     "durability": "HISTORICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/fills/route.ts:10-17",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/fills",
     "methods": [
       "GET"
@@ -1839,8 +1839,8 @@
     "durability": "CANONICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/executions/[id]/orders/route.ts:10-17",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/executions/[id]/orders",
     "methods": [
       "GET"
@@ -1860,8 +1860,8 @@
     "durability": "NONE",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/preview/route.ts:14-25",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/preview",
     "methods": [
       "POST"
@@ -1881,8 +1881,8 @@
     "durability": "CANONICAL",
     "sensitivity": "USER_PRIVATE",
     "status": "active",
-    "code_path": "apps/web/src/app/(frontend)/api/executor/settings/route.ts:10-29",
-    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:89-104, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
+    "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:145-157",
+    "evidence": "every handler begins `if (executorProxyEnabled()) return proxyExecutorRequest(req)` (executor-proxy.ts:88-131, gate = FUDCOURT_EXECUTOR_PROXY==='go', upstream 127.0.0.1:3105); else requireExecutorUser() -> hasTier(user,'team') (runtime.ts:138-144). guard.ts /executor + /api/executor -> team.",
     "path": "/api/executor/settings",
     "methods": [
       "GET",

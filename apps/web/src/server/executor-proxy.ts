@@ -1,13 +1,14 @@
 /**
- * _proxy.ts — the single always-on forwarder for every `/api/executor/*`
- * request. Lives at the route boundary so the web tier is a one-line
- * pass-through to the Go executor surface.
+ * executor-proxy.ts — the single always-on forwarder for every
+ * `/api/executor/*` request. The route boundary collapsed into the
+ * `api/[...path]` gateway (ADR-010), which dispatches here; the web tier
+ * stays a one-line pass-through to the Go executor surface.
  *
  * THE GATE (objective §52, cutover). With DR-042 the Go service
  * `fudcourt-executor.service` is the live executor, and the previous
  * `FUDCOURT_EXECUTOR_PROXY=go` flip has been removed — the web tier no
  * longer carries the choice, so the only consumer of this forwarder is
- * every one of the 15 `route.ts` shells and nothing else.
+ * the collapsed gateway `api/[...path]/route.ts` (ADR-010) and nothing else.
  *
  * WHY THE AUTH CALL IS SKIPPED ON THE FORWARD PATH. The Go surface
  * (`apps/executor/internal/api`) verifies the SAME signed
@@ -83,7 +84,8 @@ const RELAYED_RESPONSE_HEADERS = [
 ];
 /**
  * Forward one `/api/executor/*` request to the Go executor surface and
- * return its response. Called from each of the 15 `route.ts` shells.
+ * return its response. Called from the gateway's `dispatch()` for any
+ * `/api/executor/*` path (ADR-010).
  */
 export async function forwardExecutor(request: Request): Promise<Response> {
   const url = new URL(request.url);

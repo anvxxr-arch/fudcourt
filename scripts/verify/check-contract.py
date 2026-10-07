@@ -159,23 +159,32 @@ def check_go_table() -> bool:
     if n_go < 20:
         fails.append(f"Go Modes only has {n_go} modes (expected >= 20)")
     return True
+# The pure-passthrough surface was collapsed into one catch-all gateway
+# (ADR-006): the per-family route.ts files are gone, so the "thin proxy"
+# invariant is now asserted against the gateway source instead.
+GATEWAY = SRC / "app" / "(frontend)" / "api" / "[...path]" / "route.ts"
 def check_route_is_proxy(rel: str = "cryptorank", needles=("execFile", "child_process", "cr_fetch", "CR_PYTHON", "CR_MODES.includes")):
     """A sidecar-proxy route must not spawn python or re-implement validation."""
     route = SRC / "app" / "(frontend)" / "api" / rel / "route.ts"
-    if not route.exists():
-        # Family not landed yet (or removed): skip, never fail -- the same
-        # convention modes_from_sweep() uses for a machine-local artifact.
+    if route.exists():
+        where = f"src/app/(frontend)/api/{rel}/route.ts"
+        src = route.read_text()
+    elif GATEWAY.exists():
+        # Family served by the collapsed gateway: same invariant, other file.
+        where = "src/app/(frontend)/api/[...path]/route.ts (gateway)"
+        src = GATEWAY.read_text()
+    else:
+        # Family not landed yet (or removed) and no gateway: skip, never fail.
         return False
-    src = route.read_text()
     # comments are allowed to *talk* about an old path; only code counts
     src = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
     src = re.sub(r"//[^\n]*", "", src)
     for needle in needles:
         if needle in src:
-            fails.append(f"src/app/(frontend)/api/{rel}/route.ts: {needle!r} present — the route must be "
+            fails.append(f"{where}: {needle!r} present — the route must be "
                          f"a thin proxy to apps/data (Go owns validation)")
     if "DATA_URL" not in src:
-        fails.append(f"src/app/(frontend)/api/{rel}/route.ts: no DATA_URL upstream base — proxy wiring lost")
+        fails.append(f"{where}: no DATA_URL upstream base — proxy wiring lost")
     return True
 lib = modes_from_lib()
 sweep = modes_from_sweep()
@@ -347,18 +356,26 @@ cmc_parity = _keyless_parity(
 # the failure mode the house refuses; the route must fail loud instead.
 RC_ROUTE = SRC / "app" / "(frontend)" / "api" / "reconcile" / "route.ts"
 rc_row = "reconcile absent"
+# ADR-006: the route is now served by the collapsed gateway, so the same
+# checks run against whichever file serves it.
 if RC_ROUTE.exists():
-    src = re.sub(r"/\*.*?\*/", "", RC_ROUTE.read_text(), flags=re.S)
+    rc_src_path, rc_label = RC_ROUTE, "src/app/(frontend)/api/reconcile/route.ts"
+elif GATEWAY.exists():
+    rc_src_path, rc_label = GATEWAY, "src/app/(frontend)/api/[...path]/route.ts (gateway)"
+else:
+    rc_src_path, rc_label = None, ""
+if rc_src_path is not None:
+    src = re.sub(r"/\*.*?\*/", "", rc_src_path.read_text(), flags=re.S)
     src_nocomment = re.sub(r"//[^\n]*", "", src)
     if "RECONCILE" not in src_nocomment:
-        fails.append("src/app/(frontend)/api/reconcile/route.ts: no RECONCILE upstream base — proxy wiring lost")
+        fails.append(f"{rc_label}: no RECONCILE upstream base — proxy wiring lost")
     # `reconcile(` is the shaper's call shape: importing it here would make the TS
     # implementation a runtime path again.
     if re.search(r"import[^;]*from\s+['\"][^'\"]*lib/reconcile", src_nocomment) or "reconcile(" in src_nocomment:
-        fails.append("src/app/(frontend)/api/reconcile/route.ts: imports/calls the TS shaper — the Rust "
+        fails.append(f"{rc_label}: imports/calls the TS shaper — the Rust "
                      "service owns this route; src/features/overview/reconcile.ts is the oracle, not a fallback")
     if "502" not in src_nocomment:
-        fails.append("src/app/(frontend)/api/reconcile/route.ts: no 502 path — an unreachable service must fail loud")
+        fails.append(f"{rc_label}: no 502 path — an unreachable service must fail loud")
     # src/features/overview/reconcile.ts must still exist as the oracle, or parity has no second side.
     if not (SRC / "features" / "overview" / "reconcile.ts").exists():
         fails.append("src/features/overview/reconcile.ts: the TS oracle is gone — parity has no second side")

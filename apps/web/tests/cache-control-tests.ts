@@ -7,11 +7,11 @@
  *  - app/(frontend)/api/economy/indicators/route.ts: the 200 carries
  *    `Cache-Control: public, max-age=3600`; the strict 400s (unknown category,
  *    unknown country) carry none.
- *  - app/(frontend)/api/llama/route.ts and app/(frontend)/api/news/route.ts:
- *    thin sidecar proxies. A 200 with no sidecar Cache-Control gains the
- *    mirror default `public, max-age=15` (the sidecar's own 15s TTL); a 200
- *    WITH a sidecar value keeps it verbatim; non-200s (sidecar 400, sidecar
- *    unreachable 502) carry none.
+ *  - the collapsed gateway app/(frontend)/api/[...path]/route.ts serves the
+ *    llama and news families (ADR-006). A 200 with no sidecar Cache-Control
+ *    gains the mirror default `public, max-age=15` (the sidecar's own 15s
+ *    TTL); a 200 WITH a sidecar value keeps it verbatim; non-200s (sidecar
+ *    400, sidecar unreachable 502) carry none.
  *
  * The proxy seam is `globalThis.fetch`, which both routes call directly, so a
  * stubbed global drives every path without touching the routes. The stub
@@ -24,8 +24,7 @@ import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { GET as countriesGET } from '@/app/(frontend)/api/economy/countries/route';
 import { GET as indicatorsGET } from '@/app/(frontend)/api/economy/indicators/route';
-import { GET as llamaGET } from '@/app/(frontend)/api/llama/route';
-import { GET as newsGET } from '@/app/(frontend)/api/news/route';
+import { GET as gatewayGET } from '@/app/(frontend)/api/[...path]/route';
 
 // ---------------------------------------------------------------------------
 // Sidecar fetch stub for the llama/news proxies.
@@ -88,7 +87,7 @@ test('indicators: unknown country is a headerless 400', async () => {
 test('llama: 200 without sidecar Cache-Control gains public, max-age=15', async () => {
   const restore = stubSidecar({ status: 200, body: { items: [] } });
   try {
-    const res = await llamaGET(llamaReq());
+    const res = await gatewayGET(llamaReq());
     assert.equal(res.status, 200);
     assert.equal(res.headers.get('Cache-Control'), 'public, max-age=15');
   } finally {
@@ -99,7 +98,7 @@ test('llama: 200 without sidecar Cache-Control gains public, max-age=15', async 
 test('llama: 200 preserves a sidecar Cache-Control verbatim', async () => {
   const restore = stubSidecar({ status: 200, body: { items: [] }, cacheControl: 'public, max-age=60' });
   try {
-    const res = await llamaGET(llamaReq());
+    const res = await gatewayGET(llamaReq());
     assert.equal(res.status, 200);
     assert.equal(res.headers.get('Cache-Control'), 'public, max-age=60');
   } finally {
@@ -110,7 +109,7 @@ test('llama: 200 preserves a sidecar Cache-Control verbatim', async () => {
 test('llama: sidecar 400 is forwarded headerless', async () => {
   const restore = stubSidecar({ status: 400, body: { error: 'bad mode' } });
   try {
-    const res = await llamaGET(llamaReq('?mode=bogus'));
+    const res = await gatewayGET(llamaReq('?mode=bogus'));
     assert.equal(res.status, 400);
     assert.equal(res.headers.get('Cache-Control'), null);
   } finally {
@@ -121,7 +120,7 @@ test('llama: sidecar 400 is forwarded headerless', async () => {
 test('llama: unreachable sidecar is a headerless 502', async () => {
   const restore = stubSidecar('refused');
   try {
-    const res = await llamaGET(llamaReq());
+    const res = await gatewayGET(llamaReq());
     assert.equal(res.status, 502);
     assert.equal(res.headers.get('Cache-Control'), null);
   } finally {
@@ -135,7 +134,7 @@ test('llama: unreachable sidecar is a headerless 502', async () => {
 test('news: 200 without sidecar Cache-Control gains public, max-age=15', async () => {
   const restore = stubSidecar({ status: 200, body: { items: [], total: 0 } });
   try {
-    const res = await newsGET(newsReq());
+    const res = await gatewayGET(newsReq());
     assert.equal(res.status, 200);
     assert.equal(res.headers.get('Cache-Control'), 'public, max-age=15');
   } finally {
@@ -146,7 +145,7 @@ test('news: 200 without sidecar Cache-Control gains public, max-age=15', async (
 test('news: 200 preserves a sidecar Cache-Control verbatim', async () => {
   const restore = stubSidecar({ status: 200, body: { items: [], total: 0 }, cacheControl: 'no-store' });
   try {
-    const res = await newsGET(newsReq());
+    const res = await gatewayGET(newsReq());
     assert.equal(res.status, 200);
     assert.equal(res.headers.get('Cache-Control'), 'no-store');
   } finally {
@@ -157,7 +156,7 @@ test('news: 200 preserves a sidecar Cache-Control verbatim', async () => {
 test('news: sidecar 400 is forwarded headerless', async () => {
   const restore = stubSidecar({ status: 400, body: { error: 'bad source' } });
   try {
-    const res = await newsGET(newsReq('?source=bogus'));
+    const res = await gatewayGET(newsReq('?source=bogus'));
     assert.equal(res.status, 400);
     assert.equal(res.headers.get('Cache-Control'), null);
   } finally {
@@ -168,7 +167,7 @@ test('news: sidecar 400 is forwarded headerless', async () => {
 test('news: unreachable sidecar is a headerless 502', async () => {
   const restore = stubSidecar('refused');
   try {
-    const res = await newsGET(newsReq());
+    const res = await gatewayGET(newsReq());
     assert.equal(res.status, 502);
     assert.equal(res.headers.get('Cache-Control'), null);
   } finally {
