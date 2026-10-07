@@ -55,7 +55,14 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	client := telegram.NewWithEndpoint(cfg.BotToken, cfg.APIBase, nil)
+	// The Telegram client's HTTP timeout must NOT undercut the getUpdates
+	// long-poll: pollLoop holds each request for pollTimeout+requestSlack, and a
+	// fixed client timeout shorter than that fires first — every poll then fails
+	// with "Client.Timeout exceeded" even though the request context allows more.
+	// Every call site already carries its own deadline in ctx (getMe and
+	// setMyCommands 15s, each poll pollTimeout+requestSlack), so the client is
+	// left without its own timeout and the context governs.
+	client := telegram.NewWithEndpoint(cfg.BotToken, cfg.APIBase, &http.Client{})
 
 	// Identity check: proves the token before the loop opens (fail-visible).
 	meCtx, cancelMe := context.WithTimeout(ctx, 15*time.Second)
