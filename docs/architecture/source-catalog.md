@@ -158,17 +158,18 @@ own backend, whose body is two rounds of AES-128-ECB+PKCS#7 (see the `fudcourt-d
 
 Code: `apps/data/internal/research/coinank/{modes.go,fetch.go}`. Keyless via a client-computed
 signature; **no issued key**, and the official `open-api.coinank.com` host is NOT wired. **All five
-modes are `dark`** — every call returns HTTP 502 carrying the upstream body
-`{"code":"403","detail":"CoinAnk refused the request: please sub api to get data"}`. The sidecar wires
-the family correctly; the upstream refuses. The `monitor-coinank` job watches for the wall lifting.
+modes are LIVE** — the upstream gate that refused every call with HTTP 502
+`{"code":"403","detail":"CoinAnk refused the request: please sub api to get data"}` **lifted on
+2026-10-07**: a direct GET to `api.coinank.com` answers 200 (5/5 stable, no signature required) and the
+sidecar serves every mode (fundingRate 886 / liquidation 10 / longShort 726 / etf 708 / whales 50 rows).
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `ca-funding-rate` | `GET /api/fundingRate/current` | CoinAnk | DERIVATIVES | funding rates, 882 symbols × per-exchange maps | `apps/data/internal/research/coinank/modes.go:UpstreamURL` | FundingRate (target) | FREQUENT | NONE | keyless | dark | `curl 127.0.0.1:3101/api/coinank?mode=fundingRate` → 502 `403` |
-| `ca-liquidation` | `GET /api/liquidation/allExchange` (interval allowlist 1h/2h/4h/6h/12h/1d) | CoinAnk | DERIVATIVES | per-exchange liquidation turnover | same | liquidation metric (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=liquidation` → 502 `403` |
-| `ca-long-short` | `GET /api/longshort/all` | CoinAnk | DERIVATIVES | long/short ratios across exchanges | same | long/short ratio (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=longShort` → 502 `403` |
-| `ca-etf-inflow` | `GET /api/etf/etfInflow` | CoinAnk | MARKET_DATA | daily spot-ETF creations/redemptions | same | ETF flow (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=etf` → 502 `403` |
-| `ca-whales` | `GET /api/hyper/topPosition` | CoinAnk | DERIVATIVES | Hyperliquid top positions by size | same | large-position metric (target) | FREQUENT | NONE | keyless | dark | `curl ...mode=whales` → 502 `403` |
+| `ca-funding-rate` | `GET /api/fundingRate/current` | CoinAnk | DERIVATIVES | funding rates, 882 symbols × per-exchange maps | `apps/data/internal/research/coinank/modes.go:UpstreamURL` | FundingRate (target) | FREQUENT | NONE | keyless | active | `curl 127.0.0.1:3101/api/coinank?mode=fundingRate` → 200, upstreamCount 886 |
+| `ca-liquidation` | `GET /api/liquidation/allExchange` (interval allowlist 1h/2h/4h/6h/12h/1d) | CoinAnk | DERIVATIVES | per-exchange liquidation turnover | same | liquidation metric (target) | FREQUENT | NONE | keyless | active | `curl ...mode=liquidation` → 200, upstreamCount 10 |
+| `ca-long-short` | `GET /api/longshort/all` | CoinAnk | DERIVATIVES | long/short ratios across exchanges | same | long/short ratio (target) | FREQUENT | NONE | keyless | active | `curl ...mode=longShort` → 200, upstreamCount 726 |
+| `ca-etf-inflow` | `GET /api/etf/etfInflow` | CoinAnk | MARKET_DATA | daily spot-ETF creations/redemptions | same | ETF flow (target) | FREQUENT | NONE | keyless | active | `curl ...mode=etf` → 200, upstreamCount 708 |
+| `ca-whales` | `GET /api/hyper/topPosition` | CoinAnk | DERIVATIVES | Hyperliquid top positions by size | same | large-position metric (target) | FREQUENT | NONE | keyless | active | `curl ...mode=whales` → 200, upstreamCount 50 |
 
 ### 1.8 CoinMarketCap (`https://api.coinmarketcap.com/data-api/v3`)
 
@@ -451,7 +452,7 @@ Counted mechanically from the tables above (`grep -c`/script over this file):
 Facts behind the counts: CryptoRank declares **28** modes (`ModeCount = len(Modes)`; 26
 live-recorded in `MANIFEST.json.liveModes`, 2 refused-by-design); 10 ccxt venues × the
 measured `TICKER_VENUES` type table; 6 EVM chains + Solana + Hyperliquid under the
-5-minute sync; 3 live CEX venues + 1 paper venue in the executor; **CoinGlass** declares 4 keyless modes (all live), **CoinAnk** 5 keyless modes (all `dark` — the upstream refuses every call with HTTP 502 `403`), and **CoinMarketCap** 4 keyless modes (all live — keyless by having no credential at all).
+5-minute sync; 3 live CEX venues + 1 paper venue in the executor; **CoinGlass** declares 4 keyless modes (all live), **CoinAnk** 5 keyless modes (all live — the upstream gate lifted 2026-10-07; 886/10/726/708/50 rows), and **CoinMarketCap** 4 keyless modes (all live — keyless by having no credential at all).
 
 `[INFERENCE]` markers are used only where a claim rests on reading code rather than
 running it (e.g. tables with no in-repo writer). Every other row cites a file, route or

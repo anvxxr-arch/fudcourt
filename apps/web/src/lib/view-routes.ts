@@ -31,6 +31,16 @@ export const VIEW_PATHS: Record<string, string> = {
   risk: '/risk',
   // The public proof of treasury (F11): aggregates + a digest, no private detail.
   proof: '/proof',
+  // The derivatives desk: OI, funding, liquidations and long/short across venues.
+  derivatives: '/derivatives',
+  // The spot-ETF flow desk: daily creations/redemptions per issuer.
+  etf: '/etf',
+  // The global market pulse: dominance, segment volumes, venue ranking.
+  global: '/global',
+  // The crypto breadth boards: RWA, launch calendar, sector rotation, venues.
+  breadth: '/breadth',
+  // The whale watcher: the largest open positions on Hyperliquid.
+  whales: '/whales',
   // CEX Executor (PRD §81): a multi-route area (/executor/new, /:id, …), not a
   // single shell tab — this entry is the canonical deep link for nav callers.
   executor: '/executor',

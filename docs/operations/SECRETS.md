@@ -245,7 +245,7 @@ admin `fud_session` and expects the groups `mut` (7) and `gate-auth` (3) to be
 PRESENT. If either group is missing, or any row carries
 `[ENV: no FUDCOURT_SESSION_SECRET discoverable …]`, the secret is not in the
 running unit's environment — fix with §5 R3, not by weakening a guard. (Rows that
-fail against *upstreams* — `cryptorank`, `news`, coinank's dark 502 — are
+fail against *upstreams* — `cryptorank`, `news`, an upstream refusing a keyless family — are
 external drift, not this checklist's subject.)
 
 A var that is set in the §1 home file but missing at runtime shows up as one of

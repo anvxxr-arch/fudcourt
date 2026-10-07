@@ -23,6 +23,11 @@ const MarketHub = dynamic(() => import('@/features/market/hub'), { ssr: false })
 const NewsPage = dynamic(() => import('@/features/news/ui'), { ssr: false });
 const RiskFeedPage = dynamic(() => import('@/features/risk/ui'), { ssr: false });
 const ProofPage = dynamic(() => import('@/features/proof/ui'), { ssr: false });
+const DerivativesPage = dynamic(() => import('@/features/derivatives/ui'), { ssr: false });
+const EtfPage = dynamic(() => import('@/features/etf/ui'), { ssr: false });
+const GlobalPage = dynamic(() => import('@/features/global/ui'), { ssr: false });
+const BreadthPage = dynamic(() => import('@/features/breadth/ui'), { ssr: false });
+const WhalesPage = dynamic(() => import('@/features/whales/ui'), { ssr: false });
 
 type DbData = {
   assets: Asset[];
@@ -123,6 +128,11 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     { key: 'signals', label: 'Signals' },
     { key: 'scoreboard', label: 'Scoreboard' },
     { key: 'risk', label: 'Risk feed' },
+    { key: 'derivatives', label: 'Derivatives' },
+    { key: 'etf', label: 'ETF flows' },
+    { key: 'global', label: 'Global' },
+    { key: 'breadth', label: 'Breadth' },
+    { key: 'whales', label: 'Whales' },
     { key: 'news', label: 'News' },
     { key: 'proof', label: 'Proof of treasury' },
   ];
@@ -157,6 +167,26 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     proof: {
       title: 'The treasury, committed — aggregates public, holdings private',
       sub: 'A total, a per-chain split and a SHA-256 digest over the full snapshot; unpriced holdings are named, never counted as zero.',
+    },
+    derivatives: {
+      title: 'The futures tape, read verbatim from the venues',
+      sub: 'Open interest, funding extremes, per-venue liquidations and the long/short ratio — a missing venue is a dash, never a zero.',
+    },
+    etf: {
+      title: 'Where the spot-ETF money actually went',
+      sub: 'Daily creations and redemptions per issuer, a cumulative series and per-issuer totals; unlabelled upstream rows stay unlabelled.',
+    },
+    global: {
+      title: 'The whole market in one read',
+      sub: 'Market cap, dominance and segment volumes beside the venue ranking — every figure read verbatim, none estimated.',
+    },
+    breadth: {
+      title: 'Where the market is widening',
+      sub: 'Tokenized real-world assets, the launch calendar, sector rotation and the venue ranking.',
+    },
+    whales: {
+      title: 'The largest open positions, and which way they lean',
+      sub: 'Notional, leverage, entry and liquidation price per position; the board states how many of the upstream total it sees.',
     },
   };
   const boardKey = page.startsWith('market') ? 'market' : page;
@@ -249,6 +279,11 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'signals' && <SignalsPage />}
       {page === 'scoreboard' && <ScoreboardPage />}
       {page === 'risk' && <RiskFeedPage />}
+      {page === 'derivatives' && <DerivativesPage />}
+      {page === 'etf' && <EtfPage />}
+      {page === 'global' && <GlobalPage />}
+      {page === 'breadth' && <BreadthPage />}
+      {page === 'whales' && <WhalesPage />}
       {page === 'news' && <NewsPage />}
       {page === 'proof' && <ProofPage />}
 

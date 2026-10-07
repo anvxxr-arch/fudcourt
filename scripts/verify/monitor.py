@@ -50,6 +50,15 @@ Checks:
      returns 200 with empty dimensions -- the silent empty envelope the
      never-fake doctrine forbids -- so the check asserts the list is populated.
 
+  13. The venue families the new desks read (12 endpoint checks): CoinGlass
+     markets + statistics, CoinAnk etf + whales + liquidation&interval=1d,
+     CoinMarketCap global + exchanges, and CryptoRank rwa / launchpool&key=upcoming
+     / categories&key=chain / exchanges&key=cex/spot. These carry the real payload
+     under `data` (a list, or an object wrapping list/cryptoCurrencyList/exchanges/
+     quotes) and the true upstream row count as `upstreamCount`; the non-empty
+     predicate understands both shapes, so a healthy venue response no longer
+     reads as "no count/rows in envelope". Every one of them is keyless.
+
 Override target with MONITOR_BASE (used by the failure-path self-test). The two
 direct probes are overridable too: SIDECAR_HEALTH / RECONCILE_HEALTH.
 """
@@ -105,6 +114,17 @@ CHECKS = [
     ("news (cointelegraph rss)", "/api/news?limit=5", 200, True),
     ("mode=prediction (risk feed)", "/api/cryptorank?mode=prediction", 200, True),
     ("economy regime (fred/worldbank/bis)", "/api/economy/regime", 200, True),
+    ("coinglass markets", "/api/coinglass?mode=markets", 200, True),
+    ("coinglass statistics", "/api/coinglass?mode=statistics", 200, True),
+    ("coinank etf flows", "/api/coinank?mode=etf", 200, True),
+    ("coinank whales", "/api/coinank?mode=whales", 200, True),
+    ("coinank liquidations", "/api/coinank?mode=liquidation&interval=1d", 200, True),
+    ("coinmarketcap global", "/api/coinmarketcap?mode=global", 200, True),
+    ("coinmarketcap exchanges", "/api/coinmarketcap?mode=exchanges", 200, True),
+    ("cryptorank rwa", "/api/cryptorank?mode=rwa", 200, True),
+    ("cryptorank launchpool upcoming", "/api/cryptorank?mode=launchpool&key=upcoming", 200, True),
+    ("cryptorank categories chain", "/api/cryptorank?mode=categories&key=chain", 200, True),
+    ("cryptorank exchanges cex/spot", "/api/cryptorank?mode=exchanges&key=cex/spot", 200, True),
 ]
 
 
@@ -182,6 +202,27 @@ def check(args):
                 body.get("rows") or body.get("coins") or body.get("items")
                 or body.get("predictionRows") or body.get("dimensions")
             )
+            # The venue families (coinglass/coinank/coinmarketcap) park the real
+            # payload under `data` and stamp the true upstream row count as
+            # `upstreamCount` -- neither shape existed when this predicate was
+            # written, so a healthy venue response would read "no count/rows".
+            data = body.get("data")
+            if cnt is None:
+                cnt = body.get("upstreamCount")
+            if rows is None and isinstance(data, list):
+                rows = data
+            if isinstance(data, dict):
+                for _key in ("list", "cryptoCurrencyList", "exchanges", "quotes"):
+                    if isinstance(data.get(_key), list):
+                        rows = rows or data[_key]
+                        break
+                else:
+                    # A pure-object family (CoinGlass statistics) carries no row
+                    # array at all: a non-empty object IS the payload, and an
+                    # empty one is exactly the silent-empty envelope this check
+                    # exists to catch.
+                    if data and cnt is None:
+                        cnt = len(data)
             if cnt is None and rows is None:
                 problems.append(f"FAIL {name}: no count/rows in envelope")
             elif cnt is not None and int(cnt) < 1:

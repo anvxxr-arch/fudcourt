@@ -198,7 +198,9 @@ print(f"# session: {SESSION_WHY}", flush=True)
 print("=== A. pages ===", flush=True)
 for p in ["/", "/market", "/market/crypto", "/market/trench", "/market/forex",
           "/market/stock", "/market/commodity", "/market/crypto/BTC",
-          "/news", "/scoreboard", "/signals"]:
+          "/news", "/scoreboard", "/signals",
+          # the public boards added by the data-breadth pass (all 200 live)
+          "/risk", "/proof", "/derivatives", "/etf", "/global", "/breadth", "/whales"]:
     st, b = hit(p, timeout=60)
     rec("page", p, st, 200, b)
 # The market hub absorbed the standalone boards: their old paths are deliberate
@@ -296,9 +298,9 @@ st, b = hit("/api/ticker/instrument?base=BTC&type=bogus", timeout=60)
 rec("api", "/api/ticker/instrument bad type -> 400", st, 400, b)
 # The three KEYLESS sidecar families (coinglass / coinank / coinmarketcap) whose web
 # half is now wired. Each mode must answer THROUGH the proxy on :3100, and the
-# sidecar's own strict-param contract must survive the proxy hop. coinglass and
-# coinmarketcap are live; coinank is DARK -- upstream refuses all five, so the honest
-# assertion is the 502 carrying its own code, never a 200 (DR-038).
+# sidecar's own strict-param contract must survive the proxy hop. All three are
+# live as of 2026-10-07: the CoinAnk upstream gate that refused all five modes
+# with HTTP 502 `403` (DR-038) lifted, so the honest assertion is now a 200.
 for m, extra in (("statistics", ""), ("openInterest", "&symbol=BTC"),
                  ("fundingRate", ""), ("markets", "")):
     st, b = hit(f"/api/coinglass?mode={m}{extra}", timeout=120)
@@ -310,7 +312,7 @@ for q, label in (("mode=bogus", "coinglass bogus mode -> 400"),
     rec("api", label, st, 400, b)
 for m in ("fundingRate", "liquidation", "longShort", "etf", "whales"):
     st, b = hit(f"/api/coinank?mode={m}", timeout=120)
-    rec("api", f"/api/coinank mode={m} (dark upstream refusal)", st, 502, b)
+    rec("api", f"/api/coinank mode={m}", st, 200, b)
 for q, label in (("mode=bogus", "coinank bogus mode -> 400"),
                  ("mode=etf&interval=1h", "coinank interval on etf -> 400"),
                  ("mode=liquidation&interval=8h", "coinank bad interval 8h -> 400")):

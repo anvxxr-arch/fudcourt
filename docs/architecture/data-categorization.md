@@ -90,12 +90,12 @@ exist.
 | acq-coinglass-fundingRate | coinglass mode=fundingRate: CoinGlass funding-rate rank (50 most extreme +/-) — upstream https://capi.coinglass.com/api/fundingRate/rank | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinglass/modes.go` |
 | acq-coinglass-markets | coinglass mode=markets: CoinGlass futures coins markets table — upstream https://capi.coinglass.com/api/futures/v2/coins/markets | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinglass/modes.go` |
 | acq-family-coinglass | CoinGlass acquisition family (4 keyless modes; encrypted dashboard body, NO CG-API-KEY; official open-api-v4 NOT wired) | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinglass/modes.go` |
-| acq-coinank-fundingRate | coinank mode=fundingRate: CoinAnk funding rates (882 symbols x per-exchange maps) — upstream https://api.coinank.com/api/fundingRate/current | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | dark | `apps/data/internal/research/coinank/modes.go` |
-| acq-coinank-liquidation | coinank mode=liquidation: CoinAnk per-exchange liquidation turnover (interval allowlist) — upstream https://api.coinank.com/api/liquidation/allExchange?interval=<1h\|2h\|4h\|6h\|12h\|1d> | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | dark | `apps/data/internal/research/coinank/modes.go` |
-| acq-coinank-longShort | coinank mode=longShort: CoinAnk long/short ratios across exchanges — upstream https://api.coinank.com/api/longshort/all | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | dark | `apps/data/internal/research/coinank/modes.go` |
-| acq-coinank-etf | coinank mode=etf: CoinAnk daily spot-ETF creations/redemptions — upstream https://api.coinank.com/api/etf/etfInflow | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | dark | `apps/data/internal/research/coinank/modes.go` |
-| acq-coinank-whales | coinank mode=whales: CoinAnk Hyperliquid top positions by size — upstream https://api.coinank.com/api/hyper/topPosition | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | dark | `apps/data/internal/research/coinank/modes.go` |
-| acq-family-coinank | CoinAnk acquisition family (5 keyless modes; client-computed signature, NO issued key; official open-api.coinank.com NOT wired) | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | dark | `apps/data/internal/research/coinank/modes.go` |
+| acq-coinank-fundingRate | coinank mode=fundingRate: CoinAnk funding rates (882 symbols x per-exchange maps) — upstream https://api.coinank.com/api/fundingRate/current | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinank/modes.go` |
+| acq-coinank-liquidation | coinank mode=liquidation: CoinAnk per-exchange liquidation turnover (interval allowlist) — upstream https://api.coinank.com/api/liquidation/allExchange?interval=<1h\|2h\|4h\|6h\|12h\|1d> | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinank/modes.go` |
+| acq-coinank-longShort | coinank mode=longShort: CoinAnk long/short ratios across exchanges — upstream https://api.coinank.com/api/longshort/all | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinank/modes.go` |
+| acq-coinank-etf | coinank mode=etf: CoinAnk daily spot-ETF creations/redemptions — upstream https://api.coinank.com/api/etf/etfInflow | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinank/modes.go` |
+| acq-coinank-whales | coinank mode=whales: CoinAnk Hyperliquid top positions by size — upstream https://api.coinank.com/api/hyper/topPosition | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinank/modes.go` |
+| acq-family-coinank | CoinAnk acquisition family (5 keyless modes; client-computed signature, NO issued key; official open-api.coinank.com NOT wired) | DERIVATIVES | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinank/modes.go` |
 | acq-coinmarketcap-listing | coinmarketcap mode=listing: CoinMarketCap ranked coin list (start/limit paginated; local bounds [1,1000]) — upstream https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinmarketcap/modes.go` |
 | acq-coinmarketcap-global | coinmarketcap mode=global: CoinMarketCap global metrics (dominance/supply, object payload) — upstream https://api.coinmarketcap.com/data-api/v3/global-metrics/quotes/latest | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinmarketcap/modes.go` |
 | acq-coinmarketcap-marketPairs | coinmarketcap mode=marketPairs: CoinMarketCap per-exchange pairs for one coin (slug required) — upstream https://api.coinmarketcap.com/data-api/v3/cryptocurrency/market-pairs/latest?slug=<SLUG> | MARKET_DATA | PARSED | keyless | FREQUENT | NONE | PUBLIC | active | `apps/data/internal/research/coinmarketcap/modes.go` |
@@ -120,7 +120,7 @@ exist.
 | route-api-auth-callback | GET /api/auth/callback — OAuth code->session exchange (PROXY -> Go api :3103 handleAuthCallback) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `apps/web/src/app/(frontend)/api/auth/callback/route.ts` |
 | route-api-auth-logout | GET\|POST /api/auth/logout — session cookie retire (PROXY -> Go api :3103 handleAuthLogout) | ACCESS | PRODUCT_VIEW | keyless | REALTIME | NONE | SECRET | active | `apps/web/src/app/(frontend)/api/auth/logout/route.ts` |
 | route-api-coinglass | GET /api/coinglass — CoinGlass derivatives surfaces (PROXY -> Go data fudcourt-data :3101) | DERIVATIVES | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/coinglass/route.ts` |
-| route-api-coinank | GET /api/coinank — CoinAnk derivatives surfaces (PROXY -> Go data fudcourt-data :3101; upstream DARK) | DERIVATIVES | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | dark | `apps/web/src/app/(frontend)/api/coinank/route.ts` |
+| route-api-coinank | GET /api/coinank — CoinAnk derivatives surfaces (PROXY -> Go data fudcourt-data :3101; upstream LIVE) | DERIVATIVES | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/coinank/route.ts` |
 | route-api-coinmarketcap | GET /api/coinmarketcap — CoinMarketCap market surfaces (PROXY -> Go data fudcourt-data :3101) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/coinmarketcap/route.ts` |
 | route-api-cryptorank | GET /api/cryptorank — crypto research board (market caps, listings, ecosystems, RWA) (PROXY -> Go data fudcourt-data :3101) | MARKET_DATA | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/cryptorank/route.ts` |
 | route-api-llama | GET /api/llama — DeFiLlama chains/protocols TVL (PROXY -> Go data fudcourt-data :3101) | DEFI | NORMALIZED | keyless | NEAR_REALTIME | SNAPSHOT | PUBLIC | active | `apps/web/src/app/(frontend)/api/llama/route.ts` |
@@ -226,6 +226,10 @@ because it requires a symbol parameter — a validation refusal, not an upstream
 **F3 — `coinank` is dark.** All five modes return HTTP 502 carrying the upstream body
 `{"code":"403","detail":"CoinAnk refused the request: please sub api to get data"}`. The sidecar
 wires it correctly; the upstream refuses. Status `dark`, nothing broken on our side.
+**Resolved 2026-10-07.** The upstream gate lifted: a direct GET to `api.coinank.com` answers **200**
+(5/5 stable, no signature required) and the sidecar serves every mode — fundingRate 886 / liquidation
+10 / longShort 726 / etf 708 / whales 50 rows. Status flipped `dark` → `active` across the catalogs;
+the five families are now surfaced by the `/derivatives`, `/etf` and `/whales` public boards.
 
 **F4 — `coinglass`/`coinank` are unreachable through the web app.** The sidecar exposes
 `/api/coinglass` (`apps/data/main.go:231`) and `/api/coinank` (`:234`) on `:3101`, but
@@ -267,10 +271,10 @@ recorded because the middleware table not covering the path is a real (non-explo
 python3 -c "import json;print(len(json.load(open('docs/architecture/data-categorization.json'))))"  # 155
 curl -s http://127.0.0.1:3101/healthz                                  # 8 families, 28 cryptorank modes
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinglass?mode=statistics'   # 200 (web proxy)
-curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinank?mode=fundingRate'     # 502 dark (web proxy)
+curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinank?mode=fundingRate'     # 200 (web proxy)
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3100/api/coinmarketcap?mode=global'    # 200 (web proxy)
 curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinglass?mode=statistics'  # 200
-curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinank?mode=fundingRate'    # 502 dark
+curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:3101/api/coinank?mode=fundingRate'    # 200
 find apps/web/src/app \( -name 'route.ts' -o -name 'route.tsx' \) | wc -l              # 43
 grep -rn coinglass apps/web/src/app | wc -l                        # 6 (client.ts + route.ts, not "no web proxy")
 curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3103/api/markets                      # 404

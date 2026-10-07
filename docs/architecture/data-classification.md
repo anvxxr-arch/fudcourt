@@ -67,7 +67,7 @@ verified with `test -f`.
 | CMS categories / tags / media | news (editorial) | editor UI | CANONICAL | Payload CMS | MANUAL | mutable | CANONICAL | created/updated | slug / filename | PUBLIC |
 | CMS users / sessions | access (CMS-only) | admin UI | CANONICAL | Payload CMS | MANUAL | mutable / append | CANONICAL | created/updated; `expires_at` | serial PK + unique email | **SECRET** |
 | CoinGlass derivatives envelopes (`statistics`/`openInterest`/`fundingRate`/`markets`) | markets / defi | capi.coinglass.com (keyless, decrypted) | PARSED | `apps/data/internal/research/coinglass` | FREQUENT | overwrite-per-run (cache) | NONE (disk cache) | received_at = envelope fetch; upstream stamps untouched | mode + `symbol` key | PUBLIC |
-| CoinAnk derivatives envelopes (`fundingRate`/`liquidation`/`longShort`/`etf`/`whales`) | markets / defi | api.coinank.com (keyless) | PARSED (**dark** — upstream 502 `403`) | `apps/data/internal/research/coinank` | FREQUENT | overwrite-per-run | NONE | received_at n/a (no body) | mode | PUBLIC |
+| CoinAnk derivatives envelopes (`fundingRate`/`liquidation`/`longShort`/`etf`/`whales`) | markets / defi | api.coinank.com (keyless) | PARSED | `apps/data/internal/research/coinank` | FREQUENT | overwrite-per-run | NONE | received_at = envelope fetch; upstream stamps untouched | mode | PUBLIC |
 | CoinMarketCap market envelopes (`listing`/`global`/`marketPairs`/`exchanges`) | markets | api.coinmarketcap.com/data-api/v3 (keyless — no credential) | PARSED | `apps/data/internal/research/coinmarketcap` | FREQUENT | overwrite-per-run (cache) | NONE (disk cache) | received_at = envelope fetch; upstream stamps untouched | mode + `start`/`limit`/`slug` | PUBLIC |
 
 ### 2.3 On-chain, portfolio and treasury

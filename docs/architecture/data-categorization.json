@@ -763,9 +763,9 @@
     "freshness": "FREQUENT",
     "durability": "NONE",
     "sensitivity": "PUBLIC",
-    "status": "dark",
+    "status": "active",
     "code_path": "apps/data/internal/research/coinank/modes.go:UpstreamURL",
-    "evidence": "upstream=https://api.coinank.com/api/fundingRate/current; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=fundingRate' -> 502 {\"code\":\"403\",\"detail\":\"CoinAnk refused the request: please sub api to get data\",\"error\":\"upstream refused\",\"mode\":\"fundingRate\"}; modes.go:25 Modes; keyless client signature sign.go:63-75"
+    "evidence": "upstream=https://api.coinank.com/api/fundingRate/current; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=fundingRate' -> 200 (upstreamCount=886); the upstream gate lifted 2026-10-07 (direct GET api.coinank.com -> 200, 5/5 stable); modes.go:25 Modes; keyless client signature sign.go:63-75"
   },
   {
     "id": "acq-coinank-liquidation",
@@ -779,9 +779,9 @@
     "freshness": "FREQUENT",
     "durability": "NONE",
     "sensitivity": "PUBLIC",
-    "status": "dark",
+    "status": "active",
     "code_path": "apps/data/internal/research/coinank/modes.go:UpstreamURL",
-    "evidence": "upstream=https://api.coinank.com/api/liquidation/allExchange?interval=<1h|2h|4h|6h|12h|1d>; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=liquidation' -> 502 {\"code\":\"403\",\"detail\":\"CoinAnk refused the request: please sub api to get data\",\"error\":\"upstream refused\",\"mode\":\"liquidation\"}; modes.go:25 Modes; keyless client signature sign.go:63-75"
+    "evidence": "upstream=https://api.coinank.com/api/liquidation/allExchange?interval=<1h|2h|4h|6h|12h|1d>; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=liquidation' -> 200 (upstreamCount=10); the upstream gate lifted 2026-10-07 (direct GET api.coinank.com -> 200, 5/5 stable); modes.go:25 Modes; keyless client signature sign.go:63-75"
   },
   {
     "id": "acq-coinank-longShort",
@@ -795,9 +795,9 @@
     "freshness": "FREQUENT",
     "durability": "NONE",
     "sensitivity": "PUBLIC",
-    "status": "dark",
+    "status": "active",
     "code_path": "apps/data/internal/research/coinank/modes.go:UpstreamURL",
-    "evidence": "upstream=https://api.coinank.com/api/longshort/all; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=longShort' -> 502 {\"code\":\"403\",\"detail\":\"CoinAnk refused the request: please sub api to get data\",\"error\":\"upstream refused\",\"mode\":\"longShort\"}; modes.go:25 Modes; keyless client signature sign.go:63-75"
+    "evidence": "upstream=https://api.coinank.com/api/longshort/all; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=longShort' -> 200 (upstreamCount=726); the upstream gate lifted 2026-10-07 (direct GET api.coinank.com -> 200, 5/5 stable); modes.go:25 Modes; keyless client signature sign.go:63-75"
   },
   {
     "id": "acq-coinank-etf",
@@ -811,9 +811,9 @@
     "freshness": "FREQUENT",
     "durability": "NONE",
     "sensitivity": "PUBLIC",
-    "status": "dark",
+    "status": "active",
     "code_path": "apps/data/internal/research/coinank/modes.go:UpstreamURL",
-    "evidence": "upstream=https://api.coinank.com/api/etf/etfInflow; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=etf' -> 502 {\"code\":\"403\",\"detail\":\"CoinAnk refused the request: please sub api to get data\",\"error\":\"upstream refused\",\"mode\":\"etf\"}; modes.go:25 Modes; keyless client signature sign.go:63-75"
+    "evidence": "upstream=https://api.coinank.com/api/etf/etfInflow; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=etf' -> 200 (upstreamCount=708); the upstream gate lifted 2026-10-07 (direct GET api.coinank.com -> 200, 5/5 stable); modes.go:25 Modes; keyless client signature sign.go:63-75"
   },
   {
     "id": "acq-coinank-whales",
@@ -827,9 +827,9 @@
     "freshness": "FREQUENT",
     "durability": "NONE",
     "sensitivity": "PUBLIC",
-    "status": "dark",
+    "status": "active",
     "code_path": "apps/data/internal/research/coinank/modes.go:UpstreamURL",
-    "evidence": "upstream=https://api.coinank.com/api/hyper/topPosition; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=whales' -> 502 {\"code\":\"403\",\"detail\":\"CoinAnk refused the request: please sub api to get data\",\"error\":\"upstream refused\",\"mode\":\"whales\"}; modes.go:25 Modes; keyless client signature sign.go:63-75"
+    "evidence": "upstream=https://api.coinank.com/api/hyper/topPosition; curl -s -m 20 'http://127.0.0.1:3101/api/coinank?mode=whales' -> 200 (upstreamCount=50); the upstream gate lifted 2026-10-07 (direct GET api.coinank.com -> 200, 5/5 stable); modes.go:25 Modes; keyless client signature sign.go:63-75"
   },
   {
     "id": "acq-family-coinank",
@@ -843,9 +843,9 @@
     "freshness": "FREQUENT",
     "durability": "NONE",
     "sensitivity": "PUBLIC",
-    "status": "dark",
+    "status": "active",
     "code_path": "apps/data/internal/research/coinank/modes.go:Modes",
-    "evidence": "curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}; coinank.ModeCount=5 (modes.go:28); ALL 5 modes 502 'please sub api to get data'; Base fetch.go:54; TTL 60s (fetch.go:42)"
+    "evidence": "curl -s -m 15 http://127.0.0.1:3101/healthz -> {\"build\":\"28 modes\",\"chainrank\":\"2 modes\",\"coinank\":\"5 modes (keyless, client signature)\",\"coinglass\":\"4 modes (keyless)\",\"khala\":\"3 modes\",\"llama\":\"3 modes\",\"news\":\"1 feeds\",\"ok\":true}; coinank.ModeCount=5 (modes.go:28); all 5 modes 200 (886/10/726/708/50 rows); Base fetch.go:54; TTL 60s (fetch.go:42)"
   },
   {
     "id": "acq-coinmarketcap-listing",
@@ -1237,7 +1237,7 @@
   },
   {
     "id": "route-api-coinank",
-    "name": "GET /api/coinank — CoinAnk derivatives surfaces (PROXY -> Go data fudcourt-data :3101; upstream DARK)",
+    "name": "GET /api/coinank — CoinAnk derivatives surfaces (PROXY -> Go data fudcourt-data :3101; upstream LIVE)",
     "slice": "routes",
     "category": "DERIVATIVES",
     "domain": "derivatives",
@@ -1247,9 +1247,9 @@
     "freshness": "NEAR_REALTIME",
     "durability": "SNAPSHOT",
     "sensitivity": "PUBLIC",
-    "status": "dark",
+    "status": "active",
     "code_path": "apps/web/src/app/(frontend)/api/[...path]/route.ts:92-122",
-    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CA-Upstream/X-CA-Cache. apps/data/main.go `mux.HandleFunc(\"/api/coinank\")`; modes fundingRate|liquidation|longShort|etf|whales, keyless by client signature. Route is live but every mode is upstream's 502 `403` (DR-038) -- status dark mirrors the family",
+    "evidence": "route.ts `DATA_URL = process.env.FUDCOURT_DATA_URL ?? 'http://127.0.0.1:3101'`; verbatim pass-through, forwards X-CA-Upstream/X-CA-Cache. apps/data/main.go `mux.HandleFunc(\"/api/coinank\")`; modes fundingRate|liquidation|longShort|etf|whales, keyless by client signature. Route is live and every mode answers 200 -- the upstream gate lifted 2026-10-07 (was upstream's 502 `403`, DR-038)",
     "path": "/api/coinank",
     "methods": [
       "GET"

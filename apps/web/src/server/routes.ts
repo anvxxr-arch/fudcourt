@@ -207,4 +207,46 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
       'Compare any countries on any measures over one period. The query lives in the URL, so a comparison is shareable without a page per combination.',
     priority: 0.6,
   },
+  {
+    // The derivatives desk: the futures tape the /risk board does not read —
+    // open interest, funding extremes, liquidations per venue and the
+    // long/short ratio, all keyless from CoinGlass and CoinAnk.
+    path: '/derivatives',
+    title: 'Derivatives — Open interest, funding & liquidations | FUDCOURT',
+    description:
+      'The futures tape: open interest and its change, funding-rate extremes, per-venue liquidations across six intervals, and the long/short ratio. Every field is read verbatim from the venue aggregates; a missing venue is a dash, never a zero.',
+    priority: 0.7,
+  },
+  {
+    // The spot-ETF flow desk: daily creations and redemptions per issuer.
+    path: '/etf',
+    title: 'ETF flows — Daily creations & redemptions | FUDCOURT',
+    description:
+      'Spot-Bitcoin ETF flows per issuer per day: net creations and redemptions in USD and BTC, a cumulative series and per-issuer totals. Rows the upstream ships without a ticker are grouped as unlabelled rather than given a fabricated name.',
+    priority: 0.7,
+  },
+  {
+    // The global market pulse: dominance, segment volumes, gas, venue ranking.
+    path: '/global',
+    title: 'Global — Market cap, dominance & venue ranking | FUDCOURT',
+    description:
+      'The whole-market read: total market cap and 24h volume, BTC and ETH dominance with their daily change, DeFi, stablecoin and derivatives segment volumes, the gas oracle, and the venue ranking by reported volume and market share.',
+    priority: 0.7,
+  },
+  {
+    // The crypto breadth boards: RWA, launch calendar, sector rotation, venues.
+    path: '/breadth',
+    title: 'Breadth — RWA, launches, sectors & venues | FUDCOURT',
+    description:
+      'Where the market is widening: tokenized real-world assets, the launchpool and node-sale calendar, sector rotation across 28 categories, and the exchange ranking by reported volume.',
+    priority: 0.7,
+  },
+  {
+    // The whale watcher: the largest open positions on Hyperliquid.
+    path: '/whales',
+    title: 'Whales — Largest open positions | FUDCOURT',
+    description:
+      'The largest open positions on Hyperliquid by notional: side, leverage, entry, liquidation price and unrealized PnL, plus a per-coin concentration read. The board states how many of the upstream total it can see.',
+    priority: 0.6,
+  },
 ];
