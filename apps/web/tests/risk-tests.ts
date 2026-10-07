@@ -26,6 +26,7 @@ import {
   bookQualityOf,
   buildRiskFeed,
   impliedProbability,
+  mostDecidedMarket,
   parsePubDate,
   readMarket,
   significantTokens,
@@ -199,4 +200,47 @@ test('buildRiskFeed: an empty upstream is not an error — it is an empty read',
   assert.equal(feed.aggregate, null);
   assert.equal(feed.slice.priced, 0);
   assert.match(feed.derived, /MID of the two-sided book/);
+});
+
+test('mostDecidedMarket: the furthest from a coin flip, NOT the biggest market', () => {
+  // The live case that exposed this: a $3.38M market the book prices at 1.5%
+  // ranked first by volume, beside a $300K market priced at 91.1%. Selecting by
+  // volume and rendering `0.5 + conviction` printed 98.5% for the 1.5% market —
+  // the exact inversion this board exists to prevent.
+  const feed = buildRiskFeed(
+    [
+      row({ id: 'big', bid: 0.01, ask: 0.02, volume24hUsd: 3_380_443 }), // p 1.5%, conviction 48.5
+      row({ id: 'small', bid: 0.91, ask: 0.912, volume24hUsd: 300_300 }), // p 91.1%, conviction 41.1
+    ],
+    [],
+    { nowSec: NOW }
+  );
+  assert.equal(feed.markets[0].id, 'big', 'volume still ranks the table');
+  const decided = mostDecidedMarket(feed.markets);
+  assert.equal(decided?.id, 'big');
+  assert.ok(Math.abs((decided?.probability ?? 0) - 0.015) < 1e-9, 'the PRICED probability, not 0.5 + conviction');
+  assert.ok(Math.abs((decided?.conviction ?? 0) - 0.485) < 1e-9);
+});
+
+test('mostDecidedMarket: null when nothing is priced', () => {
+  assert.equal(mostDecidedMarket([]), null);
+});
+
+test('mostDecidedMarket: conviction is distance from 0.5, so a longshot can beat a favourite', () => {
+  const feed = buildRiskFeed(
+    [row({ id: 'low', bid: 0.03, ask: 0.032 }), row({ id: 'high', bid: 0.91, ask: 0.912 })],
+    [],
+    { nowSec: NOW }
+  );
+  // 3% sits 47 points from a coin flip; 91.1% sits 41.1 — the longshot is the
+  // more decided market, and the board must say so rather than assume that a
+  // high price means high conviction.
+  assert.equal(mostDecidedMarket(feed.markets)?.id, 'low');
+
+  const nearer = buildRiskFeed(
+    [row({ id: 'near', bid: 0.55, ask: 0.552 }), row({ id: 'far', bid: 0.97, ask: 0.972 })],
+    [],
+    { nowSec: NOW }
+  );
+  assert.equal(mostDecidedMarket(nearer.markets)?.id, 'far');
 });

@@ -27,7 +27,7 @@ import { DataTable } from '@/ui/data-table';
 import { EmptyState, ErrorState, Loading } from '@/ui/feedback';
 import { Stat } from '@/ui/stat';
 import { fetchRiskSources, type RiskSources } from './client';
-import { buildRiskFeed, type BookQuality, type RiskFeed } from './model';
+import { buildRiskFeed, mostDecidedMarket, type BookQuality, type RiskFeed } from './model';
 
 const QUALITY_COLOR: Record<BookQuality, string> = {
   tight: themeColor.green,
@@ -93,6 +93,12 @@ export default function RiskFeedPage() {
     );
   }
 
+  // The most DECIDED market — the one furthest from a coin flip — and its
+  // PRICED probability, never `0.5 + conviction`. Printing 98.5% beside a market
+  // the book prices at 1.5% would invert what the market says: the conviction is
+  // how far the price sits from even odds, and only the price is the market's view.
+  const mostDecided = mostDecidedMarket(feed.markets);
+
   return (
     <>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
@@ -119,9 +125,13 @@ export default function RiskFeedPage() {
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Highest conviction"
-          value={pct(feed.markets.length ? 0.5 + (feed.markets[0]?.conviction ?? 0) : null)}
-          hint={feed.markets[0]?.title ?? 'no priced market'}
+          label="Most decided"
+          value={pct(mostDecided?.probability ?? null)}
+          hint={
+            mostDecided
+              ? `${mostDecided.title} · ±${((mostDecided.conviction ?? 0) * 100).toFixed(1)} from a coin flip`
+              : 'no priced market'
+          }
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />

@@ -209,6 +209,22 @@ export function impliedProbability(
 /** The book is 'tight' under a 10% relative spread, 'wide' above it. */
 const WIDE_RELATIVE_SPREAD = 0.1;
 
+/**
+ * The market the book is most DECIDED about — the price furthest from a coin
+ * flip. Null when nothing is priced.
+ *
+ * Deliberately NOT "the biggest market": volume and conviction are different
+ * questions, and rendering the top-volume market under a conviction label is
+ * how a market the book prices at 1.5% gets printed as 98.5%.
+ */
+export function mostDecidedMarket(markets: readonly MarketRead[]): MarketRead | null {
+  let best: MarketRead | null = null;
+  for (const m of markets) {
+    if (best === null || (m.conviction ?? 0) > (best.conviction ?? 0)) best = m;
+  }
+  return best;
+}
+
 export function bookQualityOf(relativeSpread: number | null): BookQuality {
   if (relativeSpread === null) return 'unknown';
   return relativeSpread <= WIDE_RELATIVE_SPREAD ? 'tight' : 'wide';
