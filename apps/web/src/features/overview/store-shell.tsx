@@ -21,6 +21,7 @@ const SignalsPage = dynamic(() => import('@/features/signals/ui'), { ssr: false 
 const ScoreboardPage = dynamic(() => import('@/features/scoreboard/ui'), { ssr: false });
 const MarketHub = dynamic(() => import('@/features/market/hub'), { ssr: false });
 const NewsPage = dynamic(() => import('@/features/news/ui'), { ssr: false });
+const RiskFeedPage = dynamic(() => import('@/features/risk/ui'), { ssr: false });
 
 type DbData = {
   assets: Asset[];
@@ -120,6 +121,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     { key: 'market', label: 'Market' },
     { key: 'signals', label: 'Signals' },
     { key: 'scoreboard', label: 'Scoreboard' },
+    { key: 'risk', label: 'Risk feed' },
     { key: 'news', label: 'News' },
   ];
   // Team shell shows treasury tabs first, then the shared market boards.
@@ -145,6 +147,10 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     news: {
       title: 'News that survived gating — no fabricated items',
       sub: 'Aggregated feeds, decoy-rejected and freshness-bounded.',
+    },
+    risk: {
+      title: 'What the market prices, beside what is being reported',
+      sub: 'Prediction-market mids, thin books marked wide; the headline join is lexical, never causal.',
     },
   };
   const boardKey = page.startsWith('market') ? 'market' : page;
@@ -236,6 +242,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'market-trench' && <MarketHub section="trench" />}
       {page === 'signals' && <SignalsPage />}
       {page === 'scoreboard' && <ScoreboardPage />}
+      {page === 'risk' && <RiskFeedPage />}
       {page === 'news' && <NewsPage />}
 
       {/* Footer status line — dot-separated facts, not a sentence. Sans still reads better

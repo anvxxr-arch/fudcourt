@@ -27,6 +27,8 @@ export const VIEW_PATHS: Record<string, string> = {
   scoreboard: '/scoreboard',
   ticker: '/market/crypto',
   news: '/news',
+  // The risk feed (F10): prediction-market pricing joined with the headlines.
+  risk: '/risk',
   // CEX Executor (PRD §81): a multi-route area (/executor/new, /:id, …), not a
   // single shell tab — this entry is the canonical deep link for nav callers.
   executor: '/executor',

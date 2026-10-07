@@ -234,10 +234,12 @@ the full judgment record for the grouping is §4 of that file.
 | public | market · macro (API-only) | — (read by `/` and any board) | `MacroBoard` in `features/home/ui.tsx` | `/api/market/macro` (US curve 13w/5y/10y/30y · DXY · VIX · VVIX · locally-derived curve spreads · 33 BIS policy rates · 10 FRED US indicators · worldwide annual board: 125 countries + 18 aggregates × 32 themed series, budget balance derived locally) |
 | public | market · indonesia (API-only) | — (read by `/`) | `IndonesiaBoard` in `features/home/ui.tsx` | `/api/market/indonesia` (live USD/EUR/JPY/CNY-IDR · IHSG · LQ45 · BI-Rate via BIS · 19 annual World Bank indicators · 8 IMF Fiscal Monitor government-finance series, actuals only) |
 | public | economy · nation | `/economy/nation` → `/economy/nation/[countryCode]` | `NationExplorer` → `NationProfile` (`features/economy/ui/nation.tsx`) | `/api/economy/countries/[code]` (one country: the SAME themed World Bank series the worldwide board carries, each with its own reference year · 8 IMF Fiscal Monitor actuals · the BIS policy rate · the currency against the dollar) — `[countryCode]` accepts the alpha-2 or alpha-3, either case; an unknown code is a real **404** |
+| public | economy · regime | `/economy/regime` | `RegimeBoard` + `ExposureSection` (`features/economy/ui/{regime,exposure}.tsx`) | `/api/economy/regime` (public read) · `/api/economy/exposure` (**TEAM-gated** — a JSON 401 from the middleware for an anonymous caller; joins the regime read against the local `assets` table, and nulls the whole book rather than state a share of a partial one) |
 | public | market · trench | `/market/trench` | `MarketHub section="trench"` → `DexPage` · `TrenchPage` | `/api/dex?type=profiles&limit=50` |
 | public | signals | `/signals` | `SignalsPage` | `/api/signals?chain&type` |
 | public | scoreboard | `/scoreboard` | `ScoreboardPage` | `/api/signals?type=scoreboard` |
 | public | news | `/news` | `NewsPage` | `/api/news?limit=30` |
+| public | risk | `/risk` | `RiskFeedPage` (`features/risk/ui.tsx`) | `/api/cryptorank?mode=prediction` · `/api/news?source=cointelegraph&limit=40` (both thin verbatim proxies; the join is a pure local read in `features/risk/model.ts`) |
 
 Legacy `/portfolio` now **307s** to `/team/portfolio` (it used to rewrite to `/`,
 the landing page). The boards that folded into

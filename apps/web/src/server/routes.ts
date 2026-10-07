@@ -39,6 +39,16 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
     priority: 0.5,
   },
   {
+    // The risk feed (F10): prediction-market pricing beside the headlines being
+    // reported. Public like the other boards — an unauthenticated visitor sees
+    // the reading, never anything private.
+    path: '/risk',
+    title: 'Prediction markets & event risk | FUDCOURT',
+    description:
+      'Prediction-market pricing joined with the headlines being reported. Every probability is the mid of a two-sided book, a thin book is marked wide, and no headline is claimed to have moved a price.',
+    priority: 0.6,
+  },
+  {
     // The blog joined this app in DR-017. Its index is public and crawlable
     // (individual posts at /blog/<slug>, authored in Payload, carry no fixed
     // list, so they are not enumerated here — the index links them).
