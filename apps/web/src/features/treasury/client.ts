@@ -136,3 +136,64 @@ export function loadBreakdown(dimension: TreasuryDimension, range: TreasuryRange
 export function loadDiff(range: TreasuryRange): Promise<DiffResult> {
   return getJSON<DiffResult>(`/api/treasury?mode=diff&range=${range}`, { cache: 'no-store' });
 }
+
+// ---------------------------------------------------------------------------
+// Cost basis + P&L (DR-046). `/api/pnl` is read-only; the price materialization
+// is an operator/schedule action, not a client one.
+// ---------------------------------------------------------------------------
+
+export type BasisRow = {
+  chain: string;
+  asset: string;
+  costBasisUsd: number | null;
+  realizedUsd: number | null;
+  unmatchedOutUsd: number;
+  currentValueUsd: number;
+  unrealizedUsd: number | null;
+  stranded: boolean;
+  lots: number;
+  inUsd: number;
+  outUsd: number;
+  txCount: number;
+};
+
+export type PnlSummary = {
+  rows: BasisRow[];
+  totalCostBasisUsd: number;
+  totalCurrentValueUsd: number;
+  basisCurrentValueUsd: number;
+  totalUnrealizedUsd: number | null;
+  totalRealizedUsd: number | null;
+  unbasisAssets: number;
+  strandedAssets: number;
+  txCount: number;
+};
+
+export type PriceCoverageRow = {
+  symbol: string;
+  source: string;
+  points: number;
+  firstTs: string | null;
+  lastTs: string | null;
+};
+
+export type PriceSeries = {
+  symbol: string;
+  source: string;
+  points: { t: string; price: number }[];
+  latest: number | null;
+  latestTs: string | null;
+};
+
+export function loadPnl(): Promise<PnlSummary> {
+  return getJSON<PnlSummary>('/api/pnl?mode=summary', { cache: 'no-store' });
+}
+
+export function loadPriceCoverage(): Promise<{ rows: PriceCoverageRow[] }> {
+  return getJSON<{ rows: PriceCoverageRow[] }>('/api/pnl?mode=coverage', { cache: 'no-store' });
+}
+
+export function loadPriceSeries(symbol: string, source = 'implied'): Promise<PriceSeries> {
+  const qs = new URLSearchParams({ mode: 'prices', symbol, source });
+  return getJSON<PriceSeries>(`/api/pnl?${qs}`, { cache: 'no-store' });
+}

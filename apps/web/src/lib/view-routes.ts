@@ -13,6 +13,8 @@ export const VIEW_PATHS: Record<string, string> = {
   treasury: '/team/treasury',
   // The treasury leaderboard (DR-045): ranks chains/wallets/assets by window.
   leaderboard: '/team/leaderboard',
+  // Cost basis + P&L over the transaction ledger (DR-046).
+  pnl: '/team/pnl',
   market: '/market',
   'market-crypto': '/market/crypto',
   'market-forex': '/market/forex',

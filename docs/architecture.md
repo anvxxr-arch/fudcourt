@@ -66,6 +66,7 @@ node tools/fud.ts live [fam]  # the live/network harnesses (list, or run one)
 | the database | `db/schema/pg-schema.sql` (treasury) · `db/schema/executor-schema.sql` (execution ledger) |
 | deployment | `deploy/systemd/` |
 | portfolio time series | `apps/web/src/server/treasury.ts` — the sessionized read layer over `asset_history` (DR-045) |
+| cost basis & P&L | `apps/web/src/server/pnl.ts` — USD-level FIFO over `transactions`, plus the implied price series (DR-046) |
 | run everything | `node tools/fud.ts verify` |
 
 ## Decisions that shaped this layout

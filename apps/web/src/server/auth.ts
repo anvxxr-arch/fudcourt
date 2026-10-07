@@ -181,6 +181,9 @@ const TEAM_API_ROUTES = [
   // `asset_history`). It reads the same private holdings the routes above
   // gate, so it carries the same tier.
   '/api/treasury',
+  // Cost basis + P&L and the implied price series (DR-046). Same private ledger
+  // as the routes above, so the same tier.
+  '/api/pnl',
 ];
 
 function under(pathname: string, base: string): boolean {
