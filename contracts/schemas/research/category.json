@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/research/category.json",
   "title": "Category / tag index entry",
-  "description": "A provider taxonomy entry (coin category, tag, ecosystem). KEPT AS PROVIDER STRINGS ON PURPOSE: there is no canonical taxonomy anywhere in the repo - the only taxonomy tables that exist are Payload CMS's content categories, which database/README.md explicitly excludes from the trading surface. So this schema carries a provider slug plus aggregate counts (gainers/losers, dominance) and does NOT pretend to a canonical category id.",
+  "description": "A provider taxonomy entry (coin category, tag, ecosystem). KEPT AS PROVIDER STRINGS ON PURPOSE: there is no canonical taxonomy anywhere in the repo - the only taxonomy tables that exist are Payload CMS's content categories, which db/README.md explicitly excludes from the trading surface. So this schema carries a provider slug plus aggregate counts (gainers/losers, dominance) and does NOT pretend to a canonical category id.",
   "type": "object",
   "additionalProperties": false,
   "required": [

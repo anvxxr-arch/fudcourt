@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/trading/order-request.json",
   "title": "Order request (what we ask a venue to do)",
-  "description": "The instruction handed to a venue adapter. client_order_id is MINTED BEFORE the request leaves, which is what makes a lost response recoverable: on restart the reconciler adopts the venue's order by matching this id inside our own id space (executor/worker/tick.go). An adapter MUST NOT invent its own id. Prices/quantities are decimal strings and are already rounded to the instrument grid (a venue rejects a quantity off its step).",
+  "description": "The instruction handed to a venue adapter. client_order_id is MINTED BEFORE the request leaves, which is what makes a lost response recoverable: on restart the reconciler adopts the venue's order by matching this id inside our own id space (apps/executor/internal/runtime/worker/tick.go). An adapter MUST NOT invent its own id. Prices/quantities are decimal strings and are already rounded to the instrument grid (a venue rejects a quantity off its step).",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -185,6 +185,14 @@ const DOCS = [
   // the links honest — it does not make the whole document drift-proof.
   'docs/architecture.md',
   'contracts/schemas/README.md',
+  // Added with the citation-integrity sweep: these three carry live consumer
+  // tables and path-shaped prose, and nothing read them. db/README.md named a
+  // retired TypeScript executor runtime as a live consumer of
+  // db/schema/executor-schema.sql for the whole restructure while this gate
+  // reported DOCS_OK.
+  'db/README.md',
+  'docs/README.md',
+  'README.md',
 ];
 
 const TOP_LEVEL = [
@@ -207,6 +215,17 @@ const ALLOWANCES = new Map([
   ['db/schema/analytics.sql', 'cited reference that does NOT exist — the citation is the finding ("**Does not exist** (referenced by an older doc)")'],
   ['db/client.ts', 'historical reference: the pre-DR-040 frontend db module (platform/db/pg.ts), retired with the treasury move to src/server/db.ts; the citation records the old layout'],
   ['db/README', 'historical reference: the pre-DR-040 db module README, retired with the same move'],
+  // db/README.md's deliberate statements of what DOES NOT exist. Each sentence
+  // names the absent path and its real replacement in the same breath, so the
+  // citation is the record, not a stale pointer.
+  ['backend/data', 'db/README.md restructure note: records the pre-move provider directory in the rename record ("backend/data providers grouped under internal/research")'],
+  ['apps/web/src/features/executor/store.ts', 'db/README.md executor-schema.sql verdict: names the deleted TS EXECUTOR_DDL holder in the sentence explaining that the TS executor runtime is gone'],
+  ['apps/web/src/features/executor/runtime.ts', 'same sentence, same deleted TS executor runtime'],
+  ['apps/web/scripts/executor/worker.ts', 'same sentence, same deleted TS executor runtime'],
+  ['db/schema/snapshot.sql', 'db/README.md roadmap: the NOT-DONE migration target — "There is no db/migrations/ directory and no snapshot.sql"'],
+  ['frontend/web/src/server/db.ts', 'db/README.md stale-reference record: names the pre-restructure prefix of the pg-schema.sql comment, beside its real path apps/web/src/server/db.ts'],
+  ['backend/workers/executor/..', 'db/README.md stale-reference record: names the pre-restructure path in the executor-schema.sql:12 comment, beside its real path'],
+  ['apps/web/scripts/fixtures', 'db/README.md fixture note: records that the parity tests\' former fixture fallback has since been removed'],
 ]);
 // Tokens that are glob/prose shapes the walk must not even consider. Kept explicit so an unexpected
 // token cannot be excused as "probably one of these".
@@ -429,6 +448,76 @@ for (const sc of SIDECARS) {
 }
 
 // ---------------------------------------------------------------------------
+// Contract schema descriptions
+// ---------------------------------------------------------------------------
+/**
+ * `contracts/schemas/**\/*.json`, `title` + `description` only. Those two fields
+ * are where a schema names the code that implements it, and 29 of 56 files
+ * carried a path that no longer resolved while this gate reported DOCS_OK — the
+ * same failure the sidecar section above was added for, one surface over.
+ *
+ * Reuses the sidecar resolution rules verbatim: a token resolves when the file
+ * exists, when it is a RELATIVE FRAGMENT of a path given earlier in the same
+ * string, or when its repo-relative tail matches a real file. No new resolution
+ * algorithm is introduced here. A `.json` schema token is NOT treated as a
+ * citation of itself (that is what `contracts/schemas/README.md` is for), so only
+ * tokens with a known top-level directory prefix are considered.
+ */
+const SCHEMA_ROOT = 'contracts/schemas';
+let schemaFilesScanned = 0;
+let schemaPathTokens = 0;
+function schemaFilesUnder(dirAbs) {
+  const out = [];
+  let entries;
+  try { entries = readdirSync(dirAbs, { withFileTypes: true }); } catch { return out; }
+  for (const e of entries) {
+    const abs = path.join(dirAbs, e.name);
+    if (e.isDirectory()) out.push(...schemaFilesUnder(abs));
+    else if (e.name.endsWith('.json')) out.push(abs);
+  }
+  return out;
+}
+const schemaFileList = schemaFilesUnder(path.join(repoRoot, SCHEMA_ROOT));
+const repoFileSet = () => allRepoFiles();
+for (const abs of schemaFileList) {
+  const rel = path.relative(repoRoot, abs);
+  let doc;
+  try { doc = JSON.parse(readFileSync(abs, 'utf8')); } catch (e) {
+    fail(rel, `not valid JSON: ${e.message}`);
+    continue;
+  }
+  schemaFilesScanned++;
+  const texts = [];
+  if (typeof doc.title === 'string') texts.push(['title', doc.title]);
+  if (typeof doc.description === 'string') texts.push(['description', doc.description]);
+  for (const [field, text] of texts) {
+    for (const m of text.matchAll(/[\w./-]+/g)) {
+      // `/[\w./-]+/` admits a sentence-final `.`, so `…pg-schema.sql.` would be
+      // one token that resolves to nothing. Strip trailing dots (and a leading
+      // one from `database/.`) before the token is considered.
+      const tok = m[0].replace(/^\.+/, '').replace(/\.+$/, '');
+      if (!tok) continue;
+      // A path always contains a `/`; without this the top-level prefix test
+      // matches ordinary prose words.
+      if (!tok.includes('/')) continue;
+      // Same rule as the sidecar walk: only a token that LOOKS LIKE A SOURCE
+      // FILE is a citation. `BASE/QUOTE`, `Parse/MustParse/Add` and
+      // `spot_equity/futures_equity` are slash-joined prose and symbol lists,
+      // not paths, and would otherwise flood the verdict.
+      if (!/\.(?:ts|tsx|go|rs|py|sql|json|mjs|cjs|md|yaml|yml|service|sh)$/.test(tok)) continue;
+      if (GLOB_OR_PROSE.test(tok) || tok.endsWith('/')) continue;
+      schemaPathTokens++;
+      if (existsSync(path.join(repoRoot, tok))) continue;
+      // Relative fragment: the same rule the sidecar walk uses — a token that
+      // matches a real file as a suffix is a citation of that file.
+      const files = repoFileSet();
+      if ([...files].some((f) => f.endsWith(tok) && tok.includes('/'))) continue;
+      fail(`${rel}.${field}`, `cited path '${tok}' does not exist and matches no repo file as a suffix`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Verdict
 // ---------------------------------------------------------------------------
 if (failures.length > 0) {
@@ -438,4 +527,4 @@ if (failures.length > 0) {
 }
 const allowanceCount = [...allowed.values()].reduce((a, b) => a + b, 0);
 const ignoredCount = [...ignored.values()].reduce((a, b) => a + b, 0);
-console.log(`DOCS_OK docs=${docsScanned} citations=${citations} allowances=${allowanceCount} ignored=${ignoredCount} sidecar_rows=${sidecarRows} sidecar_paths=${sidecarTokens}`);
+console.log(`DOCS_OK docs=${docsScanned} citations=${citations} allowances=${allowanceCount} ignored=${ignoredCount} sidecar_rows=${sidecarRows} sidecar_paths=${sidecarTokens} schema_files=${schemaFilesScanned} schema_paths=${schemaPathTokens}`);

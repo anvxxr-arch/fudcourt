@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/event-envelope.json",
   "title": "FUDCourt event envelope",
-  "description": "The canonical envelope for every domain event FUDCourt emits. event_type is the STABLE id from events/catalog.json (PascalCase); legacy SCREAMING_SNAKE names appear only as aliases. event_version is a positive integer; consumers must tolerate additive evolution within the same version (unknown payload keys are allowed and must be ignored). Events never carry credentials or secrets.",
+  "description": "The canonical envelope for every domain event FUDCourt emits. event_type is the STABLE id from contracts/events/events.json (PascalCase); legacy SCREAMING_SNAKE names appear only as aliases. event_version is a positive integer; consumers must tolerate additive evolution within the same version (unknown payload keys are allowed and must be ignored). Events never carry credentials or secrets.",
   "type": "object",
   "additionalProperties": false,
   "required": ["event_id", "event_type", "event_version", "occurred_at", "payload"],

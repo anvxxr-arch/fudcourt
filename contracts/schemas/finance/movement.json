@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fudcourt.local/contracts/schemas/finance/movement.json",
   "title": "Movement (internal transfer between treasury accounts)",
-  "description": "An internal transfer of one asset between two treasury accounts. INVARIANTS (finance/treasury/treasury.go Movement): FromAccountID and ToAccountID are DISTINCT non-empty accounts; Amount is a strictly POSITIVE exact decimal MAGNITUDE ('positive = into ToAccount') - the direction lives in the account pair, not in the sign; Reason is NON-EMPTY, because internal capital that moves without a stated reason is unauditable. OccurredAt is Unix milliseconds and is supplied by the caller (an event time), not by the store.",
+  "description": "An internal transfer of one asset between two treasury accounts. INVARIANTS (contract-defined; no Go implementation of Movement exists in the repo yet): FromAccountID and ToAccountID are DISTINCT non-empty accounts; Amount is a strictly POSITIVE exact decimal MAGNITUDE ('positive = into ToAccount') - the direction lives in the account pair, not in the sign; Reason is NON-EMPTY, because internal capital that moves without a stated reason is unauditable. OccurredAt is Unix milliseconds and is supplied by the caller (an event time), not by the store.",
   "type": "object",
   "additionalProperties": false,
   "required": [
