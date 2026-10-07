@@ -1,0 +1,21 @@
+# FUD Court alert-engine timer — drives fudcourt-alerts.service.
+#
+# DEPLOYED as `~/.config/systemd/user/fudcourt-alerts.timer`. Pairs with
+# deploy/systemd/fudcourt-alerts.service (DR-049).
+#
+# Cadence is 5 minutes, the same as `fudcourt-sync` (whose writes it reads), but
+# `OnBootSec` is deliberately offset to 4min so a run lands on a settled
+# snapshot rather than a half-written one. The alert is a TRANSITION, so a run
+# that finds no change sends nothing.
+[Unit]
+Description=Run FUD Court alert engine every 5 minutes
+
+[Timer]
+OnBootSec=4min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=fudcourt-alerts.service
+
+[Install]
+WantedBy=timers.target

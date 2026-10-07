@@ -1,0 +1,36 @@
+# FUD Court alert engine -> Telegram (DR-049)
+#
+# DEPLOYED as `~/.config/systemd/user/fudcourt-alerts.service`, paired with
+# deploy/systemd/fudcourt-alerts.timer. A copy lives in-repo so the cadence and
+# the script path are reviewable in a diff, not only on the host.
+#
+# WHY ITS OWN UNIT (DR-046's rule, applied again): the alert engine is a derived
+# read-side projection over `asset_history` / `price_history`. It must never be
+# able to mark the sync failed — hence a separate pair, offset from the sync
+# cadence, rather than an `ExecStartPost` on the sync unit.
+#
+# RUNTIME DEPENDENCY: `psycopg2` (host package `python3-psycopg2`), the same the
+# sync already needs. Without it the run exits 3 and prints the install hint.
+#
+# The write is idempotent by transition: `alert_state` keys on (rule, subject),
+# so a missed or repeated run neither re-sends nor loses an open alert.
+[Unit]
+Description=FUD Court alert engine -> Telegram
+Documentation=file:///home/dwizzy/fudcourt/scripts/tools/alert-engine.py
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# The script walks up from its own location to the repo-root `.env` for
+# FUDCOURT_PG_URL and the thresholds; WorkingDirectory is only an anchor.
+WorkingDirectory=/home/dwizzy/fudcourt
+Environment=NODE_ENV=
+ExecStart=/usr/bin/python3 /home/dwizzy/fudcourt/scripts/tools/alert-engine.py
+# A transient Postgres blip must not silently skip a crossing; retry with backoff.
+Restart=on-failure
+RestartSec=60
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
