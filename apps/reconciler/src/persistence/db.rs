@@ -68,10 +68,10 @@ impl Db {
             .connect(NoTls)
             .await
             .map_err(|e| format!("DB connect: {e}"))?;
-        client
-            .execute("SET statement_timeout = '30s'", &[])
-            .await
-            .map_err(|e| format!("DB init: {e}"))?;
+        // Spawn the connection task FIRST: it drives the socket, so a client
+        // request awaited before it is polled — the SET below, and every query
+        // after it — would wait for a response that can never arrive and hang
+        // forever. (with_snapshot and replace_assets already order it this way.)
         let dead = Arc::new(AtomicBool::new(false));
         let dead2 = Arc::clone(&dead);
         tokio::spawn(async move {
@@ -80,6 +80,10 @@ impl Db {
                 dead2.store(true, Ordering::SeqCst);
             }
         });
+        client
+            .execute("SET statement_timeout = '30s'", &[])
+            .await
+            .map_err(|e| format!("DB init: {e}"))?;
         Ok(Arc::new(Conn {
             client: Arc::new(client),
             dead,

@@ -205,14 +205,21 @@ def main() -> int:
         # cwd=apps/web is not enough — the app tsconfig must be named explicitly
         # (verified: without this flag bun fails with "Cannot find module
         # '@/platform/db/client'").
+        #
+        # `--conditions=react-server` is required because the probe pulls the live rows
+        # through `@/server/db`, which imports `server-only`; that package's exports map
+        # resolves `react-server` to an empty module and the default condition to a
+        # throw ("This module cannot be imported from a Client Component module").
+        # Selecting the condition is how a non-Next runner imports the server layer.
         probe = pathlib.Path(__file__).resolve().parent / "parity-reconcile.ts"
-        web = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "web"
+        web = pathlib.Path(__file__).resolve().parents[2] / "apps" / "web"
         if not probe.exists():
             check(False, "the parity probe exists", note(str(probe)))
         else:
             t0 = time.time()
             r = subprocess.run(
-                ["bun", "--tsconfig-override", str(web / "tsconfig.json"), str(probe), base],
+                ["bun", "--conditions=react-server", "--tsconfig-override",
+                 str(web / "tsconfig.json"), str(probe), base],
                 cwd=str(web),
                 capture_output=True, text=True, timeout=180,
             )

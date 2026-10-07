@@ -6,11 +6,15 @@
 // implementations were shown to agree in one place, and `verify-reconcile.py`
 // carries the durable contract assertions.
 //
-// Usage: cd apps/web && bun --tsconfig-override ./tsconfig.json \
+// Usage: cd apps/web && bun --conditions=react-server --tsconfig-override ./tsconfig.json \
 //   ../../scripts/verify/parity-reconcile.ts [rust-base]
-import { query } from '@/platform/db/client';
-import { reconcile } from '@/features/treasury/reconcile';
-import type { AssetRow, TxRow, WalletRow } from '@/features/treasury/reconcile';
+//
+// `--conditions=react-server` lets the probe import `@/server/db` (which imports
+// `server-only`) outside Next: that package resolves to an empty module under the
+// condition and throws under the default one.
+import { query } from '@/server/db';
+import { reconcile } from '@/features/overview/reconcile';
+import type { AssetRow, TxRow, WalletRow } from '@/features/overview/reconcile';
 
 const RUST_BASE = process.argv[2] ?? 'http://127.0.0.1:3102';
 
