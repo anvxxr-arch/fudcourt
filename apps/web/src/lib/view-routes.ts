@@ -15,6 +15,8 @@ export const VIEW_PATHS: Record<string, string> = {
   leaderboard: '/team/leaderboard',
   // Cost basis + P&L over the transaction ledger (DR-046).
   pnl: '/team/pnl',
+  // The derived double-entry journal, trial balance and flows (DR-047).
+  journal: '/team/journal',
   market: '/market',
   'market-crypto': '/market/crypto',
   'market-forex': '/market/forex',

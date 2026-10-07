@@ -197,3 +197,80 @@ export function loadPriceSeries(symbol: string, source = 'implied'): Promise<Pri
   const qs = new URLSearchParams({ mode: 'prices', symbol, source });
   return getJSON<PriceSeries>(`/api/pnl?${qs}`, { cache: 'no-store' });
 }
+
+// ---------------------------------------------------------------------------
+// The derived double-entry journal (DR-047). Read-only; the `journal` table has
+// no writer by design, so nothing here mutates.
+// ---------------------------------------------------------------------------
+
+export type PairKind = 'fee' | 'pnl' | 'external' | 'internal';
+
+export type JournalEntry = {
+  txId: number;
+  date: string;
+  code: string;
+  memo: string;
+  debitAccount: string;
+  creditAccount: string;
+  amount: number | null;
+  chain: string;
+  asset: string | null;
+  event: string;
+  direction: string | null;
+  kind: PairKind;
+};
+
+export type TrialRow = {
+  code: string;
+  name: string;
+  type: string;
+  statement: string;
+  synthetic: boolean;
+  debit: number;
+  credit: number;
+  net: number;
+  balance: number;
+};
+
+export type TrialBalance = {
+  rows: TrialRow[];
+  totalDebit: number;
+  totalCredit: number;
+  balanced: boolean;
+  diff: number;
+  entryCount: number;
+  unpriced: number;
+};
+
+export type FlowBucket = {
+  key: 'operating' | 'external' | 'internal';
+  label: string;
+  netUsd: number;
+  inflowUsd: number;
+  outflowUsd: number;
+  entries: number;
+};
+
+export type Flows = {
+  buckets: FlowBucket[];
+  netUsd: number;
+  internalUnmatchedUsd: number;
+  feesUsd: number;
+  realizedPnlUsd: number;
+  entryCount: number;
+  unpriced: number;
+};
+
+export function loadJournalEntries(limit?: number): Promise<{ entries: JournalEntry[] }> {
+  const qs = new URLSearchParams({ mode: 'entries' });
+  if (limit && limit > 0) qs.set('limit', String(limit));
+  return getJSON<{ entries: JournalEntry[] }>(`/api/journal?${qs}`, { cache: 'no-store' });
+}
+
+export function loadTrialBalance(): Promise<TrialBalance> {
+  return getJSON<TrialBalance>('/api/journal?mode=trial', { cache: 'no-store' });
+}
+
+export function loadFlows(): Promise<Flows> {
+  return getJSON<Flows>('/api/journal?mode=flows', { cache: 'no-store' });
+}

@@ -16,6 +16,7 @@ const ReconciliationPage = dynamic(() => import('@/features/overview/reconciliat
 const TreasuryPage = dynamic(() => import('@/features/treasury/ui'), { ssr: false });
 const LeaderboardPage = dynamic(() => import('@/features/treasury/leaderboard'), { ssr: false });
 const PnlPage = dynamic(() => import('@/features/treasury/pnl'), { ssr: false });
+const JournalPage = dynamic(() => import('@/features/treasury/journal'), { ssr: false });
 const SignalsPage = dynamic(() => import('@/features/signals/ui'), { ssr: false });
 const ScoreboardPage = dynamic(() => import('@/features/scoreboard/ui'), { ssr: false });
 const MarketHub = dynamic(() => import('@/features/market/hub'), { ssr: false });
@@ -104,6 +105,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     { key: 'treasury', label: 'Time Machine' },
     { key: 'leaderboard', label: 'Leaderboard' },
     { key: 'pnl', label: 'P&L' },
+    { key: 'journal', label: 'Journal' },
     { key: 'wallets', label: `Wallets (${wallets.length})` },
     { key: 'transactions', label: `Transactions (${db?.transactions.length || 0})` },
     { key: 'reconciliation', label: 'Reconciliation' },
@@ -213,6 +215,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'treasury' && isTeam && <TreasuryPage />}
       {page === 'leaderboard' && isTeam && <LeaderboardPage />}
       {page === 'pnl' && isTeam && <PnlPage />}
+      {page === 'journal' && isTeam && <JournalPage />}
       {page === 'wallets' && isTeam && (
         <WalletPage wallets={wallets} balanceByWallet={balanceByWallet} onSave={async (w) => {
           await saveWallet(w);

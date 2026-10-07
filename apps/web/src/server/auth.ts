@@ -184,6 +184,8 @@ const TEAM_API_ROUTES = [
   // Cost basis + P&L and the implied price series (DR-046). Same private ledger
   // as the routes above, so the same tier.
   '/api/pnl',
+  // The derived double-entry journal (DR-047). Same private ledger, same tier.
+  '/api/journal',
 ];
 
 function under(pathname: string, base: string): boolean {
