@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Wallet, Asset, buildWalletMap, getAlias, getColor, groupSum } from '@/lib/format';
 import { themeColor, fontFamily, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
 import { Banner } from '@/ui/banner';
@@ -58,6 +58,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
   const [lastSync, setLastSync] = useState('');
   const [txRefresh, setTxRefresh] = useState(0);
   const [page, setPage] = useState(initialPage);
+  const railRef = useRef<HTMLDivElement>(null);
 
   const refreshTx = () => setTxRefresh(r => r + 1);
 
@@ -95,6 +96,16 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
   }, [isTeam]);
 
   useEffect(() => { load(); if (!isTeam) return; const t = setInterval(load, 30000); return () => clearInterval(t); }, [load, isTeam]);
+
+  // Keep the active board tab on screen. The rail is a single scrolling line at
+  // every width, so at a phone width the tab you are ON can start off-screen and
+  // the reader then cannot see where they are. `block: 'nearest'` keeps the PAGE
+  // itself from scrolling vertically while centring the pill horizontally.
+  useEffect(() => {
+    railRef.current
+      ?.querySelector<HTMLElement>('[data-active="true"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [page]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -270,18 +281,34 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: space[8], margin: `${space[16]}px 0`, flexWrap: 'wrap' }}>
+      {/*
+        Mobile-first tab rail: ONE scrolling line, never a wrapped block.
+
+        With `flexWrap: 'wrap'` the 28 board tabs measured 9 rows / 388px tall at
+        390px and 12 rows / 520px at 320px — over half the phone viewport spent on
+        navigation before a single figure rendered — and they never fit at ANY
+        width (2657px of pills against 1880px even at 1920px, so desktop wrapped
+        into 2-3 ragged rows too). `nowrap` + `overflowX: auto` puts them on one
+        line at every width; each pill is `flexShrink: 0` so a nowrap row cannot
+        squish the labels, and the active pill is scrolled into view because at a
+        phone width it starts off-screen.
+      */}
+      <div
+        ref={railRef}
+        style={{ display: 'flex', gap: space[8], margin: `${space[16]}px 0`, flexWrap: 'nowrap', overflowX: 'auto' }}
+      >
         {tabs.map(t => (
           <a
             key={t.key}
             href={viewPath(t.key)}
             onClick={(e) => { e.preventDefault(); setPage(t.key); }}
+            data-active={page === t.key ? 'true' : undefined}
             style={{
               background: page === t.key ? themeColor.blue : themeColor.bgSecondary,
               color: page === t.key ? themeColor.labelOnAccent : themeColor.labelPrimary,
               padding: `${space[8]}px ${space[16]}px`, border: `1px solid ${themeColor.separator}`,
               borderRadius: radius[8], cursor: 'pointer', fontSize: fontSize[12],
-              textDecoration: 'none',
+              textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap',
             }}>
             {t.label}
           </a>

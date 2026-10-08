@@ -316,7 +316,7 @@ export default function SectorsBoard() {
   const sortLabel = SORT_OPTIONS.find((o) => o.key === sortBy)?.label ?? sortBy;
 
   return (
-    <div style={{ display: 'grid', gap: space[16] }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[16] }}>
       {/* (1) Headline row of Stat cards from mode=tags. */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat

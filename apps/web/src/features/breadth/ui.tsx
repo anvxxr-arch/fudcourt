@@ -183,9 +183,9 @@ function Selector<T extends string>({
   labelOf?: (v: T) => string;
 }) {
   return (
-    <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: space[8], flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: space[4] }}>
       {options.map((o) => (
-        <button key={o} type="button" onClick={() => onChange(o)} style={selectorStyle(o === value)}>
+        <button key={o} type="button" onClick={() => onChange(o)} style={{ ...selectorStyle(o === value), flexShrink: 0 }}>
           {labelOf ? labelOf(o) : o}
         </button>
       ))}
@@ -588,7 +588,7 @@ function NodesaleCard() {
 
 function LaunchCalendarSection() {
   return (
-    <div style={{ display: 'grid', gap: space[12] }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[12] }}>
       <LaunchpoolCard />
       <NodesaleCard />
     </div>
@@ -810,7 +810,7 @@ function ExchangeSection() {
 // ---------------------------------------------------------------------------
 export default function BreadthBoards() {
   return (
-    <div style={{ display: 'grid', gap: space[16] }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[16] }}>
       <RwaSection />
       <RwaAssetSection />
       <LaunchCalendarSection />

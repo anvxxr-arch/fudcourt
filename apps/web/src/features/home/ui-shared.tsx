@@ -50,10 +50,19 @@ export const summaryStyle: React.CSSProperties = {
   letterSpacing: letterSpacing.wide,
   marginTop: space[12],
 };
+/**
+ * The provenance note under a board's rows. Every caller interpolates the RAW
+ * upstream URL (`{d.upstream}`) into this line, and a URL is ONE unbreakable
+ * token: the CoinGecko markets URL is 148 characters / 669px, which at a 390px
+ * viewport set `documentElement.scrollWidth` to 690 and made the WHOLE home page
+ * scroll sideways on a phone. `overflowWrap: 'anywhere'` lets the URL break so
+ * the note costs no page-level overflow.
+ */
 export const noteStyle: React.CSSProperties = {
   margin: `${space[8]}px 0 0`,
   color: themeColor.labelTertiary,
   fontSize: fontSize[11],
+  overflowWrap: 'anywhere',
 };
 export const listRowStyle: React.CSSProperties = {
   display: 'flex',

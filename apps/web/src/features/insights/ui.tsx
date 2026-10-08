@@ -500,7 +500,7 @@ export default function InsightsBoard() {
     q?.returnPct == null ? 'neutral' : q.returnPct >= 0 ? 'positive' : 'negative';
 
   return (
-    <div style={{ display: 'grid', gap: space[16] }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[16] }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
           label="BTC current-quarter"

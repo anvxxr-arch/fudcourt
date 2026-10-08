@@ -136,6 +136,7 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
 
       {showAdd && <TxForm title="Add Transaction" onSave={save} onClose={() => setShowAdd(false)} />}
 
+      <div style={{ overflowX: 'auto' }}>
       <Table>
         <THead>
           <TR>
@@ -169,6 +170,7 @@ export default function TransactionPage({ transactions, refreshTx, load }: Props
           ))}
         </TBody>
       </Table>
+      </div>
 
       {filtered.length === 0 && <p style={{ color: themeColor.labelTertiary, textAlign: 'center', padding: space[20] }}>No transactions found</p>}
       {edit && <TxForm title={`Edit #${edit.id}`} initial={edit} onSave={(u) => patch(edit.id, u)} onClose={() => setEdit(null)} />}

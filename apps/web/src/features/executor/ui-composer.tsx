@@ -128,7 +128,7 @@ export function ExecutorComposer() {
   }, [blocking, request]);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(320px, 420px)', gap: space[12], alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: space[12], alignItems: 'start' }}>
       <Card>
         <h3 style={h3Style}>NEW EXECUTION · §82</h3>
         {accountsError !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap', fontWeight: fontWeight.bold }}>⚠ {accountsError}</Banner>}

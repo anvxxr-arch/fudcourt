@@ -119,7 +119,14 @@ export default function ScreenerPage() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: space[16] }}>
+    // `minmax(0, 1fr)`, not a bare `auto` track: a grid child defaults to
+    // `min-width: auto`, so its MIN-CONTENT sets the track's floor. The stat
+    // cluster below is a `flexWrap: 'wrap'` row whose four `flex: 1 1 160px`
+    // tiles have a combined min-content of 647px, which made the track 647 wide
+    // inside a 350px container and scrolled the whole page sideways on a phone
+    // (measured: `scrollWidth` 667 against a 390 viewport). `minmax(0, 1fr)`
+    // removes the automatic floor so the tiles wrap instead.
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[16] }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
           label="Coins with a price"

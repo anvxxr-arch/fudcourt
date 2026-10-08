@@ -97,6 +97,7 @@ export default function QuoteBoard({
       {loading ? (
         <Loading />
       ) : (
+        <div style={{ overflowX: 'auto' }}>
         <Table>
           <THead>
             <TR>
@@ -142,6 +143,7 @@ export default function QuoteBoard({
             ))}
           </TBody>
         </Table>
+        </div>
       )}
 
       <div style={{ marginTop: space[8], color: themeColor.labelTertiary, fontSize: fontSize[11] }}>

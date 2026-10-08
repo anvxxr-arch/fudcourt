@@ -49,6 +49,7 @@ export default function DashboardPage({ assets, total, getAlias, getColor }: Pro
       ))}
 
       <h3 style={{ color: themeColor.blue }}>Assets Detail</h3>
+      <div style={{ overflowX: 'auto' }}>
       <Table style={{ fontSize: fontSize[13] }}>
         <THead>
           <TR style={{ color: themeColor.labelTertiary }}>
@@ -78,6 +79,7 @@ export default function DashboardPage({ assets, total, getAlias, getColor }: Pro
           </TR>
         </tfoot>
       </Table>
+      </div>
     </div>
   );
 }

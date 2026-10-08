@@ -331,7 +331,7 @@ function ListingsSection() {
       title="Listings — new & trending"
       subtitle="three upstream discovery widgets; change is derived from histPrices anchors where the widget ships one, em-dash otherwise"
     >
-      <div style={{ display: 'grid', gap: space[12] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[12] }}>
         {board.widgets.map((w) => {
           const newest = w.key === 'recentlyAdded' ? w.rows[0] : null;
           const newestDays = newest ? daysSince(newest.listingDate, nowSec) : null;
@@ -554,7 +554,7 @@ function OpenInterestPanel({ symbol }: { symbol: string }) {
 
 function CoinDetailSection({ pick }: { pick: CoinPick }) {
   return (
-    <div style={{ display: 'grid', gap: space[12] }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[12] }}>
       <CoinDetailPanel pick={pick} />
       <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
         <MarketPairsPanel pick={pick} />
@@ -572,7 +572,7 @@ export default function CoinsDirectory() {
   const [selected, setSelected] = useState<CoinPick | null>(null);
 
   return (
-    <div style={{ display: 'grid', gap: space[16] }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[16] }}>
       <DirectoryBoard selected={selected} onSelect={setSelected} />
       <ListingsSection />
       {selected ? (

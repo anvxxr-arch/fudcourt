@@ -29,6 +29,16 @@ export function Navbar() {
 
   return (
     <header style={{ background: themeColor.bgBase, borderBottom: `1px solid ${themeColor.separator}`, fontFamily: fontFamily.mono }}>
+      {/*
+        Mobile-first chrome: the section strip is the ONLY part that scrolls.
+
+        The bar used to wrap, which at a phone width meant three ragged rows
+        (measured at 390px: 10 items, 3 rows, 129px tall — the header alone spent
+        a sixth of the viewport, and the rows were ragged because every pill is
+        sized to its own label). The sections now share one `overflowX: auto`
+        line, with the logo pinned left and the Terminal/toggle cluster pinned
+        right, so the two controls a reader reaches for are never scrolled away.
+      */}
       <nav
         aria-label="Primary"
         style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: space[8], padding: `${space[8]}px ${space[20]}px` }}
@@ -44,41 +54,53 @@ export function Navbar() {
             letterSpacing: letterSpacing.wider,
             textDecoration: 'none',
             marginRight: space[8],
+            flexShrink: 0,
           }}
         >
           FUDCOURT
         </Link>
 
-        {NAV_SECTIONS.map((section) => {
-          const isActive = section.key === active;
-          return (
-            <Link
-              className="fc-focusable"
-              key={section.key}
-              href={section.href}
-              title={section.blurb}
-              aria-current={isActive ? 'page' : undefined}
-              style={{
-                color: isActive ? themeColor.labelOnAccent : themeColor.labelPrimary,
-                background: isActive ? themeColor.blue : 'transparent',
-                border: `1px solid ${isActive ? themeColor.blue : themeColor.separator}`,
-                borderRadius: radius[8],
-                padding: `${space[4]}px ${space[8]}px`,
-                fontSize: fontSize[11],
-                textDecoration: 'none',
-              }}
-            >
-              {section.label}
-            </Link>
-          );
-        })}
+        {/* The section strip: the one scrollable region. Its `flex-basis` is what
+            makes the bar mobile-first WITHOUT a media query — `1 1 160px` keeps
+            the bar on one line while the strip can still hold 160px, and once
+            the viewport can no longer give it that much the strip wraps to a
+            full-width second line. Pinning the strip to `1 1 auto` instead let it
+            be squeezed to 54px at a 320px viewport (measured), which is a scroll
+            window one pill wide. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: space[8], flex: '1 1 160px', minWidth: 0, overflowX: 'auto' }}>
+          {NAV_SECTIONS.map((section) => {
+            const isActive = section.key === active;
+            return (
+              <Link
+                className="fc-focusable"
+                key={section.key}
+                href={section.href}
+                title={section.blurb}
+                aria-current={isActive ? 'page' : undefined}
+                style={{
+                  color: isActive ? themeColor.labelOnAccent : themeColor.labelPrimary,
+                  background: isActive ? themeColor.blue : 'transparent',
+                  border: `1px solid ${isActive ? themeColor.blue : themeColor.separator}`,
+                  borderRadius: radius[8],
+                  padding: `${space[4]}px ${space[8]}px`,
+                  fontSize: fontSize[11],
+                  textDecoration: 'none',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {section.label}
+              </Link>
+            );
+          })}
+        </div>
 
         {/* The terminal is gated, so it is offered as the bar's one action rather
             than as a section. The middleware sends an anonymous visitor to
             /login with ?next=/team, so the link is honest for every reader.
             `marginLeft: auto` lives on this WRAPPER, not on the link, so the link and the
             theme toggle form one right-hand cluster instead of two separated islands. */}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: space[8] }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: space[8], flexShrink: 0 }}>
           <Link
             className="fc-focusable"
             href={TERMINAL.href}

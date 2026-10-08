@@ -20,8 +20,8 @@ export function Card({ title, subtitle, right, children, style }: { title?: stri
       }}
     >
       {(title || right) && (
-        <header style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: space[8], marginBottom: space[8] }}>
-          <div>
+        <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: space[8], marginBottom: space[8] }}>
+          <div style={{ minWidth: 0, flex: '1 1 auto' }}>
             {title && <h2 style={{ margin: 0, fontSize: fontSize[13], fontWeight: fontWeight.semibold, color: themeColor.labelPrimary, letterSpacing: letterSpacing.xs }}>{title}</h2>}
             {subtitle && <p style={{ margin: `${space[4]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary }}>{subtitle}</p>}
           </div>

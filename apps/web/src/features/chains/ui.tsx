@@ -686,7 +686,7 @@ export default function ChainsDirectory() {
   const slug = selected ?? board?.topByMarketCap?.slug ?? board?.rows[0]?.slug ?? null;
 
   return (
-    <div style={{ display: 'grid', gap: space[16] }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[16] }}>
       <DirectoryCard src={src} board={board} selected={slug} onSelect={setSelected} />
       {slug ? <DetailSection key={slug} slug={slug} /> : null}
       <EcosystemSection />

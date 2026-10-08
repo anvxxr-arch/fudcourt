@@ -111,6 +111,7 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
           </EmptyState>
         </Card>
       ) : (
+        <div style={{ overflowX: 'auto' }}>
         <Table style={{ fontSize: fontSize[13] }}>
           <THead>
             <TR>
@@ -168,6 +169,7 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
             })}
           </TBody>
         </Table>
+        </div>
       )}
     </div>
   );

@@ -99,7 +99,7 @@ function Overview() {
     textDecoration: 'none',
   };
   return (
-    <div style={{ display: 'grid', gap: space[12] }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[12] }}>
       {SECTIONS.map((s) => (
         <Link key={s.key} href={s.href} style={cardStyle}>
           <strong style={{ color: themeColor.blue }}>{s.label}</strong>

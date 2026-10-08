@@ -401,7 +401,7 @@ export default function MediaNewsBoards() {
   const news = useSource<NewsEnvelope>((s) => fetchNews(s), 'news');
 
   return (
-    <div style={{ display: 'grid', gap: space[16] }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[16] }}>
       <HeadlineRow media={media} news={news} />
       <MediaCard src={media} />
       <NewsCard src={news} />
