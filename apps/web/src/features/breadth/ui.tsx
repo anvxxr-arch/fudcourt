@@ -149,6 +149,14 @@ const fieldStyle: CSSProperties = {
   padding: `${space[8]}px ${space[12]}px`,
   fontSize: fontSize[13],
   fontFamily: 'inherit',
+  // A native <select>'s intrinsic width is its WIDEST <option>, so a long
+  // option list ('Ticker · Name', 'Chain · Network') makes the control wider
+  // than the card holding it — measured 522px in a 316px box. `maxWidth: 100%`
+  // bounds it to its parent; `minWidth: 0` is what lets it actually shrink
+  // there as a flex item, since the default `min-width: auto` refuses to go
+  // below min-content.
+  maxWidth: '100%',
+  minWidth: 0,
 };
 
 /**
@@ -404,7 +412,7 @@ function RwaAssetSection() {
       title="RWA asset drill-down"
       subtitle="one tokenized asset at a time — the key is the row's detailKey; an invalid key or an unknown resource is reported as an error, never an empty panel"
       right={
-        <label style={{ display: 'flex', alignItems: 'center', gap: space[4], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
+        <label style={{ display: 'flex', alignItems: 'center', minWidth: 0, gap: space[4], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
           asset
           <select
             value={detailKey}

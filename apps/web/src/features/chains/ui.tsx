@@ -109,6 +109,14 @@ const fieldStyle: CSSProperties = {
   padding: `${space[8]}px ${space[12]}px`,
   fontSize: fontSize[13],
   fontFamily: 'inherit',
+  // A native <select>'s intrinsic width is its WIDEST <option>, so a long
+  // option list ('Ticker · Name', 'Chain · Network') makes the control wider
+  // than the card holding it — measured 522px in a 316px box. `maxWidth: 100%`
+  // bounds it to its parent; `minWidth: 0` is what lets it actually shrink
+  // there as a flex item, since the default `min-width: auto` refuses to go
+  // below min-content.
+  maxWidth: '100%',
+  minWidth: 0,
 };
 
 /** A chain name drawn as the row's selection control (loads its detail). */
@@ -232,7 +240,7 @@ function DirectoryCard({
           aria-label="Filter chains by name or network"
           style={{ ...fieldStyle, flex: '1 1 220px' }}
         />
-        <label style={{ display: 'flex', alignItems: 'center', gap: space[4], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
+        <label style={{ display: 'flex', alignItems: 'center', minWidth: 0, gap: space[4], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
           select
           <select
             value={selected ?? ''}
@@ -638,7 +646,7 @@ function EcosystemDetailSection() {
       ) : indexBoard && indexBoard.rows.length > 0 ? (
         <>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], alignItems: 'center', marginBottom: space[12] }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: space[4], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
+            <label style={{ display: 'flex', alignItems: 'center', minWidth: 0, gap: space[4], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
               select
               <select
                 value={slug ?? ''}

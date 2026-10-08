@@ -70,7 +70,16 @@ export function Select<T extends string>({ value, onChange, options, style, disa
     <select className="fc-focusable" value={value} disabled={disabled} onChange={e => onChange(e.target.value as T)}
       style={{
         background: themeColor.bgBase, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`,
-        borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box', opacity: disabled ? 0.5 : 1, ...style,
+        borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box', opacity: disabled ? 0.5 : 1,
+  // A native <select>'s intrinsic width is its WIDEST <option>, so a long
+  // option list ('Ticker · Name', 'Chain · Network') makes the control wider
+  // than the card holding it — measured 522px in a 316px box. `maxWidth: 100%`
+  // bounds it to its parent; `minWidth: 0` is what lets it actually shrink
+  // there as a flex item, since the default `min-width: auto` refuses to go
+  // below min-content.
+  maxWidth: '100%',
+  minWidth: 0,
+        ...style,
       }}>
       {options.map(o => {
         const opt = typeof o === 'string' ? { value: o, label: o } : o;
