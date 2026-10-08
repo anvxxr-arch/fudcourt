@@ -33,25 +33,35 @@ import { Stat } from '@/ui/stat';
 import { fetchPlans, type Source } from './client';
 import { planTime, pct, readPlansBoard, rewardRisk, score, usd, type PlanLedger, type SignalPlan } from './model';
 
-/** The board's table columns, in order. */
-const HEAD = ['Symbol', 'Chain', 'Score', 'Entry', 'Stop', 'Target', 'Stop %', 'Risk %', 'R:R', 'Notional', 'Status', 'Planned'] as const;
+/**
+ * The board's table columns, in order — **mobile-first**, which means the
+ * columns a phone's ~316px window shows first are the ones that carry the plan
+ * (entry/stop/target), not the ones that merely classify it (chain/score).
+ *
+ * Measured at a 390px viewport before this order: the fold showed
+ * `Symbol | Chain | Score` and every payload column sat off-screen, so the
+ * board's own figure — the plan — was the part you had to scroll to find.
+ * Desktop is unaffected by the reorder: all twelve columns still render, in a
+ * reading order that leads with the plan and trails into its provenance.
+ */
+const HEAD = ['Symbol', 'Entry', 'Stop', 'Target', 'R:R', 'Notional', 'Stop %', 'Risk %', 'Status', 'Planned', 'Score', 'Chain'] as const;
 
-/** One plan as a row of cells, gaps rendered `—` by the pure formatters. */
+/** One plan as a row of cells, in `HEAD` order, gaps rendered `—` by the pure formatters. */
 function rowCells(p: SignalPlan) {
   const rr = rewardRisk(p);
   return [
     p.symbol ?? <span title={p.mint} style={{ color: themeColor.labelTertiary }}>{p.mint.slice(0, 6)}…{p.mint.slice(-4)}</span>,
-    p.chain,
-    score(p.score),
     usd(p.entry_usd),
     usd(p.stop_usd),
     usd(p.target_usd),
-    pct(p.stop_pct),
-    pct(p.risk_pct),
     rr === null ? '—' : `${rr.toFixed(2)}×`,
     usd(p.notional_usd),
+    pct(p.stop_pct),
+    pct(p.risk_pct),
     <span key="s" title={p.reason ?? undefined} style={{ color: p.status === 'planned' ? themeColor.green : themeColor.labelSecondary }}>{p.status}</span>,
     <span key="t" title={p.planned_at} style={{ color: themeColor.labelSecondary }}>{planTime(p.planned_at)}</span>,
+    score(p.score),
+    p.chain,
   ];
 }
 
@@ -95,7 +105,18 @@ export default function PlansPanel() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: space[16] }}>
-      <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap' }}>
+      {/*
+        Mobile-first KPI cluster: an intrinsic grid, NOT a wrapping flex row.
+        A flex row sizes every tile to its own content, so on a phone the six
+        tiles landed as four ragged rows of unequal width (measured at 390px:
+        141/98 | 134/171 | 279 | 172, with 103px and 178px of dead space in the
+        first and last rows). `auto-fit` + `minmax` gives every tile in a column
+        the SAME width and recomputes the column count from the container alone —
+        2 columns at 350px, 4 at 728px, 6 at 1160px — so a partial last row still
+        lines up. No media query is used or available: inline styles cannot carry
+        one, and `--fc-grid-cols-*` has no stylesheet consumer in this tree.
+      */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: space[8] }}>
         <Stat label="Plans recorded" value={String(board.total)} hint={board.shown < board.total ? `${board.shown} shown` : 'all shown'} />
         <Stat label="Planned" value={String(board.planned)} hint="actionable" tone="positive" />
         <Stat label="Not planned" value={String(board.skipped)} hint="skipped / other" tone={board.skipped > 0 ? 'negative' : 'neutral'} />
