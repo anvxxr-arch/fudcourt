@@ -3,11 +3,12 @@
  *
  * Target: WCAG 2.2 AA globally, AAA for critical financial foregrounds (the critical
  * foreground tokens live in `tokens.ts` and are enforced by the contrast tests). This file
- * carries the three things that must be true regardless of which atom is on screen:
+ * carries the four things that must be true regardless of which atom is on screen:
  *
  *   1. a focus indicator that is never removed, only replaced with an equal-or-better one,
  *   2. a screen-reader-only utility that keeps content in the accessibility tree,
- *   3. the forced-colors contract, so a Windows high-contrast user gets borders and focus.
+ *   3. the forced-colors contract, so a Windows high-contrast user gets borders and focus,
+ *   4. a touch-target floor, so a control that is a standalone target is at least 24x24.
  *
  * The focus ring is `--fc-focus-ring` (orange-500 light / orange-400 dark), 2px with a 2px
  * offset, which clears the plan's ≥3:1 focus-indicator target against both theme
@@ -93,4 +94,70 @@
   .fc-sr-only {
     clip-path: none;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Touch targets — WCAG 2.5.8 Target Size (Minimum), the 24x24 CSS px AA floor.
+ *
+ * Scoped to a table CELL on purpose. A control that is the only thing in a
+ * `<td>` is a standalone target by construction: there is no run of prose for
+ * it to be "inline" within, so 2.5.8's inline exemption cannot reach it. That
+ * is also where measurement failed — every data board renders its symbol,
+ * chain, sector and coin drill-downs as a bare text link or button inside a
+ * cell, 14-18px tall inside an 8px-padded 35px cell. Measured 2026-10-08 at a
+ * 390px viewport across 49 routes: 499 instances on /chains, 130 on /sectors,
+ * 102 each on /funding and /coins, 53 on /market/crypto, 52 on
+ * /team/transactions; this class is the large majority of every 2.5.8 failure
+ * in the app.
+ *
+ * WHY A PSEUDO-ELEMENT AND NOT `padding`. This tree styles with INLINE styles,
+ * and an inline `padding`/`margin` beats any stylesheet rule. Three of the four
+ * constants behind these controls (`LINK_BUTTON` in funding, `NAME_BUTTON_STYLE`
+ * in sectors, `buttonStyle` in coins) set `padding` inline — `padding: 0` in the
+ * first two — so a `padding`-based rule here would be a silent no-op on exactly
+ * the buttons it was written for. The hammer is worse than the bug: `!important`
+ * would override coins' `4px 8px` chip padding with a uniform value and make the
+ * chip NARROWER. A generated pseudo-element is the one box inline styles cannot
+ * address, which is why the growth lives there.
+ *
+ * WHY THIS CHANGES NOTHING VISUALLY. The overlay is transparent, absolutely
+ * positioned and centred, so it adds nothing to layout, nothing to paint, and
+ * nothing to row height — the cell stays 35px with its 8px padding, and the
+ * control keeps its 18px visual line box. It only adds hit area.
+ *
+ * WHY ENLARGING AT ALL IS SAFE HERE. Measured clearance from each of these
+ * controls to the nearest OTHER target is >= 17px vertically, and effectively
+ * unbounded horizontally (`lf=inf` / `rt=inf` — the control is alone in its
+ * cell, so the next column's control is hundreds of pixels away). A 24px hit
+ * box therefore cannot overlap a neighbour, which is the failure mode that
+ * would turn a small target into a mis-tap: 2.5.8's spacing exception exists
+ * because enlargement is not always an improvement, and it is an improvement
+ * exactly when the slack is there.
+ *
+ * `max(100%, 24px)` grows a control toward the floor and never shrinks one: a
+ * 72px-wide "explorer ↗" link keeps its full width, a 14px two-character symbol
+ * gets 24. `translate(-50%, -50%)` on a 50% origin keeps the growth symmetric,
+ * so it cannot bias a target toward the column beside it.
+ *
+ * No media query: a target floor is a property of the target, not of the
+ * viewport, and this tree carries no layout breakpoints.
+ * ------------------------------------------------------------------------- */
+td > a,
+td > button,
+th > a,
+th > button {
+  position: relative;
+}
+
+td > a::after,
+td > button::after,
+th > a::after,
+th > button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max(100%, 24px);
+  height: max(100%, 24px);
 }
