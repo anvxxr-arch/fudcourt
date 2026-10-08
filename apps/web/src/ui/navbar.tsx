@@ -53,6 +53,17 @@ export function Navbar() {
             fontWeight: fontWeight.bold,
             letterSpacing: letterSpacing.wider,
             textDecoration: 'none',
+            // WCAG 2.5.8: the wordmark is a standalone target and measured 79x20,
+            // under the 24px floor. The padding lifts its border box to 24px and
+            // the matching negative margin hands the bar its original 20px
+            // cross-size back, so the header does not grow by 4px. This one is an
+            // inline style and so cannot use the `td > a::after` overlay the
+            // table cells get — it needs no overlay, because unlike them it is
+            // ours to style directly.
+            paddingTop: 2,
+            paddingBottom: 2,
+            marginTop: -2,
+            marginBottom: -2,
             marginRight: space[8],
             flexShrink: 0,
           }}

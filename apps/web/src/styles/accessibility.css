@@ -161,3 +161,38 @@ th > button::after {
   width: max(100%, 24px);
   height: max(100%, 24px);
 }
+
+/* The other half of the same floor, which the overlay above cannot serve.
+ *
+ * A checkbox is a REPLACED element: it does not generate `::before`/`::after`,
+ * so the pseudo-element mechanism is simply unavailable to it. Measured 13x13
+ * at the browser default, 49 of them on /team/transactions (one per row, plus
+ * the header's select-all).
+ *
+ * Two mechanisms were tried against the served build and BOTH FAILED, which is
+ * why this uses a transform:
+ *
+ *   - `padding: 6px` is a NO-OP here, not merely overridden. The declaration
+ *     reaches the element (its computed style shows the rule matched and
+ *     unlayered, beating the preflight `button, input, ... { padding: 0 }` on
+ *     specificity) and Chrome still reports `padding: 0px` -- and reports 0px
+ *     again when the same padding is set as an inline style. A native checkbox
+ *     does not take author padding at all. It fails silently: the CSS looks
+ *     right, the rule is served, and nothing grows.
+ *   - `width/height: 24px` with `margin: -6px` to hold the footprint also fails,
+ *     because negative vertical margins do not shrink an inline-block's line box
+ *     here: it measured 24x24 but pushed the row from 35px to 40px. The floor is
+ *     not worth a row-height regression.
+ *
+ * `transform: scale()` is what works. It scales the PAINTED and the HIT-TESTED
+ * box together -- `getBoundingClientRect` reports 24x24 and `elementFromPoint`
+ * agrees -- while leaving layout completely alone, so the row stays 35px. The
+ * origin is the default centre, so the glyph grows around its own centre and
+ * does not shift. 13 x 1.85 = 24.05, clearing the floor without landing on it.
+ * A checkbox HOLDS its checked state, so the softness of a scaled raster is the
+ * only cost, and only on an admin table.
+ */
+td > input[type='checkbox'],
+th > input[type='checkbox'] {
+  transform: scale(1.85);
+}
