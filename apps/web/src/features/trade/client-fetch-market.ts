@@ -65,7 +65,12 @@ function toMarketRow(row: TickerRowLite, marketType: MarketType): MarketRow {
     price: row.price,
     change24h: row.change24h,
     quoteVolume: row.quoteVolume,
-    venues: row.venues.map((v) => ({ venue: v.exchange, price: v.last })),
+    // `/api/ticker` can answer a DEGRADED row that carries none of these — one row
+    // `{symbol, base, tag:'recovered'}` with no venues/price/type (caught live, and
+    // the crash it caused is what killed the Markets panel). Guard rather than
+    // assume: an unstated venue list is not an empty one, so it degrades to `[]`
+    // and the cells say so, instead of throwing and blanking the whole board.
+    venues: (row.venues ?? []).map((v) => ({ venue: v.exchange, price: v.last })),
     spreadPct: row.spread,
   };
 }

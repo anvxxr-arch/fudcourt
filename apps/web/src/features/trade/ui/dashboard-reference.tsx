@@ -65,7 +65,7 @@ export function MarketTypeTabs({ marketType }: { marketType?: MarketType }) {
 
 export function ReferenceGrid() {
   return (
-    <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', marginTop: space[12] }}>
+    <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', marginTop: space[12] }}>
       <Card title="Venues" subtitle="where an order can execute — CEX and DEX">
         <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
           {VENUES.map((v) => (

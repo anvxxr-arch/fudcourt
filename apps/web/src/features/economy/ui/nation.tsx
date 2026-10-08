@@ -97,7 +97,7 @@ export default function NationExplorer() {
             if (!list || list.length === 0) return null;
             return (
               <Card key={region} title={region} subtitle={`${list.length} countries`}>
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: space[8] }}>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(200px, 100%), 1fr))', gap: space[8] }}>
                   {list.map((c) => (
                     <li key={c.id}>
                       <Link
@@ -177,7 +177,7 @@ export function NationProfile({ code }: { code: string }) {
       />
 
       <Card title="Key Metrics" subtitle="headline series, newest published observation">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: space[12] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))', gap: space[12] }}>
           {data.keyMetrics.map((m) => (
             <Link key={m.slug} href={`/economy/indicator/${m.slug}`} style={{ textDecoration: 'none' }}>
               <Value label={m.label.replace(`${c.name} `, '')} value={m.value === null ? NO_VALUE : formatValue(m.value, m.decimals)} tone={m.value === null ? 'muted' : 'default'} unit={m.value === null ? undefined : m.unit} hint={`${m.date ?? 'no observation'} · ${m.source}`} />
@@ -188,7 +188,7 @@ export function NationProfile({ code }: { code: string }) {
 
       <RegimeBoard country={c.iso3} embedded />
 
-      <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', marginTop: space[12] }}>
+      <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', marginTop: space[12] }}>
         {data.groups.map((g) => (
           <Card key={g.category} title={g.label}>
             <DataTable

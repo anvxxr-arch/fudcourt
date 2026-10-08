@@ -116,7 +116,7 @@ export default function PlansPanel() {
         lines up. No media query is used or available: inline styles cannot carry
         one, and `--fc-grid-cols-*` has no stylesheet consumer in this tree.
       */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: space[8] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: space[8] }}>
         <Stat label="Plans recorded" value={String(board.total)} hint={board.shown < board.total ? `${board.shown} shown` : 'all shown'} />
         <Stat label="Planned" value={String(board.planned)} hint="actionable" tone="positive" />
         <Stat label="Not planned" value={String(board.skipped)} hint="skipped / other" tone={board.skipped > 0 ? 'negative' : 'neutral'} />

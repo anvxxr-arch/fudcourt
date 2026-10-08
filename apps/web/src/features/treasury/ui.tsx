@@ -293,7 +293,7 @@ export default function TreasuryPanel() {
       )}
 
       {diff && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: space[12] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: space[12] }}>
           <div style={{ background: themeColor.bgBase, border: `1px solid ${themeColor.separator}`, borderRadius: radius[12], padding: space[12] }}>
             <div style={{ color: themeColor.blue, fontSize: fontSize[13], fontWeight: fontWeight.semibold, marginBottom: space[8] }}>
               What moved — {diff.range} ({shortTs(diff.fromTs)} → {shortTs(diff.toTs)})

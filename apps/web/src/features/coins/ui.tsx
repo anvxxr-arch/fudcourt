@@ -446,7 +446,7 @@ function CoinDetailPanel({ pick }: { pick: CoinPick }) {
       title={`Detail — ${text(d.name)} (${text(d.symbol)})`}
       subtitle={`mode=coin&key=${pick.key}; change24h is a percent-scaled number upstream ships (see the model's scale note)`}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: `${space[8]}px ${space[16]}px` }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(160px, 100%), 1fr))', gap: `${space[8]}px ${space[16]}px` }}>
         {rowsList.map(([label, value]) => (
           <div key={label}>
             <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], letterSpacing: letterSpacing.xs }}>{label}</div>
@@ -556,7 +556,7 @@ function CoinDetailSection({ pick }: { pick: CoinPick }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[12] }}>
       <CoinDetailPanel pick={pick} />
-      <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+      <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))' }}>
         <MarketPairsPanel pick={pick} />
         <OpenInterestPanel symbol={pick.symbol} />
       </div>

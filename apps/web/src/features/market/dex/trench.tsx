@@ -49,7 +49,7 @@ export default function TrenchPage() {
       {loading ? (
         <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>Loading new tokens...</p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: space[8] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))', gap: space[8] }}>
           {profiles.map((p, i) => (
             <div
               key={p.address + i}

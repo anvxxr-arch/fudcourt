@@ -6,7 +6,7 @@ import type { CSSProperties } from 'react';
 import { themeColor, fontSize, fontWeight, letterSpacing, space } from '@/styles/tokens';
 import { num } from '@/lib/num';
 
-export const pairStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: space[8] };
+export const pairStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: space[8] };
 export const h3Style: CSSProperties = { color: themeColor.blue, fontSize: fontSize[12], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px`, letterSpacing: letterSpacing.wide };
 export const noteStyle: CSSProperties = { color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `${space[4]}px 0 0` };
 export const thStyle: CSSProperties = { textAlign: 'left', padding: '5px 6px', color: themeColor.labelTertiary, fontSize: fontSize[11], borderBottom: `1px solid ${themeColor.separator}` };

@@ -202,12 +202,12 @@ function TxForm({ title, initial, onSave, onClose }: {
 
   return (
     <Modal title={title} onClose={onClose} width={480}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: space[8], marginBottom: space[8] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: space[8], marginBottom: space[8] }}>
         <div><Label>Date</Label><input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', background: themeColor.bgBase, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box' }} /></div>
         <div><Label>Chain</Label><Select value={chain} onChange={setChain} options={CHAIN_OPTIONS} /></div>
         <div><Label>Venue</Label><Input value={venue} onChange={setVenue} placeholder="e.g. Binance" /></div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: space[8], marginBottom: space[8] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: space[8], marginBottom: space[8] }}>
         <div><Label>Event</Label><Select value={event} onChange={setEvent} options={EVENT_PRESETS} /></div>
         <div><Label>Amount (USD)</Label><Input value={amount} onChange={setAmount} placeholder="e.g. -100" type="number" /></div>
         <div><Label>Wallet To</Label><Input value={to} onChange={setTo} placeholder="address" /></div>

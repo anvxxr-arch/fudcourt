@@ -129,7 +129,7 @@ export default function LlamaPage() {
         </Banner>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: space[8], marginBottom: space[12] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: space[8], marginBottom: space[12] }}>
         {[
           { k: 'total TVL', v: usdBig(totalTvl) },
           { k: '24h change', v: pct(change1d), color: pctColor(change1d) },
@@ -161,7 +161,7 @@ export default function LlamaPage() {
       ) : error && !chains ? (
         <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>tables withheld — the request above failed.</p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: space[12] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: space[12] }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[4] }}>
               <h4 style={{ color: themeColor.labelPrimary, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>chains by TVL</h4>

@@ -56,7 +56,7 @@ export default function NewsPage() {
       {loading ? (
         <Loading label="Loading news..." />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: space[8] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))', gap: space[8] }}>
           {items.map((item, i) => (
             <div
               key={i}

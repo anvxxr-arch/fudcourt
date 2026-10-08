@@ -9,7 +9,7 @@ export type OrderData = { orders: Record<string, unknown>[]; boosts: Record<stri
 
 export function ProfilesGrid({ profiles }: { profiles: DexProfile[] }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: space[8] }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(230px, 100%), 1fr))', gap: space[8] }}>
       {profiles.length === 0 && <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>upstream returned no profiles.</p>}
       {profiles.map((p, i) => (
         <div key={p.address + i} style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], overflow: 'hidden' }}>

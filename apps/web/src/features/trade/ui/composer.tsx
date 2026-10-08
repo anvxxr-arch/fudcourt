@@ -151,7 +151,7 @@ export function TradeComposer({ marketType, defaultBase, defaultQuote }: {
   }, [request, blocking]);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(300px, 400px)', gap: space[12], alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(min(320px, 100%), 1fr) minmax(300px, 400px)', gap: space[12], alignItems: 'start' }}>
       <Card>
         <ComposerFields
           state={state}

@@ -178,7 +178,7 @@ export default function ScoreboardPage() {
             {(board.series || []).map(s => {
               const p = parts(s);
               return (
-                <div key={s.day} style={{ display: 'flex', alignItems: 'center', gap: space[8], fontSize: fontSize[11] }}>
+                <div key={s.day} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: space[8], fontSize: fontSize[11] }}>
                   <span style={{ color: themeColor.labelTertiary, width: 84, flexShrink: 0 }}>{s.day}</span>
                   <span style={{ color: themeColor.labelPrimary, width: 46, flexShrink: 0, textAlign: 'right' }}>{s.n}</span>
                   <div

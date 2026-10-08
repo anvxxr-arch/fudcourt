@@ -145,9 +145,9 @@ export function CentralBankDetail({ bank }: { bank: string }) {
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
       <PageHeader title={b.name} description={`${b.short} · BIS area ${b.area} · ${b.region}`} nav={ECONOMY_NAV} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: space[12] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: space[12] }}>
         <Card>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: space[12] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(110px, 100%), 1fr))', gap: space[12] }}>
             <Value label="Policy rate" value={b.rate === null ? NO_VALUE : formatValue(b.rate, 2)} tone={b.rate === null ? 'muted' : 'default'} unit={b.rate === null ? undefined : '%'} />
             <Value label="Last change" value={delta === null ? NO_VALUE : formatValue(delta, 2)} tone={delta === null ? 'muted' : 'default'} unit={delta === null ? undefined : 'pp'} hint="vs the previous distinct level" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[4] }}>

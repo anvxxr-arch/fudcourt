@@ -224,6 +224,7 @@ export default function TickerPage() {
         <Loading label="Loading..." />
       ) : (
         <div style={{ opacity: stale ? 0.45 : 1, transition: 'opacity ' + motion.quick }}>
+          <div style={{ overflowX: 'auto' }}>
           <Table>
             <THead>
               <TR style={{ borderBottom: `1px solid ${themeColor.separator}`, color: themeColor.labelTertiary }}>
@@ -264,8 +265,8 @@ export default function TickerPage() {
                     <span title="Cross-venue divergence in percent, relative to the median of the venues that answered">{fmtSpread(r.spread)}</span>
                   </TD>
                   <TD align="right" style={{ padding: space[8] }}>
-                    <div style={{ color: themeColor.labelPrimary }}>{r.venues.map(v => v.exchange).join(' · ')}</div>
-                    {r.failed.length > 0 && (
+                    <div style={{ color: themeColor.labelPrimary }}>{(r.venues ?? []).map(v => v.exchange).join(' · ') || '—'}</div>
+                    {(r.failed ?? []).length > 0 && (
                       <div style={{ fontSize: fontSize[11], color: themeColor.red }}>no quote: {r.failed.join(', ')}</div>
                     )}
                   </TD>
@@ -273,6 +274,7 @@ export default function TickerPage() {
               ))}
             </TBody>
           </Table>
+          </div>
         </div>
       )}
 

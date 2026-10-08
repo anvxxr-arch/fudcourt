@@ -108,7 +108,7 @@ export function TradeInstrument({ marketType, instrumentId }: { marketType: Mark
             <Notice>No venue returned a quote for {label} right now. An empty result is reported as empty, never padded with another instrument&apos;s price.</Notice>
           ) : (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: space[12], marginBottom: space[12] }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(120px, 100%), 1fr))', gap: space[12], marginBottom: space[12] }}>
                 <Value label="Median price" value={formatPrice(detail.value.price)} tone={detail.value.price === null ? 'muted' : 'default'} hint="Median of the venues that priced it; — when none did." />
                 <Value label="Venues priced" value={`${detail.value.priced} / ${detail.value.quotes.length}`} />
                 <Value label="Not listed" value={String(detail.value.notListed.length)} tone={detail.value.notListed.length > 0 ? 'muted' : 'default'} hint="Venues that list no such instrument — a fact about the market, not a failure." />
@@ -145,7 +145,7 @@ export function TradeInstrument({ marketType, instrumentId }: { marketType: Mark
 
       <div style={{ marginTop: space[12] }}>
         <Card title="Instrument" subtitle="the canonical identity — the venue's own symbol is a field, never the id">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: space[12] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: space[12] }}>
             <Value label="Canonical id" value={instrumentId} hint="What a route resolves and an order references." />
             <Value label="Base" value={base} />
             <Value label="Quote" value={instrument?.quote ?? NO_VALUE} />

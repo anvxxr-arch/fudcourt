@@ -11,7 +11,7 @@ import { themeColor, fontSize, fontWeight, letterSpacing, space } from '@/styles
 import { VENUE_MARKET_TYPES, type MarketType, type VenueId } from '@/features/trade/model';
 import type { BalanceBasis, SizingMode } from '@/lib/executor';
 
-export const pairStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: space[8] };
+export const pairStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: space[8] };
 
 export const h3Style: CSSProperties = {
   color: themeColor.blue,

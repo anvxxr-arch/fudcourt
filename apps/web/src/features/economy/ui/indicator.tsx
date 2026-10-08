@@ -212,9 +212,9 @@ export function IndicatorDetail({ slug }: { slug: string }) {
         nav={ECONOMY_NAV}
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: space[12] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: space[12] }}>
         <Card>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: space[12] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(110px, 100%), 1fr))', gap: space[12] }}>
             <Value label="Latest" value={latest?.value == null ? NO_VALUE : formatValue(latest.value, i.decimals)} tone={latest?.value == null ? 'muted' : 'default'} unit={latest?.value == null ? undefined : i.unit} />
             <Value label="Change" value={change === null ? NO_VALUE : formatValue(change, i.decimals)} tone={change === null ? 'muted' : 'default'} hint="vs previous observation" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[4] }}>
@@ -234,7 +234,7 @@ export function IndicatorDetail({ slug }: { slug: string }) {
         </Card>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: space[12], marginTop: space[12] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: space[12], marginTop: space[12] }}>
         <Card title="Recent observations" subtitle="newest first">
           <DataTable
             head={['Period', 'Value', 'Δ prior']}

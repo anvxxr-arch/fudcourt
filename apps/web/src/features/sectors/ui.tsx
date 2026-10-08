@@ -87,6 +87,12 @@ const FIELD_STYLE: CSSProperties = {
   padding: `${space[4]}px ${space[8]}px`,
   fontSize: fontSize[12],
   fontFamily: 'inherit',
+  // A native <select>'s intrinsic width is its WIDEST <option> — the tag list
+  // reaches '(P2E)MarketplaceLaunchpadRestakingDePINExchange'. `maxWidth: 100%`
+  // bounds it to the card; `minWidth: 0` is what lets it shrink there, since a
+  // flex item's default `min-width: auto` refuses to go below min-content.
+  maxWidth: '100%',
+  minWidth: 0,
 };
 
 /** A disabled-aware pagination / sort button. */

@@ -37,7 +37,7 @@ export function DestinationsSection() {
   return (
     <section>
       <h2 style={h2Style}>Boards</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: space[12] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(190px, 100%), 1fr))', gap: space[12] }}>
         {DESTINATIONS.map(d => (
           <Link key={d.href} href={d.href} style={{ ...cardStyle, textDecoration: 'none', display: 'block' }}>
             <div style={{ color: themeColor.labelPrimary, fontSize: fontSize[13], fontWeight: fontWeight.bold }}>{d.label} →</div>

@@ -141,7 +141,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
           {cr.loading && !cr.error && <Loading label="loading live figures…" />}
           {g && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: space[8] }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: space[8] }}>
                 <Stat label="Total market cap" value={fmtUsdCompact(g.totalMarketCap)} hint={fmtPct(g.totalMarketCapChangePercent)} tone={toneOf(g.totalMarketCapChangePercent)} valueSize={fontSize[20]} />
                 <Stat label="24h volume" value={fmtUsdCompact(g.totalVolume24h)} hint={fmtPct(g.totalVolume24hChangePercent)} tone={toneOf(g.totalVolume24hChangePercent)} valueSize={fontSize[20]} />
                 <Stat label="BTC dominance" value={g.btcDominance == null ? DASH : `${g.btcDominance.toFixed(2)}%`} hint={fmtPct(g.btcDominanceChangePercent)} tone={toneOf(g.btcDominanceChangePercent)} valueSize={fontSize[20]} />
@@ -208,7 +208,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
         {/* ---- 4. gainers / losers ------------------------------------------- */}
         <section style={{ marginBottom: space[24] }}>
           <h2 style={h2Style}>24h movers</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: space[12] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: space[12] }}>
             <MoversColumn title="Top gainers" url={GAINERS_URL} />
             <MoversColumn title="Top losers" url={LOSERS_URL} />
           </div>
@@ -249,7 +249,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
         {/* ---- 6. beyond crypto ---------------------------------------------- */}
         <section style={{ marginBottom: space[24] }}>
           <h2 style={h2Style}>Beyond crypto</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: space[12] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: space[12] }}>
             <FxColumn />
             <QuoteColumn title="Commodities" url={COMMODITY_URL} />
             <QuoteColumn title="US indices" url={STOCK_US_URL} />
@@ -272,7 +272,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
         {cr.data && (cr.data.fundingRounds.length > 0 || cr.data.upcomingIco.length > 0) && (
           <section style={{ marginBottom: space[24] }}>
             <h2 style={h2Style}>Primary market</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: space[12] }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: space[12] }}>
               <div style={cardStyle}>
                 <h3 style={h3Style}>Recent funding</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>

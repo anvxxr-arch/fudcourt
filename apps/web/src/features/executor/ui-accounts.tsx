@@ -74,7 +74,7 @@ function ConnectForm({ onConnected }: { onConnected: () => void }) {
       <h3 style={h3Style}>CONNECT AN EXCHANGE · §43</h3>
       {error !== '' && <Banner variant="error" style={{ margin: `0 0 ${space[8]}px`, whiteSpace: 'pre-wrap', fontWeight: fontWeight.bold }}>⚠ {error}</Banner>}
       {notice !== '' && <p style={{ color: themeColor.blue, fontSize: fontSize[11], fontWeight: fontWeight.bold, margin: `0 0 ${space[8]}px` }}>✓ {notice}</p>}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: space[8] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: space[8] }}>
         <Field label="Exchange">
           <Select
  value={exchange} onChange={setExchange} options={EXCHANGE_OPTIONS} />

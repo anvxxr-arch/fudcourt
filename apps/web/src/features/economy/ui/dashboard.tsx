@@ -115,7 +115,7 @@ export default function EconomyDashboard() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+      <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))' }}>
         <Card title="Regime snapshot" subtitle="rule table over published readings — not a forecast">
           {!regime ? (
             <Loading what="regime" />
@@ -236,7 +236,7 @@ export default function EconomyDashboard() {
         </Card>
 
         <Card title="Major Economies" subtitle="country profiles — the aggregator for every series we hold">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: space[8] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(140px, 100%), 1fr))', gap: space[8] }}>
             {MAJORS.map((m) => (
               <Link key={m.iso2} href={`/economy/nation/${m.iso2}`} style={{ padding: `${space[8]}px ${space[8]}px`, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], color: themeColor.labelPrimary, fontSize: fontSize[12], textDecoration: 'none' }}>
                 {m.name}

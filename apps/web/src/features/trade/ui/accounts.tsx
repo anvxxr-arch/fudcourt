@@ -94,7 +94,7 @@ export function ConnectedAccountsStrip() {
           <Link href="/executor/accounts" style={{ color: themeColor.blue, textDecoration: 'underline' }}>connect a venue →</Link>
         </Notice>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: space[12] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: space[12] }}>
           {accounts.map((account) => (
             <div key={account.id} style={{ display: 'flex', flexDirection: 'column', gap: space[4] }}>
               <span style={{ fontSize: fontSize[12], color: themeColor.labelPrimary, fontWeight: fontWeight.semibold }}>
@@ -190,7 +190,7 @@ export function TradeAccountsView({ note, showPortfolio = true }: { note?: strin
     <>
       {showPortfolio && (
         <Card title="Portfolio" subtitle="one account per connected venue — figures appear once a venue answers">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: space[12] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: space[12] }}>
             <Value label="Connected venues" value={loading ? NO_VALUE : String(accounts.length)} />
             <Value label="Equity" value={formatUsd(null)} tone="muted" hint="No positions/balances route yet, so equity is unknown, not zero." />
             <Value label="Available" value={formatUsd(null)} tone="muted" />
@@ -223,7 +223,7 @@ export function TradeAccountsView({ note, showPortfolio = true }: { note?: strin
       </div>
 
       {accounts.length > 0 && (
-        <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', marginTop: space[12] }}>
+        <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', marginTop: space[12] }}>
           {accounts.map((account) => (
             <Card key={account.id} title={`${account.label} — capability`} subtitle="what this venue supports, and what FUDCourt covers for it">
               <VenueCapabilitySummary exchange={account.exchange} />

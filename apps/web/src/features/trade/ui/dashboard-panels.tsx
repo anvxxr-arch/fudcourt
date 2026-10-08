@@ -56,7 +56,7 @@ export function PortfolioCard({
       ) : portfolio.loading ? (
         <Loading what="portfolio" />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: space[12] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(120px, 100%), 1fr))', gap: space[12] }}>
           <Value label="Equity" value={formatUsd(portfolio.value?.equity)} tone={portfolio.value?.equity == null ? 'muted' : 'default'} hint="Total equity across connected venues. — until a venue answers; never a guessed zero." />
           <Value label="Available" value={formatUsd(portfolio.value?.available)} tone={portfolio.value?.available == null ? 'muted' : 'default'} />
           <Value label="Exposure" value={formatUsd(portfolio.value?.exposure)} tone={portfolio.value?.exposure == null ? 'muted' : 'default'} />
@@ -124,7 +124,7 @@ export function MarketBoardCard({
                 formatPrice(r.price),
                 <ChangeChip key={`c-${r.instrumentId}`} percent={r.change24h} />,
                 r.spreadPct === null ? NO_VALUE : `${r.spreadPct.toFixed(3)}%`,
-                r.venues.map((v) => v.venue).join(' · '),
+                r.venues.length ? r.venues.map((v) => v.venue).join(' · ') : NO_VALUE,
               ],
             }))}
           />
@@ -146,7 +146,7 @@ export function AccountPanelsGrid({
   committedNotional: number | null;
 }) {
   return (
-    <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', marginTop: space[12] }}>
+    <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', marginTop: space[12] }}>
       <Card title="Open positions" subtitle="normalized across CEX and DEX">
         {executions.error ? (
           <ErrorState title="Positions unavailable" detail={executions.error} />
@@ -178,7 +178,7 @@ export function AccountPanelsGrid({
       </Card>
 
       <Card title="Risk" subtitle="deterministic, never model-estimated">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: space[12] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(110px, 100%), 1fr))', gap: space[12] }}>
           <Value label="Margin usage" value={NO_VALUE} tone="muted" hint="Requires a connected venue's margin snapshot." />
           <Value label="Committed risk" value={formatUsd(committedNotional)} tone={committedNotional === null ? 'muted' : 'default'} hint="Sum of planned notional over live executions. — when none are working." />
           <Value label="Portfolio risk" value={NO_VALUE} tone="muted" hint="Sum of committed risk over the whole portfolio; needs venue balances." />
