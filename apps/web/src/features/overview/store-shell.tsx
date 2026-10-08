@@ -28,6 +28,11 @@ const EtfPage = dynamic(() => import('@/features/etf/ui'), { ssr: false });
 const GlobalPage = dynamic(() => import('@/features/global/ui'), { ssr: false });
 const BreadthPage = dynamic(() => import('@/features/breadth/ui'), { ssr: false });
 const WhalesPage = dynamic(() => import('@/features/whales/ui'), { ssr: false });
+const ChainsPage = dynamic(() => import('@/features/chains/ui'), { ssr: false });
+const SectorsPage = dynamic(() => import('@/features/sectors/ui'), { ssr: false });
+const CoinsPage = dynamic(() => import('@/features/coins/ui'), { ssr: false });
+const MediaPage = dynamic(() => import('@/features/media/ui'), { ssr: false });
+const InsightsPage = dynamic(() => import('@/features/insights/ui'), { ssr: false });
 
 type DbData = {
   assets: Asset[];
@@ -133,6 +138,11 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     { key: 'global', label: 'Global' },
     { key: 'breadth', label: 'Breadth' },
     { key: 'whales', label: 'Whales' },
+    { key: 'chains', label: 'Chains' },
+    { key: 'sectors', label: 'Sectors' },
+    { key: 'coins', label: 'Coins' },
+    { key: 'media', label: 'Media' },
+    { key: 'insights', label: 'Insights' },
     { key: 'news', label: 'News' },
     { key: 'proof', label: 'Proof of treasury' },
   ];
@@ -187,6 +197,26 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     whales: {
       title: 'The largest open positions, and which way they lean',
       sub: 'Notional, leverage, entry and liquidation price per position; the board states how many of the upstream total it sees.',
+    },
+    chains: {
+      title: 'Chains & ecosystems',
+      sub: 'Every chain, and the projects built on it',
+    },
+    sectors: {
+      title: 'Sector taxonomy',
+      sub: 'Where the money is rotating, sector by sector',
+    },
+    coins: {
+      title: 'Coin directory',
+      sub: 'Every coin, with the new listings beside it',
+    },
+    media: {
+      title: 'CryptoRank media',
+      sub: 'The videos and headlines CryptoRank is carrying',
+    },
+    insights: {
+      title: 'Quarterly & AI digest',
+      sub: 'Quarterly returns, beside the CryptoRank market read',
     },
   };
   const boardKey = page.startsWith('market') ? 'market' : page;
@@ -284,6 +314,11 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'global' && <GlobalPage />}
       {page === 'breadth' && <BreadthPage />}
       {page === 'whales' && <WhalesPage />}
+      {page === 'chains' && <ChainsPage />}
+      {page === 'sectors' && <SectorsPage />}
+      {page === 'coins' && <CoinsPage />}
+      {page === 'media' && <MediaPage />}
+      {page === 'insights' && <InsightsPage />}
       {page === 'news' && <NewsPage />}
       {page === 'proof' && <ProofPage />}
 

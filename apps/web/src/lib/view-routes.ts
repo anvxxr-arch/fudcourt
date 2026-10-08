@@ -41,6 +41,11 @@ export const VIEW_PATHS: Record<string, string> = {
   breadth: '/breadth',
   // The whale watcher: the largest open positions on Hyperliquid.
   whales: '/whales',
+  chains: '/chains',
+  sectors: '/sectors',
+  coins: '/coins',
+  media: '/media',
+  insights: '/insights',
   // CEX Executor (PRD §81): a multi-route area (/executor/new, /:id, …), not a
   // single shell tab — this entry is the canonical deep link for nav callers.
   executor: '/executor',

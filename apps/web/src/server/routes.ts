@@ -249,4 +249,44 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
       'The largest open positions on Hyperliquid by notional: side, leverage, entry, liquidation price and unrealized PnL, plus a per-coin concentration read. The board states how many of the upstream total it can see.',
     priority: 0.6,
   },
+  {
+    // Chains & ecosystems — the CryptoRank chains surface (TIER-2 idle modes come online).
+    path: '/chains',
+    title: 'Chains & ecosystems | FUDCOURT',
+    description:
+      'The chain directory read verbatim from CryptoRank: 277 chains with their market caps and explorers, the ecosystem index with projects and TVL, and per-chain token tables. A chain the upstream ships without a market cap is a dash, never a zero.',
+    priority: 0.6,
+  },
+  {
+    // Sector taxonomy — the CryptoRank sectors surface (TIER-2 idle modes come online).
+    path: '/sectors',
+    title: 'Sector taxonomy | FUDCOURT',
+    description:
+      'The tag taxonomy: 183 sectors with market cap, dominance, the gainers-to-losers split and their ranked coins, plus a per-sector coin table. A sector with no 24h change is reported as absent, never as flat.',
+    priority: 0.6,
+  },
+  {
+    // Coin directory — the CryptoRank coins surface (TIER-2 idle modes come online).
+    path: '/coins',
+    title: 'Coin directory | FUDCOURT',
+    description:
+      'A 100-row coin directory with market cap, volume, category and all-time high, the recently-added, most-searched and most-visited listings, and a per-coin drill-down joining the CryptoRank detail with CMC market pairs and CoinGlass open interest.',
+    priority: 0.6,
+  },
+  {
+    // CryptoRank media — the CryptoRank media surface (TIER-2 idle modes come online).
+    path: '/media',
+    title: 'CryptoRank media | FUDCOURT',
+    description:
+      'The CryptoRank media surface: the video feed with channel and duration, the latest news items with their sentiment tags, and a tag-filtered news drill-down. A pinned promo slot with no date renders a dash, never dropped.',
+    priority: 0.6,
+  },
+  {
+    // Quarterly & AI digest — the CryptoRank insights surface (TIER-2 idle modes come online).
+    path: '/insights',
+    title: 'Quarterly & AI digest | FUDCOURT',
+    description:
+      'BTC and ETH quarterly open/close with return percentages computed and labelled, next to the CryptoRank generated AI market digest, its funding rounds and its drop-hunting and vesting slices.',
+    priority: 0.6,
+  },
 ];

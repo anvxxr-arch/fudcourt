@@ -200,7 +200,9 @@ for p in ["/", "/market", "/market/crypto", "/market/trench", "/market/forex",
           "/market/stock", "/market/commodity", "/market/crypto/BTC",
           "/news", "/scoreboard", "/signals",
           # the public boards added by the data-breadth pass (all 200 live)
-          "/risk", "/proof", "/derivatives", "/etf", "/global", "/breadth", "/whales"]:
+          "/risk", "/proof", "/derivatives", "/etf", "/global", "/breadth", "/whales",
+          # the TIER-2 idle-mode boards (all 200 live)
+          "/chains", "/sectors", "/coins", "/media", "/insights"]:
     st, b = hit(p, timeout=60)
     rec("page", p, st, 200, b)
 # The market hub absorbed the standalone boards: their old paths are deliberate

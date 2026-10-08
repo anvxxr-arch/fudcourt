@@ -265,6 +265,16 @@ auth logic by design, and the Go upstream **does** enforce the tier — an unaut
 `curl :3103/api/admin/members` returns **401** `{"detail":"requires admin tier"}`. No bypass exists;
 recorded because the middleware table not covering the path is a real (non-exploitable) asymmetry.
 
+**F9 — the idle `cryptorank` modes are now consumed, except the two decoys (2026-10-08).** After the
+TIER-1 boards (F3), the `acq` `cryptorank` modes `blockchains`, `chain`, `ecosystems`, `tags`, `tag`,
+`coins`, `listings`, `coin`, `media`, `news`, `newstag`, `quarterly` and `aioverview` were served
+end-to-end at `:3101` with **0** boards reading them. Five public boards now consume them —
+`/chains`, `/sectors`, `/coins`, `/media`, `/insights` (DR-051) — so the family's live rows are
+surfaced. The two modes left dark are `funding` and `unlocks`: both are **DISABLED** upstream
+(`status: dead` in §3.1 — a synthetic decoy), and a board over a decoy would publish fabricated rows.
+`chainrank`/`khala` stay retired (DR-041). The monitor covers the new surfaces with 18 checks
+(5 board pages + 13 mode reads) from the repo script, so no cron edit was needed.
+
 ## 5. Verification
 
 ```
