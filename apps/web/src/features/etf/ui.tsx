@@ -49,9 +49,10 @@ function signedBtc(v: number | null | undefined): string {
   return `${v < 0 ? '-' : '+'}${mag} BTC`;
 }
 
-/** The tone a signed value carries: any non-negative flow is positive. */
-function tone(v: number | null | undefined): 'positive' | 'negative' {
-  return (v ?? 0) >= 0 ? 'positive' : 'negative';
+/** The tone a signed value carries: any non-negative flow is positive, a missing flow is neutral. */
+function tone(v: number | null | undefined): 'positive' | 'negative' | 'neutral' {
+  if (v === null || v === undefined || !Number.isFinite(v)) return 'neutral';
+  return v >= 0 ? 'positive' : 'negative';
 }
 
 /** The colour a signed cell carries. */

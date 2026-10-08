@@ -495,13 +495,17 @@ export default function InsightsBoard() {
   const btcCurrent = btcBoard?.current?.quarter ?? null;
   const ethCurrent = ethBoard?.current?.quarter ?? null;
 
+  /** A signed return paints positive/negative; a MISSING return is neutral — never a fake 0. */
+  const quarterTone = (q: { returnPct: number | null } | null): 'positive' | 'negative' | 'neutral' =>
+    q?.returnPct == null ? 'neutral' : q.returnPct >= 0 ? 'positive' : 'negative';
+
   return (
     <div style={{ display: 'grid', gap: space[16] }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
           label="BTC current-quarter"
           value={fmtPct(btcCurrent ? btcCurrent.returnPct : null)}
-          tone={(btcCurrent?.returnPct ?? 0) >= 0 ? 'positive' : 'negative'}
+          tone={quarterTone(btcCurrent)}
           hint={currentHint(btcBoard)}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 150px' }}
@@ -509,7 +513,7 @@ export default function InsightsBoard() {
         <Stat
           label="ETH current-quarter"
           value={fmtPct(ethCurrent ? ethCurrent.returnPct : null)}
-          tone={(ethCurrent?.returnPct ?? 0) >= 0 ? 'positive' : 'negative'}
+          tone={quarterTone(ethCurrent)}
           hint={currentHint(ethBoard)}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 150px' }}

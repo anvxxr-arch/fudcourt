@@ -112,7 +112,7 @@ export default function RiskFeedPage() {
         <Stat
           label="24h volume"
           value={usd(feed.aggregate?.totalVolumeUsd)}
-          tone={(feed.aggregate?.volumeChangePct ?? 0) >= 0 ? 'positive' : 'negative'}
+          tone={feed.aggregate == null ? 'neutral' : feed.aggregate.volumeChangePct >= 0 ? 'positive' : 'negative'}
           hint={feed.aggregate ? `${feed.aggregate.volumeChangePct >= 0 ? '+' : ''}${feed.aggregate.volumeChangePct.toFixed(2)}% vs prior` : 'not reported'}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}

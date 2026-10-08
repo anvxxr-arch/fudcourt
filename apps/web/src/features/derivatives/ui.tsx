@@ -86,8 +86,9 @@ function signColor(v: number | null | undefined): string {
 }
 
 /** The `Stat` tone a signed value carries; a missing value reads neutral. */
-function signTone(v: number | null | undefined): 'positive' | 'negative' {
-  return (v ?? 0) >= 0 ? 'positive' : 'negative';
+function signTone(v: number | null | undefined): 'positive' | 'negative' | 'neutral' {
+  if (v === null || v === undefined || !Number.isFinite(v)) return 'neutral';
+  return v >= 0 ? 'positive' : 'negative';
 }
 
 /** The footnote treatment: muted, small, wrapped. */
