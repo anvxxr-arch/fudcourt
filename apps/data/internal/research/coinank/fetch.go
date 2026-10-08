@@ -218,6 +218,50 @@ func (f *Fetcher) FetchFresh(ctx context.Context, rawURL string) (Result, CacheI
 	return f.fetch(ctx, rawURL, false)
 }
 
+// Retry policy for a TRANSIENT upstream refusal.
+//
+// Measured, not assumed: `api.coinank.com` answers HTTP **200** with
+// `{"success":false,"code":"403","msg":"please sub api to get data"}` in bursts
+// and then serves the very same request normally seconds later. Verified live --
+// every mode (`fundingRate` 1.8 MB, `longShort` 165 KB, `etf` 472 KB) returned
+// `success:true` on the next pass with no change to the signature, the version
+// header or the host. So "please sub api to get data" is NOT an entitlement
+// wall and NOT a bug in the client-side signature (that is proven accepted: a
+// garbage or absent signature produces a DIFFERENT message, `system error`).
+// It is a self-clearing refusal -- most likely an abuse/rate heuristic, and one
+// this family can trigger itself by bursting, which is exactly why the retry
+// below is bounded and backed off rather than tight.
+//
+// Before this, one such refusal became a hard error on the first attempt, so a
+// blip that clears in a second blanked the board and failed the uptime monitor.
+const (
+	// maxAttempts bounds the retry loop. Three attempts at 700ms then 1.4s is
+	// ~2.1s of worst-case added latency inside a 30s request timeout and a 75s
+	// BFF timeout: enough to ride out the measured blip, short enough that a
+	// genuine outage still fails in a timely and visible way.
+	maxAttempts = 3
+	// retryBase is the first backoff. It is deliberately not tight: a burst is
+	// the thing that appears to CAUSE the refusal, so the retry must not look
+	// like more burst.
+	retryBase = 700 * time.Millisecond
+	// refusalCode and refusalDetail identify the measured transient refusal.
+	// Matching on both keeps this narrow: a param error arrives with
+	// `code:"0"` / `system error!` and must NEVER be retried, because it is
+	// deterministic and retrying only burns the timeout.
+	refusalCode   = "403"
+	refusalDetail = "please sub api"
+)
+
+// transientRefusal reports whether a decode error is the upstream's
+// self-clearing refusal rather than a deterministic one.
+func transientRefusal(err error) bool {
+	var he *HardError
+	if !errors.As(err, &he) || he.Kind != "upstream" {
+		return false
+	}
+	return he.Code == refusalCode && strings.Contains(strings.ToLower(he.Detail), refusalDetail)
+}
+
 func (f *Fetcher) fetch(ctx context.Context, rawURL string, useCache bool) (Result, CacheInfo, error) {
 	info := CacheInfo{Cache: "MISS"}
 	if useCache {
@@ -234,39 +278,85 @@ func (f *Fetcher) fetch(ctx context.Context, rawURL string, useCache bool) (Resu
 		}
 	}
 
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if attempt > 1 {
+			wait := retryBase << (attempt - 2)
+			select {
+			case <-ctx.Done():
+				return Result{}, info, ctx.Err()
+			case <-time.After(wait):
+			}
+		}
+		res, retryable, err := f.attempt(ctx, rawURL, &info)
+		if err == nil {
+			return res, info, nil
+		}
+		lastErr = err
+		if !retryable || attempt == maxAttempts {
+			return res, info, err
+		}
+	}
+	return Result{}, info, lastErr
+}
+
+// attempt performs ONE signed upstream call.
+//
+// `retryable` reports whether the failure is the kind measured to clear on its
+// own. It is a separate return rather than something the caller re-derives from
+// the error because the classifier differs by failure class: a transport error
+// and a 5xx are transient by nature, an upstream envelope refusal is transient
+// only when it is the measured message, and a 4xx other than 429 is not.
+//
+// The signature is clock-derived, so a retry MUST re-sign: it does, because the
+// request headers are rebuilt here on every attempt. Reusing attempt 1's signed
+// headers on attempt 2 would send a stale clock and fail for a second reason.
+func (f *Fetcher) attempt(ctx context.Context, rawURL string, info *CacheInfo) (Result, bool, error) {
 	nowMs := f.now().UnixMilli()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
-		return Result{}, info, fmt.Errorf("coinank: request: %w", err)
+		return Result{}, false, fmt.Errorf("coinank: request: %w", err)
 	}
 	for k, v := range RequestHeaders(nowMs) {
 		req.Header.Set(k, v)
 	}
 	resp, err := f.client.Do(req)
 	if err != nil {
-		return Result{}, info, fmt.Errorf("coinank: fetch %s: %w", rawURL, err)
+		// A transport failure is transient by nature and worth one retry, but
+		// only when the context is still live -- a cancelled request is not a
+		// blip and must not be retried.
+		return Result{}, ctx.Err() == nil, fmt.Errorf("coinank: fetch %s: %w", rawURL, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBodyBytes))
 	if err != nil {
-		return Result{}, info, fmt.Errorf("coinank: read body: %w", err)
+		return Result{}, ctx.Err() == nil, fmt.Errorf("coinank: read body: %w", err)
 	}
 	info.Status = resp.StatusCode
 	info.FetchedAt = f.now().Unix()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return Result{}, info, fmt.Errorf("coinank: HTTP %d from %s", resp.StatusCode, rawURL)
+		transient := resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500
+		return Result{}, transient, fmt.Errorf("coinank: HTTP %d from %s", resp.StatusCode, rawURL)
 	}
 
+	res, err := Decode(rawURL, body)
+	if err != nil {
+		return res, transientRefusal(err), err
+	}
+
+	// Cache ONLY a body that DECODED. This write used to happen before Decode,
+	// which meant a refused envelope (`success:false`) was stored as if it were
+	// data: a warm read then re-decoded it, failed, and fell through to a
+	// re-fetch, so the poisoning was survivable but it wasted one of the 64
+	// slots and left a body on disk that no reader would ever accept.
 	f.writeCache(Entry{
 		URL:       rawURL,
 		Status:    resp.StatusCode,
 		Body:      string(body),
 		FetchedAt: f.now().Unix(),
 	})
-
-	res, err := Decode(rawURL, body)
-	return res, info, err
+	return res, false, nil
 }
 
 // Decode parses an upstream body into a Result.
