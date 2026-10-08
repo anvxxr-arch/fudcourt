@@ -275,6 +275,22 @@ surfaced. The two modes left dark are `funding` and `unlocks`: both are **DISABL
 `chainrank`/`khala` stay retired (DR-041). The monitor covers the new surfaces with 18 checks
 (5 board pages + 13 mode reads) from the repo script, so no cron edit was needed.
 
+**F10 — the last four idle modes are consumed; no live row is left unwired (2026-10-08).** After F9,
+four `acq` modes still carried real rows with no board reading them: `cryptorank` `converter`
+(the full price list — every coin CryptoRank tracks, priced) and the keyed `ecosystem` and
+`rwaasset` details, plus `coinank` `fundingRate` (the per-symbol funding matrix). Two new public
+boards consume the list modes — `/screener` (`converter`) and `/funding` (`coinank` `fundingRate`)
+— and the two keyed details become drill-downs inside the boards that already list their index:
+`/chains` gains a per-`ecosystem` section and `/breadth` gains a per-`rwaasset` section (the key is
+the row's own `detailKey`). With this, **every live `acq` mode that carries rows is read by a
+surface**; the only modes still dark are the two DISABLED decoys (`funding`, `unlocks`) and the
+retired families (`chainrank`/`khala`, DR-041). `converter` and `fundingRate` are the two widest
+datasets in the app — ~5.4k priced coins vs the 100-row `coins` board, and 885 symbols across ~11
+USDT venues vs CoinGlass's 50 most extreme. Never-fake holds: `converter` ships no change column
+(`changeSource: 'unavailable'`) so the board states that rather than printing a flat 0, and every
+`fundingRate` (a FRACTION upstream) renders ×100 as a percent with a null rate as `—`. The monitor
+gains 6 checks (2 board pages + the `converter`, `ecosystem`, `rwaasset` and `fundingRate` reads).
+
 ## 5. Verification
 
 ```

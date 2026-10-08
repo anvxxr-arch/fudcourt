@@ -1,5 +1,5 @@
 /**
- * The chain & ecosystem directory's client — the three upstream reads, typed.
+ * The chain & ecosystem directory's client — the four upstream reads, typed.
  *
  * TYPING / DISPLAY MIRROR ONLY. Every read goes through the collapsed API
  * gateway (`app/(frontend)/api/[...path]/route.ts`), which forwards verbatim to
@@ -14,7 +14,7 @@
  * error to surface — never an empty board.
  */
 import { getJSON } from '@/lib/fetch';
-import type { ChainDetail, ChainRow, ChainTokenRow, ChainsChangeSource, EcosystemRow } from './model';
+import type { ChainDetail, ChainRow, ChainTokenRow, ChainsChangeSource, EcosystemCoinRow, EcosystemDetail, EcosystemRow } from './model';
 
 /** The envelope fields every CryptoRank mode shares. */
 export type CryptorankEnvelope = {
@@ -37,6 +37,8 @@ export type BlockchainsEnvelope = CryptorankEnvelope & { kind: 'blockchains'; ch
 export type EcosystemsEnvelope = CryptorankEnvelope & { kind: 'ecosystems'; ecosystemRows?: EcosystemRow[] };
 /** `mode=chain&key=<slug>` — the chain header (`chain`) plus its token array (`rows`). */
 export type ChainEnvelope = CryptorankEnvelope & { kind: 'chain'; chain?: ChainDetail; rows?: ChainTokenRow[] };
+/** `mode=ecosystem&key=<slug>` — the ecosystem header (`ecosystem`) plus its coin rows (`rows`). */
+export type EcosystemEnvelope = CryptorankEnvelope & { kind: 'ecosystem'; ecosystem?: EcosystemDetail; rows?: EcosystemCoinRow[] };
 
 /** A read that either resolved to a payload or failed with a reason — never both. */
 export type Source<T> = { data: T | null; error: string | null };
@@ -68,4 +70,9 @@ export function fetchEcosystems(signal?: AbortSignal): Promise<Source<Ecosystems
 /** `mode=chain&key=<slug>` — one chain's header and its ecosystem tokens. */
 export function fetchChain(slug: string, signal?: AbortSignal): Promise<Source<ChainEnvelope>> {
   return read<ChainEnvelope>(`/api/cryptorank?mode=chain&key=${slug}`, signal);
+}
+
+/** `mode=ecosystem&key=<slug>` — one ecosystem's header and its coin rows. */
+export function fetchEcosystem(slug: string, signal?: AbortSignal): Promise<Source<EcosystemEnvelope>> {
+  return read<EcosystemEnvelope>(`/api/cryptorank?mode=ecosystem&key=${slug}`, signal);
 }

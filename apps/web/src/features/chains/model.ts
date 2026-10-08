@@ -92,6 +92,38 @@ export type ChainTokenRow = {
   change24h: number | null;
 };
 
+/** The native coin CryptoRank ships in an ecosystem header; `change24h` is a PERCENT. */
+export type EcosystemCoin = {
+  key: string;
+  name: string;
+  symbol: string | null;
+  priceUsd: number | null;
+  /**
+   * A PERCENT number (e.g. -1.71 = -1.71%), unlike the coin-change fractions the
+   * asset boards carry — so the board renders it with a percent sign, not ×100.
+   */
+  change24h: number | null;
+};
+
+/** The ecosystem header CryptoRank ships beside `mode=ecosystem` rows. */
+export type EcosystemDetail = {
+  slug: string;
+  name: string;
+  /** Upstream HTML (`<p>…</p>`) — the board strips the tags and shows upstream's words. */
+  description: string | null;
+  /** The chain upstream keys this ecosystem to; null when it published none. */
+  blockchain: { key: string; name: string } | null;
+  /** The ecosystem's native coin quote; null -> the header states no quote. */
+  coin: EcosystemCoin | null;
+};
+
+/**
+ * One coin row inside `mode=ecosystem&key=<slug>`. It is the SAME shape the
+ * chain detail ships (`ChainTokenRow`), so the two keyed drill-downs render
+ * alike — an alias, not a copy, so the two cannot drift apart.
+ */
+export type EcosystemCoinRow = ChainTokenRow;
+
 /** How the envelope's change column was obtained (mirrors the sidecar field). */
 export type ChainsChangeSource = 'direct' | 'derived-from-histPrices-24H' | 'unavailable';
 
@@ -276,5 +308,70 @@ export function readChainDetail(
     lastIndex,
     change: readChangeColumn(changeSource),
     pageNote,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The keyed ecosystem drill-down — mode=ecosystem&key=<slug>
+// ---------------------------------------------------------------------------
+
+/**
+ * Strip upstream's HTML from the ecosystem description, so the board shows the
+ * words rather than the markup. Tags become a space and whitespace runs collapse;
+ * an empty result (or no description at all) is null -> the em-dash, never ''.
+ */
+export function stripHtml(html: string | null): string | null {
+  if (html === null) return null;
+  const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return text === '' ? null : text;
+}
+
+/** One line stating the native-coin quote's provenance, since its change24h is a PERCENT. */
+export function nativeCoinNote(coin: EcosystemCoin | null): string {
+  if (coin === null) return 'upstream shipped no native-coin quote for this ecosystem';
+  return `upstream's own ${coin.symbol ?? coin.name} quote — change24h here is a PERCENT (e.g. -1.71 = -1.71%), not the fraction the asset boards carry`;
+}
+
+/** One ecosystem's drill-down, read: the header, the coin rows, and the slice they sit in. */
+export type EcosystemDetailBoard = {
+  ecosystem: EcosystemDetail | null;
+  rows: EcosystemCoinRow[];
+  /** How many coin rows this read shipped (SSR page 1 only, 30). */
+  shown: number;
+  /** Upstream's stated full size, when it names one (1077), else null. */
+  upstreamTotal: number | null;
+  /** The slice line, e.g. `30 of 1077 coins`. */
+  sliceNote: string;
+  /** Upstream's description as plain text (HTML stripped), or null when absent. */
+  descriptionText: string | null;
+  change: { available: boolean; note: string | null };
+};
+
+/**
+ * Read one ecosystem's drill-down. The slice is stated because "the 30 coins on
+ * SSR page 1" and "the 1077 the ecosystem holds" are different claims, and only
+ * the first is what this read shipped. The change column follows the same rule
+ * as the chain detail: an `unavailable` source renders the em-dash on every row
+ * rather than a 0 that would read as a flat market.
+ */
+export function readEcosystemDetail(
+  ecosystem: EcosystemDetail | null,
+  rows: readonly EcosystemCoinRow[],
+  upstreamTotal: number | null,
+  changeSource: ChainsChangeSource | undefined,
+): EcosystemDetailBoard {
+  const shown = rows.length;
+  const sliceNote =
+    upstreamTotal === null
+      ? `${shown} coins — upstream stated no total, so this board reads only the ${shown} it shipped`
+      : `${shown} of ${upstreamTotal} coins`;
+  return {
+    ecosystem,
+    rows: [...rows],
+    shown,
+    upstreamTotal,
+    sliceNote,
+    descriptionText: stripHtml(ecosystem?.description ?? null),
+    change: readChangeColumn(changeSource),
   };
 }

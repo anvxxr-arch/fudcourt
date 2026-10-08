@@ -33,6 +33,8 @@ const SectorsPage = dynamic(() => import('@/features/sectors/ui'), { ssr: false 
 const CoinsPage = dynamic(() => import('@/features/coins/ui'), { ssr: false });
 const MediaPage = dynamic(() => import('@/features/media/ui'), { ssr: false });
 const InsightsPage = dynamic(() => import('@/features/insights/ui'), { ssr: false });
+const ScreenerPage = dynamic(() => import('@/features/screener/ui'), { ssr: false });
+const FundingPage = dynamic(() => import('@/features/funding/ui'), { ssr: false });
 
 type DbData = {
   assets: Asset[];
@@ -143,6 +145,8 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     { key: 'coins', label: 'Coins' },
     { key: 'media', label: 'Media' },
     { key: 'insights', label: 'Insights' },
+    { key: 'screener', label: 'Screener' },
+    { key: 'funding', label: 'Funding' },
     { key: 'news', label: 'News' },
     { key: 'proof', label: 'Proof of treasury' },
   ];
@@ -217,6 +221,14 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     insights: {
       title: 'Quarterly & AI digest',
       sub: 'Quarterly returns, beside the CryptoRank market read',
+    },
+    screener: {
+      title: 'Full price list',
+      sub: 'Every coin CryptoRank tracks, priced',
+    },
+    funding: {
+      title: 'Per-symbol funding rates',
+      sub: 'Funding across every venue CoinAnk tracks',
     },
   };
   const boardKey = page.startsWith('market') ? 'market' : page;
@@ -319,6 +331,8 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'coins' && <CoinsPage />}
       {page === 'media' && <MediaPage />}
       {page === 'insights' && <InsightsPage />}
+      {page === 'screener' && <ScreenerPage />}
+      {page === 'funding' && <FundingPage />}
       {page === 'news' && <NewsPage />}
       {page === 'proof' && <ProofPage />}
 

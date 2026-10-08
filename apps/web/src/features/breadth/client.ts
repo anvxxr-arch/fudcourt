@@ -25,6 +25,7 @@ import type {
   BreadthNdKey,
   BreadthNodesaleRow,
   BreadthRwaRow,
+  RwaAssetDetail,
 } from './model';
 
 /** The envelope fields every CryptoRank mode shares. */
@@ -56,6 +57,8 @@ export type CategoriesEnvelope = CryptorankEnvelope & {
 };
 /** `mode=exchanges&key=<variant>` — the ranked venues. */
 export type ExchangesEnvelope = CryptorankEnvelope & { kind: 'exchanges'; rows?: BreadthExchangeRow[] };
+/** `mode=rwaasset&key=<plural-type>/<slug>` — one RWA asset's keyed detail. */
+export type RwaAssetEnvelope = CryptorankEnvelope & { kind: 'rwaasset'; rwaAsset?: RwaAssetDetail };
 
 /** A read that either resolved to a payload or failed with a reason — never both. */
 export type Source<T> = { data: T | null; error: string | null };
@@ -97,4 +100,15 @@ export function fetchCategories(slug: string, signal?: AbortSignal): Promise<Sou
 /** `mode=exchanges&key=…` — the venue ranking for one variant. */
 export function fetchExchanges(key: BreadthExchangeKey, signal?: AbortSignal): Promise<Source<ExchangesEnvelope>> {
   return read<ExchangesEnvelope>(`/api/cryptorank?mode=exchanges&key=${key}`, signal);
+}
+
+/**
+ * `mode=rwaasset&key=…` — one RWA asset's keyed detail. The key is the
+ * `detailKey` an `mode=rwa` row already carries (e.g. `commodities/gold`), and
+ * it is passed through verbatim: the sidecar owns the `<plural-type>/<slug>`
+ * validation, so an invalid key (400) or an unknown resource (404) surfaces as
+ * this read's error side rather than a blank panel.
+ */
+export function fetchRwaAsset(detailKey: string, signal?: AbortSignal): Promise<Source<RwaAssetEnvelope>> {
+  return read<RwaAssetEnvelope>(`/api/cryptorank?mode=rwaasset&key=${detailKey}`, signal);
 }

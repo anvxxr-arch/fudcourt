@@ -33,9 +33,11 @@ import { Stat } from '@/ui/stat';
 import {
   fetchBlockchains,
   fetchChain,
+  fetchEcosystem,
   fetchEcosystems,
   type BlockchainsEnvelope,
   type ChainEnvelope,
+  type EcosystemEnvelope,
   type EcosystemsEnvelope,
   type Source,
 } from './client';
@@ -43,9 +45,11 @@ import {
   CHAINS_DETAIL_PAGE_SIZE,
   capCoverageNote,
   filterChains,
+  nativeCoinNote,
   readChainDetail,
   readChainDirectory,
   readEcosystemBoard,
+  readEcosystemDetail,
   type ChainDirectoryBoard,
   type ChainRow,
 } from './model';
@@ -497,6 +501,173 @@ function EcosystemSection() {
 }
 
 // ---------------------------------------------------------------------------
+// (5) The keyed ecosystem drill-down — mode=ecosystem&key=<slug>
+// ---------------------------------------------------------------------------
+function EcosystemDetailRead({ slug }: { slug: string }) {
+  const src = useSource<EcosystemEnvelope>((s) => fetchEcosystem(slug, s), `ecosystem:${slug}`);
+
+  if (src === null) {
+    return <Loading what={`the ${slug} ecosystem`} />;
+  }
+  if (src.data === null) {
+    return (
+      <ErrorState
+        title={`Could not load the '${slug}' ecosystem`}
+        detail={src.error ?? 'the upstream returned no header and named no reason'}
+      />
+    );
+  }
+
+  const board = readEcosystemDetail(
+    src.data.ecosystem ?? null,
+    src.data.rows ?? [],
+    src.data.upstreamTotal ?? null,
+    src.data.changeSource,
+  );
+  if (board.ecosystem === null || board.rows.length === 0) {
+    return (
+      <ErrorState
+        title={`The '${slug}' ecosystem came back empty`}
+        detail="the upstream answered successfully with no header or no coin rows — an empty ecosystem is not a valid read, so this is reported as a failure, not an empty table"
+      />
+    );
+  }
+
+  const eco = board.ecosystem;
+  const coin = eco.coin;
+  return (
+    <>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
+        <Stat
+          label="Ecosystem"
+          value={text(eco.name)}
+          hint={eco.blockchain ? `blockchain ${text(eco.blockchain.name)}` : 'upstream stated no blockchain'}
+          valueSize={fontSize[17]}
+          style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 180px' }}
+        />
+        <Stat
+          label="Native coin"
+          value={coin ? `${text(coin.symbol)} ${fmtPrice(coin.priceUsd)}` : dash}
+          hint={coin ? `24h ${fmtPct(coin.change24h)} — upstream percent` : nativeCoinNote(coin)}
+          valueSize={fontSize[17]}
+          style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 220px' }}
+        />
+        <Stat
+          label="Coins"
+          value={num(board.shown)}
+          hint={board.sliceNote}
+          valueSize={fontSize[17]}
+          style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
+        />
+      </div>
+
+      {board.descriptionText ? (
+        <p style={{ margin: `0 0 ${space[12]}px`, fontSize: fontSize[12], color: themeColor.labelSecondary, lineHeight: lineHeight.normal }}>
+          <span style={{ color: themeColor.labelTertiary }}>upstream&apos;s own words (HTML stripped): </span>
+          {board.descriptionText}
+        </p>
+      ) : (
+        <p style={{ margin: `0 0 ${space[12]}px`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
+          upstream shipped no description for this ecosystem — shown as {dash} rather than invented.
+        </p>
+      )}
+
+      {!board.change.available ? (
+        <p style={{ margin: `0 0 ${space[8]}px`, fontSize: fontSize[12], color: themeColor.orange, lineHeight: lineHeight.normal }}>
+          {text(board.change.note)}.
+        </p>
+      ) : null}
+
+      <DataTable
+        head={['Rank', 'Name', 'Symbol', 'Price (USD)', 'Market cap', '24h volume', 'Category', '24h %']}
+        rows={board.rows.map((r) => ({
+          cells: [
+            <span key="rank" style={{ color: themeColor.labelTertiary }}>{num(r.rank)}</span>,
+            <span key="name" style={{ fontWeight: fontWeight.semibold }}>{text(r.name)}</span>,
+            <span key="sym" style={{ color: themeColor.labelTertiary }}>{text(r.symbol)}</span>,
+            <span key="price">{fmtPrice(r.priceUsd)}</span>,
+            <span key="mcap">{usd(r.marketCap)}</span>,
+            <span key="vol">{usd(r.volume24hUsd)}</span>,
+            <span key="cat" style={{ color: themeColor.labelTertiary }}>{text(r.category)}</span>,
+            board.change.available ? (
+              <span key="chg" style={{ color: changeColor(r.change24h) }}>{fmtPct(r.change24h)}</span>
+            ) : (
+              <span key="chg" style={{ color: themeColor.labelTertiary }} title="this mode reports no change column">
+                {dash}
+              </span>
+            ),
+          ],
+        }))}
+      />
+
+      <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
+        {board.sliceNote} — SSR ships page 1 only, so this board reads those {board.shown} and no more. 24h % is {dash} because this
+        mode reports changeSource:&apos;unavailable&apos; — an absent column, not a flat market. The native-coin quote and the
+        description above are upstream&apos;s own; the description&apos;s HTML tags are stripped for display. A blank price, cap or volume
+        is a metric upstream did not publish, shown as {dash} rather than 0. CryptoRank&apos;s own slice: {text(src.data.slice)}.
+      </p>
+    </>
+  );
+}
+
+function EcosystemDetailSection() {
+  const indexSrc = useSource<EcosystemsEnvelope>((s) => fetchEcosystems(s), 'ecosystems');
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const indexBoard = indexSrc?.data
+    ? readEcosystemBoard(indexSrc.data.ecosystemRows ?? [], indexSrc.data.upstreamTotal ?? null)
+    : null;
+
+  // The default selection is DERIVED, never a hard-coded slug: the first ecosystem
+  // the index shipped, so the drill-down loads with the selector instead of
+  // needing a click first.
+  const slug = selected ?? indexBoard?.rows[0]?.key ?? null;
+
+  return (
+    <Card
+      title="Ecosystem detail"
+      subtitle="mode=ecosystem&key=<slug> — pick an ecosystem from the index above to load it; this mode ships no change column, so the 24h % cell is — on every row"
+    >
+      {indexSrc === null ? (
+        <Loading what="the ecosystem index" />
+      ) : indexSrc.data === null ? (
+        <ErrorState
+          title="Could not load the ecosystem index"
+          detail={indexSrc.error ?? 'the upstream returned no rows and named no reason'}
+        />
+      ) : indexBoard && indexBoard.rows.length > 0 ? (
+        <>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], alignItems: 'center', marginBottom: space[12] }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: space[4], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
+              select
+              <select
+                value={slug ?? ''}
+                onChange={(e) => setSelected(e.target.value)}
+                aria-label="Select an ecosystem to load its detail"
+                style={fieldStyle}
+              >
+                {indexBoard.rows.map((e) => (
+                  <option key={e.key} value={e.key}>
+                    {e.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{indexBoard.note}</span>
+          </div>
+          {slug ? <EcosystemDetailRead key={slug} slug={slug} /> : null}
+        </>
+      ) : (
+        <ErrorState
+          title="The ecosystem index came back empty"
+          detail="the upstream answered successfully with no rows — reported as a failure, not an empty table"
+        />
+      )}
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // The route surface — the directory owns the selection; a failed read never blanks another section.
 // ---------------------------------------------------------------------------
 export default function ChainsDirectory() {
@@ -519,6 +690,7 @@ export default function ChainsDirectory() {
       <DirectoryCard src={src} board={board} selected={slug} onSelect={setSelected} />
       {slug ? <DetailSection key={slug} slug={slug} /> : null}
       <EcosystemSection />
+      <EcosystemDetailSection />
       <p style={{ margin: 0, fontSize: fontSize[11], color: themeColor.labelTertiary, letterSpacing: letterSpacing.xs, lineHeight: lineHeight.normal }}>
         One chain directory, its ecosystem index and a keyed per-chain detail. Every board states its slice; a metric CryptoRank did
         not publish renders —, never 0; the detail&apos;s change column is named as unavailable rather than printed as a flat 0; and a

@@ -54,6 +54,31 @@ export type BreadthRwaRow = {
   mainTokenKey: string | null;
 };
 
+/**
+ * One RWA asset's keyed detail, as CryptoRank's `rwaasset` mode ships it — the
+ * drill-down an `rwa` row opens by its `detailKey`.
+ */
+export type RwaAssetDetail = {
+  slug: string;
+  /** `<plural-type>/<slug>` — the key this detail was read by. */
+  detailKey: string;
+  ticker: string;
+  name: string;
+  /** Upstream's own label ('commodity' | 'stock' | 'etf' | 'bond'). */
+  type: string;
+  image: string | null;
+  priceUsd: number | null;
+  /** A FRACTION, not a percent — see `rwaChangePercent`. */
+  change24h: number | null;
+  /** The absolute price change upstream states beside the fraction. */
+  change24hAbs: number | null;
+  /** Upstream's market-state label; null = the last session close, shown as —. */
+  marketState: string | null;
+  currency: string | null;
+  quoteUpdatedAt: string | null;
+  isLeveraged: boolean;
+};
+
 /** One launchpool event row (`mode=launchpool&key=<past|upcoming|active>`). */
 export type BreadthLaunchpoolRow = {
   key: string;
@@ -327,6 +352,38 @@ export function readRwaBoard(rows: readonly BreadthRwaRow[], upstreamTotal: numb
       ? `showing ${shown} RWA assets — upstream stated no total, so the ranking is over these ${shown} alone`
       : `${shown} of ${upstreamTotal} upstream — the board reads the ${shown} on SSR page 1, and its ranking is over those ${shown}, not the whole index`;
   return { rows: [...rows], typeMix, leveraged, slice: { shown, upstreamTotal, note } };
+}
+
+/** The keyed RWA-asset detail, read: its quote plus the derivations the header renders. */
+export type RwaAssetRead = {
+  asset: RwaAssetDetail;
+  /** `change24h` as a PERCENT (the field is a fraction upstream), or null. */
+  changePercent: number | null;
+  /** A line stating whether upstream published a marketState, and what a null means. */
+  marketStateNote: string;
+};
+
+/**
+ * Read one RWA asset's keyed detail.
+ *
+ * `change24h` is a FRACTION upstream — the same field the `mode=rwa` rows carry
+ * — so the percent is `rwaChangePercent` of it: the EXISTING derivation is
+ * reused, not re-derived, so the index and the drill-down cannot drift. A null
+ * fraction stays null (never 0).
+ *
+ * `marketState` may be null, which means the quote is the last session close
+ * rather than a guessed open/closed state; the note says so and the header
+ * renders — for it.
+ */
+export function readRwaAsset(asset: RwaAssetDetail): RwaAssetRead {
+  return {
+    asset,
+    changePercent: rwaChangePercent(asset.change24h),
+    marketStateNote:
+      asset.marketState === null
+        ? 'upstream states no marketState for this quote — it is the last session close, and marketState renders — rather than a guessed open/closed state'
+        : `upstream's own marketState for this quote is ${asset.marketState}`,
+  };
 }
 
 /** The sector-rotation board, read. */

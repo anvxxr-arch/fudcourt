@@ -46,6 +46,8 @@ export const VIEW_PATHS: Record<string, string> = {
   coins: '/coins',
   media: '/media',
   insights: '/insights',
+  screener: '/screener',
+  funding: '/funding',
   // CEX Executor (PRD §81): a multi-route area (/executor/new, /:id, …), not a
   // single shell tab — this entry is the canonical deep link for nav callers.
   executor: '/executor',

@@ -34,10 +34,12 @@ import {
   fetchLaunchpool,
   fetchNodesale,
   fetchRwa,
+  fetchRwaAsset,
   type CategoriesEnvelope,
   type ExchangesEnvelope,
   type LaunchpoolEnvelope,
   type NodesaleEnvelope,
+  type RwaAssetEnvelope,
   type RwaEnvelope,
   type Source,
 } from './client';
@@ -54,6 +56,7 @@ import {
   readCategoryBoard,
   readEventList,
   readExchangeBoard,
+  readRwaAsset,
   readRwaBoard,
   rwaChangePercent,
   type BreadthCategorySlug,
@@ -136,6 +139,17 @@ function selectorStyle(active: boolean): CSSProperties {
     fontFamily: 'inherit',
   };
 }
+
+/** The keyed RWA-asset `<select>` field (mirrors the directory's field style). */
+const fieldStyle: CSSProperties = {
+  background: themeColor.bgTertiary,
+  color: themeColor.labelPrimary,
+  border: `1px solid ${themeColor.separator}`,
+  borderRadius: radius[8],
+  padding: `${space[8]}px ${space[12]}px`,
+  fontSize: fontSize[13],
+  fontFamily: 'inherit',
+};
 
 /**
  * One read, keyed by a selector string. The loader closure is re-created each
@@ -256,6 +270,158 @@ function RwaSection() {
         {board.slice.note}. The 24h % column is upstream&apos;s own change (a fraction upstream, shown as a percent); a blank
         price or cap is a metric upstream did not publish, shown as — rather than 0. CryptoRank&apos;s own slice: {text(src.data.slice)}.
       </p>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// (1b) RWA asset drill-down — mode=rwaasset&key=<detailKey> (keyed detail)
+// ---------------------------------------------------------------------------
+
+/** One keyed RWA-asset detail read — `mode=rwaasset&key=<detailKey>`. */
+function RwaAssetDetailCard({ detailKey }: { detailKey: string }) {
+  const src = useSource<RwaAssetEnvelope>((s) => fetchRwaAsset(detailKey, s), `rwaasset:${detailKey}`);
+
+  if (src === null) return <Loading what={`the ${detailKey} RWA asset`} />;
+  if (src.data === null) {
+    // A 400 (invalid key) or 404 (unknown resource) lands here as the error
+    // side — never an empty panel.
+    return (
+      <ErrorState
+        title={`Could not load the '${detailKey}' RWA asset`}
+        detail={src.error ?? 'the upstream returned no asset and named no reason — an invalid key or an unknown resource is reported here, never as an empty panel'}
+      />
+    );
+  }
+  const asset = src.data.rwaAsset;
+  if (!asset) {
+    return (
+      <ErrorState
+        title={`The '${detailKey}' RWA asset came back empty`}
+        detail="the upstream answered successfully with no asset — an empty detail is not a valid read, so this is reported as a failure, not an empty panel"
+      />
+    );
+  }
+
+  const read = readRwaAsset(asset);
+  const chg = read.changePercent;
+  const tone: 'neutral' | 'positive' | 'negative' =
+    chg === null || !Number.isFinite(chg) || chg === 0 ? 'neutral' : chg > 0 ? 'positive' : 'negative';
+
+  return (
+    <>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
+        <Stat
+          label="Ticker"
+          value={text(asset.ticker)}
+          hint={text(asset.name)}
+          valueSize={fontSize[17]}
+          style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
+        />
+        <Stat
+          label="Type"
+          value={text(asset.type)}
+          hint={`key ${detailKey}`}
+          valueSize={fontSize[17]}
+          style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 130px' }}
+        />
+        <Stat
+          label="Price (USD)"
+          value={fmtPrice(asset.priceUsd)}
+          hint={asset.currency ? `quoted in ${asset.currency}` : 'upstream stated no quote currency'}
+          valueSize={fontSize[17]}
+          style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 150px' }}
+        />
+        <Stat
+          label="24h %"
+          value={fmtPct(chg)}
+          tone={tone}
+          hint="change24h is a fraction upstream, shown ×100 as a percent"
+          valueSize={fontSize[17]}
+          style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 150px' }}
+        />
+        <Stat
+          label="24h change (abs)"
+          value={asset.change24hAbs === null ? dash : fmtPrice(asset.change24hAbs)}
+          hint="upstream's absolute price change"
+          valueSize={fontSize[17]}
+          style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
+        />
+        <Stat
+          label="Market state"
+          value={text(asset.marketState)}
+          hint={asset.marketState === null ? 'no marketState upstream — last session close' : "upstream's own label"}
+          valueSize={fontSize[13]}
+          style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 180px' }}
+        />
+        <Stat
+          label="Quote updated"
+          value={text(asset.quoteUpdatedAt)}
+          hint="upstream's own quote instant"
+          valueSize={fontSize[11]}
+          style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 220px' }}
+        />
+        <Stat
+          label="Leveraged"
+          value={asset.isLeveraged ? 'yes' : 'no'}
+          hint="row CryptoRank flags leveraged"
+          valueSize={fontSize[17]}
+          style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 120px' }}
+        />
+      </div>
+      <p style={{ margin: 0, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
+        {read.marketStateNote}. A blank price, change, market state or quote instant is a metric upstream did not publish,
+        shown as — rather than 0. CryptoRank&apos;s own slice: {text(src.data.slice)}.
+      </p>
+    </>
+  );
+}
+
+/** The RWA drill-down — a keyed selector over the `mode=rwa` rows. */
+function RwaAssetSection() {
+  const list = useSource<RwaEnvelope>((s) => fetchRwa(s), 'rwa:asset-list');
+  const [selected, setSelected] = useState<string | null>(null);
+
+  if (list === null) return <Loading what="the RWA asset list" />;
+  if (list.data === null) return <ReadFailure title="Could not load the RWA asset list" error={list.error} />;
+
+  const rows = list.data.rwaRows ?? [];
+  if (rows.length === 0) {
+    return (
+      <ErrorState
+        title="The RWA index came back empty"
+        detail="the upstream answered successfully with no rows — an empty selector is not a valid read, so this is reported as a failure, not an empty panel"
+      />
+    );
+  }
+
+  // The default selection is DERIVED, never hard-coded: the first row's
+  // detailKey, so the detail loads with the list instead of needing a click.
+  const detailKey = selected ?? rows[0].detailKey;
+
+  return (
+    <Card
+      title="RWA asset drill-down"
+      subtitle="one tokenized asset at a time — the key is the row's detailKey; an invalid key or an unknown resource is reported as an error, never an empty panel"
+      right={
+        <label style={{ display: 'flex', alignItems: 'center', gap: space[4], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
+          asset
+          <select
+            value={detailKey}
+            onChange={(e) => setSelected(e.target.value)}
+            aria-label="Select an RWA asset to load its detail"
+            style={fieldStyle}
+          >
+            {rows.map((r: BreadthRwaRow) => (
+              <option key={r.detailKey} value={r.detailKey}>
+                {text(r.ticker)} · {text(r.name)}
+              </option>
+            ))}
+          </select>
+        </label>
+      }
+    >
+      <RwaAssetDetailCard key={detailKey} detailKey={detailKey} />
     </Card>
   );
 }
@@ -646,6 +812,7 @@ export default function BreadthBoards() {
   return (
     <div style={{ display: 'grid', gap: space[16] }}>
       <RwaSection />
+      <RwaAssetSection />
       <LaunchCalendarSection />
       <SectorSection />
       <ExchangeSection />

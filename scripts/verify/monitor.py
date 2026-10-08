@@ -15,7 +15,8 @@ Checks:
      /cryptorank page was retired in b8e27c6 -- assert the page that ships)
   3. /api/cryptorank?mode=home     -> 200 + count/rows non-empty + upstream field
   4. /api/cryptorank?mode=coins    -> 200
-  5. /api/cryptorank?mode=converter-> 200 (full-list converter path)
+  5. /api/cryptorank?mode=converter-> 200 + non-empty (full-list converter path,
+     the widest price list -- ~5.4k coins; a rotated shape returns 200 with 0 rows)
   6. /api/cryptorank?mode=newstag&key=defi -> 200 (keyed soft-404 handler)
   7. /api/cryptorank?mode=funding  -> 503 (decoy refusal still armed)
 
@@ -58,6 +59,14 @@ Checks:
      quotes) and the true upstream row count as `upstreamCount`; the non-empty
      predicate understands both shapes, so a healthy venue response no longer
      reads as "no count/rows in envelope". Every one of them is keyless.
+
+  14. The TIER-3 last idle modes come online (5 endpoint checks): the two new board
+     pages /screener + /funding, and the four widest mode reads -- cryptorank
+     ecosystem&key=ethereum, rwaasset&key=commodities/gold and coinank fundingRate
+     (885 symbols). These are the last live modes that carried rows with no board
+     reading them; the converter path (check 5) is the widest price list. Each of
+     the keyed details is a soft-404 handler (a rotated slug 404s) and the funding
+     matrix is 885 rows across ~11 venues.
 
 Override target with MONITOR_BASE (used by the failure-path self-test). The two
 direct probes are overridable too: SIDECAR_HEALTH / RECONCILE_HEALTH.
@@ -107,7 +116,7 @@ CHECKS = [
     ("board page", "/", 200, False),
     ("mode=home", "/api/cryptorank?mode=home", 200, True),
     ("mode=coins", "/api/cryptorank?mode=coins", 200, False),
-    ("mode=converter", "/api/cryptorank?mode=converter", 200, False),
+    ("mode=converter", "/api/cryptorank?mode=converter", 200, True),
     ("mode=newstag&key=defi", "/api/cryptorank?mode=newstag&key=defi", 200, False),
     ("mode=funding (decoy refusal)", "/api/cryptorank?mode=funding", 503, False),
     ("markets (coingecko)", "/api/markets?seartc&limit=5", 200, True),
@@ -143,6 +152,11 @@ CHECKS = [
     ("cryptorank aioverview", "/api/cryptorank?mode=aioverview", 200, True),
     ("coinglass openInterest BTC", "/api/coinglass?mode=openInterest&symbol=BTC", 200, True),
     ("coinmarketcap marketPairs bitcoin", "/api/coinmarketcap?mode=marketPairs&slug=bitcoin", 200, True),
+    ("board page /screener", "/screener", 200, False),
+    ("board page /funding", "/funding", 200, False),
+    ("cryptorank ecosystem ethereum", "/api/cryptorank?mode=ecosystem&key=ethereum", 200, True),
+    ("cryptorank rwaasset commodities/gold", "/api/cryptorank?mode=rwaasset&key=commodities/gold", 200, True),
+    ("coinank fundingRate", "/api/coinank?mode=fundingRate", 200, True),
 ]
 
 

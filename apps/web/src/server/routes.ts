@@ -289,4 +289,20 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
       'BTC and ETH quarterly open/close with return percentages computed and labelled, next to the CryptoRank generated AI market digest, its funding rounds and its drop-hunting and vesting slices.',
     priority: 0.6,
   },
+  {
+    // Full price list — the CryptoRank/CoinAnk screener surface (the last idle modes come online).
+    path: '/screener',
+    title: 'Full price list | FUDCOURT',
+    description:
+      'The full price list read verbatim from the CryptoRank converter payload: all 5413 tracked coins with their live price, filterable and paginated client-side. The mode ships price only, so there is no change column — never a zero.',
+    priority: 0.6,
+  },
+  {
+    // Per-symbol funding rates — the CryptoRank/CoinAnk funding surface (the last idle modes come online).
+    path: '/funding',
+    title: 'Per-symbol funding rates | FUDCOURT',
+    description:
+      'Per-symbol funding rates across every venue CoinAnk tracks: 885 symbols, each with its USDT- and COIN-margined rate maps, filterable and sortable, with a per-symbol venue drill-down. Rates are fractions rendered as percents; an absent venue is simply absent.',
+    priority: 0.6,
+  },
 ];
