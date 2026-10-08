@@ -248,7 +248,7 @@ for p in ["/robots.txt", "/sitemap.xml"]:
 
 print("=== B. anonymous gates ===", flush=True)
 for p in ["/team/balance", "/team/portfolio", "/team/wallets", "/team/transactions",
-          "/team/reconciliation", "/member", "/admin"]:
+          "/team/reconciliation", "/team/journal", "/team/plans", "/member", "/admin"]:
     st, b = hit(p, timeout=60)
     rec("gate", f"{p} anon -> 307 login", st, 307, b)
 
@@ -259,6 +259,8 @@ for p, name in [("/api/all", "/api/all anon -> 401"),
                 ("/api/wallets", "/api/wallets (list) anon -> 401"),
                 ("/api/reconcile", "/api/reconcile anon -> 401"),
                 ("/api/transactions?limit=5", "/api/transactions?limit=5 anon -> 401"),
+                ("/api/journal", "/api/journal anon -> 401"),
+                ("/api/plans", "/api/plans anon -> 401"),
                 ("/api/admin/members", "/api/admin/members anon -> 401")]:
     st, b = hit(p)
     rec("api", name, st, 401, b)
@@ -394,6 +396,18 @@ if SESSION_OK:
     for p in ["/member", "/team/balance", "/admin"]:
         st, b = hit(p, timeout=60, cookie=SESSION)
         rec("gate-auth", f"{p} admin-cookie -> 200", st, 200, b)
+    # The gated READ the /team/plans board depends on: a session must open it,
+    # and it must answer its own shape (a `plans` list + an integer `total`) --
+    # not merely a 200 with an envelope that could be anything.
+    st, b = hit("/api/plans", cookie=SESSION)
+    ok_shape = False
+    n = 0
+    if isinstance(b, dict):
+        plans_list = b.get("plans")
+        if isinstance(plans_list, list) and isinstance(b.get("total"), int):
+            ok_shape = True
+            n = len(plans_list)
+    rec("api-auth", f"/api/plans admin-cookie -> 200 + plans/total ({n} plans)", st if (st == 200 and ok_shape) else 0, 200, b)
 else:
     # ENVIRONMENTAL: this audit target cannot authenticate anyone, so the
     # session-gated path is unexercised rather than broken.
@@ -401,6 +415,7 @@ else:
         rec("mut-env", f"{name} admin-cookie -> {want} [ENV: {SESSION_WHY}]", 0, want, {})
     for p in ["/member", "/team/balance", "/admin"]:
         rec("gate-auth-env", f"{p} admin-cookie -> 200 [ENV: {SESSION_WHY}]", 0, 200, {})
+    rec("api-auth-env", f"/api/plans admin-cookie -> 200 + plans/total [ENV: {SESSION_WHY}]", 0, 200, {})
 
 print("=== E. cryptorank: 28 modes + contract ===", flush=True)
 CR = [

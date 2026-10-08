@@ -222,6 +222,8 @@ the full judgment record for the grouping is §4 of that file.
 | team | wallets | `/team/wallets` | `WalletPage` | props |
 | team | transactions | `/team/transactions` | `TransactionPage` | `/api/transactions` |
 | team | reconciliation | `/team/reconciliation` | `ReconciliationPage` | props |
+| team | journal | `/team/journal` | `JournalPage` | `/api/journal` (paged double-entry lines, `/api/journal?limit&offset`) |
+| team | plans | `/team/plans` | `PlansPage` | `/api/plans` (the paper-plan ledger written by `fudcourt-signals.timer`) |
 | member | overview | `/member` | shell (boards) | session only |
 | admin | control panel | `/admin` | `MemberTable` + audit | `/api/admin/members` + `/api/all` |
 | public | home | `/` | `HomePage` (12 sections) | `/api/cryptorank?mode={home,trending,gainers,losers}` · `/api/markets` · `/api/llama?mode=protocols` · `/api/market/{forex,commodity,stock,macro,indonesia}` · `/api/news` · `/api/signals?type=scoreboard` |
@@ -323,7 +325,7 @@ implies team implies member.
 |---|---|---|
 | `public` | `/`, the market boards (`BOARD_TABS`: `market`, `signals`, `scoreboard`, `news`), public market APIs | none (deliberate) |
 | `member` | `/member` | middleware + page `requireTier('member')` |
-| `team` | `/team/{balance,portfolio,wallets,transactions,reconciliation}` + treasury APIs | middleware + page + server-side write check |
+| `team` | `/team/{balance,portfolio,wallets,transactions,reconciliation,journal,plans}` + treasury APIs | middleware + page + server-side write check |
 | `admin` | `/admin` (member list, role grant/revoke, treasury audit) + `/api/admin/members` | middleware + page + API re-check |
 
 - Route policy is one table (`src/server/auth.ts` → `requiredTierForPath`), consumed

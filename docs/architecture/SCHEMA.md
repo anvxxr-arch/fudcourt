@@ -62,6 +62,25 @@ chain; `value_usd` summed for net worth. Every `INSERT` is snapshotted into the
 | `trades` | `ORDER BY date DESC LIMIT 20` |
 | `net_worth` | derived: `SELECT SUM(value_usd) FROM assets` |
 
+### 1.5 `signal_plans` — the paper-plan ledger (written by the signal pipeline)
+Created and written by `scripts/tools/signal-pipeline.py` (the `fudcourt-signals`
+systemd pair), NOT by `pg-schema.sql` — so the DDL lives in that script, not the
+schema file. One row per surfaced signal, **keyed `(chain, mint)`**: a token still
+surfaced on a later run refreshes `score`/`decision`/`planned_at` and never
+re-plans (DR-050). Read by `apps/web/src/server/plans.ts` for `/api/plans`.
+
+| Column | Notes |
+|--------|-------|
+| `chain`, `mint` | **primary key** — the plan's identity, one plan per token |
+| `symbol`, `decision`, `score` | the signal that produced the plan (`decision` e.g. `surfaced`) |
+| `entry_usd`, `stop_usd`, `target_usd` | the price legs; can be sub-`1e-6` on memecoins |
+| `quantity`, `notional_usd`, `risk_usd`, `risk_pct` | the size (`risk_usd = equity_usd × risk_pct/100`) |
+| `equity_usd`, `stop_pct` | the equity the plan was sized against, and the stop distance |
+| `capped` | `true` when `max_notional_pct` clipped the size rather than risk doing it |
+| `mode` | always `paper` — this pipeline never places an order |
+| `status`, `reason` | `planned`, or a stated skip reason |
+| `planned_at` | `timestamptz`, defaults `now()`; the board orders on it |
+
 ## 2. Neon Postgres (payload CMS, merged into apps/web) — 3.89
 
 Source of truth: `apps/web/src/cms/migrations/20260917_194354.ts`.

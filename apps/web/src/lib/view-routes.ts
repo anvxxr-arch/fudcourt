@@ -17,6 +17,9 @@ export const VIEW_PATHS: Record<string, string> = {
   pnl: '/team/pnl',
   // The derived double-entry journal, trial balance and flows (DR-047).
   journal: '/team/journal',
+  // The paper-plan ledger (DR-050): the risk-sized plans signal-pipeline.py
+  // records per surfaced signal — the table's first reader.
+  plans: '/team/plans',
   market: '/market',
   'market-crypto': '/market/crypto',
   'market-forex': '/market/forex',

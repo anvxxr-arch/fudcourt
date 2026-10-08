@@ -186,6 +186,9 @@ const TEAM_API_ROUTES = [
   '/api/pnl',
   // The derived double-entry journal (DR-047). Same private ledger, same tier.
   '/api/journal',
+  // The paper-plan ledger (DR-050). The stored plans carry the account's own
+  // equity and risk figures — the same private ledger the routes above gate.
+  '/api/plans',
   // The macro regime joined with the treasury's own exposure to it (plan Phase
   // 13). The regime alone is public at /api/economy/regime — it describes asset
   // CLASSES. This route adds the holdings behind them, so it carries the tier
