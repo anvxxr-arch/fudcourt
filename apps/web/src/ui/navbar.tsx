@@ -60,10 +60,16 @@ export function Navbar() {
             // inline style and so cannot use the `td > a::after` overlay the
             // table cells get — it needs no overlay, because unlike them it is
             // ours to style directly.
-            paddingTop: 2,
-            paddingBottom: 2,
-            marginTop: -2,
-            marginBottom: -2,
+            //
+            // 3px, not 2px: the first attempt used 2px and produced a box of
+            // 23.9px. `getBoundingClientRect()` ROUNDS, so it reported "24" and
+            // looked correct; the residual survey re-listed it as below the floor
+            // because `height >= 24` was false. A rounded measurement is not a
+            // passing measurement -- read the raw rect, and leave headroom.
+            paddingTop: 3,
+            paddingBottom: 3,
+            marginTop: -3,
+            marginBottom: -3,
             marginRight: space[8],
             flexShrink: 0,
           }}

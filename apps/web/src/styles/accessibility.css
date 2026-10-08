@@ -162,6 +162,46 @@ th > button::after {
   height: max(100%, 24px);
 }
 
+/* The residual: standalone links and buttons that are neither in a table cell nor
+ * inline in a sentence. This is the part of the app-wide measurement that is left
+ * after the cell overlay and the checkbox transform.
+ *
+ * Same `::after` mechanism and the same argument as the cell rule above -- the
+ * overlay is layout-neutral and `max(100%, 24px)` is a NO-OP for anything already
+ * at or above the floor, so this rule can only ever touch a control that is
+ * currently a violation.
+ *
+ * The `:not(...)` guards are the whole safety argument, not decoration. CSS cannot
+ * express "this link is standalone", so the rule is written as "everything EXCEPT
+ * the places a link is prose": inside a paragraph, a span, a list item, or a table
+ * cell. Measured before writing it: the three stat links on `/` sit 3.5px from the
+ * next target, so a 13px link grown to 24px would reach 2px INTO a neighbour, and
+ * stealing a neighbour's taps is worse than the defect being fixed. Those live in
+ * spans and paragraphs and are excluded here on purpose -- they are reported as
+ * remaining, not as fixed.
+ *
+ * Everything admitted by the guards was measured to have room: horizontal
+ * clearance is unbounded (`lf=inf`, `rt=inf`) across every one of them, and 32 of
+ * 33 have >=8.8px vertically, against the <=5.5px a 24px box needs. The one
+ * exception is a link at 5px clearance on /executor/new, and it is inside a
+ * paragraph, so the guard keeps it out anyway.
+ */
+a:not(p a):not(span a):not(li a):not(td a):not(th a),
+button:not(p button):not(span button):not(li button):not(td button):not(th button) {
+  position: relative;
+}
+
+a:not(p a):not(span a):not(li a):not(td a):not(th a)::after,
+button:not(p button):not(span button):not(li button):not(td button):not(th button)::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max(100%, 24px);
+  height: max(100%, 24px);
+}
+
 /* The other half of the same floor, which the overlay above cannot serve.
  *
  * A checkbox is a REPLACED element: it does not generate `::before`/`::after`,
