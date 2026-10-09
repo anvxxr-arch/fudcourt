@@ -3,10 +3,10 @@ import { getJSON } from '@/lib/fetch';
 /**
  * client.ts — the treasury family's data client for `/api/treasury`.
  *
- * One endpoint, four modes (see `@/server/treasury`): `history`, `analytics`,
- * `breakdown`, `diff`. The types below mirror the route's JSON exactly; the
- * shell reads them and never reshapes, so a field added server-side shows up
- * here without a second definition to drift.
+ * One endpoint, five modes (see `@/server/treasury`): `history`, `analytics`,
+ * `breakdown`, `attribution`, `diff`. The types below mirror the route's JSON
+ * exactly; the shell reads them and never reshapes, so a field added
+ * server-side shows up here without a second definition to drift.
  *
  * The route is team-gated, so every call carries the session cookie the shell
  * already holds (same-origin `fetch` sends it by default). `cache: 'no-store'`
@@ -135,6 +135,67 @@ export function loadBreakdown(dimension: TreasuryDimension, range: TreasuryRange
 
 export function loadDiff(range: TreasuryRange): Promise<DiffResult> {
   return getJSON<DiffResult>(`/api/treasury?mode=diff&range=${range}`, { cache: 'no-store' });
+}
+
+/**
+ * One (key, asset) decomposed: the window's change for it split into the part
+ * the price moved and the part the book moved. `opened`/`closed` say WHY a price
+ * effect is 0 (nothing to reprice / no end price), which is not the same claim as
+ * "the price did not move".
+ */
+export type AttributionPair = {
+  key: string;
+  asset: string;
+  startQty: number;
+  endQty: number;
+  startValueUsd: number;
+  endValueUsd: number;
+  startPrice: number | null;
+  endPrice: number | null;
+  deltaUsd: number;
+  priceEffectUsd: number;
+  flowEffectUsd: number;
+  opened: boolean;
+  closed: boolean;
+  priceSharePct: number | null;
+};
+
+/** One dimension key, aggregated over its assets. */
+export type AttributionRow = {
+  key: string;
+  startValueUsd: number;
+  endValueUsd: number;
+  deltaUsd: number;
+  priceEffectUsd: number;
+  flowEffectUsd: number;
+  priceSharePct: number | null;
+  assets: number;
+  openedAssets: number;
+  closedAssets: number;
+};
+
+export type Attribution = {
+  dimension: TreasuryDimension;
+  range: TreasuryRange;
+  observations: number;
+  fromTs: string | null;
+  toTs: string | null;
+  /** Null when the window held one observation: there is no change to attribute. */
+  totalStartUsd: number | null;
+  totalEndUsd: number | null;
+  totalDeltaUsd: number | null;
+  totalPriceEffectUsd: number | null;
+  totalFlowEffectUsd: number | null;
+  residualUsd: number | null;
+  marketSharePct: number | null;
+  singleObservation: boolean;
+  rows: AttributionRow[];
+  pairs: AttributionPair[];
+};
+
+export function loadAttribution(dimension: TreasuryDimension, range: TreasuryRange): Promise<Attribution> {
+  const qs = new URLSearchParams({ mode: 'attribution', dimension, range });
+  return getJSON<Attribution>(`/api/treasury?${qs}`, { cache: 'no-store' });
 }
 
 // ---------------------------------------------------------------------------

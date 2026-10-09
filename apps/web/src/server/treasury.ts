@@ -31,6 +31,7 @@
  * so no request text ever reaches a query.
  */
 import 'server-only';
+import { buildAttribution, pairInputsFromRows, type AttrDimension, type AttributionResult } from '@/lib/attribution';
 import { query, type Row } from './db';
 
 export type RangeKey = '24h' | '7d' | '30d' | '90d';
@@ -73,6 +74,16 @@ const RUN_GAP = "INTERVAL '60 seconds'";
 /** The allowlisted dimension names, as a frozen map for `pick`. */
 const GROUP_KEYS: Record<GroupKey, 1> = { total: 1, chain: 1, wallet: 1, asset: 1 };
 
+/**
+ * The dimension allowlist. A `GroupKey` minus `total`: "total" is a chart
+ * grouping, not a dimension anything can be broken down BY, so it is not a
+ * legal `dimension=` value. It is exported as the ORDERED list because the
+ * route's 400 message must name the same set the parser enforces — one list,
+ * not two, so a message can never advertise a dimension the parser rejects.
+ */
+export const DIMENSIONS = ['chain', 'wallet', 'asset'] as const;
+const DIM_KEYS: Record<(typeof DIMENSIONS)[number], 1> = { chain: 1, wallet: 1, asset: 1 };
+
 /** An allowlisted key, or `null` for a supplied-but-unknown value (never clamped). */
 function pick<K extends string>(value: string | null, allowed: Record<K, unknown>, fallback: K): K | null {
   if (value === null || value === '') return fallback;
@@ -82,6 +93,9 @@ function pick<K extends string>(value: string | null, allowed: Record<K, unknown
 export const parseRange = (v: string | null): RangeKey | null => pick(v, RANGES, '7d');
 export const parseBucket = (v: string | null): BucketKey | null => pick(v, BUCKETS, '1h');
 export const parseGroup = (v: string | null): GroupKey | null => pick(v, GROUP_KEYS, 'chain');
+/** A dimension for the breakdown and attribution modes; `total` is not one. */
+export const parseDimension = (v: string | null): Exclude<GroupKey, 'total'> | null =>
+  pick(v, DIM_KEYS, 'chain');
 
 const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
 const iso = (v: unknown): string | null => (v === null || v === undefined ? null : new Date(String(v)).toISOString());
@@ -91,10 +105,14 @@ const iso = (v: unknown): string | null => (v === null || v === undefined ? null
  * the previous row exceeds `RUN_GAP`; `run` numbers them; `obs` collapses each
  * run to its first `ts` (`obs_ts`) — the observation time. Rows are read once,
  * in `ts` order, so the run boundaries are global across chains and assets.
+ *
+ * `quantity` rides along because the attribution mode needs it beside
+ * `value_usd` to tell a reprice from a buy. Every consumer of `run`/`ordered`
+ * names the columns it wants, so carrying one more is additive.
  */
 function sessionize(range: RangeKey): string {
   return `ordered AS (
-      SELECT ts, chain, asset, wallet, value_usd,
+      SELECT ts, chain, asset, wallet, quantity, value_usd,
              CASE WHEN lag(ts) OVER (ORDER BY ts) IS NULL
                     OR ts - lag(ts) OVER (ORDER BY ts) > ${RUN_GAP}
                   THEN 1 ELSE 0 END AS is_new
@@ -102,7 +120,7 @@ function sessionize(range: RangeKey): string {
       WHERE ts >= now() - INTERVAL '${RANGES[range]}'
     ),
     run AS (
-      SELECT ts, chain, asset, wallet, value_usd,
+      SELECT ts, chain, asset, wallet, quantity, value_usd,
              SUM(is_new) OVER (ORDER BY ts) AS run_id
       FROM ordered
     ),
@@ -484,4 +502,72 @@ export async function treasuryDiff(range: RangeKey): Promise<DiffResult> {
       source: String(r.source ?? ''),
     })),
   };
+}
+
+export type { AttrDimension, AttributionResult, AttrPair, AttrRow } from '@/lib/attribution';
+
+/**
+ * WHY the window moved — the change split into a price effect (the book as it
+ * stood, repriced) and a flow effect (the book itself changing), per (key,
+ * asset) and aggregated by key.
+ *
+ * DECOMPOSED PER ASSET, NEVER PER KEY. A chain or a wallet holds many assets, and
+ * summing their quantities yields a number that is not a quantity (BTC + USDC),
+ * so a key-level `value / qty` price would be a fabricated reading. Every pair
+ * below is one (key, asset), so each price is a real unit price; the key's row is
+ * the SUM of its assets' exact effects. `@/lib/attribution` owns that arithmetic
+ * and is unit-tested offline against fixed rows.
+ *
+ * The endpoints are the FIRST and LAST observation in the window — the same
+ * `bounds` shape `treasuryBreakdown` and `treasuryDiff` use, so all three panels
+ * describe the same two instants and cannot disagree about the window. The FULL
+ * OUTER JOIN is what lets a pair that appeared or vanished carry its whole delta
+ * instead of being dropped.
+ */
+export async function treasuryAttribution(
+  dimension: AttrDimension,
+  range: RangeKey,
+): Promise<AttributionResult> {
+  // `dimension` is an allowlist key (the route validates it before calling), and
+  // the expression comes from the frozen GROUPS map — no request text reaches SQL.
+  const dim = GROUPS[dimension];
+
+  // One pass. The endpoints are `t0`/`t1` — the first and last observation in the
+  // window — pulled as scalar subqueries and carried on every row, so the bounds
+  // and the pairs arrive together instead of sessionizing the table twice. The
+  // FULL OUTER JOIN is what makes an OPENED pair (`a` missing) and a CLOSED one
+  // (`b` missing) first-class rows rather than silently-dropped inner-join misses.
+  const rows = await query(
+    `WITH ${sessionize(range)},
+     obs_pair AS (
+       SELECT o.obs_ts AS t, ${dim} AS key, r.asset AS asset,
+              SUM(r.quantity)::float8 AS qty,
+              SUM(r.value_usd)::float8 AS v
+       FROM run r JOIN obs o ON o.run_id = r.run_id
+       GROUP BY o.obs_ts, ${dim}, r.asset
+     )
+     SELECT coalesce(a.key, b.key)     AS key,
+            coalesce(a.asset, b.asset) AS asset,
+            a.qty::float8 AS q0, a.v::float8 AS v0,
+            b.qty::float8 AS q1, b.v::float8 AS v1,
+            (SELECT min(t) FROM obs_pair) AS t0,
+            (SELECT max(t) FROM obs_pair) AS t1
+     FROM (SELECT key, asset, qty, v FROM obs_pair
+            WHERE t = (SELECT min(t) FROM obs_pair)) a
+     FULL OUTER JOIN (SELECT key, asset, qty, v FROM obs_pair
+                       WHERE t = (SELECT max(t) FROM obs_pair)) b
+       ON a.key = b.key AND a.asset = b.asset
+     ORDER BY abs(coalesce(b.v, 0) - coalesce(a.v, 0)) DESC, key ASC, asset ASC`,
+  );
+
+  const first = (rows[0] ?? {}) as Row;
+
+  return buildAttribution({
+    dimension,
+    range,
+    observations: await observations(range),
+    fromTs: iso(first.t0),
+    toTs: iso(first.t1),
+    pairs: pairInputsFromRows(rows as Record<string, unknown>[]),
+  });
 }

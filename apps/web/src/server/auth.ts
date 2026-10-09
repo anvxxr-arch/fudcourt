@@ -177,9 +177,9 @@ const TEAM_API_ROUTES = [
   '/api/reconcile',
   '/api/transactions',
   '/api/executor',
-  // The treasury time-series surface (history/analytics/breakdown/diff over
-  // `asset_history`). It reads the same private holdings the routes above
-  // gate, so it carries the same tier.
+  // The treasury time-series surface (history/analytics/breakdown/attribution/
+  // diff over `asset_history`). It reads the same private holdings the routes
+  // above gate, so it carries the same tier.
   '/api/treasury',
   // Cost basis + P&L and the implied price series (DR-046). Same private ledger
   // as the routes above, so the same tier.

@@ -21,7 +21,8 @@ import {
   type TreasuryRange,
 } from './client';
 import { DASH, usd, pct, shortTs, toneOf } from './format';
-import { Segmented, Td, Th } from './parts';
+import { Segmented, Stat, Td, Th } from './parts';
+import AttributionPanel from './attribution';
 
 // ---------------------------------------------------------------------------
 // The chart. A self-contained SVG so the panel owns no charting dependency:
@@ -120,20 +121,6 @@ function SeriesChart({ history }: { history: HistoryResult }) {
             </span>
           ))}
       </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// A single figure. `sub` carries the qualifier (a timestamp, a window) so a
-// headline number is never read without its context.
-// ---------------------------------------------------------------------------
-function Stat({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
-  return (
-    <div style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: space[12], minWidth: 132 }}>
-      <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], letterSpacing: letterSpacing.xs, textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ color: color ?? themeColor.labelPrimary, fontSize: fontSize[20], fontWeight: fontWeight.bold, marginTop: space[4] }}>{value}</div>
-      {sub && <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginTop: space[4] }}>{sub}</div>}
     </div>
   );
 }
@@ -238,6 +225,11 @@ export default function TreasuryPanel() {
           <SeriesChart history={history} />
         </div>
       )}
+
+      {/* The split of the same window's move: how much of it was the market and
+          how much was the book. It fetches on its own, so a failure here cannot
+          blank the chart above it. */}
+      <AttributionPanel range={range} />
 
       {breakdown && (
         <div style={{ background: themeColor.bgBase, border: `1px solid ${themeColor.separator}`, borderRadius: radius[12], padding: space[12] }}>

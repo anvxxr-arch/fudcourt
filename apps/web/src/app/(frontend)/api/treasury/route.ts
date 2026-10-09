@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fail, failInternal } from '../_lib/http';
 import {
+  DIMENSIONS,
   parseBucket,
+  parseDimension,
   parseGroup,
   parseRange,
   treasuryAnalytics,
+  treasuryAttribution,
   treasuryBreakdown,
   treasuryDiff,
   treasuryHistory,
@@ -13,12 +16,13 @@ import {
 /**
  * GET /api/treasury — the treasury time-series read surface.
  *
- * One route, four modes over `asset_history` (see `@/server/treasury`):
+ * One route, five modes over `asset_history` (see `@/server/treasury`):
  *
- *   ?mode=history   &group=total|chain|wallet|asset &range=… &bucket=…  bucketed series
- *   ?mode=analytics &range=…                                            ATH/drawdown/vol/change
- *   ?mode=breakdown &dimension=chain|wallet|asset &range=…              per-dimension deltas
- *   ?mode=diff      &range=…                                            what moved + why
+ *   ?mode=history     &group=total|chain|wallet|asset &range=… &bucket=…  bucketed series
+ *   ?mode=analytics   &range=…                                            ATH/drawdown/vol/change
+ *   ?mode=breakdown   &dimension=chain|wallet|asset &range=…              per-dimension deltas
+ *   ?mode=attribution &dimension=chain|wallet|asset &range=…              WHY it moved: price vs flow
+ *   ?mode=diff        &range=…                                            what moved + why
  *
  * `mode` defaults to `history`, `range` to `7d`. Every supplied-but-unknown
  * value is a 400, never a silent fallback: a caller that typos `range=7days`
@@ -32,11 +36,8 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const MODES = ['history', 'analytics', 'breakdown', 'diff'] as const;
+const MODES = ['history', 'analytics', 'breakdown', 'attribution', 'diff'] as const;
 type Mode = (typeof MODES)[number];
-
-const DIMENSIONS = ['chain', 'wallet', 'asset'] as const;
-type Dimension = (typeof DIMENSIONS)[number];
 
 export async function GET(req: NextRequest): Promise<Response> {
   const p = req.nextUrl.searchParams;
@@ -57,12 +58,20 @@ export async function GET(req: NextRequest): Promise<Response> {
       case 'analytics':
         return NextResponse.json(await treasuryAnalytics(range));
 
-      case 'breakdown': {
-        const dim = p.get('dimension') ?? 'chain';
-        if (!(DIMENSIONS as readonly string[]).includes(dim)) {
-          return fail('unknown dimension', 400, `${JSON.stringify(dim)} is not one of ${DIMENSIONS.join('|')}`);
+      case 'attribution': {
+        const dim = parseDimension(p.get('dimension'));
+        if (dim === null) {
+          return fail('unknown dimension', 400, `${JSON.stringify(p.get('dimension'))} is not one of ${DIMENSIONS.join('|')}`);
         }
-        return NextResponse.json(await treasuryBreakdown(dim as Dimension, range));
+        return NextResponse.json(await treasuryAttribution(dim, range));
+      }
+
+      case 'breakdown': {
+        const dim = parseDimension(p.get('dimension'));
+        if (dim === null) {
+          return fail('unknown dimension', 400, `${JSON.stringify(p.get('dimension'))} is not one of ${DIMENSIONS.join('|')}`);
+        }
+        return NextResponse.json(await treasuryBreakdown(dim, range));
       }
 
       case 'diff':

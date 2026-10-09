@@ -98,3 +98,41 @@ export function Board({ title, right, children }: { title: React.ReactNode; righ
     </div>
   );
 }
+
+/**
+ * A single figure. `sub` carries the qualifier (a timestamp, a window) so a
+ * headline number is never read without its context.
+ */
+export function Stat({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
+  return (
+    <div style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: space[12], minWidth: 132 }}>
+      <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], letterSpacing: letterSpacing.xs, textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ color: color ?? themeColor.labelPrimary, fontSize: fontSize[20], fontWeight: fontWeight.bold, marginTop: space[4] }}>{value}</div>
+      {sub && <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginTop: space[4] }}>{sub}</div>}
+    </div>
+  );
+}
+
+/**
+ * A two-segment split bar. Widths are the two effects' shares of their combined
+ * magnitude, so the split is legible at a glance; the SIGN never lives here —
+ * it stays in the numeric columns either side, because a bar cannot honestly
+ * show a signed sum.
+ */
+export function SplitBar({ left, right }: { left: number; right: number }) {
+  const total = Math.abs(left) + Math.abs(right);
+  if (total === 0) {
+    return <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>—</span>;
+  }
+  const leftPct = (Math.abs(left) / total) * 100;
+  return (
+    <div
+      style={{ display: 'flex', height: 6, minWidth: 64, borderRadius: radius[8], overflow: 'hidden', background: themeColor.bgTertiary }}
+      role="img"
+      aria-label={`market ${leftPct.toFixed(0)}%, book ${(100 - leftPct).toFixed(0)}%`}
+    >
+      <div style={{ width: `${leftPct}%`, background: themeColor.blue }} />
+      <div style={{ width: `${100 - leftPct}%`, background: themeColor.orange }} />
+    </div>
+  );
+}

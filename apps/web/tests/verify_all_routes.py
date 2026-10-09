@@ -408,6 +408,25 @@ if SESSION_OK:
             ok_shape = True
             n = len(plans_list)
     rec("api-auth", f"/api/plans admin-cookie -> 200 + plans/total ({n} plans)", st if (st == 200 and ok_shape) else 0, 200, b)
+    # The fifth mode of the treasury read layer (DR-053). A session must open it,
+    # and the SPLIT MUST CLOSE: `residualUsd` is the panel's own check figure
+    # (move - market - book), so a 200 carrying a non-zero residual is a
+    # decomposition that does not explain the move it claims to -- a defect no
+    # status code can see. A dimension the parser rejects must be a 400, not a
+    # silent fallback to a dimension the caller did not ask for.
+    st, b = hit("/api/treasury?mode=attribution&dimension=asset&range=7d", cookie=SESSION)
+    ok_pairs = ok_resid = False
+    n_pairs = 0
+    resid = None
+    if isinstance(b, dict):
+        rows, pairs, resid = b.get("rows"), b.get("pairs"), b.get("residualUsd")
+        n_pairs = len(pairs) if isinstance(pairs, list) else 0
+        ok_pairs = isinstance(rows, list) and isinstance(pairs, list)
+        ok_resid = isinstance(resid, (int, float)) and abs(resid) < 1e-6
+    rec("api-auth", f"/api/treasury?mode=attribution -> 200 + split closes ({n_pairs} pairs, residual {resid})",
+        st if (st == 200 and ok_pairs and ok_resid) else 0, 200, b)
+    st, b = hit("/api/treasury?mode=attribution&dimension=total&range=7d", cookie=SESSION)
+    rec("api-auth", "/api/treasury?mode=attribution&dimension=total -> 400 (not a dimension)", st, 400, b)
 else:
     # ENVIRONMENTAL: this audit target cannot authenticate anyone, so the
     # session-gated path is unexercised rather than broken.
@@ -416,6 +435,8 @@ else:
     for p in ["/member", "/team/balance", "/admin"]:
         rec("gate-auth-env", f"{p} admin-cookie -> 200 [ENV: {SESSION_WHY}]", 0, 200, {})
     rec("api-auth-env", f"/api/plans admin-cookie -> 200 + plans/total [ENV: {SESSION_WHY}]", 0, 200, {})
+    rec("api-auth-env", f"/api/treasury?mode=attribution -> 200 + split closes [ENV: {SESSION_WHY}]", 0, 200, {})
+    rec("api-auth-env", f"/api/treasury?mode=attribution&dimension=total -> 400 [ENV: {SESSION_WHY}]", 0, 400, {})
 
 print("=== E. cryptorank: 28 modes + contract ===", flush=True)
 CR = [
