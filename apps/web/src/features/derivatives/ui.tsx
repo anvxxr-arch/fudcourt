@@ -27,9 +27,10 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, radius, space } from '@/styles/tokens';
 import { dash, fmtPrice, fmtPct } from '@/lib/format';
+import { setBoardStale } from '@/lib/stale-board';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
-import { EmptyState, ErrorState, Loading } from '@/ui/feedback';
+import { EmptyState, ErrorState, Loading, StaleNotice } from '@/ui/feedback';
 import { Stat } from '@/ui/stat';
 import { fetchDerivativeSources, fetchLiquidation, type DerivativeSources, type LiquidationRead } from './client';
 import {
@@ -178,6 +179,14 @@ export default function DerivativesPage() {
     fetchLiquidation(interval, ac.signal).then((r) => !ac.signal.aborted && setLiq(r));
     return () => ac.abort();
   }, [interval]);
+  // Publish this board's staleness to the shell subtitle; cleared on unmount.
+  // Stale if EITHER coinank envelope is a labelled last-good serve — the
+  // liquidation read is preferred for its fetchedAt/age when both are.
+  const staleEnvelope = liq?.data?.stale ? liq.data : sources?.longShort?.stale ? sources.longShort : null;
+  useEffect(() => {
+    setBoardStale(staleEnvelope ? { source: 'CoinAnk', fetchedAt: staleEnvelope.fetchedAt, ageSec: staleEnvelope.staleAgeSec ?? 0 } : null);
+    return () => setBoardStale(null);
+  }, [staleEnvelope]);
 
   const longShortRows = sources?.longShort?.data ?? null;
   const longShortPage = useMemo(
@@ -196,6 +205,20 @@ export default function DerivativesPage() {
 
   return (
     <>
+      {liq?.data?.stale ? (
+        <StaleNotice
+          source={`CoinAnk ${interval} liquidations`}
+          fetchedAt={liq.data.fetchedAt}
+          ageSec={liq.data.staleAgeSec ?? 0}
+        />
+      ) : null}
+      {sources.longShort?.stale ? (
+        <StaleNotice
+          source="CoinAnk long/short"
+          fetchedAt={sources.longShort.fetchedAt}
+          ageSec={sources.longShort.staleAgeSec ?? 0}
+        />
+      ) : null}
       {statistics === null ? (
         <ErrorState
           title="Could not read the market statistics"

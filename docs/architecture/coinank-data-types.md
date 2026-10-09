@@ -266,8 +266,15 @@ serves the same shapes — that is what makes CoinAnk interesting for us.
 2. The signature is **time-based and stateless** — no session, no cookie, no
    browser. Recompute per request (or per short window) in Go: `time.Now().UnixMilli()
    + C` → `+ "347"` → `|`-join → `base64`. Portable to stdlib only.
-3. **Cache hard.** Nothing in the bundle documents a rate limit; treat it as
-   undocumented and mirror the CryptoRank sidecar's per-route TTL disk cache.
+3. **Cache hard — per-mode, and honest when the wall is up.** Nothing in the
+   bundle documents a rate limit; treat it as undocumented. The sidecar caches
+   on disk keyed on the upstream URL with PER-MODE TTLs (fundingRate/
+   liquidation/whales 300 s, longShort 900 s, etf 3600 s), single-flights
+   concurrent reads per URL, and — after the bounded retry fails — serves the
+   ≤24h last-good body as a LABELLED 200 (`X-CA-Cache: STALE`,
+   `stale`/`staleAgeSec`). `fresh=1` never takes that fallback: it is the
+   verifier's live-truth path. The measured wall classes (2026-10-07,
+   2026-10-09) are in `docs/operations/CHANGELOG.md`.
 4. Apply the repo's `api-surface-recon` discipline before wiring: prove a
    nonexistent symbol does not return fabricated data, and cross-check one value
    (e.g. BTC funding rate) against an independent feed — note that CoinAnk's own

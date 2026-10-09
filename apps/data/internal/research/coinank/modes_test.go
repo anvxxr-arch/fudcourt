@@ -268,3 +268,25 @@ func TestUnexpectedParamDetail(t *testing.T) {
 		t.Errorf("the interval error should explain why it is rejected locally: %q", DetailIntervalInvalid)
 	}
 }
+
+// TestTTLForPerModeAndFallback pins the per-mode cache TTLs and the fallback
+// rule: an unclaimed path gets the caller's fallback (the SHORT default), never
+// the longest per-mode value.
+func TestTTLForPerModeAndFallback(t *testing.T) {
+	cases := map[string]int{
+		Base + "/api/fundingRate/current":                 300,
+		Base + "/api/liquidation/allExchange?interval=1h": 300,
+		Base + "/api/liquidation/allExchange?interval=1d": 300,
+		Base + "/api/longshort/all":                       900,
+		Base + "/api/etf/etfInflow":                       3600,
+		Base + "/api/hyper/topPosition":                   300,
+	}
+	for u, want := range cases {
+		if got := TTLFor(u, 60); got != want {
+			t.Errorf("TTLFor(%s) = %d, want %d", u, got, want)
+		}
+	}
+	if got := TTLFor(Base+"/api/nope", 60); got != 60 {
+		t.Errorf("unknown path fallback = %d, want 60", got)
+	}
+}

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from 'react';
 import { Wallet, Asset, buildWalletMap, getAlias, getColor, groupSum } from '@/lib/format';
 import { themeColor, fontFamily, fontSize, fontWeight, letterSpacing, radius, space } from '@/styles/tokens';
 import { Banner } from '@/ui/banner';
 import { Loading } from '@/ui/feedback';
 import { viewPath } from '@/lib/view-routes';
+import { subscribeBoardStale, getBoardStale } from '@/lib/stale-board';
 import dynamic from 'next/dynamic';
 import { loadOverviewBundle, saveWallet, type OverviewCoin, type OverviewReconRow, type OverviewTransaction, type Venue } from './client';
 const DashboardPage = dynamic(() => import('@/features/overview/dashboard'), { ssr: false });
@@ -58,6 +59,9 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
   const [loading, setLoading] = useState(true);
   const [lastSync, setLastSync] = useState('');
   const [txRefresh, setTxRefresh] = useState(0);
+  // The mounted board publishes its own staleness (lib/stale-board) so the
+  // shared subtitle can say "last-good" instead of contradicting a StaleNotice.
+  const boardStale = useSyncExternalStore(subscribeBoardStale, getBoardStale, getBoardStale);
   const [page, setPage] = useState(initialPage);
   const railRef = useRef<HTMLDivElement>(null);
 
@@ -265,7 +269,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
                 {loading && ' ⟳'}
               </>
             )}
-            {!isTeam && ' · public boards — live data, no treasury sync'}
+            {!isTeam && (boardStale ? ' · public boards — labelled last-good data, no treasury sync' : ' · public boards — live data, no treasury sync')}
           </p>
         </div>
         {isTeam && (

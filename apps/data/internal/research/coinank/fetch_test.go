@@ -186,6 +186,10 @@ func TestCacheHitAndFreshBypass(t *testing.T) {
 	}
 }
 
+// TestCacheExpiresByTTL pins the PER-MODE TTL table: the fundingRate path
+// carries a 300s TTL (was one flat 60s for every mode), and a URL no mode
+// claims falls back to the fetcher-level TTL -- never to the longest per-mode
+// value, which would let a harness URL ride a 1-hour entry.
 func TestCacheExpiresByTTL(t *testing.T) {
 	d := &fakeDoer{status: 200, body: fundingBody}
 	f := newTestFetcher(t, d)
@@ -196,13 +200,24 @@ func TestCacheExpiresByTTL(t *testing.T) {
 	if _, _, err := f.Fetch(context.Background(), url); err != nil {
 		t.Fatalf("seed fetch: %v", err)
 	}
-	f.now = func() time.Time { return base.Add(30 * time.Second) }
+	f.now = func() time.Time { return base.Add(61 * time.Second) }
 	if _, info, _ := f.Fetch(context.Background(), url); info.Cache != "HIT" {
-		t.Errorf("at t+30s within a 60s TTL: Cache = %q, want HIT", info.Cache)
+		t.Errorf("at t+61s within the 300s fundingRate TTL: Cache = %q, want HIT", info.Cache)
+	}
+	f.now = func() time.Time { return base.Add(301 * time.Second) }
+	if _, info, _ := f.Fetch(context.Background(), url); info.Cache != "MISS" {
+		t.Errorf("at t+301s past the 300s fundingRate TTL: Cache = %q, want MISS", info.Cache)
+	}
+
+	// An unclaimed URL expires at the fetcher-level TTL (60s here).
+	unknown := Base + "/api/harness/selftest"
+	f.now = func() time.Time { return base }
+	if _, _, err := f.Fetch(context.Background(), unknown); err != nil {
+		t.Fatalf("unknown-path seed: %v", err)
 	}
 	f.now = func() time.Time { return base.Add(61 * time.Second) }
-	if _, info, _ := f.Fetch(context.Background(), url); info.Cache != "MISS" {
-		t.Errorf("at t+61s past a 60s TTL: Cache = %q, want MISS", info.Cache)
+	if _, info, _ := f.Fetch(context.Background(), unknown); info.Cache != "MISS" {
+		t.Errorf("unknown path must expire at the fallback TTL: Cache = %q, want MISS", info.Cache)
 	}
 }
 

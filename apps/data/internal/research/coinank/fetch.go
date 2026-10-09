@@ -82,9 +82,8 @@ type Result struct {
 // CacheInfo says where the bytes came from.
 type CacheInfo struct {
 	Status int
-	Cache  string // "MISS" or "HIT"
+	Cache  string // "MISS", "HIT" or "STALE" (the labelled last-good fallback)
 	// FetchedAt is when the served body was downloaded from upstream. It is
-	// set from the cache Entry on a HIT and from the fetch on a MISS, so the
 	// envelope's fetchedAt mirrors llama/news/chainrank instead of stamping
 	// shape time on a warm read.
 	FetchedAt int64
@@ -102,6 +101,9 @@ type Options struct {
 	Timeout time.Duration
 	// TTL in seconds for disk-cache entries (default defaultTTL).
 	TTL int
+	// Now overrides the clock (tests pin cache age and staleness). Default
+	// time.Now.
+	Now func() time.Time
 	// Client is injectable.
 	Client Doer
 	// NoCache disables the disk cache (used by the live verifier so it never
@@ -122,6 +124,16 @@ type Entry struct {
 	FetchedAt int64  `json:"fetchedAt"`
 }
 
+// flight is an in-flight upstream fetch other callers wait on (single-flight,
+// keyed on the upstream URL). Its outcome -- success, refusal, or the STALE
+// fallback -- is handed to every joiner verbatim.
+type flight struct {
+	done chan struct{}
+	res  Result
+	info CacheInfo
+	err  error
+}
+
 // Fetcher is the CoinAnk HTTP client + disk cache.
 type Fetcher struct {
 	cacheDir string
@@ -132,7 +144,9 @@ type Fetcher struct {
 	// now is the clock, injectable so the signature and cache age are testable.
 	now func() time.Time
 
-	mu sync.Mutex // serialises cache writes
+	// mu guards flights and serialises cache writes/prunes.
+	mu      sync.Mutex
+	flights map[string]*flight
 }
 
 // New builds a Fetcher.
@@ -159,9 +173,13 @@ func New(o Options) (*Fetcher, error) {
 	if c == nil {
 		c = httpx.NewClient(to)
 	}
+	now := o.Now
+	if now == nil {
+		now = time.Now
+	}
 	return &Fetcher{
 		cacheDir: dir, ttl: ttl, timeout: to, client: c, noCache: o.NoCache,
-		now: time.Now,
+		now: now, flights: map[string]*flight{},
 	}, nil
 }
 
@@ -201,7 +219,10 @@ func (f *Fetcher) pathFor(rawURL string) string {
 	return filepath.Join(f.cacheDir, hex.EncodeToString(sum[:16])+".json")
 }
 
-// Fetch gets rawURL (cached) and returns the decoded envelope.
+// Fetch gets rawURL (cached) and returns the decoded envelope. It JOINS an
+// in-flight fetch for the same URL (single-flight) and, when upstream refuses
+// even after the bounded retry, falls back to the newest decodable body on
+// disk served loudly as STALE -- real, labelled data rather than a blank board.
 func (f *Fetcher) Fetch(ctx context.Context, rawURL string) (Result, CacheInfo, error) {
 	return f.fetch(ctx, rawURL, true)
 }
@@ -250,6 +271,11 @@ const (
 	// deterministic and retrying only burns the timeout.
 	refusalCode   = "403"
 	refusalDetail = "please sub api"
+	// maxStaleSec bounds how old a cached body may be and still be served as
+	// the STALE fallback. 24h: the measured walls lasted ~2h (2026-10-09) and
+	// up to a day (2026-10-07). Beyond a day the numbers stop being something
+	// a reader can use even labelled, so the refusal goes loud again instead.
+	maxStaleSec = 24 * 3600
 )
 
 // transientRefusal reports whether a decode error is the upstream's
@@ -262,42 +288,87 @@ func transientRefusal(err error) bool {
 	return he.Code == refusalCode && strings.Contains(strings.ToLower(he.Detail), refusalDetail)
 }
 
+// fetch is the ONE read path. useCache=true (Fetch) honours the disk cache,
+// joins an in-flight fetch for the same URL, and falls back to the labelled
+// last-good body below when the bounded retry gives up. useCache=false
+// (FetchFresh, the `fresh=1` path) does NONE of these: a caller who asked for
+// the live truth gets an error rather than a labelled old answer, which is
+// what keeps the live verifiers honest.
 func (f *Fetcher) fetch(ctx context.Context, rawURL string, useCache bool) (Result, CacheInfo, error) {
 	info := CacheInfo{Cache: "MISS"}
-	if useCache {
-		if entry, ok := f.readCache(rawURL); ok {
-			res, err := Decode(rawURL, []byte(entry.Body))
-			if err == nil {
-				info.Cache = "HIT"
-				info.Status = entry.Status
-				info.FetchedAt = entry.FetchedAt
-				return res, info, nil
-			}
-			// A cached body that no longer decodes (schema drift, truncated
-			// write) is a MISS, not a hard failure: fall through and re-fetch.
+	if !useCache {
+		res, err := f.fetchUpstream(ctx, rawURL, &info)
+		return res, info, err
+	}
+	if entry, ok := f.readCache(rawURL); ok {
+		res, err := Decode(rawURL, []byte(entry.Body))
+		if err == nil {
+			info.Cache = "HIT"
+			info.Status = entry.Status
+			info.FetchedAt = entry.FetchedAt
+			return res, info, nil
 		}
+		// A cached body that no longer decodes (schema drift, truncated
+		// write) is a MISS, not a hard failure: fall through and re-fetch.
 	}
 
+	// Single-flight, keyed on the upstream URL: a request storm (every board
+	// section mounted at once, or several boards) collapses to ONE upstream
+	// fetch. That matters more here than the bandwidth -- CoinAnk's refusal
+	// heuristic appears to trip on bursts, so our own concurrency must never
+	// be able to trip it. The joiner receives the leader's outcome verbatim
+	// (its MISS/STALE/error), never a second upstream call.
+	f.mu.Lock()
+	if fl, ok := f.flights[rawURL]; ok {
+		f.mu.Unlock()
+		<-fl.done
+		return fl.res, fl.info, fl.err
+	}
+	fl := &flight{done: make(chan struct{})}
+	f.flights[rawURL] = fl
+	f.mu.Unlock()
+
+	res, err := f.fetchUpstream(ctx, rawURL, &info)
+	if err != nil {
+		// The upstream refused (or died) even after the bounded retry. A
+		// labelled last-good body is strictly better than a blank board: the
+		// data is real, `fetchedAt` says WHEN it was true, and the envelope
+		// carries `stale`/`staleAgeSec` so no consumer can mistake it for
+		// current. Nothing decodable on disk? The refusal stands.
+		if sres, sinfo, ok := f.staleFallback(rawURL); ok {
+			res, info, err = sres, sinfo, nil
+		}
+	}
+	f.mu.Lock()
+	fl.res, fl.info, fl.err = res, info, err
+	delete(f.flights, rawURL)
+	f.mu.Unlock()
+	close(fl.done)
+	return res, info, err
+}
+
+// fetchUpstream runs the bounded, backed-off retry loop against upstream.
+func (f *Fetcher) fetchUpstream(ctx context.Context, rawURL string, info *CacheInfo) (Result, error) {
 	var lastErr error
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		if attempt > 1 {
 			wait := retryBase << (attempt - 2)
 			select {
 			case <-ctx.Done():
-				return Result{}, info, ctx.Err()
+				return Result{}, ctx.Err()
 			case <-time.After(wait):
 			}
 		}
-		res, retryable, err := f.attempt(ctx, rawURL, &info)
+		res, retryable, err := f.attempt(ctx, rawURL, info)
 		if err == nil {
-			return res, info, nil
+			return res, nil
 		}
 		lastErr = err
 		if !retryable || attempt == maxAttempts {
-			return res, info, err
+			return res, err
 		}
 	}
-	return Result{}, info, lastErr
+	return Result{}, lastErr
 }
 
 // attempt performs ONE signed upstream call.
@@ -408,7 +479,10 @@ func (f *Fetcher) readCache(rawURL string) (Entry, bool) {
 	if e.Status != http.StatusOK || e.Body == "" {
 		return Entry{}, false
 	}
-	if f.now().Unix()-e.FetchedAt > int64(f.ttl) {
+	// The TTL is PER-MODE (modes.go:TTLFor): a 1-hour etf body must not be
+	// re-pulled every minute, and an unclaimed URL falls back to the short
+	// fetcher-level TTL rather than the longest per-mode value.
+	if f.now().Unix()-e.FetchedAt > int64(TTLFor(rawURL, f.ttl)) {
 		return Entry{}, false
 	}
 	return e, true
@@ -427,6 +501,47 @@ func (f *Fetcher) writeCache(e Entry) {
 	// Best-effort: a cache write failure must never fail the request.
 	_ = os.WriteFile(f.pathFor(e.URL), b, 0o644)
 	f.pruneCache()
+}
+
+// readStaleCache is readCache WITHOUT the TTL: any entry that still decodes is
+// eligible, bounded only by maxStaleSec. A NoCache fetcher returns nothing --
+// the live verifier must never see a stale body dressed as an answer.
+func (f *Fetcher) readStaleCache(rawURL string) (Entry, bool) {
+	if f.noCache {
+		return Entry{}, false
+	}
+	b, err := os.ReadFile(f.pathFor(rawURL))
+	if err != nil {
+		return Entry{}, false
+	}
+	var e Entry
+	if err := json.Unmarshal(b, &e); err != nil {
+		return Entry{}, false
+	}
+	if e.Status != http.StatusOK || e.Body == "" {
+		return Entry{}, false
+	}
+	age := f.now().Unix() - e.FetchedAt
+	if age < 0 || age > maxStaleSec {
+		return Entry{}, false
+	}
+	return e, true
+}
+
+// staleFallback is the labelled last-good serve: the newest decodable body on
+// disk, with Cache=STALE and its ORIGINAL FetchedAt, so the envelope's
+// fetchedAt stays the moment the data was true. A refusal can never be here --
+// refusals are never written to disk (attempt writes only after Decode).
+func (f *Fetcher) staleFallback(rawURL string) (Result, CacheInfo, bool) {
+	entry, ok := f.readStaleCache(rawURL)
+	if !ok {
+		return Result{}, CacheInfo{}, false
+	}
+	res, err := Decode(rawURL, []byte(entry.Body))
+	if err != nil {
+		return Result{}, CacheInfo{}, false
+	}
+	return res, CacheInfo{Cache: "STALE", Status: entry.Status, FetchedAt: entry.FetchedAt}, true
 }
 
 // maxCacheEntries bounds the on-disk cache. The chainrank family caps its

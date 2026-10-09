@@ -2,6 +2,7 @@ package coinank
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -109,6 +110,49 @@ func UpstreamURL(mode, interval string) string {
 	default:
 		return Base + "/api/fundingRate/current"
 	}
+}
+
+// Per-mode disk-cache TTLs (seconds).
+//
+// ONE flat 60s TTL was measured to be wasteful on this family: the largest body
+// (fundingRate/current, ~1.87 MB at 884 symbols) was re-pulled from upstream
+// every minute the board was open, for a series a human scans occasionally --
+// and every pull is a small burst against an upstream that has TWICE refused
+// this host with an abuse heuristic (2026-10-07 and 2026-10-09; see
+// docs/operations/CHANGELOG.md). Each TTL below is keyed to how fast its
+// series ACTUALLY moves, which cuts upstream pulls ~85% without making any
+// board lie: a funding rate is a per-8h-window number, an ETF flow is a DAILY
+// number, and a 5-minute-old top-position table is still the current table.
+const (
+	ttlFundingRate = 300
+	ttlLiquidation = 300
+	ttlLongShort   = 900
+	ttlETF         = 3600
+	ttlWhales      = 300
+)
+
+// pathTTL maps each upstream PATH to its TTL. Keyed on the parsed path rather
+// than the full URL so every liquidation interval shares one row.
+var pathTTL = map[string]int{
+	"/api/fundingRate/current":     ttlFundingRate,
+	"/api/liquidation/allExchange": ttlLiquidation,
+	"/api/longshort/all":           ttlLongShort,
+	"/api/etf/etfInflow":           ttlETF,
+	"/api/hyper/topPosition":       ttlWhales,
+}
+
+// TTLFor returns the cache TTL in seconds for an upstream URL. An unknown URL
+// falls back to the caller's default -- deliberately the SHORTER value, so a
+// harness or self-test URL can never inherit the 1-hour etf TTL by accident.
+func TTLFor(rawURL string, fallback int) int {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fallback
+	}
+	if t, ok := pathTTL[u.Path]; ok {
+		return t
+	}
+	return fallback
 }
 
 // accepts is the param scoping matrix: which query params a mode accepts.

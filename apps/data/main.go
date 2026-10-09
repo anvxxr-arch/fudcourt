@@ -137,8 +137,8 @@ func main() {
 		// the handler has read it.
 		MaxHeaderBytes: 1 << 16,
 	}
-	log.Printf("fudcourt-data listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes; coinglass: cache %s, ttl %ds, %d modes; coinank: cache %s, ttl %ds, %d modes; coinmarketcap: cache %s, ttl %ds, %d modes)",
-		addr, f.CacheDir(), ttl, cryptorank.ModeCount, kf.CacheDir(), khala.TTLDefault(), khala.ModeCount, lf.TTL(), llama.ModeCount, nf.TTL(), news.SourceCount, cf.TTL(), chainrank.ModeCount, gf.CacheDir(), coinglass.TTLDefault(), coinglass.ModeCount, af.CacheDir(), coinank.TTLDefault(), coinank.ModeCount, mf.CacheDir(), coinmarketcap.TTLDefault(), coinmarketcap.ModeCount)
+	log.Printf("fudcourt-data listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes; coinglass: cache %s, ttl %ds, %d modes; coinank: cache %s, %s, %d modes; coinmarketcap: cache %s, ttl %ds, %d modes)",
+		addr, f.CacheDir(), ttl, cryptorank.ModeCount, kf.CacheDir(), khala.TTLDefault(), khala.ModeCount, lf.TTL(), llama.ModeCount, nf.TTL(), news.SourceCount, cf.TTL(), chainrank.ModeCount, gf.CacheDir(), coinglass.TTLDefault(), coinglass.ModeCount, af.CacheDir(), coinank.TTLNote(), coinank.ModeCount, mf.CacheDir(), coinmarketcap.TTLDefault(), coinmarketcap.ModeCount)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -614,6 +614,10 @@ func writeCoinglassError(w http.ResponseWriter, mode string, err error) {
 //
 // Upstream's own refusal (HTTP 200, success:false, "system error!") becomes a 502
 // carrying its code and message. It never becomes a 200 with an empty table.
+// UNLESS the disk cache holds a decodable last-good body (<=24h old): then the
+// refusal's bounded retry is followed by that body served as HTTP 200 with
+// X-CA-Cache: STALE and `stale`/`staleAgeSec` in the envelope -- real, labelled
+// data rather than a blank board. fresh=1 never takes that fallback.
 func (s *server) handleCoinank(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		writeJSON(w, 405, map[string]interface{}{"error": "method not allowed"})

@@ -125,9 +125,11 @@ CHECKS = [
     ("economy regime (fred/worldbank/bis)", "/api/economy/regime", 200, True),
     ("coinglass markets", "/api/coinglass?mode=markets", 200, True),
     ("coinglass statistics", "/api/coinglass?mode=statistics", 200, True),
-    ("coinank etf flows", "/api/coinank?mode=etf", 200, True),
-    ("coinank whales", "/api/coinank?mode=whales", 200, True),
-    ("coinank liquidations", "/api/coinank?mode=liquidation&interval=1d", 200, True),
+    # fresh=1: the sidecar's per-mode TTLs (modes.go) and its STALE fallback
+    # would otherwise answer from disk; the monitor must assert UPSTREAM truth.
+    ("coinank etf flows", "/api/coinank?mode=etf&fresh=1", 200, True),
+    ("coinank whales", "/api/coinank?mode=whales&fresh=1", 200, True),
+    ("coinank liquidations", "/api/coinank?mode=liquidation&interval=1d&fresh=1", 200, True),
     ("coinmarketcap global", "/api/coinmarketcap?mode=global", 200, True),
     ("coinmarketcap exchanges", "/api/coinmarketcap?mode=exchanges", 200, True),
     ("cryptorank rwa", "/api/cryptorank?mode=rwa", 200, True),
@@ -156,7 +158,7 @@ CHECKS = [
     ("board page /funding", "/funding", 200, False),
     ("cryptorank ecosystem ethereum", "/api/cryptorank?mode=ecosystem&key=ethereum", 200, True),
     ("cryptorank rwaasset commodities/gold", "/api/cryptorank?mode=rwaasset&key=commodities/gold", 200, True),
-    ("coinank fundingRate", "/api/coinank?mode=fundingRate", 200, True),
+    ("coinank fundingRate", "/api/coinank?mode=fundingRate&fresh=1", 200, True),
 ]
 
 

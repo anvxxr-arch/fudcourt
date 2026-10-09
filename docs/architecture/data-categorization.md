@@ -231,6 +231,11 @@ wires it correctly; the upstream refuses. Status `dark`, nothing broken on our s
 (5/5 stable, no signature required) and the sidecar serves every mode — fundingRate 886 / liquidation
 10 / longShort 726 / etf 708 / whales 50 rows. Status flipped `dark` → `active` across the catalogs;
 the five families are now surfaced by the `/derivatives`, `/etf` and `/whales` public boards.
+**Recurrence 2026-10-09.** The wall returned between 10:19:12 and ~12:19 UTC (last sidecar
+cache write → verified recovery) and lifted again with no code change; during the window the
+live dashboard's own XHRs were refused on the same endpoints, so the wall stays upstream and
+per-endpoint, and the sidecar's loud 502 was the correct answer throughout. Verified after:
+5/5 modes 200 (884/10/728/709/50 rows), `monitor.py` HEALTHY, `verify-coinank.py` 114/0/0.
 
 **F4 — `coinglass`/`coinank` are unreachable through the web app.** The sidecar exposes
 `/api/coinglass` (`apps/data/main.go:231`) and `/api/coinank` (`:234`) on `:3101`, but

@@ -28,9 +28,10 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, radius, space } from '@/styles/tokens';
 import { dash, fmtTime } from '@/lib/format';
+import { setBoardStale } from '@/lib/stale-board';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
-import { EmptyState, ErrorState, Loading } from '@/ui/feedback';
+import { EmptyState, ErrorState, Loading, StaleNotice } from '@/ui/feedback';
 import { Stat } from '@/ui/stat';
 import { fetchFundingRates, type FundingRead } from './client';
 import {
@@ -177,6 +178,12 @@ export default function FundingPage() {
     fetchFundingRates(ac.signal).then((r) => !ac.signal.aborted && setRead(r));
     return () => ac.abort();
   }, []);
+  // Publish this board's staleness to the shell subtitle; cleared on unmount.
+  const staleEnvelope = read?.data?.stale ? read.data : null;
+  useEffect(() => {
+    setBoardStale(staleEnvelope ? { source: 'CoinAnk', fetchedAt: staleEnvelope.fetchedAt, ageSec: staleEnvelope.staleAgeSec ?? 0 } : null);
+    return () => setBoardStale(null);
+  }, [staleEnvelope]);
 
   const rows = read?.data?.data ?? null;
 
@@ -212,6 +219,9 @@ export default function FundingPage() {
 
   return (
     <>
+      {read.data?.stale ? (
+        <StaleNotice source="CoinAnk" fetchedAt={read.data.fetchedAt} ageSec={read.data.staleAgeSec ?? 0} />
+      ) : null}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
           label="Symbols tracked"

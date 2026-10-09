@@ -15,7 +15,11 @@ FROZEN CONTRACT (v1)
          a measurement upstream never made.
        - `interval` is echoed ONLY by mode=liquidation (it defaults to 1h).
   headers (all modes): X-CA-Upstream == body `upstream`, X-CA-Cache in
-                  {MISS,HIT}, Cache-Control: public, max-age=30.
+                  {MISS,HIT} -- every mode read here is `fresh=1`, so MISS is
+                  the only value a HEALTHY run may see; STALE (the sidecar's
+                  labelled last-good fallback during an upstream wall) must
+                  never appear on a fresh read, and is asserted against per
+                  mode below. Cache-Control: public, max-age=30.
   cache: ?fresh=1 -> MISS, a repeat -> HIT.
   400 (local, never forwarded upstream):
        - mode absent/unknown            -> error "unknown mode"
@@ -25,7 +29,11 @@ FROZEN CONTRACT (v1)
        - interval outside {1h,2h,4h,6h,12h,1d} -> error "invalid param"
   502: upstream's own refusal (HTTP 200 + success:false + "system error!") is
        carried through with upstream's code and message. Never a 200 with an
-       empty table.
+       empty table. (Exception: with a decodable last-good body <=24h old on
+       disk, the refusal is followed by that body served as a 200 with
+       X-CA-Cache: STALE and stale/staleAgeSec in the envelope -- real, labelled
+       data rather than a blank board. fresh=1 never takes it, and the checks
+       below pin that.)
   405: POST/PUT/... on the route.
 
 Checks:
@@ -270,9 +278,12 @@ def main() -> int:
         check(f"{m}: X-CA-Upstream header == body upstream",
               hget(r["hdr"], "X-CA-Upstream") == b.get("upstream"),
               f"header={hget(r['hdr'], 'X-CA-Upstream')!r} body={b.get('upstream')!r}", counted=True)
-        check(f"{m}: X-CA-Cache header is MISS|HIT",
-              hget(r["hdr"], "X-CA-Cache") in ("MISS", "HIT"),
+        check(f"{m}: X-CA-Cache == MISS (a live fresh read)",
+              hget(r["hdr"], "X-CA-Cache") == "MISS",
               f"{hget(r['hdr'], 'X-CA-Cache')!r}", counted=True)
+        check(f"{m}: envelope is NOT stale (fresh never falls back)",
+              not b.get("stale"),
+              f"stale={b.get('stale')!r} staleAgeSec={b.get('staleAgeSec')!r}", counted=True)
         check(f"{m}: Cache-Control == public, max-age=30",
               (hget(r["hdr"], "Cache-Control") or "").replace(" ", "") == "public,max-age=30",
               f"{hget(r['hdr'], 'Cache-Control')!r}", counted=True)

@@ -17,6 +17,10 @@ DETERMINISM (the cron contract)
 
 OUTPUT
   STILL_REFUSED <mode>=<code> ...   every mode still refused        -> exit 0
+                                    <code> is upstream's refusal code, or
+                                    `stale`: the sidecar served its labelled
+                                    last-good body while the wall is up --
+                                    still refused, NOT a recovery.
   RECOVERED <mode>=<status> ...     at least one mode now answers   -> exit 0
   FAIL <what>                       anything else: sidecar down, an
                                     unknown shape, a non-refusal 5xx -> exit 1
@@ -46,7 +50,9 @@ TRANSIENT = {0, 429, 500, 502, 503, 504}
 
 def probe(mode):
     """-> (status:int, body:dict|None, neterr:str|None)."""
-    url = f"{BASE}/api/coinank?mode={mode}"
+    # fresh=1: since the per-mode TTLs + STALE fallback landed, a cached read
+    # could answer 200 while the wall is still up; this probe must ask upstream.
+    url = f"{BASE}/api/coinank?mode={mode}&fresh=1"
     try:
         with urllib.request.urlopen(urllib.request.Request(url), timeout=TIMEOUT) as r:
             raw = r.read()
@@ -93,7 +99,11 @@ for mode in MODES:
     if st == 200:
         # A 200 is only a recovery if it actually carries a body; a 200 with an
         # empty envelope would be a silent-empty regression, which is a FAIL.
-        if isinstance(body, dict) and body:
+        if isinstance(body, dict) and body.get("stale"):
+            # The sidecar's labelled last-good fallback: upstream is still
+            # refusing, so this is STILL_REFUSED, not a recovery.
+            still.append(f"{mode}=stale")
+        elif isinstance(body, dict) and body:
             recovered.append(f"{mode}={st}")
         else:
             fails.append(f"FAIL {mode}: 200 with an empty/non-object envelope")

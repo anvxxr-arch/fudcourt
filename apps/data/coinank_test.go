@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/research/chainrank"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/research/coinank"
@@ -35,13 +36,18 @@ type caDoer struct {
 	// refusal, when set, is served as the body with HTTP 200 — exactly how
 	// CoinAnk reports a refusal.
 	refusal string
-	reqs    []string
+	// failAfter, when >0, switches the doer to serving `refusal` once that
+	// many calls have passed -- the shape of an upstream wall landing on a
+	// warm cache. Zero keeps the old always-refuse behaviour.
+	failAfter int
+	reqs      []string
 }
 
 func (d *caDoer) Do(req *http.Request) (*http.Response, error) {
 	d.reqs = append(d.reqs, req.URL.String())
+	serveRefusal := d.refusal != "" && (d.failAfter == 0 || len(d.reqs) > d.failAfter)
 	body := d.refusal
-	if body == "" {
+	if !serveRefusal {
 		b, err := os.ReadFile(filepath.Join(caFixtureDir, d.fixture+".body"))
 		if err != nil {
 			return nil, err
@@ -308,5 +314,81 @@ func TestCoinankHealthzNamesTheFamily(t *testing.T) {
 	// The cryptorank `build` key must stay untouched (existing gates assert it).
 	if b, _ := body["build"].(string); !strings.Contains(b, "modes") {
 		t.Fatalf("healthz build = %q", b)
+	}
+}
+
+// caTransientRefusal is CoinAnk's measured self-clearing refusal, inline
+// because the identically-shaped constant in the coinank package is
+// unexported and this test lives in the main package.
+const caTransientRefusal = `{"success":false,"code":"403","extCode":null,` +
+	`"msg":"please sub api to get data","data":null}`
+
+// TestCoinankStaleIsLabelledOnTheWire: with a warm cache and a wall upstream,
+// the route answers 200 carrying the LAST GOOD body, X-CA-Cache: STALE and
+// stale/staleAgeSec in the envelope -- the boards keep their data and the
+// label tells the truth. fresh=1 must NOT take the fallback: the live verifier
+// depends on a fresh read failing loudly rather than serving old data.
+func TestCoinankStaleIsLabelledOnTheWire(t *testing.T) {
+	clock := time.Unix(1790969044000, 0)
+	d := &caDoer{
+		fixture:   "real-liquidation",
+		refusal:   caTransientRefusal,
+		failAfter: 1,
+	}
+	f, err := coinank.New(coinank.Options{
+		Client:   d,
+		CacheDir: t.TempDir(),
+		Now:      func() time.Time { return clock },
+	})
+	if err != nil {
+		t.Fatalf("coinank.New: %v", err)
+	}
+	h := newServer(&fakeFetcher{}, 60, khala.Service{}, llama.Service{}, news.Service{},
+		chainrank.Service{}, coinglass.Service{}, coinank.Service{F: f}, coinmarketcap.Service{}).mux()
+
+	coinank.Now = func() int64 { return clock.Unix() }
+	t.Cleanup(func() { coinank.Now = func() int64 { return time.Now().Unix() } })
+
+	// Prime the cache from the fixture.
+	rec := caGet(t, h, "/api/coinank?mode=liquidation&interval=1h")
+	if rec.Code != 200 {
+		t.Fatalf("prime: status %d, body %s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("X-CA-Cache"); got != "MISS" {
+		t.Fatalf("prime X-CA-Cache = %q, want MISS", got)
+	}
+
+	// Move past the liquidation TTL (300s); upstream now refuses every call.
+	clock = clock.Add(600 * time.Second)
+	rec = caGet(t, h, "/api/coinank?mode=liquidation&interval=1h")
+	if rec.Code != 200 {
+		t.Fatalf("stale serve must be a 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("X-CA-Cache"); got != "STALE" {
+		t.Errorf("X-CA-Cache = %q, want STALE", got)
+	}
+	var body struct {
+		Stale         bool  `json:"stale"`
+		StaleAgeSec   int64 `json:"staleAgeSec"`
+		FetchedAt     int64 `json:"fetchedAt"`
+		UpstreamCount *int  `json:"upstreamCount"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("stale body: %v", err)
+	}
+	if !body.Stale || body.StaleAgeSec != 600 {
+		t.Errorf("stale=%v staleAgeSec=%d, want true/600", body.Stale, body.StaleAgeSec)
+	}
+	if want := clock.Add(-600 * time.Second).Unix(); body.FetchedAt != want {
+		t.Errorf("fetchedAt = %d, want %d (the moment the data was true)", body.FetchedAt, want)
+	}
+	if body.UpstreamCount == nil || *body.UpstreamCount == 0 {
+		t.Errorf("the stale body must still carry its row count, got %v", body.UpstreamCount)
+	}
+
+	// fresh=1 over the wall: loud 502, never the stale fallback.
+	rec = caGet(t, h, "/api/coinank?mode=liquidation&interval=1h&fresh=1")
+	if rec.Code != 502 {
+		t.Errorf("fresh over a wall must be 502, got %d: %s", rec.Code, rec.Body.String())
 	}
 }

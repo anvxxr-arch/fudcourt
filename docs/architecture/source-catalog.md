@@ -162,6 +162,23 @@ modes are LIVE** — the upstream gate that refused every call with HTTP 502
 `{"code":"403","detail":"CoinAnk refused the request: please sub api to get data"}` **lifted on
 2026-10-07**: a direct GET to `api.coinank.com` answers 200 (5/5 stable, no signature required) and the
 sidecar serves every mode (fundingRate 886 / liquidation 10 / longShort 726 / etf 708 / whales 50 rows).
+**Recurrence, measured 2026-10-09:** the same wall returned between 10:19:12 and ~12:19 UTC
+(last successful sidecar cache write → verified recovery) and self-cleared with no code change.
+During the window even coinank.com's own browser XHRs were refused on the same endpoints while
+`/indicatorapi/*` and `/api/Statistics/all` still answered 200 — a per-endpoint upstream wall,
+not our signature. After recovery: 5/5 modes 200 (884/10/728/709/50 rows),
+`verify-coinank.py` 114/0/0, `monitor.py` HEALTHY — row in `docs/operations/CHANGELOG.md` 2026-10-09.
+**Resilience, landed 2026-10-09 (post-wall):** the cache is now PER-MODE
+(`modes.go:TTLFor` — fundingRate/liquidation/whales 300 s, longShort 900 s,
+etf 3600 s, replacing one flat 60 s; ~82% fewer upstream pulls of the 1.87 MB
+fundingRate body), concurrent reads collapse to ONE upstream fetch per URL
+(single-flight — our own request storms must never be able to trip their
+burst heuristic), and a wall after the bounded retry serves the ≤24h
+last-good body as a LABELLED 200 (`X-CA-Cache: STALE`, `stale`/`staleAgeSec`,
+`fetchedAt` = the moment the data was true) instead of blanking the four
+boards; `fresh=1` (monitors + `verify-coinank.py`) never falls back.
+`verify-coinank.py` is now 119 checks (live reads also assert `MISS` and no
+`stale` on every fresh read).
 
 | source_id | source | provider | category | data produced | current code path | canonical target | freshness | durability | auth required | status | evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|

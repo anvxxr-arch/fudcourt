@@ -22,9 +22,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, radius, space, letterSpacing } from '@/styles/tokens';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
-import { EmptyState, ErrorState, Loading } from '@/ui/feedback';
+import { EmptyState, ErrorState, Loading, StaleNotice } from '@/ui/feedback';
 import { Stat } from '@/ui/stat';
 import { fmtPrice } from '@/lib/format';
+import { setBoardStale } from '@/lib/stale-board';
 import { fetchWhaleSource, type WhaleSources } from './client';
 import { buildWhaleBoard, type WhaleBoard, type WhalePosition, type WhaleSide } from './model';
 
@@ -102,6 +103,12 @@ export default function WhalesPage() {
     fetchWhaleSource(ac.signal).then((s) => !ac.signal.aborted && setSources(s));
     return () => ac.abort();
   }, []);
+  // Publish this board's staleness to the shell subtitle; cleared on unmount.
+  const staleEnvelope = sources?.data?.stale ? sources.data : null;
+  useEffect(() => {
+    setBoardStale(staleEnvelope ? { source: 'CoinAnk', fetchedAt: staleEnvelope.fetchedAt, ageSec: staleEnvelope.staleAgeSec ?? 0 } : null);
+    return () => setBoardStale(null);
+  }, [staleEnvelope]);
 
   const board: WhaleBoard | null = useMemo(() => {
     if (!sources?.data) return null;
@@ -139,6 +146,9 @@ export default function WhalesPage() {
 
   return (
     <>
+      {sources.data?.stale ? (
+        <StaleNotice source="CoinAnk" fetchedAt={sources.data.fetchedAt} ageSec={sources.data.staleAgeSec ?? 0} />
+      ) : null}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
           label="Positions seen"

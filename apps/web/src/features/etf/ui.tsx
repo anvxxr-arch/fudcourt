@@ -22,9 +22,10 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, space } from '@/styles/tokens';
+import { setBoardStale } from '@/lib/stale-board';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
-import { ErrorState, Loading } from '@/ui/feedback';
+import { ErrorState, Loading, StaleNotice } from '@/ui/feedback';
 import { Stat } from '@/ui/stat';
 import { fetchEtfSource, type EtfSources } from './client';
 import { buildEtfBoard, dayLabel, topIssuers, type EtfBoard } from './model';
@@ -76,6 +77,12 @@ export default function EtfFlowsPage() {
     fetchEtfSource(ac.signal).then((s) => !ac.signal.aborted && setSources(s));
     return () => ac.abort();
   }, []);
+  // Publish this board's staleness to the shell subtitle; cleared on unmount.
+  const staleEnvelope = sources?.data?.stale ? sources.data : null;
+  useEffect(() => {
+    setBoardStale(staleEnvelope ? { source: 'CoinAnk', fetchedAt: staleEnvelope.fetchedAt, ageSec: staleEnvelope.staleAgeSec ?? 0 } : null);
+    return () => setBoardStale(null);
+  }, [staleEnvelope]);
 
   const board: EtfBoard | null = useMemo(() => {
     const rows = sources?.data?.data;
@@ -102,6 +109,9 @@ export default function EtfFlowsPage() {
 
   return (
     <>
+      {sources.data?.stale ? (
+        <StaleNotice source="CoinAnk" fetchedAt={sources.data.fetchedAt} ageSec={sources.data.staleAgeSec ?? 0} />
+      ) : null}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
           label="Latest net flow"

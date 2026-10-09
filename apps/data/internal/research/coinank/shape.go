@@ -58,6 +58,17 @@ type CnEnvelope struct {
 
 	// Cache is the X-Cache value. It is a header, not body state (json:"-").
 	Cache string `json:"-"`
+
+	// Stale marks a LABELLED last-good serve: upstream refused (or was
+	// unreachable) after the bounded retry, and this body is the newest
+	// decodable one on disk -- real data fetched at FetchedAt, NOT current.
+	// Absent on every live read; the fresh=1 path never falls back.
+	Stale bool `json:"stale,omitempty"`
+
+	// StaleAgeSec is how old the served body is, set only with Stale: the
+	// seconds between the cached fetch and THIS response, so a consumer can
+	// state the age without comparing clocks it does not control.
+	StaleAgeSec int64 `json:"staleAgeSec,omitempty"`
 }
 
 // Now is the injected clock (tests pin fetchedAt).
@@ -83,8 +94,21 @@ func (e *HardError) Error() string {
 // Service ties a Fetcher to the mode semantics.
 type Service struct{ F *Fetcher }
 
-// TTLDefault is the family's default cache TTL in seconds, for the boot log.
-func TTLDefault() int { return defaultTTL }
+// TTLNote is the family's cache-TTL sentence for the boot log. The TTLs are
+// per-mode now (modes.go:TTLFor), so the sentence states the RANGE rather than
+// a single number that would be wrong for four of the five modes.
+func TTLNote() string {
+	min, max := 0, 0
+	for _, t := range pathTTL {
+		if min == 0 || t < min {
+			min = t
+		}
+		if t > max {
+			max = t
+		}
+	}
+	return fmt.Sprintf("ttl per-mode %d-%ds", min, max)
+}
 
 // Envelope fetches and returns the response for one already-validated
 // (mode, interval). Every failure is returned as an error; the handler maps it
@@ -147,6 +171,14 @@ func (s *Service) Envelope(ctx context.Context, mode, interval string, fresh boo
 	} else {
 		env.Derived = fmt.Sprintf(
 			"upstream `data` verbatim (object, %s)", AuthNote)
+	}
+
+	if info.Cache == "STALE" {
+		env.Stale = true
+		if age := Now() - info.FetchedAt; age > 0 {
+			env.StaleAgeSec = age
+		}
+		env.Derived += " — STALE: upstream refused; this is the last good body (see stale/staleAgeSec)"
 	}
 	return env, nil
 }
