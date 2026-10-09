@@ -54,6 +54,12 @@ export const DASHBOARD_READS = {
   wallets: 'SELECT * FROM wallets ORDER BY label, address',
   trades: 'SELECT * FROM trades ORDER BY date DESC, id DESC LIMIT 20',
   netWorth: 'SELECT SUM(value_usd) as total FROM assets',
+  // The treasury `venues` dimension: 12 reference rows (id, name, type). Added so
+  // `transactions.venue_id` — populated on 47 of 48 rows — can be resolved to a name
+  // and a type. Before this key nothing in the app read the table at all, so every
+  // transaction rendered a bare id ('binance') and the type was invisible.
+  // `ORDER BY type, name, id` is a total order (`id` is the primary key).
+  venues: 'SELECT * FROM venues ORDER BY type, name, id',
 } as const;
 
 let pgClient: SQL | null = null;
@@ -128,11 +134,12 @@ export async function execute(sql: string, args: unknown[] = []) {
 export async function getAll() {
   const names = Object.keys(DASHBOARD_READS) as (keyof typeof DASHBOARD_READS)[];
   const rows = await Promise.all(names.map((n) => query(DASHBOARD_READS[n])));
-  const [accounts, transactions, journal, ledger, assets, wallets, trades, netWorthRows] = rows;
+  const [accounts, transactions, journal, ledger, assets, wallets, trades, netWorthRows, venuesRows] = rows;
   const total = Number(netWorthRows[0]?.total ?? 0);
   return {
     accounts, transactions, journal, ledger, assets, wallets, trades,
     net_worth: Number.isFinite(total) ? total : 0,
+    venues: venuesRows,
   };
 }
 

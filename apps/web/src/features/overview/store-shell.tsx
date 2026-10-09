@@ -7,7 +7,7 @@ import { Banner } from '@/ui/banner';
 import { Loading } from '@/ui/feedback';
 import { viewPath } from '@/lib/view-routes';
 import dynamic from 'next/dynamic';
-import { loadOverviewBundle, saveWallet, type OverviewCoin, type OverviewReconRow, type OverviewTransaction } from './client';
+import { loadOverviewBundle, saveWallet, type OverviewCoin, type OverviewReconRow, type OverviewTransaction, type Venue } from './client';
 const DashboardPage = dynamic(() => import('@/features/overview/dashboard'), { ssr: false });
 const PortfolioPage = dynamic(() => import('@/features/overview/portfolio'), { ssr: false });
 const WalletPage = dynamic(() => import('@/features/overview/wallets'), { ssr: false });
@@ -43,6 +43,7 @@ type DbData = {
   coinTotal: number;
   wallets: Wallet[];
   transactions: OverviewTransaction[];
+  venues: Venue[];
   reconRows: OverviewReconRow[];
   reconWallets: Wallet[];
   period?: string;
@@ -81,6 +82,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
         coinTotal: coinsData.total || 0,
         wallets,
         transactions: allData.transactions || [],
+        venues: allData.venues || [],
         period: allData.period,
         net_worth: allData.net_worth,
         reconRows: reconData.rows || [],
@@ -337,7 +339,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
         }} />
       )}
       {page === 'transactions' && isTeam && (
-        <TransactionPage transactions={db?.transactions || []} refreshTx={refreshTx} load={load} />
+        <TransactionPage transactions={db?.transactions || []} venues={db?.venues || []} refreshTx={refreshTx} load={load} />
       )}
       {page === 'reconciliation' && isTeam && db?.reconRows && db?.reconWallets && (
         <ReconciliationPage rows={db.reconRows} wallets={db.reconWallets} />

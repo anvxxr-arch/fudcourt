@@ -19,6 +19,17 @@ export type OverviewTransaction = {
   trade_id: string | null;
 };
 
+/**
+ * A treasury venue — the 12-row reference dimension (`venues` in pg-schema.sql).
+ * `transactions.venue_id` points at `id` (and `wallets.chain` matches it
+ * case-insensitively: 'BSC' -> 'bsc'). `type` is one of exchange/wallet/bank/other.
+ */
+export type Venue = {
+  id: string;
+  name: string;
+  type: string;
+};
+
 export type OverviewCoin = {
   asset: string;
   total_usd: number;
@@ -40,6 +51,7 @@ export type OverviewReconRow = {
 export type AllData = {
   assets?: Asset[];
   transactions?: OverviewTransaction[];
+  venues?: Venue[];
   period?: string;
   net_worth?: number;
 };
