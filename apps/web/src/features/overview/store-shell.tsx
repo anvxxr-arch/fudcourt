@@ -333,7 +333,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'journal' && isTeam && <JournalPage />}
       {page === 'plans' && isTeam && <PlansPage />}
       {page === 'wallets' && isTeam && (
-        <WalletPage wallets={wallets} balanceByWallet={balanceByWallet} onSave={async (w) => {
+        <WalletPage wallets={wallets} venues={db?.venues || []} balanceByWallet={balanceByWallet} onSave={async (w) => {
           await saveWallet(w);
           load();
         }} />

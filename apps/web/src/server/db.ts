@@ -87,11 +87,19 @@ export function pg(): SQL {
  * positional `?` placeholders (Postgres numbers them $1..$n — a bare `?` is
  * invalid) and `ORDER BY rowid` (SQLite's implicit insertion-order column).
  *
- * `rowid` maps to `id`: every table that uses it has an INTEGER PRIMARY KEY,
- * which IS the rowid in SQLite, so this preserves the exact ordering rather
- * than merely a stable one. `ctid` would be the physical-position analogue, but
- * it changes under UPDATE (an updated row moves to the heap tail), which would
- * silently reorder the wallets list after an edit.
+ * `rowid` maps to `id`, which is ONLY sound for a table whose primary key is an
+ * INTEGER (there the rowid IS that column). It is NOT sound for a table keyed on a
+ * text column: `wallets` is keyed on `address` and has no `id`, so the rewrite made
+ * `/api/wallets` 500 (the journal shows `column "id" does not exist`) and the client
+ * swallowed it into a permanently empty surface. That route now orders explicitly by
+ * `created_at, address` and no route passes `rowid` any more — keep it that way, or
+ * make this rewrite table-aware before relying on it again.
+ *
+ * Where the mapping IS sound — a table with an INTEGER primary key — it preserves
+ * the exact insertion order rather than merely a stable one. `ctid` would be the
+ * physical-position analogue, but it changes under UPDATE (an updated row moves to
+ * the heap tail), which would silently reorder a list after an edit, so it is not a
+ * substitute.
  */
 export function toPostgres(sql: string): string {
   let n = 0;

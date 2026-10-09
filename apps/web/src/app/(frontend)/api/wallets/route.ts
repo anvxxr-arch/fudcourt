@@ -8,7 +8,13 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const wallets = await query('SELECT * FROM wallets ORDER BY rowid');
+    // `wallets` is keyed on `address` (text) and has NO integer primary key, so
+    // `ORDER BY rowid` cannot be translated: `toPostgres` rewrites it to `ORDER BY id`,
+    // which does not exist here, and the resulting 500 was swallowed by the caller's
+    // `.catch(() => [])` — the surface then rendered a calm "Wallets (0)". `created_at`
+    // is the stored insertion time; `address` breaks the tie (the seeded rows share one
+    // timestamp), so the order stays deterministic.
+    const wallets = await query('SELECT * FROM wallets ORDER BY created_at, address');
     return NextResponse.json(wallets);
   } catch (e: unknown) {
     return failInternal(e);

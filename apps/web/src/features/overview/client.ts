@@ -83,7 +83,12 @@ export async function loadOverviewBundle(): Promise<{
 }> {
   const [allData, wallets, coinsData, reconData] = await Promise.all([
     getJSON<AllData>('/api/all', { cache: 'no-store' }),
-    getJSON<Wallet[]>('/api/wallets', { cache: 'no-store' }).catch((): Wallet[] => []),
+    getJSON<Wallet[]>('/api/wallets', { cache: 'no-store' }).catch((e): Wallet[] => {
+      // An empty list and a broken endpoint must not look the same to an operator: this
+      // catch is why a 500 on the wallet list rendered as a calm "Wallets (0)".
+      console.warn('[overview] /api/wallets failed; the wallet list renders empty', e);
+      return [];
+    }),
     getJSON<CoinsData>('/api/coins', { cache: 'no-store' }).catch(() => ({ coins: [], total: 0 })),
     getJSON<ReconData>('/api/reconcile', { cache: 'no-store' }).catch(() => ({ rows: [], wallets: [] })),
   ]);

@@ -7,6 +7,7 @@ import { Button, Input, Select, Modal, Label } from '@/ui/primitives';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import { bulkDeleteTransactions, bulkPatchTransactions, createTransaction, deleteTransaction, patchTransaction } from './client';
 import type { Venue } from './client';
+import { buildVenueIndex } from './venue-index';
 
 type Tx = {
   id: number;
@@ -78,7 +79,7 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
    * table itself (fetched in the same payload), never from a hardcoded list, so the
    * dictionary cannot drift from the database.
    */
-  const venueById = useMemo(() => new Map(venues.map(v => [v.id, v])), [venues]);
+  const venueById = useMemo(() => buildVenueIndex(venues), [venues]);
 
   /** Every row lands in exactly one bucket — a venue id, NO_VENUE, or UNRESOLVED_VENUE. */
   const venueKeyOf = useCallback(

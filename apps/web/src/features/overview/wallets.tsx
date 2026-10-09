@@ -1,24 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { themeColor, fontSize, radius, space } from '@/styles/tokens';
 import { Wallet, CHAIN_COLOR, EMOJI_PRESETS, COLOR_PRESETS } from '@/lib/format';
 import { Button, Modal, Label, Card } from '@/ui/primitives';
+import type { Venue } from './client';
+import { buildVenueIndex, resolveVenue } from './venue-index';
 
 type Props = {
   wallets: Wallet[];
+  venues: Venue[];
   balanceByWallet: Record<string, number>;
   onSave: (w: Partial<Wallet>) => void;
 };
 
-export default function WalletPage({ wallets, balanceByWallet, onSave }: Props) {
+export default function WalletPage({ wallets, venues, balanceByWallet, onSave }: Props) {
   const [edit, setEdit] = useState<Wallet | null>(null);
+
+  /**
+   * `wallets.chain` stores a presentation string ('BSC', 'Solana') where the
+   * dimension's keys are 'bsc'/'solana' — measured on the live DB: 0 of 3 resolve
+   * exactly, 3 of 3 resolve folded. So each card names the venue the way the
+   * VOCABULARY names it (and keeps the stored chain visible when it differs), shows
+   * the TYPE it is filed under, and flags a chain the vocabulary does not know
+   * rather than blanking it.
+   */
+  const venueIndex = useMemo(() => buildVenueIndex(venues), [venues]);
 
   return (
     <div>
       <h3 style={{ color: themeColor.blue }}>Wallet Manager</h3>
       <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>Customize alias, emoji, color for each wallet. Changes reflect everywhere instantly.</p>
-      {wallets.map(w => (
+      {wallets.map(w => {
+        const venue = resolveVenue(venueIndex, w.chain);
+        return (
         <Card key={w.address}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
@@ -28,13 +43,37 @@ export default function WalletPage({ wallets, balanceByWallet, onSave }: Props) 
                 {w.alias && w.alias !== w.label && <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginLeft: space[8] }}>({w.label})</span>}
               </div>
               <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, marginTop: space[4], wordBreak: 'break-all' }}>{w.address}</div>
-              <div style={{ fontSize: fontSize[11], color: CHAIN_COLOR[w.chain] || themeColor.labelTertiary, marginTop: 2 }}>{w.chain} · ${balanceByWallet[w.label]?.toFixed(2) || '0.00'}</div>
+              {/* The canonical venue name (or the raw chain, when the vocabulary does not
+                  know it), then the TYPE it is filed under. A flex-wrap row so a long name
+                  wraps instead of overflowing at 390px. The stored chain stays visible in
+                  parentheses only when it differs from the name — the same alias/label idiom
+                  the line above uses — so 'BSC' -> 'BSC Main' shows the drift and 'Solana'
+                  does not repeat itself. */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: space[4], rowGap: space[8], marginTop: 2 }}>
+                <span style={{ fontSize: fontSize[11], color: CHAIN_COLOR[w.chain] || themeColor.labelTertiary }}>{venue ? venue.name : w.chain}</span>
+                {venue && w.chain !== venue.name && <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>({w.chain})</span>}
+                {venue ? (
+                  <span style={{
+                      display: 'inline-flex', alignItems: 'center', border: `1px solid ${themeColor.separator}`,
+                      borderRadius: radius[8], padding: `1px ${space[4]}px`, whiteSpace: 'nowrap',
+                      fontSize: fontSize[11], color: themeColor.labelTertiary,
+                    }}>{venue.type}</span>
+                ) : (
+                  <span title="no `venues` row matches this chain — the reference is unresolved" style={{
+                    display: 'inline-flex', alignItems: 'center', border: `1px solid ${themeColor.red}`,
+                    borderRadius: radius[8], padding: `1px ${space[4]}px`, whiteSpace: 'nowrap',
+                    fontSize: fontSize[11], color: themeColor.red,
+                  }}>⚠ unresolved</span>
+                )}
+                <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>· ${balanceByWallet[w.label]?.toFixed(2) || '0.00'}</span>
+              </div>
               {w.notes && <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, marginTop: space[4], fontStyle: 'italic' }}>{w.notes}</div>}
             </div>
             <Button onClick={() => setEdit(w)} variant="ghost" size="sm">✏️ Edit</Button>
           </div>
         </Card>
-      ))}
+        );
+      })}
 
       {edit && (
         <EditWalletModal wallet={edit} onSave={(w) => { onSave(w); setEdit(null); }} onClose={() => setEdit(null)} />
