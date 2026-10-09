@@ -1,0 +1,423 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/taxonomy/datapoint-taxonomy.json",
+  "title": "Data point taxonomy",
+  "description": "Machine-readable classification vocabulary for fudcourt data points. The taxonomy is a classification vocabulary (not an entity schema): it pins the 19 top-level domains in order, each domain's exact type list, and the 13 dimensions every data point carries; it does not model any concrete entity, record shape, or storage format. The prose companion is docs/architecture/data-taxonomy.md, which explains the same taxonomy in narrative form. A data point lives under exactly one top-level domain key, and its type must come from that domain's $defs <domain>_types enum. Decision note: the taxonomy's single 'News / Events' source bullet feeds BOTH top-level keys, so $defs news_types and $defs events_types are deliberately identical lists rather than two independently curated ones.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "domain",
+    "type",
+    "subtype",
+    "asset",
+    "instrument",
+    "venue",
+    "chain",
+    "country",
+    "currency",
+    "timeframe",
+    "timestamp",
+    "source",
+    "value",
+    "unit"
+  ],
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "The one top-level domain this data point belongs to: exactly one of the 19 keys in taxonomy order.",
+      "enum": [
+        "economy",
+        "fixed_income",
+        "equities",
+        "forex",
+        "commodities",
+        "crypto_spot",
+        "crypto_derivatives",
+        "options",
+        "dex",
+        "defi",
+        "blockchain",
+        "onchain",
+        "stablecoins",
+        "funds",
+        "positioning",
+        "sentiment",
+        "news",
+        "events",
+        "prediction"
+      ]
+    },
+    "type": {
+      "type": "string",
+      "description": "The data point's type. The value is one of the $defs <domain>_types enums: it MUST be a member of the $defs '<domain>_types' enum matching the chosen 'domain' (domain 'economy' -> $defs 'economy_types', domain 'prediction' -> $defs 'prediction_types', and so on for all 19 domains)."
+    },
+    "subtype": {
+      "type": ["string", "null"]
+    },
+    "asset": {
+      "type": ["string", "null"]
+    },
+    "instrument": {
+      "type": ["string", "null"]
+    },
+    "venue": {
+      "type": ["string", "null"]
+    },
+    "chain": {
+      "type": ["string", "null"]
+    },
+    "country": {
+      "type": ["string", "null"]
+    },
+    "currency": {
+      "type": ["string", "null"]
+    },
+    "timeframe": {
+      "type": ["string", "null"]
+    },
+    "timestamp": {
+      "type": ["string", "null"]
+    },
+    "source": {
+      "type": ["string", "null"]
+    },
+    "value": {
+      "type": ["string", "number", "boolean", "null"],
+      "description": "The observed value. Money and price values are exact decimal strings per the repo's common/decimal.json convention (never a JSON number for money/price, which loses precision in binary64); a value the source does not report is null, never a fabricated 0."
+    },
+    "unit": {
+      "type": ["string", "null"]
+    }
+  },
+  "$defs": {
+    "economy_types": {
+      "type": "string",
+      "enum": [
+        "GDP",
+        "CPI / inflation",
+        "PPI",
+        "PCE",
+        "PMI",
+        "unemployment",
+        "payroll / employment",
+        "wages",
+        "retail sales",
+        "industrial production",
+        "consumer confidence",
+        "trade balance",
+        "current account",
+        "foreign reserves",
+        "government debt",
+        "fiscal balance",
+        "money supply",
+        "policy rate",
+        "central bank balance sheet",
+        "economic calendar / release"
+      ]
+    },
+    "fixed_income_types": {
+      "type": "string",
+      "enum": [
+        "treasury yield",
+        "bond price",
+        "coupon",
+        "maturity",
+        "duration",
+        "yield curve",
+        "credit spread",
+        "OAS",
+        "bond auction",
+        "issuance",
+        "default / credit risk"
+      ]
+    },
+    "equities_types": {
+      "type": "string",
+      "enum": [
+        "OHLCV",
+        "tick",
+        "trade",
+        "quote",
+        "bid / ask",
+        "order book",
+        "market cap",
+        "shares outstanding",
+        "EPS",
+        "revenue",
+        "net income",
+        "balance sheet",
+        "cash flow",
+        "valuation ratios",
+        "dividends",
+        "splits",
+        "earnings",
+        "corporate action",
+        "institutional holdings",
+        "insider transactions"
+      ]
+    },
+    "forex_types": {
+      "type": "string",
+      "enum": [
+        "spot price",
+        "OHLCV",
+        "tick",
+        "bid / ask",
+        "spread",
+        "forward",
+        "swap",
+        "cross rate",
+        "reference rate",
+        "volatility",
+        "positioning"
+      ]
+    },
+    "commodities_types": {
+      "type": "string",
+      "enum": [
+        "spot",
+        "futures",
+        "OHLCV",
+        "volume",
+        "open interest",
+        "forward curve",
+        "inventory",
+        "production",
+        "consumption",
+        "supply / demand"
+      ]
+    },
+    "crypto_spot_types": {
+      "type": "string",
+      "enum": [
+        "asset metadata",
+        "price",
+        "OHLCV",
+        "trades",
+        "ticker",
+        "bid / ask",
+        "order book",
+        "volume",
+        "market cap",
+        "circulating supply",
+        "total supply",
+        "dominance",
+        "exchange pairs"
+      ]
+    },
+    "crypto_derivatives_types": {
+      "type": "string",
+      "enum": [
+        "perpetual price",
+        "futures price",
+        "mark price",
+        "index price",
+        "funding rate",
+        "predicted funding",
+        "open interest",
+        "basis",
+        "premium",
+        "liquidation",
+        "long / short ratio",
+        "taker buy/sell ratio"
+      ]
+    },
+    "options_types": {
+      "type": "string",
+      "enum": [
+        "option chain",
+        "strike",
+        "expiry",
+        "call / put",
+        "IV",
+        "historical volatility",
+        "delta",
+        "gamma",
+        "theta",
+        "vega",
+        "skew",
+        "term structure",
+        "put/call ratio",
+        "max pain",
+        "gamma exposure"
+      ]
+    },
+    "dex_types": {
+      "type": "string",
+      "enum": [
+        "token",
+        "pair",
+        "pool",
+        "swap",
+        "pool price",
+        "liquidity",
+        "volume",
+        "fees",
+        "LP position",
+        "ticks",
+        "price impact",
+        "slippage",
+        "liquidity depth"
+      ]
+    },
+    "defi_types": {
+      "type": "string",
+      "enum": [
+        "protocol",
+        "TVL",
+        "chain TVL",
+        "deposits",
+        "borrows",
+        "utilization",
+        "lending rate",
+        "borrowing rate",
+        "APY / APR",
+        "protocol fees",
+        "revenue",
+        "treasury",
+        "yield pool",
+        "bridge volume",
+        "stablecoin TVL"
+      ]
+    },
+    "blockchain_types": {
+      "type": "string",
+      "enum": [
+        "block",
+        "transaction",
+        "input/output",
+        "address",
+        "balance",
+        "contract",
+        "logs",
+        "events",
+        "token transfer",
+        "gas",
+        "gas fee",
+        "validator",
+        "staking",
+        "mempool",
+        "nonce"
+      ]
+    },
+    "onchain_types": {
+      "type": "string",
+      "enum": [
+        "exchange inflow",
+        "exchange outflow",
+        "exchange reserve",
+        "whale activity",
+        "active addresses",
+        "new addresses",
+        "transaction count",
+        "transaction volume",
+        "realized cap",
+        "MVRV",
+        "NUPL",
+        "SOPR",
+        "realized profit/loss",
+        "holder distribution",
+        "miner reserve",
+        "LTH / STH supply"
+      ]
+    },
+    "stablecoins_types": {
+      "type": "string",
+      "enum": [
+        "supply",
+        "circulating supply",
+        "mint",
+        "burn",
+        "peg",
+        "peg deviation",
+        "chain distribution",
+        "exchange reserve",
+        "bridge flow"
+      ]
+    },
+    "funds_types": {
+      "type": "string",
+      "enum": [
+        "NAV",
+        "AUM",
+        "holdings",
+        "inflow",
+        "outflow",
+        "net flow",
+        "shares outstanding",
+        "premium / discount"
+      ]
+    },
+    "positioning_types": {
+      "type": "string",
+      "enum": [
+        "COT",
+        "commercial positions",
+        "non-commercial positions",
+        "leveraged funds",
+        "asset managers",
+        "dealers",
+        "long / short ratio",
+        "futures positioning"
+      ]
+    },
+    "sentiment_types": {
+      "type": "string",
+      "enum": [
+        "fear & greed",
+        "social mentions",
+        "social volume",
+        "social dominance",
+        "sentiment score",
+        "search trend",
+        "news sentiment"
+      ]
+    },
+    "news_types": {
+      "type": "string",
+      "description": "Fed by the taxonomy's single 'News / Events' source bullet: news_types and events_types are the same list by decision, not two separately curated lists.",
+      "enum": [
+        "news article",
+        "headline",
+        "source",
+        "entity",
+        "asset mentioned",
+        "country",
+        "event type",
+        "sentiment",
+        "importance",
+        "timestamp"
+      ]
+    },
+    "events_types": {
+      "type": "string",
+      "description": "Fed by the taxonomy's single 'News / Events' source bullet: events_types and news_types are the same list by decision, not two separately curated lists.",
+      "enum": [
+        "news article",
+        "headline",
+        "source",
+        "entity",
+        "asset mentioned",
+        "country",
+        "event type",
+        "sentiment",
+        "importance",
+        "timestamp"
+      ]
+    },
+    "prediction_types": {
+      "type": "string",
+      "enum": [
+        "event",
+        "market",
+        "outcome",
+        "probability",
+        "price",
+        "volume",
+        "liquidity",
+        "order book",
+        "resolution"
+      ]
+    }
+  }
+}

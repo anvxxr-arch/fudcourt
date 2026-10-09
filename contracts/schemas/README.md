@@ -35,6 +35,7 @@ schemas/
   defi/              protocol, pool
   research/          provider-shaped market rows + news/report documents
   signals/           signal, scoreboard
+  taxonomy/          data-point taxonomy: 19 domains + per-domain type vocabulary
   error-envelope.json, event-envelope.json   (pre-existing, untouched)
 ```
 
@@ -116,6 +117,17 @@ it is computed.
 | [`research/prediction-market.json`](research/prediction-market.json) | ENRICHED (in-payload join) | `apps/data/internal/research/cryptorank` | provider id |
 | [`signals/signal.json`](signals/signal.json) | PRODUCT VIEW | **absent** (Next route only) | provider `(id, mint)` |
 | [`signals/scoreboard.json`](signals/scoreboard.json) | **DERIVED** (provider/browser) | **absent** | n/a |
+
+### 2.3 `taxonomy/`
+
+Classification contract, not an entity schema: it classes data points, so the table below has no
+Owner or canonical-id column. Its prose companion is
+[docs/architecture/data-taxonomy.md](../../../docs/architecture/data-taxonomy.md). `macro/` remains
+deliberately absent — economy is a taxonomy domain with no schema — consistent with §5.
+
+| File | What it is |
+|---|---|
+| [`taxonomy/datapoint-taxonomy.json`](taxonomy/datapoint-taxonomy.json) | Classification vocabulary for data points: domain + 13 dimensions + per-domain type enums. Layer: **classification contract** (not an entity schema) — it names no owning service and invents no entity, it classes data points. |
 
 ## 3. Relation to `events/`
 
