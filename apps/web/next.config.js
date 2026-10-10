@@ -8,6 +8,18 @@ const { withPayload } = require('@payloadcms/next/withPayload');
 // dashboard, which is the exact regression the typecheck gate exists to catch.
 // The typecheck must therefore pass under React 19 before this is deployed.
 const nextConfig = {
+  // The macro dashboard reads dozens of upstream series at BUILD time: its loader
+  // runs inside static generation so the figures land in the first paint instead of
+  // growing the cards on the client (see features/economy/server-boards.ts).
+  // Measured on this host 2026-10-10, against the running service: the five boards
+  // cost 31.4s sequentially, and the slowest one alone (calendar) 24.4s warm. A
+  // cold run under load metered past Next's 60s default on all three attempts,
+  // which fails static generation and took the entire build — and therefore the
+  // served app — down. 300s is ~10x the warm worst board and 5x the threshold that
+  // failed, so a cold build still lands. The key is TOP-LEVEL, not under
+  // `experimental`: this Next reads `result.staticPageGenerationTimeout` directly
+  // (dist/server/config.js), so nesting it would be silently ignored.
+  staticPageGenerationTimeout: 300,
   // Portfolio moved to /team/portfolio: the legacy /portfolio entry now
   // redirects there (was: rewrite /portfolio -> /). The /:path* fallthrough
   // keeps any deeper legacy /portfolio/* link landing on the matching top
