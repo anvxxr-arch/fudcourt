@@ -2547,3 +2547,43 @@ The class chip's `aria-pressed` flips to the class being shown and the call coun
 **4. CI on the commit.** `f7224c1` — **5 of 5 green**, measured with `gh run watch --exit-status`:
 web 2m2s (run 38083344095), integration 2m31s (38083344109), contracts 15s (38083344047), go 14s (38083344012), rust 17s (38083344197).
 Before the push the same commit passed **422 pass / 0 fail** plus `tsc --noEmit` 0 in a detached worktree, so the verdict is about the commit rather than the working tree.
+
+## DR-067 — the board's coverage was reconciled against the app's own modules: 121 of 123, and the last two are named with sharper evidence (2026-10-10)
+
+**Status:** accepted and **served** — measured over HTTP on `fudcourt-web` (BUILD_ID `5Tnk6ddo9TAP0SRd7yB57`) and on the live DOM, class by class, at a 390px viewport.
+
+**Context.** DR-066 shipped 120 registry rows and named three assets the screener could not rate. Two things had never actually been checked: whether that set is the WHOLE app universe (nothing had diffed the registry against the modules that define it), and whether the three unresolved symbols were unresolved because the upstream lacks them or because the probe had not looked hard enough.
+
+**Decision.**
+
+- THE UNIVERSE IS READ FROM THE MODULES THAT DEFINE IT, NOT RECOUNTED BY HAND. A throwaway bun script imported `features/trade/model-instruments.ts`, `features/market/stock-regions.ts`, `commodity-symbols.ts` and `forex-pairs.ts` and dumped them: **30 crypto + 65 stocks (us 16, asia 18, europe 31) + 12 commodities + 16 forex = 123** — the number the reconciliation is measured against, not a number a resolver script printed about itself.
+- THE RECONCILIATION IS A SET DIFFERENCE, AND IT IS CLEAN: **app 123 = 120 on the board + 3 named unrated + 0 orphans.** No app symbol is silently absent, and every ticker in the registry is a measured ticker (0 registry rows carry a ticker outside the measured map).
+- `^TWII` RESOLVED, AND THE PROOF IS THE PRICE RATHER THAN THE NAME. `TWSE:IX0001` is `type=index` with the description "TSEC CAPITALIZATION WEIGHTED STOCK INDEX". The disambiguator is not the string match: the app's own upstream — Yahoo, the feed `stock-regions.ts` reads — answers for `^TWII` with the shortName **"TSEC CAPITALIZATION WEIGHTED ST"** and the price **49313.44** (TWD, TAI), byte-identical to the screener's close for `TWSE:IX0001`. Same index, same level, same currency. The row therefore joins the board as 121.
+- `^AXJO` DID NOT RESOLVE, AND THE WIDER SWEEP SAYS WHY. `ASX:XJO` and every other plausible form (`ASX:AXJO`, `TVC:XJO`, `TVC:AXJO`, `SPI:XJO`, `ASX:XAO`, `ASX:XKO`, `TVC:SPI`) is **ABSENT** from the screener, and every rated "ASX 200" hit is a fund — `LSE:XAUS`, `XETR:DX2S`, `ASX:STW`, `VIE:DB36`, `OTC:SKJJF` — rather than the index. Named as unresolved, never guessed.
+- COFFEE WAS PROBED AT CLOSER RANGE AND THE REFUSAL GOT SHARPER. The contracts this app tracks are **carried** by the screener and publish a null aggregate — `ICEUS:KC1!` and `ICEEUR:RC1!`, `Recommend.All` null (measured), which is the DR-066 front-month finding restated at the exact symbols. Nor is there a rated series for the underlying: the only rated things named "coffee" are `SPARKS:COFFEE`, an index over coffee **companies**, and `DJ:DJCIKC`, an index over coffee **futures**. Both are different price series, so both are refused. `UNRESOLVED` now carries two entries, each with its reason in the code beside it.
+- THE REFUSED CANDIDATE IS ALSO REMOVED FROM THE MEASUREMENT RECORD. The scratch map still held the coffee entry whose ticker had been refused, which made the map read 121 rows against a 120-row registry; it is dropped, so the record and the shipped registry agree.
+- THE REGISTRY IS PINNED TO THE NEW SHAPE BY TESTS: class sizes **30 / 64 / 16 / 11 = 121**, `UNRESOLVED` = `axjo` + `coffee`, `TWSE:` added to the carried-exchange assertion, and the TAIEX row pinned (`byId('twii')?.tv === 'TWSE:IX0001'`) beside an explicit assertion that `byId('axjo')` is undefined.
+
+**Evidence.**
+
+**1. Every class, read live — one request each, with the board's own five timeframes.**
+
+| class | ids | payload | instruments | missing | reads | withheld | invariant | 1h aggregate |
+|---|---|---|---|---|---|---|---|---|
+| crypto | 30 | 149.5 KB | 30 | 0 | 150 | 30 | 120/120 | 30/30 |
+| stock | 64 | 311.0 KB | 64 | 0 | 320 | 64 | 256/256 | 64/64 |
+| forex | 16 | 79.3 KB | 16 | 0 | 80 | 16 | 64/64 | 16/16 |
+| commodity | 11 | 53.9 KB | 11 | 0 | 55 | 11 | 44/44 | 11/11 |
+
+**2. The verdict at 390px, class by class (live DOM, effective-area contract of DR-064).**
+
+| class | doc | sideways | interactive | under-24 boxes | effective failures | clipped | escapees | table rows | API calls | ids in the call |
+|---|---|---|---|---|---|---|---|---|---|---|
+| crypto | 390/390 | false | 70 | 0 | 0 | 0 | 0 | 27 | 1 | 30 |
+| stock | 390/390 | false | 104 | 0 | 0 | 0 | 0 | 27 | 2 | 64 |
+| forex | 390/390 | false | 56 | 0 | 0 | 0 | 0 | 27 | 3 | 16 |
+| commodity | 390/390 | false | 51 | 0 | 0 | 0 | 0 | 27 | 4 | 11 |
+
+**3. Gates.** `test:shapers` **467 pass / 0 fail** (registry guards updated to the new shape), `tsc --noEmit` 0 errors, `STRUCTURE_OK (442 files)`, `DESIGN_TOKENS_OK (files=447 exemptions=6)`, `TOKENS_OK (14 colors, 9 space, 11 font-size, 281 vars)`, `DESIGN_SYSTEM_OK (files=23 scale_exemptions=6)`, `build` exit 0.
+
+**Consequences.** `apps/web/src/features/technicals/model.ts` (121 rows, two named unresolved), `apps/web/tests/technicals-tests.ts`. No route, client, UI or contract change: the class switcher already re-fetches per class, so one more stock row costs one more id in the same request.

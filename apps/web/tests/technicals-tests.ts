@@ -144,8 +144,8 @@ test('registry: the app universes are FULLY accounted for', () => {
   // 121 rows carry 30 crypto · 63 of the 65 stocks · 16 forex · 12 commodities.
   // The other two stocks are in UNRESOLVED, so nothing the app tracks is
   // missing without being named.
-  assert.deepEqual(classCounts(), { crypto: 30, stock: 63, forex: 16, commodity: 11 });
-  assert.equal(INSTRUMENTS.length, 120);
+  assert.deepEqual(classCounts(), { crypto: 30, stock: 64, forex: 16, commodity: 11 });
+  assert.equal(INSTRUMENTS.length, 121);
   assert.equal(classCounts().stock + UNRESOLVED.filter((u) => u.cls === 'stock').length, 65,
     'the app carries 65 stock symbols (16 US + 18 Asia + 31 Europe)');
   for (const cls of ['crypto', 'stock', 'forex', 'commodity'] as const) {
@@ -154,7 +154,7 @@ test('registry: the app universes are FULLY accounted for', () => {
 });
 
 test('registry: the app assets the upstream cannot rate are STATED, never faked', () => {
-  assert.deepEqual(UNRESOLVED.map((u) => u.id).sort(), ['axjo', 'coffee', 'twii']);
+  assert.deepEqual(UNRESOLVED.map((u) => u.id).sort(), ['axjo', 'coffee']);
   for (const u of UNRESOLVED) {
     assert.equal(byId(u.id), undefined, `${u.id} must not be a registry row`);
     assert.equal(INSTRUMENTS.some((i) => i.label === u.label), false, `${u.label} must not be silently dropped either`);
@@ -175,7 +175,7 @@ test('registry: the resolved families are the measured ones', () => {
   assert.ok(tvs('forex').every((t) => t.startsWith('FX:') || t.startsWith('FX_IDC:')), 'forex reads the FX feeds');
   assert.ok(tvs('commodity').every((t) => /^(TVC|OANDA|FX):/.test(t)),
     'commodities read a rated spot/CFD series, never a front month (0/25 rated)');
-  for (const ex of ['IDX:', 'LSE:', 'XETR:', 'NASDAQ:', 'NYSE:', 'TSE:', 'HKEX:']) {
+  for (const ex of ['IDX:', 'LSE:', 'XETR:', 'NASDAQ:', 'NYSE:', 'TSE:', 'HKEX:', 'TWSE:']) {
     assert.ok(tvs('stock').some((t) => t.startsWith(ex)), `${ex} must be carried by the stock class`);
   }
 });
@@ -203,4 +203,7 @@ test('registry: the renames the measurement found are pinned', () => {
   assert.equal(byId('maticusdt')?.tv, 'BINANCE:POLUSDT');
   assert.equal(byId('tonusdt')?.tv, 'COINBASE:TONUSD');
   assert.equal(byId('usdidr')?.tv, 'FX_IDC:USDIDR');
+  // The index sweep: ^TWII IS the TAIEX, and the upstream says so in its own words.
+  assert.equal(byId('twii')?.tv, 'TWSE:IX0001');
+  assert.equal(byId('axjo'), undefined, '^AXJO has no rated form and stays unresolved (ASX:XJO is absent)');
 });

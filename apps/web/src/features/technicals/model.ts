@@ -71,12 +71,21 @@ export interface Instrument {
  * Commodities were the hard half, and the reason they read CFD/spot series
  * rather than the front months this app tracks: NOT ONE futures contract in the
  * screener carries a technicals aggregate (measured — 0 of 25 rated in every
- * symbol search, including `CBOT:ZC` and `ICEUS:KC`). Each commodity therefore
- * reads the rated series for the SAME underlying, accepted only where the
- * upstream itself calls it one (`type=commodity`: "WTI Oil Future", "Copper",
- * "Soybeans"). A rated but DIFFERENT instrument is refused — `LSE:CRUD` and
- * `AMEX:BNO` are oil ETCs, `AMEX:SOYB` a soybean ETF, `SPARKS:COFFEE` an index
- * of coffee stocks. Coffee has no such series anywhere, so it is `UNRESOLVED`.
+ * symbol search, including `CBOT:ZC` and `ICEUS:KC`; the same finding at closer
+ * range — the exact contracts this app tracks, `ICEUS:KC1!` and `ICEEUR:RC1!`,
+ * are PRESENT in the screener and publish a null aggregate). Each commodity
+ * therefore reads the rated series for the SAME underlying, accepted only where
+ * the upstream itself calls it one (`type=commodity`: "WTI Oil Future",
+ * "Copper", "Soybeans"). A rated but DIFFERENT instrument is refused — `LSE:CRUD`
+ * and `AMEX:BNO` are oil ETCs, `AMEX:SOYB` a soybean ETF, `SPARKS:COFFEE` an
+ * index over coffee stocks and `DJ:DJCIKC` an index over coffee futures. Coffee
+ * has no series for the underlying anywhere, so it is `UNRESOLVED`.
+ *
+ * The two indices were swept the same way. `^TWII` resolved: `TWSE:IX0001` is
+ * `type=index` and its own description names it the TSEC capitalization-weighted
+ * index — the TAIEX `^TWII` tracks. `^AXJO` did not: every plausible form
+ * (`ASX:XJO` first) is ABSENT from the screener, and every rated "ASX 200" hit is
+ * a fund (`STW`, `XAUS`, `DX2S`) rather than the index.
  *
  * Ids are registry-local, stable and URL-safe (what `?symbols=` carries) — the
  * upstream ticker is a FIELD, never the identity.
@@ -135,6 +144,7 @@ export const INSTRUMENTS: Instrument[] = [
   { id: 'hsi', label: 'Hang Seng', tv: 'TVC:HSI', cls: 'stock' },
   { id: 'ks11', label: 'KOSPI', tv: 'KRX:KOSPI', cls: 'stock' },
   { id: 'sti', label: 'Straits Times', tv: 'TVC:STI', cls: 'stock' },
+  { id: 'twii', label: 'Taiwan Weighted', tv: 'TWSE:IX0001', cls: 'stock' },
   { id: 'bbca.jk', label: 'Bank Central Asia', tv: 'IDX:BBCA', cls: 'stock' },
   { id: 'bbri.jk', label: 'Bank Rakyat Indonesia', tv: 'IDX:BBRI', cls: 'stock' },
   { id: 'bmri.jk', label: 'Bank Mandiri', tv: 'IDX:BMRI', cls: 'stock' },
@@ -217,11 +227,13 @@ export const INSTRUMENTS: Instrument[] = [
  * of dashes or dropping them silently.
  */
 export const UNRESOLVED: readonly { id: string; label: string; cls: AssetClass }[] = [
-  { id: 'twii', label: 'Taiwan Weighted', cls: 'stock' },
   { id: 'axjo', label: 'S&P/ASX 200', cls: 'stock' },
-  // Coffee: ICEUS:KC1! is unrated like every other front month, and no rated
-  // series for the same underlying exists — the only "coffee" the screener rates
-  // is SPARKS:COFFEE, an INDEX of coffee companies, which is a different asset.
+  // Coffee: the screener CARRIES the contracts (`ICEUS:KC1!`, `ICEEUR:RC1!`) and
+  // publishes no aggregate for either (Recommend.All null, measured) — the front
+  // month finding at the closest possible range. No rated spot/CFD series for the
+  // same underlying exists either: the only "coffee" the screener rates is
+  // SPARKS:COFFEE, an index over coffee COMPANIES, and DJ:DJCIKC, an index over
+  // coffee FUTURES. Both are different price series, so both are refused.
   { id: 'coffee', label: 'Coffee', cls: 'commodity' },
 ];
 
