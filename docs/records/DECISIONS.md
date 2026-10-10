@@ -2586,6 +2586,8 @@ Before the push the same commit passed **422 pass / 0 fail** plus `tsc --noEmit`
 
 **3. Gates.** `test:shapers` **467 pass / 0 fail** (registry guards updated to the new shape), `tsc --noEmit` 0 errors, `STRUCTURE_OK (442 files)`, `DESIGN_TOKENS_OK (files=447 exemptions=6)`, `TOKENS_OK (14 colors, 9 space, 11 font-size, 281 vars)`, `DESIGN_SYSTEM_OK (files=23 scale_exemptions=6)`, `build` exit 0.
 
+**4. CI.** 5 of 5 green on the commit that carries this record — web `38084663804` 2m10s, integration `38084663850` 3m4s, contracts `38084663864` 16s, go `38084663805` 12s, rust `38084663893` 16s — and the readings above were taken on that commit's build, `5Tnk6ddo9TAP0SRd7yB57`, served locally and over the tunnel.
+
 **Consequences.** `apps/web/src/features/technicals/model.ts` (121 rows, two named unresolved), `apps/web/tests/technicals-tests.ts`. No route, client, UI or contract change: the class switcher already re-fetches per class, so one more stock row costs one more id in the same request.
 
 ## DR-068 — the indicator table names its two groups instead of encoding them in colour (2026-10-10)
