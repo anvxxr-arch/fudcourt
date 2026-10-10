@@ -92,6 +92,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("fudcourt-data: llama: %v", err)
 	}
+	// Llama prewarm runs detached after the listener starts (see below): the
+	// seven fixed mode URLs are fetched once so the first board mount after a
+	// deploy is a hot read. Parameterized modes are not prewarmed — their URL
+	// space is unbounded and the first caller pays one MISS each.
 	// news is a FOURTH family and the first whose upstream is a document rather
 	// than a JSON API: cointelegraph.com/rss is plain HTTPS (no fingerprint
 	// needed), so it is a third plain net/http fetcher, not a tls-client one.
@@ -167,6 +171,10 @@ func main() {
 
 	log.Printf("fudcourt-data listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes; coinglass: cache %s, ttl %ds, %d modes; coinank: cache %s, %s, %d modes; coinmarketcap: cache %s, ttl %ds, %d modes)",
 		addr, f.CacheDir(), ttl, cryptorank.ModeCount, kf.CacheDir(), khala.TTLDefault(), khala.ModeCount, lf.TTL(), llama.ModeCount, nf.TTL(), news.SourceCount, cf.TTL(), chainrank.ModeCount, gf.CacheDir(), coinglass.TTLDefault(), coinglass.ModeCount, af.CacheDir(), coinank.TTLNote(), coinank.ModeCount, mf.CacheDir(), coinmarketcap.TTLDefault(), coinmarketcap.ModeCount)
+
+	// Llama prewarm: one detached pass over the seven fixed mode URLs, so the
+	// first board mount after a deploy is hot. Fail-open by construction.
+	go prewarmLlama(lf)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -405,6 +413,14 @@ func (r unavailableReader) ReadFunding(ctx context.Context, instrumentID, venueI
 }
 
 func (r unavailableReader) ReadOpenInterest(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]canon.OpenInterest, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ReadLiquidations(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]canon.Liquidation, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ReadOptionQuotes(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]canon.OptionQuote, error) {
 	return nil, r.err()
 }
 
@@ -1187,13 +1203,19 @@ func writeCoinmarketcapError(w http.ResponseWriter, mode string, err error) {
 	})
 }
 
-// handleLlama serves the DeFiLlama read family (api.llama.fi): three modes with
-// two of OUR params validated strictly. It is the Go half of
-// apps/web/app/api/llama/route.ts, which is now a verbatim proxy here.
+// handleLlama serves the DeFiLlama read family: ten modes with OUR params
+// validated strictly. It is the Go half of the /api/llama proxy.
 //
-//	chains      full /v2/chains list, re-sorted by tvl desc
-//	protocols   head `top` (default 50, max 200) of /protocols, tvl desc
-//	historical  tail `days` (default 365, max 3288) of /v2/historicalChainTvl
+//	chains       full /v2/chains list, re-sorted by tvl desc
+//	protocols    head `top` (default 50, max 200) of /protocols, tvl desc
+//	historical   tail `days` (default 365, max 3288) of /v2/historicalChainTvl
+//	chainHistory tail `days` of /v2/historicalChainTvl/{chain} (`chain` required)
+//	tvl          current TVL number of /tvl/{protocol} (`protocol` required)
+//	prices       spot prices of /prices/current/{coins} on coins.llama.fi (`coins` required)
+//	stablecoins  head `top` of the peggedAssets list, circulating desc
+//	dexs         head `top` of the dex protocols, total24h desc
+//	fees         head `top` of the fee protocols, total24h desc
+//	yields       head `top` of the pools data, tvlUsd desc
 //
 // Every refusal is the TS route's own string, because scripts/verify-llama.py
 // asserts the fragments: "unknown mode", "<param> must be an integer, got …",
@@ -1216,29 +1238,52 @@ func (s *server) handleLlama(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	// Only the mode's own param is read: chains takes neither, and a `top` sent
-	// to historical is ignored exactly as the TS Intl param read ignored it
-	// (the TS route's `top` is only consulted in the protocols branch).
-	top, days := 0, 0
+	// Only the mode's own params are read: chains takes none, and a `top`
+	// sent to historical is ignored exactly as the TS Intl param read
+	// ignored it (the TS route's `top` is only consulted in its own branch).
+	var p llama.EnvelopeParams
 	switch mode {
-	case "protocols":
+	case "protocols", "stablecoins", "dexs", "fees", "yields":
 		v, err := llama.ParseParam(q, llama.TopParam)
 		if err != nil {
 			writeJSON(w, 400, map[string]interface{}{"error": err.Error()})
 			return
 		}
-		top = v
-	case "historical":
+		p.Top = v
+	case "historical", "chainHistory":
 		v, err := llama.ParseParam(q, llama.DaysParam)
 		if err != nil {
 			writeJSON(w, 400, map[string]interface{}{"error": err.Error()})
 			return
 		}
-		days = v
+		p.Days = v
+	}
+	switch mode {
+	case "chainHistory":
+		v, err := llama.ParseChain(q.Get("chain"))
+		if err != nil {
+			writeJSON(w, 400, map[string]interface{}{"error": err.Error()})
+			return
+		}
+		p.Chain = v
+	case "tvl":
+		v, err := llama.ParseProtocol(q.Get("protocol"))
+		if err != nil {
+			writeJSON(w, 400, map[string]interface{}{"error": err.Error()})
+			return
+		}
+		p.Protocol = v
+	case "prices":
+		v, err := llama.ParseCoins(q.Get("coins"))
+		if err != nil {
+			writeJSON(w, 400, map[string]interface{}{"error": err.Error()})
+			return
+		}
+		p.Coins = v
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
-	env, err := s.ls.Envelope(ctx, mode, top, days)
+	env, err := s.ls.EnvelopeWith(ctx, mode, p)
 	if err != nil {
 		writeLlamaError(w, mode, err)
 		return
@@ -1247,6 +1292,25 @@ func (s *server) handleLlama(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, env)
 }
 
+// prewarmLlama fetches the seven fixed llama mode URLs once at startup so the
+// first board mount after a deploy is a hot read instead of seven cold
+// upstream round-trips (the 11MB yields body alone costs ~0.4s). Detached
+// with its own cap: it must never delay or gate the listener, and any
+// failure only logs — the cold-miss path remains for every mode.
+func prewarmLlama(lf *llama.Fetcher) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	ok, fail := 0, 0
+	for _, mode := range []string{"chains", "protocols", "historical", "stablecoins", "dexs", "fees", "yields"} {
+		if _, _, _, err := lf.Fetch(ctx, llama.UpstreamURL(mode)); err != nil {
+			fail++
+			log.Printf("llama prewarm %s failed: %v", mode, err)
+		} else {
+			ok++
+		}
+	}
+	log.Printf("llama prewarm ok=%d failed=%d", ok, fail)
+}
 // writeLlamaError maps a llama failure onto the TS route's error bodies: the
 // param refusals are written by the caller (they never reach the fetcher), so
 // this covers the upstream arm -- real status kept, real text quoted, never a

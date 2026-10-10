@@ -7,7 +7,7 @@ package canon
 const (
 	// SchemaVersion is the semantic version of the tracked
 	// db/schema/data-schema.sql the sidecar applies at startup.
-	SchemaVersion = "1.0.0"
+	SchemaVersion = "1.1.0"
 	// NormalizationVersion is the semantic version of the provider→canonical
 	// mapping rules (id minting, market-type spelling, unit conventions).
 	NormalizationVersion = "1.0.0"

@@ -81,7 +81,7 @@ func TestNewsHealthzReportsFourFamilies(t *testing.T) {
 	}
 	body := decode(t, rec)
 	for k, want := range map[string]string{
-		"build": "28 modes", "khala": "3 modes", "llama": "3 modes", "news": "1 feeds",
+		"build": "28 modes", "khala": "3 modes", "llama": "10 modes", "news": "1 feeds",
 	} {
 		if got := body[k]; got != want {
 			t.Errorf("healthz[%q] = %v, want %q", k, got, want)

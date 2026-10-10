@@ -20,6 +20,14 @@
 //	GET /protocol/{slug}       -> 29.7MB for ONE protocol -> deliberately not a
 //	                              mode: it would ship 18x the 8.9MB body the
 //	                              protocols mode already trims, for one row.
+//	GET /v2/historicalChainTvl/{chain} -> per-chain history, OLDEST-first
+//	GET /tvl/{protocol}        -> ONE NUMBER, the protocol's current TVL
+//	GET /prices/current/{coins} (coins.llama.fi) -> {"coins":{...}} object
+//	GET /stablecoins?includePrices=true (stablecoins.llama.fi)
+//	                           -> {"peggedAssets":[...]}
+//	GET /overview/dexs?...     -> {"protocols":[...],...}
+//	GET /overview/fees?...     -> {"protocols":[...],...}
+//	GET /pools (yields.llama.fi) -> {"data":[...]}
 //
 // # Honest-by-construction (house rule: the wire says what was done)
 //
@@ -35,12 +43,14 @@
 // # Caching
 //
 // The TS route went through lib/rate-limit.ts (min-gap + 15s TTL +
-// single-flight). This side owns that now: an in-memory per-process TTL cache
-// (default 15s, FUDCOURT_DATA_LLAMA_TTL overrides it in main.go) plus single-flight
-// per URL, keyed on the UPSTREAM URL, so `top=3` and `top=7` share one 8.9MB
-// fetch. It is bounded BY CONSTRUCTION at the three URLs AllowedURL admits:
-// there is no eviction policy because there is nothing that can grow (see
-// fetch.go's Stats.Entries test).
+// single-flight). This side owns that now: an in-memory per-process cache with
+// per-mode TTLs (TTLFor -- the three original modes keep the 15s window,
+// FUDCOURT_DATA_LLAMA_TTL overrides the fallback in main.go) plus
+// single-flight per URL, keyed on the UPSTREAM URL, so `top=3` and `top=7`
+// share one 8.9MB fetch. It is bounded by an LRU at maxEntries (100): the
+// parameterized modes take one entry per distinct chain, protocol or coin-set,
+// so a fixed three-key map can no longer hold the family (see fetch.go's
+// evictIfFull and the Stats ceiling test).
 package llama
 
 import (
@@ -55,15 +65,36 @@ const (
 	// write endpoint to gate, which is why this family needs no disabled-mode
 	// refusal -- cryptorank's data-integrity refusal has no analogue here.
 	Base = "https://api.llama.fi"
-	// The three upstream reads, verbatim from the TS route's upstreamPath.
+	// CoinsBase is the DeFiLlama coins origin: the per-coin spot prices the
+	// reconciler already reads for portfolio valuation.
+	CoinsBase = "https://coins.llama.fi"
+	// StableBase is the DeFiLlama stablecoins origin.
+	StableBase = "https://stablecoins.llama.fi"
+	// YieldsBase is the DeFiLlama yields origin.
+	YieldsBase = "https://yields.llama.fi"
+	// The three original upstream reads, verbatim from the TS route's upstreamPath.
 	PathChains     = "/v2/chains"
 	PathProtocols  = "/protocols"
 	PathHistorical = "/v2/historicalChainTvl"
+	// The four new fixed upstream reads.
+	PathStablecoins = "/stablecoins?includePrices=true"
+	PathDexs        = "/overview/dexs?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true"
+	PathFees        = "/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true"
+	PathYields      = "/pools"
+	// PrefixChainHistory prefixes the per-chain history read: the escaped
+	// chain name is appended.
+	PrefixChainHistory = "/v2/historicalChainTvl/"
+	// PrefixTVL prefixes the per-protocol TVL read: the escaped slug is
+	// appended.
+	PrefixTVL = "/tvl/"
+	// PrefixPrices prefixes the per-coin price read on the coins host: the
+	// escaped comma-separated coin list is appended.
+	PrefixPrices = "/prices/current/"
 )
 
 // Modes is the mode table in declaration order. The array ships verbatim in the
 // 400 unknown-mode detail, so the order is part of the contract.
-var Modes = []string{"chains", "protocols", "historical"}
+var Modes = []string{"chains", "protocols", "historical", "chainHistory", "tvl", "prices", "stablecoins", "dexs", "fees", "yields"}
 
 // ModeCount is the number of modes (healthz prints it).
 var ModeCount = len(Modes)
@@ -79,29 +110,71 @@ var known = func() map[string]bool {
 // Known reports whether mode is in the table.
 func Known(mode string) bool { return known[mode] }
 
-// Path is the upstream path of a mode. Only the three table entries have one;
-// callers refuse an unknown mode before consulting this.
+// Path is the upstream path of a fixed mode. The parameterized modes
+// (chainHistory, tvl, prices) have no single path -- callers build their URL
+// with UpstreamURLFor -- and report "" here; callers refuse an unknown mode
+// before consulting this.
 func Path(mode string) string {
 	switch mode {
 	case "chains":
 		return PathChains
 	case "protocols":
 		return PathProtocols
+	case "stablecoins":
+		return PathStablecoins
+	case "dexs":
+		return PathDexs
+	case "fees":
+		return PathFees
+	case "yields":
+		return PathYields
+	case "historical":
+		return PathHistorical
+	case "chainHistory", "tvl", "prices":
+		return ""
 	}
 	return PathHistorical
 }
 
-// UpstreamURL is the canonical upstream URL of a mode: the envelope's
-// `upstream` and the URL the cache is keyed on.
-func UpstreamURL(mode string) string { return Base + Path(mode) }
+// UpstreamURL is the canonical upstream URL of a fixed mode: the envelope's
+// `upstream` and the URL the cache is keyed on. Parameterized modes must use
+// UpstreamURLFor.
+func UpstreamURL(mode string) string {
+	switch mode {
+	case "stablecoins":
+		return StableBase + PathStablecoins
+	case "yields":
+		return YieldsBase + PathYields
+	}
+	return Base + Path(mode)
+}
 
-// Param names. `top` is a mode=protocols param, `days` a mode=historical one;
-// mode=chains has none (it serves the full list, so a trim request would have
-// nothing to trim -- see Service.Envelope).
+// UpstreamURLFor builds the canonical upstream URL of a parameterized mode,
+// escaping the caller-supplied segment. Callers validate the segment with the
+// Parse* validator before calling: the escaping is defence in depth, not the
+// validation.
+func UpstreamURLFor(mode, chain, protocol, coins string) string {
+	switch mode {
+	case "chainHistory":
+		return Base + PrefixChainHistory + url.PathEscape(chain)
+	case "tvl":
+		return Base + PrefixTVL + url.PathEscape(protocol)
+	case "prices":
+		return CoinsBase + PrefixPrices + url.PathEscape(coins)
+	}
+	return UpstreamURL(mode)
+}
+
+// Param names. `top` trims the list-shaped modes, `days` tails the
+// history-shaped ones; `chain` / `protocol` / `coins` select the upstream
+// document of the parameterized modes.
 const (
-	ParamMode = "mode"
-	ParamTop  = "top"
-	ParamDays = "days"
+	ParamMode     = "mode"
+	ParamTop      = "top"
+	ParamDays     = "days"
+	ParamChain    = "chain"
+	ParamProtocol = "protocol"
+	ParamCoins    = "coins"
 )
 
 // ParamSpec names ONE of our integer params: its wire name, the value an absent
@@ -128,6 +201,61 @@ var TopParam = ParamSpec{Name: ParamTop, Default: 50, Max: 200}
 // -- is what tells a caller how much history actually exists. days=99999 is a
 // 400, never a silent 3288.
 var DaysParam = ParamSpec{Name: ParamDays, Default: 365, Max: 3288}
+
+// Per-mode cache TTLs in seconds.
+//
+// The three original modes keep the 15s window the TS limiter used (the board
+// fires them on mount and on every poll), so they are NOT listed here: they
+// fall back to the caller's default. Each TTL below is keyed to how fast its
+// series actually moves: a per-chain history point is daily, a protocol TVL
+// moves by the block, spot prices by the minute, and the stablecoin/dex/fee/
+// yield tables are slow aggregates.
+const (
+	ttlChainHistory = 3600
+	ttlTVL          = 300
+	ttlPrices       = 60
+	ttlStablecoins  = 300
+	ttlDexs         = 300
+	ttlFees         = 900
+	ttlYields       = 300
+)
+
+// TTLFor returns the cache TTL in seconds for an upstream URL. The three
+// original modes (and any unknown URL) fall back to the caller's default --
+// deliberately the SHORTER value, so a harness or self-test URL can never
+// inherit the 1-hour chainHistory TTL by accident.
+func TTLFor(rawURL string, fallback int) int {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fallback
+	}
+	host, path := u.Hostname(), u.Path
+	if host == "stablecoins.llama.fi" && path == "/stablecoins" {
+		return ttlStablecoins
+	}
+	if host == "yields.llama.fi" && path == "/pools" {
+		return ttlYields
+	}
+	if host == "coins.llama.fi" && strings.HasPrefix(path, PrefixPrices) && len(path) > len(PrefixPrices) {
+		return ttlPrices
+	}
+	if host != "api.llama.fi" {
+		return fallback
+	}
+	switch path {
+	case "/overview/dexs":
+		return ttlDexs
+	case "/overview/fees":
+		return ttlFees
+	}
+	if strings.HasPrefix(path, PrefixChainHistory) && len(path) > len(PrefixChainHistory) {
+		return ttlChainHistory
+	}
+	if strings.HasPrefix(path, PrefixTVL) && len(path) > len(PrefixTVL) {
+		return ttlTVL
+	}
+	return fallback
+}
 
 // ParamError is a bad value for one of our own params: a 400 whose message the
 // TS route wrote verbatim (scripts/verify-llama.py asserts the fragments "must
@@ -157,7 +285,10 @@ func ParseParam(q url.Values, spec ParamSpec) (int, error) {
 	}
 	raw := vals[0]
 	digits := raw != ""
-	for i := 0; i < len(raw) && digits; i++ {
+	for i := range raw {
+		if !digits {
+			break
+		}
 		if raw[i] < '0' || raw[i] > '9' {
 			digits = false
 		}
@@ -174,6 +305,102 @@ func ParseParam(q url.Values, spec ParamSpec) (int, error) {
 		return 0, &ParamError{fmt.Sprintf("%s must be between 1 and %d, got %s", spec.Name, spec.Max, got)}
 	}
 	return v, nil
+}
+
+// ParseChain validates mode=chainHistory's `chain`: required, 1..50 chars of
+// [A-Za-z0-9 _-]. Strict, like ParseParam: anything else is a 400 naming the
+// rule, never a silent substitution.
+func ParseChain(raw string) (string, error) {
+	if !isChainStr(raw) {
+		return "", &ParamError{fmt.Sprintf("chain must be 1..50 chars of [A-Za-z0-9 _-], got '%s'", raw)}
+	}
+	return raw, nil
+}
+
+// ParseProtocol validates mode=tvl's `protocol`: required, 1..100 chars of
+// [A-Za-z0-9-]. Upstream slugs are lowercase alphanumerics and dashes; the
+// charset admits uppercase too rather than inventing a case rule upstream
+// never stated.
+func ParseProtocol(raw string) (string, error) {
+	if !isProtocolStr(raw) {
+		return "", &ParamError{fmt.Sprintf("protocol must be 1..100 chars of [A-Za-z0-9-], got '%s'", raw)}
+	}
+	return raw, nil
+}
+
+// ParseCoins validates mode=prices' `coins`: required, 1..20 comma-separated
+// coins, each 1..100 chars of [A-Za-z0-9:._-]. The whole list is echoed back
+// verbatim on success: the cache is keyed on the exact upstream URL, so the
+// canonical spelling is the caller's own.
+func ParseCoins(raw string) (string, error) {
+	if !isCoinsStr(raw) {
+		return "", &ParamError{fmt.Sprintf("coins must be 1..20 comma-separated coins of [A-Za-z0-9:._-], got '%s'", raw)}
+	}
+	return raw, nil
+}
+
+// isChainStr reports whether s is an admissible chain segment.
+func isChainStr(s string) bool {
+	if len(s) == 0 || len(s) > 50 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == ' ' || c == '_' || c == '-' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+// isProtocolStr reports whether s is an admissible protocol slug.
+func isProtocolStr(s string) bool {
+	if len(s) == 0 || len(s) > 100 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+// isCoinItem reports whether s is one admissible coin id.
+func isCoinItem(s string) bool {
+	if len(s) == 0 || len(s) > 100 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == ':' || c == '.' || c == '_' || c == '-' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+// isCoinsStr reports whether s is an admissible coin list: 1..20 items, each
+// an admissible coin id. An empty item (a leading, trailing or doubled comma)
+// is rejected: upstream would read it as an empty id, not as nothing.
+func isCoinsStr(s string) bool {
+	if s == "" {
+		return false
+	}
+	items := strings.Split(s, ",")
+	if len(items) > 20 {
+		return false
+	}
+	for _, it := range items {
+		if !isCoinItem(it) {
+			return false
+		}
+	}
+	return true
 }
 
 // UnknownModeError is a mode outside the table. The handler maps it to the
@@ -204,4 +431,46 @@ func DerivedProtocols(top, total int) string {
 // history length and the direction upstream publishes in.
 func DerivedHistorical(days, total int) string {
 	return fmt.Sprintf("last %d of %d days (upstream is oldest-first)", days, total)
+}
+
+// DerivedChainHistory is mode=chainHistory's `derived`: the tail length, the
+// real history length, the chain, and the direction upstream publishes in.
+func DerivedChainHistory(chain string, days, total int) string {
+	return fmt.Sprintf("last %d of %d days for chain %s (upstream is oldest-first)", days, total, chain)
+}
+
+// DerivedTVL is mode=tvl's `derived`: the number IS upstream's verbatim body,
+// so the label names the protocol rather than a transform.
+func DerivedTVL(protocol string) string {
+	return fmt.Sprintf("current tvl for protocol %s (upstream is a single number)", protocol)
+}
+
+// DerivedPrices is mode=prices' `derived`: how many of the requested coins
+// upstream priced, so a partial map can never be read as full coverage.
+func DerivedPrices(n, total int) string {
+	return fmt.Sprintf("%d of %d coins (upstream is a coins object)", n, total)
+}
+
+// DerivedStablecoins is mode=stablecoins' `derived`: the head length AND the
+// real peggedAssets length, ordered by circulating supply.
+func DerivedStablecoins(top, total int) string {
+	return fmt.Sprintf("head %d of %d sorted by circulating desc (upstream is a peggedAssets list)", top, total)
+}
+
+// DerivedDexs is mode=dexs' `derived`: the head length AND the real protocols
+// length, ordered by 24h volume.
+func DerivedDexs(top, total int) string {
+	return fmt.Sprintf("head %d of %d dexes sorted by total24h desc (upstream is a protocols object)", top, total)
+}
+
+// DerivedFees is mode=fees' `derived`: the head length AND the real protocols
+// length, ordered by 24h fees.
+func DerivedFees(top, total int) string {
+	return fmt.Sprintf("head %d of %d protocols sorted by total24h desc (upstream is a protocols object)", top, total)
+}
+
+// DerivedYields is mode=yields' `derived`: the head length AND the real data
+// length, ordered by USD TVL.
+func DerivedYields(top, total int) string {
+	return fmt.Sprintf("head %d of %d sorted by tvlUsd desc (upstream is a data list)", top, total)
 }

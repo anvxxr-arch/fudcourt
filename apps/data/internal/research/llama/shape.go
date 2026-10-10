@@ -103,14 +103,34 @@ var Now = func() int64 { return time.Now().Unix() }
 // Service ties a Fetcher to the mode semantics.
 type Service struct{ F *Fetcher }
 
-// Envelope builds the response for one already-validated (mode, top, days).
+// EnvelopeParams carries the already-validated per-mode parameters. The
+// handler validates every query value before calling: the Service never
+// parses strings, so a bad value cannot reach the cache key or upstream.
+type EnvelopeParams struct {
+	Top      int
+	Days     int
+	Chain    string
+	Protocol string
+	Coins    string
+}
+
+// Envelope builds the response for one already-validated (mode, params).
 //
 // It is the port of the TS route's body-building half: fetch by UPSTREAM URL
-// (so the three trims share one cache entry), then sort/slice/map. Every
-// failure is returned as an error — the handler maps it to the frozen body and
-// never substitutes an empty payload.
+// (so the trims share one cache entry), then sort/slice/map. Every failure
+// is returned as an error — the handler maps it to the frozen body and never
+// substitutes an empty payload. The legacy (mode, top, days) form is kept as
+// a thin wrapper so the original three modes read unchanged.
 func (s *Service) Envelope(ctx context.Context, mode string, top, days int) (LlamaEnvelope, error) {
+	return s.EnvelopeWith(ctx, mode, EnvelopeParams{Top: top, Days: days})
+}
+
+// EnvelopeWith builds the response for a mode with its full parameter set.
+func (s *Service) EnvelopeWith(ctx context.Context, mode string, p EnvelopeParams) (LlamaEnvelope, error) {
 	url := UpstreamURL(mode)
+	if mode == "chainHistory" || mode == "tvl" || mode == "prices" {
+		url = UpstreamURLFor(mode, p.Chain, p.Protocol, p.Coins)
+	}
 	raw, total, info, err := s.F.Fetch(ctx, url)
 	if err != nil {
 		return LlamaEnvelope{}, err
@@ -118,21 +138,18 @@ func (s *Service) Envelope(ctx context.Context, mode string, top, days int) (Lla
 	// Rows and the sorted projection come from the Fetcher's memoized entry
 	// when the body is warm (the HIT path): decoding and re-sorting the 8.9MB
 	// /protocols body on every request is the cost the entry exists to avoid.
-	// On a MISS (or when the fetcher does not memoize), decode and sort once
+	// On a MISS (or when the fetcher does not memoize), extract and sort once
 	// here — the result is the same shape served either way.
 	rows, sorted, ok := s.F.ShapedByURL(url)
 	if !ok {
-		rows = nil
-		if err := json.Unmarshal([]byte(raw), &rows); err != nil {
-			// Unreachable via Fetcher (fetch already proved the body is a JSON
-			// array); kept so a second BodyFetcher implementation cannot ship a
-			// half-parsed payload.
-			return LlamaEnvelope{}, &HardError{Kind: "non-json", URL: url, Detail: "cached body is not a JSON array: " + err.Error()}
+		var exErr error
+		rows, sorted, exErr = extractAndSort(raw, url)
+		if exErr != nil {
+			// Unreachable via Fetcher (fetch already proved the body is the
+			// shape its URL promises); kept so a second BodyFetcher
+			// implementation cannot ship a half-parsed payload.
+			return LlamaEnvelope{}, &HardError{Kind: "non-json", URL: url, Detail: "cached body is not servable: " + exErr.Error()}
 		}
-		if rows == nil {
-			rows = []json.RawMessage{}
-		}
-		sorted = SortByTVLDesc(rows)
 	}
 	env := LlamaEnvelope{
 		Kind:          mode,
@@ -146,11 +163,32 @@ func (s *Service) Envelope(ctx context.Context, mode string, top, days int) (Lla
 		env.Rows = sorted
 		env.Derived = DerivedChains
 	case "protocols":
-		env.Rows = projectProtocols(Take(sorted, top))
-		env.Derived = DerivedProtocols(top, total)
+		env.Rows = projectProtocols(Take(sorted, p.Top))
+		env.Derived = DerivedProtocols(p.Top, total)
+	case "chainHistory":
+		env.Rows = projectHistorical(Tail(rows, p.Days))
+		env.Derived = DerivedChainHistory(p.Chain, p.Days, total)
+	case "tvl":
+		env.Rows = projectTVL(rows, p.Protocol)
+		env.Derived = DerivedTVL(p.Protocol)
+	case "prices":
+		env.Rows = sorted
+		env.Derived = DerivedPrices(len(sorted), total)
+	case "stablecoins":
+		env.Rows = projectStablecoins(Take(sorted, p.Top))
+		env.Derived = DerivedStablecoins(p.Top, total)
+	case "dexs":
+		env.Rows = projectDexFees(Take(sorted, p.Top))
+		env.Derived = DerivedDexs(p.Top, total)
+	case "fees":
+		env.Rows = projectDexFees(Take(sorted, p.Top))
+		env.Derived = DerivedFees(p.Top, total)
+	case "yields":
+		env.Rows = projectYields(Take(sorted, p.Top))
+		env.Derived = DerivedYields(p.Top, total)
 	default:
-		env.Rows = projectHistorical(Tail(rows, days))
-		env.Derived = DerivedHistorical(days, total)
+		env.Rows = projectHistorical(Tail(rows, p.Days))
+		env.Derived = DerivedHistorical(p.Days, total)
 	}
 	return env, nil
 }
@@ -263,6 +301,158 @@ func projectHistorical(rows []json.RawMessage) []json.RawMessage {
 		out = append(out, b)
 	}
 	return out
+}
+
+// LlamaTVL is one row of mode=tvl: the protocol slug plus its current TVL.
+// Upstream serves a bare number, so the slug is the row's identity — without
+// it a cached row could not say whose TVL it is.
+type LlamaTVL struct {
+	Protocol string `json:"protocol"`
+	TVL      any    `json:"tvl"`
+}
+
+// projectTVL maps the one synthesized {tvl} row onto {protocol, tvl}.
+func projectTVL(rows []json.RawMessage, protocol string) []json.RawMessage {
+	var tvl any
+	if len(rows) > 0 {
+		var m map[string]any
+		if err := json.Unmarshal(rows[0], &m); err == nil {
+			tvl = nullOf(m["tvl"])
+		}
+	}
+	b, err := json.Marshal(LlamaTVL{Protocol: protocol, TVL: tvl})
+	if err != nil {
+		return nil
+	}
+	return []json.RawMessage{b}
+}
+
+// LlamaStablecoin is one row of mode=stablecoins: identity plus the
+// circulating supply in pegged USD and the venue's own price. The upstream
+// `circulating` object ({peggedUSD, ...}) is flattened to its peggedUSD
+// number: the board renders one supply figure, and the per-peg breakdown is
+// not a second number the row must carry.
+type LlamaStablecoin struct {
+	ID          any `json:"id"`
+	Name        string `json:"name"`
+	Symbol      string `json:"symbol"`
+	Circulating any `json:"circulating"`
+	Price       any `json:"price"`
+}
+
+// projectStablecoins maps peggedAssets rows onto the five wire keys.
+func projectStablecoins(rows []json.RawMessage) []json.RawMessage {
+	out := make([]json.RawMessage, 0, len(rows))
+	for _, r := range rows {
+		var m map[string]any
+		if err := json.Unmarshal(r, &m); err != nil {
+			m = map[string]any{}
+		}
+		var circulating any
+		if inner, ok := m["circulating"].(map[string]any); ok {
+			circulating = nullOf(inner["peggedUSD"])
+		}
+		p := LlamaStablecoin{
+			ID:          nullOf(m["id"]),
+			Name:        str(m["name"]),
+			Symbol:      str(m["symbol"]),
+			Circulating: circulating,
+			Price:       nullOf(m["price"]),
+		}
+		b, err := json.Marshal(p)
+		if err != nil {
+			continue
+		}
+		out = append(out, b)
+	}
+	return out
+}
+
+// LlamaDexFee is one row of mode=dexs and mode=fees: identity plus the two
+// totals the board ranks by. Both upstreams serve a `protocols` array with
+// the same core keys, so one projection serves both modes.
+type LlamaDexFee struct {
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Total24h    any    `json:"total24h"`
+	TotalAllTime any   `json:"totalAllTime"`
+	Chains      []any  `json:"chains"`
+}
+
+// projectDexFees maps dex/fee protocol rows onto the five wire keys.
+func projectDexFees(rows []json.RawMessage) []json.RawMessage {
+	out := make([]json.RawMessage, 0, len(rows))
+	for _, r := range rows {
+		var m map[string]any
+		if err := json.Unmarshal(r, &m); err != nil {
+			m = map[string]any{}
+		}
+		p := LlamaDexFee{
+			Name:         str(m["name"]),
+			Slug:         str(m["slug"]),
+			Total24h:     nullOf(m["total24h"]),
+			TotalAllTime: nullOf(m["totalAllTime"]),
+			Chains:       arrayOf(m["chains"]),
+		}
+		b, err := json.Marshal(p)
+		if err != nil {
+			continue
+		}
+		out = append(out, b)
+	}
+	return out
+}
+
+// LlamaYield is one row of mode=yields: the pool id plus the chain, project,
+// symbol, USD TVL and APY legs the board renders.
+type LlamaYield struct {
+	Pool      string `json:"pool"`
+	Chain     string `json:"chain"`
+	Project   string `json:"project"`
+	Symbol    string `json:"symbol"`
+	TVLUsd    any    `json:"tvlUsd"`
+	APY       any    `json:"apy"`
+	APYBase   any    `json:"apyBase"`
+	APYReward any    `json:"apyReward"`
+}
+
+// projectYields maps yields data rows onto the eight wire keys.
+func projectYields(rows []json.RawMessage) []json.RawMessage {
+	out := make([]json.RawMessage, 0, len(rows))
+	for _, r := range rows {
+		var m map[string]any
+		if err := json.Unmarshal(r, &m); err != nil {
+			m = map[string]any{}
+		}
+		p := LlamaYield{
+			Pool:      str(m["pool"]),
+			Chain:     str(m["chain"]),
+			Project:   str(m["project"]),
+			Symbol:    str(m["symbol"]),
+			TVLUsd:    nullOf(m["tvlUsd"]),
+			APY:       nullOf(m["apy"]),
+			APYBase:   nullOf(m["apyBase"]),
+			APYReward: nullOf(m["apyReward"]),
+		}
+		b, err := json.Marshal(p)
+		if err != nil {
+			continue
+		}
+		out = append(out, b)
+	}
+	return out
+}
+
+// extractAndSort is the Service-side twin of the Fetcher's shapeRows: the
+// same extract + sort over a body the fetcher did not memoize. One
+// implementation would be ideal; two exist because the Fetcher owns its entry
+// type and the Service must serve even when the fetcher hands it raw bytes.
+func extractAndSort(raw, url string) (rows, sorted []json.RawMessage, err error) {
+	rows, err = extractRows(raw, url)
+	if err != nil {
+		return nil, nil, err
+	}
+	return rows, sortRows(rows, url), nil
 }
 
 // str is the TS `r.name` read: a non-string becomes "", never a formatted

@@ -155,7 +155,17 @@ func TestKhalaReportRequiresAndValidatesKey(t *testing.T) {
 	if rec.Code != 400 || decode(t, rec)["error"] != "missing param" {
 		t.Fatalf("missing key: %d %s", rec.Code, rec.Body.String())
 	}
-	for _, bad := range []string{"UPPER", "-leading-dash", "has%20space", strings.Repeat("a", 129)} {
+	for _, bad := range []string{
+		"UPPER", "-leading-dash", "has%20space", strings.Repeat("a", 129),
+		// Hostile keys 400 before any fetch: traversal (raw and percent-
+		// encoded - the handler sees the decoded value, so %2e%2e arrives
+		// as ".." and must still fail), separators, unicode and absolute
+		// URLs all fail KeyRe. No "#": a fragment in the request target is
+		// stripped by URL parsing and would test a different key; that
+		// vector is pinned at the KeyRe/AllowedURL layer in fetch_test.go.
+		"..", "../etc/passwd", "%2e%2e", "a/b", "a?b", "café",
+		"https://evil.example/", "//evil.example",
+	} {
 		rec = khGet(t, &khFetcher{t: t}, "/api/khala?mode=report&key="+bad)
 		if rec.Code != 400 || decode(t, rec)["error"] != "invalid key" {
 			t.Errorf("key=%q: %d %s", bad, rec.Code, rec.Body.String())

@@ -391,6 +391,78 @@ func (r *Repo) ReadOpenInterest(ctx context.Context, instrumentID, venueID, asse
 	})
 }
 
+// ReadLiquidations implements canon.Reader with the same asset join as the
+// other derivatives reads: non-empty asset filters on the instrument's base
+// symbol so callers can ask by asset instead of id.
+func (r *Repo) ReadLiquidations(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]canon.Liquidation, error) {
+	f := &filter{}
+	join := ""
+	if asset != "" {
+		join = " JOIN data.instrument i ON i.instrument_id = l.instrument_id"
+		f.add("i.base_symbol = "+f.nextArg(), asset)
+	}
+	if instrumentID != "" {
+		f.add("l.instrument_id = "+f.nextArg(), instrumentID)
+	}
+	if venueID != "" {
+		f.add("l.venue_id = "+f.nextArg(), venueID)
+	}
+	f.timeRange("l.at", start, end)
+	sql := `SELECT l.instrument_id, l.venue_id, l.at, l.side, l.price, l.quantity,
+		l.value_usd, l.source, l.retrieved_at
+		FROM data.liquidation l` + join + f.where() +
+		fmt.Sprintf(" ORDER BY l.at DESC LIMIT $%d", len(f.args)+1)
+	args := append(f.args, clampLimit(limit))
+	return listRowsASC(ctx, r, sql, args, limit, func(row pgx.Rows) (canon.Liquidation, error) {
+		var li canon.Liquidation
+		var retrieved *time.Time
+		if err := row.Scan(&li.InstrumentID, &li.VenueID, &li.At, &li.Side, &li.Price,
+			&li.Quantity, &li.ValueUSD, &li.Source, &retrieved); err != nil {
+			return li, fmt.Errorf("repo: scan liquidation: %w", err)
+		}
+		if retrieved != nil {
+			li.RetrievedAt = *retrieved
+		}
+		return li, nil
+	})
+}
+
+// ReadOptionQuotes implements canon.Reader with the same asset join.
+func (r *Repo) ReadOptionQuotes(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]canon.OptionQuote, error) {
+	f := &filter{}
+	join := ""
+	if asset != "" {
+		join = " JOIN data.instrument i ON i.instrument_id = oq.instrument_id"
+		f.add("i.base_symbol = "+f.nextArg(), asset)
+	}
+	if instrumentID != "" {
+		f.add("oq.instrument_id = "+f.nextArg(), instrumentID)
+	}
+	if venueID != "" {
+		f.add("oq.venue_id = "+f.nextArg(), venueID)
+	}
+	f.timeRange("oq.at", start, end)
+	sql := `SELECT oq.instrument_id, oq.venue_id, oq.at, oq.mark_price, oq.index_price,
+		oq.bid, oq.ask, oq.volume_24h, oq.open_interest, oq.iv, oq.delta, oq.gamma,
+		oq.theta, oq.vega, oq.source, oq.retrieved_at
+		FROM data.option_quote oq` + join + f.where() +
+		fmt.Sprintf(" ORDER BY oq.at DESC LIMIT $%d", len(f.args)+1)
+	args := append(f.args, clampLimit(limit))
+	return listRowsASC(ctx, r, sql, args, limit, func(row pgx.Rows) (canon.OptionQuote, error) {
+		var q canon.OptionQuote
+		var retrieved *time.Time
+		if err := row.Scan(&q.InstrumentID, &q.VenueID, &q.At, &q.MarkPrice, &q.IndexPrice,
+			&q.Bid, &q.Ask, &q.Volume24h, &q.OpenInterest, &q.IV, &q.Delta, &q.Gamma,
+			&q.Theta, &q.Vega, &q.Source, &retrieved); err != nil {
+			return q, fmt.Errorf("repo: scan option_quote: %w", err)
+		}
+		if retrieved != nil {
+			q.RetrievedAt = *retrieved
+		}
+		return q, nil
+	})
+}
+
 // ReadTrades implements canon.Reader.
 func (r *Repo) ReadTrades(ctx context.Context, instrumentID, venueID string, start, end time.Time, limit int) ([]canon.Trade, error) {
 	f := &filter{}

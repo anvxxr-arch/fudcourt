@@ -435,29 +435,36 @@ func TestParseParamMatrix(t *testing.T) {
 }
 
 func TestModeTableAndUnknownDetail(t *testing.T) {
-	if ModeCount != 3 {
-		t.Fatalf("ModeCount=%d want 3", ModeCount)
+	if ModeCount != 10 {
+		t.Fatalf("ModeCount=%d want 10", ModeCount)
 	}
-	for _, m := range []string{"chains", "protocols", "historical"} {
+	for _, m := range []string{"chains", "protocols", "historical", "chainHistory", "tvl", "prices", "stablecoins", "dexs", "fees", "yields"} {
 		if !Known(m) {
 			t.Errorf("Known(%q)=false", m)
 		}
+	}
+	for _, m := range []string{"chains", "protocols", "historical", "stablecoins", "dexs", "fees", "yields"} {
 		if Path(m) == "" {
 			t.Errorf("Path(%q) is empty", m)
+		}
+		if !AllowedURL(UpstreamURL(m)) {
+			t.Errorf("AllowedURL rejects the table's own URL for %q", m)
+		}
+	}
+	for _, tc := range []struct{ mode, chain, protocol, coins string }{
+		{"chainHistory", "Ethereum", "", ""},
+		{"tvl", "", "uniswap", ""},
+		{"prices", "", "", "coingecko:ethereum"},
+	} {
+		if !AllowedURL(UpstreamURLFor(tc.mode, tc.chain, tc.protocol, tc.coins)) {
+			t.Errorf("AllowedURL rejects the parameterized URL for %q", tc.mode)
 		}
 	}
 	if Known("bogus") {
 		t.Error("Known(bogus)=true")
 	}
-	if d := UnknownModeDetail(); d != "expected one of chains, protocols, historical" {
+	if d := UnknownModeDetail(); d != "expected one of chains, protocols, historical, chainHistory, tvl, prices, stablecoins, dexs, fees, yields" {
 		t.Errorf("detail=%q (generated from the same table Known consults)", d)
-	}
-	// Every allowed URL is one the table produces, so the cache can never grow
-	// past three keys.
-	for _, m := range Modes {
-		if !AllowedURL(UpstreamURL(m)) {
-			t.Errorf("AllowedURL rejects the table's own URL for %q", m)
-		}
 	}
 }
 
@@ -566,6 +573,141 @@ func TestEmptyListIsDataNotAnError(t *testing.T) {
 	}
 	if env.UpstreamTotal != 0 || len(env.Rows) != 0 {
 		t.Errorf("rows=%d total=%d want 0/0", len(env.Rows), env.UpstreamTotal)
+	}
+}
+
+func TestTTLForPerModeAndFallback(t *testing.T) {
+	cases := map[string]int{
+		UpstreamURL("stablecoins"):                                300,
+		UpstreamURL("dexs"):                                       300,
+		UpstreamURL("fees"):                                       900,
+		UpstreamURL("yields"):                                     300,
+		UpstreamURLFor("chainHistory", "Ethereum", "", ""):       3600,
+		UpstreamURLFor("tvl", "", "uniswap", ""):                 300,
+		UpstreamURLFor("prices", "", "", "coingecko:ethereum"):   60,
+		UpstreamURL("chains"):                                     15,
+		UpstreamURL("protocols"):                                  15,
+		UpstreamURL("historical"):                                 15,
+	}
+	for u, want := range cases {
+		if got := TTLFor(u, 15); got != want {
+			t.Errorf("TTLFor(%s) = %d, want %d", u, got, want)
+		}
+	}
+	if got := TTLFor(Base+"/nope", 15); got != 15 {
+		t.Errorf("unknown path fallback = %d, want 15", got)
+	}
+}
+
+func TestAllowedURLFixedAndParameterized(t *testing.T) {
+	for _, m := range []string{"chains", "protocols", "historical", "stablecoins", "dexs", "fees", "yields"} {
+		if !AllowedURL(UpstreamURL(m)) {
+			t.Errorf("AllowedURL rejects fixed %q", m)
+		}
+	}
+	for _, u := range []string{
+		UpstreamURLFor("chainHistory", "Ethereum", "", ""),
+		UpstreamURLFor("tvl", "", "uniswap", ""),
+		UpstreamURLFor("prices", "", "", "coingecko:ethereum,coingecko:solana"),
+	} {
+		if !AllowedURL(u) {
+			t.Errorf("AllowedURL rejects parameterized %q", u)
+		}
+	}
+	for _, u := range []string{
+		Base + "/protocol/aave",
+		Base + "/v2/historicalChainTvl/",
+		Base + "/v2/historicalChainTvl/Evil/Chain",
+		Base + "/tvl/",
+		"https://coins.llama.fi/prices/current/",
+		Base + "/v2/historicalChainTvl/Ethereum?x=1",
+		"https://evil.llama.fi/pools",
+	} {
+		if AllowedURL(u) {
+			t.Errorf("AllowedURL accepts %q", u)
+		}
+	}
+}
+
+func TestParseChainProtocolCoinsMatrix(t *testing.T) {
+	if _, err := ParseChain(""); err == nil {
+		t.Error("empty chain accepted")
+	}
+	if _, err := ParseChain("Evil/Chain"); err == nil {
+		t.Error("slash chain accepted")
+	}
+	if v, err := ParseChain("Ethereum"); err != nil || v != "Ethereum" {
+		t.Errorf("chain Ethereum = %q, %v", v, err)
+	}
+	if _, err := ParseProtocol(""); err == nil {
+		t.Error("empty protocol accepted")
+	}
+	if _, err := ParseProtocol("evil/slug"); err == nil {
+		t.Error("slash protocol accepted")
+	}
+	if _, err := ParseCoins(""); err == nil {
+		t.Error("empty coins accepted")
+	}
+	if _, err := ParseCoins("a,,b"); err == nil {
+		t.Error("doubled comma accepted")
+	}
+	if v, err := ParseCoins("coingecko:ethereum,coingecko:solana"); err != nil || v == "" {
+		t.Errorf("coins list = %q, %v", v, err)
+	}
+}
+
+func TestNewModeEnvelopes(t *testing.T) {
+	d := &fakeDoer{body: map[string]string{
+		UpstreamURLFor("tvl", "", "uniswap", ""): `3946415939.48`,
+		UpstreamURLFor("prices", "", "", "coingecko:ethereum"): `{"coins":{"coingecko:ethereum":{"price":2492.0,"symbol":"ETH","timestamp":1791608096,"confidence":0.99}}}`,
+		UpstreamURL("stablecoins"):                             `{"peggedAssets":[{"id":"1","name":"Tether","symbol":"USDT","circulating":{"peggedUSD":184.0},"price":1.0},{"id":"2","name":"Coin","symbol":"C","circulating":{"peggedUSD":73.0},"price":1.0}]}`,
+		UpstreamURL("dexs"):                                    `{"protocols":[{"name":"Curve DEX","slug":"curve-dex","total24h":7,"totalAllTime":352.0,"chains":["Ethereum"]},{"name":"S","slug":"s","total24h":1,"totalAllTime":10.0,"chains":[]}]}`,
+		UpstreamURL("yields"):                                  `{"status":"success","data":[{"pool":"a","chain":"Ethereum","project":"lido","symbol":"STETH","tvlUsd":241.0,"apy":2.2,"apyBase":2.2,"apyReward":null},{"pool":"b","chain":"Base","project":"x","symbol":"Y","tvlUsd":10.0,"apy":5.0,"apyBase":5.0,"apyReward":null}]}`,
+	}}
+	f := newTestFetcher(t, d, 15)
+	svc := &Service{F: f}
+	env, err := svc.EnvelopeWith(context.Background(), "tvl", EnvelopeParams{Protocol: "uniswap"})
+	if err != nil {
+		t.Fatalf("tvl: %v", err)
+	}
+	if env.UpstreamTotal != 1 || len(env.Rows) != 1 {
+		t.Errorf("tvl rows=%d total=%d want 1/1", len(env.Rows), env.UpstreamTotal)
+	}
+	env, err = svc.EnvelopeWith(context.Background(), "stablecoins", EnvelopeParams{Top: 1})
+	if err != nil {
+		t.Fatalf("stablecoins: %v", err)
+	}
+	if env.UpstreamTotal != 2 || len(env.Rows) != 1 {
+		t.Errorf("stablecoins rows=%d total=%d want 1/2", len(env.Rows), env.UpstreamTotal)
+	}
+	var srow map[string]any
+	_ = json.Unmarshal(env.Rows[0], &srow)
+	if srow["symbol"] != "USDT" {
+		t.Errorf("stablecoins head=%v want USDT first (circulating desc)", srow["symbol"])
+	}
+	env, err = svc.EnvelopeWith(context.Background(), "yields", EnvelopeParams{Top: 1})
+	if err != nil {
+		t.Fatalf("yields: %v", err)
+	}
+	var yrow map[string]any
+	_ = json.Unmarshal(env.Rows[0], &yrow)
+	if yrow["project"] != "lido" {
+		t.Errorf("yields head=%v want lido first (tvlUsd desc)", yrow["project"])
+	}
+}
+
+func TestLRUBoundEvictsOldest(t *testing.T) {
+	d := &fakeDoer{}
+	f := newTestFetcher(t, d, 15)
+	for i := range maxEntries + 5 {
+		u := UpstreamURLFor("tvl", "", "proto", "") + string(rune('a'+i%26)) + string(rune('0'+i/26))
+		f.mu.Lock()
+		f.evictIfFull()
+		f.entries[u] = &entry{body: "1", upstreamTotal: 1, fetchedAt: int64(i)}
+		f.mu.Unlock()
+	}
+	if got := f.Stats().Entries; got != maxEntries {
+		t.Errorf("entries=%d want the %d cap", got, maxEntries)
 	}
 }
 

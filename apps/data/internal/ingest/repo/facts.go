@@ -129,6 +129,72 @@ func (r *Repo) WriteOrderbook(ctx context.Context, rows []canon.OrderbookSnap) (
 	return written, rejected, err
 }
 
+// WriteLiquidations implements canon.Writer. Liquidations are append-only
+// events, but REST liquidation feeds re-deliver recent events on every poll,
+// so rows dedup on the natural key (venue, instrument, at, side, price,
+// quantity) — DO NOTHING keeps the first append and the batch-local seen-set
+// keeps one poll from queueing the same event twice. execBatchTolerant
+// counts an Exec no-op (conflict) as written, which is the correct count
+// here: the row IS in the table after the call.
+func (r *Repo) WriteLiquidations(ctx context.Context, rows []canon.Liquidation) (written, rejected int, err error) {
+	now := time.Now()
+	good, rejected := splitValid(rows, validateLiquidation, now)
+	type liqKey struct {
+		venue, instrument string
+		at                time.Time
+		side              *string
+		price, quantity   *float64
+	}
+	seen := make(map[liqKey]struct{}, len(good))
+	deduped := good[:0]
+	for _, row := range good {
+		key := liqKey{row.VenueID, row.InstrumentID, row.At, row.Side, row.Price, row.Quantity}
+		if _, dup := seen[key]; dup {
+			continue
+		}
+		seen[key] = struct{}{}
+		deduped = append(deduped, row)
+	}
+	written, err = r.execBatchTolerant(ctx, len(deduped), func(b *pgx.Batch) {
+		for _, row := range deduped {
+			b.Queue(`INSERT INTO data.liquidation
+				(instrument_id, venue_id, at, side, price, quantity, value_usd, source, retrieved_at)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+				ON CONFLICT (venue_id, instrument_id, at, side, price, quantity) DO NOTHING`,
+				row.InstrumentID, row.VenueID, row.At, row.Side, row.Price, row.Quantity,
+				row.ValueUSD, row.Source, nullTime(row.RetrievedAt))
+		}
+	})
+	return written, rejected, err
+}
+
+// WriteOptionQuotes implements canon.Writer. Ticker snapshots upsert on the
+// snapshot key (instrument, venue, at): a re-polled timestamp replaces the
+// earlier read, matching the quote/orderbook/open-interest writers.
+func (r *Repo) WriteOptionQuotes(ctx context.Context, rows []canon.OptionQuote) (written, rejected int, err error) {
+	now := time.Now()
+	good, rejected := splitValid(rows, validateOptionQuote, now)
+	written, err = r.execBatchTolerant(ctx, len(good), func(b *pgx.Batch) {
+		for _, row := range good {
+			b.Queue(`INSERT INTO data.option_quote
+				(instrument_id, venue_id, at, mark_price, index_price, bid, ask,
+				 volume_24h, open_interest, iv, delta, gamma, theta, vega, source, retrieved_at)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+				ON CONFLICT (instrument_id, venue_id, at) DO UPDATE SET
+					mark_price = EXCLUDED.mark_price, index_price = EXCLUDED.index_price,
+					bid = EXCLUDED.bid, ask = EXCLUDED.ask, volume_24h = EXCLUDED.volume_24h,
+					open_interest = EXCLUDED.open_interest, iv = EXCLUDED.iv,
+					delta = EXCLUDED.delta, gamma = EXCLUDED.gamma, theta = EXCLUDED.theta,
+					vega = EXCLUDED.vega, source = EXCLUDED.source,
+					retrieved_at = EXCLUDED.retrieved_at`,
+				row.InstrumentID, row.VenueID, row.At, row.MarkPrice, row.IndexPrice,
+				row.Bid, row.Ask, row.Volume24h, row.OpenInterest, row.IV, row.Delta,
+				row.Gamma, row.Theta, row.Vega, row.Source, nullTime(row.RetrievedAt))
+		}
+	})
+	return written, rejected, err
+}
+
 // WriteObservations implements canon.Writer.
 func (r *Repo) WriteObservations(ctx context.Context, rows []canon.Observation) (written, rejected int, err error) {
 	now := time.Now()

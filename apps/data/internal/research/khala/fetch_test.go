@@ -360,10 +360,28 @@ func TestAllowedURLRejectsStrayPaths(t *testing.T) {
 		Base + "/../etc/passwd",
 		Base + "/foo/bar",
 		"https://framerusercontent.com/sites/x/searchIndex.json",
+		// Hostile keys must never become a path segment: traversal (raw and
+		// percent-encoded), separators, a fragment and unicode all fail KeyRe,
+		// so the KeyURL() of any of them is refused by AllowedURL even if a
+		// caller above skipped ValidKey.
+		KeyURL(".."),
+		KeyURL("../etc/passwd"),
+		KeyURL("%2e%2e"),
+		KeyURL("a?b"),
+		KeyURL("a#b"),
+		KeyURL("café"),
+		KeyURL("https://evil.example/x"),
 	}
 	for _, u := range bad {
 		if AllowedURL(u) {
 			t.Errorf("AllowedURL(%q) = true, want false", u)
+		}
+	}
+	// The slug allowlist itself refuses the same vectors (the fetch-layer gate
+	// is defense in depth on top of this predicate).
+	for _, k := range []string{"..", "../etc/passwd", "%2e%2e", "a?b", "a#b", "café", "https://evil.example/x"} {
+		if ValidKey(k) {
+			t.Errorf("ValidKey(%q) = true, want false", k)
 		}
 	}
 }

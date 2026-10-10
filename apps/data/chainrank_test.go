@@ -76,7 +76,7 @@ func TestChainrankHealthzReportsFiveFamilies(t *testing.T) {
 	}
 	body := decode(t, rec)
 	for k, want := range map[string]string{
-		"build": "28 modes", "khala": "3 modes", "llama": "3 modes",
+		"build": "28 modes", "khala": "3 modes", "llama": "10 modes",
 		"news": "1 feeds", "chainrank": "2 modes",
 	} {
 		if got := body[k]; got != want {

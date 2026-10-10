@@ -72,6 +72,8 @@ type Writer interface {
 	WriteTrades(ctx context.Context, rows []Trade) (written, rejected int, err error)
 	WriteQuotes(ctx context.Context, rows []Quote) (written, rejected int, err error)
 	WriteOrderbook(ctx context.Context, rows []OrderbookSnap) (written, rejected int, err error)
+	WriteLiquidations(ctx context.Context, rows []Liquidation) (written, rejected int, err error)
+	WriteOptionQuotes(ctx context.Context, rows []OptionQuote) (written, rejected int, err error)
 	WriteObservations(ctx context.Context, rows []Observation) (written, rejected int, err error)
 	WriteFunding(ctx context.Context, rows []FundingRate) (written, rejected int, err error)
 	WriteOpenInterest(ctx context.Context, rows []OpenInterest) (written, rejected int, err error)
@@ -104,6 +106,11 @@ type Reader interface {
 	ReadFunding(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]FundingRate, error)
 	// ReadOpenInterest reads open-interest rows with the same asset join.
 	ReadOpenInterest(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]OpenInterest, error)
+	// ReadLiquidations reads liquidation events; asset, when non-empty, joins
+	// the instrument's base symbol so callers can ask by asset instead of id.
+	ReadLiquidations(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]Liquidation, error)
+	// ReadOptionQuotes reads options ticker snapshots with the same asset join.
+	ReadOptionQuotes(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]OptionQuote, error)
 	// ReadTrades reads executed trades for one instrument/venue window.
 	ReadTrades(ctx context.Context, instrumentID, venueID string, start, end time.Time, limit int) ([]Trade, error)
 	// ReadOrderbook reads depth snapshots for one instrument/venue window.

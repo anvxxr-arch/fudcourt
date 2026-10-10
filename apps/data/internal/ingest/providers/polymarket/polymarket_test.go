@@ -75,6 +75,12 @@ func (w *spyWriter) WriteQuotes(ctx context.Context, rows []canon.Quote) (int, i
 func (w *spyWriter) WriteOrderbook(ctx context.Context, rows []canon.OrderbookSnap) (int, int, error) {
 	return 0, 0, w.err
 }
+func (w *spyWriter) WriteLiquidations(ctx context.Context, rows []canon.Liquidation) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyWriter) WriteOptionQuotes(ctx context.Context, rows []canon.OptionQuote) (int, int, error) {
+	return 0, 0, w.err
+}
 func (w *spyWriter) WriteObservations(ctx context.Context, rows []canon.Observation) (int, int, error) {
 	return 0, 0, w.err
 }

@@ -23,6 +23,7 @@ const (
 	DSFunding      = "funding"
 	DSOpenInterest = "open_interest"
 	DSLiquidation  = "liquidation"
+	DSOptionQuote  = "option_quote"
 	DSTVLProtocol  = "tvl_protocol"
 	DSTVLChain     = "tvl_chain"
 	DSPool         = "pool"
@@ -52,6 +53,7 @@ func DefaultRetentionWindows() RetentionWindows {
 	w[DSFunding] = 400
 	w[DSOpenInterest] = 400
 	w[DSLiquidation] = 180
+	w[DSOptionQuote] = 30
 	w[DSTVLProtocol] = 730
 	w[DSTVLChain] = 730
 	w[DSPool] = 180
@@ -102,7 +104,7 @@ func validRetentionKey(k string) bool {
 	}
 	switch k {
 	case DSTrade, DSQuote, DSOrderbook, DSFunding, DSOpenInterest,
-		DSLiquidation, DSTVLProtocol, DSTVLChain, DSPool, DSSupply,
+		DSLiquidation, DSOptionQuote, DSTVLProtocol, DSTVLChain, DSPool, DSSupply,
 		DSObservation, DSMetric:
 		return true
 	}
@@ -208,6 +210,7 @@ func (r *PGRetention) plan(now time.Time) []sweepStatement {
 	add(DSFunding, "data.funding", "funding_time")
 	add(DSOpenInterest, "data.open_interest", "at")
 	add(DSLiquidation, "data.liquidation", "at")
+	add(DSOptionQuote, "data.option_quote", "at")
 	add(DSTVLProtocol, "data.tvl_protocol", "at")
 	add(DSTVLChain, "data.tvl_chain", "at")
 	add(DSPool, "data.pool", "at")

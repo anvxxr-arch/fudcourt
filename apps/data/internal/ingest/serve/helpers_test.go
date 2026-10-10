@@ -24,6 +24,8 @@ type fakeReader struct {
 	ohlcv        []canon.Ohlcv
 	funding      []canon.FundingRate
 	oi           []canon.OpenInterest
+	liquidations []canon.Liquidation
+	optionQuotes []canon.OptionQuote
 	trades       []canon.Trade
 	orderbook    []canon.OrderbookSnap
 	pools        []canon.Pool
@@ -210,6 +212,52 @@ func (f *fakeReader) ReadOpenInterest(ctx context.Context, instrumentID, venueID
 	return clamp(out, limit), nil
 }
 
+func (f *fakeReader) ReadLiquidations(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]canon.Liquidation, error) {
+	if err := f.fail(); err != nil {
+		return nil, err
+	}
+	out := make([]canon.Liquidation, 0)
+	for _, r := range f.liquidations {
+		if instrumentID != "" && r.InstrumentID != instrumentID {
+			continue
+		}
+		if venueID != "" && r.VenueID != venueID {
+			continue
+		}
+		if !start.IsZero() && r.At.Before(start) {
+			continue
+		}
+		if !end.IsZero() && !r.At.Before(end) {
+			continue
+		}
+		out = append(out, r)
+	}
+	return clamp(out, limit), nil
+}
+
+func (f *fakeReader) ReadOptionQuotes(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]canon.OptionQuote, error) {
+	if err := f.fail(); err != nil {
+		return nil, err
+	}
+	out := make([]canon.OptionQuote, 0)
+	for _, r := range f.optionQuotes {
+		if instrumentID != "" && r.InstrumentID != instrumentID {
+			continue
+		}
+		if venueID != "" && r.VenueID != venueID {
+			continue
+		}
+		if !start.IsZero() && r.At.Before(start) {
+			continue
+		}
+		if !end.IsZero() && !r.At.Before(end) {
+			continue
+		}
+		out = append(out, r)
+	}
+	return clamp(out, limit), nil
+}
+
 func (f *fakeReader) ReadTrades(ctx context.Context, instrumentID, venueID string, start, end time.Time, limit int) ([]canon.Trade, error) {
 	if err := f.fail(); err != nil {
 		return nil, err
@@ -342,6 +390,8 @@ type testWriter struct {
 	ohlcv     int
 	funding   int
 	oi        int
+	liqs      int
+	optQuotes int
 	quotes    int
 	orderbook int
 	series    int
@@ -437,6 +487,22 @@ func (w *testWriter) WriteOpenInterest(ctx context.Context, rows []canon.OpenInt
 		return w.unavailable()
 	}
 	w.oi += len(rows)
+	return len(rows), 0, nil
+}
+
+func (w *testWriter) WriteLiquidations(ctx context.Context, rows []canon.Liquidation) (int, int, error) {
+	if w.fail != nil {
+		return w.unavailable()
+	}
+	w.liqs += len(rows)
+	return len(rows), 0, nil
+}
+
+func (w *testWriter) WriteOptionQuotes(ctx context.Context, rows []canon.OptionQuote) (int, int, error) {
+	if w.fail != nil {
+		return w.unavailable()
+	}
+	w.optQuotes += len(rows)
 	return len(rows), 0, nil
 }
 

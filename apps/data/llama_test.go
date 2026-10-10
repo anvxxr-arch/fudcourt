@@ -66,7 +66,7 @@ func TestLlamaHealthzReportsAllThreeFamilies(t *testing.T) {
 	if body["build"] != "28 modes" {
 		t.Errorf("build=%v (the cryptorank count is what existing gates assert)", body["build"])
 	}
-	if body["khala"] != "3 modes" || body["llama"] != "3 modes" {
+	if body["khala"] != "3 modes" || body["llama"] != "10 modes" {
 		t.Errorf("khala=%v llama=%v", body["khala"], body["llama"])
 	}
 }
@@ -93,7 +93,7 @@ func TestLlamaUnknownModeNamesTheFieldAndTheTable(t *testing.T) {
 	if body["error"] != "unknown mode 'bogus'" {
 		t.Errorf("error=%v", body["error"])
 	}
-	if body["detail"] != "expected one of chains, protocols, historical" {
+	if body["detail"] != "expected one of chains, protocols, historical, chainHistory, tvl, prices, stablecoins, dexs, fees, yields" {
 		t.Errorf("detail=%v", body["detail"])
 	}
 	// `?mode=` is NOT an unknown mode: the TS read is `get('mode') || 'chains'`,
@@ -241,4 +241,79 @@ func (d statusDoer) Do(req *http.Request) (*http.Response, error) {
 		Header:     http.Header{"Content-Type": []string{"application/json"}},
 		Request:    req,
 	}, nil
+}
+
+// The seven new modes serve through the same handler with their own params,
+// each refused strictly before any upstream fetch.
+func TestLlamaNewModesStrictParams(t *testing.T) {
+	cases := []struct{ q, frag string }{
+		{"mode=chainHistory", "chain must be"},
+		{"mode=chainHistory&chain=", "chain must be"},
+		{"mode=chainHistory&chain=Evil/Chain", "chain must be"},
+		{"mode=tvl", "protocol must be"},
+		{"mode=tvl&protocol=", "protocol must be"},
+		{"mode=prices", "coins must be"},
+		{"mode=prices&coins=", "coins must be"},
+		{"mode=prices&coins=" + strings.Repeat("coingecko:a,", 21), "coins must be"},
+		{"mode=stablecoins&top=201", "top must be between 1 and 200, got 201"},
+		{"mode=dexs&top=abc", "top must be an integer, got 'abc'"},
+		{"mode=fees&top=0", "top must be between 1 and 200, got 0"},
+		{"mode=yields&top=", "top must be an integer, got ''"},
+		{"mode=chainHistory&chain=Ethereum&days=99999", "days must be between 1 and 3288, got 99999"},
+	}
+	for _, c := range cases {
+		rec := llamaGet(t, &llamaDoer{}, "/api/llama?"+c.q)
+		if rec.Code != 400 {
+			t.Fatalf("%s: status %d (want 400)", c.q, rec.Code)
+		}
+		if got := decode(t, rec)["error"]; !strings.Contains(got.(string), c.frag) {
+			t.Errorf("%s: error=%v want fragment %q", c.q, got, c.frag)
+		}
+	}
+	// A refused param must not have reached upstream at all.
+	d := &llamaDoer{}
+	llamaGet(t, d, "/api/llama?mode=tvl&protocol=")
+	if len(d.count) != 0 {
+		t.Errorf("a refused param still hit upstream: %v", d.count)
+	}
+}
+
+func TestLlamaNewModesServeEnvelopes(t *testing.T) {
+	d := &llamaDoer{body: map[string]string{
+		"https://api.llama.fi/v2/historicalChainTvl/Ethereum": `[{"date":1,"tvl":1},{"date":2,"tvl":2}]`,
+		"https://api.llama.fi/tvl/uniswap":                   `3946415939.48`,
+		"https://coins.llama.fi/prices/current/coingecko:ethereum": `{"coins":{"coingecko:ethereum":{"price":2492.0,"symbol":"ETH","timestamp":1791608096,"confidence":0.99}}}`,
+		"https://stablecoins.llama.fi/stablecoins?includePrices=true": `{"peggedAssets":[{"id":"1","name":"Tether","symbol":"USDT","circulating":{"peggedUSD":184.0},"price":1.0}]}`,
+		"https://api.llama.fi/overview/dexs?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true": `{"protocols":[{"name":"Curve DEX","slug":"curve-dex","total24h":7,"totalAllTime":352.0,"chains":["Ethereum"]}]}`,
+		"https://api.llama.fi/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true":  `{"protocols":[{"name":"Aave","slug":"aave","total24h":9,"totalAllTime":177.0,"chains":["Ethereum"]}]}`,
+		"https://yields.llama.fi/pools": `{"status":"success","data":[{"pool":"abc","chain":"Ethereum","project":"lido","symbol":"STETH","tvlUsd":241.0,"apy":2.2,"apyBase":2.2,"apyReward":null}]}`,
+	}}
+	for _, tc := range []struct{ q, kind, frag string; wantRows int }{
+		{"mode=chainHistory&chain=Ethereum&days=2", "chainHistory", "for chain Ethereum", 2},
+		{"mode=tvl&protocol=uniswap", "tvl", "for protocol uniswap", 1},
+		{"mode=prices&coins=coingecko:ethereum", "prices", "coins object", 1},
+		{"mode=stablecoins&top=1", "stablecoins", "peggedAssets", 1},
+		{"mode=dexs&top=1", "dexs", "total24h", 1},
+		{"mode=fees&top=1", "fees", "total24h", 1},
+		{"mode=yields&top=1", "yields", "tvlUsd", 1},
+	} {
+		rec := llamaGet(t, d, "/api/llama?"+tc.q)
+		if rec.Code != 200 {
+			t.Fatalf("%s: status %d: %s", tc.q, rec.Code, rec.Body.String())
+		}
+		body := decode(t, rec)
+		if body["kind"] != tc.kind {
+			t.Errorf("%s: kind=%v want %s", tc.q, body["kind"], tc.kind)
+		}
+		rows, ok := body["rows"].([]any)
+		if !ok || len(rows) != tc.wantRows {
+			t.Fatalf("%s: rows=%v want %d rows", tc.q, body["rows"], tc.wantRows)
+		}
+		if !strings.Contains(body["derived"].(string), tc.frag) {
+			t.Errorf("%s: derived=%v want fragment %q", tc.q, body["derived"], tc.frag)
+		}
+		if got := rec.Header().Get("X-Cache"); got != "MISS" {
+			t.Errorf("%s: X-Cache=%q want MISS", tc.q, got)
+		}
+	}
 }

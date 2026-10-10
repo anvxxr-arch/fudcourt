@@ -371,6 +371,27 @@ type Liquidation struct {
 	RetrievedAt  time.Time `json:"retrieved_at"`
 }
 
+// OptionQuote is one options ticker snapshot: prices and the provider's
+// greeks for one option instrument. Nil fields are absent upstream (never-fake).
+type OptionQuote struct {
+	InstrumentID string    `json:"instrument_id"`
+	VenueID      string    `json:"venue_id"`
+	At           time.Time `json:"at"`
+	MarkPrice    *float64  `json:"mark_price"`
+	IndexPrice   *float64  `json:"index_price"`
+	Bid          *float64  `json:"bid"`
+	Ask          *float64  `json:"ask"`
+	Volume24h    *float64  `json:"volume_24h"`
+	OpenInterest *float64  `json:"open_interest"`
+	IV           *float64  `json:"iv"`
+	Delta        *float64  `json:"delta"`
+	Gamma        *float64  `json:"gamma"`
+	Theta        *float64  `json:"theta"`
+	Vega         *float64  `json:"vega"`
+	Source       string    `json:"source"`
+	RetrievedAt  time.Time `json:"retrieved_at"`
+}
+
 // Observation is one value of one economic/metric series at one period, under
 // one revision. A nil Value is a REAL row: the provider published the period
 // but the value is absent (never-fake: absent becomes NULL, never 0).

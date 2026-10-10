@@ -71,6 +71,14 @@ func (f *fakeReader) ReadOpenInterest(context.Context, string, string, string, t
 	return nil, f.unused("ReadOpenInterest")
 }
 
+func (f *fakeReader) ReadLiquidations(context.Context, string, string, string, time.Time, time.Time, int) ([]canon.Liquidation, error) {
+	return nil, f.unused("ReadLiquidations")
+}
+
+func (f *fakeReader) ReadOptionQuotes(context.Context, string, string, string, time.Time, time.Time, int) ([]canon.OptionQuote, error) {
+	return nil, f.unused("ReadOptionQuotes")
+}
+
 func (f *fakeReader) ReadTrades(context.Context, string, string, time.Time, time.Time, int) ([]canon.Trade, error) {
 	return nil, f.unused("ReadTrades")
 }
@@ -189,6 +197,14 @@ func (f *fakeWriter) WriteFunding(context.Context, []canon.FundingRate) (int, in
 
 func (f *fakeWriter) WriteOpenInterest(context.Context, []canon.OpenInterest) (int, int, error) {
 	return f.unused("WriteOpenInterest")
+}
+
+func (f *fakeWriter) WriteLiquidations(context.Context, []canon.Liquidation) (int, int, error) {
+	return f.unused("WriteLiquidations")
+}
+
+func (f *fakeWriter) WriteOptionQuotes(context.Context, []canon.OptionQuote) (int, int, error) {
+	return f.unused("WriteOptionQuotes")
 }
 
 func (f *fakeWriter) WritePools(context.Context, []canon.Pool) (int, int, error) {

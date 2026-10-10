@@ -94,6 +94,8 @@ func (s *server) routeMux() *http.ServeMux {
 	h("/orderbook", s.get(s.handleOrderbook))
 	h("/derivatives/funding", s.get(s.handleFunding))
 	h("/derivatives/open-interest", s.get(s.handleOpenInterest))
+	h("/derivatives/liquidations", s.get(s.handleLiquidations))
+	h("/derivatives/options", s.get(s.handleOptionQuotes))
 	h("/defi/protocols", s.get(handleList(s, func(ctx context.Context, q canon.ListQuery) ([]canon.ProtocolTVL, error) {
 		return s.r.ListProtocolTVL(ctx, q.Limit)
 	})))
@@ -409,6 +411,56 @@ func (s *server) handleOpenInterest(w http.ResponseWriter, r *http.Request) {
 	writeData(w, rows)
 }
 
+// handleLiquidations serves /derivatives/liquidations with the same filters.
+func (s *server) handleLiquidations(w http.ResponseWriter, r *http.Request) {
+	limit, err := limitParam(r)
+	if err != nil {
+		badRequest(w, "limit must be a positive integer")
+		return
+	}
+	q := r.URL.Query()
+	if q.Get("instrument") == "" && q.Get("asset") == "" {
+		badRequest(w, "instrument or asset is required")
+		return
+	}
+	start, end, err := window(r)
+	if err != nil {
+		badRequest(w, err.Error())
+		return
+	}
+	rows, err := s.r.ReadLiquidations(r.Context(), q.Get("instrument"), q.Get("venue"), q.Get("asset"), start, end, limit)
+	if err != nil {
+		s.readFailed(w, r, err)
+		return
+	}
+	writeData(w, rows)
+}
+
+// handleOptionQuotes serves /derivatives/options with the same filters.
+func (s *server) handleOptionQuotes(w http.ResponseWriter, r *http.Request) {
+	limit, err := limitParam(r)
+	if err != nil {
+		badRequest(w, "limit must be a positive integer")
+		return
+	}
+	q := r.URL.Query()
+	if q.Get("instrument") == "" && q.Get("asset") == "" {
+		badRequest(w, "instrument or asset is required")
+		return
+	}
+	start, end, err := window(r)
+	if err != nil {
+		badRequest(w, err.Error())
+		return
+	}
+	rows, err := s.r.ReadOptionQuotes(r.Context(), q.Get("instrument"), q.Get("venue"), q.Get("asset"), start, end, limit)
+	if err != nil {
+		s.readFailed(w, r, err)
+		return
+	}
+	writeData(w, rows)
+}
+
 // handlePools serves /dex/pools?chain=&dex=&base=&quote=&limit=.
 func (s *server) handlePools(w http.ResponseWriter, r *http.Request) {
 	limit, err := limitParam(r)
@@ -597,6 +649,14 @@ func (f failingWriter) WriteFunding(ctx context.Context, rows []canon.FundingRat
 }
 
 func (f failingWriter) WriteOpenInterest(ctx context.Context, rows []canon.OpenInterest) (int, int, error) {
+	return 0, 0, f.unavailable()
+}
+
+func (f failingWriter) WriteLiquidations(ctx context.Context, rows []canon.Liquidation) (int, int, error) {
+	return 0, 0, f.unavailable()
+}
+
+func (f failingWriter) WriteOptionQuotes(ctx context.Context, rows []canon.OptionQuote) (int, int, error) {
 	return 0, 0, f.unavailable()
 }
 

@@ -130,6 +130,8 @@ may exist elsewhere per the dependency rules.
 | `venues` | exchangeaccounts | venue registry |
 | `asset_history` | portfolio | history (appended by the `assets_snapshot` trigger on every `assets` insert) |
 | `price_history` | markets | price history hypertable (no producer — DR-036) |
+| `alert_state` | alerts | **tool-owned**: created at runtime by `scripts/tools/alert-engine.py` (`CREATE TABLE IF NOT EXISTS`), NOT in `schema/pg-schema.sql`; the live-drift gate allowlists it on the live side |
+| `signal_plans` | signals | **tool-owned**: created at runtime by `scripts/tools/signal-pipeline.py`, NOT in `schema/pg-schema.sql`; same allowlist |
 
 ### Postgres `executor` schema (`schema/executor-schema.sql`)
 
@@ -162,6 +164,30 @@ introduce a new migration framework unnecessarily"; DR-020):
 - Treasury `public`: schema is `db/schema/pg-schema.sql`, applied out-of-band to the
   `fudcourt` database. There is no dump and no drift gate — the SQLite dump and
   its `dump-schema.mjs --check` alarm were retired together with Turso (DR-040).
+  The file is self-contained EMPTY→LATEST: it declares
+  `CREATE EXTENSION IF NOT EXISTS timescaledb` before its first
+  `create_hypertable()` (without that line a clean database dies mid-apply with
+  `function create_hypertable(...) does not exist` — found 2026-10-09 on
+  postgres-hardened:18; CI's timescale image ships the extension, which is why
+  the gap was invisible there). Two guards watch that contract: the offline
+  gate `scripts/verify/check-schema-bootstrap.py` (runs in `verify-all.sh`:
+  extension declared first, no destructive DDL, every `ON CONFLICT` arbiter
+  used in source backed by a unique index the file creates) and the live
+  harness `scripts/verify/verify-db-apply.py` (`node tools/fud.ts live
+  dbapply`: disposable database, both schema files applied twice, extension /
+  hypertables / arbiter upsert / FK validation asserted, dropped afterwards).
+  The live-vs-file drift gate is `scripts/verify/check-live-drift.py`
+  (`node tools/fud.ts live dbdrift`): it applies both schema files to a
+  disposable reference database and diffs the NORMALIZED CATALOGS (columns,
+  indexes, constraints, hypertables) against the live database, read as a
+  superuser so per-role visibility cannot hide an object, with an allowlist
+  for the tool-owned tables above; it also asserts every live relation and
+  file-defined function is owned by the applier role — the 2026-10-09
+  re-apply blocker (`must be owner of function/table`) as a permanent check.
+  The 2026-10-09 QA pass found and closed the drift it introduced the gate
+  for: live was missing `assets_wallet_chain_asset` (the arbiter the Rust
+  sync plans against), and `assets_snapshot()` + `canonical_reference*`
+  were owned by `postgres`.
 - Neon (Payload CMS): Payload's own migration folder
   (`apps/web/src/cms/migrations/`) stays with the CMS by Payload convention.
 

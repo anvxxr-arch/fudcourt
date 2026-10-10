@@ -77,6 +77,9 @@ type CacheInfo struct {
 //	status     any other non-200
 //	not-xml    a 200 whose body carries no <item>
 //	empty      a 200 whose parsed item list is empty
+//	too-large a 200 body past the 4 MiB cap — a capped XML prefix PARSES as a
+//	          clean partial feed, so the cut must be refused loudly, never
+//	          shipped (QA 2026-10-09)
 type HardError struct {
 	Kind   string
 	Status int
@@ -329,11 +332,22 @@ func (f *Fetcher) fetch(ctx context.Context, url string) (string, []Item, CacheI
 		defer gz.Close()
 		r = gz
 	}
-	raw, err := io.ReadAll(io.LimitReader(r, maxBodyBytes))
+	raw, err := io.ReadAll(io.LimitReader(r, maxBodyBytes+1))
 	if err != nil {
 		return "", nil, CacheInfo{}, &HardError{
 			Kind: "transport", URL: url, HasBody: false,
 			Detail: "read failed: " + err.Error(),
+		}
+	}
+	if len(raw) > maxBodyBytes {
+		// A capped XML prefix parses as a CLEAN partial feed (the parser has no
+		// end marker to notice is missing), so without this cut the family
+		// would ship a half-feed as success — the silent-partial class this
+		// codebase forbids. Refuse loudly (QA 2026-10-09).
+		return "", nil, CacheInfo{}, &HardError{
+			Kind: "too-large", Status: res.StatusCode, URL: url,
+			Detail: "feed body passed the " + strconv.Itoa(maxBodyBytes) + " byte cap — refusing a truncated feed",
+			Body:   research.SliceBodyEllipsis(string(raw[:detailBytes]), detailBytes, ""), HasBody: true,
 		}
 	}
 	body := string(raw)

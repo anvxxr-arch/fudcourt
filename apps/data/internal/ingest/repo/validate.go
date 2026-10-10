@@ -288,6 +288,113 @@ func validateOpenInterest(r canon.OpenInterest, now time.Time) (reject, warn str
 	return "", warn
 }
 
+// validateLiquidation returns (reject, warn). Side, price, quantity and
+// value_usd are optional (feeds disagree on what they publish); whatever IS
+// present must be well-formed — a negative liquidation price/quantity/value
+// is a parser bug, not a market state.
+func validateLiquidation(r canon.Liquidation, now time.Time) (reject, warn string) {
+	label := "liquidation " + r.InstrumentID + "/" + r.VenueID
+	if r.InstrumentID == "" || r.VenueID == "" {
+		return label + ": empty instrument or venue id", ""
+	}
+	if r.Source == "" {
+		return label + ": empty source", ""
+	}
+	if reject = checkTime(label+" at", r.At, now); reject != "" {
+		return
+	}
+	if r.Price != nil {
+		if reject = checkNonNegative(label, "price", *r.Price); reject != "" {
+			return
+		}
+	}
+	if r.Quantity != nil {
+		if reject = checkNonNegative(label, "quantity", *r.Quantity); reject != "" {
+			return
+		}
+	}
+	if r.ValueUSD != nil {
+		if reject = checkNonNegative(label, "value_usd", *r.ValueUSD); reject != "" {
+			return
+		}
+	}
+	return "", warn
+}
+
+// validateOptionQuote returns (reject, warn). Prices/volumes/IV/gamma are
+// non-negative wherever present; delta, theta and vega are signed greeks, so
+// they are only checked for NaN/Inf (the same finite-ness rule
+// checkNonNegative applies internally).
+func validateOptionQuote(r canon.OptionQuote, now time.Time) (reject, warn string) {
+	label := "option_quote " + r.InstrumentID + "/" + r.VenueID
+	if r.InstrumentID == "" || r.VenueID == "" {
+		return label + ": empty instrument or venue id", ""
+	}
+	if r.Source == "" {
+		return label + ": empty source", ""
+	}
+	if reject = checkTime(label+" at", r.At, now); reject != "" {
+		return
+	}
+	if r.MarkPrice != nil {
+		if reject = checkNonNegative(label, "mark_price", *r.MarkPrice); reject != "" {
+			return
+		}
+	}
+	if r.IndexPrice != nil {
+		if reject = checkNonNegative(label, "index_price", *r.IndexPrice); reject != "" {
+			return
+		}
+	}
+	if r.Bid != nil {
+		if reject = checkNonNegative(label, "bid", *r.Bid); reject != "" {
+			return
+		}
+	}
+	if r.Ask != nil {
+		if reject = checkNonNegative(label, "ask", *r.Ask); reject != "" {
+			return
+		}
+	}
+	if r.Volume24h != nil {
+		if reject = checkNonNegative(label, "volume_24h", *r.Volume24h); reject != "" {
+			return
+		}
+	}
+	if r.OpenInterest != nil {
+		if reject = checkNonNegative(label, "open_interest", *r.OpenInterest); reject != "" {
+			return
+		}
+	}
+	if r.IV != nil {
+		if reject = checkNonNegative(label, "iv", *r.IV); reject != "" {
+			return
+		}
+	}
+	if r.Gamma != nil {
+		if reject = checkNonNegative(label, "gamma", *r.Gamma); reject != "" {
+			return
+		}
+	}
+	// Signed greeks: absence is nil, a present value only has to be finite.
+	if r.Delta != nil {
+		if reject = checkFloats(label, *r.Delta); reject != "" {
+			return
+		}
+	}
+	if r.Theta != nil {
+		if reject = checkFloats(label, *r.Theta); reject != "" {
+			return
+		}
+	}
+	if r.Vega != nil {
+		if reject = checkFloats(label, *r.Vega); reject != "" {
+			return
+		}
+	}
+	return "", warn
+}
+
 // validatePool returns (reject, warn).
 func validatePool(r canon.Pool, now time.Time) (reject, warn string) {
 	label := "pool " + r.PoolID
