@@ -68,7 +68,7 @@ func (r *Repo) WriteTrades(ctx context.Context, rows []canon.Trade) (written, re
 				(instrument_id, venue_id, provider_trade_id, trade_time, price, quantity,
 				 side, aggressor, source, retrieved_at)
 				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-				ON CONFLICT (venue_id, instrument_id, provider_trade_id) DO UPDATE SET
+				ON CONFLICT (venue_id, instrument_id, provider_trade_id, trade_time) DO UPDATE SET
 					trade_time = EXCLUDED.trade_time, price = EXCLUDED.price,
 					quantity = EXCLUDED.quantity, side = EXCLUDED.side,
 					aggressor = EXCLUDED.aggressor, source = EXCLUDED.source,

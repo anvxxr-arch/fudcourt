@@ -39,6 +39,10 @@ func (f *fetcher) Fetch(ctx context.Context, job ingest.Job, w canon.Writer) (in
 		written, rejected, err = f.client.openInterest(ctx, w, job, 200)
 	case "ticker":
 		written, rejected, err = f.client.ticker(ctx, w, job)
+	case "trades":
+		written, rejected, err = f.client.trades(ctx, w, job, 60)
+	case "depth":
+		written, rejected, err = f.client.depth(ctx, w, job)
 	case "instruments":
 		written, rejected, err = f.client.instruments(ctx, w, job)
 	default:
@@ -74,14 +78,17 @@ func (m *Module) Fetchers() map[string]ingest.Fetcher {
 		"funding":       &fetcher{dataset: "funding", client: m.client},
 		"open-interest": &fetcher{dataset: "open-interest", client: m.client},
 		"ticker":        &fetcher{dataset: "ticker", client: m.client},
+		"trades":        &fetcher{dataset: "trades", client: m.client},
+		"depth":         &fetcher{dataset: "depth", client: m.client},
 		"instruments":   &fetcher{dataset: "instruments", client: m.client},
 	}
 }
 
 // Jobs is the seed registry: ohlcv BTC/ETH poll 1m, funding and oi BTC/ETH
-// poll 5m, tickers stream 30s, and the one-shot instrument listing. Subjects
-// carry the market for klines ("spot:BTCUSDT"); funding/oi are linear-perp
-// only so the bare symbol means the USDⓈ-M linear perp.
+// poll 5m, tickers stream 30s, spot trades/depth for BTC, and the one-shot
+// instrument listing. Subjects carry the market for klines ("spot:BTCUSDT");
+// funding/oi are linear-perp only so the bare symbol means the USDⓈ-M linear
+// perp.
 func (m *Module) Jobs() []ingest.JobSpec {
 	specs := []ingest.JobSpec{
 		{
@@ -119,6 +126,14 @@ func (m *Module) Jobs() []ingest.JobSpec {
 		{
 			Provider: providerName, Dataset: "ticker", Subject: "",
 			Mode: "stream", Schedule: 30 * time.Second, Priority: 4, Enabled: true,
+		},
+		{
+			Provider: providerName, Dataset: "trades", Subject: "spot:BTCUSDT",
+			Mode: "poll", Schedule: time.Minute, Priority: 2, Enabled: true,
+		},
+		{
+			Provider: providerName, Dataset: "depth", Subject: "spot:BTCUSDT",
+			Mode: "poll", Schedule: 30 * time.Second, Priority: 2, Enabled: true,
 		},
 		{
 			Provider: providerName, Dataset: "instruments", Subject: "spot",

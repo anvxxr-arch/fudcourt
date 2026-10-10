@@ -39,6 +39,10 @@ func (f *fetcher) Fetch(ctx context.Context, job ingest.Job, w canon.Writer) (in
 		written, rejected, err = f.client.openInterest(ctx, w, job, 0)
 	case "ticker":
 		written, rejected, err = f.client.ticker(ctx, w, job)
+	case "trades":
+		written, rejected, err = f.client.trades(ctx, w, job, 100)
+	case "depth":
+		written, rejected, err = f.client.depth(ctx, w, job, 100)
 	case "instruments":
 		written, rejected, err = f.client.instruments(ctx, w, job)
 	default:
@@ -74,6 +78,8 @@ func (m *Module) Fetchers() map[string]ingest.Fetcher {
 		"funding":       &fetcher{dataset: "funding", client: m.client},
 		"open-interest": &fetcher{dataset: "open-interest", client: m.client},
 		"ticker":        &fetcher{dataset: "ticker", client: m.client},
+		"trades":        &fetcher{dataset: "trades", client: m.client},
+		"depth":         &fetcher{dataset: "depth", client: m.client},
 		"instruments":   &fetcher{dataset: "instruments", client: m.client},
 	}
 }
@@ -119,6 +125,14 @@ func (m *Module) Jobs() []ingest.JobSpec {
 		{
 			Provider: providerName, Dataset: "ticker", Subject: "",
 			Mode: "stream", Schedule: 30 * time.Second, Priority: 4, Enabled: true,
+		},
+		{
+			Provider: providerName, Dataset: "trades", Subject: "spot:BTC-USDT",
+			Mode: "poll", Schedule: time.Minute, Priority: 2, Enabled: true,
+		},
+		{
+			Provider: providerName, Dataset: "depth", Subject: "spot:BTC-USDT",
+			Mode: "poll", Schedule: 30 * time.Second, Priority: 2, Enabled: true,
 		},
 		{
 			Provider: providerName, Dataset: "instruments", Subject: "spot",

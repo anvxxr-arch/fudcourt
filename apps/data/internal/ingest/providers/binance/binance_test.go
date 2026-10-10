@@ -331,7 +331,7 @@ func TestJobsRegistered(t *testing.T) {
 		t.Fatalf("provider: %s", m.Provider())
 	}
 	fetchers := m.Fetchers()
-	for _, ds := range []string{"ohlcv", "funding", "open-interest", "ticker"} {
+	for _, ds := range []string{"ohlcv", "funding", "open-interest", "ticker", "trades", "depth"} {
 		if _, ok := fetchers[ds]; !ok {
 			t.Fatalf("missing fetcher %s", ds)
 		}
