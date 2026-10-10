@@ -54,6 +54,9 @@ export type CoinankEnvelope<T> = {
   upstreamCount?: number;
   data: T;
   derived: string;
+  /** Set only on a labelled last-good serve: upstream refusing, data old. */
+  stale?: boolean;
+  staleAgeSec?: number;
   interval?: string;
 };
 

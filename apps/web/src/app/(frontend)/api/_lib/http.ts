@@ -15,6 +15,38 @@ export function failInternal(e: unknown) {
 }
 
 /**
+ * A PUBLIC, read-only 200 with the one `Cache-Control` every such route shares.
+ *
+ * The value is the route's own in-process TTL, so the edge revalidates on the
+ * same clock the server memo already runs on — never shorter (which would spend
+ * an upstream call for nothing) and never longer (which would serve a figure the
+ * board itself has already replaced). `s-maxage` is the shared cache; `max-age`
+ * keeps a browser from re-asking on every navigation; `stale-while-revalidate`
+ * lets a stale hit answer instantly while the refresh runs, which is the whole
+ * point of putting a TTL on a board that must stay live.
+ *
+ * This is a separate helper from `fail`/`failInternal` (which answer errors and
+ * deliberately carry no storeable header) so that every successful public read
+ * gets the same value by construction rather than by a copy pasted per route.
+ * Anything user-specific or auth-gated belongs on `noStoreJson`, never here.
+ */
+export function publicJson(body: unknown, ttlSeconds: number, init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  headers.set('Cache-Control', `public, max-age=${ttlSeconds}, s-maxage=${ttlSeconds}, stale-while-revalidate=${ttlSeconds}`);
+  return NextResponse.json(body, { ...init, headers });
+}
+/**
+ * A response that must never be stored by any cache: every auth-gated read and
+ * every error. `no-store` is explicit rather than implied by the request having
+ * a cookie, because the header is what the browser, the CDN and Lighthouse's
+ * `bf-cache` audit all read.
+ */
+export function noStoreJson(body: unknown, init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  headers.set('Cache-Control', 'private, no-store');
+  return NextResponse.json(body, { ...init, headers });
+} 
+/**
  * The public origin this deployment answers on. `FUDCOURT_PUBLIC_ORIGIN`
  * may hold a comma-separated allowlist (e.g. "https://fudcourt.com,
  * https://www.fudcourt.com"); each entry is a full origin

@@ -29,6 +29,9 @@ export type EtfEnvelope = {
   upstreamCount?: number;
   data: EtfDayRow[];
   derived: string;
+  /** Set only on a labelled last-good serve: upstream refusing, data old. */
+  stale?: boolean;
+  staleAgeSec?: number;
 };
 
 /** The read, with its own failure — a half-read board is a stated half. */

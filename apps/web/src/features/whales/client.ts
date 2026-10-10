@@ -32,6 +32,9 @@ export type WhaleEnvelope = {
   };
   /** What the sidecar did to the bytes. */
   derived: string;
+  /** Set only on a labelled last-good serve: upstream refusing, data old. */
+  stale?: boolean;
+  staleAgeSec?: number;
 };
 
 /** The read, with its own failure — a failed read is a stated failure, not empty. */

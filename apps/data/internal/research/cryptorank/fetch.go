@@ -25,9 +25,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -418,6 +420,8 @@ func (f *Fetcher) fetch(ctx context.Context, route, target string, ttl int) (*He
 			Route:  route,
 			Status: r.StatusCode,
 			Err:    fmt.Sprintf("upstream HTTP %d (Cloudflare wall or stale route)", r.StatusCode),
+			// Plumb the upstream wait so fetchWithRetry can honor it.
+			RetryAfter: parseRetryAfter(r.Header.Get("Retry-After"), time.Now()),
 		}
 	}
 
@@ -489,9 +493,34 @@ type HelperErr struct {
 	Route  string
 	Status int
 	Err    string
+	// RetryAfter is the parsed upstream Retry-After directive (0 = absent,
+	// unparseable, or already past). The consumer caps it; the parse is raw.
+	RetryAfter time.Duration
 }
 
 func (e *HelperErr) Error() string { return e.Err }
+
+// parseRetryAfter accepts both RFC 9110 forms — delta-seconds ("5") and an
+// HTTP-date — and returns 0 for anything else, which reads as "no directive"
+// and leaves the caller on its linear backoff.
+func parseRetryAfter(v string, now time.Time) time.Duration {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return 0
+	}
+	if secs, err := strconv.Atoi(v); err == nil {
+		if secs <= 0 {
+			return 0
+		}
+		return time.Duration(secs) * time.Second
+	}
+	if t, err := http.ParseTime(v); err == nil {
+		if d := t.Sub(now); d > 0 {
+			return d
+		}
+	}
+	return 0
+}
 
 type resp struct {
 	StatusCode int
