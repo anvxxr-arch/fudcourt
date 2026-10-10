@@ -12,13 +12,38 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
+	"math/rand/v2"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 	"time"
 
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/canon"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/bi"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/binance"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/blockscout"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/bps"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/bybit"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/cftc"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/coingecko"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/defillama"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/dexscreener"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/dune"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/etherscan"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/fred"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/geckoterminal"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/imf"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/oecd"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/okx"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/polymarket"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/worldbank"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/repo"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/serve"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/research/chainrank"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/research/coinank"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/research/coinglass"
@@ -29,6 +54,8 @@ import (
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/research/news"
 	"github.com/anvxxr-arch/fudcourt/apps/data/platform/cache"
 	"github.com/anvxxr-arch/fudcourt/apps/data/platform/httpx"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -137,6 +164,7 @@ func main() {
 		// the handler has read it.
 		MaxHeaderBytes: 1 << 16,
 	}
+
 	log.Printf("fudcourt-data listening on %s (cryptorank: cache %s, ttl %ds, %d modes; khala: cache %s, ttl %ds, %d modes; llama: ttl %ds, %d modes; news: ttl %ds, %d feeds; chainrank: ttl %ds, %d modes; coinglass: cache %s, ttl %ds, %d modes; coinank: cache %s, %s, %d modes; coinmarketcap: cache %s, ttl %ds, %d modes)",
 		addr, f.CacheDir(), ttl, cryptorank.ModeCount, kf.CacheDir(), khala.TTLDefault(), khala.ModeCount, lf.TTL(), llama.ModeCount, nf.TTL(), news.SourceCount, cf.TTL(), chainrank.ModeCount, gf.CacheDir(), coinglass.TTLDefault(), coinglass.ModeCount, af.CacheDir(), coinank.TTLNote(), coinank.ModeCount, mf.CacheDir(), coinmarketcap.TTLDefault(), coinmarketcap.ModeCount)
 
@@ -148,9 +176,345 @@ func main() {
 		defer cancel()
 		_ = srv.Shutdown(sh)
 	}()
+	// The canonical data platform (ingest) rides the same sidecar: a PG-backed
+	// job registry + run journal + retention sweeper driving the provider
+	// adapters, and the /api/data/* read surface mounted next to the family
+	// routes. FUDCOURT_DATA_INGEST=off removes it entirely; the families are
+	// unaffected either way. Fail-open like the L2 (platform/cache): a
+	// database that never answers degrades the platform to its own loud 503s,
+	// never this process.
+	if os.Getenv("FUDCOURT_DATA_INGEST") != "off" {
+		mountDataPlatform(srv, ctx)
+	}
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatalf("fudcourt-data: %v", err)
 	}
+}
+
+// poolExecutor adapts *pgxpool.Pool to the Executor shape internal/ingest
+// and internal/ingest/repo program against (their Query/QueryRow/SendBatch/
+// CopyFrom match the pool's own; Exec deliberately returns `any` so their
+// fakes stay pgconn-free). The widening wrap is the whole adapter; every
+// call still lands on the shared pool.
+type poolExecutor struct{ p *pgxpool.Pool }
+
+func (e poolExecutor) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	return e.p.Query(ctx, sql, args...)
+}
+
+func (e poolExecutor) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
+	return e.p.QueryRow(ctx, sql, args...)
+}
+
+func (e poolExecutor) Exec(ctx context.Context, sql string, args ...any) (any, error) {
+	return e.p.Exec(ctx, sql, args...)
+}
+
+func (e poolExecutor) SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults {
+	return e.p.SendBatch(ctx, b)
+}
+
+func (e poolExecutor) CopyFrom(ctx context.Context, tableName pgx.Identifier, columnNames []string, rowSrc pgx.CopyFromSource) (int64, error) {
+	return e.p.CopyFrom(ctx, tableName, columnNames, rowSrc)
+}
+
+// dataLog is the ingest platform's logger. It shares stderr with the stdlib
+// logger (the svc unit merges both) but carries slog's structured fields so
+// engine/journal lines stay greppable: msg + key=value pairs.
+func dataLog() *slog.Logger {
+	return slog.New(slog.NewTextHandler(os.Stderr, nil))
+}
+
+// dataPGURL resolves the platform's database. FUDCOURT_DATA_PG_URL wins; the
+// fallback derives from FUDCOURT_PG_URL (the web tier's URL) by swapping the
+// database name to /fudcourt — same host/port/user/password, because the data
+// schema lives in the SAME fudcourt database (contract "Storage layout"), so
+// the derived URL usually equals the input.
+func dataPGURL() string {
+	if v := os.Getenv("FUDCOURT_DATA_PG_URL"); v != "" {
+		return v
+	}
+	base := os.Getenv("FUDCOURT_PG_URL")
+	if base == "" {
+		return ""
+	}
+	u, err := url.Parse(base)
+	if err != nil {
+		return base
+	}
+	u.Path = "/fudcourt"
+	return u.String()
+}
+
+// connectDataPool opens the platform's pgx pool and returns it adapted to
+// the Executor shapes internal/ingest and internal/ingest/repo program
+// against. The connect is retried in a goroutine-safe retry loop (3 tries,
+// 5s apart) so a Postgres that is still booting alongside this sidecar does
+// not permanently disable the platform; on final failure it returns a nil
+// interface and the caller fails open (the families keep serving,
+// /api/data/* answers its loud 503s).
+func connectDataPool(dlog *slog.Logger) (poolExecutor, *repo.Repo) {
+	dsn := dataPGURL()
+	if dsn == "" {
+		dlog.Error("fudcourt-data: no FUDCOURT_DATA_PG_URL or FUDCOURT_PG_URL; data platform disabled")
+		return poolExecutor{}, nil
+	}
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		dlog.Error("fudcourt-data: data pool config parse failed; data platform disabled", "err", err)
+		return poolExecutor{}, nil
+	}
+	// Contract pool shape: bounded like the executor's TS-parity pool so a
+	// slow reader cannot pin arbitrarily many backends on the shared server.
+	// The dial timeout lives on the underlying ConnConfig (pgxpool has no
+	// ConnectTimeout of its own).
+	cfg.MaxConns = 8
+	cfg.MinConns = 1
+	cfg.MaxConnLifetime = 30 * time.Second
+	cfg.MaxConnIdleTime = 30 * time.Second
+	cfg.ConnConfig.ConnectTimeout = 5 * time.Second
+
+	// The retry loop is goroutine-safe by construction: connectDataPool runs
+	// ONCE, on the main goroutine, BEFORE mountDataPlatform hands the pool to
+	// the engine, the serve surface or any request handler. Nobody can touch
+	// a partially-initialised pool.
+	var raw *pgxpool.Pool
+	const tries = 3
+	for attempt := 1; attempt <= tries; attempt++ {
+		p, err := pgxpool.NewWithConfig(context.Background(), cfg)
+		if err == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			err = p.Ping(ctx)
+			cancel()
+			if err == nil {
+				raw = p
+				break
+			}
+			p.Close()
+		}
+		if attempt < tries {
+			dlog.Error("fudcourt-data: data pool connect failed, retrying", "attempt", attempt, "err", err)
+			time.Sleep(5 * time.Second)
+		} else {
+			dlog.Error("fudcourt-data: DATA PLATFORM DISABLED: data pool connect failed after retries; research families still serve, /api/data/* reads will 503", "err", err)
+		}
+	}
+	if raw == nil {
+		return poolExecutor{}, nil
+	}
+	// Schema first, idempotent (embedded DDL, same startup-apply precedent as
+	// the executor). A schema failure is a loud log + no platform, not a
+	// crash: the sidecar must still serve the families. The applier takes the
+	// same adapter (PGConn narrows Exec to (any, error) for its fakes).
+	sctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	err = ingest.Apply(sctx, poolExecutor{p: raw}, dlog)
+	cancel()
+	if err != nil {
+		dlog.Error("fudcourt-data: DATA PLATFORM DISABLED: schema apply failed; research families still serve, /api/data/* reads will 503", "err", err)
+		raw.Close()
+		return poolExecutor{}, nil
+	}
+	pool := poolExecutor{p: raw}
+	return pool, repo.New(pool)
+}
+
+// buildDataModules is the engine's provider registry. Every adapter
+// implements ingest.Module (Provider/Fetchers/Jobs); nil Doer means each
+// client's tuned default transport (the same rule the adapters' own tests
+// use for production wiring). Keys are read inside the packages
+// (FRED_API_KEY, BPS_API_KEY/BPS_API_ID, BI_API_KEY, ETHERSCAN_API_KEY,
+// DUNE_API_KEY); a missing key degrades that provider's fetches to loud
+// no-credentials failures, it never crashes the engine.
+func buildDataModules() []ingest.Module {
+	return []ingest.Module{
+		binance.NewModule(nil),
+		bybit.NewModule(nil),
+		okx.NewModule(nil),
+		coingecko.NewModuleWithConfig(nil, coingecko.Config{MaxPages: 4}),
+		defillama.NewModule(nil),
+		fred.NewModule(nil),
+		worldbank.NewModule(nil),
+		imf.NewModule(nil),
+		oecd.NewModule(nil),
+		bps.NewModule(nil),
+		bi.NewModule(nil),
+		cftc.NewModule(nil),
+		polymarket.NewModule(nil),
+		dexscreener.NewModule(nil),
+		geckoterminal.NewModule(nil),
+		etherscan.NewModule(nil),
+		blockscout.NewModule(nil),
+		dune.NewModule(nil),
+	}
+}
+
+// moduleNames is the static provider list for the startup log line.
+func moduleNames(mods []ingest.Module) []string {
+	names := make([]string, len(mods))
+	for i, m := range mods {
+		names[i] = m.Provider()
+	}
+	return names
+}
+
+// unavailableReader is the canon.Reader wired when no pool exists: every
+// method fails LOUDLY (serve maps the error to its 503 "unavailable"
+// envelope and /health reports db:false), so a DB-less sidecar answers the
+// data surface honestly instead of panicking on a nil reader or faking an
+// empty payload.
+type unavailableReader struct{}
+
+func (unavailableReader) err() error {
+	return errors.New("data store unavailable: no database pool (research families unaffected)")
+}
+
+func (r unavailableReader) ListAssets(ctx context.Context, q canon.ListQuery) ([]canon.Asset, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ListChains(ctx context.Context, q canon.ListQuery) ([]canon.Chain, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ListVenues(ctx context.Context, q canon.ListQuery) ([]canon.Venue, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ListProtocols(ctx context.Context, q canon.ListQuery) ([]canon.Protocol, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ListInstruments(ctx context.Context, q canon.InstrumentQuery) ([]canon.Instrument, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ListSeries(ctx context.Context, q canon.SeriesQuery) ([]canon.SeriesMeta, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ReadTimeseries(ctx context.Context, seriesID string, start, end time.Time, limit int) ([]canon.Observation, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ReadOhlcv(ctx context.Context, instrumentID, venueID, timeframe string, start, end time.Time, limit int) ([]canon.Ohlcv, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ReadFunding(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]canon.FundingRate, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ReadOpenInterest(ctx context.Context, instrumentID, venueID, asset string, start, end time.Time, limit int) ([]canon.OpenInterest, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ReadTrades(ctx context.Context, instrumentID, venueID string, start, end time.Time, limit int) ([]canon.Trade, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ReadOrderbook(ctx context.Context, instrumentID, venueID string, start, end time.Time, limit int) ([]canon.OrderbookSnap, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ListPools(ctx context.Context, q canon.PoolQuery) ([]canon.Pool, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ListArticles(ctx context.Context, limit int) ([]canon.Article, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ListPredictionMarkets(ctx context.Context, limit int) ([]canon.PredictionMarket, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ListChainTVL(ctx context.Context, limit int) ([]canon.ChainTVL, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ListProtocolTVL(ctx context.Context, limit int) ([]canon.ProtocolTVL, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ResolveProviderSymbol(ctx context.Context, provider, symbol string) (kind, canonicalID string, err error) {
+	return "", "", r.err()
+}
+
+func (r unavailableReader) ListRuns(ctx context.Context, limit int) ([]canon.RunRecord, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) HealthCheck(ctx context.Context) error {
+	return r.err()
+}
+
+// mountDataPlatform wires the whole platform onto srv's handler: pool
+// (retrying connect + idempotent schema apply), engine loop in its own
+// goroutine on the server context, and the /api/data surface (serve strips
+// the /api/data prefix itself, per its ServeHTTP doc). With no pool the
+// surface still mounts — every data endpoint then answers the loud 503 —
+// and /healthz's families are untouched either way.
+func mountDataPlatform(srv *http.Server, ctx context.Context) {
+	dlog := dataLog()
+	pool, r := connectDataPool(dlog)
+	// reader is never nil: with no pool the stub makes every data endpoint
+	// answer the loud 503 envelope (and /health db:false) instead of the
+	// handler panicking on a nil canon.Reader.
+	reader := canon.Reader(unavailableReader{})
+	if r != nil {
+		reader = r
+	}
+	var store ingest.JobStore
+	if pool.p != nil {
+		store = ingest.NewPGJobStore(pool)
+		journal := ingest.NewPGRunJournal(pool)
+		// retention is the interface type on purpose: a nil *PGRetention
+		// wrapped in the interface would defeat the engine's nil check and
+		// panic on the first sweep. Retention stays nil (sweeps off) only
+		// when FUDCOURT_DATA_RETENTION_JSON itself is malformed; the
+		// default windows apply otherwise.
+		var retention ingest.Retention
+		if pr, err := ingest.NewRetention(pool, nil); err != nil {
+			dlog.Error("fudcourt-data: data retention config invalid, retention sweeps disabled", "err", err)
+		} else {
+			retention = pr
+		}
+		workers := envInt("FUDCOURT_DATA_INGEST_WORKERS", 4)
+		eng := ingest.New(ingest.Config{
+			Workers: workers,
+			Once:    os.Getenv("FUDCOURT_DATA_INGEST_ONCE") != "",
+		}, store, journal, retention, buildDataModules, dlog, r)
+		go eng.Run(ctx)
+		mods := buildDataModules()
+		dlog.Info("fudcourt-data: data ingest engine started",
+			"workers", workers,
+			"once", os.Getenv("FUDCOURT_DATA_INGEST_ONCE") != "",
+			"providers", moduleNames(mods))
+	} else {
+		dlog.Error("fudcourt-data: data platform degraded to read-only 503s: no database pool")
+	}
+	// serve.New strips /api/data itself (its ServeHTTP), so the two patterns
+	// below are the whole mount. The FAMILY mux is preserved, not replaced:
+	// everything that is not /api/data falls through to the original handler
+	// (read before the swap; serving has not started yet). The store is
+	// passed for the manual-trigger context; with no pool it is nil and
+	// /ingest/run reports that loudly.
+	families := srv.Handler
+	dataHandler := serve.New(reader, store, buildDataModules, dlog)
+	// Manual /api/data/ingest/run needs a canon.Writer; the store is the
+	// JobStore, not one, so hand serve the repo (the engine's own writer)
+	// when the pool is up. With no pool serve keeps its loud failingWriter.
+	var manualWriter canon.Writer
+	if r != nil {
+		manualWriter = r
+	}
+	dataHandler = serve.WithWriter(dataHandler, manualWriter)
+	dataMux := http.NewServeMux()
+	dataMux.Handle("/api/data", dataHandler)
+	dataMux.Handle("/api/data/", dataHandler)
+	dataMux.Handle("/", families)
+	srv.Handler = dataMux
+	dlog.Info("fudcourt-data: /api/data mounted", "db", r != nil)
 }
 
 func envOr(k, def string) string {
@@ -1017,10 +1381,35 @@ func resolveKey(w http.ResponseWriter, mode, raw string) (string, bool) {
 	return key, true
 }
 
+// maxRetryAfter bounds an upstream Retry-After so a hostile or broken header
+// cannot park the route for hours; anything larger waits the cap instead.
+const maxRetryAfter = 30 * time.Second
+
+// nextDelay is the wait before the next 429 attempt: an upstream Retry-After
+// directive wins and is honored exactly (capped at maxRetryAfter) — jittering
+// it downward would retry EARLIER than the upstream allowed. Without the
+// header the linear retryBase*(attempt+1) gets ±20% jitter so simultaneous
+// clients stop retrying in lockstep. A zero base stays zero, which is what
+// the retryBase=0 tests rely on.
+func nextDelay(attempt int, retryBase, retryAfter time.Duration) time.Duration {
+	if retryAfter > 0 {
+		if retryAfter > maxRetryAfter {
+			return maxRetryAfter
+		}
+		return retryAfter
+	}
+	d := retryBase * time.Duration(attempt+1)
+	if d <= 0 {
+		return 0
+	}
+	return time.Duration(float64(d) * (0.8 + 0.4*rand.Float64()))
+}
+
 // fetchWithRetry is the port of the route's runHelper: a page mount fires every
 // mode at once, which can trip cryptorank's CF burst limiter (upstream 429).
 // Back off and retry the SAME fetch -- responses may only fail on real data,
-// never on a hiccup. 3 attempts, 3s x (attempt+1).
+// never on a hiccup. 3 attempts, 3s x (attempt+1) ±20% jitter, or the capped
+// upstream Retry-After when the header is sent.
 func fetchWithRetry(ctx context.Context, f fetcher, route, path string, ttl int, retryBase time.Duration) (*cryptorank.HelperOut, error) {
 	var last error
 	for attempt := 0; attempt < 3; attempt++ {
@@ -1033,7 +1422,7 @@ func fetchWithRetry(ctx context.Context, f fetcher, route, path string, ttl int,
 		if errors.As(err, &he) && he.Status == 429 {
 			if attempt < 2 {
 				select {
-				case <-time.After(retryBase * time.Duration(attempt+1)):
+				case <-time.After(nextDelay(attempt, retryBase, he.RetryAfter)):
 				case <-ctx.Done():
 					return nil, ctx.Err()
 				}

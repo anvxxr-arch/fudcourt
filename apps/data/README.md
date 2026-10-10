@@ -244,6 +244,46 @@ The parity oracle is only as good as its fixtures: `expected/` is produced by
 `tests/oracle/dump-envelopes.ts` from the recorded upstream payloads, so if
 the TS shapers change, regenerate both before trusting a green run.
 
+## Canonical data platform (ingest)
+
+Alongside the read-proxy families, the sidecar runs the canonical data
+platform: a Postgres-backed ingestion engine (provider adapters under
+`internal/ingest/providers/*`, jobs in `data.job`, per-attempt audit trail in
+`data.ingestion_run` / dead letters in `data.ingestion_error`, retention
+sweeps) and a JSON read surface over the same database. It is fail-open like
+the L2 cache: with Postgres down the families above are untouched and the
+data surface answers loud 503s, never fake rows.
+
+* `POST /api/data/ingest/run?provider=&dataset=[&subject=&backfill=1]` — one
+  synchronous fetch, returns the `FetchResult`.
+* `GET /api/data/health` — `{ok, db, runs, providers}`.
+* `GET /api/data/assets|instruments|venues|protocols|chains|series` —
+  entity/series listings (`?limit=&search=`, series also `?domain=&metric=
+  &country=&asset=`).
+* `GET /api/data/timeseries?series_id=&start=&end=&limit=` — observations.
+* `GET /api/data/ohlcv?instrument=&venue=&timeframe=&start=&end=&limit=`,
+  `GET /api/data/derivatives/funding|open-interest?...` — market history
+  (`start`/`end` accept RFC3339 or `YYYY-MM-DD`).
+* `GET /api/data/defi/protocols|chains`, `GET /api/data/dex/pools?chain=&dex=
+  &base=&quote=&limit=` — DeFi TVL and DEX pools.
+* `GET /api/data/news?limit=`, `GET /api/data/prediction?limit=`,
+  `GET /api/data/runs?limit=` — articles, prediction markets, run journal.
+  Unknown paths 404, bad params 400, store outages 503 — never an
+  empty-but-200 body.
+
+| env | default | meaning |
+| --- | --- | --- |
+| `FUDCOURT_DATA_INGEST` | `on` | `off` disables the platform entirely (no engine, no `/api/data`) |
+| `FUDCOURT_DATA_PG_URL` | derived from `FUDCOURT_PG_URL` (`/fudcourt` db) | platform Postgres DSN (schema `data`, applied at startup) |
+| `FUDCOURT_DATA_INGEST_WORKERS` | `4` | bounded worker pool size |
+| `FUDCOURT_DATA_INGEST_ONCE` | unset | run due jobs once, then exit the loop |
+| `FUDCOURT_DATA_RETENTION_JSON` | unset | JSON overrides of the per-dataset retention windows |
+
+Provider API keys (`FRED_API_KEY`, `BPS_API_KEY`/`BPS_API_ID`, `BI_API_KEY`,
+`ETHERSCAN_API_KEY`, `DUNE_API_KEY`) are read by the adapters themselves; a
+missing key fails that provider's fetches loudly, it never disables the
+engine.
+
 ## Layout
 
 ```

@@ -1,0 +1,85 @@
+package worldbank
+
+import (
+	"context"
+	"time"
+
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/canon"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest"
+)
+
+// providerName is the data.job provider column value.
+const providerName = "worldbank"
+
+// seedCountries is the country set one indicators job covers, in stable
+// order. ISO2 codes; the fixture/live rows key identity on country.id.
+var seedCountries = []string{"ID", "US"}
+
+// fetcher is one dataset's Fetcher implementation. The dataset name is the
+// registry key the engine and /api/data/ingest/run resolve.
+type fetcher struct {
+	dataset string
+	client  *client
+}
+
+func (f *fetcher) Dataset() string { return f.dataset }
+
+// Fetch runs ONE synchronous attempt (the engine owns retries). The
+// indicators fetch upserts the series rows (one per indicator+country) and
+// appends the observations since the cursor's last year.
+func (f *fetcher) Fetch(ctx context.Context, job ingest.Job, w canon.Writer) (ingest.FetchResult, error) {
+	switch f.dataset {
+	case "indicators":
+		written, rejected, next, err := f.client.indicators(ctx, w, job)
+		if err != nil {
+			return ingest.FetchResult{}, err
+		}
+		return ingest.FetchResult{
+			RowsIn:       written + rejected,
+			RowsWritten:  written,
+			RowsRejected: rejected,
+			Next:         next,
+		}, nil
+	default:
+		return ingest.FetchResult{}, &HardError{Kind: "shape", Detail: "unknown dataset " + f.dataset}
+	}
+}
+
+// Module is the worldbank adapter's registration.
+type Module struct {
+	client *client
+}
+
+// NewModule builds the worldbank module with an optional injected Doer
+// (tests). Public keyless API: no credentials.
+func NewModule(d canon.Doer) *Module {
+	return &Module{client: newClient(d, 0)}
+}
+
+func (m *Module) Provider() string { return providerName }
+
+// Fetchers returns one fetcher per dataset, keyed by dataset name.
+func (m *Module) Fetchers() map[string]ingest.Fetcher {
+	return map[string]ingest.Fetcher{
+		"indicators": &fetcher{dataset: "indicators", client: m.client},
+	}
+}
+
+// Jobs is the seed registry: the three core indicators for ID and US, poll
+// daily. The subject is "indicator:<ID>"; each fetch covers seedCountries.
+func (m *Module) Jobs() []ingest.JobSpec {
+	jobs := make([]ingest.JobSpec, 0, 3)
+	for _, ind := range []string{"NY.GDP.MKTP.CD", "FP.CPI.TOTL", "SL.UEM.TOTL.ZS"} {
+		jobs = append(jobs, ingest.JobSpec{
+			Provider: providerName, Dataset: "indicators", Subject: "indicator:" + ind,
+			Mode: "poll", Schedule: 24 * time.Hour, Priority: 5, Enabled: true,
+		})
+	}
+	return jobs
+}
+
+// compile-time checks the adapter satisfies the frozen interfaces.
+var (
+	_ ingest.Module  = (*Module)(nil)
+	_ ingest.Fetcher = (*fetcher)(nil)
+)
