@@ -112,6 +112,7 @@ export default function TechnicalsBoard() {
       {/* Source line: which upstream, read when. A figure with no clock is not a reading. */}
       <p style={{ margin: 0, color: themeColor.labelSecondary, fontSize: fontSize[11], fontFamily: fontFamily.sans }}>
         source: {board?.source ?? 'TradingView scanner'} · read {readTime} · one request per class · bands ±0.1 / ±0.5 applied here, the score is verbatim
+        {' '}and equal to the mean of the two means beside it, (MA + oscillators) / 2 — the board re-checks that on every read
       </p>
 
       <div style={{ display: 'flex', gap: space[8], flexWrap: 'nowrap', overflowX: 'auto' }}>

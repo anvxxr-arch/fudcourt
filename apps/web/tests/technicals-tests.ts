@@ -227,3 +227,14 @@ test('technicals: the indicator table is grouped by the two means, and those two
   assert.match(ui, /'oscillators', OSCILLATORS/, 'the oscillator group is labelled');
   assert.match(ui, /'moving averages', MOVING_AVERAGES/, 'the moving-average group is labelled');
 });
+
+test('technicals: the page states the identity it rests on, and states it the same way the warning does', () => {
+  // The board checks Recommend.All === (Recommend.MA + Recommend.Other) / 2 on
+  // every read and warns when it fails. The page must therefore SAY what the
+  // score is in the healthy case too, and say it in the same words, otherwise a
+  // reader meets the formula for the first time only when it has already broken.
+  const ui = readFileSync(new URL('../src/features/technicals/ui.tsx', import.meta.url), 'utf8');
+  assert.match(ui, /the mean of the two means beside it, \(MA \+ oscillators\) \/ 2/, 'the source line states the identity');
+  assert.match(ui, /not \(MA \+ oscillators\) \/ 2/, 'the warning states the same formula');
+  assert.equal((ui.match(/\(MA \+ oscillators\) \/ 2/g) ?? []).length, 2, 'healthy case and warning agree on the formula');
+});

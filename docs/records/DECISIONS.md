@@ -2607,3 +2607,19 @@ Before the push the same commit passed **422 pass / 0 fail** plus `tsc --noEmit`
 
 **5. CI.** 5 of 5 green on the commit that carries this record — web `38085375875`, integration `38085375851`, contracts `38085375831`, go `38085375762`, rust `38085375890`.
 **Files:** `apps/web/src/features/technicals/ui.tsx`, `apps/web/tests/technicals-tests.ts`.
+
+## DR-069 — the page states the score identity in the healthy case, in the same words its warning uses (2026-10-10)
+
+**Status:** accepted and **served** — measured over live HTTP + the live DOM at 390px, BUILD_ID `f9G1tPvgbn5FvjT371Mnb`.
+
+**Context.** The whole board rests on one measured identity: `Recommend.All === (Recommend.MA + Recommend.Other) / 2`, held on 90 of 90 samples. The board re-checks it on every read and, when a payload disagrees, prints a warning that names the formula. But in the **healthy** case the page never said what the score was: measured on the served HTML, "Oscillator and moving-average means" appears (the source line already names the two means as displayed columns), while "two means" and "mean of" appear **zero** times. A reader therefore met the formula for the first time only when it had already broken, which is the wrong moment to learn what a number means. This is the same class of gap DR-068 closed for the two groups: the record said it, the page did not.
+
+**Decision.** The provenance line states the identity once, in the same formula the warning uses — `(MA + oscillators) / 2` — and says that the board re-checks it on every read. No new computation is shown and no number changes: the score stays verbatim, the check it already performs is simply now also stated where a reader meets the score. A test asserts that **both** places carry the identical formula, so the healthy statement and the broken statement cannot drift apart.
+
+**Evidence.**
+1. Live DOM at 390px, one reading per class: the new assertion `identity=True` on all four classes alongside `group_labels_visible osc=True ma=True` and `footnote=True`; every class still `sideways=false` with `scrollWidth == clientWidth == 390`, `under24 0`, effective-area failures 0, `clipped 0`, `escapees 0`, and one fresh call per class carrying that class's own ids.
+2. Live HTTP for the same build: 30 / 64 / 16 / 11 instruments returned, `missing 0` and `invariant_violations 0` on all four — the prose changed, the arithmetic did not.
+3. The formula appears exactly twice in the UI source, once in the healthy statement and once in the warning, and the test pins both.
+4. `test:shapers` **469 pass / 0 fail**, `tsc --noEmit` 0, `STRUCTURE_OK`, `TOKENS_OK`, `DESIGN_TOKENS_OK`, `DESIGN_SYSTEM_OK`, `build` 0.
+
+**Files:** `apps/web/src/features/technicals/ui.tsx`, `apps/web/tests/technicals-tests.ts`.
