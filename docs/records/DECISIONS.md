@@ -2544,3 +2544,6 @@ The class chip's `aria-pressed` flips to the class being shown and the call coun
 **Consequences.** Registry `apps/web/src/features/technicals/model.ts` (120 rows + 3 named unresolved), route `apps/web/src/app/(frontend)/api/technicals/route.ts` (`MAX_IDS`), tests `apps/web/tests/technicals-tests.ts` (6 guards). No new route, no new dependency, and the fetch shape is unchanged — one POST per class per board read.
 
 **A note on the shared index.** Before this work the repository index was found holding **945 staged deletions** across the 11 files of the DR-065 commit, left by a sibling session: present in HEAD and on disk, staged as deleted. Restored with `git reset -- <the 11 paths>` only — no global reset, no sibling path touched.
+**4. CI on the commit.** `f7224c1` — **5 of 5 green**, measured with `gh run watch --exit-status`:
+web 2m2s (run 38083344095), integration 2m31s (38083344109), contracts 15s (38083344047), go 14s (38083344012), rust 17s (38083344197).
+Before the push the same commit passed **422 pass / 0 fail** plus `tsc --noEmit` 0 in a detached worktree, so the verdict is about the commit rather than the working tree.
