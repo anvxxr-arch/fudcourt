@@ -2587,3 +2587,19 @@ Before the push the same commit passed **422 pass / 0 fail** plus `tsc --noEmit`
 **3. Gates.** `test:shapers` **467 pass / 0 fail** (registry guards updated to the new shape), `tsc --noEmit` 0 errors, `STRUCTURE_OK (442 files)`, `DESIGN_TOKENS_OK (files=447 exemptions=6)`, `TOKENS_OK (14 colors, 9 space, 11 font-size, 281 vars)`, `DESIGN_SYSTEM_OK (files=23 scale_exemptions=6)`, `build` exit 0.
 
 **Consequences.** `apps/web/src/features/technicals/model.ts` (121 rows, two named unresolved), `apps/web/tests/technicals-tests.ts`. No route, client, UI or contract change: the class switcher already re-fetches per class, so one more stock row costs one more id in the same request.
+
+## DR-068 — the indicator table names its two groups instead of encoding them in colour (2026-10-10)
+
+**Status:** accepted and **served** — measured over live HTTP + the live DOM at 390px, BUILD_ID `uhkLEd8i5JjymjDoit9UI`.
+
+**Context.** The per-instrument table rendered `[...OSCILLATORS, ...MOVING_AVERAGES]` as one flat list of 26 rows, and the only thing separating the eleven oscillators from the fifteen moving averages was **colour** — the name cell was dimmed for one group and bright for the other. That is information carried by colour alone, and a reader had no way to tell which of the 26 rows belonged to which mean. The record already described the board as "the summary plus the Oscillators and the Moving-Averages tables" (DR-065); the rendered page did not say it.
+
+**Decision.** The body is now two groups, each opened by a label row that names the group **and its size**: `oscillators (11)` and `moving averages (15)`, the same two means `Recommend.Other` and `Recommend.MA` the score is built from. The colour difference is **dropped** — the label carries the information, so no reading depends on colour. The `close vs level` column is now computed by group: it is `—` for the whole oscillator group **by construction** rather than by a per-row flag, because the group is known where the row is rendered.
+
+**Evidence.**
+1. Live DOM at 390px, one reading per class after clicking its chip: `group_labels_visible osc=True ma=True` on all four classes, the board's own footnote present (`footnote=True`), the first table cell of the readout is the group label (`oscillators (11)` before `RSI`, `Stoch.K`, …), and `sideways=false` with `scrollWidth == clientWidth == 390`, `under24 0`, effective-area failures 0, `clipped 0`, `escapees 0`, one fresh call per class carrying that class's own ids (30 / 64 / 16 / 11).
+2. The same BUILD_ID read over HTTP for every class: 30 / 64 / 16 / 11 instruments returned, `missing 0` and `invariant_violations 0` on all four.
+3. The grouping is now **asserted**, not just rendered: the test checks the two groups are disjoint, that `Recommend.Other` is a mean over 11 and `Recommend.MA` over 15, that the published field order is the two groups back to back, and that the UI source labels both groups.
+4. `test:shapers` **468 pass / 0 fail**, `tsc --noEmit` 0, `STRUCTURE_OK`, `TOKENS_OK`, `DESIGN_TOKENS_OK`, `DESIGN_SYSTEM_OK`, `build` 0.
+
+**Files:** `apps/web/src/features/technicals/ui.tsx`, `apps/web/tests/technicals-tests.ts`.

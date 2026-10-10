@@ -228,22 +228,35 @@ export default function TechnicalsBoard() {
                       <th style={{ padding: space[4], fontWeight: fontWeight.semibold, textAlign: 'left' }}>close vs level</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {[...OSCILLATORS, ...MOVING_AVERAGES].map((f) => {
-                      const isMa = (MOVING_AVERAGES as readonly string[]).includes(f);
-                      const level = isMa ? detail.values[f] ?? null : null;
-                      const side = isMa ? aboveBelow(close, level) : null;
-                      return (
-                        <tr key={f} style={{ borderTop: `1px solid ${themeColor.separator}` }}>
-                          <td style={{ padding: space[4], color: isMa ? themeColor.labelPrimary : themeColor.labelSecondary }}>{f}</td>
-                          <td style={{ padding: space[4], textAlign: 'right', color: themeColor.labelPrimary }}>{fmt(detail.values[f] ?? null)}</td>
-                          <td style={{ padding: space[4], color: side === 'above' ? themeColor.green : side === 'below' ? themeColor.red : themeColor.labelSecondary }}>
-                            {isMa ? (side ?? '—') : '—'}
+                  {([['oscillators', OSCILLATORS, false], ['moving averages', MOVING_AVERAGES, true]] as const).map(
+                    ([label, fields, isMa]) => (
+                      <tbody key={label}>
+                        {/* The two groups ARE the two means the score is built from; naming
+                            them here is what lets a reader tell an oscillator row from a
+                            moving-average row without reading colours. */}
+                        <tr>
+                          <td
+                            colSpan={3}
+                            style={{ padding: `${space[8]}px ${space[4]}px`, color: themeColor.labelSecondary, fontSize: fontSize[11], letterSpacing: letterSpacing.sm, fontFamily: fontFamily.sans }}
+                          >
+                            {label} ({fields.length})
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
+                        {fields.map((f) => {
+                          const side = isMa ? aboveBelow(close, detail.values[f] ?? null) : null;
+                          return (
+                            <tr key={f} style={{ borderTop: `1px solid ${themeColor.separator}` }}>
+                              <td style={{ padding: space[4], color: themeColor.labelPrimary }}>{f}</td>
+                              <td style={{ padding: space[4], textAlign: 'right', color: themeColor.labelPrimary }}>{fmt(detail.values[f] ?? null)}</td>
+                              <td style={{ padding: space[4], color: side === 'above' ? themeColor.green : side === 'below' ? themeColor.red : themeColor.labelSecondary }}>
+                                {side ?? '—'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    ),
+                  )}
                 </table>
               </div>
               <p style={{ margin: `${space[8]}px 0 0`, color: themeColor.labelSecondary, fontSize: fontSize[11], fontFamily: fontFamily.sans }}>

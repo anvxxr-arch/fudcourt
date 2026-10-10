@@ -9,6 +9,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   INSTRUMENTS, OSCILLATORS, MOVING_AVERAGES, SCAN_TF, TIMEFRAMES, UNRESOLVED, VALUE_FIELDS,
   aboveBelow, byClass, byId, classCounts, duplicateIds, recoverNet, scanBody, scanColumns,
@@ -206,4 +207,23 @@ test('registry: the renames the measurement found are pinned', () => {
   // The index sweep: ^TWII IS the TAIEX, and the upstream says so in its own words.
   assert.equal(byId('twii')?.tv, 'TWSE:IX0001');
   assert.equal(byId('axjo'), undefined, '^AXJO has no rated form and stays unresolved (ASX:XJO is absent)');
+});
+
+test('technicals: the indicator table is grouped by the two means, and those two groups partition the published fields', () => {
+  // The two groups ARE Recommend.Other and Recommend.MA — the two means the
+  // score is built from. The table must name them (not colour-code them), and
+  // they must partition the published fields exactly, in the published order.
+  const osc = new Set<string>(OSCILLATORS);
+  const ma = new Set<string>(MOVING_AVERAGES);
+  assert.equal(osc.size, 11, 'Recommend.Other is a mean over 11');
+  assert.equal(ma.size, 15, 'Recommend.MA is a mean over 15');
+  for (const f of ma) assert.equal(osc.has(f), false, `${f} cannot belong to both means`);
+  assert.deepEqual(
+    VALUE_FIELDS.slice(0, OSCILLATORS.length + MOVING_AVERAGES.length),
+    [...OSCILLATORS, ...MOVING_AVERAGES],
+    'the published order is the two groups back to back — that order is what the table renders',
+  );
+  const ui = readFileSync(new URL('../src/features/technicals/ui.tsx', import.meta.url), 'utf8');
+  assert.match(ui, /'oscillators', OSCILLATORS/, 'the oscillator group is labelled');
+  assert.match(ui, /'moving averages', MOVING_AVERAGES/, 'the moving-average group is labelled');
 });
