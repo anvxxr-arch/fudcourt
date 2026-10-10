@@ -206,10 +206,14 @@ export default function DexPage() {
             )}
           </>
         )}
-        {rows.length > 0 && (
-          <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="filter rows…"
-            style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, color: themeColor.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 200 }} />
-        )}
+        {/* The filter input is NOT gated on `rows.length`: it lives in the toolbar
+            above the results, so rendering it only once rows arrive grew the toolbar
+            from 0 to 35px at hydrate and shoved the hint paragraph 34px down
+            (measured 567 -> 601 on /market/trench, the bulk of that route's CLS).
+            It always renders now, at a stable position, like every other toolbar
+            control; a filter typed before results arrive simply applies on arrival. */}
+        <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="filter rows…"
+          style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, color: themeColor.labelPrimary, padding: `${space[8]}px ${space[8]}px`, borderRadius: radius[8], fontSize: fontSize[11], width: 200 }} />
       </div>
 
       <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>{active.hint}</p>

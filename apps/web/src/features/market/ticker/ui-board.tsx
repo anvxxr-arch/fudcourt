@@ -182,8 +182,31 @@ export default function TickerPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: space[12], flexWrap: 'wrap', gap: space[8] }}>
         <div>
           <h3 style={{ color: themeColor.blue, margin: 0 }}>Exchange Ticker</h3>
-          <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `${space[4]}px 0 0` }}>
-            Centralized-exchange instruments relayed from {venues.join(', ') || '—'} and cross-checked between venues. Not a market-cap ranking.
+          {/* ONE LINE, ALWAYS. This line names the venues the board is quoting
+              (`venues` is empty until the first response lands), and on a phone
+              the full 9-venue list wrapped it to four text lines against two
+              when empty — measured 33px → 66px at 412px, i.e. the +33px growth
+              that pushed the whole board down and produced the /market/crypto
+              CLS of 0.265. Reserving the loaded height instead would waste up
+              to 5 lines at 360px and 2 at 768px, so the geometry is stabilised
+              rather than the box enlarged: the list is clamped to one line, and
+              `venues` is SORTED so an upstream reordering cannot re-truncate the
+              title mid-session. The full list stays in the tooltip and in the
+              accessible name, and in the document flow below at every width. */}
+          <p
+            title={`exchanges: ${[...venues].sort().join(', ')}`}
+            aria-label={`Centralized-exchange instruments relayed from ${[...venues].sort().join(', ')} and cross-checked between venues. Not a market-cap ranking.`}
+            style={{
+              color: themeColor.labelTertiary,
+              fontSize: fontSize[11],
+              margin: `${space[4]}px 0 0`,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '100%',
+            }}
+          >
+            Centralized-exchange instruments relayed from {[...venues].sort().join(', ') || '—'} and cross-checked between venues. Not a market-cap ranking.
           </p>
         </div>
         <div style={{ display: 'flex', gap: space[8], alignItems: 'center' }}>

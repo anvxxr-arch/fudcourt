@@ -13,8 +13,8 @@
  * Route modules may only export segment config, so shared types live here.
  */
 
-/** The three reads we proxy. Anything else is a loud 400, not a silent default. */
-export const LLAMA_MODES = ['chains', 'protocols', 'historical'] as const;
+/** The ten reads we proxy. Anything else is a loud 400, not a silent default. */
+export const LLAMA_MODES = ['chains', 'protocols', 'historical', 'chainHistory', 'tvl', 'prices', 'stablecoins', 'dexs', 'fees', 'yields'] as const;
 export type LlamaMode = (typeof LLAMA_MODES)[number];
 
 export const LLAMA_UPSTREAM = 'https://api.llama.fi';
@@ -28,6 +28,46 @@ export const PROTOCOLS_TOP_MAX = 200;
 /** History window limits. 3288 days is everything upstream has (since 2017). */
 export const HISTORICAL_DAYS_DEFAULT = 365;
 export const HISTORICAL_DAYS_MAX = 3288;
+
+export interface LlamaTVL {
+  protocol: string;
+  tvl: number | null;
+}
+
+export interface LlamaPrice {
+  id: string;
+  price: number | null;
+  symbol: string | null;
+  timestamp: number | null;
+  confidence: number | null;
+}
+
+export interface LlamaStablecoin {
+  id: string | number | null;
+  name: string;
+  symbol: string;
+  circulating: number | null;
+  price: number | null;
+}
+
+export interface LlamaDexFee {
+  name: string;
+  slug: string;
+  total24h: number | null;
+  totalAllTime: number | null;
+  chains: string[];
+}
+
+export interface LlamaYield {
+  pool: string;
+  chain: string;
+  project: string;
+  symbol: string;
+  tvlUsd: number | null;
+  apy: number | null;
+  apyBase: number | null;
+  apyReward: number | null;
+}
 
 export interface LlamaChain {
   name: string;
