@@ -11,6 +11,16 @@ export interface PublicRoute {
 
 export const PUBLIC_ROUTES: PublicRoute[] = [
   {
+    // The technicals board: TradingView-style summaries read from the screener
+    // that powers the public technicals page. Registered here so the sitemap and
+    // the crawl tier carry it — the board is public and read-only.
+    path: '/technicals',
+    title: 'Technicals — the summary, per timeframe | FUDCOURT',
+    description:
+      'TradingView-style technical summaries read from the screener its own technicals page uses: the score per timeframe, the oscillator and moving-average means behind it, and every indicator value verbatim. A score that disagrees with its own parts is flagged; a timeframe the upstream withholds is stated, never zero-filled.',
+    priority: 0.6,
+  },
+  {
     path: '/',
     title: 'FUDCOURT — Community, terminal, and management',
     description:

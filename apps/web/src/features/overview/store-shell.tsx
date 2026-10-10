@@ -37,6 +37,7 @@ const MediaPage = dynamic(() => import('@/features/media/ui'), { ssr: false });
 const InsightsPage = dynamic(() => import('@/features/insights/ui'), { ssr: false });
 const ScreenerPage = dynamic(() => import('@/features/screener/ui'), { ssr: false });
 const FundingPage = dynamic(() => import('@/features/funding/ui'), { ssr: false });
+const TechnicalsPage = dynamic(() => import('@/features/technicals/ui'), { ssr: false });
 
 type DbData = {
   assets: Asset[];
@@ -166,6 +167,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     { key: 'insights', label: 'Insights' },
     { key: 'screener', label: 'Screener' },
     { key: 'funding', label: 'Funding' },
+    { key: 'technicals', label: 'Technicals' },
     { key: 'news', label: 'News' },
     { key: 'proof', label: 'Proof of treasury' },
   ];
@@ -248,6 +250,10 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     funding: {
       title: 'Per-symbol funding rates',
       sub: 'Funding across every venue CoinAnk tracks',
+    },
+    technicals: {
+      title: 'The summary, per timeframe — read from the screener its own page uses',
+      sub: 'Oscillator and moving-average means beside every indicator value, verbatim. The word is our band on their score, a net is a net, and a timeframe the upstream withholds says so.',
     },
   };
   const boardKey = page.startsWith('market') ? 'market' : page;
@@ -369,6 +375,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       {page === 'insights' && <InsightsPage />}
       {page === 'screener' && <ScreenerPage />}
       {page === 'funding' && <FundingPage />}
+      {page === 'technicals' && <TechnicalsPage />}
       {page === 'news' && <NewsPage />}
       {page === 'proof' && <ProofPage />}
 
