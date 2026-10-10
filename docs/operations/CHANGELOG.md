@@ -11,6 +11,11 @@ measured on this host, never estimated.
 > single `ci.yml` is now five path-filtered workflows. Use `docs/records/archive/final-review.md` §1
 > for the tree today.
 
+## 2026-10-10
+| Change | Surface | Evidence | Record |
+|---|---|---|---|
+| **The wallet surface reads the NFT venue — and OpenSea's own two chain lists disagree about `bsc`** | `/team/wallets`: each wallet card gains its NFT block, read server-side through `/api/nft/opensea` so the API key never reaches the browser; `lib/opensea-chains.ts` maps a stored chain to a venue slug only when the folded name is in a measured 36-slug list, so `BSC`→`bsc` while `BNB` stays unmapped | 390px probe of the served build: 3 cards, lines `1 NFT on bsc` / `no NFTs on bsc` / `no NFTs on solana` (loaded=1 empty=2 unresolved=0 failed=0); thumb `decoded=1 broken=0` in a `48x48` box inside a `48x48` link (`belowFloor=0`), `altMissing=0`; `scrollWidth == clientWidth == 390` (no sideways scroll). `bsc` is absent from the venue's own 29-entry `/chains` yet `?chain=bsc&address=0x6816…1548` returns a real NFT — the enumerations disagree and the read wins. Gates: `tsc` 0 errors · `test:shapers` green (+4 new guards) · `STRUCTURE_OK 437 files` · `DESIGN_TOKENS_OK` | DR-059 |
+
 ## 2026-10-09
 | Change | Surface | Evidence | Record |
 |---|---|---|---|

@@ -6,6 +6,7 @@ import { Wallet, CHAIN_COLOR, EMOJI_PRESETS, COLOR_PRESETS } from '@/lib/format'
 import { Button, Modal, Label, Card } from '@/ui/primitives';
 import type { Venue } from './client';
 import { buildVenueIndex, resolveVenue } from './venue-index';
+import WalletNfts from './wallet-nfts';
 
 type Props = {
   wallets: Wallet[];
@@ -68,6 +69,12 @@ export default function WalletPage({ wallets, venues, balanceByWallet, onSave }:
                 <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>· ${balanceByWallet[w.label]?.toFixed(2) || '0.00'}</span>
               </div>
               {w.notes && <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, marginTop: space[4], fontStyle: 'italic' }}>{w.notes}</div>}
+              {/* The NFT venue for THIS wallet. The read goes server-side through
+                  /api/nft/opensea, so the API key never reaches the browser; the
+                  block is one flex-wrap row (no media query) and an unresolved
+                  chain or a failed read says so rather than rendering as an empty
+                  wallet. */}
+              <WalletNfts chain={w.chain} address={w.address} />
             </div>
             <Button onClick={() => setEdit(w)} variant="ghost" size="sm">✏️ Edit</Button>
           </div>
