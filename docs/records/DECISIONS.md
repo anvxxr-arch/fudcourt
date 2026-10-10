@@ -2622,4 +2622,6 @@ Before the push the same commit passed **422 pass / 0 fail** plus `tsc --noEmit`
 3. The formula appears exactly twice in the UI source, once in the healthy statement and once in the warning, and the test pins both.
 4. `test:shapers` **469 pass / 0 fail**, `tsc --noEmit` 0, `STRUCTURE_OK`, `TOKENS_OK`, `DESIGN_TOKENS_OK`, `DESIGN_SYSTEM_OK`, `build` 0.
 
+
+**5. CI.** 5 of 5 green on the commit that carries this record — web `38086454549` 2m12s, integration `38086454579`, contracts `38086454573` 13s, go `38086454672` 14s, rust `38086454514` 16s.
 **Files:** `apps/web/src/features/technicals/ui.tsx`, `apps/web/tests/technicals-tests.ts`.
