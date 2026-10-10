@@ -2604,4 +2604,6 @@ Before the push the same commit passed **422 pass / 0 fail** plus `tsc --noEmit`
 3. The grouping is now **asserted**, not just rendered: the test checks the two groups are disjoint, that `Recommend.Other` is a mean over 11 and `Recommend.MA` over 15, that the published field order is the two groups back to back, and that the UI source labels both groups.
 4. `test:shapers` **468 pass / 0 fail**, `tsc --noEmit` 0, `STRUCTURE_OK`, `TOKENS_OK`, `DESIGN_TOKENS_OK`, `DESIGN_SYSTEM_OK`, `build` 0.
 
+
+**5. CI.** 5 of 5 green on the commit that carries this record — web `38085375875`, integration `38085375851`, contracts `38085375831`, go `38085375762`, rust `38085375890`.
 **Files:** `apps/web/src/features/technicals/ui.tsx`, `apps/web/tests/technicals-tests.ts`.
