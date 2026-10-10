@@ -64,7 +64,19 @@ export function Breadcrumb({ labels, origin }: { labels?: Readonly<Record<string
                   {crumb.label}
                 </span>
               ) : (
-                <Link href={crumb.href} style={{ color: themeColor.labelSecondary, textDecoration: 'none' }}>
+                <Link
+                  href={crumb.href}
+                  style={{
+                    color: themeColor.labelSecondary,
+                    textDecoration: 'none',
+                    // At fontSize[11] the bare link box measures 29x18 at 390px,
+                    // so it misses the 24px touch floor (WCAG 2.5.8 AA) by 6px in
+                    // one axis. The floor comes from the box, not the text.
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    minHeight: space[24],
+                  }}
+                >
                   {crumb.label}
                 </Link>
               )}
