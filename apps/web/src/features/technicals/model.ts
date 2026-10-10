@@ -34,10 +34,10 @@ export interface AssetClassSpec {
 }
 
 export const ASSET_CLASSES: AssetClassSpec[] = [
-  { id: 'crypto', label: 'Crypto', venue: 'TradingView crypto screener' },
-  { id: 'stock', label: 'Stocks', venue: 'TradingView US screener' },
-  { id: 'forex', label: 'Forex', venue: 'TradingView FX screener' },
-  { id: 'commodity', label: 'Commodities', venue: 'TradingView CFD screener' },
+  { id: 'crypto', label: 'Crypto', venue: 'TradingView crypto screener (exchange-qualified pairs)' },
+  { id: 'stock', label: 'Stocks', venue: 'TradingView global stock screener (US, Asia, Europe)' },
+  { id: 'forex', label: 'Forex', venue: 'TradingView forex screener (FX and FX_IDC feeds)' },
+  { id: 'commodity', label: 'Commodities', venue: 'TradingView commodity series (TVC, OANDA, FX spot/CFD)' },
 ];
 
 export interface Instrument {
@@ -50,16 +50,39 @@ export interface Instrument {
 }
 
 /**
- * The curated universe. Deliberately small and hand-picked: a board that claims
- * "the market" while showing 20 rows would be lying, so the board says what it
- * covers and each row links to the upstream it came from.
+ * The curated universe: EVERY asset this app tracks — the 30 crypto pairs of
+ * `features/trade/model-instruments.ts`, the 65 stocks and indices of
+ * `features/market/stock-regions.ts` (US, Asia and Europe), the 12 futures of
+ * `features/market/commodity-symbols.ts` and the 16 pairs of
+ * `features/market/forex-pairs.ts`.
  *
- * Crypto uses exchange-qualified pairs (`BINANCE:BTCUSDT`) rather than the
- * `CRYPTO:BTCUSD` synthetic index: the synthetic symbols are absent from the
- * public screener's ticker list (measured), and the exchange pair is the one a
- * trader can actually act on.
+ * Every `tv` below was RESOLVED BY MEASUREMENT, never by guesswork: each
+ * candidate was POSTed to the public screener and kept only when it answered
+ * with a numeric `Recommend.All`. The app symbols it could not rate are in
+ * `UNRESOLVED` below, with the reason — a symbol the upstream cannot rate is
+ * stated, never faked, and never dropped quietly.
+ *
+ * Crypto uses the exchange-qualified pair rather than the `CRYPTO:BTCUSD`
+ * synthetic (the synthetics answer without an aggregate — measured), and where
+ * the app's symbol no longer matches the live venue the resolution says so:
+ * `MATIC` resolves to `BINANCE:POLUSDT` (the migration), `TON` to
+ * `COINBASE:TONUSD`.
+ *
+ * Commodities were the hard half, and the reason they read CFD/spot series
+ * rather than the front months this app tracks: NOT ONE futures contract in the
+ * screener carries a technicals aggregate (measured — 0 of 25 rated in every
+ * symbol search, including `CBOT:ZC` and `ICEUS:KC`). Each commodity therefore
+ * reads the rated series for the SAME underlying, accepted only where the
+ * upstream itself calls it one (`type=commodity`: "WTI Oil Future", "Copper",
+ * "Soybeans"). A rated but DIFFERENT instrument is refused — `LSE:CRUD` and
+ * `AMEX:BNO` are oil ETCs, `AMEX:SOYB` a soybean ETF, `SPARKS:COFFEE` an index
+ * of coffee stocks. Coffee has no such series anywhere, so it is `UNRESOLVED`.
+ *
+ * Ids are registry-local, stable and URL-safe (what `?symbols=` carries) — the
+ * upstream ticker is a FIELD, never the identity.
  */
 export const INSTRUMENTS: Instrument[] = [
+  // --- crypto: 30 ---
   { id: 'btcusdt', label: 'BTC/USDT', tv: 'BINANCE:BTCUSDT', cls: 'crypto' },
   { id: 'ethusdt', label: 'ETH/USDT', tv: 'BINANCE:ETHUSDT', cls: 'crypto' },
   { id: 'solusdt', label: 'SOL/USDT', tv: 'BINANCE:SOLUSDT', cls: 'crypto' },
@@ -67,23 +90,153 @@ export const INSTRUMENTS: Instrument[] = [
   { id: 'xrpusdt', label: 'XRP/USDT', tv: 'BINANCE:XRPUSDT', cls: 'crypto' },
   { id: 'dogeusdt', label: 'DOGE/USDT', tv: 'BINANCE:DOGEUSDT', cls: 'crypto' },
   { id: 'adausdt', label: 'ADA/USDT', tv: 'BINANCE:ADAUSDT', cls: 'crypto' },
-  { id: 'linkusdt', label: 'LINK/USDT', tv: 'BINANCE:LINKUSDT', cls: 'crypto' },
   { id: 'avaxusdt', label: 'AVAX/USDT', tv: 'BINANCE:AVAXUSDT', cls: 'crypto' },
-  { id: 'aapl', label: 'AAPL', tv: 'NASDAQ:AAPL', cls: 'stock' },
-  { id: 'msft', label: 'MSFT', tv: 'NASDAQ:MSFT', cls: 'stock' },
-  { id: 'nvda', label: 'NVDA', tv: 'NASDAQ:NVDA', cls: 'stock' },
-  { id: 'tsla', label: 'TSLA', tv: 'NASDAQ:TSLA', cls: 'stock' },
-  { id: 'spy', label: 'SPY', tv: 'AMEX:SPY', cls: 'stock' },
+  { id: 'linkusdt', label: 'LINK/USDT', tv: 'BINANCE:LINKUSDT', cls: 'crypto' },
+  { id: 'dotusdt', label: 'DOT/USDT', tv: 'BINANCE:DOTUSDT', cls: 'crypto' },
+  { id: 'maticusdt', label: 'MATIC/USDT', tv: 'BINANCE:POLUSDT', cls: 'crypto' },
+  { id: 'ltcusdt', label: 'LTC/USDT', tv: 'BINANCE:LTCUSDT', cls: 'crypto' },
+  { id: 'trxusdt', label: 'TRX/USDT', tv: 'BINANCE:TRXUSDT', cls: 'crypto' },
+  { id: 'tonusdt', label: 'TON/USDT', tv: 'COINBASE:TONUSD', cls: 'crypto' },
+  { id: 'arbusdt', label: 'ARB/USDT', tv: 'BINANCE:ARBUSDT', cls: 'crypto' },
+  { id: 'opusdt', label: 'OP/USDT', tv: 'BINANCE:OPUSDT', cls: 'crypto' },
+  { id: 'atomusdt', label: 'ATOM/USDT', tv: 'BINANCE:ATOMUSDT', cls: 'crypto' },
+  { id: 'nearusdt', label: 'NEAR/USDT', tv: 'BINANCE:NEARUSDT', cls: 'crypto' },
+  { id: 'aptusdt', label: 'APT/USDT', tv: 'BINANCE:APTUSDT', cls: 'crypto' },
+  { id: 'suiusdt', label: 'SUI/USDT', tv: 'BINANCE:SUIUSDT', cls: 'crypto' },
+  { id: 'pepeusdt', label: 'PEPE/USDT', tv: 'BINANCE:PEPEUSDT', cls: 'crypto' },
+  { id: 'shibusdt', label: 'SHIB/USDT', tv: 'BINANCE:SHIBUSDT', cls: 'crypto' },
+  { id: 'injusdt', label: 'INJ/USDT', tv: 'BINANCE:INJUSDT', cls: 'crypto' },
+  { id: 'seiusdt', label: 'SEI/USDT', tv: 'BINANCE:SEIUSDT', cls: 'crypto' },
+  { id: 'tiausdt', label: 'TIA/USDT', tv: 'BINANCE:TIAUSDT', cls: 'crypto' },
+  { id: 'runeusdt', label: 'RUNE/USDT', tv: 'BINANCE:RUNEUSDT', cls: 'crypto' },
+  { id: 'wifusdt', label: 'WIF/USDT', tv: 'BINANCE:WIFUSDT', cls: 'crypto' },
+  { id: 'aaveusdt', label: 'AAVE/USDT', tv: 'BINANCE:AAVEUSDT', cls: 'crypto' },
+  { id: 'uniusdt', label: 'UNI/USDT', tv: 'BINANCE:UNIUSDT', cls: 'crypto' },
+  { id: 'crvusdt', label: 'CRV/USDT', tv: 'BINANCE:CRVUSDT', cls: 'crypto' },
+  // --- stock: 65 ---
+  { id: 'gspc', label: 'S&P 500', tv: 'SP:SPX', cls: 'stock' },
+  { id: 'ixic', label: 'Nasdaq Composite', tv: 'NASDAQ:IXIC', cls: 'stock' },
+  { id: 'dji', label: 'Dow Jones Industrial Average', tv: 'DJ:DJI', cls: 'stock' },
+  { id: 'rut', label: 'Russell 2000', tv: 'TVC:RUT', cls: 'stock' },
+  { id: 'aapl', label: 'Apple', tv: 'NASDAQ:AAPL', cls: 'stock' },
+  { id: 'msft', label: 'Microsoft', tv: 'NASDAQ:MSFT', cls: 'stock' },
+  { id: 'nvda', label: 'NVIDIA', tv: 'NASDAQ:NVDA', cls: 'stock' },
+  { id: 'googl', label: 'Alphabet', tv: 'NASDAQ:GOOGL', cls: 'stock' },
+  { id: 'amzn', label: 'Amazon', tv: 'NASDAQ:AMZN', cls: 'stock' },
+  { id: 'meta', label: 'Meta Platforms', tv: 'NASDAQ:META', cls: 'stock' },
+  { id: 'tsla', label: 'Tesla', tv: 'NASDAQ:TSLA', cls: 'stock' },
+  { id: 'avgo', label: 'Broadcom', tv: 'NASDAQ:AVGO', cls: 'stock' },
+  { id: 'jpm', label: 'JPMorgan Chase', tv: 'NYSE:JPM', cls: 'stock' },
+  { id: 'v', label: 'Visa', tv: 'NYSE:V', cls: 'stock' },
+  { id: 'brk-b', label: 'Berkshire Hathaway', tv: 'NYSE:BRK.B', cls: 'stock' },
+  { id: 'xom', label: 'Exxon Mobil', tv: 'NYSE:XOM', cls: 'stock' },
+  { id: 'jkse', label: 'IDX Composite (IHSG)', tv: 'IDX:COMPOSITE', cls: 'stock' },
+  { id: 'n225', label: 'Nikkei 225', tv: 'TVC:NI225', cls: 'stock' },
+  { id: 'hsi', label: 'Hang Seng', tv: 'TVC:HSI', cls: 'stock' },
+  { id: 'ks11', label: 'KOSPI', tv: 'KRX:KOSPI', cls: 'stock' },
+  { id: 'sti', label: 'Straits Times', tv: 'TVC:STI', cls: 'stock' },
+  { id: 'bbca.jk', label: 'Bank Central Asia', tv: 'IDX:BBCA', cls: 'stock' },
+  { id: 'bbri.jk', label: 'Bank Rakyat Indonesia', tv: 'IDX:BBRI', cls: 'stock' },
+  { id: 'bmri.jk', label: 'Bank Mandiri', tv: 'IDX:BMRI', cls: 'stock' },
+  { id: 'tlkm.jk', label: 'Telkom Indonesia', tv: 'IDX:TLKM', cls: 'stock' },
+  { id: 'asii.jk', label: 'Astra International', tv: 'IDX:ASII', cls: 'stock' },
+  { id: 'icbp.jk', label: 'Indofood CBP', tv: 'IDX:ICBP', cls: 'stock' },
+  { id: '7203.t', label: 'Toyota Motor', tv: 'TSE:7203', cls: 'stock' },
+  { id: '0700.hk', label: 'Tencent Holdings', tv: 'HKEX:700', cls: 'stock' },
+  { id: '005930.ks', label: 'Samsung Electronics', tv: 'KRX:005930', cls: 'stock' },
+  { id: '2330.tw', label: 'TSMC', tv: 'TWSE:2330', cls: 'stock' },
+  { id: '600519.ss', label: 'Kweichow Moutai', tv: 'SSE:600519', cls: 'stock' },
+  { id: 'ftse', label: 'FTSE 100', tv: 'TVC:UKX', cls: 'stock' },
+  { id: 'gdaxi', label: 'DAX', tv: 'XETR:DAX', cls: 'stock' },
+  { id: 'fchi', label: 'CAC 40', tv: 'TVC:CAC40', cls: 'stock' },
+  { id: 'stoxx50e', label: 'EURO STOXX 50', tv: 'TVC:SX5E', cls: 'stock' },
+  { id: 'ibex', label: 'IBEX 35', tv: 'BME:IBC', cls: 'stock' },
+  { id: 'aex', label: 'AEX', tv: 'EURONEXT:AEX', cls: 'stock' },
+  { id: 'ssmi', label: 'SMI', tv: 'SIX:SMI', cls: 'stock' },
+  { id: 'bfx', label: 'BEL 20', tv: 'EURONEXT:BEL20', cls: 'stock' },
+  { id: 'omx', label: 'OMX Stockholm 30', tv: 'OMXSTO:OMXS30', cls: 'stock' },
+  { id: 'shel.l', label: 'Shell', tv: 'LSE:SHEL', cls: 'stock' },
+  { id: 'azn.l', label: 'AstraZeneca', tv: 'LSE:AZN', cls: 'stock' },
+  { id: 'hsba.l', label: 'HSBC Holdings', tv: 'LSE:HSBA', cls: 'stock' },
+  { id: 'ulvr.l', label: 'Unilever', tv: 'LSE:ULVR', cls: 'stock' },
+  { id: 'mc.pa', label: 'LVMH', tv: 'EURONEXT:MC', cls: 'stock' },
+  { id: 'or.pa', label: "L'Oréal", tv: 'EURONEXT:OR', cls: 'stock' },
+  { id: 'tte.pa', label: 'TotalEnergies', tv: 'EURONEXT:TTE', cls: 'stock' },
+  { id: 'sap.de', label: 'SAP', tv: 'XETR:SAP', cls: 'stock' },
+  { id: 'sie.de', label: 'Siemens', tv: 'XETR:SIE', cls: 'stock' },
+  { id: 'alv.de', label: 'Allianz', tv: 'XETR:ALV', cls: 'stock' },
+  { id: 'asml.as', label: 'ASML Holding', tv: 'EURONEXT:ASML', cls: 'stock' },
+  { id: 'adyen.as', label: 'Adyen', tv: 'EURONEXT:ADYEN', cls: 'stock' },
+  { id: 'san.mc', label: 'Banco Santander', tv: 'BME:SAN', cls: 'stock' },
+  { id: 'itx.mc', label: 'Inditex', tv: 'BME:ITX', cls: 'stock' },
+  { id: 'eni.mi', label: 'Eni', tv: 'MIL:ENI', cls: 'stock' },
+  { id: 'galp.ls', label: 'Galp Energia', tv: 'EURONEXT:GALP', cls: 'stock' },
+  { id: 'nesn.sw', label: 'Nestlé', tv: 'SIX:NESN', cls: 'stock' },
+  { id: 'novn.sw', label: 'Novartis', tv: 'SIX:NOVN', cls: 'stock' },
+  { id: 'ubsg.sw', label: 'UBS Group', tv: 'SIX:UBSG', cls: 'stock' },
+  { id: 'novo-b.co', label: 'Novo Nordisk', tv: 'OMXCOP:NOVO_B', cls: 'stock' },
+  { id: 'eric-b.st', label: 'Ericsson', tv: 'OMXSTO:ERIC_B', cls: 'stock' },
+  { id: 'nokia.he', label: 'Nokia', tv: 'OMXHEX:NOKIA', cls: 'stock' },
+  // --- forex: 16 ---
   { id: 'eurusd', label: 'EUR/USD', tv: 'FX:EURUSD', cls: 'forex' },
   { id: 'gbpusd', label: 'GBP/USD', tv: 'FX:GBPUSD', cls: 'forex' },
-  { id: 'usdjpy', label: 'USD/JPY', tv: 'FX:USDJPY', cls: 'forex' },
   { id: 'audusd', label: 'AUD/USD', tv: 'FX:AUDUSD', cls: 'forex' },
+  { id: 'nzdusd', label: 'NZD/USD', tv: 'FX:NZDUSD', cls: 'forex' },
+  { id: 'usdjpy', label: 'USD/JPY', tv: 'FX:USDJPY', cls: 'forex' },
+  { id: 'usdchf', label: 'USD/CHF', tv: 'FX:USDCHF', cls: 'forex' },
+  { id: 'usdcad', label: 'USD/CAD', tv: 'FX:USDCAD', cls: 'forex' },
+  { id: 'usdcny', label: 'USD/CNY', tv: 'FX_IDC:USDCNY', cls: 'forex' },
+  { id: 'usdsgd', label: 'USD/SGD', tv: 'FX_IDC:USDSGD', cls: 'forex' },
+  { id: 'usdhkd', label: 'USD/HKD', tv: 'FX:USDHKD', cls: 'forex' },
+  { id: 'usdidr', label: 'USD/IDR', tv: 'FX_IDC:USDIDR', cls: 'forex' },
+  { id: 'usdmyr', label: 'USD/MYR', tv: 'FX_IDC:USDMYR', cls: 'forex' },
+  { id: 'usdthb', label: 'USD/THB', tv: 'FX_IDC:USDTHB', cls: 'forex' },
+  { id: 'usdphp', label: 'USD/PHP', tv: 'FX_IDC:USDPHP', cls: 'forex' },
+  { id: 'usdinr', label: 'USD/INR', tv: 'FX:USDINR', cls: 'forex' },
+  { id: 'usdkrw', label: 'USD/KRW', tv: 'FX:USDKRW', cls: 'forex' },
+  // --- commodity: 11 --- rated series only; the front months carry no
+  // aggregate at all (measured 0/25), so each row reads the rated series
+  // for the same underlying. Coffee is in UNRESOLVED: nothing rates it.
   { id: 'gold', label: 'Gold', tv: 'TVC:GOLD', cls: 'commodity' },
   { id: 'silver', label: 'Silver', tv: 'TVC:SILVER', cls: 'commodity' },
-  { id: 'wti', label: 'Crude WTI', tv: 'TVC:USOIL', cls: 'commodity' },
-  { id: 'copper', label: 'Copper', tv: 'TVC:COPPER', cls: 'commodity' },
+  { id: 'copper', label: 'Copper', tv: 'OANDA:XCUUSD', cls: 'commodity' },
+  { id: 'platinum', label: 'Platinum', tv: 'TVC:PLATINUM', cls: 'commodity' },
+  { id: 'crudewti', label: 'Crude WTI', tv: 'FX:USOIL', cls: 'commodity' },
+  { id: 'brent', label: 'Brent', tv: 'FX:UKOIL', cls: 'commodity' },
+  { id: 'naturalgas', label: 'Natural Gas', tv: 'OANDA:NATGASUSD', cls: 'commodity' },
+  { id: 'corn', label: 'Corn', tv: 'OANDA:CORNUSD', cls: 'commodity' },
+  { id: 'wheat', label: 'Wheat', tv: 'OANDA:WHEATUSD', cls: 'commodity' },
+  { id: 'soybeans', label: 'Soybeans', tv: 'OANDA:SOYBNUSD', cls: 'commodity' },
+  { id: 'sugar11', label: 'Sugar #11', tv: 'OANDA:SUGARUSD', cls: 'commodity' },
 ];
 
+/**
+ * The app assets the public screener could not rate. Measured, not assumed:
+ * these are the ONLY two of the 65 stocks whose every candidate ticker answered
+ * without a `Recommend.All`, so the board states them instead of rendering a row
+ * of dashes or dropping them silently.
+ */
+export const UNRESOLVED: readonly { id: string; label: string; cls: AssetClass }[] = [
+  { id: 'twii', label: 'Taiwan Weighted', cls: 'stock' },
+  { id: 'axjo', label: 'S&P/ASX 200', cls: 'stock' },
+  // Coffee: ICEUS:KC1! is unrated like every other front month, and no rated
+  // series for the same underlying exists — the only "coffee" the screener rates
+  // is SPARKS:COFFEE, an INDEX of coffee companies, which is a different asset.
+  { id: 'coffee', label: 'Coffee', cls: 'commodity' },
+];
+
+/** The instruments of one asset class, in registry order. */
+export function byClass(cls: AssetClass): Instrument[] {
+  return INSTRUMENTS.filter((i) => i.cls === cls);
+}
+
+/** Per-class counts, so the switcher states its own size instead of implying it. */
+export function classCounts(): Record<AssetClass, number> {
+  const out = {} as Record<AssetClass, number>;
+  for (const cls of ASSET_CLASSES) out[cls.id] = 0;
+  for (const i of INSTRUMENTS) out[i.cls] += 1;
+  return out;
+}
 export const byId = (id: string): Instrument | undefined => INSTRUMENTS.find((i) => i.id === id);
 
 /** Every id in the registry, unique — a duplicated id would resolve to the wrong row. */

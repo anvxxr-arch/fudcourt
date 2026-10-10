@@ -2499,3 +2499,48 @@ The cause is structural, not a slip: the trail's links carried only `color` and 
 - A REQUEST THAT CANNOT BE ANSWERED IS A THROWN ERROR WITH A STATUS, never a 200 carrying a board of dashes — the `missing-key` anti-lie rule of DR-056, applied to a board whose whole value is that a figure it cannot source is a figure it does not print.
 
 **Consequences.** `apps/web/src/features/technicals/{model.ts,client.ts,ui.tsx}` (new), `apps/web/src/app/(frontend)/api/technicals/route.ts` (new), `apps/web/src/app/(frontend)/(public)/technicals/page.tsx` (new), `apps/web/tests/technicals-tests.ts` (new — offline shaper guards over frozen payloads), `features/overview/store-shell.tsx` + `lib/view-routes.ts` + `server/routes.ts` (the registration carriers). Measured live, never mocked: `/technicals` **200**; `/api/technicals?symbols=btcusdt,ethusdt&tf=1h,4h` **200** with BTC 1h `all 0.0424, ma 0.2667, osc -0.1818, invariant true, netMa 4/15, netOsc -2/11` and all 11 oscillator values present; no params **400**; unknown id **404** with `kind: unknown-symbols`. At 390px, on the live DOM: `scrollWidth == clientWidth == 390` (`sideways:false`), 49 interactive elements with **0 boxes under 24** and **0 effective-area failures** (`UNDER24=0 UNDER44=0`), 0 clipped texts, 0 viewport escapees, 1 table of **26 rows** (11 oscillators + 15 moving averages), timeframe labels `15M 1H 4H 1D 1W`, four asset classes offered (Crypto/Stocks/Forex/Commodities — `NASDAQ:AAPL`, `AMEX:SPY`, `FX:EURUSD`, `TVC:GOLD` and `IDX:BBCA` all measured carrying `Recommend.All` + RSI), the provenance line naming the source and the read time, and one `withheld` note for `1D`. Gates: `test:shapers` **460 pass / 0 fail** (32 files), `tsc --noEmit` 0 errors, `STRUCTURE_OK 442 files`, `DESIGN_TOKENS_OK files=447`, `TOKENS_OK`, `DESIGN_SYSTEM_OK files=23`, `DOCS_OK citations=1175`, `MDTABLES_OK rows=3163`, `CONTRACTS_OK`, `SCHEMAS_OK`, `bun run build` exit 0 with `/technicals` prerendered static at a 5m window. Two house contracts caught the new page on the first run and are recorded as the reason the page is shaped as it is: every public board must declare `revalidate = 300` (`tests/server-cache-tests.ts`), and a board must mount the client shell with no server-side fetch of its own — which is what makes a 300s shell honest. The per-route TTL registry in that same test file is owned by another live session and was deliberately not edited; the pairing holds by construction. CI on this commit: **5/5 green** — `web` 1m54s, `integration` 3m20s, `contracts` 44s, `go` 43s, `rust` 1m19s.
+
+## DR-066 — the technicals board reads the app's whole universe: 120 of the 123 assets it tracks, and the three the upstream cannot rate are named (2026-10-10)
+
+**Status:** accepted and **served** — measured over HTTP on `fudcourt-web` (BUILD_ID `HptPNcQjoAaCJMTtgZhYF`) and on the live DOM, class by class, at a 390px viewport.
+
+**Context.** DR-065 shipped the board covering crypto only (30 instruments). The ask was the app's whole universe: `features/trade/model-instruments.ts` (30 crypto), `features/market/stock-regions.ts` (66 stocks, US/Asia/Europe), `commodity-symbols.ts` (12) and `forex-pairs.ts` (16) — **123 assets**.
+
+**Decision.**
+- THE REGISTRY IS MEASURED, NOT WRITTEN. Every app symbol was POSTed to the screener and kept only when the answer carried a numeric `Recommend.All`; **121 of 123** resolved across two passes, and the rows in `model.ts` are **generated** from that map rather than hand-typed.
+- THE ACCEPTANCE TEST HAS TO BE THE AGGREGATE ITSELF. Pass 1 accepted "a numeric in column 1", which a futures front month satisfies with an RSI and no rating at all — a class-wide read then showed **only 3 of the 12 commodities** carrying the 1h aggregate. The filter became `Recommend.All`, and the weaker one was discarded.
+- NOT ONE FUTURES CONTRACT IN THE SCREENER IS RATED. The upstream's own symbol search was queried per commodity: **0 of 25 rated in every query**, the canonical `CBOT:ZC`, `ICEUS:KC` and `NYMEX:CL` included. The front months this app tracks are invisible to the technicals screener, so the commodity class reads the rated spot/CFD series for the SAME underlying instead.
+- A RATED TICKER IS NOT ENOUGH — IT HAS TO BE THE SAME ASSET. `LSE:CRUD` and `AMEX:BNO` are oil funds, `AMEX:SOYB` a soybean fund, and `SPARKS:COFFEE` is `type=index` over coffee **companies** (close 84.55, not a coffee price). Every one is rated and every one is the wrong instrument, so all were refused. A candidate was accepted only where the upstream's own `description` and `type=commodity` name the same underlying: `FX:USOIL` ("WTI Oil Future"), `FX:UKOIL` ("Brent Oil Futures"), `OANDA:XCUUSD` ("Copper"), `OANDA:SOYBNUSD` ("Soybeans"), `TVC:GOLD`, `TVC:SILVER`, `TVC:PLATINUM`, `OANDA:NATGASUSD`, `OANDA:CORNUSD`, `OANDA:WHEATUSD`, `OANDA:SUGARUSD`.
+- THE THREE THE UPSTREAM CANNOT RATE ARE STATED, NEVER GUESSED: `TWII` and `AXJO` (no rated index series) and `COFFEE` (no rated series for the underlying anywhere) sit in `UNRESOLVED` with their reason, so the class counts the board shows are 30/63/16/11 and the app's own totals are accounted for rather than quietly short. The board's line "one request per class" is now true of all four classes.
+- THE ROUTE IS BOUNDED. `MAX_IDS = 80` on `/api/technicals`: the largest class is 63 ids so the cap never binds in normal use, and **81 ids answer 400 `too-many-symbols`** (measured), so an unbounded query string cannot become an unbounded upstream POST.
+- THE REGISTRY IS PINNED BY TESTS, NOT BY PROSE: uniqueness on both keys, the class sizes (30 + 63 + 16 + 11 = 120), the two venue renames the measurement found (`MATIC` to `BINANCE:POLUSDT`, `TON` to `COINBASE:TONUSD`), URL-safety and exchange-qualification of every id and ticker, the eleven-row commodity allow-list, and that `TWII`, `AXJO` and `COFFEE` are **not** rows.
+
+**Evidence.**
+
+**1. Every class, read live — one request each, with the board's own five timeframes.**
+
+| class | ids | payload | instruments | missing | reads | withheld | invariant | 1h aggregate |
+|---|---|---|---|---|---|---|---|---|
+| crypto | 30 | 149.7 KB | 30 | 0 | 150 | 30 | 120/120 | 30/30 |
+| stock | 63 | 306.1 KB | 63 | 0 | 315 | 63 | 252/252 | 63/63 |
+| forex | 16 | 79.3 KB | 16 | 0 | 80 | 16 | 64/64 | 16/16 |
+| commodity | 11 | 53.9 KB | 11 | 0 | 55 | 11 | 44/44 | 11/11 |
+
+Nothing dropped and nothing blank: every instrument carries the 1h aggregate, the row-identity invariant holds on every non-withheld read, and exactly one timeframe per instrument is withheld — the `1d` the scanner publishes as null (DR-065).
+
+**2. The verdict at 390px, class by class (live DOM, effective-area contract of DR-064).**
+
+| class | doc | sideways | interactive | under-24 boxes | effective failures | clipped | escapees | table rows | API calls | ids in the call |
+|---|---|---|---|---|---|---|---|---|---|---|
+| crypto | 390/390 | false | 70 | 0 | 0 | 0 | 0 | 27 | 1 | 30 |
+| stock | 390/390 | false | 103 | 0 | 0 | 0 | 0 | 27 | 2 | 63 |
+| forex | 390/390 | false | 56 | 0 | 0 | 0 | 0 | 27 | 3 | 16 |
+| commodity | 390/390 | false | 51 | 0 | 0 | 0 | 0 | 27 | 4 | 11 |
+
+The class chip's `aria-pressed` flips to the class being shown and the call count rises by exactly one per switch, carrying that class's own ids — so the switcher re-fetches the class it names instead of re-labelling one payload. `under-44` counts are reported but not treated as violations: WCAG 2.5.8 AA's floor is 24 and the tree's chip class carries a layout-neutral hit-area overlay (DR-064).
+
+**3. Gates.** `test:shapers` **467 pass / 0 fail** (six new registry guards, one stale family assertion corrected in the same pass), `tsc --noEmit` 0 errors, `STRUCTURE_OK (442 files)`, `DESIGN_TOKENS_OK (files=447 exemptions=6)`, `TOKENS_OK (14 colors, 9 space, 11 font-size, 281 vars)`, `DESIGN_SYSTEM_OK (files=23 scale_exemptions=6)`, `build` exit 0 with `○ /technicals 5m 1y`.
+
+**Consequences.** Registry `apps/web/src/features/technicals/model.ts` (120 rows + 3 named unresolved), route `apps/web/src/app/(frontend)/api/technicals/route.ts` (`MAX_IDS`), tests `apps/web/tests/technicals-tests.ts` (6 guards). No new route, no new dependency, and the fetch shape is unchanged — one POST per class per board read.
+
+**A note on the shared index.** Before this work the repository index was found holding **945 staged deletions** across the 11 files of the DR-065 commit, left by a sibling session: present in HEAD and on disk, staged as deleted. Restored with `git reset -- <the 11 paths>` only — no global reset, no sibling path touched.

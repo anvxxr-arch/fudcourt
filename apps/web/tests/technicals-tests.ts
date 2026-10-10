@@ -10,9 +10,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  INSTRUMENTS, OSCILLATORS, MOVING_AVERAGES, SCAN_TF, TIMEFRAMES, VALUE_FIELDS,
-  aboveBelow, byId, duplicateIds, recoverNet, scanBody, scanColumns, shapeBoard,
-  shapeInstrument, summaryBand, type Instrument,
+  INSTRUMENTS, OSCILLATORS, MOVING_AVERAGES, SCAN_TF, TIMEFRAMES, UNRESOLVED, VALUE_FIELDS,
+  aboveBelow, byClass, byId, classCounts, duplicateIds, recoverNet, scanBody, scanColumns,
+  shapeBoard, shapeInstrument, summaryBand, type Instrument,
 } from '@/features/technicals/model';
 
 const inst: Instrument = { id: 'btcusdt', label: 'BTC/USDT', tv: 'BINANCE:BTCUSDT', cls: 'crypto' };
@@ -122,4 +122,85 @@ test('technicals: close-vs-level is arithmetic, and an unknown side is null rath
   assert.equal(aboveBelow(100, 100), null);
   assert.equal(aboveBelow(null, 100), null);
   assert.equal(aboveBelow(100, null), null);
+});
+
+
+/* ---------------------------------------------------------------------------
+ * The registry: every asset this app tracks, resolved by MEASUREMENT.
+ *
+ * The counts below are the app's own universes (`features/trade/model-instruments.ts`,
+ * `features/market/stock-regions.ts`, `forex-pairs.ts`, `commodity-symbols.ts`) —
+ * pinned as literals so a registry that quietly loses a class fails here rather
+ * than shipping a board that claims to cover the market and does not.
+ * ------------------------------------------------------------------------- */
+
+test('registry: one row per app asset, and not one duplicate id or ticker', () => {
+  assert.deepEqual(duplicateIds(), [], 'a duplicated id resolves to the wrong row');
+  const tvs = INSTRUMENTS.map((i) => i.tv);
+  assert.equal(new Set(tvs).size, tvs.length, 'two registry rows share one upstream ticker');
+});
+
+test('registry: the app universes are FULLY accounted for', () => {
+  // 121 rows carry 30 crypto · 63 of the 65 stocks · 16 forex · 12 commodities.
+  // The other two stocks are in UNRESOLVED, so nothing the app tracks is
+  // missing without being named.
+  assert.deepEqual(classCounts(), { crypto: 30, stock: 63, forex: 16, commodity: 11 });
+  assert.equal(INSTRUMENTS.length, 120);
+  assert.equal(classCounts().stock + UNRESOLVED.filter((u) => u.cls === 'stock').length, 65,
+    'the app carries 65 stock symbols (16 US + 18 Asia + 31 Europe)');
+  for (const cls of ['crypto', 'stock', 'forex', 'commodity'] as const) {
+    assert.equal(byClass(cls).length, classCounts()[cls]);
+  }
+});
+
+test('registry: the app assets the upstream cannot rate are STATED, never faked', () => {
+  assert.deepEqual(UNRESOLVED.map((u) => u.id).sort(), ['axjo', 'coffee', 'twii']);
+  for (const u of UNRESOLVED) {
+    assert.equal(byId(u.id), undefined, `${u.id} must not be a registry row`);
+    assert.equal(INSTRUMENTS.some((i) => i.label === u.label), false, `${u.label} must not be silently dropped either`);
+  }
+});
+
+test('registry: every id is URL-safe and every ticker is exchange-qualified', () => {
+  for (const i of INSTRUMENTS) {
+    assert.match(i.id, /^[a-z0-9.\-]+$/, `id ${i.id} is not URL-safe for ?symbols=`);
+    assert.match(i.tv, /^[A-Z0-9_]+:[A-Za-z0-9._!+\-]+$/, `ticker ${i.tv} is not exchange-qualified`);
+  }
+});
+
+test('registry: the resolved families are the measured ones', () => {
+  const tvs = (c: string) => INSTRUMENTS.filter((i) => i.cls === c).map((i) => i.tv);
+  assert.ok(tvs('crypto').every((t) => t.startsWith('BINANCE:') || t.startsWith('COINBASE:')),
+    'crypto reads an exchange pair, never the synthetic index');
+  assert.ok(tvs('forex').every((t) => t.startsWith('FX:') || t.startsWith('FX_IDC:')), 'forex reads the FX feeds');
+  assert.ok(tvs('commodity').every((t) => /^(TVC|OANDA|FX):/.test(t)),
+    'commodities read a rated spot/CFD series, never a front month (0/25 rated)');
+  for (const ex of ['IDX:', 'LSE:', 'XETR:', 'NASDAQ:', 'NYSE:', 'TSE:', 'HKEX:']) {
+    assert.ok(tvs('stock').some((t) => t.startsWith(ex)), `${ex} must be carried by the stock class`);
+  }
+});
+
+test('registry: commodities read only a series the upstream itself calls one', () => {
+  // The front months this app tracks carry NO aggregate (measured: 0 of 25
+  // contracts rated in every symbol search), so each commodity reads the rated
+  // series for the same underlying. Every other candidate was refused for a
+  // reason: LSE:CRUD / AMEX:BNO / AMEX:SOYB are funds, SPARKS:COFFEE is an index
+  // of coffee companies. This list is therefore a measurement, not a preference.
+  const measured = new Set([
+    'TVC:GOLD', 'TVC:SILVER', 'OANDA:XCUUSD', 'TVC:PLATINUM', 'FX:USOIL', 'FX:UKOIL',
+    'OANDA:NATGASUSD', 'OANDA:CORNUSD', 'OANDA:WHEATUSD', 'OANDA:SOYBNUSD', 'OANDA:SUGARUSD',
+  ]);
+  const rows = byClass('commodity');
+  assert.equal(rows.length, measured.size);
+  for (const r of rows) assert.ok(measured.has(r.tv), `${r.label} reads ${r.tv}, never measured`);
+  assert.equal(rows.some((r) => r.tv.includes('1!')), false, 'a front month cannot carry a rating (0/25)');
+  assert.equal(byId('coffee'), undefined, 'coffee has no rated series and stays unresolved');
+});
+
+test('registry: the renames the measurement found are pinned', () => {
+  // MATIC migrated to POL at the venue and TON is only rated on Coinbase;
+  // both were measured, neither was guessed.
+  assert.equal(byId('maticusdt')?.tv, 'BINANCE:POLUSDT');
+  assert.equal(byId('tonusdt')?.tv, 'COINBASE:TONUSD');
+  assert.equal(byId('usdidr')?.tv, 'FX_IDC:USDIDR');
 });
