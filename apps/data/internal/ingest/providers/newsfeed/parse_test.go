@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf16"
 )
 
 // Fixtures are canned upstream documents: the parser is proved without a
@@ -281,5 +282,47 @@ func TestTopicsFrom(t *testing.T) {
 	}
 	if topicsFrom(nil) != nil {
 		t.Fatal("an item with no categories must have no topics, not an empty slice")
+	}
+}
+
+func TestParseFeedStripsBOM(t *testing.T) {
+	// Measured live: federalreserve.gov/feeds/press_all.xml opens with EF BB BF,
+	// which is not whitespace and used to make the document unparsable.
+	body := append([]byte{0xEF, 0xBB, 0xBF}, []byte(rssFixture)...)
+	meta, items, err := ParseFeed(body, "")
+	if err != nil {
+		t.Fatalf("BOM-prefixed RSS refused: %v", err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("items = %d, want 2", len(items))
+	}
+	if meta.Title == "" {
+		t.Fatal("channel title lost")
+	}
+}
+
+func TestParseFeedTranscodesUTF16(t *testing.T) {
+	// A UTF-16 document cannot be prefix-matched as UTF-8 at all, so the BOM is
+	// the only signal that it is XML.
+	units := utf16.Encode([]rune("<rss version=\"2.0\"><channel><title>News</title>" +
+		"<item><title>Halving</title><link>https://example.test/a</link>" +
+		"<pubDate>Sun, 11 Oct 2026 10:00:00 GMT</pubDate></item></channel></rss>"))
+	buf := []byte{0xFF, 0xFE}
+	for _, u := range units {
+		buf = append(buf, byte(u), byte(u>>8))
+	}
+	_, items, err := ParseFeed(buf, "")
+	if err != nil {
+		t.Fatalf("UTF-16 RSS refused: %v", err)
+	}
+	if len(items) != 1 || items[0].Title != "Halving" {
+		t.Fatalf("items = %+v", items)
+	}
+}
+
+func TestParseFeedBOMOnJSONFeed(t *testing.T) {
+	body := append([]byte{0xEF, 0xBB, 0xBF}, []byte(jsonFeedFixture)...)
+	if _, items, err := ParseFeed(body, ""); err != nil || len(items) != 1 {
+		t.Fatalf("BOM-prefixed JSON Feed: items=%d err=%v", len(items), err)
 	}
 }

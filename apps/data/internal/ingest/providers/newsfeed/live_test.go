@@ -54,6 +54,14 @@ func TestLiveFeeds(t *testing.T) {
 		default:
 			reachable++
 			total += res.RowsWritten
+			if len(rec.arts) == 0 {
+				// RowsIn > 0 with nothing recorded means every row was already
+				// known (or the writer filtered it) -- indexing here is how this
+				// harness panicked instead of reporting.
+				t.Logf("  ok %-14s %2d items -> %2d articles in %s (nothing new to write)",
+					feed.Slug, res.RowsIn, res.RowsWritten, took)
+				continue
+			}
 			first := rec.arts[0]
 			t.Logf("  ok %-14s %2d items -> %2d articles in %s | %q | %s | tags=%v",
 				feed.Slug, res.RowsIn, res.RowsWritten, took, clip(first.Headline, 58),

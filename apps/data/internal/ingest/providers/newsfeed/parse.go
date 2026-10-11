@@ -2,6 +2,7 @@ package newsfeed
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"io"
 	"strings"
 	"time"
+	"unicode/utf16"
 )
 
 // Meta is the channel-level identity of a feed. It is recorded (not stored as
@@ -176,8 +178,34 @@ type jsonFeedItem struct {
 // from the document itself (root element / leading brace); `want`, when
 // non-empty, is then verified against the detection so a feed that silently
 // changes dialect is a reported shape error rather than a silent mis-parse.
+// stripBOM removes a leading byte-order mark and returns UTF-8 bytes. A BOM is
+// legal in XML and publishers do emit one -- measured live on
+// federalreserve.gov/feeds/press_all.xml, whose body opens with EF BB BF -- but
+// U+FEFF is NOT whitespace in Go, so every prefix check in this file missed it
+// and the document was reported as unparsable. UTF-16 bodies are transcoded
+// rather than rejected, because utf8-only prefix checks cannot see them at all.
+func stripBOM(b []byte) []byte {
+	switch {
+	case bytes.HasPrefix(b, []byte{0xEF, 0xBB, 0xBF}):
+		return b[3:]
+	case bytes.HasPrefix(b, []byte{0xFF, 0xFE}):
+		return utf16ToUTF8(b[2:], binary.LittleEndian)
+	case bytes.HasPrefix(b, []byte{0xFE, 0xFF}):
+		return utf16ToUTF8(b[2:], binary.BigEndian)
+	}
+	return b
+}
+
+func utf16ToUTF8(b []byte, order binary.ByteOrder) []byte {
+	units := make([]uint16, 0, len(b)/2)
+	for i := 0; i+1 < len(b); i += 2 {
+		units = append(units, order.Uint16(b[i:i+2]))
+	}
+	return []byte(string(utf16.Decode(units)))
+}
+
 func ParseFeed(body []byte, want Format) (Meta, []Item, error) {
-	trimmed := bytes.TrimSpace(body)
+	trimmed := bytes.TrimSpace(stripBOM(body))
 	if len(trimmed) == 0 {
 		return Meta{}, nil, &HardError{Kind: "empty", Detail: "zero-byte feed body"}
 	}
