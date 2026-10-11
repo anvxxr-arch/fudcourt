@@ -62,6 +62,12 @@ UTF-16LE/BE bodies. That is not defensive decoration: `U+FEFF` is **not** whites
 BOM — was reported unparsable until the sweep scored a working feed as a failure and the defect
 was found.
 
+The parser also strips a leading byte-order mark before it sniffs anything, and transcodes
+UTF-16LE/BE bodies. That is not defensive decoration: `U+FEFF` is **not** whitespace in Go, so
+`federalreserve.gov/feeds/press_all.xml` — a healthy RSS 2.0 document that opens with the UTF-8
+BOM — was reported unparsable until the sweep scored a working feed as a failure and the defect
+was found.
+
 ## Transport
 
 `client.go` wraps the repository's own `httpx.NewClient` and adds only what a feed needs:
@@ -172,7 +178,11 @@ to one row each: a row is a host and a feed, not a bullet in a list.
 
 ### Why the rest are not collected, with the measurement behind each reason
 
-| Reason | Hosts | What was measured |
+Counts here are **entries** — the 158-row list repeats a host in 7 places, and one host can
+carry two bullets while contributing one uncollected source. The host lists underneath are
+host counts, and they are labelled as such.
+
+| Reason | Entries | What was measured |
 |---|---|---|
 | host answers 200, no feed advertised | 41 | no `<link rel="alternate">` of any type on the homepage, and none of the 12 standard paths answered a parsable document |
 | no TLS handshake on the name as given | 22 | the apex name serves no certificate for itself; the `www` form was then probed too, and where it answered 200 the paths were re-tried there |
