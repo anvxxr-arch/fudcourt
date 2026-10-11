@@ -176,6 +176,9 @@ const DOCS = [
   'docs/architecture/design-debt.md',
   // Added 2026-10-02 with the data-categorization refresh; its cited paths are now gated.
   'docs/architecture/data-categorization.md',
+  // Added 2026-10-11 with the newsfeed adapter; it cites the adapter package, the canon
+  // write surface, the schema pair and the verify entrypoint — all rename-prone.
+  'docs/architecture/news-ingestion.md',
   // Added 2026-10-06 with the Telegram bot; every repo path it names is now gated.
   'docs/architecture/bot.md',
   // The canonical entry point. Its markdown LINKS are gated here; the bare

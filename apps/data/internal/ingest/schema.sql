@@ -658,3 +658,32 @@ SELECT create_hypertable('data.option_quote', 'at', if_not_exists => TRUE);
 -- events on every poll, so append-only rows need a deterministic dedup key.
 CREATE UNIQUE INDEX IF NOT EXISTS liquidation_natural_key
   ON data.liquidation (venue_id, instrument_id, at, side, price, quantity);
+
+-- 31. news_source — the source REGISTRY projection. The version-controlled
+-- registry is code (apps/data/internal/ingest/providers/newsfeed/feeds.go) and
+-- stays the sole owner of the list; this table is its projection, upserted at
+-- startup, so an operator can join the registry against what was actually
+-- collected (data.news_article.source carries the same slug) without reading Go.
+-- Only registry membership lives here: per-source HEALTH is deliberately NOT
+-- duplicated — it is read from data.job (status, last_success, last_attempt,
+-- retry_count) and data.ingestion_run/ingestion_error for
+-- provider='newsfeed', subject=source_slug.
+CREATE TABLE IF NOT EXISTS data.news_source (
+  source_slug   text PRIMARY KEY,
+  label         text NOT NULL,
+  homepage      text,
+  feed_url      text NOT NULL,
+  feed_format   text NOT NULL,
+  category      text NOT NULL,
+  country       text,
+  language      text,
+  reliability   int,
+  license       text,
+  status        text NOT NULL,
+  status_detail text,
+  enabled       boolean NOT NULL DEFAULT false,
+  poll_seconds  int NOT NULL DEFAULT 0,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS news_source_status_idx ON data.news_source (status, enabled);

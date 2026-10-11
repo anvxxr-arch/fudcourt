@@ -32,6 +32,12 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 (`.next/` is git-ignored) — re-created on every build, never edit it. (It was
 `apps/blog/.next/…` before the DR-017 merge.)
 
+> **The publisher-feed family needs no credential (2026-10-11).** Every source registered in
+> `apps/data/internal/ingest/providers/newsfeed/feeds.go` is a public, keyless, GET-only feed;
+> nothing in that package reads the environment, so there is no row to add above and no
+> rotation step in §5. A future source that *does* want a key is `pending_credentials` until
+> its row and its home are recorded here in the same commit.
+
 ## 2. Audit findings (evidence-based)
 
 1. **No `.env` file was ever committed.** `git log --all --diff-filter=A

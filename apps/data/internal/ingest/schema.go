@@ -28,8 +28,8 @@ var embeddedSchemaFS embed.FS
 // It is exported so tests can report the exact file they compared.
 const SchemaSQLPath = "schema.sql"
 
-// SchemaSQL returns the embedded DDL: the data.* schema definition (29
-// tables, 13 hypertables, named constraints and secondary indexes) that
+// SchemaSQL returns the embedded DDL: the data.* schema definition (31
+// tables, 14 hypertables, named constraints and secondary indexes) that
 // Apply runs. The returned text is this module's copy — the drift test
 // proves it byte-equal to the tracked db/schema/data-schema.sql.
 func SchemaSQL() (string, error) {

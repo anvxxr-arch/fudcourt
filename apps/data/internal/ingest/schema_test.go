@@ -66,8 +66,8 @@ func TestSplitStatementsUnterminated(t *testing.T) {
 }
 
 // TestSplitStatementsRealSchema pins the splitter against the embedded DDL:
-// the statement census (1 schema + 30 tables + 14 hypertables + 11 secondary
-// indexes + 1 unique index = 57) and spot-checks that every structural
+// the statement census (1 schema + 31 tables + 14 hypertables + 12 secondary
+// indexes + 1 unique index = 59) and spot-checks that every structural
 // statement survived whole.
 func TestSplitStatementsRealSchema(t *testing.T) {
 	ddl := MustSchemaSQL()
@@ -76,14 +76,14 @@ func TestSplitStatementsRealSchema(t *testing.T) {
 		t.Fatalf("SplitStatements(schema): %v", err)
 	}
 	joined := strings.Join(stmts, "\n;;\n")
-	if got := strings.Count(joined, "CREATE TABLE IF NOT EXISTS data."); got != 30 {
-		t.Errorf("tables: got %d, want 30", got)
+	if got := strings.Count(joined, "CREATE TABLE IF NOT EXISTS data."); got != 31 {
+		t.Errorf("tables: got %d, want 31", got)
 	}
 	if got := strings.Count(joined, "create_hypertable("); got != 14 {
 		t.Errorf("hypertables: got %d, want 14", got)
 	}
-	if got := strings.Count(joined, "CREATE INDEX IF NOT EXISTS"); got != 11 {
-		t.Errorf("secondary indexes: got %d, want 11", got)
+	if got := strings.Count(joined, "CREATE INDEX IF NOT EXISTS"); got != 12 {
+		t.Errorf("secondary indexes: got %d, want 12", got)
 	}
 	if got := strings.Count(joined, "CREATE UNIQUE INDEX IF NOT EXISTS"); got != 1 {
 		t.Errorf("unique indexes: got %d, want 1", got)

@@ -44,6 +44,7 @@ docs/
 | architecture | [SCHEMA.md](architecture/SCHEMA.md) | Data schemas: Postgres treasury tables, Payload/Neon tables, API envelopes |
 | architecture | [canonical-model.md](architecture/canonical-model.md) | The canonical data model: 7-layer pipeline, entity list with identity/owner, domain taxonomy, time semantics, precision rules, duplicate-concept decisions |
 | architecture | [source-catalog.md](architecture/source-catalog.md) | Every data source actually in the repo: provider/feed/account kept distinct, freshness/durability/auth/status + the sources that are absent |
+| architecture | [news-ingestion.md](architecture/news-ingestion.md) | The publisher-feed family in the sidecar: one `newsfeed` adapter over RSS/Atom/JSON Feed, a code-owned source registry projected into `data.news_source`, conditional requests, three-level de-duplication, the same-host redirect guard, and the measured per-source coverage (15 active, 1 restricted) |
 | architecture | [data-catalog.md](architecture/data-catalog.md) | Per-dataset detail: today's layer, provider carrier, canonical target, identity, time semantics, consumers |
 | architecture | [data-classification.md](architecture/data-classification.md) | The classification matrix + provider-DTO leak audit + duplicate-concept audit |
 | architecture | [database-classification.md](architecture/database-classification.md) | Every table in Postgres `public`/executor-schema/Neon classified: canonical/event/snapshot/cache/provider-specific/legacy/unknown, owner, durability, sensitivity, writer gaps |

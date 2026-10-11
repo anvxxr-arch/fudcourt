@@ -38,6 +38,7 @@ import (
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/fred"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/geckoterminal"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/imf"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/newsfeed"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/oecd"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/okx"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/polymarket"
@@ -323,6 +324,15 @@ func connectDataPool(dlog *slog.Logger) (poolExecutor, *repo.Repo) {
 		return poolExecutor{}, nil
 	}
 	pool := poolExecutor{p: raw}
+	// The news-source registry describes itself in data.news_source: a
+	// projection of the version-controlled registry (providers/newsfeed), which
+	// stays its sole owner. A failure here is loud and non-fatal - the sidecar
+	// must keep serving whether or not the projection landed.
+	pctx, pcancel := context.WithTimeout(context.Background(), 30*time.Second)
+	if err := ingest.EnsureNewsSources(pctx, pool, newsfeed.SourceRows(), dlog); err != nil {
+		dlog.Error("fudcourt-data: news source registry projection failed", "err", err)
+	}
+	pcancel()
 	return pool, repo.New(pool)
 }
 
@@ -353,6 +363,7 @@ func buildDataModules() []ingest.Module {
 		etherscan.NewModule(nil),
 		blockscout.NewModule(nil),
 		dune.NewModule(nil),
+		newsfeed.NewModule(nil),
 	}
 }
 
@@ -1311,6 +1322,7 @@ func prewarmLlama(lf *llama.Fetcher) {
 	}
 	log.Printf("llama prewarm ok=%d failed=%d", ok, fail)
 }
+
 // writeLlamaError maps a llama failure onto the TS route's error bodies: the
 // param refusals are written by the caller (they never reach the fetcher), so
 // this covers the upstream arm -- real status kept, real text quoted, never a
