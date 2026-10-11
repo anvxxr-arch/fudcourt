@@ -1,0 +1,26 @@
+[Unit]
+Description=cloudflared (fudcourt.my.id — tunnel in the zone's own account)
+Documentation=file:///home/dwizzy/fudcourt/docs/operations/SECRETS.md
+After=network.target
+
+[Service]
+# Why a SECOND cloudflared and not the nprouter tunnel (DR-070):
+# Cloudflare routes a <uuid>.cfargotunnel.com CNAME only when the tunnel and the
+# DNS zone are in the SAME account. The zone fudcourt.my.id lives in the anvxxr
+# account; nprouter (39bdfeef) lives in the arrijalprabowo.ap account, so pointing
+# the apex at nprouter answers 530 / `error code: 1033` (Argo Tunnel error) at the
+# edge and no origin-side change can fix it. This unit runs the tunnel that
+# belongs to the zone's account (5603c635-064f-4503-bc6e-f9fa8fa620cd).
+#
+# This is a SYSTEM unit (`/etc/systemd/system/cloudflared-fudcourt.service`), not a
+# user unit like the fudcourt-* services, because it must come up before any login.
+User=dwizzy
+Group=dwizzy
+TimeoutStartSec=0
+Type=notify
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /home/dwizzy/.cloudflared/fudcourt.yml tunnel run
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

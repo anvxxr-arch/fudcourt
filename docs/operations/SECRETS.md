@@ -78,6 +78,7 @@ Production == this homeserver:
 | CEX Executor API + composer (`apps/web`) | `fudcourt-web.service` | `127.0.0.1:3100` (`/executor`, `/api/executor`, tier `team`) | `apps/web/.env.local` (`FUDCOURT_EXECUTOR_MASTER_KEY`; exchange API secrets are **not** in any env file) |
 | CEX Executor worker (TS, **TOMBSTONE — retired 2026-10-05 by DR-043; was retired from runtime by DR-042**) | `fudcourt-executor-worker.service` → renamed to `deploy/systemd/RETIRED-fudcourt-executor-worker.service.txt` (preserves history; the unit is **not installed**); the entry script is preserved at `apps/web/scripts/executor/worker.ts` with a tombstone header. The live executor is the Go service below. | — (was outbound only: venue APIs) | `apps/web/.env.local` was the unit's `EnvironmentFile`; that file still carries the executor env names (the Go service reads the same ones). Restarting `fudcourt-web` never stopped an execution; the Go service is the runtime now. |
 | CEX Executor **Go** service (`apps/executor`, `7b8dc2d`) | `fudcourt-executor.service` (unit versioned at `deploy/systemd/fudcourt-executor.service`) | `127.0.0.1:3104` (`/healthz`+`/readyz`) and `127.0.0.1:3105` (`/api/executor/*`, `FUDCOURT_EXECUTOR_API_ADDR`) | Needs `FUDCOURT_SESSION_SECRET` (it verifies the same `fud_session` cookie the web tier signs — the unit documents this coupling and deliberately does **not** set the secret itself) + `FUDCOURT_EXECUTOR_PG_URL` + `FUDCOURT_EXECUTOR_MASTER_KEY`. **Env is fail-visible: the unit cannot start until `FUDCOURT_SESSION_SECRET` and `FUDCOURT_EXECUTOR_PG_URL` are present in the process env** (name-only; no value here). Also reads `VALKEY_ADDR`+`VALKEY_PASSWORD` (distributed leases; the host requires AUTH). **Sole live web path since 2026-10-05 (DR-043):** `fudcourt-web` thin-proxies `/api/executor/*` to `:3105` via `src/app/(frontend)/api/executor/_proxy.ts`; the TS executor runtime (`apps/web/src/platform/executor/**`) was retired in this pass and the wire contract is the only survivor at `src/platform/executor/types.ts`. |
+| Public ingress (`fudcourt.my.id`) | `cloudflared-fudcourt.service` (system unit, versioned at `deploy/systemd/cloudflared-fudcourt.service`) | tunnel → `127.0.0.1:3110` (the Caddy compression front) | host-only, never in the repo: `~/.cloudflared/fudcourt-credentials.json` (600) + `~/.cloudflared/fudcourt.yml`; DNS writes use `~/.secrets/cloudflare/fudcourt-dns.token` (600, scoped to this one zone) — names here, values nowhere |
 | Telegram bot (`apps/bot`, stdlib-only Go) | `fudcourt-bot.service` (unit versioned at `deploy/systemd/fudcourt-bot.service`) | — (outbound only: long-poll `getUpdates` to the Bot API; **opens no port**, so it is not in the tunnel ingress) | repo-root `.env` as its `EnvironmentFile` (`FUDCOURT_TELEGRAM_BOT_TOKEN`, name-only above) — the same `.env` the executor reads, so the token has one home. The **receiving half** of the notification channel; see [bot.md](../architecture/bot.md) |
 
 - **No third-party deploy target.** The `fudcourt.vercel.app` domain answers
@@ -90,11 +91,20 @@ Production == this homeserver:
   question is retired with DR-002. If the projects are ever wanted, the only
   required env names are exactly the §1 rows.
 - **Exposure: public via Cloudflare Tunnel, origin stays loopback.** The units
-  bind `127.0.0.1` only; the sole path in is the tunnel ingress
-  `fc.dwirijal.my.id → http://127.0.0.1:3100` (proxied CNAME, zone
-  `dwirijal.my.id`). Verified public: page 200, cryptorank 200 with real
-  upstream JSON, mutation without token → **401** (fail-closed holds on the
-  public hostname).
+  bind `127.0.0.1` only; the path in is the tunnel ingress and nothing else.
+  Two hostnames are live and they are served by **two different tunnels**:
+  `fc.dwirijal.my.id → http://127.0.0.1:3110` (proxied CNAME, zone
+  `dwirijal.my.id`, carried by the `nprouter` tunnel `39bdfeef…`) and
+  `fudcourt.my.id → http://127.0.0.1:3110` (proxied CNAME, zone
+  `fudcourt.my.id`, carried by `cloudflared-fudcourt.service`'s tunnel
+  `5603c635…` — DR-070). **A `<uuid>.cfargotunnel.com` CNAME only routes when the
+  tunnel and the zone are in the same Cloudflare account**, which is why the apex
+  is not simply another entry on `nprouter`; pointing it at the wrong account
+  answers `530` / `error code: 1033` at the edge. Both point at the same Caddy
+  compression front, so the origin bind is unchanged. Verified public: page 200,
+  cryptorank 200 with real upstream JSON, mutation without token → **401**
+  (fail-closed holds on both public hostnames), and `http://` answers
+  **301 → https** on the apex.
 
 ## 4. Runtime surfaces
 

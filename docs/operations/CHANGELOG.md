@@ -11,6 +11,11 @@ measured on this host, never estimated.
 > single `ci.yml` is now five path-filtered workflows. Use `docs/records/archive/final-review.md` §1
 > for the tree today.
 
+## 2026-10-11
+| Change | Surface | Evidence | Record |
+|---|---|---|---|
+| **The app is published on `fudcourt.my.id`: the apex is served by a tunnel in the account that owns the zone, because a `<uuid>.cfargotunnel.com` CNAME only routes when the tunnel and the zone share an account — measured as `530` / `error code: 1033` on the obvious wiring (apex → the nprouter tunnel), fixed with a second tunnel in the zone's own account.** The zone was already registered and already active on Cloudflare in the `anvxxr` account with an empty apex, while every other fudcourt hostname runs on nprouter in a different account — a split invisible from the origin side, where the tunnel was healthy and the app answered 200. `cloudflared-fudcourt.service` (system unit, versioned here) runs the zone's tunnel with ingress `fudcourt.my.id → 127.0.0.1:3110`, the Caddy front `fc.dwirijal.my.id` already uses; a zone-scoped `DNS Write` token (name and location only, never a value) writes the one proxied CNAME, and a temporary `Zone Settings Write` token set `always_use_https=on` and was deleted in the same pass. | `deploy/systemd/cloudflared-fudcourt.service` (new), `docs/operations/SECRETS.md` | Public apex measured over HTTPS: `/` **200** 30,069 B, `/technicals` **200** 27,162 B, `/login` **200** 23,112 B, TLS verify 0 with `CN=fudcourt.my.id` (Let's Encrypt, to 2027-01-09), and `http://` **301 → `https://fudcourt.my.id/`**; `/technicals` **byte-identical** to `fc.dwirijal.my.id` (27,162 B, `cmp` clean, same chunk `static/chunks/3r3p6xrojoz7o`); unit active + enabled with four registered tunnel connections (sin20/sin22/sin02/sin17, quic) and exactly one proxied CNAME in the zone; gates `STRUCTURE_OK`, `DEPLOY_OK`, `MDTABLES_OK`, `DOCS_OK`, `CONTRACTS_OK`, `SCHEMAS_OK` (docs + unit only). | DR-070 |
+
 ## 2026-10-10
 | Change | Surface | Evidence | Record |
 |---|---|---|---|
