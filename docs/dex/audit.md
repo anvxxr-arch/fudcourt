@@ -200,7 +200,9 @@ Ordered by what unblocks the most downstream work.
 1. **No canonical query/read layer.** `/api/v1/dex/*` does not exist; `apps/api` serves health, auth
    and admin only. Plan §30 and §31 (filtering, sorting, cursor pagination) have no host.
 2. **No raw-chain ingestion.** No blocks, logs, transactions or swap events from any EVM chain, and
-   no Solana RPC/Helius client. Plan §16 and §17 are empty.
+   no Solana RPC/Helius client. Plan §16 and §17 are empty. *(Partially closed — see §15: an EVM
+   JSON-RPC transport and a block dataset now exist, and the V2/V3 swap + pool-created decoders are
+   written and live-tested, but nothing lands a log yet. Solana is untouched.)*
 3. **No DEX-native protocol adapters.** No Uniswap, PancakeSwap, Curve, Balancer, Aerodrome,
    Raydium, Orca or Meteora. Plan §20 is empty. Pool data today comes from aggregators only (S3),
    so there is **no S0/S1 ground truth** to reconcile against.
@@ -397,3 +399,59 @@ CONTRACTS_OK    openapi_paths=37 route_handlers=43 events=28 client_endpoints=17
 
 The sixteen files are listed in `contracts/schemas/README.md` §1 layout and §2.2 domain table, so
 `check-schemas.mjs` indexes them in both directions.
+
+---
+
+## 15. Phase 3 status — the first S0 adapter (landed after the Phase 1 freeze)
+
+§8 item 2 recorded that raw-chain ingestion did not exist. This change lands its **transport and
+its raw-fact dataset**, which is the part that does not depend on the open G1/G2 decisions.
+
+Added `apps/data/internal/ingest/providers/evmrpc/` (registered in `apps/data/main.go`):
+
+- **Transport** — JSON-RPC 2.0 over the engine's existing `canon.Doer`, with four typed failure
+  kinds (`no-credentials`, `transport`, `rpc-error`, `status`, `shape`). A JSON-RPC error object
+  inside HTTP 200 is surfaced with the node's own code and message rather than flattened into an
+  empty result.
+- **Dataset `block`** — one job per chain, writing three chain-level series
+  (`series/blockchain/{block_height,base_fee_gwei,gas_used_pct}/chain:<id>`). The cursor carries the
+  last block **hash**, and each run re-reads that height and compares: a changed hash, or a tip that
+  moved backwards, increments `reorg_count` and records `reorg_at_block` instead of silently
+  overwriting the checkpoint.
+- **Event decoders** — V2 `Swap`, V3 `Swap`, V2 `PairCreated`, V3 `PoolCreated`, as **pure
+  functions over a decoded log** (no client, no I/O, no id minting), so a DEX-specific dataset can
+  be layered on the same transport later. The topic0 constants are pinned to values **observed on
+  Ethereum mainnet**, not computed at init: a typo in a signature string would otherwise produce a
+  topic that matches nothing, silently.
+- **Credentials** — the tree's **existing** `ALCHEMY_KEY`, expanded per chain as
+  `https://<host>/v2/<KEY>` exactly as `apps/reconciler/src/streams/sync.rs` does it, with the chain
+  map mirroring `apps/reconciler/src/chains.rs`. A per-chain `EVM_RPC_URL_<CHAIN>` overrides it.
+  Minting a second chain-access credential for the same six chains would have created the same
+  two-sources-of-truth problem as G2, so it was not done.
+
+**What this does NOT close.** The decoders have no dataset behind them yet. Raw logs have **no
+landing table** in `db/schema/data-schema.sql`, and writing a swap into `data.trade` would be wrong
+rather than merely incomplete: that table's natural key is the CEX-shaped
+`(venue, instrument, provider_trade_id, trade_time)`, which cannot hold
+`(chain, tx_hash, log_index)` without discarding the on-chain identity the whole S0 tier exists to
+provide. §8 items 1, 3, 4, 5–11 are unchanged, and item 2 is now **half** closed — blocks yes,
+logs yes, but nothing lands the logs. Adding the landing table is the next step.
+
+G1 and G2 remain open and are still the blocker for any dataset that mints a pool, token or swap id.
+
+Gate evidence for this change:
+
+```
+go build ./...            clean
+go vet ./...              clean
+go test ./...             68 packages ok, 0 failures
+contracts                 CONTRACTS_OK openapi_paths=37 route_handlers=43 events=28
+evmrpc unit tests         19/19 pass (offline)
+evmrpc live tests         4/4 pass against Ethereum mainnet (head 26175090, base fee
+                          0.065118 gwei, 30 live V3 swap logs decoded, a live
+                          PoolCreated decoded to pool 0x370c602e… / 100 bps / tickSpacing 200)
+```
+
+The live tests are gated on `EVM_RPC_LIVE=1` so an offline `go test ./...` touches no network; the
+offline decoder tests run against **captured** mainnet payloads (`evmrpc_test.go` fixtures), which
+is why the live run reproduced the fixture's pool address byte-for-byte.

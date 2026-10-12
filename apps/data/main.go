@@ -35,6 +35,7 @@ import (
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/dexscreener"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/dune"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/etherscan"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/evmrpc"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/fred"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/geckoterminal"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/imf"
@@ -341,7 +342,8 @@ func connectDataPool(dlog *slog.Logger) (poolExecutor, *repo.Repo) {
 // client's tuned default transport (the same rule the adapters' own tests
 // use for production wiring). Keys are read inside the packages
 // (FRED_API_KEY, BPS_API_KEY/BPS_API_ID, BI_API_KEY, ETHERSCAN_API_KEY,
-// DUNE_API_KEY); a missing key degrades that provider's fetches to loud
+// DUNE_API_KEY, EVM_RPC_URL_<CHAIN>); a missing key degrades that provider's
+// fetches to loud
 // no-credentials failures, it never crashes the engine.
 func buildDataModules() []ingest.Module {
 	return []ingest.Module{
@@ -361,6 +363,7 @@ func buildDataModules() []ingest.Module {
 		dexscreener.NewModule(nil),
 		geckoterminal.NewModule(nil),
 		etherscan.NewModule(nil),
+		evmrpc.NewModule(nil),
 		blockscout.NewModule(nil),
 		dune.NewModule(nil),
 		newsfeed.NewModule(nil),
