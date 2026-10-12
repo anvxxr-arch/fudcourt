@@ -261,6 +261,34 @@ struktur aktual repo". **Recommendation:** land the DEX subsystem as
 plus `apps/data/internal/ingest/providers/<provider>` for the adapters, and expose reads from
 `apps/api`. Do not create a `backend/` tree.
 
+**G5 — The "Raw Observations" stage has no table for a NON-NUMERIC payload.**
+Found while landing the first S0 adapter, and it is independent of G1/G2. The plan's architecture
+puts a Raw Observations layer between Adapters and the Normalizer, and §12 forbids storing provider
+JSON as canonical — so a raw payload must land SOMEWHERE traceable. It has no home. Measured, not
+assumed:
+
+- `data.observation` (the table the Phase-1 `ingestion/provider-observation.json` contract maps to)
+  is a **scalar series** table: `PRIMARY KEY (series_id, period, observed_at, revision)` with a
+  single `value double precision`. Its own contract describes it as "one value of one series at one
+  period". An EVM log is a structured payload (`address`, `topics[]`, a `data` blob, `tx_hash`,
+  `log_index`, `removed`) and cannot be expressed as one scalar in one series.
+- `data.ingestion_error.payload jsonb` holds a FAILED payload for replay, not an accepted one.
+- `data.job.cursor jsonb` is per-source checkpoint state, not a row store.
+- A grep for `raw_log`, `chain_log`, `evm_log` or a `data.block`/`data.log` table returns nothing;
+  the 35 tables in `db/schema/data-schema.sql` include no raw landing table of any kind.
+
+This also means **§14 overstated its own work**: `ingestion/` was described as "the raw landing
+layer", but the layer it froze covers scalar series readings only. The correction is recorded there.
+
+**Recommendation:** one provider-agnostic raw landing table, not a chain-specific one —
+`data.raw_payload(provider, dataset, subject, payload jsonb, payload_hash, block_number, tx_hash,
+log_index, observed_at, retrieved_at, canonical boolean)` with bounded retention. A chain-shaped
+table (`data.chain_log`) would solve EVM logs and nothing else, and the next Solana instruction or
+institutional-provider body would need a second one; the plan's Raw Observations box is
+provider-agnostic by construction. The chain columns stay NULL for a non-chain provider. This is a
+schema decision (new table, new contract, the five-file schema dance), so it is reported here rather
+than resolved by an adapter author — the same rule G1/G2 follow.
+
 ---
 
 ## 10. Recommended reuse — per plan agent
@@ -373,6 +401,12 @@ Added under `contracts/schemas/`:
 - `ingestion/` — `checkpoint.json`, `provider-observation.json` (a new directory: the raw landing
   layer and job state, neither of which is canonical data)
 
+  *Correction (see §9 G5):* that "raw landing layer" is a **scalar series** layer —
+  `provider-observation.json` maps to `data.observation`, one decimal value per series per period.
+  It cannot hold a structured payload such as an EVM log, so the Raw Observations stage the plan
+  puts between Adapters and the Normalizer is still without a table. The phrase above is narrower
+  than it reads.
+
 Already present and reused rather than restated: `assets/{asset,token,chain}.json`,
 `defi/{protocol,pool}.json`, `markets/{venue,instrument,ticker,price,candle}.json`,
 `common/provenance.json`.
@@ -435,9 +469,14 @@ rather than merely incomplete: that table's natural key is the CEX-shaped
 `(venue, instrument, provider_trade_id, trade_time)`, which cannot hold
 `(chain, tx_hash, log_index)` without discarding the on-chain identity the whole S0 tier exists to
 provide. §8 items 1, 3, 4, 5–11 are unchanged, and item 2 is now **half** closed — blocks yes,
-logs yes, but nothing lands the logs. Adding the landing table is the next step.
+logs yes, but nothing lands the logs.
+
+The landing table is not merely unbuilt: it has **no contract**, and finding that out was the second
+result of this change. `data.observation` cannot hold a structured payload (it is one scalar per
+series per period), and no table in the schema can. That is **§9 G5**, reported rather than resolved.
 
 G1 and G2 remain open and are still the blocker for any dataset that mints a pool, token or swap id.
+G5 is the blocker for landing the raw log that a swap would be normalized from.
 
 Gate evidence for this change:
 
