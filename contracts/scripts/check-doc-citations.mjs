@@ -181,6 +181,11 @@ const DOCS = [
   'docs/architecture/news-ingestion.md',
   // Added 2026-10-06 with the Telegram bot; every repo path it names is now gated.
   'docs/architecture/bot.md',
+  // Added 2026-10-12 with the DEX data-subsystem Phase 0 audit; it cites the provider
+  // packages, the canon/canonical-reference id spaces, the data.* schema and the
+  // contracts/ schemas it recommends reusing — all rename-prone, and its whole value
+  // is that the reuse claims point at real files.
+  'docs/dex/audit.md',
   // The canonical entry point. Its markdown LINKS are gated here; the bare
   // directory paths in its tables are NOT (the walk only picks up tokens that
   // look like file citations, and `db/schema/` has no extension), so the table
