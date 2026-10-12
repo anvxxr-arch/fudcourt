@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/defi/risk-metric.json",
+  "title": "RiskMetric",
+  "description": "One risk measurement about a pool, token or protocol: wash-trading probability, holder concentration, liquidity depth, impermanent loss, MEV exposure, contract risk. ABSENT TODAY: no table, no producer, no route. This is plan §32/§46 Group C. Every risk metric is DERIVED, so it MUST name its algorithm version and its inputs (plan §26) - a risk score without them is an unfalsifiable number and cannot be compared across releases. value is 0-100 by convention so one field type carries every risk kind; the meaning of 100 is per-risk_type and is stated in the description, not assumed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "subject_id",
+    "risk_type",
+    "value",
+    "calculation_version"
+  ],
+  "properties": {
+    "subject_id": {
+      "$ref": "../common/identifier.json",
+      "description": "The pool, token or protocol the risk is about."
+    },
+    "subject_kind": {
+      "type": "string",
+      "enum": [
+        "pool",
+        "token",
+        "protocol",
+        "wallet"
+      ]
+    },
+    "risk_type": {
+      "type": "string",
+      "enum": [
+        "wash_trading_probability",
+        "holder_concentration",
+        "liquidity_depth",
+        "impermanent_loss",
+        "mev_exposure",
+        "sandwich_exposure",
+        "contract_risk",
+        "rug_pull_probability",
+        "price_manipulation"
+      ],
+      "description": "Closed set. Each names one measurable thing; 'risk' alone is not a metric."
+    },
+    "value": {
+      "$ref": "../common/percentage.json",
+      "description": "0-100 where 100 is maximum risk for this risk_type. percentage.json is the right carrier because the scale is a percentage, not a ratio."
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/count.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "calculation_version": {
+      "type": "string",
+      "description": "plan §26 metric_version/algorithm_version. Required: two releases' scores are not comparable without it."
+    },
+    "inputs": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "plan §26 input_sources: what the calculation consumed, so the score can be re-derived."
+    },
+    "at": {
+      "$ref": "../common/time.json#/$defs/observed_at"
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  }
+}

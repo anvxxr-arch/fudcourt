@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/defi/protocol-metric.json",
+  "title": "ProtocolMetric",
+  "description": "One protocol-level metric at one point in time (TVL, DEX volume, fees, revenue, market share, active users, rank). data.metric ALREADY STORES THE SHAPE - (series_id, at, value, meta) with source defaulting to 'derived' - and data.tvl_protocol / data.tvl_chain store the TVL case specifically, so this schema names the contract those rows must satisfy rather than inventing storage. The metric is an ENUM, not a free-form label, because 'volume' reported in USD and 'volume' reported in native units are different facts and a free-form string lets them collide. plan §22: DefiLlama is the baseline protocol analytics source and the others enrich or validate it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_id",
+    "at",
+    "metric",
+    "value"
+  ],
+  "properties": {
+    "protocol_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "chain_id": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json",
+            "description": "Null means the metric is protocol-aggregated across chains, matching data.tvl_protocol's chain_id = '' convention."
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "at": {
+      "$ref": "../common/time.json#/$defs/observed_at"
+    },
+    "metric": {
+      "type": "string",
+      "enum": [
+        "tvl_usd",
+        "volume_usd",
+        "fees_usd",
+        "revenue_usd",
+        "market_share_pct",
+        "active_users",
+        "transactions",
+        "rank"
+      ],
+      "description": "The metric name. Closed set: a metric that is not listed here is not a ProtocolMetric and must not be squeezed into one."
+    },
+    "value": {
+      "$ref": "../common/decimal.json",
+      "description": "Exact decimal string. A USD metric is in USD; market_share_pct is 0-100; rank and counts are integers carried as decimal strings so one field type serves every metric."
+    },
+    "window": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The aggregation window the value covers ('24h', '7d', '30d', 'all'). Null when the metric is instantaneous (TVL) or when the provider does not state one - null is not '24h'."
+    },
+    "meta": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": true
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source": {
+      "$ref": "../common/source.json"
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  }
+}

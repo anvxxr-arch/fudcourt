@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/markets/perpetual.json",
+  "title": "PerpMarket",
+  "description": "One perpetual (or dated future) market on one venue: the contract terms that make its funding and open interest interpretable. The repo ALREADY STORES the perp time series - data.funding and data.open_interest are both hypertables keyed by (instrument_id, venue_id) - but NOT the contract terms, so a funding rate is stored without the interval it accrues over and an open-interest figure without the settlement asset it is denominated in. This schema is that missing header. settlement_asset is separate from quote_asset on purpose: an inverse contract settles in the base asset, and conflating the two inverts the sign of a PnL.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "instrument_id",
+    "venue_id",
+    "contract_type"
+  ],
+  "properties": {
+    "instrument_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "venue_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "contract_type": {
+      "type": "string",
+      "enum": [
+        "perpetual",
+        "future"
+      ],
+      "description": "A perpetual has no expiry; a dated future does, and its expiry must then be present."
+    },
+    "base_asset_id": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "quote_asset_id": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "settlement_asset_id": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json",
+            "description": "What PnL and margin are denominated in. For an inverse contract this is the BASE asset, not the quote - the single most common perp data bug."
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "expiry": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/time.json#/$defs/occurred_at",
+            "description": "Required in practice when contract_type is 'future'; null for a perpetual, where it is not a property."
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "max_leverage": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/decimal.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "funding_interval_hours": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/count.json",
+            "description": "The accrual interval data.funding.rate applies over. Null when the venue uses a continuous rate - and a rate read without this interval is uninterpretable."
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "open_interest_usd": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/money.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "mark_price": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/price.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "index_price": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/price.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "next_funding_at": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/time.json#/$defs/occurred_at"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "at": {
+      "$ref": "../common/time.json#/$defs/observed_at"
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  }
+}

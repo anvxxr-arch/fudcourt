@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/markets/liquidation.json",
+  "title": "Liquidation",
+  "description": "One liquidation event on one venue. A DIRECT CONTRACT FOR data.liquidation (instrument_id, venue_id, at, side, price, quantity, value_usd, source, retrieved_at), which is append-only and carries a UNIQUE natural key (venue_id, instrument_id, at, side, price, quantity) precisely because REST liquidation feeds re-deliver recent events on every poll - the row is an event, never upserted, and the dedup key is what stops a re-delivery becoming a second liquidation. value_usd is null, never 0, when the notional cannot be computed: a 0 would read as a liquidated-nothing event.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "instrument_id",
+    "venue_id",
+    "at"
+  ],
+  "properties": {
+    "instrument_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "venue_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "at": {
+      "$ref": "../common/time.json#/$defs/occurred_at",
+      "description": "When the liquidation happened, per the venue."
+    },
+    "side": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The side that was liquidated. Null when the venue does not report it - which is not the same as 'long'."
+    },
+    "price": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/price.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "quantity": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/quantity.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "value_usd": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/money.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source": {
+      "$ref": "../common/source.json"
+    },
+    "retrieved_at": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/time.json#/$defs/received_at"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  },
+  "$defs": {
+    "natural_key": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "venue_id, instrument_id, at, side, price, quantity - the dedup tuple data.liquidation enforces, because liquidation feeds re-deliver."
+    }
+  }
+}

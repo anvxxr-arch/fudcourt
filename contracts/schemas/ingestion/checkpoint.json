@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/ingestion/checkpoint.json",
+  "title": "IngestionCheckpoint",
+  "description": "The resumable state of one dataset job: where the last run stopped and how it went. A DIRECT CONTRACT FOR data.job (provider, dataset, subject, mode, schedule_seconds, priority, enabled, cursor, last_success, last_attempt, status, retry_count) whose UNIQUE tuple (provider, dataset, subject, mode) is the job identity - EnsureJobs upserts schedule/priority/enabled and deliberately leaves cursor and last_* alone, because those are runtime state the engine owns. IMPORTANT GAP: plan §14 names last_block, last_timestamp and error_count as checkpoint fields, and data.job HAS NO SUCH COLUMNS - the block and timestamp cursors live inside the opaque `cursor` jsonb, and the error counter is retry_count. They are surfaced here as optional fields because a checkpoint contract must be readable without decoding a provider-specific jsonb blob; making them real columns is a schema decision, not an adapter decision.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provider",
+    "dataset",
+    "mode"
+  ],
+  "properties": {
+    "provider": {
+      "type": "string"
+    },
+    "dataset": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string",
+      "description": "The per-subject partition of a dataset (a pool address, a feed slug). Defaults to the empty string in data.job, so an unpartitioned job and a job whose subject is '' are the same row."
+    },
+    "mode": {
+      "type": "string",
+      "description": "How the job fetches: 'poll' by default in data.job, plus the streaming modes the engine supports."
+    },
+    "cursor": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": true
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "last_block": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "plan §14 block cursor. NO COLUMN EXISTS in data.job today - it is carried inside `cursor`. Present here so a checkpoint is readable without decoding the blob."
+    },
+    "last_timestamp": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/occurred_at"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "plan §14 timestamp cursor. As with last_block, no dedicated column exists today."
+    },
+    "last_success": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/received_at"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Maps to data.job.last_success: when the last run SUCCEEDED. Distinct from last_attempt, and the difference is the whole staleness signal."
+    },
+    "last_attempt": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/received_at"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Maps to data.job.last_attempt: when the last run STARTED, successful or not."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "idle",
+        "running",
+        "ok",
+        "error",
+        "disabled"
+      ],
+      "description": "data.job.status, defaulting to 'idle'. Health is read from HERE plus data.ingestion_run, never duplicated onto the source registry."
+    },
+    "retry_count": {
+      "$ref": "../common/count.json",
+      "description": "Maps to data.job.retry_count - this is the plan's error_count; there is no separate error counter."
+    },
+    "error_count": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "plan §14 spelling of the same counter. Non-null only when a producer wants the plan's name; it MUST equal retry_count when both are present, and the engine writes retry_count."
+    },
+    "schedule_seconds": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Declared by the job registry, not runtime state; EnsureJobs owns it and a run must not rewrite it."
+    },
+    "priority": {
+      "anyOf": [
+        {
+          "$ref": "../common/count.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "plan §28/§57: the scheduler's tiebreaker, so a premium-credit provider is not spent on a low-value pool."
+    },
+    "enabled": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "False parks a job without deleting its cursor, so re-enabling resumes rather than re-backfills."
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  }
+}

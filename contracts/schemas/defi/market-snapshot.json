@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/defi/market-snapshot.json",
+  "title": "MarketSnapshot (reconciled canonical market state)",
+  "description": "The RECONCILED market state for one market at one instant: one canonical value, the sources that produced it, and a confidence score. THIS IS THE OUTPUT OF PLAN §24/§25 AND NOTHING IN THE REPO PRODUCES IT TODAY: the repo has several providers reporting the same pair (DexScreener, GeckoTerminal, CoinGecko) and no code that decides which to believe, so today a consumer picks one provider and the disagreement is invisible. The value is deliberately NOT an average (plan §24): source priority, liquidity, trade recency and provider freshness weight the pick, and `sources` keeps every input so a disagreement can be audited rather than averaged away. Confidence factors are plan §25's: source agreement 30, freshness 20, liquidity 20, source quality 15, block confirmation 10, anomaly penalty 5.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "market_id",
+    "at",
+    "confidence"
+  ],
+  "properties": {
+    "market_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "market_kind": {
+      "type": "string",
+      "enum": [
+        "pool",
+        "token",
+        "instrument"
+      ],
+      "description": "What sort of entity market_id names, because the same opaque id shape covers three kinds."
+    },
+    "at": {
+      "$ref": "../common/time.json#/$defs/observed_at"
+    },
+    "price": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/price.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "confidence": {
+      "$ref": "../common/count.json",
+      "description": "0-100. Required: a reconciled value without its confidence is indistinguishable from a single-source guess."
+    },
+    "source_count": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/count.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sources": {
+      "anyOf": [
+        {
+          "$ref": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/source_reading"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "liquidity_usd": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/money.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "volume_usd": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/money.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "quality_status": {
+      "type": "string",
+      "enum": [
+        "healthy",
+        "degraded",
+        "stale",
+        "conflicting",
+        "invalid"
+      ],
+      "description": "The plan §32 quality verdict. 'conflicting' means sources disagreed beyond tolerance and the reconciliation could not pick - it is a RESULT, not an error to hide."
+    },
+    "calculation_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  },
+  "$defs": {
+    "source_reading": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "value"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "../common/price.json"
+        },
+        "observed_at": {
+          "$ref": "../common/time.json#/$defs/observed_at"
+        },
+        "provider_timestamp": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/time.json#/$defs/occurred_at"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "block_number": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/count.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "liquidity_usd": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/money.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_confidence": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/count.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tier": {
+          "anyOf": [
+            {
+              "$ref": {
+                "type": "string",
+                "enum": [
+                  "S0",
+                  "S1",
+                  "S2",
+                  "S3",
+                  "S4",
+                  "S5"
+                ]
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "description": "One provider's reading of the same market, kept alongside the others so the reconciliation is re-derivable."
+    }
+  }
+}

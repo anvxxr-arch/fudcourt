@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/ingestion/provider-observation.json",
+  "title": "ProviderObservation",
+  "description": "One value of one series at one period under one revision, AS THE PROVIDER REPORTED IT: the raw landing row that normalization reads from, kept so any canonical value can be traced back to the exact upstream reading. A DIRECT CONTRACT FOR data.observation (series_id, period, observed_at, value, revision, vintage, source, provider, provider_record_id, retrieved_at) with PK (series_id, period, observed_at, revision). The `revision` column is the point: a series whose provider restates history keeps BOTH the superseded and the restated row rather than overwriting, which is what makes a backtest honest. This is the plan §3/§6 provenance layer and it is DELIBERATELY NOT canonical data - plan §12 forbids storing provider JSON as canonical, so this row is a raw observation with bounded retention, not a domain entity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provider",
+    "series_id",
+    "observed_at"
+  ],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "description": "Which upstream this row came from. Matches data.observation.provider."
+    },
+    "dataset": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The provider's dataset within the source, when it has more than one."
+    },
+    "series_id": {
+      "$ref": "../common/identifier.json",
+      "description": "The canonical series this reading belongs to (data.observation.series_id), NOT the provider's series name - the provider's spelling lives in provider_record_id."
+    },
+    "period": {
+      "type": "string",
+      "description": "The provider's OWN period label ('2026-09', '2026-10-09'), kept verbatim; observed_at carries the same period as a timestamp for windowing, so neither is derived from the other at read time."
+    },
+    "observed_at": {
+      "$ref": "../common/time.json#/$defs/observed_at",
+      "description": "Part of the PK. The period as a timestamp, matching data.observation."
+    },
+    "value": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/decimal.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "revision": {
+      "type": "string",
+      "description": "data.observation.revision, defaulting to 'latest'. A restatement writes a NEW row under a new revision; it never overwrites the superseded one."
+    },
+    "vintage": {
+      "anyOf": [
+        {
+          "$ref": "../common/time.json#/$defs/recorded_at"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "When the provider published this revision, distinct from observed_at (when we read it)."
+    },
+    "provider_record_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source": {
+      "$ref": "../common/source.json"
+    },
+    "retrieved_at": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/time.json#/$defs/received_at"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  }
+}

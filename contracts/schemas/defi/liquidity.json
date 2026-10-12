@@ -1,0 +1,273 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/defi/liquidity.json",
+  "title": "LiquiditySnapshot + LiquidityPosition",
+  "description": "Pool liquidity at a point in time, and a single LP's position in that pool. LiquiditySnapshot mirrors what data.pool already stores per (pool_id, at), with a UNIQUE (chain_id, address, at) constraint precisely so a re-keyed pool id cannot duplicate a snapshot. LiquidityPosition HAS NO TABLE AND NO PRODUCER: the plan's §4 freeze lists it and nothing implements it, so an LP's range, entry price and impermanent loss are not reconstructible from the repo today. tick and sqrt_price_x96 are carried for concentrated-liquidity pools and are null for v2-like pools, where they are not a property rather than a missing measurement.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "pool_id",
+    "at"
+  ],
+  "properties": {
+    "pool_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "chain_id": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "at": {
+      "$ref": "../common/time.json#/$defs/observed_at",
+      "description": "When the pool state was read. Part of the snapshot key, matching data.pool's (pool_id, at)."
+    },
+    "liquidity_usd": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/money.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reserves": {
+      "anyOf": [
+        {
+          "$ref": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/reserve_leg"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "fee_tier_bps": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/count.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "tick": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/count.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sqrt_price_x96": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/decimal.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source": {
+      "$ref": "../common/source.json"
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  },
+  "$defs": {
+    "reserve_leg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "token_id"
+      ],
+      "properties": {
+        "token_id": {
+          "$ref": "../common/identifier.json"
+        },
+        "balance_raw": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/decimal.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decimals": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/count.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "balance_normalized": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/quantity.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reserve_usd": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/money.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "description": "One reserve leg. Raw and normalized travel together (plan §54)."
+    },
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "position_id",
+        "pool_id",
+        "owner"
+      ],
+      "properties": {
+        "position_id": {
+          "$ref": "../common/identifier.json"
+        },
+        "pool_id": {
+          "$ref": "../common/identifier.json"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "tick_lower": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/count.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tick_upper": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/count.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "liquidity_raw": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/decimal.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "amount0": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/quantity.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "amount1": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/quantity.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "entry_price": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/price.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "opened_at": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/time.json#/$defs/occurred_at"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provenance": {
+          "$ref": "../common/provenance.json"
+        }
+      },
+      "description": "One LP position. NO TABLE AND NO PRODUCER EXISTS TODAY - this schema is the contract a producer must satisfy, and its absence is what makes LP APR and impermanent loss unimplementable."
+    }
+  }
+}
