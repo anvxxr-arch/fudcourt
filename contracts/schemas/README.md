@@ -32,7 +32,10 @@ schemas/
   markets/           venue, instrument, ticker, price, candle
   trading/           execution, order, fill, position + plan/request/risk
   finance/           ledger entry, transaction, treasury, valuation, exposure
-  defi/              protocol, pool
+  defi/              protocol, pool, swap, liquidity, route-quote, market-snapshot,
+                     protocol-metric, risk-metric, mev-event, wallet-activity,
+                     deployment, pool-token
+  ingestion/         checkpoint, provider-observation
   research/          provider-shaped market rows + news/report documents
   signals/           signal, scoreboard
   taxonomy/          data-point taxonomy: 19 domains + per-domain type vocabulary
@@ -87,6 +90,10 @@ it is computed.
 | [`markets/ticker.json`](markets/ticker.json) | CANONICAL | `apps/api [removed: markets/overview]` | via instrument+venue |
 | [`markets/price.json`](markets/price.json) | CANONICAL | **absent** | schema only |
 | [`markets/candle.json`](markets/candle.json) | CANONICAL | `apps/api [removed: markets/overview]` | via instrument+interval+open_time |
+| [`markets/perpetual.json`](markets/perpetual.json) | CANONICAL | **absent** (terms unmodelled; `data.funding`/`data.open_interest` store only the series) | via `instrument_id` + `venue_id` |
+| [`markets/funding-snapshot.json`](markets/funding-snapshot.json) | CANONICAL | **table only** (`data.funding`), no adapter | `(instrument, venue, funding_time)` |
+| [`markets/liquidation.json`](markets/liquidation.json) | CANONICAL | **table only** (`data.liquidation`), no adapter | natural key `(venue, instrument, at, side, price, quantity)` |
+| [`markets/orderbook-snapshot.json`](markets/orderbook-snapshot.json) | CANONICAL | **table only** (`data.orderbook`), no adapter | `(instrument, venue, at)` |
 | [`trading/execution.json`](trading/execution.json) | CANONICAL | `apps/executor` | minted uuid |
 | [`trading/order.json`](trading/order.json) | CANONICAL | `apps/executor` | minted `fud_…` |
 | [`trading/fill.json`](trading/fill.json) | CANONICAL | `apps/executor` | dedup key `(account, trade)` |
@@ -106,6 +113,16 @@ it is computed.
 | [`finance/exposure.json`](finance/exposure.json) | **DERIVED** | `apps/api [removed: finance/portfolio]` | n/a |
 | [`defi/protocol.json`](defi/protocol.json) | NORMALIZED | `apps/data/internal/research/llama` | provider slug |
 | [`defi/pool.json`](defi/pool.json) | NORMALIZED | **absent** (TS `DexPair`) | provider pair address |
+| [`defi/deployment.json`](defi/deployment.json) | CANONICAL | **absent** | `deployment_id` minted over `protocol/chain` |
+| [`defi/pool-token.json`](defi/pool-token.json) | CANONICAL | **absent** (2-column projection only: `data.pool.base_asset_id`/`quote_asset_id`) | via `pool_id` + `token_id` |
+| [`defi/swap.json`](defi/swap.json) | CANONICAL | **absent** (no chain log ingest; `data.trade` is CEX-shaped) | `(chain, tx_hash, log_index)` |
+| [`defi/liquidity.json`](defi/liquidity.json) | CANONICAL | snapshot: `data.pool`; position: **absent** | `(pool_id, at)`; position over `pool/owner/range` |
+| [`defi/route-quote.json`](defi/route-quote.json) | CANONICAL | **absent** (no 0x/1inch/Jupiter client) | `quote_id` only when persisted |
+| [`defi/market-snapshot.json`](defi/market-snapshot.json) | **DERIVED** (reconciled) | **absent** (no reconciliation) | via `market_id` |
+| [`defi/protocol-metric.json`](defi/protocol-metric.json) | **DERIVED** | `apps/data/internal/ingest/providers/defillama` (`data.metric`, `data.tvl_protocol`) | via `protocol_id` + metric |
+| [`defi/risk-metric.json`](defi/risk-metric.json) | **DERIVED** | **absent** | via `subject_id` + risk_type |
+| [`defi/mev-event.json`](defi/mev-event.json) | **DERIVED** (detection) | **absent** | `(chain, block, kind)` |
+| [`defi/wallet-activity.json`](defi/wallet-activity.json) | CANONICAL | **absent** | `(chain, tx_hash, log_index)` |
 | [`research/coin.json`](research/coin.json) | NORMALIZED | `apps/data/internal/research/cryptorank` | provider key |
 | [`research/global-stats.json`](research/global-stats.json) | NORMALIZED | same | n/a |
 | [`research/chain-stats.json`](research/chain-stats.json) | NORMALIZED | same | provider slug |
@@ -117,6 +134,17 @@ it is computed.
 | [`research/prediction-market.json`](research/prediction-market.json) | ENRICHED (in-payload join) | `apps/data/internal/research/cryptorank` | provider id |
 | [`signals/signal.json`](signals/signal.json) | PRODUCT VIEW | **absent** (Next route only) | provider `(id, mint)` |
 | [`signals/scoreboard.json`](signals/scoreboard.json) | **DERIVED** (provider/browser) | **absent** | n/a |
+
+**`ingestion/` — the raw landing layer and the job state that produces it.** The plan's §3/§6
+provenance row and §14 checkpoint. Neither is canonical data — a ProviderObservation is a
+provider-shaped reading with bounded retention and a Checkpoint is runtime state — so they are
+grouped separately rather than under a domain. Both have a table today (`data.observation`,
+`data.job`) and neither had a written contract.
+
+| File | Layer | Owner today (package) | Canonical id? |
+|---|---|---|---|
+| [`ingestion/checkpoint.json`](ingestion/checkpoint.json) | system | `apps/data/internal/ingest` (job store; `data.job`, `data.ingestion_run`) | job identity `(provider, dataset, subject, mode)` |
+| [`ingestion/provider-observation.json`](ingestion/provider-observation.json) | RAW (bounded retention) | `apps/data/internal/ingest` (`canon.Writer` → `data.observation`) | `(series_id, period, observed_at, revision)` |
 
 ### 2.3 `taxonomy/`
 

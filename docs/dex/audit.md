@@ -315,7 +315,7 @@ plus `apps/data/internal/ingest/providers/<provider>` for the adapters, and expo
 | plan phase | already exists | remaining work |
 |---|---|---|
 | 0 Audit | this document | — |
-| 1 Contracts | `contracts/schemas/**`, `reference.json`, `canon/ids.go` | resolve G1/G2; add pool/protocol/swap schemas |
+| 1 Contracts | `contracts/schemas/**`, `reference.json`, `canon/ids.go` | resolve G1/G2; **canonical schemas added in the same change (see §14)** |
 | 2 Core infra | `ingest` engine, Valkey cache, limiter, breaker | provider health (§34), capability-based fallback |
 | 3 P0 providers | DexScreener, GeckoTerminal, CoinGecko, DefiLlama | **raw chain, Bitquery, The Graph, Jupiter, Helius** |
 | 4 Native DEX | none | all of §20 |
@@ -353,3 +353,47 @@ grep -n '^#\{1,3\} ' docs/architecture/canonical-model.md
 ```
 
 Outputs are quoted inline in the sections above.
+
+---
+
+## 14. Phase 1 status (landed in the same change as this audit)
+
+The plan's Phase 1 freeze names 22 canonical domains. Sixteen of them had **no schema at all** —
+the repo's schema tree stopped at `defi/{protocol,pool}` and `markets/{venue,instrument,ticker,price,candle}`.
+Those sixteen are now written and gated; the remaining six already existed.
+
+Added under `contracts/schemas/`:
+
+- `defi/` — `deployment.json`, `pool-token.json`, `swap.json`, `liquidity.json`, `route-quote.json`,
+  `market-snapshot.json`, `protocol-metric.json`, `risk-metric.json`, `mev-event.json`,
+  `wallet-activity.json`
+- `markets/` — `perpetual.json`, `funding-snapshot.json`, `liquidation.json`, `orderbook-snapshot.json`
+- `ingestion/` — `checkpoint.json`, `provider-observation.json` (a new directory: the raw landing
+  layer and job state, neither of which is canonical data)
+
+Already present and reused rather than restated: `assets/{asset,token,chain}.json`,
+`defi/{protocol,pool}.json`, `markets/{venue,instrument,ticker,price,candle}.json`,
+`common/provenance.json`.
+
+Three of the new files are **direct contracts for tables that already exist** and were undocumented
+as contracts: `markets/funding-snapshot.json` (`data.funding`), `markets/liquidation.json`
+(`data.liquidation`, including its natural dedup key), `markets/orderbook-snapshot.json`
+(`data.orderbook`), plus `ingestion/checkpoint.json` (`data.job`) and
+`ingestion/provider-observation.json` (`data.observation`).
+
+**A schema is not a producer.** Every file added here describes a shape; the gap list in §8 is
+unchanged — no adapter, route or table-population exists for swap, route, position, risk, MEV,
+wallet activity, perpetual terms, deployment or reconciliation. Phase 1 fixes the vocabulary, not
+the pipeline.
+
+Gate evidence for this change:
+
+```
+SCHEMAS_OK      files=73 refs=529 enums=180        (was files=57 refs=344)
+MDTABLES_OK     files=78 rows=3348
+DOCS_OK         docs=19 citations=1254
+CONTRACTS_OK    openapi_paths=37 route_handlers=43 events=28 client_endpoints=17
+```
+
+The sixteen files are listed in `contracts/schemas/README.md` §1 layout and §2.2 domain table, so
+`check-schemas.mjs` indexes them in both directions.

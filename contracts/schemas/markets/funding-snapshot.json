@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/markets/funding-snapshot.json",
+  "title": "FundingSnapshot",
+  "description": "One funding settlement for one perpetual. THIS SCHEMA IS A DIRECT CONTRACT FOR AN EXISTING TABLE: data.funding (instrument_id, venue_id, funding_time, rate, cap, predicted, source, retrieved_at) with PK (instrument_id, venue_id, funding_time) and a venue-scoped index. It is written down because the table's shape is currently undocumented as a contract, so nothing stops a second funding table appearing with a different key. rate is a RATIO per common/ratio.json (0-1, signed) - not a percentage: a 0.0001 funding rate is 0.01 percent, and storing the percentage in a ratio field is a 100x error. predicted distinguishes a settled rate from a venue's forecast, which is a different fact and must never be overwritten by it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "instrument_id",
+    "venue_id",
+    "funding_time",
+    "rate"
+  ],
+  "properties": {
+    "instrument_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "venue_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "funding_time": {
+      "$ref": "../common/time.json#/$defs/occurred_at",
+      "description": "The settlement instant, supplied by the venue. Part of the PK, matching data.funding."
+    },
+    "rate": {
+      "$ref": "../common/ratio.json",
+      "description": "Signed ratio (0-1 scale). Positive means longs pay shorts."
+    },
+    "cap": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/ratio.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "predicted": {
+      "type": "boolean",
+      "description": "True for the venue's forecast of the NEXT settlement, false for a settled one. A forecast must never overwrite a settlement."
+    },
+    "source": {
+      "$ref": "../common/source.json"
+    },
+    "retrieved_at": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/time.json#/$defs/received_at"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  }
+}

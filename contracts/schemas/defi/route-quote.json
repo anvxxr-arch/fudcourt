@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/defi/route-quote.json",
+  "title": "RouteQuote + RouteLeg + LiquiditySource",
+  "description": "A quotable swap route: what a router would execute, split across how many pools, for what output, at what slippage and price impact. ABSENT ENTIRELY TODAY - no 0x, 1inch or Jupiter client exists and no table stores a quote, so Best Execution / Best DEX / slippage comparison (plan §21) cannot be built from the repo. The three entities are separated on purpose: a RouteQuote is a PROVIDER'S OPINION at an instant and it expires, a RouteLeg is a mechanical hop, and a LiquiditySource names which DEX a hop uses. Averaging two providers' quotes into one number is exactly the anti-goal §65 forbids, so each quote keeps its own provider and its own expiry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "chain_id",
+    "token_in",
+    "token_out",
+    "amount_in",
+    "provider",
+    "observed_at"
+  ],
+  "properties": {
+    "quote_id": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "chain_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "token_in": {
+      "$ref": "../common/identifier.json"
+    },
+    "token_out": {
+      "$ref": "../common/identifier.json"
+    },
+    "amount_in": {
+      "$ref": "../common/quantity.json"
+    },
+    "amount_out": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/quantity.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "price": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/price.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "price_impact_pct": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/percentage.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "slippage_pct": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/percentage.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "gas_estimate_usd": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/money.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "route": {
+      "anyOf": [
+        {
+          "$ref": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/leg"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider": {
+      "type": "string",
+      "description": "Which router produced this quote ('0x', '1inch', 'jupiter'). Two providers' quotes are NEVER merged into one number."
+    },
+    "expires_at": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/time.json#/$defs/occurred_at"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "observed_at": {
+      "$ref": "../common/time.json#/$defs/observed_at"
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  },
+  "$defs": {
+    "leg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "token_in",
+        "token_out"
+      ],
+      "properties": {
+        "token_in": {
+          "$ref": "../common/identifier.json"
+        },
+        "token_out": {
+          "$ref": "../common/identifier.json"
+        },
+        "pool_id": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/identifier.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "amount_in": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/quantity.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "amount_out": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/quantity.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fee_bps": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/count.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "price_impact_pct": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/percentage.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/liquidity_source"
+        }
+      },
+      "description": "One hop of a route."
+    },
+    "liquidity_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "venue_id": {
+          "anyOf": [
+            {
+              "$ref": {
+                "$ref": "../common/identifier.json"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "description": "Which DEX a hop uses. venue_id is null until the router's DEX name is resolved through the venue registry; the router's spelling is kept verbatim either way."
+    }
+  }
+}

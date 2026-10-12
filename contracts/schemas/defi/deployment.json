@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/defi/deployment.json",
+  "title": "DexDeployment",
+  "description": "One deployed instance of one DEX protocol on one chain: the (protocol, chain, factory) triple that a pool's address is scoped by. ABSENT TODAY: no table, no adapter and no route produce a deployment; the plan's §4 freeze lists it and nothing implements it. It is a SEPARATE entity from Protocol on purpose - Uniswap v3 exists on Ethereum, Base and Arbitrum as three deployments with three factory addresses, three subgraph endpoints and three fee-tier sets, and collapsing them into one Protocol row is what makes a cross-chain pool join silently wrong. A pool may not be stored without its deployment_id once deployments exist; until then pool.json carries the provider's dex_id string.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "deployment_id",
+    "protocol_id",
+    "chain_id"
+  ],
+  "properties": {
+    "deployment_id": {
+      "$ref": "../common/identifier.json",
+      "description": "Minted, opaque. Natural key: deployment/<protocol-slug>/<chain-name>."
+    },
+    "protocol_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "chain_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "factory_address": {
+      "anyOf": [
+        {
+          "$ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The factory contract pools are discovered from; null when the DEX has no factory (orderbook-style venues)."
+    },
+    "router_address": {
+      "anyOf": [
+        {
+          "$ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "subgraph_url": {
+      "anyOf": [
+        {
+          "$ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "amm_family": {
+      "type": "string",
+      "enum": [
+        "v2_like",
+        "concentrated_liquidity",
+        "stable_amm",
+        "weighted",
+        "orderbook"
+      ],
+      "description": "The AMM family (plan §20), which decides which parser applies - not the protocol name."
+    },
+    "fee_tiers_bps": {
+      "anyOf": [
+        {
+          "$ref": {
+            "type": "array",
+            "items": {
+              "$ref": "../common/count.json"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "active": {
+      "type": "boolean",
+      "description": "False for a deployment that has been deprecated or whose chain has halted. A consumer MUST NOT silently substitute another deployment."
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  }
+}

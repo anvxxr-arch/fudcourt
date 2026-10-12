@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/markets/orderbook-snapshot.json",
+  "title": "OrderbookSnapshot",
+  "description": "One depth snapshot for one instrument on one venue. A DIRECT CONTRACT FOR data.orderbook (instrument_id, venue_id, at, depth, bids, asks, source) with PK (instrument_id, venue_id, at), where both sides are stored as jsonb arrays of [price, size] pairs. That pair-of-numbers form is a boundary encoding, not canonical data: a level's price is a price and its size is a quantity, so a consumer reading the raw array must not treat the numbers as binary64 money. depth records how many levels were requested, which is what makes a truncated snapshot distinguishable from a thin book - the two look identical without it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "instrument_id",
+    "venue_id",
+    "at"
+  ],
+  "properties": {
+    "instrument_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "venue_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "at": {
+      "$ref": "../common/time.json#/$defs/observed_at",
+      "description": "When the book was read. Part of the PK, matching data.orderbook."
+    },
+    "depth": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/count.json",
+            "description": "How many levels were requested. Without it a truncated snapshot is indistinguishable from a thin book."
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "bids": {
+      "anyOf": [
+        {
+          "$ref": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/level"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "asks": {
+      "anyOf": [
+        {
+          "$ref": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/level"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source": {
+      "$ref": "../common/source.json"
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  },
+  "$defs": {
+    "level": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "string"
+      },
+      "description": "[price, size] as decimal STRINGS, the boundary encoding data.orderbook stores as jsonb. Strings, not numbers, so precision survives the round trip."
+    }
+  }
+}

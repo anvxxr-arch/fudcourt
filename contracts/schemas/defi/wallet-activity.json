@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/defi/wallet-activity.json",
+  "title": "WalletActivity",
+  "description": "One economically meaningful action by one wallet on one chain: a swap, an add/remove of liquidity, a transfer, or a claim. ABSENT TODAY: no table and no producer (plan §17 wallet activity, §46 Group B). The distinction from Swap is that activity is keyed by WALLET and answers 'what did this address do', while a swap is keyed by POOL and answers 'what happened in this pool' - the same onchain event produces both rows and neither substitutes for the other. realized_pnl_usd is null, never 0, when the cost basis is not established: a null says 'unknown', a 0 asserts 'broke even'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "chain_id",
+    "wallet_address",
+    "kind",
+    "tx_hash",
+    "occurred_at"
+  ],
+  "properties": {
+    "activity_id": {
+      "$ref": "../common/identifier.json",
+      "description": "Minted, opaque. Natural key: activity/<chain-name>/<tx-hash>/<log-index>."
+    },
+    "chain_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "wallet_address": {
+      "type": "string",
+      "description": "The address verbatim. An address is NOT a canonical wallet id: accounts/wallet.json owns that, and this field keeps the chain-scoped spelling so no join depends on address casing."
+    },
+    "wallet_id": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "swap",
+        "add_liquidity",
+        "remove_liquidity",
+        "transfer_in",
+        "transfer_out",
+        "claim",
+        "borrow",
+        "repay",
+        "stake",
+        "unstake"
+      ]
+    },
+    "tx_hash": {
+      "type": "string"
+    },
+    "log_index": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/count.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "block_number": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/count.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "pool_id": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "token_in": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "token_out": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "amount_in": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/quantity.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "amount_out": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/quantity.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "value_usd": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/money.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "realized_pnl_usd": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/money.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "counterparty": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "occurred_at": {
+      "$ref": "../common/time.json#/$defs/occurred_at"
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  }
+}

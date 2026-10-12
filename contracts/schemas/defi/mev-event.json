@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/defi/mev-event.json",
+  "title": "MEVEvent",
+  "description": "One extracted-value event observed around a user transaction: a sandwich, an arbitrage, a frontrun/backrun pair, or a liquidation. ABSENT TODAY: no table, no producer, no route (plan §46 Group C). It is a SEPARATE entity from Swap because a sandwich is a RELATIONSHIP between transactions - the victim, the attacker's two legs and the ordering within one block - and storing it as a swap would lose the victim link that makes it MEV. profit_usd is the extractor's gain, and it is null rather than 0 when it cannot be computed: 0 is a claim that nothing was extracted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "chain_id",
+    "block_number",
+    "kind",
+    "occurred_at"
+  ],
+  "properties": {
+    "event_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "chain_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "block_number": {
+      "$ref": "../common/count.json"
+    },
+    "block_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "sandwich",
+        "arbitrage",
+        "frontrun",
+        "backrun",
+        "liquidation",
+        "jit_liquidity"
+      ],
+      "description": "Closed set. Each names one extractable pattern; a detection that fits none of them is not a MEVEvent."
+    },
+    "victim_tx_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "attacker": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "pool_id": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "token_in": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "token_out": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "profit_usd": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/money.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "victim_loss_usd": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/money.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "occurred_at": {
+      "$ref": "../common/time.json#/$defs/occurred_at"
+    },
+    "detector_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  }
+}

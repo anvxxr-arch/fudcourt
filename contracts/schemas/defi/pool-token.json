@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/defi/pool-token.json",
+  "title": "PoolToken (pool composition leg)",
+  "description": "One side of a pool's composition: which token sits in the pool and in what amount. Pool composition is a LIST of these, never two fixed columns, because a Balancer weighted pool holds up to 8 legs and a Curve metapool holds 2-4 with a rate oracle. ABSENT AS A ROW TODAY: data.pool stores exactly two sides as base_asset_id/quote_asset_id plus base_symbol/quote_symbol, so a >2-leg pool cannot be represented and a 2-leg pool's composition is inferred from the pair rather than stored. This schema is the shape a composition row must take; the existing two-column form is a lossy projection of it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "token_id",
+    "pool_id"
+  ],
+  "properties": {
+    "pool_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "token_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "leg_index": {
+      "$ref": "../common/count.json",
+      "description": "Position in the pool's own leg order, so a consumer comparing two snapshots compares like with like."
+    },
+    "weight_pct": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/percentage.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "balance_raw": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/decimal.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "decimals": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/count.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "balance_normalized": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/quantity.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reserve_usd": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/money.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  }
+}

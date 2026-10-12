@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fudcourt.local/contracts/schemas/defi/swap.json",
+  "title": "Swap (onchain DEX trade)",
+  "description": "One executed swap on one DEX pool, identified by chain + transaction hash + log index. THE IDENTITY IS THE PLAN'S §15 RULE: at-least-once ingestion means the same swap WILL arrive twice, so (chain_id, tx_hash, log_index) is the deterministic identity and a replay must upsert the same row rather than append a second one. DISTINCT FROM markets/ticker.json AND FROM data.trade: data.trade's PK is (venue_id, instrument_id, provider_trade_id, trade_time) and models a CEX print, which has no transaction hash, no log index and no block - a DEX swap carries all three, so it cannot be stored in data.trade without dropping the identity that makes it dedupable. No producer exists today: etherscan and blockscout fetch supply, gas and chain stats only, so data.trade has no rows and no swap ingest exists on any chain.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "swap_id",
+    "chain_id",
+    "tx_hash",
+    "log_index",
+    "occurred_at"
+  ],
+  "properties": {
+    "swap_id": {
+      "$ref": "../common/identifier.json",
+      "description": "Minted, opaque. Natural key: swap/<chain-name>/<tx-hash>/<log-index>."
+    },
+    "chain_id": {
+      "$ref": "../common/identifier.json"
+    },
+    "pool_id": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "deployment_id": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "tx_hash": {
+      "type": "string"
+    },
+    "log_index": {
+      "$ref": "../common/count.json",
+      "description": "Position of this event within the transaction's log list. Part of the identity, not metadata."
+    },
+    "transaction_index": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/count.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "block_number": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/count.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "block_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Carried so a reorg is detectable: a swap whose (block_number, block_hash) no longer matches the canonical chain is a candidate for invalidation."
+    },
+    "occurred_at": {
+      "$ref": "../common/time.json#/$defs/occurred_at",
+      "description": "The block time, supplied by the chain. Never our clock."
+    },
+    "sender": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "recipient": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "token_in": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "token_out": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "amount_in_raw": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/decimal.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "amount_out_raw": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/decimal.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "amount_in": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/quantity.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "amount_out": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/quantity.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "price": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/price.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "side": {
+      "anyOf": [
+        {
+          "$ref": {
+            "type": "string",
+            "enum": [
+              "buy",
+              "sell"
+            ]
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "fee_usd": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/money.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "venue_id": {
+      "anyOf": [
+        {
+          "$ref": {
+            "$ref": "../common/identifier.json"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provenance": {
+      "$ref": "../common/provenance.json"
+    }
+  },
+  "$defs": {
+    "natural_key": {
+      "type": "string",
+      "description": "swap/<chain-name>/<tx-hash>/<log-index> - the deterministic identity a replay upserts on."
+    }
+  }
+}
