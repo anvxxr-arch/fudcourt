@@ -35,7 +35,11 @@ export const WORLDBANK_TTL_MS = 60 * 60_000;
  *  to a couple of seconds without leaning on the upstream's patience. */
 export const WORLDBANK_POOL = 6;
 
-const TIMEOUT_MS = 30_000;
+/** Per-call ceiling. WB answers in ~0.15s when healthy, so a call still running
+ *  after this is a degraded upstream, not a slow one -- fail it fast so one
+ *  stalled series cannot hold its calendar wave for half a minute. The 1h memo
+ *  means a failed call is simply retried on the next read. */
+const TIMEOUT_MS = 15_000;
 
 /** The one lane every World Bank call in this process shares. */
 const wbFetch = createFetchPool(WORLDBANK_POOL, TIMEOUT_MS);

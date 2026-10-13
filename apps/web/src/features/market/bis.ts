@@ -117,8 +117,19 @@ export async function fetchPolicyRates(areas: readonly string[]): Promise<Policy
  */
 type Entry = { at: number; value: unknown };
 
-const store = new Map<string, Entry>();
-const inflight = new Map<string, Promise<unknown>>();
+/**
+ * The memo store lives on globalThis rather than in module scope: Next bundles
+ * the instrumentation hook and the route handlers as separate module graphs, so
+ * a module-local Map would hand the boot warm its own store and leave the first
+ * route request paying the whole fan-out anyway. One process, one store.
+ */
+type MemoState = { store: Map<string, Entry>; inflight: Map<string, Promise<unknown>> };
+const memoGlobal = globalThis as typeof globalThis & { __fudcourtMemo?: MemoState };
+const memoState: MemoState =
+  memoGlobal.__fudcourtMemo ??
+  (memoGlobal.__fudcourtMemo = { store: new Map<string, Entry>(), inflight: new Map<string, Promise<unknown>>() });
+const store = memoState.store;
+const inflight = memoState.inflight;
 
 /**
  * How far past its TTL a value may still be SERVED while a refresh runs in the

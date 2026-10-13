@@ -44,7 +44,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src"
 # Files Next.js itself requires at the `app/` level rather than inside it.
-NEXT_ROOT_FILES = {"middleware.ts"}
+# `instrumentation.ts` (the boot hook) is the same kind of file: Next resolves it
+# only from the project root or the `src/` root, never from a layer directory.
+NEXT_ROOT_FILES = {"middleware.ts", "instrumentation.ts"}
 
 violations: list[str] = []
 checked = 0
