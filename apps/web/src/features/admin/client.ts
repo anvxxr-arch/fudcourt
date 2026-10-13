@@ -22,3 +22,42 @@ export function setMemberRole(userId: string, role: MemberRole, action: MemberAc
     body: JSON.stringify({ userId, role, action }),
   });
 }
+
+/** The admin-editable Discord wiring (DB-backed, env is only the default). */
+export type DiscordConfig = {
+  guildId: string;
+  roleAdmin: string;
+  roleTeam: string;
+  roleMagang: string;
+};
+
+/** One guild role for the pickers; managed roles cannot be assigned by hand. */
+export type DiscordRole = {
+  id: string;
+  name: string;
+  color: number;
+  position: number;
+  managed: boolean;
+};
+
+export type AdminSettings = {
+  config?: DiscordConfig;
+  defaults?: DiscordConfig;
+  roles?: DiscordRole[];
+  configured?: boolean;
+  detail?: string;
+};
+
+export function fetchSettings(): Promise<AdminSettings> {
+  return getJSON<AdminSettings>('/api/admin/settings', { cache: 'no-store' });
+}
+
+export function saveSettings(
+  config: Partial<DiscordConfig>,
+): Promise<{ ok?: boolean; config?: DiscordConfig; detail?: string }> {
+  return getJSON<{ ok?: boolean; config?: DiscordConfig; detail?: string }>('/api/admin/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  });
+}

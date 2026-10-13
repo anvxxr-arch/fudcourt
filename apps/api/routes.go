@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -76,7 +77,7 @@ func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		"?client_id="+jsEncodeFormComponent(env.ClientID)+
 		"&response_type=code"+
 		"&redirect_uri="+jsEncodeFormComponent(env.RedirectURI)+
-		"&scope="+jsEncodeFormComponent("identify guilds")+
+		"&scope="+jsEncodeFormComponent("identify guilds guilds.join")+
 		"&state="+jsEncodeFormComponent(state))
 }
 
@@ -158,7 +159,9 @@ func (s *server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 		reject("bad_state")
 		return
 	}
-	env := s.discord.env
+	// effective() overlays the admin's saved wiring on the env defaults; the
+	// OAuth credentials it copies through are env-only (secrets stay in env).
+	env := s.discord.effective(r.Context())
 	if env.ClientID == "" || env.ClientSecret == "" || env.RedirectURI == "" {
 		reject("auth_unconfigured")
 		return
@@ -173,11 +176,25 @@ func (s *server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 		reject("discord_api_failed")
 		return
 	}
+	// Auto-enrolment: pull the freshly-authenticated user into the guild with
+	// their own guilds.join token and, only on a genuinely new join (201), hand
+	// them the Magang role. Best-effort by design — a Discord refusal logs and
+	// falls through so a hiccup can never lock a real user out of the site; the
+	// role read below still reflects the true post-join state.
+	if env.GuildID != "" && env.BotToken != "" {
+		if created, problem := s.discord.addGuildMember(r.Context(), profile.ID, token); problem != "" {
+			slog.Warn("guild auto-join failed", "service", "api", "problem", problem)
+		} else if created && env.RoleMagang != "" {
+			if ok, problem := s.discord.setMemberRole(r.Context(), profile.ID, env.RoleMagang, "add"); !ok {
+				slog.Warn("magang role grant failed", "service", "api", "problem", problem)
+			}
+		}
+	}
 	roles := s.discord.fetchGuildRoleIDs(r.Context(), profile.ID)
 	// tierFromRoles verbatim (guard.ts): the tier, error ignored — the Go port
 	// additionally reports role-env misconfiguration loudly, and guard.ts's
 	// silent answer is what the route's behavior must mirror.
-	resolved, _ := identity.TierFromRoleIDs(roles, s.discord.roleEnv())
+	resolved, _ := identity.TierFromRoleIDs(roles, roleEnv(env))
 	tier := resolved
 	if tier == identity.TierPublic {
 		// "`public` from tierFromRoles means the guild/role env is unset — a
@@ -267,13 +284,14 @@ type adminMembersBody struct {
 }
 
 func (s *server) adminMembersList(w http.ResponseWriter, r *http.Request) {
-	members, ok := s.discord.listGuildMembers(r.Context(), 100)
+	members, ok := s.discord.listGuildMembers(r.Context(), membersListLimit)
 	if !ok {
 		writeRefusal(w, r, http.StatusServiceUnavailable, "discord_unavailable", errs.CategoryNetwork,
 			"FUDCOURT_BOT_TOKEN / FUDCOURT_GUILD_ID are not set, or Discord refused the request")
 		return
 	}
-	env := s.discord.roleEnv()
+	effEnv := s.discord.effective(r.Context())
+	env := roleEnv(effEnv)
 	rows := make([]memberRow, 0, len(members))
 	for _, m := range members {
 		// tierFromRoles verbatim: the tier, error ignored (see handleAuthCallback).
@@ -288,7 +306,7 @@ func (s *server) adminMembersList(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusOK, adminMembersBody{
 		Members: rows,
-		RoleIDs: roleIDsBody{Team: s.discord.env.RoleTeam, Admin: s.discord.env.RoleAdmin},
+		RoleIDs: roleIDsBody{Team: effEnv.RoleTeam, Admin: effEnv.RoleAdmin},
 	})
 }
 
@@ -340,13 +358,14 @@ func (s *server) adminMembersMutate(w http.ResponseWriter, r *http.Request) {
 		writeRefusal(w, r, http.StatusBadRequest, "bad_request", errs.CategoryValidation, "action must be add or remove")
 		return
 	}
-	roleID := s.discord.env.RoleTeam
+	effEnv := s.discord.effective(r.Context())
+	roleID := effEnv.RoleTeam
 	if role == "admin" {
-		roleID = s.discord.env.RoleAdmin
+		roleID = effEnv.RoleAdmin
 	}
 	if roleID == "" {
 		writeRefusal(w, r, http.StatusServiceUnavailable, "discord_unconfigured", errs.CategoryInternal,
-			"FUDCOURT_ROLE_"+strings.ToUpper(role)+" is not set")
+			role+" role is not configured (set it in the admin panel)")
 		return
 	}
 	ok, problem := s.discord.setMemberRole(r.Context(), userID, roleID, action)

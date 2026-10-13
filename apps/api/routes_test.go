@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,8 +34,17 @@ func fakeDiscord(t *testing.T) (*discordClient, *httptest.Server) {
 		io.WriteString(w, `{"id":"42","username":"tester","global_name":"Tester","avatar":"hash"}`)
 	})
 	mux.HandleFunc("/api/v10/guilds/100/members/42", func(w http.ResponseWriter, r *http.Request) {
-		// Real Discord member payload: roles are snowflake STRINGS.
-		io.WriteString(w, `{"user":{"id":"42"},"roles":["900"]}`)
+		switch r.Method {
+		case http.MethodPut:
+			// Add Guild Member: 201 = newly joined.
+			w.WriteHeader(http.StatusCreated)
+		case http.MethodPatch:
+			// Role grant/revoke accepted.
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			// Real Discord member payload: roles are snowflake STRINGS.
+			io.WriteString(w, `{"user":{"id":"42"},"roles":["900"]}`)
+		}
 	})
 	mux.HandleFunc("/api/v10/guilds/100/members", func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, `[{"user":{"id":"42","username":"tester","global_name":"Tester","avatar":"hash"},"roles":["900"]}]`)
@@ -52,6 +62,7 @@ func fakeDiscord(t *testing.T) (*discordClient, *httptest.Server) {
 		BotToken:     "bot",
 		RoleTeam:     "800",
 		RoleAdmin:    "900",
+		RoleMagang:   "700",
 	})
 	dc.apiBase = srv.URL + "/api/v10"
 	dc.tokenURL = srv.URL + "/api/oauth2/token"
@@ -107,7 +118,7 @@ func TestAuthLoginStartsFlow(t *testing.T) {
 		t.Fatal(err)
 	}
 	if q.Get("client_id") != "cid" || q.Get("response_type") != "code" ||
-		q.Get("scope") != "identify guilds" ||
+		q.Get("scope") != "identify guilds guilds.join" ||
 		q.Get("redirect_uri") != "https://fudcourt.example/auth/callback" {
 		t.Fatalf("authorize params drifted: %v", q)
 	}
@@ -183,6 +194,83 @@ func TestAuthCallbackMintsSession(t *testing.T) {
 	// unresolvable role set still floors at member, never escalates.
 	if claims.Tier != identity.TierAdmin {
 		t.Fatalf("tier = %q, want admin (admin role id resolves from string roles)", claims.Tier)
+	}
+}
+
+// TestAuthCallbackAutoJoinsAndGrantsMagang pins the signup side effect: a
+// first-time login (join 201) pulls the user into the guild with their own
+// guilds.join token and grants the Magang role; an already-joined login (204)
+// must NOT re-grant it.
+func TestAuthCallbackAutoJoinsAndGrantsMagang(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		joinStatus int
+		wantMagang bool
+	}{
+		{"new signup joins and gets Magang", http.StatusCreated, true},
+		{"existing member is left alone", http.StatusNoContent, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var mu sync.Mutex
+			var joinCalls, patchCalls int
+			var joinToken, patchBody string
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/oauth2/token", func(w http.ResponseWriter, r *http.Request) {
+				io.WriteString(w, `{"access_token":"oauth-token","token_type":"Bearer"}`)
+			})
+			mux.HandleFunc("/api/v10/users/@me", func(w http.ResponseWriter, r *http.Request) {
+				io.WriteString(w, `{"id":"42","username":"newbie"}`)
+			})
+			mux.HandleFunc("/api/v10/guilds/100/members/42", func(w http.ResponseWriter, r *http.Request) {
+				mu.Lock()
+				defer mu.Unlock()
+				switch r.Method {
+				case http.MethodPut:
+					joinCalls++
+					var body map[string]string
+					_ = json.NewDecoder(r.Body).Decode(&body)
+					joinToken = body["access_token"]
+					w.WriteHeader(tc.joinStatus)
+				case http.MethodPatch:
+					patchCalls++
+					b, _ := io.ReadAll(r.Body)
+					patchBody = string(b)
+					w.WriteHeader(http.StatusNoContent)
+				default:
+					io.WriteString(w, `{"user":{"id":"42"},"roles":[]}`)
+				}
+			})
+			mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(404) })
+			srv := httptest.NewServer(mux)
+			t.Cleanup(srv.Close)
+			dc := newDiscordClient(discordEnv{
+				ClientID: "cid", ClientSecret: "csecret",
+				RedirectURI: "https://fudcourt.example/auth/callback",
+				GuildID:     "100", BotToken: "bot", RoleMagang: "700",
+			})
+			dc.apiBase = srv.URL + "/api/v10"
+			dc.tokenURL = srv.URL + "/api/oauth2/token"
+			s := &server{health: health.NewRegistry(), discord: dc, secret: routeTestSecret}
+
+			state := "nonce123./"
+			rec := do(t, s, "GET", "/api/auth/callback?code=good&state="+url.QueryEscape(state),
+				stateCookieName+"="+jsEncodeURIComponent(state), "")
+			if rec.Code != 307 {
+				t.Fatalf("status = %d, want 307: %s", rec.Code, rec.Body.String())
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			if joinCalls != 1 || joinToken != "oauth-token" {
+				t.Fatalf("join: calls=%d token=%q (want 1 call carrying the OAuth token)", joinCalls, joinToken)
+			}
+			if tc.wantMagang {
+				if patchCalls != 1 || !strings.Contains(patchBody, "700") {
+					t.Fatalf("magang grant: patchCalls=%d body=%s (want one PATCH carrying 700)", patchCalls, patchBody)
+				}
+			} else if patchCalls != 0 {
+				t.Fatalf("an existing member must not be re-granted Magang: patchCalls=%d", patchCalls)
+			}
+		})
 	}
 }
 

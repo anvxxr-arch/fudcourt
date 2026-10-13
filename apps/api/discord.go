@@ -5,12 +5,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/anvxxr-arch/fudcourt/apps/api/internal/access/identity"
+	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/cache"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
-	"github.com/anvxxr-arch/fudcourt/apps/api/internal/access/identity"
 )
 
 // Discord REST client — the port of the retired frontend Discord client plus
@@ -27,6 +28,22 @@ const (
 	discordAuthorize = "https://discord.com/oauth2/authorize"
 )
 
+const (
+	// membersTTL is how long a fetched guild-member list stays fresh. Roles
+	// change rarely and the admin panel tolerates a minute of staleness in
+	// exchange for never waiting on Discord.
+	membersTTL = 60 * time.Second
+	// membersFetchTimeout caps one upstream members fetch: inline on a cold
+	// miss (a 503 instead of a hanging request) and inside the detached
+	// background refresh (which has no request deadline of its own).
+	membersFetchTimeout = 2 * time.Second
+	// membersListLimit is the ONE limit the members plane fetches with: the
+	// admin route and the startup prewarm must agree, because guild+limit is
+	// the cache key — a prewarm at a different limit would warm a key no
+	// request ever reads.
+	membersListLimit = 100
+)
+
 // discordEnv is the Discord-side configuration the TS routes read from
 // process.env at call time. Empty fields mean "not configured" and every
 // helper fails soft exactly where its TS counterpart does.
@@ -38,6 +55,7 @@ type discordEnv struct {
 	BotToken     string // FUDCOURT_BOT_TOKEN
 	RoleTeam     string // FUDCOURT_ROLE_TEAM
 	RoleAdmin    string // FUDCOURT_ROLE_ADMIN
+	RoleMagang   string // FUDCOURT_ROLE_MAGANG
 }
 
 // discordUser is the normalised OAuth profile (DiscordUser in callback/route.ts).
@@ -59,6 +77,17 @@ type discordMember struct {
 	RoleIDs    []string
 }
 
+// discordRole is one guild role as the settings panel needs it: id + name,
+// with position and managed so the UI can order them and flag bot-managed
+// roles that cannot be assigned by hand.
+type discordRole struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Color    int    `json:"color"`
+	Position int    `json:"position"`
+	Managed  bool   `json:"managed"`
+}
+
 // discordClient performs the calls with an injected HTTP client; apiBase and
 // tokenURL are fields so tests can point them at a stub server.
 type discordClient struct {
@@ -66,15 +95,64 @@ type discordClient struct {
 	http     *http.Client
 	apiBase  string
 	tokenURL string
+	// members caches the guild-member list (stale-while-revalidate, see
+	// listGuildMembers), keyed by this client's own guild id + limit.
+	members *cache.Cache[[]discordMember]
+	// settings is the admin-editable config store (settings.go). nil means
+	// "not configured": every resolution then uses env alone.
+	settings settingsStore
 }
+
+// discordTransport is the one connection pool every discordClient shares:
+// keep-alive on and idle provider connections retained, with the per-host
+// idle cap raised above http.Transport's default of 2 so a cache refresh and
+// an OAuth exchange in flight at the same time reuse one warm connection
+// instead of paying a fresh TCP+TLS handshake (120-400ms to Discord) each.
+var discordTransport = func() *http.Transport {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.MaxIdleConns = 64
+	t.MaxIdleConnsPerHost = 16
+	t.IdleConnTimeout = 90 * time.Second
+	return t
+}()
 
 func newDiscordClient(env discordEnv) *discordClient {
 	return &discordClient{
 		env:      env,
-		http:     &http.Client{Timeout: 15 * time.Second},
+		http:     &http.Client{Timeout: 15 * time.Second, Transport: discordTransport},
 		apiBase:  discordAPI,
 		tokenURL: discordTokenURL,
+		members:  cache.New[[]discordMember](membersTTL),
 	}
+}
+
+// effective resolves the Discord wiring for one call: the env defaults overlaid
+// with whatever an admin saved in the settings table (settings.go). The DB wins
+// when a key is set; a missing key or an unreachable store keeps the env value,
+// so the site tiers correctly before the panel is ever used and through a DB
+// outage. The bot token and OAuth credentials stay env-only (they are secrets).
+func (d *discordClient) effective(ctx context.Context) discordEnv {
+	e := d.env
+	if d.settings == nil {
+		return e
+	}
+	cfg, err := d.settings.load(ctx)
+	if err != nil {
+		return e
+	}
+	if cfg.GuildID != "" {
+		e.GuildID = cfg.GuildID
+	}
+	if cfg.RoleAdmin != "" {
+		e.RoleAdmin = cfg.RoleAdmin
+	}
+	if cfg.RoleTeam != "" {
+		e.RoleTeam = cfg.RoleTeam
+	}
+	if cfg.RoleMagang != "" {
+		e.RoleMagang = cfg.RoleMagang
+	}
+	return e
 }
 
 // readJSON mirrors readJson in the TS oracles: parse failures are null, never
@@ -168,15 +246,16 @@ func (d *discordClient) fetchCurrentUser(ctx context.Context, token string) (*di
 // Discord actually sends ({"roles":["123"]}) or legacy {"id":"123"} objects;
 // anything else is skipped so the tier resolution stays fail-closed.
 func (d *discordClient) fetchGuildRoleIDs(ctx context.Context, userID string) []string {
-	if d.env.GuildID == "" || d.env.BotToken == "" {
+	e := d.effective(ctx)
+	if e.GuildID == "" || e.BotToken == "" {
 		return []string{}
 	}
 	req, err := http.NewRequestWithContext(ctx, "GET",
-		d.apiBase+"/guilds/"+url.PathEscape(d.env.GuildID)+"/members/"+url.PathEscape(userID), nil)
+		d.apiBase+"/guilds/"+url.PathEscape(e.GuildID)+"/members/"+url.PathEscape(userID), nil)
 	if err != nil {
 		return []string{}
 	}
-	req.Header.Set("Authorization", "Bot "+d.env.BotToken)
+	req.Header.Set("Authorization", "Bot "+e.BotToken)
 	res, err := d.http.Do(req)
 	if err != nil {
 		return []string{}
@@ -209,24 +288,120 @@ func (d *discordClient) fetchGuildRoleIDs(ctx context.Context, userID string) []
 	return roles
 }
 
-// listGuildMembers lists the configured guild (listGuildMembers in the OpenAPI
-// contract) or reports unavailable (false) when the guild/bot env is unset.
+// addGuildMember adds the freshly-authenticated OAuth user to the guild (Add
+// Guild Member, PUT /guilds/{id}/members/{id}) using their own guilds.join
+// bearer token; the bot must hold CREATE_INSTANT_INVITE. It reports created=true
+// only for a 201 (a genuinely new join) — Discord answers 204 when the user is
+// already a member, which is not a signup and must not re-grant the entry role.
+// Every failure is a non-empty problem string; the caller treats it as
+// best-effort and never blocks the login on it.
+func (d *discordClient) addGuildMember(ctx context.Context, userID, accessToken string) (bool, string) {
+	e := d.effective(ctx)
+	if e.GuildID == "" || e.BotToken == "" {
+		return false, "Discord is not configured"
+	}
+	if accessToken == "" {
+		return false, "no OAuth access token"
+	}
+	payload, err := json.Marshal(map[string]string{"access_token": accessToken})
+	if err != nil {
+		return false, "could not build the join payload"
+	}
+	endpoint := d.apiBase + "/guilds/" + url.PathEscape(e.GuildID) + "/members/" + url.PathEscape(userID)
+	req, err := http.NewRequestWithContext(ctx, "PUT", endpoint, strings.NewReader(string(payload)))
+	if err != nil {
+		return false, "could not build the join request"
+	}
+	req.Header.Set("Authorization", "Bot "+e.BotToken)
+	req.Header.Set("Content-Type", "application/json")
+	res, err := d.http.Do(req)
+	if err != nil {
+		return false, "Discord returned no response"
+	}
+	defer res.Body.Close()
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		message := ""
+		if body, ok := readJSON(res.Body).(map[string]any); ok {
+			if m, ok := body["message"].(string); ok {
+				message = m
+			}
+		}
+		if message == "" {
+			message = fmt.Sprintf("Discord returned %d", res.StatusCode)
+		}
+		return false, message
+	}
+	return res.StatusCode == http.StatusCreated, ""
+}
+
+// listGuildMembers answers the members plane (listGuildMembers in the OpenAPI
+// contract) from the process-local cache; fetchGuildMembers is the uncached
+// Discord call underneath. The contract with the handler:
+//
+//   - fresh entry (< membersTTL): served from memory, no upstream call;
+//   - stale entry: served immediately while ONE background refresh runs
+//     (stale-while-revalidate) — after the first successful fetch this never
+//     blocks on Discord;
+//   - cold miss: fetches inline under membersFetchTimeout and reports
+//     unavailable on failure (the 503 the route already answers); a failed
+//     fetch is never cached;
+//   - unset guild/bot env: unavailable, before any cache lookup.
+//
+// The cache key is guild id + limit — server configuration, never request
+// input — so the keyspace cannot be grown by a caller.
 func (d *discordClient) listGuildMembers(ctx context.Context, limit int) ([]discordMember, bool) {
-	if d.env.GuildID == "" || d.env.BotToken == "" {
+	e := d.effective(ctx)
+	if e.GuildID == "" || e.BotToken == "" {
+		return nil, false
+	}
+	key := fmt.Sprintf("%s/%d", e.GuildID, limit)
+	if value, stale, ok := d.members.Get(key); ok {
+		if stale {
+			d.members.Revalidate(key, func() ([]discordMember, bool) {
+				// Detached from the request that noticed the staleness: its
+				// context dies with the response, so this refresh carries its
+				// own deadline.
+				refreshCtx, cancel := context.WithTimeout(context.Background(), membersFetchTimeout)
+				defer cancel()
+				return d.fetchGuildMembers(refreshCtx, limit)
+			})
+		}
+		return value, true
+	}
+	fetchCtx, cancel := context.WithTimeout(ctx, membersFetchTimeout)
+	defer cancel()
+	members, ok := d.fetchGuildMembers(fetchCtx, limit)
+	if !ok {
+		return nil, false
+	}
+	d.members.Set(key, members)
+	return members, true
+}
+
+// fetchGuildMembers is one uncached Discord members call (listGuildMembers in
+// the OpenAPI contract) or reports unavailable (false) when the guild/bot env
+// is unset or Discord refuses.
+func (d *discordClient) fetchGuildMembers(ctx context.Context, limit int) ([]discordMember, bool) {
+	e := d.effective(ctx)
+	if e.GuildID == "" || e.BotToken == "" {
 		return nil, false
 	}
 	req, err := http.NewRequestWithContext(ctx, "GET",
-		d.apiBase+"/guilds/"+url.PathEscape(d.env.GuildID)+fmt.Sprintf("/members?limit=%d", limit), nil)
+		d.apiBase+"/guilds/"+url.PathEscape(e.GuildID)+fmt.Sprintf("/members?limit=%d", limit), nil)
 	if err != nil {
 		return nil, false
 	}
-	req.Header.Set("Authorization", "Bot "+d.env.BotToken)
+	req.Header.Set("Authorization", "Bot "+e.BotToken)
 	res, err := d.http.Do(req)
 	if err != nil {
 		return nil, false
 	}
 	defer res.Body.Close()
 	if res.StatusCode < 200 || res.StatusCode > 299 {
+		// Drain the error body (bounded) so the keep-alive connection returns
+		// to the pool instead of being torn down unread — a failing provider
+		// is exactly when paying a fresh TCP+TLS handshake hurts most.
+		io.Copy(io.Discard, io.LimitReader(res.Body, 4<<20))
 		return nil, false
 	}
 	list, ok := readJSON(res.Body).([]any)
@@ -274,15 +449,16 @@ func (d *discordClient) listGuildMembers(ctx context.Context, limit int) ([]disc
 // OpenAPI contract). Discord failures are reported as an error string rather
 // than an exception, so the panel can render the reason.
 func (d *discordClient) setMemberRole(ctx context.Context, userID, roleID, action string) (bool, string) {
-	if d.env.GuildID == "" || d.env.BotToken == "" {
+	e := d.effective(ctx)
+	if e.GuildID == "" || e.BotToken == "" {
 		return false, "Discord is not configured"
 	}
-	memberURL := d.apiBase + "/guilds/" + url.PathEscape(d.env.GuildID) + "/members/" + url.PathEscape(userID)
+	memberURL := d.apiBase + "/guilds/" + url.PathEscape(e.GuildID) + "/members/" + url.PathEscape(userID)
 	req, err := http.NewRequestWithContext(ctx, "GET", memberURL, nil)
 	if err != nil {
 		return false, "Could not read that guild member"
 	}
-	req.Header.Set("Authorization", "Bot "+d.env.BotToken)
+	req.Header.Set("Authorization", "Bot "+e.BotToken)
 	member, err := d.http.Do(req)
 	if err != nil {
 		return false, "Could not read that guild member"
@@ -334,7 +510,7 @@ func (d *discordClient) setMemberRole(ctx context.Context, userID, roleID, actio
 	if err != nil {
 		return false, "Discord rejected the role change"
 	}
-	req.Header.Set("Authorization", "Bot "+d.env.BotToken)
+	req.Header.Set("Authorization", "Bot "+e.BotToken)
 	req.Header.Set("Content-Type", "application/json")
 	res, err := d.http.Do(req)
 	if err != nil {
@@ -356,14 +532,66 @@ func (d *discordClient) setMemberRole(ctx context.Context, userID, roleID, actio
 	return true, ""
 }
 
-// roleEnv maps the configured single role ids into identity.RoleEnv the way
-// tierFromRoles in guard.ts resolves them: with no guild/role env there is
+// roleEnv maps the resolved single role ids into identity.RoleEnv the way
+// tierFromRoles in guard.ts resolves them: with no guild/role config there is
 // nothing to resolve against (empty sets -> public), otherwise the admin and
 // team sets are the two configured ids. MemberRoleIDs stays empty — the
 // guard.ts member floor ("any resolvable account is at least member") applies.
-func (d *discordClient) roleEnv() identity.RoleEnv {
-	if d.env.GuildID == "" || d.env.RoleAdmin == "" || d.env.RoleTeam == "" {
+func roleEnv(e discordEnv) identity.RoleEnv {
+	if e.GuildID == "" || e.RoleAdmin == "" || e.RoleTeam == "" {
 		return identity.RoleEnv{}
 	}
-	return identity.RoleEnv{AdminRoleIDs: []string{d.env.RoleAdmin}, TeamRoleIDs: []string{d.env.RoleTeam}}
+	return identity.RoleEnv{AdminRoleIDs: []string{e.RoleAdmin}, TeamRoleIDs: []string{e.RoleTeam}}
+}
+
+// listGuildRoles reads the guild's roles (GET /guilds/{id}/roles) so the admin
+// panel can offer a picker instead of hand-typed ids. ok=false when the guild
+// or bot is unset or Discord refuses; the panel then falls back to free text.
+func (d *discordClient) listGuildRoles(ctx context.Context) ([]discordRole, bool) {
+	e := d.effective(ctx)
+	if e.GuildID == "" || e.BotToken == "" {
+		return nil, false
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", d.apiBase+"/guilds/"+url.PathEscape(e.GuildID)+"/roles", nil)
+	if err != nil {
+		return nil, false
+	}
+	req.Header.Set("Authorization", "Bot "+e.BotToken)
+	res, err := d.http.Do(req)
+	if err != nil {
+		return nil, false
+	}
+	defer res.Body.Close()
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		io.Copy(io.Discard, io.LimitReader(res.Body, 4<<20))
+		return nil, false
+	}
+	raw, ok := readJSON(res.Body).([]any)
+	if !ok {
+		return nil, false
+	}
+	roles := make([]discordRole, 0, len(raw))
+	for _, entry := range raw {
+		obj, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		id, _ := obj["id"].(string)
+		name, _ := obj["name"].(string)
+		if id == "" {
+			continue
+		}
+		r := discordRole{ID: id, Name: name}
+		if c, ok := obj["color"].(float64); ok {
+			r.Color = int(c)
+		}
+		if p, ok := obj["position"].(float64); ok {
+			r.Position = int(p)
+		}
+		if m, ok := obj["managed"].(bool); ok {
+			r.Managed = m
+		}
+		roles = append(roles, r)
+	}
+	return roles, true
 }
