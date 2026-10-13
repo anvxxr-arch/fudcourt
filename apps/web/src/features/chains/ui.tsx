@@ -26,6 +26,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, radius, space, letterSpacing } from '@/styles/tokens';
 import { dash, fmtPct, fmtPrice, fmtTime } from '@/lib/format';
+import { useT } from '@/lib/i18n/t';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
 import { ErrorState, Loading } from '@/ui/feedback';
@@ -168,20 +169,21 @@ function DirectoryCard({
   selected: string | null;
   onSelect: (slug: string) => void;
 }) {
+  const t = useT();
   const [query, setQuery] = useState('');
 
   if (src === null) {
     return (
-      <Card title="Chain directory">
-        <Loading what="the chain directory" />
+      <Card title={t('crypto.chains.cardTitle')}>
+        <Loading what={t('crypto.chains.loadingWhat')} />
       </Card>
     );
   }
   if (src.data === null) {
     return (
       <ErrorState
-        title="Could not load the chain directory"
-        detail={src.error ?? 'the upstream returned no rows and named no reason'}
+        title={t('crypto.chains.loadFailTitle')}
+        detail={src.error ?? t('crypto.common.upstreamNoRows')}
       />
     );
   }
@@ -190,8 +192,8 @@ function DirectoryCard({
   if (listed.rows.length === 0) {
     return (
       <ErrorState
-        title="The chain directory came back empty"
-        detail="the upstream answered successfully with no rows — an empty directory is not a valid read, so this is reported as a failure, not an empty table"
+        title={t('crypto.chains.emptyTitle')}
+        detail={t('crypto.chains.emptyDetail')}
       />
     );
   }
@@ -200,31 +202,31 @@ function DirectoryCard({
 
   return (
     <Card
-      title="Chain directory"
-      subtitle="every chain CryptoRank indexes — a market cap it did not state renders —; click a chain (or pick one) to load its ecosystem"
+      title={t('crypto.chains.cardTitle')}
+      subtitle={t('crypto.chains.cardSubtitle')}
     >
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
         <Stat
-          label="Chains with stated cap"
+          label={t('crypto.chains.statStatedCap')}
           value={`${listed.statedCap} / ${listed.shown}`}
-          hint="rows that state a market cap"
+          hint={t('crypto.chains.hintRowsStateCap')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
         />
         <Stat
-          label="Top by market cap"
+          label={t('crypto.chains.statTopCap')}
           value={listed.topByMarketCap ? text(listed.topByMarketCap.name) : dash}
-          hint={listed.topByMarketCap ? usd(listed.topByMarketCap.marketCap) : 'no chain states a market cap'}
+          hint={listed.topByMarketCap ? usd(listed.topByMarketCap.marketCap) : t('crypto.chains.hintNoChainCap')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 180px' }}
         />
         <Stat
-          label="Total market cap"
+          label={t('crypto.chains.statTotalCap')}
           value={listed.totalMarketCapUsd === null ? dash : usd(listed.totalMarketCapUsd)}
           hint={
             listed.totalMarketCapUsd === null
-              ? `${listed.statedCap} of ${listed.shown} state a cap — not totalled`
-              : 'every row states a cap'
+              ? t('crypto.chains.hintCapNotTotalled', { stated: listed.statedCap, shown: listed.shown })
+              : t('crypto.chains.hintEveryRowCap')
           }
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 180px' }}
@@ -236,16 +238,16 @@ function DirectoryCard({
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="filter by name or network…"
-          aria-label="Filter chains by name or network"
+          placeholder={t('crypto.chains.filterPlaceholder')}
+          aria-label={t('crypto.chains.filterAria')}
           style={{ ...fieldStyle, flex: '1 1 220px' }}
         />
         <label style={{ display: 'flex', alignItems: 'center', minWidth: 0, gap: space[4], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-          select
+          {t('crypto.chains.selectLabel')}
           <select
             value={selected ?? ''}
             onChange={(e) => onSelect(e.target.value)}
-            aria-label="Select a chain to load its detail"
+            aria-label={t('crypto.chains.selectAria')}
             style={fieldStyle}
           >
             {listed.rows.map((c) => (
@@ -260,18 +262,18 @@ function DirectoryCard({
       </div>
 
       <DataTable
-        head={['Name', 'Network', 'Market cap', 'Explorer']}
+        head={[t('crypto.head.name'), t('crypto.chains.headNetwork'), t('crypto.head.marketCap'), t('crypto.chains.headExplorer')]}
         rows={matched.map((r: ChainRow) => ({
           cells: [
             <button key="n" type="button" onClick={() => onSelect(r.slug)} style={nameButtonStyle(r.slug === selected)}>
               {text(r.name)}
-              {r.slug === selected ? <span style={{ color: themeColor.labelTertiary }}> · shown below</span> : null}
+              {r.slug === selected ? <span style={{ color: themeColor.labelTertiary }}>{t('crypto.chains.shownBelow')}</span> : null}
             </button>,
             <span key="net" style={{ color: themeColor.labelTertiary }}>{text(r.network)}</span>,
             <span key="mcap">{usd(r.marketCap)}</span>,
             r.explorerUrl ? (
               <a key="ex" href={r.explorerUrl} target="_blank" rel="noreferrer" style={{ color: themeColor.blue }}>
-                explorer ↗
+                {t('crypto.chains.explorerLink')}
               </a>
             ) : (
               <span key="ex" style={{ color: themeColor.labelTertiary }}>{dash}</span>
@@ -280,9 +282,9 @@ function DirectoryCard({
         }))}
       />
       <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-        {note}; {listed.upstreamTotal === null ? 'upstream stated no fuller total — the feed is the whole index' : `upstream states ${listed.upstreamTotal} in all`}.{' '}
-        {capCoverageNote(listed)}. A blank market cap is a metric upstream did not publish, shown as — rather than 0.
-        Directory read {fmtTime(listed.asOf)} (this browser).
+        {note}; {listed.upstreamTotal === null ? t('crypto.chains.footnoteNoTotal') : t('crypto.chains.footnoteTotal', { n: listed.upstreamTotal })}.{' '}
+        {capCoverageNote(listed)}. {t('crypto.chains.footnoteBlankCap')}
+        {t('crypto.chains.footnoteRead', { time: fmtTime(listed.asOf) })}
       </p>
     </Card>
   );
@@ -292,20 +294,21 @@ function DirectoryCard({
 // (4) The keyed chain detail — mode=chain&key=<slug>, paginated 50/page
 // ---------------------------------------------------------------------------
 function DetailSection({ slug }: { slug: string }) {
+  const t = useT();
   const src = useSource<ChainEnvelope>((s) => fetchChain(slug, s), `chain:${slug}`);
   const [page, setPage] = useState(1);
 
   return (
     <Card
-      title="Chain detail"
-      subtitle={`mode=chain&key=${slug} — the keyed read; this mode ships no change column, so the 24h % cell is — on every row`}
+      title={t('crypto.chains.detailTitle')}
+      subtitle={t('crypto.chains.detailSubtitle', { slug })}
     >
       {src === null ? (
-        <Loading what={`the ${slug} chain`} />
+        <Loading what={t('crypto.chains.detailLoadingWhat', { slug })} />
       ) : src.data === null ? (
         <ErrorState
-          title={`Could not load the '${slug}' chain`}
-          detail={src.error ?? 'the upstream returned no header and named no reason'}
+          title={t('crypto.chains.detailLoadFailTitle', { slug })}
+          detail={src.error ?? t('crypto.chains.detailNoHeaderDetail')}
         />
       ) : (
         (() => {
@@ -316,8 +319,8 @@ function DetailSection({ slug }: { slug: string }) {
           if (board.totalRows === 0) {
             return (
               <ErrorState
-                title={`The '${slug}' chain came back with no tokens`}
-                detail="the upstream answered successfully with an empty token array — reported as a failure, not an empty table"
+                title={t('crypto.chains.detailEmptyTitle', { slug })}
+                detail={t('crypto.chains.detailEmptyDetail')}
               />
             );
           }
@@ -326,38 +329,38 @@ function DetailSection({ slug }: { slug: string }) {
             <>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
                 <Stat
-                  label="Chain"
+                  label={t('crypto.chains.statChain')}
                   value={chain ? text(chain.name) : text(slug)}
-                  hint={chain ? `network ${text(chain.network)}` : 'header not stated upstream'}
+                  hint={chain ? t('crypto.chains.hintNetwork', { network: text(chain.network) }) : t('crypto.chains.hintNoHeader')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
                 />
                 <Stat
-                  label="Market cap"
+                  label={t('crypto.chains.statMarketCap')}
                   value={chain ? usd(chain.marketCap) : dash}
-                  hint="CryptoRank's own figure for the chain"
+                  hint={t('crypto.chains.hintChainCap')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
                 />
                 <Stat
-                  label="Tokens"
+                  label={t('crypto.chains.statTokens')}
                   value={num(board.totalRows)}
-                  hint={`page ${board.page} of ${board.totalPages}`}
+                  hint={t('crypto.chains.hintPageOf', { page: board.page, pages: board.totalPages })}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
                 />
                 <Stat
-                  label="Explorer"
+                  label={t('crypto.chains.statExplorer')}
                   value={
                     chain && chain.explorerUrl ? (
                       <a href={chain.explorerUrl} target="_blank" rel="noreferrer" style={{ color: themeColor.blue, fontSize: fontSize[13] }}>
-                        open ↗
+                        {t('crypto.chains.openLink')}
                       </a>
                     ) : (
                       dash
                     )
                   }
-                  hint={chain && chain.explorerUrl ? chain.explorerUrl : 'upstream stated no explorer'}
+                  hint={chain && chain.explorerUrl ? chain.explorerUrl : t('crypto.chains.hintNoExplorer')}
                   valueSize={fontSize[13]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 200px' }}
                 />
@@ -374,7 +377,7 @@ function DetailSection({ slug }: { slug: string }) {
               ) : null}
 
               <DataTable
-                head={['Rank', 'Name', 'Symbol', 'Price (USD)', 'Market cap', '24h volume', 'Category', 'ATH (USD)', '24h %']}
+                head={[t('crypto.head.rank'), t('crypto.head.name'), t('crypto.coins.headSymbol'), t('crypto.head.priceUsd'), t('crypto.head.marketCap'), t('crypto.head.volume24h'), t('crypto.head.category'), t('crypto.head.athUsd'), t('crypto.head.change24h')]}
                 rows={board.pageRows.map((r) => ({
                   cells: [
                     <span key="rank" style={{ color: themeColor.labelTertiary }}>{num(r.rank)}</span>,
@@ -388,7 +391,7 @@ function DetailSection({ slug }: { slug: string }) {
                     board.change.available ? (
                       <span key="chg" style={{ color: changeColor(r.change24h) }}>{fmtPct(r.change24h)}</span>
                     ) : (
-                      <span key="chg" style={{ color: themeColor.labelTertiary }} title="this mode reports no change column">
+                      <span key="chg" style={{ color: themeColor.labelTertiary }} title={t('crypto.chains.noChangeTitle')}>
                         {dash}
                       </span>
                     ),
@@ -398,7 +401,7 @@ function DetailSection({ slug }: { slug: string }) {
 
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: space[8], marginTop: space[8] }}>
                 <button type="button" disabled={board.page <= 1} onClick={() => setPage(board.page - 1)} style={controlStyle(board.page <= 1)}>
-                  ‹ prev
+                  {t('crypto.common.prev')}
                 </button>
                 <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{board.pageNote}</span>
                 <button
@@ -407,15 +410,12 @@ function DetailSection({ slug }: { slug: string }) {
                   onClick={() => setPage(board.page + 1)}
                   style={controlStyle(board.page >= board.totalPages)}
                 >
-                  next ›
+                  {t('crypto.common.next')}
                 </button>
               </div>
 
               <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-                The detail ships the whole ecosystem token array in one read; the board paginates it client-side at{' '}
-                {board.pageSize}/page and states the slice ({board.pageNote}). 24h % is — because this mode reports
-                changeSource:&apos;unavailable&apos; — an absent column, not a flat market. A blank price, cap or ATH is a metric upstream
-                did not publish, shown as — rather than 0. CryptoRank&apos;s own slice: {text(src.data.slice)}.
+                {t('crypto.chains.detailFootnote', { pageSize: board.pageSize, note: board.pageNote, slice: text(src.data.slice) })}
               </p>
             </>
           );
@@ -429,21 +429,22 @@ function DetailSection({ slug }: { slug: string }) {
 // (3) The ecosystem index — mode=ecosystems (20 of 106)
 // ---------------------------------------------------------------------------
 function EcosystemSection() {
+  const t = useT();
   const src = useSource<EcosystemsEnvelope>((s) => fetchEcosystems(s), 'ecosystems');
 
   if (src === null) {
     return (
-      <Card title="Ecosystem index">
-        <Loading what="the ecosystem index" />
+      <Card title={t('crypto.chains.ecoIndexTitle')}>
+        <Loading what={t('crypto.chains.ecoIndexLoadingWhat')} />
       </Card>
     );
   }
   if (src.data === null) {
     return (
-      <Card title="Ecosystem index">
+      <Card title={t('crypto.chains.ecoIndexTitle')}>
         <ErrorState
-          title="Could not load the ecosystem index"
-          detail={src.error ?? 'the upstream returned no rows and named no reason'}
+          title={t('crypto.chains.ecoIndexLoadFailTitle')}
+          detail={src.error ?? t('crypto.common.upstreamNoRows')}
         />
       </Card>
     );
@@ -452,10 +453,10 @@ function EcosystemSection() {
   const board = readEcosystemBoard(src.data.ecosystemRows ?? [], src.data.upstreamTotal ?? null);
   if (board.rows.length === 0) {
     return (
-      <Card title="Ecosystem index">
+      <Card title={t('crypto.chains.ecoIndexTitle')}>
         <ErrorState
-          title="The ecosystem index came back empty"
-          detail="the upstream answered successfully with no rows — reported as a failure, not an empty table"
+          title={t('crypto.chains.ecoIndexEmptyTitle')}
+          detail={t('crypto.chains.ecoIndexEmptyDetail')}
         />
       </Card>
     );
@@ -463,28 +464,28 @@ function EcosystemSection() {
 
   return (
     <Card
-      title="Ecosystem index"
-      subtitle="CryptoRank's own ecosystem aggregates — a metric it did not publish renders —; the % columns are upstream's percent figures"
+      title={t('crypto.chains.ecoIndexTitle')}
+      subtitle={t('crypto.chains.ecoIndexSubtitle')}
     >
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
         <Stat
-          label="Ecosystems shown"
+          label={t('crypto.chains.statEcoShown')}
           value={String(board.shown)}
-          hint={board.upstreamTotal === null ? 'upstream total not stated' : `of ${board.upstreamTotal} upstream`}
+          hint={board.upstreamTotal === null ? t('crypto.common.upstreamTotalNotStated') : t('crypto.common.ofUpstream', { n: board.upstreamTotal })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
         />
         <Stat
-          label="Slice"
+          label={t('crypto.chains.statSlice')}
           value={board.note}
-          hint="SSR ships page 1 only"
+          hint={t('crypto.chains.hintSsrPage1')}
           valueSize={fontSize[13]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 220px' }}
         />
       </div>
 
       <DataTable
-        head={['Ecosystem', 'Projects', 'Δ Projects 3m', 'Market cap', 'Mcap 24h %', 'TVL', 'TVL 24h %', 'Tags']}
+        head={[t('crypto.chains.headEcosystem'), t('crypto.chains.headProjects'), t('crypto.chains.headProjects3m'), t('crypto.head.marketCap'), t('crypto.chains.headMcap24h'), t('crypto.chains.headTvl'), t('crypto.chains.headTvl24h'), t('crypto.chains.headTags')]}
         rows={board.rows.map((r) => ({
           cells: [
             <span key="n" style={{ fontWeight: fontWeight.semibold }}>{text(r.name)}</span>,
@@ -499,10 +500,7 @@ function EcosystemSection() {
         }))}
       />
       <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-        {board.note} — SSR ships page 1 only, so this board reads those {board.shown} and no more. Market cap, TVL and their 24h %
-        columns are CryptoRank&apos;s OWN ecosystem aggregates (their methodology), not an independent measure. Δ Projects 3m and the
-        % columns are shipped by upstream: the two 24h values are percent figures, and projectsChange3m carries no unit upstream so
-        it is shown exactly as shipped. A blank figure is a metric upstream did not publish, shown as — rather than 0.
+        {t('crypto.chains.ecoFootnote', { note: board.note, shown: board.shown })}
       </p>
     </Card>
   );
@@ -512,16 +510,17 @@ function EcosystemSection() {
 // (5) The keyed ecosystem drill-down — mode=ecosystem&key=<slug>
 // ---------------------------------------------------------------------------
 function EcosystemDetailRead({ slug }: { slug: string }) {
+  const t = useT();
   const src = useSource<EcosystemEnvelope>((s) => fetchEcosystem(slug, s), `ecosystem:${slug}`);
 
   if (src === null) {
-    return <Loading what={`the ${slug} ecosystem`} />;
+    return <Loading what={t('crypto.chains.ecoDetailLoadingWhat', { slug })} />;
   }
   if (src.data === null) {
     return (
       <ErrorState
-        title={`Could not load the '${slug}' ecosystem`}
-        detail={src.error ?? 'the upstream returned no header and named no reason'}
+        title={t('crypto.chains.ecoDetailLoadFailTitle', { slug })}
+        detail={src.error ?? t('crypto.chains.detailNoHeaderDetail')}
       />
     );
   }
@@ -535,8 +534,8 @@ function EcosystemDetailRead({ slug }: { slug: string }) {
   if (board.ecosystem === null || board.rows.length === 0) {
     return (
       <ErrorState
-        title={`The '${slug}' ecosystem came back empty`}
-        detail="the upstream answered successfully with no header or no coin rows — an empty ecosystem is not a valid read, so this is reported as a failure, not an empty table"
+        title={t('crypto.chains.ecoDetailEmptyTitle', { slug })}
+        detail={t('crypto.chains.ecoDetailEmptyDetail')}
       />
     );
   }
@@ -547,21 +546,21 @@ function EcosystemDetailRead({ slug }: { slug: string }) {
     <>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
         <Stat
-          label="Ecosystem"
+          label={t('crypto.chains.statEcosystem')}
           value={text(eco.name)}
-          hint={eco.blockchain ? `blockchain ${text(eco.blockchain.name)}` : 'upstream stated no blockchain'}
+          hint={eco.blockchain ? t('crypto.chains.hintBlockchain', { name: text(eco.blockchain.name) }) : t('crypto.chains.hintNoBlockchain')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 180px' }}
         />
         <Stat
-          label="Native coin"
+          label={t('crypto.chains.statNativeCoin')}
           value={coin ? `${text(coin.symbol)} ${fmtPrice(coin.priceUsd)}` : dash}
-          hint={coin ? `24h ${fmtPct(coin.change24h)} — upstream percent` : nativeCoinNote(coin)}
+          hint={coin ? t('crypto.chains.hintNativeCoin24h', { pct: fmtPct(coin.change24h) }) : nativeCoinNote(coin)}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 220px' }}
         />
         <Stat
-          label="Coins"
+          label={t('crypto.chains.statCoins')}
           value={num(board.shown)}
           hint={board.sliceNote}
           valueSize={fontSize[17]}
@@ -571,12 +570,12 @@ function EcosystemDetailRead({ slug }: { slug: string }) {
 
       {board.descriptionText ? (
         <p style={{ margin: `0 0 ${space[12]}px`, fontSize: fontSize[12], color: themeColor.labelSecondary, lineHeight: lineHeight.normal }}>
-          <span style={{ color: themeColor.labelTertiary }}>upstream&apos;s own words (HTML stripped): </span>
+          <span style={{ color: themeColor.labelTertiary }}>{t('crypto.chains.descOwnWords')}</span>
           {board.descriptionText}
         </p>
       ) : (
         <p style={{ margin: `0 0 ${space[12]}px`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-          upstream shipped no description for this ecosystem — shown as {dash} rather than invented.
+          {t('crypto.chains.descNone')}
         </p>
       )}
 
@@ -587,7 +586,7 @@ function EcosystemDetailRead({ slug }: { slug: string }) {
       ) : null}
 
       <DataTable
-        head={['Rank', 'Name', 'Symbol', 'Price (USD)', 'Market cap', '24h volume', 'Category', '24h %']}
+        head={[t('crypto.head.rank'), t('crypto.head.name'), t('crypto.coins.headSymbol'), t('crypto.head.priceUsd'), t('crypto.head.marketCap'), t('crypto.head.volume24h'), t('crypto.head.category'), t('crypto.head.change24h')]}
         rows={board.rows.map((r) => ({
           cells: [
             <span key="rank" style={{ color: themeColor.labelTertiary }}>{num(r.rank)}</span>,
@@ -600,7 +599,7 @@ function EcosystemDetailRead({ slug }: { slug: string }) {
             board.change.available ? (
               <span key="chg" style={{ color: changeColor(r.change24h) }}>{fmtPct(r.change24h)}</span>
             ) : (
-              <span key="chg" style={{ color: themeColor.labelTertiary }} title="this mode reports no change column">
+              <span key="chg" style={{ color: themeColor.labelTertiary }} title={t('crypto.chains.noChangeTitle')}>
                 {dash}
               </span>
             ),
@@ -609,16 +608,14 @@ function EcosystemDetailRead({ slug }: { slug: string }) {
       />
 
       <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-        {board.sliceNote} — SSR ships page 1 only, so this board reads those {board.shown} and no more. 24h % is {dash} because this
-        mode reports changeSource:&apos;unavailable&apos; — an absent column, not a flat market. The native-coin quote and the
-        description above are upstream&apos;s own; the description&apos;s HTML tags are stripped for display. A blank price, cap or volume
-        is a metric upstream did not publish, shown as {dash} rather than 0. CryptoRank&apos;s own slice: {text(src.data.slice)}.
+        {t('crypto.chains.ecoDetailFootnote', { note: board.sliceNote, shown: board.shown, slice: text(src.data.slice) })}
       </p>
     </>
   );
 }
 
 function EcosystemDetailSection() {
+  const t = useT();
   const indexSrc = useSource<EcosystemsEnvelope>((s) => fetchEcosystems(s), 'ecosystems');
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -633,25 +630,25 @@ function EcosystemDetailSection() {
 
   return (
     <Card
-      title="Ecosystem detail"
-      subtitle="mode=ecosystem&key=<slug> — pick an ecosystem from the index above to load it; this mode ships no change column, so the 24h % cell is — on every row"
+      title={t('crypto.chains.ecoDetailTitle')}
+      subtitle={t('crypto.chains.ecoDetailSubtitle')}
     >
       {indexSrc === null ? (
-        <Loading what="the ecosystem index" />
+        <Loading what={t('crypto.chains.ecoIndexLoadingWhat')} />
       ) : indexSrc.data === null ? (
         <ErrorState
-          title="Could not load the ecosystem index"
-          detail={indexSrc.error ?? 'the upstream returned no rows and named no reason'}
+          title={t('crypto.chains.ecoIndexLoadFailTitle')}
+          detail={indexSrc.error ?? t('crypto.common.upstreamNoRows')}
         />
       ) : indexBoard && indexBoard.rows.length > 0 ? (
         <>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], alignItems: 'center', marginBottom: space[12] }}>
             <label style={{ display: 'flex', alignItems: 'center', minWidth: 0, gap: space[4], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-              select
+              {t('crypto.chains.selectLabel')}
               <select
                 value={slug ?? ''}
                 onChange={(e) => setSelected(e.target.value)}
-                aria-label="Select an ecosystem to load its detail"
+                aria-label={t('crypto.chains.ecoSelectAria')}
                 style={fieldStyle}
               >
                 {indexBoard.rows.map((e) => (
@@ -667,8 +664,8 @@ function EcosystemDetailSection() {
         </>
       ) : (
         <ErrorState
-          title="The ecosystem index came back empty"
-          detail="the upstream answered successfully with no rows — reported as a failure, not an empty table"
+          title={t('crypto.chains.ecoIndexEmptyTitle')}
+          detail={t('crypto.chains.ecoIndexEmptyDetail')}
         />
       )}
     </Card>
@@ -679,6 +676,7 @@ function EcosystemDetailSection() {
 // The route surface — the directory owns the selection; a failed read never blanks another section.
 // ---------------------------------------------------------------------------
 export default function ChainsDirectory() {
+  const t = useT();
   const src = useSource<BlockchainsEnvelope>((s) => fetchBlockchains(s), 'blockchains');
   const [selected, setSelected] = useState<string | null>(null);
   const nowSec = useMemo(() => Math.floor(Date.now() / 1000), []);
@@ -700,9 +698,7 @@ export default function ChainsDirectory() {
       <EcosystemSection />
       <EcosystemDetailSection />
       <p style={{ margin: 0, fontSize: fontSize[11], color: themeColor.labelTertiary, letterSpacing: letterSpacing.xs, lineHeight: lineHeight.normal }}>
-        One chain directory, its ecosystem index and a keyed per-chain detail. Every board states its slice; a metric CryptoRank did
-        not publish renders —, never 0; the detail&apos;s change column is named as unavailable rather than printed as a flat 0; and a
-        successful-but-empty read is reported as a failure, never shown as an empty table. Nothing here is a recommendation.
+        {t('crypto.chains.routeFootnote')}
       </p>
     </div>
   );

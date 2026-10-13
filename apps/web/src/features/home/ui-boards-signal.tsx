@@ -20,7 +20,7 @@ import {
   type ScoreboardCatch,
   type ScoreboardPayload,
 } from './client';
-import { h2Style, h4Style, noteStyle, useJson } from './ui-shared';
+import { NOTE_MIN_HEIGHT, h2Style, h4Style, noteStyle, useJson } from './ui-shared';
 
 /**
  * Signal quality — the cohort scoreboard. `run`/`flat`/`dump` are the UPSTREAM's
@@ -43,7 +43,14 @@ export function SignalQuality() {
           signal quality unavailable — {error}. Section withheld rather than rendered empty.
         </Banner>
       )}
-      {loading && !error && <Loading label="loading live figures…" />}
+      {loading && !error && (
+        // One meter block per chain (~62px: an h3 line plus the bar) plus the
+        // best-catch note. Reserved so this panel's arrival does not move the
+        // Boards section below it.
+        <div style={{ minHeight: 2 * 62 + NOTE_MIN_HEIGHT }}>
+          <Loading label="loading live figures…" />
+        </div>
+      )}
       {!error && data && (
         <>
           {entries.map(([chain, c]) => {

@@ -1,0 +1,73 @@
+# FUD Court web — PUBLIC listener (TLS) for apps/web (C2).
+#
+# WHAT THIS IS
+# ------------
+# `fc.dwirijal.my.id` is a PUBLIC hostname, not an internal one. Caddy already
+# terminates TLS for public names on this host (that is why `caddy.service` is
+# up and binds :443 — `default_bind` in /etc/caddy/Caddyfile only constrains the
+# other site, it does not apply here). So the front for this host terminates
+# TLS AND compresses in one listener, and the Cloudflare tunnel is REMOVED from
+# the path for this hostname.
+#
+# WHY NOT `http://` THROUGH THE TUNNEL
+# ------------------------------------
+# A bare `http://` site on any other port answers correctly but does NOT run a
+# content-encoding encoder (verified on this host 2026-10-09: the same config on
+# :3511 returned `Content-Encoding: gzip` for `/api/ticker`; the encoder is
+# installed by the HTTP-protocol/tls certificate app, not by `encode` alone).
+# Going straight to TLS:443 is therefore both the fewer-hops option and the one
+# that compresses.
+#
+# WHAT CHANGES OUTSIDE THIS REPO (host-level files, done at deploy time)
+# ---------------------------------------------------------------------
+#   1. sudo cp deploy/caddy/fudcourt-web-internal.caddy /etc/caddy/   ← optional internal listener
+#      sudo cp deploy/caddy/fudcourt-web-public.caddy  /etc/caddy/fudcourt-web-public.caddy
+#   2. echo 'import /etc/caddy/fudcourt-web-public.caddy' >> /etc/caddy/Caddyfile
+#      (an `import` keeps this repo file authoritative for this hostname and
+#       leaves the existing :80 handlers untouched)
+#   3. sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy
+#   4. REMOVE the fc.dwirijal.my.id ingress from the tunnel:
+#        ~/.cloudflared/config.yml — delete:
+#          - hostname: fc.dwirijal.my.id
+#            service: http://127.0.0.1:3100
+#      then: systemctl restart cloudflared
+#   5. FLIP THE DNS RECORD from the tunnel (proxied CNAME to
+#      <tunnel>.cfargotunnel.com) to the ORIGIN A/AAAA for fc.dwirijal.my.id.
+#      Until step 5 the hostname still resolves to the tunnel and this listener
+#      is never reached, so the change is inert until you intend it.
+#
+# ROLLBACK
+# --------
+# Restore the two lines in ~/.cloudflared/config.yml, restore the DNS record to
+# the tunnel CNAME, `systemctl restart cloudflared`. The app was never changed,
+# so nothing else has to move.
+#
+# CAVEAT, STATED HONESTLY
+# -----------------------
+#  * rsautl/ACME: this listener must obtain the certificate itself (Let's
+#    Encrypt via HTTP-01 or TLS-ALPN). Cloudflare's "Full" mode is fine with a
+#    publicly-trusted cert; "Flexible" would loop, so leave SSL/TLS mode at
+#    Full (strict) or above when the DNS record is moved.
+#  * Cloudflare's proxy (`proxied` record) would re-add its own CDN layer for
+#    this host; that layers fine (it re-compresses/streams) but it re-introduces
+#    the same edge masking this config exists to remove. If you want the
+#    uncompressed-origin proof to hold in production, use a DNS-only (grey)
+#    record for this hostname.
+#  * Neither file is deployed by this run; this run only proves the compression
+#    behaviour on the internal listener (:3110) against the real app.
+#
+{
+	email admin@dwirijal.my.id
+	log {
+		output stderr
+		format console
+	}
+}
+
+fc.dwirijal.my.id {
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:3100 {
+		flush_interval -1
+	}
+}

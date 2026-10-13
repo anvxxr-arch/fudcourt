@@ -6,6 +6,7 @@ import { Wallet, CHAIN_COLOR, EMOJI_PRESETS, COLOR_PRESETS } from '@/lib/format'
 import { Button, Modal, Label, Card } from '@/ui/primitives';
 import type { Venue } from './client';
 import { buildVenueIndex, resolveVenue } from './venue-index';
+import { useT } from '@/lib/i18n/t';
 import WalletNfts from './wallet-nfts';
 
 type Props = {
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export default function WalletPage({ wallets, venues, balanceByWallet, onSave }: Props) {
+  const t = useT();
   const [edit, setEdit] = useState<Wallet | null>(null);
 
   /**
@@ -30,8 +32,8 @@ export default function WalletPage({ wallets, venues, balanceByWallet, onSave }:
 
   return (
     <div>
-      <h3 style={{ color: themeColor.blue }}>Wallet Manager</h3>
-      <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>Customize alias, emoji, color for each wallet. Changes reflect everywhere instantly.</p>
+      <h3 style={{ color: themeColor.blue }}>{t('overview.wallets.title')}</h3>
+      <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>{t('overview.wallets.subtitle')}</p>
       {wallets.map(w => {
         const venue = resolveVenue(venueIndex, w.chain);
         return (
@@ -60,11 +62,11 @@ export default function WalletPage({ wallets, venues, balanceByWallet, onSave }:
                       fontSize: fontSize[11], color: themeColor.labelTertiary,
                     }}>{venue.type}</span>
                 ) : (
-                  <span title="no `venues` row matches this chain — the reference is unresolved" style={{
+                  <span title={t('overview.wallets.unresolvedTitle')} style={{
                     display: 'inline-flex', alignItems: 'center', border: `1px solid ${themeColor.red}`,
                     borderRadius: radius[8], padding: `1px ${space[4]}px`, whiteSpace: 'nowrap',
                     fontSize: fontSize[11], color: themeColor.red,
-                  }}>⚠ unresolved</span>
+                  }}>{t('overview.wallets.unresolved')}</span>
                 )}
                 <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>· ${balanceByWallet[w.label]?.toFixed(2) || '0.00'}</span>
               </div>
@@ -76,7 +78,7 @@ export default function WalletPage({ wallets, venues, balanceByWallet, onSave }:
                   wallet. */}
               <WalletNfts chain={w.chain} address={w.address} />
             </div>
-            <Button onClick={() => setEdit(w)} variant="ghost" size="sm">✏️ Edit</Button>
+            <Button onClick={() => setEdit(w)} variant="ghost" size="sm">{t('overview.wallets.edit')}</Button>
           </div>
         </Card>
         );
@@ -90,20 +92,21 @@ export default function WalletPage({ wallets, venues, balanceByWallet, onSave }:
 }
 
 function EditWalletModal({ wallet, onSave, onClose }: { wallet: Wallet; onSave: (w: Partial<Wallet>) => void; onClose: () => void }) {
+  const t = useT();
   const [alias, setAlias] = useState(wallet.alias || '');
   const [emoji, setEmoji] = useState(wallet.emoji || '💰');
   const [swatch, setSwatch] = useState(wallet.color || themeColor.blue);
   const [notes, setNotes] = useState(wallet.notes || '');
 
   return (
-    <Modal title="Edit Wallet" onClose={onClose} width={420}>
+    <Modal title={t('overview.wallets.editWallet')} onClose={onClose} width={420}>
       <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, wordBreak: 'break-all', marginBottom: space[12] }}>{wallet.address}</div>
 
-      <Label>Alias</Label>
+      <Label>{t('overview.wallets.alias')}</Label>
       <input value={alias} onChange={e => setAlias(e.target.value)} placeholder={wallet.label}
         style={{ width: '100%', background: themeColor.bgBase, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[13], marginBottom: space[12], boxSizing: 'border-box' }} />
 
-      <Label>Emoji</Label>
+      <Label>{t('overview.wallets.emoji')}</Label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[4], marginBottom: space[12] }}>
         {EMOJI_PRESETS.map(e => (
           <button key={e} onClick={() => setEmoji(e)} style={{
@@ -113,7 +116,7 @@ function EditWalletModal({ wallet, onSave, onClose }: { wallet: Wallet; onSave: 
         ))}
       </div>
 
-      <Label>Color</Label>
+      <Label>{t('overview.wallets.color')}</Label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[4], marginBottom: space[12] }}>
         {COLOR_PRESETS.map(c => (
           <button key={c} onClick={() => setSwatch(c)} style={{
@@ -125,13 +128,13 @@ function EditWalletModal({ wallet, onSave, onClose }: { wallet: Wallet; onSave: 
           style={{ width: space[32], height: space[32], background: 'transparent', border: 'none', cursor: 'pointer' }} />
       </div>
 
-      <Label>Notes</Label>
-      <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="optional notes..."
+      <Label>{t('overview.wallets.notes')}</Label>
+      <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('overview.wallets.notesPlaceholder')}
         style={{ width: '100%', background: themeColor.bgBase, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], marginBottom: space[16], minHeight: 50, resize: 'vertical', boxSizing: 'border-box' }} />
 
       <div style={{ display: 'flex', gap: space[8], justifyContent: 'flex-end' }}>
-        <Button onClick={onClose} variant="ghost" size="md">Cancel</Button>
-        <Button onClick={() => onSave({ address: wallet.address, alias: alias || wallet.label, emoji, color: swatch, notes })}>💾 Save</Button>
+        <Button onClick={onClose} variant="ghost" size="md">{t('overview.wallets.cancel')}</Button>
+        <Button onClick={() => onSave({ address: wallet.address, alias: alias || wallet.label, emoji, color: swatch, notes })}>{t('overview.wallets.save')}</Button>
       </div>
     </Modal>
   );

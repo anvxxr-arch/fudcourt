@@ -18,9 +18,21 @@ export async function generateMetadata({ params }: { params: Promise<{ indicator
   };
 }
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
+/**
+ * ISR, not request-time: the param space is unbounded (every coin, every
+ * market type/instrument, every country/bank/indicator the registry knows),
+ * so this route cannot be pre-rendered to a fixed list. `dynamicParams = true`
+ * lets Next render unknown slugs on demand while still caching the ones it has
+ * already built, and `revalidate = 300` renews them. The shell is static — the
+ * root layout no longer reads the cookie server-side, so the whole public tree
+ * stays cacheable and only this param space is served on demand.
+ */
+export async function generateStaticParams() {
+  return [];
+}
+export const dynamicParams = true;
+export const revalidate = 300;
 export default async function EconomyIndicatorRoute({ params }: { params: Promise<{ indicator: string }> }) {
   const { indicator } = await params;
   if (!INDICATOR_BY_SLUG[(indicator ?? '').toLowerCase()]) notFound();

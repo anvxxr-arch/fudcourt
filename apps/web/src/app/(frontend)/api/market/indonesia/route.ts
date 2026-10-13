@@ -20,6 +20,7 @@ import { fetchWorldBank } from '@/features/market/worldbank';
 import { fetchImfFiscal } from '@/features/market/imf';
 import { limitedFetch } from '@/lib/rate-limit';
 import { mapPool } from '@/app/(frontend)/api/economy/_lib/rows';
+import { publicJson } from '../../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -82,6 +83,7 @@ export async function GET() {
   // all HIT). The BIS/World Bank/IMF helpers return parsed data, not
   // Responses, so they contribute no freshness mark.
   const cacheMarks: string[] = [];
+  const staleAges: number[] = [];
 
   // ---- 1. live quotes (Yahoo) ----------------------------------------------
   const quotes: IdrQuote[] = [];
@@ -98,7 +100,9 @@ export async function GET() {
       return { ok: false, failure: { symbol: spec.symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` } };
     }
     const mark = res.headers.get('X-Cache');
-    cacheMarks.push(mark === 'HIT' || mark === 'COALESCED' ? mark : 'MISS');
+    const age = res.headers.get('Age');
+    cacheMarks.push(mark === 'HIT' || mark === 'COALESCED' || mark === 'STALE' ? mark : 'MISS');
+    if (mark === 'STALE' && age) staleAges.push(Number(age));
     if (!res.ok) {
       return { ok: false, failure: { symbol: spec.symbol, reason: `upstream ${res.status}` } };
     }
@@ -224,13 +228,18 @@ export async function GET() {
 
   // HIT only if EVERY upstream call was a HIT; COALESCED if any coalesced
   // and none missed; otherwise MISS.
+  // STALE is the worst case that still served: any stale body must be
+  // VISIBLE as stale (never folded into COALESCED/HIT), with the OLDEST
+  // body's age carried in the Age header.
   const cache =
     cacheMarks.length > 0 && cacheMarks.every((m) => m === 'HIT')
       ? 'HIT'
       : cacheMarks.some((m) => m === 'MISS') || cacheMarks.length === 0
         ? 'MISS'
-        : 'COALESCED';
-  return NextResponse.json(
+        : cacheMarks.some((m) => m === 'STALE')
+          ? 'STALE'
+          : 'COALESCED';
+  return publicJson(
     {
       quotes,
       policy,
@@ -243,6 +252,7 @@ export async function GET() {
       asOf: Math.floor(Date.now() / 1000),
       derived: `quotes: one Yahoo chart call per symbol (live); policy: BIS WS_CBPOL; economy: World Bank annual, newest non-null year per indicator; government finance: IMF Fiscal Monitor vintage${apbn ? ` ${apbn.vintage} (published ${apbn.published.slice(0, 10)}, actuals through ${apbn.actualThrough}, ${apbn.droppedProjections} projection year(s) withheld)` : ' unavailable'}; ${failed.length} upstream item(s) failed`,
     },
-    { status: 200, headers: { 'X-Cache': cache } }
+    IDR_QUOTE_TTL_MS / 1000,
+    { status: 200, headers: cache === 'STALE' ? { 'X-Cache': cache, Age: String(Math.max(0, ...staleAges)) } : { 'X-Cache': cache } }
   );
 }

@@ -1,7 +1,7 @@
 import StoreShell from '@/features/overview/store-shell';
 import type { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 const TITLE = 'Prediction Markets & Event Risk | FUDCOURT';
 const DESCRIPTION =
@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   openGraph: { title: TITLE, description: DESCRIPTION, url: '/risk', siteName: 'FUDCOURT', type: 'website', images: ['/og-cover.png'] },
   twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION, images: ['/og-cover.png'] },
 };
-export const revalidate = 0;
 
 export default function RiskRoute() {
   return <StoreShell initialPage="risk" />;

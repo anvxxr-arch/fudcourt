@@ -6,6 +6,7 @@ import { Loading } from '@/ui/feedback';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import { Toolbar } from '@/ui/toolbar';
 import { fmtRate, fmtTime } from '@/lib/format';
+import { useT } from '@/lib/i18n/t';
 import type { ForexPair } from './forex-pairs';
 /**
  * Forex board UI (client) — pure pair data lives in './forex-pairs'
@@ -33,6 +34,7 @@ export function fetchForex(): Promise<ForexBoardEnvelope> {
 }
 /** Forex board: curated major pairs from /api/market/forex. */
 export default function ForexBoard() {
+  const t = useT();
   const [pairs, setPairs] = useState<ForexPair[]>([]);
   const [base, setBase] = useState('USD');
   const [updated, setUpdated] = useState<number | null>(null);
@@ -56,8 +58,8 @@ export default function ForexBoard() {
   }, []);
   useEffect(() => {
     load();
-    const t = setInterval(load, 60_000);
-    return () => clearInterval(t);
+    const timer = setInterval(load, 60_000);
+    return () => clearInterval(timer);
   }, [load]);
   // `TH` already defaults `color` to `themeColor.labelTertiary` and takes `align` as a prop; this
   // board's headers carry `fontWeight.regular` on top of that (the shelf's shared style is
@@ -81,16 +83,16 @@ export default function ForexBoard() {
               cursor: 'pointer',
             }}
           >
-            ↻ Refresh
+            {t('common.refresh')}
           </button>
         }
       >
         <h3 style={{ color: themeColor.blue, margin: 0 }}>
-          Forex — major pairs
+          {t('market.forexTitle')}
           <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], fontWeight: fontWeight.regular }}>
             {' '}
-            · base {base}
-            {updated ? ` · updated ${fmtTime(updated)}` : ''}
+            · {t('market.forexMetaBase', { base })}
+            {updated ? ` · ${t('market.forexMetaUpdated', { time: fmtTime(updated) })}` : ''}
           </span>
         </h3>
       </Toolbar>
@@ -101,9 +103,9 @@ export default function ForexBoard() {
         <Table>
           <THead>
             <TR>
-              <TH style={thStyle}>Pair</TH>
-              <TH align="right" style={thStyle}>Rate</TH>
-              <TH align="right" style={thStyle}>Inverse</TH>
+              <TH style={thStyle}>{t('col.pair')}</TH>
+              <TH align="right" style={thStyle}>{t('col.rate')}</TH>
+              <TH align="right" style={thStyle}>{t('market.inverse')}</TH>
             </TR>
           </THead>
           <TBody>

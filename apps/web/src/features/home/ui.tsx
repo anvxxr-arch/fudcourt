@@ -45,6 +45,7 @@ import {
   Panel,
   Change,
   CoinCell,
+  NOTE_MIN_HEIGHT,
 } from './ui-shared';
 import { MoversColumn, FxColumn, QuoteColumn } from './ui-panels';
 import { MacroBoard, IndonesiaBoard, SignalQuality, ProofStrip } from './ui-boards';
@@ -138,7 +139,15 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
               market overview unavailable — {cr.error}. The tiles are withheld rather than shown as zeroes.
             </Banner>
           )}
-          {cr.loading && !cr.error && <Loading label="loading live figures…" />}
+          {cr.loading && !cr.error && (
+            // Six stat tiles on an auto-fit 150px grid = two rows at phone
+            // width (~148px) plus the note; reserved so the tiles' arrival does
+            // not push every section below them down (this was one of the four
+            // measured shifts on `/`).
+            <div style={{ minHeight: 2 * 148 + NOTE_MIN_HEIGHT }}>
+              <Loading label="loading live figures…" />
+            </div>
+          )}
           {g && (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: space[8] }}>
@@ -161,6 +170,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
           title={`Top ${TOP_LIMIT} by market cap`}
           url={MARKETS_TOP_URL}
           label="loading live figures…"
+          rows={Math.min(TOP_LIMIT, 5)}
           render={d => (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
@@ -185,6 +195,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
         <Panel<CrTrending>
           title="Trending now"
           url={TRENDING_URL}
+          rows={6}
           render={d => (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
@@ -218,6 +229,7 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
         <Panel<LlamaProtocols>
           title="Top DeFi protocols by TVL"
           url={DEFI_PROTOCOLS_URL}
+          rows={6}
           render={d => (
             <>
               <Meter
@@ -311,6 +323,11 @@ export default function HomePage({ isTeam = false }: { isTeam?: boolean }) {
         <Panel<NewsEnvelope>
           title="Latest news"
           url={NEWS_URL}
+          rows={6}
+          // A news row is a card (headline + meta), not a single line of
+          // figures: measured ~98px against the 18px `ROW_MIN_HEIGHT` default,
+          // which is why the news panel was the tallest mis-reservation.
+          rowHeight={98}
           render={d => (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>

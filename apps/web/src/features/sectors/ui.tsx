@@ -26,6 +26,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, radius, space, letterSpacing } from '@/styles/tokens';
 import { dash, fmtPct, fmtPrice } from '@/lib/format';
+import { useT } from '@/lib/i18n/t';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
 import { EmptyState, ErrorState, Loading } from '@/ui/feedback';
@@ -143,22 +144,23 @@ function useSource<T>(load: (signal: AbortSignal) => Promise<Source<T>>, key: st
   return state;
 }
 
-const SORT_OPTIONS: { key: TagSortKey; label: string }[] = [
-  { key: 'marketCap', label: 'Market cap' },
-  { key: 'change24h', label: '24h %' },
-  { key: 'dominance', label: 'Dominance' },
+const SORT_OPTIONS: { key: TagSortKey; label: 'crypto.sectors.sortMarketCap' | 'crypto.sectors.sortChange24h' | 'crypto.sectors.sortDominance' }[] = [
+  { key: 'marketCap', label: 'crypto.sectors.sortMarketCap' },
+  { key: 'change24h', label: 'crypto.sectors.sortChange24h' },
+  { key: 'dominance', label: 'crypto.sectors.sortDominance' },
 ];
 
 // ---------------------------------------------------------------------------
 // (3) The KEYED detail — mode=tag&key=<slug>
 // ---------------------------------------------------------------------------
 function TagDetailCard({ slug, tags, onSelect }: { slug: string; tags: TagRow[]; onSelect: (s: string) => void }) {
+  const t = useT();
   const nowSec = Math.floor(Date.now() / 1000);
   const src = useSource<TagEnvelope>((s) => fetchTag(slug, s), `tag:${slug}`);
   const [page, setPage] = useState(1);
 
   const selector = (
-    <select value={slug} onChange={(e) => onSelect(e.target.value)} style={FIELD_STYLE} aria-label="Select a tag">
+    <select value={slug} onChange={(e) => onSelect(e.target.value)} style={FIELD_STYLE} aria-label={t('crypto.sectors.selectAria')}>
       {tags.map((t) => (
         <option key={t.slug} value={t.slug}>
           {t.name}
@@ -169,20 +171,20 @@ function TagDetailCard({ slug, tags, onSelect }: { slug: string; tags: TagRow[];
 
   const wrap = (children: ReactNode) => (
     <Card
-      title="Tag detail"
-      subtitle="one tag's page — the selected slug loads mode=tag&key=<slug>; an unknown slug is a 404, surfaced as an error"
+      title={t('crypto.sectors.detailTitle')}
+      subtitle={t('crypto.sectors.detailSubtitle')}
       right={selector}
     >
       {children}
     </Card>
   );
 
-  if (src === null) return wrap(<Loading what="the tag page" />);
+  if (src === null) return wrap(<Loading what={t('crypto.sectors.loadingWhat')} />);
   if (src.data === null) {
     return wrap(
       <ErrorState
-        title={`Could not load the tag ‘${slug}’`}
-        detail={`${src.error ?? 'the upstream returned no rows and named no reason'} — an unknown slug is answered as a 404 by the sidecar, which is a FAILED read, never an empty table`}
+        title={t('crypto.sectors.loadFailTitle', { slug })}
+        detail={t('crypto.sectors.loadFailDetail', { error: src.error ?? t('crypto.common.upstreamNoRows') })}
       />,
     );
   }
@@ -192,8 +194,8 @@ function TagDetailCard({ slug, tags, onSelect }: { slug: string; tags: TagRow[];
   if (detail.rows.length === 0) {
     return wrap(
       <ErrorState
-        title={`The tag ‘${slug}’ came back empty`}
-        detail="the upstream answered successfully with no rows — an empty board is not a valid read, so this is reported as a failure, not an empty table"
+        title={t('crypto.sectors.emptyTitle', { slug })}
+        detail={t('crypto.sectors.emptyDetail')}
       />,
     );
   }
@@ -205,23 +207,23 @@ function TagDetailCard({ slug, tags, onSelect }: { slug: string; tags: TagRow[];
     <>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
         <Stat
-          label="Slug"
+          label={t('crypto.sectors.statSlug')}
           value={text(detail.info?.slug ?? slug)}
-          hint="the mode=tag key"
+          hint={t('crypto.sectors.hintModeTagKey')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Name"
+          label={t('crypto.sectors.statName')}
           value={text(detail.info?.name)}
-          hint={`${detail.rows.length} coins in this tag`}
+          hint={t('crypto.sectors.hintCoinsInTag', { n: detail.rows.length })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
         />
         <Stat
-          label="Subtitle"
+          label={t('crypto.sectors.statSubtitle')}
           value={text(detail.info?.subtitle)}
-          hint="CryptoRank's own description"
+          hint={t('crypto.sectors.hintOwnDescription')}
           valueSize={fontSize[13]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 260px' }}
         />
@@ -231,7 +233,7 @@ function TagDetailCard({ slug, tags, onSelect }: { slug: string; tags: TagRow[];
           the cells so it can never read as a flat market. */}
       {!detail.change.available ? (
         <p style={{ margin: `0 0 ${space[8]}px`, fontSize: fontSize[12], color: themeColor.orange, lineHeight: lineHeight.normal }}>
-          {`the upstream reports changeSource: 'unavailable' for this mode — the 24h % column below is shown as ${dash} for every row, never 0`}
+          {t('crypto.sectors.changeUnavailableNote')}
           {detail.change.note ? ` (${detail.change.note})` : ''}.
         </p>
       ) : detail.change.note ? (
@@ -241,12 +243,12 @@ function TagDetailCard({ slug, tags, onSelect }: { slug: string; tags: TagRow[];
       ) : null}
 
       <DataTable
-        head={['Rank', 'Name', 'Symbol', 'Price (USD)', 'Market cap', '24h volume', 'Category', 'ATH (USD)', detail.change.available ? '24h %' : '24h % (unavailable)']}
+        head={[t('crypto.head.rank'), t('crypto.head.name'), t('crypto.coins.headSymbol'), t('crypto.head.priceUsd'), t('crypto.head.marketCap'), t('crypto.head.volume24h'), t('crypto.head.category'), t('crypto.head.athUsd'), detail.change.available ? t('crypto.head.change24h') : t('crypto.sectors.headChangeUnavailable')]}
         rows={visible.map((r: TagCoinRow) => {
           const changeCell = detail.change.available ? (
             <span style={{ color: changeColor(r.change24h) }}>{fmtPct(r.change24h)}</span>
           ) : (
-            <span style={{ color: themeColor.labelTertiary }} title="the upstream change column is unavailable on this surface">
+            <span style={{ color: themeColor.labelTertiary }} title={t('crypto.sectors.changeUnavailableTitle')}>
               {dash}
             </span>
           );
@@ -268,19 +270,18 @@ function TagDetailCard({ slug, tags, onSelect }: { slug: string; tags: TagRow[];
 
       <div style={{ display: 'flex', alignItems: 'center', gap: space[8], marginTop: space[8], flexWrap: 'wrap' }}>
         <button type="button" onClick={() => setPage(slice.page - 1)} disabled={slice.page <= 1} style={buttonStyle(false, slice.page <= 1)}>
-          ‹ Prev
+          {t('crypto.common.prevCap')}
         </button>
         <span style={{ fontSize: fontSize[12], color: themeColor.labelSecondary }}>
-          showing {slice.note} · page {slice.page} of {slice.pages}
+          {t('crypto.sectors.showingTags', { n: slice.note, total: detail.rows.length })} · {t('crypto.sectors.hintPageOf', { page: slice.page, pages: slice.pages })}
         </span>
         <button type="button" onClick={() => setPage(slice.page + 1)} disabled={slice.page >= slice.pages} style={buttonStyle(false, slice.page >= slice.pages)}>
-          Next ›
+          {t('crypto.common.nextCap')}
         </button>
       </div>
 
       <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-        {envelope.count} rows on CryptoRank&apos;s own tag page. A metric the upstream did not publish renders {dash} rather than 0.
-        CryptoRank&apos;s own slice: {text(envelope.slice)}.
+        {t('crypto.sectors.detailFootnote', { count: envelope.count, slice: text(envelope.slice) })}
       </p>
     </>,
   );
@@ -290,18 +291,19 @@ function TagDetailCard({ slug, tags, onSelect }: { slug: string; tags: TagRow[];
 // The route surface — the taxonomy index, its filter/sort, and the keyed detail.
 // ---------------------------------------------------------------------------
 export default function SectorsBoard() {
+  const t = useT();
   const tags = useSource<TagsEnvelope>((s) => fetchTags(s), 'tags');
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<TagSortKey>('marketCap');
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const nowSec = Math.floor(Date.now() / 1000);
 
-  if (tags === null) return <Loading what="the tag taxonomy" />;
+  if (tags === null) return <Loading what={t('crypto.sectors.taxonomyLoadingWhat')} />;
   if (tags.data === null) {
     return (
       <ErrorState
-        title="Could not load the tag taxonomy"
-        detail={`${tags.error ?? 'the upstream returned no rows and named no reason'} — the taxonomy read failed, which is reported as an error, never as an empty board`}
+        title={t('crypto.sectors.taxonomyLoadFailTitle')}
+        detail={t('crypto.sectors.taxonomyLoadFailDetail', { error: tags.error ?? t('crypto.common.upstreamNoRows') })}
       />
     );
   }
@@ -311,47 +313,47 @@ export default function SectorsBoard() {
   if (board.rows.length === 0) {
     return (
       <ErrorState
-        title="The tag taxonomy came back empty"
-        detail="the upstream answered successfully with no rows — an empty board is not a valid read, so this is reported as a failure, not an empty table"
+        title={t('crypto.sectors.taxonomyEmptyTitle')}
+        detail={t('crypto.common.emptyBoardFailure')}
       />
     );
   }
 
   const view = filterAndSortTags(board.rows, { query, sortBy });
   const activeSlug = selectedSlug ?? board.topDominance?.slug ?? board.rows[0]?.slug ?? null;
-  const sortLabel = SORT_OPTIONS.find((o) => o.key === sortBy)?.label ?? sortBy;
+  const sortLabel = t(SORT_OPTIONS.find((o) => o.key === sortBy)?.label ?? 'crypto.sectors.sortMarketCap');
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[16] }}>
       {/* (1) Headline row of Stat cards from mode=tags. */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
-          label="Tags"
+          label={t('crypto.sectors.statTags')}
           value={String(board.tagCount)}
-          hint={board.upstreamTotal === null ? 'upstream total not stated' : `of ${board.upstreamTotal} upstream`}
+          hint={board.upstreamTotal === null ? t('crypto.common.upstreamTotalNotStated') : t('crypto.common.ofUpstream', { n: board.upstreamTotal })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Top dominance"
+          label={t('crypto.sectors.statTopDominance')}
           value={pct(board.topDominance?.dominance ?? null)}
-          hint={board.topDominance ? `${board.topDominance.name} · ${board.topDominance.slug}` : 'no tag states a dominance'}
+          hint={board.topDominance ? `${board.topDominance.name} · ${board.topDominance.slug}` : t('crypto.sectors.hintNoTagDominance')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 200px' }}
         />
         <Stat
-          label="Gainers across tags"
+          label={t('crypto.sectors.statGainers')}
           value={board.gainers.stated === 0 ? dash : num(board.gainers.total)}
           tone="positive"
-          hint={`sum over the ${board.gainers.stated} of ${board.gainers.of} tags that state it`}
+          hint={t('crypto.sectors.hintSumOverTags', { stated: board.gainers.stated, of: board.gainers.of })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 180px' }}
         />
         <Stat
-          label="Losers across tags"
+          label={t('crypto.sectors.statLosers')}
           value={board.losers.stated === 0 ? dash : num(board.losers.total)}
           tone="negative"
-          hint={`sum over the ${board.losers.stated} of ${board.losers.of} tags that state it`}
+          hint={t('crypto.sectors.hintSumOverTags', { stated: board.losers.stated, of: board.losers.of })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 180px' }}
         />
@@ -359,40 +361,40 @@ export default function SectorsBoard() {
 
       {/* (2) The taxonomy table — filter over name/description, sort by a metric. */}
       <Card
-        title="Tag taxonomy"
-        subtitle="CryptoRank's topic tags — 24h % and dominance are upstream PERCENTS here; a tag the upstream left blank renders —"
+        title={t('crypto.sectors.cardTitle')}
+        subtitle={t('crypto.sectors.cardSubtitle')}
         right={
           <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="filter name / description…"
+              placeholder={t('crypto.sectors.filterPlaceholder')}
               style={FIELD_STYLE}
-              aria-label="Filter tags by name or description"
+              aria-label={t('crypto.sectors.filterAria')}
             />
             {SORT_OPTIONS.map((o) => (
               <button key={o.key} type="button" onClick={() => setSortBy(o.key)} style={buttonStyle(o.key === sortBy, false)}>
-                {o.label}
+                {t(o.label as Parameters<typeof t>[0])}
               </button>
             ))}
           </div>
         }
       >
         <p style={{ margin: `0 0 ${space[8]}px`, fontSize: fontSize[12], color: themeColor.labelSecondary, lineHeight: lineHeight.normal }}>
-          showing {view.length} of {board.rows.length} tags
-          {query.trim() === '' ? '' : ` (filtered by “${query.trim()}”)`} · sorted by {sortLabel}, largest first · upstream states{' '}
-          {text(envelope.upstreamTotal === null ? null : String(envelope.upstreamTotal))} tags.
+          {t('crypto.sectors.showingTags', { n: view.length, total: board.rows.length })}
+          {query.trim() === '' ? '' : t('crypto.sectors.filteredBy', { query: query.trim() })}
+          {t('crypto.sectors.sortedBy', { label: sortLabel, total: text(envelope.upstreamTotal === null ? null : String(envelope.upstreamTotal)) })}
         </p>
 
         {view.length === 0 ? (
-          <EmptyState>No tag matches “{query.trim()}”.</EmptyState>
+          <EmptyState>{t('crypto.sectors.noMatch', { query: query.trim() })}</EmptyState>
         ) : (
           <DataTable
-            head={['Name', 'Market cap', '24h volume', 'Dominance', '24h %', 'Gainers', 'Losers', 'Top coins']}
+            head={[t('crypto.head.name'), t('crypto.head.marketCap'), t('crypto.head.volume24h'), t('crypto.sectors.headDominance'), t('crypto.head.change24h'), t('crypto.sectors.headGainers'), t('crypto.sectors.headLosers'), t('crypto.sectors.headTopCoins')]}
             rows={view.map((r) => ({
               cells: [
-                <button key="name" type="button" onClick={() => setSelectedSlug(r.slug)} style={NAME_BUTTON_STYLE} title={`load ${r.slug}`}>
+                <button key="name" type="button" className="fc-hit-24" onClick={() => setSelectedSlug(r.slug)} style={NAME_BUTTON_STYLE} title={t('crypto.sectors.loadTitle', { slug: r.slug })}>
                   {text(r.name)}
                 </button>,
                 <span key="mcap">{usd(r.marketCap)}</span>,
@@ -408,25 +410,21 @@ export default function SectorsBoard() {
         )}
 
         <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-          On this surface change24h and dominance are upstream PERCENTS (a whole number is already 100×), unlike the fraction
-          change other CryptoRank modes ship. A cap, volume, change or count the upstream left blank renders {dash}, never 0.
-          Gainers/losers totals are sums over the tags that state them. CryptoRank&apos;s own slice: {text(envelope.slice)}.
+          {t('crypto.sectors.taxonomyFootnote', { slice: text(envelope.slice) })}
         </p>
       </Card>
 
       {/* (3) The KEYED detail for the selected slug. */}
       {activeSlug === null ? (
-        <Card title="Tag detail" subtitle="select a tag above">
-          <EmptyState>No tag selected.</EmptyState>
+        <Card title={t('crypto.sectors.detailPlaceholderTitle')} subtitle={t('crypto.sectors.detailPlaceholderSubtitle')}>
+          <EmptyState>{t('crypto.sectors.noTagSelected')}</EmptyState>
         </Card>
       ) : (
         <TagDetailCard key={activeSlug} slug={activeSlug} tags={board.rows} onSelect={setSelectedSlug} />
       )}
 
       <p style={{ margin: 0, fontSize: fontSize[11], color: themeColor.labelTertiary, letterSpacing: letterSpacing.xs, lineHeight: lineHeight.normal }}>
-        Two reads, one rule: a metric CryptoRank did not publish renders {dash}, never 0. The taxonomy is {board.tagCount} tags and the
-        detail page is paginated client-side 50 at a time, so each states the slice it is showing; the detail change column is named
-        unavailable rather than printed as 0. Nothing here is a recommendation.
+        {t('crypto.sectors.routeFootnote', { count: board.tagCount })}
       </p>
     </div>
   );

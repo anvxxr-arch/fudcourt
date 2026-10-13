@@ -135,10 +135,10 @@ export default function TickerDetailPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[12], flexWrap: 'wrap', gap: space[8] }}>
         <div>
-          <h3 style={{ color: themeColor.blue, margin: 0 }}>
+          <h1 style={{ color: themeColor.blue, margin: 0, fontSize: fontSize[20] }}>
             <Link href="/market/crypto" style={{ color: themeColor.labelTertiary, textDecoration: 'none', fontSize: fontSize[13] }}>← </Link>
             {base} · centralized exchange instruments
-          </h3>
+          </h1>
           <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `${space[4]}px 0 0` }}>
             {summary
               ? `${summary.venues.length} venue${summary.venues.length === 1 ? '' : 's'} list ${meta?.typeLabels[type].toLowerCase() ?? type} for this coin`

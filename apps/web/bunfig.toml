@@ -1,0 +1,7 @@
+# Bun test defaults: the offline suites import 'server-only'-guarded server modules
+# (routing-tests, nav-tests read @/server/routes and @/lib/i18n/*), so the preload
+# that maps the guard to its empty twin must apply to EVERY `bun test` invocation —
+# not only the `test:shapers` script. Without it a bare `bun test tests/routing-tests.ts`
+# fails on the guard before any test runs.
+[test]
+preload = ["./tests/preload.ts"]

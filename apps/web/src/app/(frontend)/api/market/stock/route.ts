@@ -17,7 +17,7 @@ import {
 } from '@/features/market/clients';
 import { limitedFetch } from '@/lib/rate-limit';
 import { mapPool } from '@/app/(frontend)/api/economy/_lib/rows';
-import { fail } from '../../_lib/http';
+import { fail, publicJson } from '../../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -54,6 +54,7 @@ export async function GET(req: Request) {
   // Per-symbol upstream freshness marks from the fan-out below, aggregated
   // into a single X-Cache header on the 200 path (HIT only if all HIT).
   const cacheMarks: string[] = [];
+  const staleAges: number[] = [];
 
   const outcomes = await mapPool(symbols, 6, async (symbol: string): Promise<QuoteOutcome> => {
     let res: Response;
@@ -61,14 +62,16 @@ export async function GET(req: Request) {
       res = await limitedFetch(
         chartUrl(symbol),
         { headers: { 'User-Agent': YAHOO_UA }, signal: AbortSignal.timeout(TIMEOUT_MS) },
-        { ttlMs: STOCK_TTL_MS }
+        { ttlMs: STOCK_TTL_MS, staleMs: 10 * 60_000 }
       );
     } catch (e) {
       cacheMarks.push('MISS');
       return { ok: false, failure: { symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` } };
     }
     const mark = res.headers.get('X-Cache');
-    cacheMarks.push(mark === 'HIT' || mark === 'COALESCED' ? mark : 'MISS');
+    const age = res.headers.get('Age');
+    cacheMarks.push(mark === 'HIT' || mark === 'COALESCED' || mark === 'STALE' ? mark : 'MISS');
+    if (mark === 'STALE' && age) staleAges.push(Number(age));
     if (!res.ok) {
       return { ok: false, failure: { symbol, reason: `upstream ${res.status}` } };
     }
@@ -103,13 +106,18 @@ export async function GET(req: Request) {
 
   // HIT only if EVERY upstream call was a HIT; COALESCED if any coalesced
   // and none missed; otherwise MISS.
+  // STALE is the worst case that still served: any stale body must be
+  // VISIBLE as stale (never folded into COALESCED/HIT), with the OLDEST
+  // body's age carried in the Age header.
   const cache =
     cacheMarks.length > 0 && cacheMarks.every((m) => m === 'HIT')
       ? 'HIT'
       : cacheMarks.some((m) => m === 'MISS') || cacheMarks.length === 0
         ? 'MISS'
-        : 'COALESCED';
-  return NextResponse.json(
+        : cacheMarks.some((m) => m === 'STALE')
+          ? 'STALE'
+          : 'COALESCED';
+  return publicJson(
     {
       region,
       quotes,
@@ -119,6 +127,7 @@ export async function GET(req: Request) {
       asOf: Math.floor(Date.now() / 1000),
       derived: `region=${region}; one Yahoo chart call per symbol; ${failed.length} of ${symbols.length} failed`,
     },
-    { status: 200, headers: { 'X-Cache': cache } }
+    STOCK_TTL_MS / 1000,
+    { status: 200, headers: cache === 'STALE' ? { 'X-Cache': cache, Age: String(Math.max(0, ...staleAges)) } : { 'X-Cache': cache } }
   );
 }

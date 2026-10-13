@@ -4,6 +4,7 @@ import { themeColor, fontSize, fontWeight, letterSpacing, space } from '@/styles
 import { Asset, CHAIN_COLOR, groupBy, groupSum } from '@/lib/format';
 import { Card } from '@/ui/primitives';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
+import { useT } from '@/lib/i18n/t';
 
 type Props = {
   assets: Asset[];
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export default function DashboardPage({ assets, total, getAlias, getColor }: Props) {
+  const t = useT();
   const byOwner = groupBy(assets, a => a.wallet || 'Unassigned');
   const byChain = groupBy(assets, a => a.chain || 'Unknown');
   const ownerTotals = groupSum(assets, a => a.wallet || 'Unassigned', a => a.value_usd);
@@ -21,16 +23,16 @@ export default function DashboardPage({ assets, total, getAlias, getColor }: Pro
   return (
     <div>
       <Card>
-        <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], letterSpacing: letterSpacing.wide }}>NET WORTH</div>
+        <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], letterSpacing: letterSpacing.wide }}>{t('overview.dashboard.netWorth')}</div>
         <div style={{ fontSize: fontSize[34], fontWeight: fontWeight.bold, color: themeColor.blue }}>
           ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
         <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], marginTop: space[8] }}>
-          {assets.length} assets · {sortedOwners.length} entities · on-chain + CEX
+          {t('overview.dashboard.summary', { nAssets: assets.length, nEntities: sortedOwners.length })}
         </div>
       </Card>
 
-      <h3 style={{ color: themeColor.blue }}>Per Entity</h3>
+      <h3 style={{ color: themeColor.blue }}>{t('overview.dashboard.perEntity')}</h3>
       {sortedOwners.map(([owner, total]) => (
         <Card key={owner}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -48,16 +50,16 @@ export default function DashboardPage({ assets, total, getAlias, getColor }: Pro
         </Card>
       ))}
 
-      <h3 style={{ color: themeColor.blue }}>Assets Detail</h3>
+      <h3 style={{ color: themeColor.blue }}>{t('overview.dashboard.assetsDetail')}</h3>
       <div style={{ overflowX: 'auto' }}>
       <Table style={{ fontSize: fontSize[13] }}>
         <THead>
           <TR style={{ color: themeColor.labelTertiary }}>
-            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>Chain</TH>
-            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>Coin</TH>
-            <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>Balance</TH>
-            <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>USD</TH>
-            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>Owner</TH>
+            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('col.chain')}</TH>
+            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('col.coin')}</TH>
+            <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('col.balance')}</TH>
+            <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('overview.dashboard.usd')}</TH>
+            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('overview.dashboard.owner')}</TH>
           </TR>
         </THead>
         <TBody>
@@ -73,7 +75,7 @@ export default function DashboardPage({ assets, total, getAlias, getColor }: Pro
         </TBody>
         <tfoot>
           <TR style={{ borderBottom: 'none', borderTop: `2px solid ${themeColor.blue}` }}>
-            <TD colSpan={3} align="right" style={{ padding: space[8], color: themeColor.labelTertiary }}>TOTAL</TD>
+            <TD colSpan={3} align="right" style={{ padding: space[8], color: themeColor.labelTertiary }}>{t('overview.dashboard.total')}</TD>
             <TD align="right" mono style={{ padding: space[8], fontWeight: fontWeight.bold, color: themeColor.blue }}>${total.toFixed(2)}</TD>
             <TD />
           </TR>

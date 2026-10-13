@@ -59,6 +59,60 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Checked state for the custom-drawn form controls (checkbox / radio / switch).
+ *
+ * The atoms paint their own box, dot and knob as sibling spans of a visually
+ * hidden native input, so the browser's own `:checked` rendering never reaches
+ * them: without these rules the tick and the dot are painted unconditionally
+ * (every checkbox looks ticked, every radio looks selected) and the switch
+ * knob never moves. The native input keeps the semantics — `:checked` here is
+ * purely the visual half of the same state.
+ *
+ * The default (unchecked) appearance is declared HERE rather than as an inline
+ * style so the two halves of the state live in one place: an inline
+ * `background: currentColor` on the tick would beat any stylesheet rule.
+ * ------------------------------------------------------------------------- */
+.fc-checkbox input:checked + span .fc-checkbox-tick,
+.fc-radio input:checked + span .fc-radio-dot {
+  opacity: 1;
+}
+
+.fc-checkbox-tick {
+  opacity: 0;
+  background: currentColor;
+}
+
+.fc-radio-dot {
+  opacity: 0;
+  background: var(--fc-brand-primary);
+}
+
+/* Unchecked defaults for the switch, declared here (not inline) so the
+   `:checked` rules below can override them — an inline `background` would win
+   over any class selector and the track could never change colour. */
+.fc-switch-track {
+  background: var(--fc-surface-secondary);
+}
+
+.fc-switch-knob {
+  background: var(--fc-text-muted);
+}
+
+/* The switch's track and knob are adjacent siblings of the input, so the
+   checked track is `input + .fc-switch-track` and the knob follows it. The
+   travel is the track width minus the knob width minus the 2px inset on each
+   side, which is what keeps the knob inside the track at every size. */
+.fc-switch input:checked + .fc-switch-track {
+  background: var(--fc-brand-primary);
+  border-color: var(--fc-brand-primary);
+}
+
+.fc-switch input:checked + .fc-switch-track + .fc-switch-knob {
+  transform: translateX(calc(var(--fc-switch-travel, 16px)));
+  background: var(--fc-text-inverse);
+}
+
+/* ---------------------------------------------------------------------------
  * Disabled semantics. A disabled control is not merely dimmed — it is removed
  * from the tab order and marked not-editable, so a keyboard user cannot land
  * on something that will not respond. `pointer-events: none` is what stops a
@@ -193,6 +247,40 @@ button:not(p button):not(span button):not(li button):not(td button):not(th butto
 
 a:not(p a):not(span a):not(li a):not(td a):not(th a)::after,
 button:not(p button):not(span button):not(li button):not(td button):not(th button)::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max(100%, 24px);
+  height: max(100%, 24px);
+}
+
+/* An explicit 24x24 hit area for a control the design keeps visually smaller
+ * than the floor: an inline hash "Copy" (minHeight 20 to sit on a data line)
+ * and a chip's remove ✕ (16x16 inside the chip). The generic overlay's
+ * `:not(span ...)` guards exclude both, because they live inside a <span> — so
+ * they opt in by class instead. The mechanism is the same pseudo-element, so
+ * the control's own box, and therefore the row it sits in, does not change
+ * size; only the hit-tested area grows to the WCAG 2.2 floor.
+ *
+ * PROOF, measured in headless Chromium with real clicks (not
+ * `elementFromPoint` — that ignores pseudo-elements and reported `html` at
+ * every corner, which is exactly why it is the wrong instrument here). A
+ * DISPATCHED click decides it:
+ *
+ *   16x16 ✕, click at centre     -> fires   (baseline, inside the widget)
+ *   click +7px below centre     -> fires   (OUTSIDE the 16px box, inside 24px)
+ *   click +10px below centre    -> fires   (clearly inside 24px)
+ *   click +14px below centre    -> silent  (outside 24px, so the bound is real)
+ *
+ * `getComputedStyle(el, '::after')` reports 24x24 while the widget box stays
+ * 16x16 for the ✕ (and 44x20 for Copy), so the floor is met without repainting
+ * the control or moving the line it sits on. */
+.fc-hit-24 {
+  position: relative;
+}
+.fc-hit-24::after {
   content: '';
   position: absolute;
   top: 50%;

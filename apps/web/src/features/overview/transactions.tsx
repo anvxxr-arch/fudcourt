@@ -3,11 +3,13 @@
 import { useState, useMemo, useCallback } from 'react';
 import { alpha, themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { EVENT_PRESETS, CHAIN_COLOR } from '@/lib/format';
-import { Button, Input, Select, Modal, Label } from '@/ui/primitives';
+import { Button, Input, Select, Modal } from '@/ui/primitives';
+import { Field } from '@/ui/field';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import { bulkDeleteTransactions, bulkPatchTransactions, createTransaction, deleteTransaction, patchTransaction } from './client';
 import type { Venue } from './client';
 import { buildVenueIndex } from './venue-index';
+import { useT } from '@/lib/i18n/t';
 
 type Tx = {
   id: number;
@@ -61,6 +63,7 @@ function typeColor(type: string | undefined): string {
 }
 
 export default function TransactionPage({ transactions, venues, refreshTx, load }: Props) {
+  const t = useT();
   const [search, setSearch] = useState('');
   const [filterChain, setFilterChain] = useState('');
   const [filterVenue, setFilterVenue] = useState(ALL_VENUES);
@@ -70,7 +73,7 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
   const [showAdd, setShowAdd] = useState(false);
 
   const chains = useMemo(() =>
-    Array.from(new Set(transactions.map(t => t.chain).filter(Boolean))),
+    Array.from(new Set(transactions.map(tx => tx.chain).filter(Boolean))),
     [transactions]
   );
 
@@ -83,35 +86,35 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
 
   /** Every row lands in exactly one bucket — a venue id, NO_VENUE, or UNRESOLVED_VENUE. */
   const venueKeyOf = useCallback(
-    (t: Tx) => (!t.venue_id ? NO_VENUE : venueById.has(t.venue_id) ? t.venue_id : UNRESOLVED_VENUE),
+    (tx: Tx) => (!tx.venue_id ? NO_VENUE : venueById.has(tx.venue_id) ? tx.venue_id : UNRESOLVED_VENUE),
     [venueById],
   );
 
   // Computed over ALL rows, not the filtered set, so the option does not vanish
   // mid-filter (the list must stay stable while the user narrows it).
   const hasUnresolved = useMemo(
-    () => transactions.some(t => !!t.venue_id && !venueById.has(t.venue_id)),
+    () => transactions.some(tx => !!tx.venue_id && !venueById.has(tx.venue_id)),
     [transactions, venueById],
   );
 
   const venueOptions = useMemo(() => {
-    const opts: { value: string; label: string }[] = [{ value: ALL_VENUES, label: ALL_VENUES }];
+    const opts: { value: string; label: string }[] = [{ value: ALL_VENUES, label: t('overview.tx.allVenues') }];
     for (const v of venues) opts.push({ value: v.id, label: `${v.name} · ${v.type}` });
-    opts.push({ value: NO_VENUE, label: '— No venue' });
-    if (hasUnresolved) opts.push({ value: UNRESOLVED_VENUE, label: '⚠ Unresolved id' });
+    opts.push({ value: NO_VENUE, label: t('overview.tx.noVenue') });
+    if (hasUnresolved) opts.push({ value: UNRESOLVED_VENUE, label: t('overview.tx.unresolvedId') });
     return opts;
-  }, [venues, hasUnresolved]);
+  }, [venues, hasUnresolved, t]);
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
-    return transactions.filter(t => {
-      if (search && !`${t.memo} ${t.event} ${t.hash} ${t.wallet_to}`.toLowerCase().includes(s)) return false;
-      if (filterChain && filterChain !== 'All Chains' && t.chain !== filterChain) return false;
-      if (filterVenue !== ALL_VENUES && venueKeyOf(t) !== filterVenue) return false;
-      if (filterDirection && filterDirection !== 'All Directions' && t.direction !== filterDirection) return false;
+    return transactions.filter(tx => {
+      if (search && !`${tx.memo} ${tx.event} ${tx.hash} ${tx.wallet_to}`.toLowerCase().includes(s)) return false;
+      if (filterChain && filterChain !== t('overview.tx.allChains') && tx.chain !== filterChain) return false;
+      if (filterVenue !== ALL_VENUES && venueKeyOf(tx) !== filterVenue) return false;
+      if (filterDirection && filterDirection !== t('overview.tx.allDirections') && tx.direction !== filterDirection) return false;
       return true;
     });
-  }, [transactions, search, filterChain, filterVenue, filterDirection, venueKeyOf]);
+  }, [transactions, search, filterChain, filterVenue, filterDirection, venueKeyOf, t]);
 
   /**
    * The cut the dimension unlocks: what actually moved, per venue and per venue type.
@@ -121,8 +124,8 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
    */
   const venueCut = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const t of filtered) {
-      const k = venueKeyOf(t);
+    for (const tx of filtered) {
+      const k = venueKeyOf(tx);
       counts.set(k, (counts.get(k) ?? 0) + 1);
     }
     const rows = venues
@@ -141,7 +144,7 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   const toggleAll = () => {
-    const ids = filtered.map(t => t.id);
+    const ids = filtered.map(tx => tx.id);
     setSelected(prev => ids.every(id => prev.includes(id))
       ? prev.filter(id => !ids.includes(id))
       : Array.from(new Set([...prev, ...ids]))
@@ -151,13 +154,13 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
   const refresh = useCallback(() => { refreshTx(); load(); }, [refreshTx, load]);
 
   const del = async (id: number) => {
-    if (!confirm(`Delete #${id}?`)) return;
+    if (!confirm(t('overview.tx.deleteConfirm', { id }))) return;
     await deleteTransaction(id);
     refresh();
   };
 
   const bulkDel = async () => {
-    if (!selected.length || !confirm(`Delete ${selected.length}?`)) return;
+    if (!selected.length || !confirm(t('overview.tx.deleteSelectedConfirm', { n: selected.length }))) return;
     await bulkDeleteTransactions(selected);
     setSelected([]); refresh();
   };
@@ -174,8 +177,8 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
 
   const bulkPatch = async () => {
     if (!selected.length) return;
-    const chain = prompt('Chain (skip if empty):');
-    const event = prompt('Event (skip if empty):');
+    const chain = prompt(t('overview.tx.chainPrompt'));
+    const event = prompt(t('overview.tx.eventPrompt'));
     const updates: TxDraft = {};
     if (chain) updates.chain = chain;
     if (event) updates.event = event;
@@ -185,15 +188,15 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
   };
 
   /** The resolved name, or the raw id — never a blank cell where an id exists. */
-  const venueNameOf = (t: Tx) => {
-    if (!t.venue_id) return '';
-    return venueById.get(t.venue_id)?.name ?? t.venue_id;
+  const venueNameOf = (tx: Tx) => {
+    if (!tx.venue_id) return '';
+    return venueById.get(tx.venue_id)?.name ?? tx.venue_id;
   };
-  const venueTypeOf = (t: Tx) => (t.venue_id ? venueById.get(t.venue_id)?.type ?? 'unresolved' : '');
+  const venueTypeOf = (tx: Tx) => (tx.venue_id ? venueById.get(tx.venue_id)?.type ?? 'unresolved' : '');
 
   const csv = () => {
     const cols = ['ID','Date','Chain','Venue','Venue Type','Venue Id','Event','Amount','Direction','Memo','Wallet To','Source'];
-    const rows = [cols, ...filtered.map(t => [t.id, t.date, t.chain, venueNameOf(t), venueTypeOf(t), t.venue_id, t.event, t.amount_usd, t.direction, t.memo, t.wallet_to, t.source])];
+    const rows = [cols, ...filtered.map(tx => [tx.id, tx.date, tx.chain, venueNameOf(tx), venueTypeOf(tx), tx.venue_id, tx.event, tx.amount_usd, tx.direction, tx.memo, tx.wallet_to, tx.source])];
     const data = rows.map(r => r.map(c => `"${(c ?? '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([data], { type: 'text/csv' }));
     const a = document.createElement('a');
@@ -205,30 +208,30 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[12], flexWrap: 'wrap', gap: space[8] }}>
         <div style={{ display: 'flex', gap: space[8], flexWrap: 'wrap' }}>
-          <Button onClick={() => setShowAdd(!showAdd)} size="sm">+ Add TX</Button>
-          <Button onClick={csv} variant="ghost" size="sm">📥 CSV</Button>
+          <Button onClick={() => setShowAdd(!showAdd)} size="sm">{t('overview.tx.addTx')}</Button>
+          <Button onClick={csv} variant="ghost" size="sm">{t('overview.tx.csv')}</Button>
           {selected.length > 0 && (
             <>
-              <Button onClick={bulkDel} variant="danger" size="sm">🗑️ Delete ({selected.length})</Button>
-              <Button onClick={bulkPatch} variant="ghost" size="sm">✏️ Edit ({selected.length})</Button>
+              <Button onClick={bulkDel} variant="danger" size="sm">{t('overview.tx.deleteSelected', { n: selected.length })}</Button>
+              <Button onClick={bulkPatch} variant="ghost" size="sm">{t('overview.tx.editSelected', { n: selected.length })}</Button>
             </>
           )}
         </div>
-        <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{filtered.length} of {transactions.length} shown</span>
+        <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{t('overview.tx.shown', { n: filtered.length, total: transactions.length })}</span>
       </div>
 
       <div style={{ display: 'flex', gap: space[8], marginBottom: space[12], flexWrap: 'wrap' }}>
-        <Input value={search} onChange={setSearch} placeholder="🔍 Search memo/event/hash..." style={{ flex: 1, minWidth: 200 }} />
-        <Select value={filterChain} onChange={setFilterChain} options={['All Chains', ...chains]} />
+        <Input value={search} onChange={setSearch} placeholder={t('overview.tx.search')} style={{ flex: 1, minWidth: 200 }} />
+        <Select value={filterChain} onChange={setFilterChain} options={[t('overview.tx.allChains'), ...chains]} />
         <Select value={filterVenue} onChange={setFilterVenue} options={venueOptions} />
-        <Select value={filterDirection} onChange={setFilterDirection} options={['All Directions', 'IN', 'OUT']} />
+        <Select value={filterDirection} onChange={setFilterDirection} options={[t('overview.tx.allDirections'), 'IN', 'OUT']} />
       </div>
 
       {/* The venue cut. Every chip is a venue the filtered rows actually touched, with the
           type it is filed under; the trailing total is the three buckets added back up. */}
       {venueCut.total > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: space[4], marginBottom: space[12] }}>
-          <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginRight: space[4] }}>Venue</span>
+          <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginRight: space[4] }}>{t('overview.tx.venue')}</span>
           {venueCut.rows.map(v => (
             <span key={v.id} style={{
               display: 'inline-flex', alignItems: 'center', gap: space[4],
@@ -246,7 +249,7 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
               border: `1px dashed ${themeColor.separator}`, borderRadius: radius[8],
               padding: `1px ${space[4]}px`, whiteSpace: 'nowrap', color: themeColor.labelTertiary,
             }}>
-              <span style={{ fontSize: fontSize[11] }}>No venue</span>
+              <span style={{ fontSize: fontSize[11] }}>{t('overview.tx.noVenueChip')}</span>
               <span style={{ fontSize: fontSize[11], fontWeight: fontWeight.semibold }}>{venueCut.noVenue}</span>
             </span>
           )}
@@ -256,40 +259,40 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
               border: `1px solid ${themeColor.red}`, borderRadius: radius[8],
               padding: `1px ${space[4]}px`, whiteSpace: 'nowrap', color: themeColor.red,
             }}>
-              <span style={{ fontSize: fontSize[11] }}>Unresolved id</span>
+              <span style={{ fontSize: fontSize[11] }}>{t('overview.tx.unresolvedChip')}</span>
               <span style={{ fontSize: fontSize[11], fontWeight: fontWeight.semibold }}>{venueCut.unresolved}</span>
             </span>
           )}
-          <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>= {venueCut.total} rows</span>
+          <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{t('overview.tx.rowsTotal', { n: venueCut.total })}</span>
         </div>
       )}
 
-      {showAdd && <TxForm title="Add Transaction" venues={venues} onSave={save} onClose={() => setShowAdd(false)} />}
+      {showAdd && <TxForm title={t('overview.tx.addTransaction')} venues={venues} onSave={save} onClose={() => setShowAdd(false)} />}
 
       <div style={{ overflowX: 'auto' }}>
       <Table>
         <THead>
           <TR>
-            <TH style={{ padding: space[8], fontWeight: fontWeight.regular, width: 30 }}><input type="checkbox" checked={filtered.length > 0 && filtered.every(t => selected.includes(t.id))} onChange={toggleAll} /></TH>
-            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>Date</TH>
-            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>Chain</TH>
-            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>Venue</TH>
-            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>Event</TH>
-            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>Memo</TH>
-            <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>Amount</TH>
-            <TH align="center" style={{ padding: space[8], fontWeight: fontWeight.regular }}>Actions</TH>
+            <TH style={{ padding: space[8], fontWeight: fontWeight.regular, width: 30 }}><input type="checkbox" checked={filtered.length > 0 && filtered.every(tx => selected.includes(tx.id))} onChange={toggleAll} /></TH>
+            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('col.date')}</TH>
+            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('col.chain')}</TH>
+            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('overview.tx.venue')}</TH>
+            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('col.event')}</TH>
+            <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('overview.tx.memo')}</TH>
+            <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('col.amount')}</TH>
+            <TH align="center" style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('col.actions')}</TH>
           </TR>
         </THead>
         <TBody>
-          {filtered.map(t => {
-            const v = t.venue_id ? venueById.get(t.venue_id) : undefined;
+          {filtered.map(tx => {
+            const v = tx.venue_id ? venueById.get(tx.venue_id) : undefined;
             return (
-            <TR key={t.id} style={{ background: selected.includes(t.id) ? alpha(themeColor.blue, 0.08) : undefined }}>
-              <TD style={{ padding: space[8], width: 30 }}><input type="checkbox" checked={selected.includes(t.id)} onChange={() => toggle(t.id)} /></TD>
-              <TD style={{ padding: space[8] }}>{t.date}</TD>
-              <TD style={{ padding: space[8], color: CHAIN_COLOR[t.chain] || themeColor.labelTertiary }}>{t.chain || '—'}</TD>
+            <TR key={tx.id} style={{ background: selected.includes(tx.id) ? alpha(themeColor.blue, 0.08) : undefined }}>
+              <TD style={{ padding: space[8], width: 30 }}><input type="checkbox" checked={selected.includes(tx.id)} onChange={() => toggle(tx.id)} /></TD>
+              <TD style={{ padding: space[8] }}>{tx.date}</TD>
+              <TD style={{ padding: space[8], color: CHAIN_COLOR[tx.chain] || themeColor.labelTertiary }}>{tx.chain || '—'}</TD>
               <TD style={{ padding: space[8], whiteSpace: 'nowrap' }}>
-                {!t.venue_id ? (
+                {!tx.venue_id ? (
                   <span style={{ color: themeColor.labelTertiary }}>—</span>
                 ) : v ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: space[4] }}>
@@ -303,20 +306,20 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
                 ) : (
                   // An id with no venues row. Never hidden and never blanked: the raw id
                   // stays visible so the orphan is fixable, and it is marked as such.
-                  <span title={`venue_id '${t.venue_id}' has no row in the venues table`} style={{ color: themeColor.red }}>
-                    {t.venue_id}
-                    <span style={{ fontSize: fontSize[10] }}> unresolved</span>
+                  <span title={t('overview.tx.unresolvedTitle', { id: tx.venue_id })} style={{ color: themeColor.red }}>
+                    {tx.venue_id}
+                    <span style={{ fontSize: fontSize[10] }}> {t('overview.tx.unresolvedLabel')}</span>
                   </span>
                 )}
               </TD>
-              <TD style={{ padding: space[8] }}>{t.event}</TD>
-              <TD style={{ padding: space[8], color: themeColor.labelTertiary, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.memo || '—'}</TD>
-              <TD align="right" mono style={{ padding: space[8], color: t.amount_usd > 0 ? themeColor.blue : themeColor.red }}>
-                {t.amount_usd > 0 ? '+' : ''}{Number(t.amount_usd || 0).toFixed(2)}
+              <TD style={{ padding: space[8] }}>{tx.event}</TD>
+              <TD style={{ padding: space[8], color: themeColor.labelTertiary, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.memo || '—'}</TD>
+              <TD align="right" mono style={{ padding: space[8], color: tx.amount_usd > 0 ? themeColor.blue : themeColor.red }}>
+                {tx.amount_usd > 0 ? '+' : ''}{Number(tx.amount_usd || 0).toFixed(2)}
               </TD>
               <TD align="center" style={{ padding: space[8] }}>
-                <Button onClick={() => setEdit(t)} variant="ghost" size="sm">✏️</Button>
-                <Button onClick={() => del(t.id)} variant="danger" size="sm">🗑️</Button>
+                <Button onClick={() => setEdit(tx)} variant="ghost" size="sm">✏️</Button>
+                <Button onClick={() => del(tx.id)} variant="danger" size="sm">🗑️</Button>
               </TD>
             </TR>
             );
@@ -325,8 +328,8 @@ export default function TransactionPage({ transactions, venues, refreshTx, load 
       </Table>
       </div>
 
-      {filtered.length === 0 && <p style={{ color: themeColor.labelTertiary, textAlign: 'center', padding: space[20] }}>No transactions found</p>}
-      {edit && <TxForm title={`Edit #${edit.id}`} initial={edit} venues={venues} onSave={(u) => patch(edit.id, u)} onClose={() => setEdit(null)} />}
+      {filtered.length === 0 && <p style={{ color: themeColor.labelTertiary, textAlign: 'center', padding: space[20] }}>{t('overview.tx.noTransactions')}</p>}
+      {edit && <TxForm title={t('overview.tx.editTx', { id: edit.id })} initial={edit} venues={venues} onSave={(u) => patch(edit.id, u)} onClose={() => setEdit(null)} />}
     </div>
   );
 }
@@ -345,6 +348,7 @@ type TxDraft = {
 function TxForm({ title, initial, venues, onSave, onClose }: {
   title: string; initial?: Tx | TxDraft; venues: Venue[]; onSave: (tx: TxDraft) => void; onClose: () => void;
 }) {
+  const t = useT();
   const [date, setDate] = useState(initial?.date || new Date().toISOString().slice(0, 10));
   const [chain, setChain] = useState(initial?.chain || 'Offchain');
   const [venue, setVenue] = useState(initial?.venue_id || '');
@@ -360,28 +364,32 @@ function TxForm({ title, initial, venues, onSave, onClose }: {
    * rather than silently dropped, so editing an old row cannot rewrite its venue.
    */
   const venueOptions = useMemo(() => {
-    const opts: { value: string; label: string }[] = [{ value: '', label: '— none —' }];
+    const opts: { value: string; label: string }[] = [{ value: '', label: t('overview.tx.none') }];
     for (const v of venues) opts.push({ value: v.id, label: `${v.name} · ${v.type}` });
-    if (venue && !venues.some(v => v.id === venue)) opts.push({ value: venue, label: `${venue} (not in venues)` });
+    if (venue && !venues.some(v => v.id === venue)) opts.push({ value: venue, label: t('overview.tx.notInVenues', { id: venue }) });
     return opts;
-  }, [venues, venue]);
+  }, [venues, venue, t]);
 
   return (
     <Modal title={title} onClose={onClose} width={480}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: space[8], marginBottom: space[8] }}>
-        <div><Label>Date</Label><input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', background: themeColor.bgBase, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], boxSizing: 'border-box' }} /></div>
-        <div><Label>Chain</Label><Select value={chain} onChange={setChain} options={CHAIN_OPTIONS} /></div>
-        <div><Label>Venue</Label><Select value={venue} onChange={setVenue} options={venueOptions} /></div>
+        <Field label={t('col.date')}><Input type="date" value={date} onChange={setDate} /></Field>
+        <Field label={t('col.chain')}><Select value={chain} onChange={setChain} options={CHAIN_OPTIONS} /></Field>
+        <Field label={t('overview.tx.venue')}><Select value={venue} onChange={setVenue} options={venueOptions} /></Field>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: space[8], marginBottom: space[8] }}>
-        <div><Label>Event</Label><Select value={event} onChange={setEvent} options={EVENT_PRESETS} /></div>
-        <div><Label>Amount (USD)</Label><Input value={amount} onChange={setAmount} placeholder="e.g. -100" type="number" /></div>
-        <div><Label>Wallet To</Label><Input value={to} onChange={setTo} placeholder="address" /></div>
+        <Field label={t('col.event')}><Select value={event} onChange={setEvent} options={EVENT_PRESETS} /></Field>
+        <Field label={t('overview.tx.amountUsd')}><Input value={amount} onChange={setAmount} placeholder={t('overview.tx.amountPlaceholder')} type="number" /></Field>
+        <Field label={t('overview.tx.walletTo')}><Input value={to} onChange={setTo} placeholder={t('overview.tx.addressPlaceholder')} /></Field>
       </div>
-      <div style={{ marginBottom: space[12] }}><Label>Memo</Label><textarea value={memo} onChange={e => setMemo(e.target.value)} placeholder="..." style={{ width: '100%', background: themeColor.bgBase, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], minHeight: space[40], resize: 'vertical', boxSizing: 'border-box' }} /></div>
+      <div style={{ marginBottom: space[12] }}>
+        <Field label={t('overview.tx.memo')}>
+          <textarea value={memo} onChange={e => setMemo(e.target.value)} placeholder={t('overview.tx.memoPlaceholder')} style={{ width: '100%', background: themeColor.bgBase, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[12], minHeight: space[40], resize: 'vertical', boxSizing: 'border-box' }} />
+        </Field>
+      </div>
       <div style={{ display: 'flex', gap: space[8], justifyContent: 'flex-end' }}>
-        <Button onClick={onClose} variant="ghost" size="md">Cancel</Button>
-        <Button onClick={() => onSave({ date, chain, venue_id: venue, event, amount_usd: amount, memo, wallet_to: to, source: 'manual' })}>💾 Save</Button>
+        <Button onClick={onClose} variant="ghost" size="md">{t('overview.tx.cancel')}</Button>
+        <Button onClick={() => onSave({ date, chain, venue_id: venue, event, amount_usd: amount, memo, wallet_to: to, source: 'manual' })}>{t('overview.tx.save')}</Button>
       </div>
     </Modal>
   );

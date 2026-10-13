@@ -1,6 +1,12 @@
-import { NextResponse } from 'next/server';
-import { failInternal } from '../_lib/http';
+import { failInternal, publicJson } from '../_lib/http';
 import { treasuryProof } from '@/server/proof';
+/**
+ * How long the public commitment may be reused. The proof describes the LATEST
+ * sync run (`@/server/proof`); the sync writes on a 5-minute cadence, so 300s
+ * is the longest a reader can be shown the previous run, and the digest has not
+ * changed within that window by construction.
+ */
+const PROOF_TTL_SECONDS = 300;
 
 /**
  * GET /api/proof — the public proof-of-treasury read.
@@ -22,7 +28,7 @@ export const revalidate = 0;
 
 export async function GET(): Promise<Response> {
   try {
-    return NextResponse.json(await treasuryProof());
+    return publicJson(await treasuryProof(), PROOF_TTL_SECONDS);
   } catch (e: unknown) {
     return failInternal(e);
   }

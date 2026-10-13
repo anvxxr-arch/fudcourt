@@ -5,6 +5,7 @@ import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens
 import { Loading } from '@/ui/feedback';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import { fetchTrackerCoins, type TrackerCoin as Coin } from './client';
+import { useT } from '@/lib/i18n/t';
 
 // Same family shape as /api/markets (lib/markets.ts) -- the tracker used to
 // call api.coingecko.com directly from the browser (ungated, hammering CG
@@ -12,6 +13,7 @@ import { fetchTrackerCoins, type TrackerCoin as Coin } from './client';
 // read now goes through the gated, cached, rate-limited proxy.
 
 export default function TrackerPage() {
+  const t = useT();
   const [coins, setCoins] = useState<Coin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,25 +41,25 @@ export default function TrackerPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[12] }}>
-        <h3 style={{ color: themeColor.blue, margin: 0 }}>Price Tracker</h3>
+        <h3 style={{ color: themeColor.blue, margin: 0 }}>{t('overview.tracker.title')}</h3>
         <button onClick={load} style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
-          ↻ Refresh
+          {t('common.refresh')}
         </button>
       </div>
 
       {error && <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>{error}</p>}
 
       {loading ? (
-        <Loading label="Loading..." />
+        <Loading label={t('common.loading')} />
       ) : (
         <Table>
           <THead>
             <TR style={{ color: themeColor.labelTertiary }}>
-              <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>Coin</TH>
-              <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>Price</TH>
-              <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>24h %</TH>
-              <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>Volume</TH>
-              <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>Mkt Cap</TH>
+              <TH style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('col.coin')}</TH>
+              <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('col.price')}</TH>
+              <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('overview.tracker.change24h')}</TH>
+              <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('col.volume')}</TH>
+              <TH align="right" style={{ padding: space[8], fontWeight: fontWeight.regular }}>{t('overview.tracker.mktCap')}</TH>
             </TR>
           </THead>
           <TBody>

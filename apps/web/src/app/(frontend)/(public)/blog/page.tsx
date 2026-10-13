@@ -24,7 +24,14 @@ export const metadata: Metadata = {
   },
 };
 
+// `revalidate = 300` is NOT safe here. The index renders `getPayload({ config })`
+// at build time, and the CI build has no Payload secret key, so Next tries to
+// prerender /blog and fails the whole build ("missing secret key. A secret key
+// is needed to secure Payload." — measured 2026-10-13 on the CI web job). The
+// page reads live CMS content, so it is genuinely per-request; force-dynamic is
+// the correct state and keeps the build green.
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function BlogIndex() {
   const payload = await getPayload({ config });

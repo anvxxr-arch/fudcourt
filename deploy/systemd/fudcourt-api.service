@@ -18,7 +18,10 @@ EnvironmentFile=/home/dwizzy/fudcourt/.env
 Environment=FUDCOURT_API_ADDR=127.0.0.1:3103
 ExecStartPre=/usr/bin/go build -C /home/dwizzy/fudcourt/apps/api -o bin/fudcourt-api .
 ExecStart=/home/dwizzy/fudcourt/apps/api/bin/fudcourt-api
-Restart=on-failure
+# `always`, not `on-failure`: a status-0 exit from a daemon is still an outage
+# (see fudcourt-data.service, which sat dead ~20h on a clean exit). `systemctl
+# stop` suppresses the restart regardless, so an intentional stop is unaffected.
+Restart=always
 RestartSec=3
 LimitNOFILE=65536
 

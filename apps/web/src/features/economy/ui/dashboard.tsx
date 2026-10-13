@@ -14,8 +14,9 @@
  * Each panel is independent: one upstream failing empties its panel with a named
  * error and leaves the rest of the page intact.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useT } from '@/lib/i18n/t';
 import { themeColor, fontSize, fontWeight, letterSpacing, lineHeight, radius, space } from '@/styles/tokens';
 import {
   fetchCalendar,
@@ -31,6 +32,9 @@ import {
   type LiquidityEnvelope,
   type RegimeEnvelope,
 } from '@/features/economy/model';
+// The pulse basket lives in the client model so the server prerender and this
+// fallback read the same list (one source, not a copy).
+import { PULSE } from '@/features/economy/model';
 import { Card } from '@/ui/card';
 import { ECONOMY_NAV } from '@/features/economy/nav';
 import { ErrorState } from '@/ui/feedback';
@@ -40,7 +44,6 @@ import { PageHeader } from '@/ui/page-header';
 import { Sparkline } from '@/ui/sparkline';
 
 /** The pulse is a curated cross-country basket, not "every indicator". */
-const PULSE = ['us-gdp', 'us-cpi', 'us-core-cpi', 'us-unemployment', 'us-m2', 'us-policy-rate', 'xm-policy-rate'] as const;
 
 /** The majors the board leads with, in display order. */
 const MAJORS = [
@@ -63,38 +66,72 @@ type State = {
   errors: string[];
 };
 
-export default function EconomyDashboard() {
-  const [state, setState] = useState<State>({ pulse: null, banks: null, liquidity: null, calendar: null, regime: null, errors: [] });
+/**
+ * The boards the server may hand in. A `null` board means the server could not
+ * read it (no upstream access at prerender, or that board failed), in which case
+ * the dashboard fetches it on the client exactly as it always did.
+ */
+export type EconomyBoardsProp = {
+  pulse: CompareEnvelope | null;
+  banks: CentralBanksEnvelope | null;
+  liquidity: LiquidityEnvelope | null;
+  calendar: CalendarEnvelope | null;
+  regime: RegimeEnvelope | null;
+};
+export default function EconomyDashboard({ initial = null }: { initial?: EconomyBoardsProp | null }) {
+  const t = useT();
+  const [state, setState] = useState<State>({
+    pulse: initial?.pulse ?? null,
+    banks: initial?.banks ?? null,
+    liquidity: initial?.liquidity ?? null,
+    calendar: initial?.calendar ?? null,
+    regime: initial?.regime ?? null,
+    errors: [],
+  });
 
+  // The server hands in the figures so the FIRST paint already carries the real
+  // card heights — this is the /economy CLS fix. The prerendered shell used to
+  // ship `Loading` placeholders and grow 100px+ per card when the client data
+  // landed (measured: Pulse 112px -> 532px, the cards below it moving 136px).
+  // Only the boards the server could NOT resolve are fetched here, so a build
+  // without upstream access degrades to the old client-only behaviour instead of
+  // baking an error page for the whole revalidate window.
+  const initialRef = useRef(initial);
   useEffect(() => {
+    const seed = initialRef.current;
     const ac = new AbortController();
     (async () => {
       const errors: string[] = [];
-      const [pulse, banks, liquidity, calendar, regime] = await Promise.all([
-        fetchCompare(PULSE, '1y', ac.signal).catch((e) => {
-          errors.push(`macro pulse: ${e instanceof Error ? e.message : String(e)}`);
-          return null;
-        }),
-        fetchCentralBanks(ac.signal).catch((e) => {
-          errors.push(`central banks: ${e instanceof Error ? e.message : String(e)}`);
-          return null;
-        }),
-        fetchLiquidity(ac.signal).catch((e) => {
-          errors.push(`liquidity: ${e instanceof Error ? e.message : String(e)}`);
-          return null;
-        }),
-        fetchCalendar({}, ac.signal).catch((e) => {
-          errors.push(`calendar: ${e instanceof Error ? e.message : String(e)}`);
-          return null;
-        }),
-        fetchRegime(undefined, ac.signal).catch((e) => {
-          errors.push(`regime: ${e instanceof Error ? e.message : String(e)}`);
-          return null;
-        }),
-      ]);
-      if (!ac.signal.aborted) setState({ pulse, banks, liquidity, calendar, regime, errors });
+      const missing = (v: unknown): boolean => v === null || v === undefined;
+      const want: Array<[keyof State, string, () => Promise<unknown>]> = [];
+      if (missing(seed?.pulse)) want.push(['pulse', t('economy.errPulse'), () => fetchCompare(PULSE, '1y', ac.signal)]);
+      if (missing(seed?.banks)) want.push(['banks', t('economy.errBanks'), () => fetchCentralBanks(ac.signal)]);
+      if (missing(seed?.liquidity)) want.push(['liquidity', t('economy.errLiquidity'), () => fetchLiquidity(ac.signal)]);
+      if (missing(seed?.calendar)) want.push(['calendar', t('economy.errCalendar'), () => fetchCalendar({}, ac.signal)]);
+      if (missing(seed?.regime)) want.push(['regime', t('economy.errRegime'), () => fetchRegime(undefined, ac.signal)]);
+      if (want.length === 0) return;
+      const results = await Promise.all(
+        want.map(async ([key, label, load]) => {
+          try {
+            return [key, await load()] as const;
+          } catch (e) {
+            errors.push(`${label}: ${e instanceof Error ? e.message : String(e)}`);
+            return [key, undefined] as const;
+          }
+        })
+      );
+      if (ac.signal.aborted) return;
+      setState((s) => {
+        const next: Record<string, unknown> = { ...s, errors };
+        for (const [key, value] of results) if (value !== undefined) next[key] = value;
+        return next as State;
+      });
     })();
     return () => ac.abort();
+    // The server value is a build-time constant for the page; re-running on a new
+    // object identity would refetch every board, so it is read through a ref and
+    // deliberately excluded from the deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const { pulse, banks, liquidity, calendar, regime, errors } = state;
@@ -102,36 +139,36 @@ export default function EconomyDashboard() {
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
       <PageHeader
-        title="Macro prints, normalised - never compared apples-to-oranges"
-        description="Canonical economic series across growth, inflation, labour, money and policy — read from FRED, the World Bank and BIS, normalised to one model so a monthly US print and an annual World Bank print are never compared as if they were the same measurement."
+        title={t('economy.dashboardTitle')}
+        description={t('economy.dashboardDesc')}
         nav={ECONOMY_NAV}
       />
 
       {errors.length > 0 && (
         <div style={{ marginBottom: space[12] }}>
           {errors.map((e) => (
-            <ErrorState key={e} title="Panel unavailable" detail={e} />
+            <ErrorState key={e} title={t('economy.panelUnavailable')} detail={e} />
           ))}
         </div>
       )}
 
       <div style={{ display: 'grid', gap: space[12], gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))' }}>
-        <Card title="Regime snapshot" subtitle="rule table over published readings — not a forecast">
+        <Card title={t('economy.regimeSnapshot')} subtitle={t('economy.regimeSnapshotSub')}>
           {!regime ? (
-            <Loading what="regime" />
+            <Loading what={t('economy.loadingRegime')} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
               {regime.regime ? (
                 <>
                   <div style={{ fontSize: fontSize[20], fontWeight: fontWeight.bold, color: themeColor.labelPrimary }}>{regime.regime.label}</div>
                   <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-                    evidence confidence: <span style={{ color: regime.confidence === 'high' ? themeColor.green : regime.confidence === 'medium' ? themeColor.orange : themeColor.red }}>{regime.confidence}</span>
-                    {regime.missing.length > 0 ? ` · ${regime.missing.length} dimension(s) unreadable` : ''}
+                    {t('economy.evidenceConfidence')} <span style={{ color: regime.confidence === 'high' ? themeColor.green : regime.confidence === 'medium' ? themeColor.orange : themeColor.red }}>{regime.confidence}</span>
+                    {regime.missing.length > 0 ? t('economy.unreadableDims', { n: regime.missing.length }) : ''}
                   </div>
                 </>
               ) : (
                 <>
-                  <div style={{ fontSize: fontSize[15], fontWeight: fontWeight.semibold, color: themeColor.orange }}>No regime stated</div>
+                  <div style={{ fontSize: fontSize[15], fontWeight: fontWeight.semibold, color: themeColor.orange }}>{t('economy.noRegime')}</div>
                   <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>{regime.regimeReason}</div>
                 </>
               )}
@@ -151,14 +188,14 @@ export default function EconomyDashboard() {
                   </span>
                 ))}
               </div>
-              <Link href="/economy/regime" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>full regime board →</Link>
+              <Link href="/economy/regime" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>{t('economy.fullRegimeBoard')}</Link>
             </div>
           )}
         </Card>
 
-        <Card title="Pulse snapshot" subtitle="latest observation of a curated basket; sparkline is the last year">
+        <Card title={t('economy.pulseSnapshot')} subtitle={t('economy.pulseSnapshotSub')}>
           {!pulse ? (
-            <Loading what="macro pulse" />
+            <Loading what={t('economy.loadingPulse')} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
               {pulse.series.map((s) => {
@@ -183,9 +220,9 @@ export default function EconomyDashboard() {
           )}
         </Card>
 
-        <Card title="Liquidity snapshot" subtitle="derived position in a curated basket of real liquidity series">
+        <Card title={t('economy.liquiditySnapshot')} subtitle={t('economy.liquiditySnapshotSub')}>
           {!liquidity ? (
-            <Loading what="liquidity" />
+            <Loading what={t('economy.loadingLiquidity')} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[12] }}>
               {liquidity.index && (
@@ -199,7 +236,7 @@ export default function EconomyDashboard() {
                   <div style={{ height: 6, background: themeColor.separator, borderRadius: radius[8], marginTop: space[8] }}>
                     <div style={{ width: `${liquidity.index.value}%`, height: '100%', background: themeColor.blue, borderRadius: radius[8] }} />
                   </div>
-                  <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary }}>share of {liquidity.index.components} live components moving looser · 0–100, derived</p>
+                  <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary }}>{t('economy.liquidityShareNote', { n: liquidity.index.components })}</p>
                 </div>
               )}
               {liquidity.components.slice(0, 4).map((c) => (
@@ -208,14 +245,14 @@ export default function EconomyDashboard() {
                   <span style={{ color: themeColor.labelPrimary }}>{c.change === null ? '—' : `${c.change > 0 ? '+' : ''}${formatValue(c.change, 1)}`}</span>
                 </div>
               ))}
-              <Link href="/economy/liquidity" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>full liquidity board →</Link>
+              <Link href="/economy/liquidity" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>{t('economy.fullLiquidityBoard')}</Link>
             </div>
           )}
         </Card>
 
-        <Card title="Policy rates snapshot" subtitle="policy rate, latest BIS observation">
+        <Card title={t('economy.policyRatesSnapshot')} subtitle={t('economy.policyRatesSnapshotSub')}>
           {!banks ? (
-            <Loading what="central banks" />
+            <Loading what={t('economy.loadingBanks')} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
               {FEATURED_BANKS.map((slug) => {
@@ -230,12 +267,12 @@ export default function EconomyDashboard() {
                   </div>
                 );
               })}
-              <Link href="/economy/central-bank" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>all {banks.banks.length} banks →</Link>
+              <Link href="/economy/central-bank" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>{t('economy.allBanks', { n: banks.banks.length })}</Link>
             </div>
           )}
         </Card>
 
-        <Card title="Major Economies" subtitle="country profiles — the aggregator for every series we hold">
+        <Card title={t('economy.majorEconomies')} subtitle={t('economy.majorEconomiesSub')}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(140px, 100%), 1fr))', gap: space[8] }}>
             {MAJORS.map((m) => (
               <Link key={m.iso2} href={`/economy/nation/${m.iso2}`} style={{ padding: `${space[8]}px ${space[8]}px`, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], color: themeColor.labelPrimary, fontSize: fontSize[12], textDecoration: 'none' }}>
@@ -243,12 +280,12 @@ export default function EconomyDashboard() {
               </Link>
             ))}
           </div>
-          <Link href="/economy/nation" style={{ display: 'inline-block', marginTop: space[8], fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>all countries →</Link>
+          <Link href="/economy/nation" style={{ display: 'inline-block', marginTop: space[8], fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>{t('economy.allCountries')}</Link>
         </Card>
 
-        <Card title="Release log snapshot" subtitle="reference periods, newest first — a release log, not a forward schedule">
+        <Card title={t('economy.releaseLogSnapshot')} subtitle={t('economy.releaseLogSnapshotSub')}>
           {!calendar ? (
-            <Loading what="releases" />
+            <Loading what={t('economy.loadingReleases')} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
               {calendar.events.slice(0, 8).map((e, i) => (
@@ -263,14 +300,14 @@ export default function EconomyDashboard() {
                   </div>
                 </div>
               ))}
-              <Link href="/economy/calendar" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>full calendar →</Link>
+              <Link href="/economy/calendar" style={{ fontSize: fontSize[11], color: themeColor.blue, textDecoration: 'none' }}>{t('economy.fullCalendar')}</Link>
             </div>
           )}
         </Card>
       </div>
 
       <p style={{ marginTop: space[16], fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal, letterSpacing: letterSpacing.xs }}>
-        Every value is a published observation, never a model estimate. A series the upstream did not publish renders “—” rather than zero, and the liquidity index is a derived position in this module’s own basket, not an official gauge.
+        {t('economy.dashboardFootnote')}
       </p>
     </main>
   );

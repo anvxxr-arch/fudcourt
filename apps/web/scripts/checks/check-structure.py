@@ -333,8 +333,11 @@ for f in sources():
             )
         # --- rule 4b: src/ui/ is a leaf (live layer) ---------------------------
         # src/ui/* may import only @/ui (incl. the client-safe ui/site-nav nav
-        # module) and @/styles, and nothing further.
-        if layer == "ui" and tlayer not in ("ui", "styles"):
+        # module), @/styles, and @/lib/i18n (the client-safe dictionary hooks —
+        # chrome strings are part of presentation, same family as site-nav),
+        # and nothing further.
+        UI_ALLOWED_PREFIXES = ("ui/", "styles/", "lib/i18n")
+        if layer == "ui" and not (tlayer in ("ui", "styles") or target.startswith(UI_ALLOWED_PREFIXES)):
             violations.append(
                 f"src/{rel}:{line_no} ui/ imports {tlayer}/{tname} — "
                 f"ui/ is presentational and must stay dependency-free"

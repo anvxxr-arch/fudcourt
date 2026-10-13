@@ -29,6 +29,11 @@ export const runtime = 'nodejs';
  *     answers 200 with an empty `data` array to paper over a dead upstream.
  */
 
+/** How long a DEX read may be reused. The shared limiter memoises these calls
+ *  for 15s, and the route's own writes are already inside that window, so 15s
+ *  is the longest the edge can reuse without serving a pair the server itself
+ *  would have refetched. */
+const DEX_TTL_SECONDS = 15;
 const TIMEOUT_MS = 20_000;
 
 /** Fetch upstream, converting a non-2xx into a loud proxy error. */
@@ -210,7 +215,10 @@ export async function GET(req: Request) {
   // COALESCED means "shared a call that was already in flight" -- distinct from
   // both, and reported as such rather than rounded down to MISS.
   const cacheState = up.cache;
-  const cacheHeaders = { 'X-Cache': cacheState };
+  const cacheHeaders: Record<string, string> = {
+    'X-Cache': cacheState,
+    'Cache-Control': `public, max-age=${DEX_TTL_SECONDS}, s-maxage=${DEX_TTL_SECONDS}, stale-while-revalidate=${DEX_TTL_SECONDS}`,
+  };
 
   // --- profiles / boosts: list of profile records, passed through trimmed ---
   if (kind === 'profiles') {

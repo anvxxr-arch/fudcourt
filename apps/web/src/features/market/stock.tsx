@@ -1,6 +1,7 @@
 'use client';
 import { Banner } from '@/ui/banner';
 import QuoteBoard from '@/features/market/quote-board';
+import { useT } from '@/lib/i18n/t';
 import type { StockRegion } from './stock-regions';
 
 /**
@@ -17,11 +18,11 @@ export {
 } from './stock-regions';
 export type { StockRegion } from './stock-regions';
 
-const TITLE: Record<StockRegion, string> = {
-  us: 'Stock — US indices & mega-caps',
-  asia: 'Stock — Asia indices & blue chips',
-  europe: 'Stock — Europe indices & blue chips',
-};
+const TITLE_KEYS = {
+  us: 'market.stockTitleUs',
+  asia: 'market.stockTitleAsia',
+  europe: 'market.stockTitleEurope',
+} as const;
 /**
  * Stock section: one Yahoo board per region (US / Asia / Europe).
  *
@@ -31,15 +32,16 @@ const TITLE: Record<StockRegion, string> = {
  * shape dereferenced the record and would have thrown mid-render instead.
  */
 export default function StockBoard({ region }: { region: StockRegion }) {
-  const title = TITLE[region];
-  if (!title) {
-    return <Banner variant="error">{`market hub: unknown stock region '${region}'`}</Banner>;
+  const t = useT();
+  const titleKey = TITLE_KEYS[region];
+  if (!titleKey) {
+    return <Banner variant="error">{t('market.unknownRegion', { region })}</Banner>;
   }
   return (
     <QuoteBoard
       endpoint={`/api/market/stock?region=${region}`}
-      title={title}
-      unitHint="Yahoo Finance · one chart call per symbol"
+      title={t(titleKey)}
+      unitHint={t('market.stockHint')}
     />
   );
 }

@@ -24,6 +24,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, radius, space, letterSpacing } from '@/styles/tokens';
 import { dash, fmtPct, fmtPrice } from '@/lib/format';
+import { useT } from '@/lib/i18n/t';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
 import { ErrorState, Loading } from '@/ui/feedback';
@@ -67,13 +68,6 @@ import {
   type EventStatus,
 } from './model';
 
-/** How the board reads a status for the eye. */
-const STATUS_LABEL: Record<EventStatus, string> = {
-  upcoming: 'upcoming',
-  active: 'live',
-  past: 'closed',
-  unknown: 'no window',
-};
 const STATUS_COLOR: Record<EventStatus, string> = {
   upcoming: themeColor.blue,
   active: themeColor.green,
@@ -178,7 +172,18 @@ function useSource<T>(load: (signal: AbortSignal) => Promise<Source<T>>, key: st
   return state;
 }
 
-/** A row of selector buttons over one allowlist. */
+/**
+ * A row of selector buttons over one allowlist.
+ *
+ * `aria-pressed` is what carries the selection to assistive tech: the active
+ * option was previously distinguishable ONLY by its `background` colour
+ * (`selectorStyle`), which is a colour-only signal a screen reader cannot read
+ * and a colour-blind reader can miss. The pattern is copied from
+ * `features/economy/ui/compare.tsx` and `features/technicals/ui.tsx`, which
+ * already do this correctly — it is the house convention, not a new one.
+ *
+ * Four boards consume this component, so the one attribute fixes all of them.
+ */
 function Selector<T extends string>({
   options,
   value,
@@ -193,7 +198,7 @@ function Selector<T extends string>({
   return (
     <div style={{ display: 'flex', gap: space[8], flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: space[4] }}>
       {options.map((o) => (
-        <button key={o} type="button" onClick={() => onChange(o)} style={{ ...selectorStyle(o === value), flexShrink: 0 }}>
+        <button key={o} type="button" aria-pressed={o === value} onClick={() => onChange(o)} style={{ ...selectorStyle(o === value), flexShrink: 0 }}>
           {labelOf ? labelOf(o) : o}
         </button>
       ))}
@@ -203,58 +208,60 @@ function Selector<T extends string>({
 
 /** The failure panel for a read that returned nothing — never an empty board. */
 function ReadFailure({ title, error }: { title: string; error: string | null }) {
-  return <ErrorState title={title} detail={error ?? 'the upstream returned no rows and named no reason'} />;
+  const t = useT();
+  return <ErrorState title={title} detail={error ?? t('crypto.common.upstreamNoRows')} />;
 }
 
 // ---------------------------------------------------------------------------
 // (1) RWA board — mode=rwa (25 of 210)
 // ---------------------------------------------------------------------------
 function RwaSection() {
+  const t = useT();
   const src = useSource<RwaEnvelope>((s) => fetchRwa(s), 'rwa');
-  if (src === null) return <Loading what="the RWA board" />;
-  if (src.data === null) return <ReadFailure title="Could not load the RWA board" error={src.error} />;
+  if (src === null) return <Loading what={t('crypto.breadth.rwaLoadingWhat')} />;
+  if (src.data === null) return <ReadFailure title={t('crypto.breadth.rwaLoadFailTitle')} error={src.error} />;
 
   const board = readRwaBoard(src.data.rwaRows ?? [], src.data.upstreamTotal ?? null);
   if (board.rows.length === 0) {
     return (
       <ErrorState
-        title="The RWA index came back empty"
-        detail="the upstream answered successfully with no rows — an empty board is not a valid read, so this is reported as a failure, not an empty table"
+        title={t('crypto.breadth.rwaEmptyTitle')}
+        detail={t('crypto.breadth.rwaEmptyDetail')}
       />
     );
   }
 
   return (
     <Card
-      title="RWA board"
-      subtitle="tokenized real-world assets — rank, price and cap as CryptoRank ships them; a metric it did not publish renders —"
+      title={t('crypto.breadth.rwaTitle')}
+      subtitle={t('crypto.breadth.rwaSubtitle')}
     >
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
         <Stat
-          label="Assets shown"
+          label={t('crypto.breadth.statAssetsShown')}
           value={String(board.slice.shown)}
-          hint={board.slice.upstreamTotal === null ? 'upstream total not stated' : `of ${board.slice.upstreamTotal} upstream`}
+          hint={board.slice.upstreamTotal === null ? t('crypto.common.upstreamTotalNotStated') : t('crypto.common.ofUpstream', { n: board.slice.upstreamTotal })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Leveraged"
+          label={t('crypto.breadth.statLeveraged')}
           value={String(board.leveraged)}
-          hint="rows CryptoRank flags leveraged"
+          hint={t('crypto.breadth.hintRowsLeveraged')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Type mix"
+          label={t('crypto.breadth.statTypeMix')}
           value={board.typeMix.length === 0 ? dash : board.typeMix.map((t) => `${t.count} ${t.type}`).join(' · ')}
-          hint="rows on this page by upstream type"
+          hint={t('crypto.breadth.hintRowsByType')}
           valueSize={fontSize[13]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 200px' }}
         />
       </div>
 
       <DataTable
-        head={['Rank', 'Ticker', 'Name', 'Type', 'Price (USD)', '24h %', 'Market cap', '24h volume']}
+        head={[t('crypto.head.rank'), t('crypto.breadth.statTicker'), t('crypto.head.name'), t('crypto.breadth.statType'), t('crypto.head.priceUsd'), t('crypto.head.change24h'), t('crypto.head.marketCap'), t('crypto.head.volume24h')]}
         rows={board.rows.map((r: BreadthRwaRow) => {
           const chg = rwaChangePercent(r.change24h);
           return {
@@ -263,7 +270,7 @@ function RwaSection() {
               <span key="ticker" style={{ fontWeight: fontWeight.semibold }}>{text(r.ticker)}</span>,
               <span key="name">
                 {text(r.name)}
-                {r.isLeveraged ? <span style={{ color: themeColor.orange, fontWeight: fontWeight.regular }}> · leveraged</span> : null}
+                {r.isLeveraged ? <span style={{ color: themeColor.orange, fontWeight: fontWeight.regular }}>{t('crypto.breadth.leveragedTag')}</span> : null}
               </span>,
               <span key="type" style={{ color: themeColor.labelTertiary }}>{text(r.type)}</span>,
               <span key="price">{fmtPrice(r.priceUsd)}</span>,
@@ -275,8 +282,7 @@ function RwaSection() {
         })}
       />
       <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-        {board.slice.note}. The 24h % column is upstream&apos;s own change (a fraction upstream, shown as a percent); a blank
-        price or cap is a metric upstream did not publish, shown as — rather than 0. CryptoRank&apos;s own slice: {text(src.data.slice)}.
+        {board.slice.note}. {t('crypto.breadth.rwaFootnote', { slice: text(src.data.slice) })}
       </p>
     </Card>
   );
@@ -288,16 +294,17 @@ function RwaSection() {
 
 /** One keyed RWA-asset detail read — `mode=rwaasset&key=<detailKey>`. */
 function RwaAssetDetailCard({ detailKey }: { detailKey: string }) {
+  const t = useT();
   const src = useSource<RwaAssetEnvelope>((s) => fetchRwaAsset(detailKey, s), `rwaasset:${detailKey}`);
 
-  if (src === null) return <Loading what={`the ${detailKey} RWA asset`} />;
+  if (src === null) return <Loading what={t('crypto.breadth.assetLoadingWhat', { key: detailKey })} />;
   if (src.data === null) {
     // A 400 (invalid key) or 404 (unknown resource) lands here as the error
     // side — never an empty panel.
     return (
       <ErrorState
-        title={`Could not load the '${detailKey}' RWA asset`}
-        detail={src.error ?? 'the upstream returned no asset and named no reason — an invalid key or an unknown resource is reported here, never as an empty panel'}
+        title={t('crypto.breadth.assetLoadFailTitle', { key: detailKey })}
+        detail={src.error ?? t('crypto.breadth.assetLoadFailDetail')}
       />
     );
   }
@@ -305,8 +312,8 @@ function RwaAssetDetailCard({ detailKey }: { detailKey: string }) {
   if (!asset) {
     return (
       <ErrorState
-        title={`The '${detailKey}' RWA asset came back empty`}
-        detail="the upstream answered successfully with no asset — an empty detail is not a valid read, so this is reported as a failure, not an empty panel"
+        title={t('crypto.breadth.assetEmptyTitle', { key: detailKey })}
+        detail={t('crypto.breadth.assetEmptyDetail')}
       />
     );
   }
@@ -320,66 +327,65 @@ function RwaAssetDetailCard({ detailKey }: { detailKey: string }) {
     <>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
         <Stat
-          label="Ticker"
+          label={t('crypto.breadth.statTicker')}
           value={text(asset.ticker)}
           hint={text(asset.name)}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Type"
+          label={t('crypto.breadth.statType')}
           value={text(asset.type)}
-          hint={`key ${detailKey}`}
+          hint={t('crypto.breadth.hintKey', { key: detailKey })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 130px' }}
         />
         <Stat
-          label="Price (USD)"
+          label={t('crypto.breadth.statPriceUsd')}
           value={fmtPrice(asset.priceUsd)}
-          hint={asset.currency ? `quoted in ${asset.currency}` : 'upstream stated no quote currency'}
+          hint={asset.currency ? t('crypto.breadth.hintQuotedIn', { currency: asset.currency }) : t('crypto.breadth.hintNoQuoteCurrency')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 150px' }}
         />
         <Stat
-          label="24h %"
+          label={t('crypto.breadth.stat24h')}
           value={fmtPct(chg)}
           tone={tone}
-          hint="change24h is a fraction upstream, shown ×100 as a percent"
+          hint={t('crypto.breadth.hintChangeFraction')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 150px' }}
         />
         <Stat
-          label="24h change (abs)"
+          label={t('crypto.breadth.stat24hAbs')}
           value={asset.change24hAbs === null ? dash : fmtPrice(asset.change24hAbs)}
-          hint="upstream's absolute price change"
+          hint={t('crypto.breadth.hintAbsChange')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
         />
         <Stat
-          label="Market state"
+          label={t('crypto.breadth.statMarketState')}
           value={text(asset.marketState)}
-          hint={asset.marketState === null ? 'no marketState upstream — last session close' : "upstream's own label"}
+          hint={asset.marketState === null ? t('crypto.breadth.hintNoMarketState') : t('crypto.breadth.hintOwnLabel')}
           valueSize={fontSize[13]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 180px' }}
         />
         <Stat
-          label="Quote updated"
+          label={t('crypto.breadth.statQuoteUpdated')}
           value={text(asset.quoteUpdatedAt)}
-          hint="upstream's own quote instant"
+          hint={t('crypto.breadth.hintQuoteInstant')}
           valueSize={fontSize[11]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 220px' }}
         />
         <Stat
-          label="Leveraged"
-          value={asset.isLeveraged ? 'yes' : 'no'}
-          hint="row CryptoRank flags leveraged"
+          label={t('crypto.breadth.statLeveraged')}
+          value={asset.isLeveraged ? t('crypto.breadth.yes') : t('crypto.breadth.no')}
+          hint={t('crypto.breadth.hintRowLeveraged')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 120px' }}
         />
       </div>
       <p style={{ margin: 0, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-        {read.marketStateNote}. A blank price, change, market state or quote instant is a metric upstream did not publish,
-        shown as — rather than 0. CryptoRank&apos;s own slice: {text(src.data.slice)}.
+        {read.marketStateNote}. {t('crypto.breadth.assetFootnote', { slice: text(src.data.slice) })}
       </p>
     </>
   );
@@ -387,18 +393,19 @@ function RwaAssetDetailCard({ detailKey }: { detailKey: string }) {
 
 /** The RWA drill-down — a keyed selector over the `mode=rwa` rows. */
 function RwaAssetSection() {
+  const t = useT();
   const list = useSource<RwaEnvelope>((s) => fetchRwa(s), 'rwa:asset-list');
   const [selected, setSelected] = useState<string | null>(null);
 
-  if (list === null) return <Loading what="the RWA asset list" />;
-  if (list.data === null) return <ReadFailure title="Could not load the RWA asset list" error={list.error} />;
+  if (list === null) return <Loading what={t('crypto.breadth.assetListLoadingWhat')} />;
+  if (list.data === null) return <ReadFailure title={t('crypto.breadth.assetListLoadFailTitle')} error={list.error} />;
 
   const rows = list.data.rwaRows ?? [];
   if (rows.length === 0) {
     return (
       <ErrorState
-        title="The RWA index came back empty"
-        detail="the upstream answered successfully with no rows — an empty selector is not a valid read, so this is reported as a failure, not an empty panel"
+        title={t('crypto.breadth.assetListEmptyTitle')}
+        detail={t('crypto.breadth.assetListEmptyDetail')}
       />
     );
   }
@@ -409,15 +416,15 @@ function RwaAssetSection() {
 
   return (
     <Card
-      title="RWA asset drill-down"
-      subtitle="one tokenized asset at a time — the key is the row's detailKey; an invalid key or an unknown resource is reported as an error, never an empty panel"
+      title={t('crypto.breadth.assetDrillTitle')}
+      subtitle={t('crypto.breadth.assetDrillSubtitle')}
       right={
         <label style={{ display: 'flex', alignItems: 'center', minWidth: 0, gap: space[4], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-          asset
+          {t('crypto.breadth.assetSelectLabel')}
           <select
             value={detailKey}
             onChange={(e) => setSelected(e.target.value)}
-            aria-label="Select an RWA asset to load its detail"
+            aria-label={t('crypto.breadth.assetSelectAria')}
             style={fieldStyle}
           >
             {rows.map((r: BreadthRwaRow) => (
@@ -438,28 +445,29 @@ function RwaAssetSection() {
 // (2) Launch calendar — mode=launchpool + mode=nodesale, each with a window selector
 // ---------------------------------------------------------------------------
 function LaunchpoolCard() {
+  const t = useT();
   const [variant, setVariant] = useState<BreadthLpKey>(BREADTH_DEFAULT_LP);
   const src = useSource<LaunchpoolEnvelope>((s) => fetchLaunchpool(variant, s), `launchpool:${variant}`);
   const nowSec = Math.floor(Date.now() / 1000);
 
   return (
     <Card
-      title="Launchpool events"
-      subtitle="primary-launch raises — windows are upstream ISO dates; an unannounced window is named, never guessed"
+      title={t('crypto.breadth.launchpoolTitle')}
+      subtitle={t('crypto.breadth.launchpoolSubtitle')}
       right={<Selector<BreadthLpKey> options={BREADTH_LP_LISTS} value={variant} onChange={setVariant} />}
     >
       {src === null ? (
-        <Loading what="the launchpool list" />
+        <Loading what={t('crypto.breadth.launchpoolLoadingWhat')} />
       ) : src.data === null ? (
-        <ReadFailure title="Could not load the launchpool list" error={src.error} />
+        <ReadFailure title={t('crypto.breadth.launchpoolLoadFailTitle')} error={src.error} />
       ) : (
         (() => {
           const read = readEventList(src.data.launchpoolRows ?? [], nowSec, (r) => r.totalRaiseUsd);
           if (read.shown === 0) {
             return (
               <ErrorState
-                title={`No ${variant} launchpool events came back`}
-                detail="the upstream answered successfully with no rows — reported as a failure, not an empty calendar"
+                title={t('crypto.breadth.launchpoolEmptyTitle', { variant })}
+                detail={t('crypto.breadth.launchpoolEmptyDetail')}
               />
             );
           }
@@ -467,35 +475,35 @@ function LaunchpoolCard() {
             <>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
                 <Stat
-                  label="Events shown"
+                  label={t('crypto.breadth.statEventsShown')}
                   value={String(read.shown)}
-                  hint={src.data.upstreamTotal ? `of ${src.data.upstreamTotal} upstream` : 'upstream total not stated'}
+                  hint={src.data.upstreamTotal ? t('crypto.common.ofUpstream', { n: src.data.upstreamTotal }) : t('crypto.common.upstreamTotalNotStated')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
                 />
                 <Stat
-                  label="Raise stated"
+                  label={t('crypto.breadth.statRaiseStated')}
                   value={`${read.raisedStated} / ${read.shown}`}
-                  hint="rows that state a raise"
+                  hint={t('crypto.breadth.hintRowsStateRaise')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
                 />
                 <Stat
-                  label="Total raise"
+                  label={t('crypto.breadth.statTotalRaise')}
                   value={usd(read.raisedTotalUsd)}
-                  hint={read.raisedTotalUsd === null ? 'not totalled — some rows state no raise' : 'every row states a raise'}
+                  hint={read.raisedTotalUsd === null ? t('crypto.breadth.hintNotTotalled') : t('crypto.breadth.hintEveryRowRaise')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
                 />
               </div>
               <DataTable
-                head={['Name', 'Symbol', 'Category', 'Status', 'Starts', 'Ends', 'Total raise']}
+                head={[t('crypto.head.name'), t('crypto.coins.headSymbol'), t('crypto.head.category'), t('col.status'), t('crypto.breadth.headStarts'), t('crypto.breadth.headEnds'), t('crypto.breadth.headTotalRaise')]}
                 rows={read.events.map((e) => ({
                   cells: [
                     <span key="n" style={{ fontWeight: fontWeight.semibold }}>{text(e.row.name)}</span>,
                     <span key="s" style={{ color: themeColor.labelTertiary }}>{text(e.row.symbol)}</span>,
                     <span key="c" style={{ color: themeColor.labelTertiary }}>{text(e.row.category)}</span>,
-                    <span key="w" style={{ color: STATUS_COLOR[e.window.status] }}>{STATUS_LABEL[e.window.status]}</span>,
+                    <span key="w" style={{ color: STATUS_COLOR[e.window.status] }}>{t(`crypto.breadth.status${e.window.status === 'upcoming' ? 'Upcoming' : e.window.status === 'active' ? 'Active' : e.window.status === 'past' ? 'Past' : 'Unknown'}` as 'crypto.breadth.statusUpcoming')}</span>,
                     <span key="a">{dateOf(e.row.when)}</span>,
                     <span key="b">{dateOf(e.row.till)}</span>,
                     <span key="r">{usd(e.row.totalRaiseUsd)}</span>,
@@ -503,9 +511,8 @@ function LaunchpoolCard() {
                 }))}
               />
               <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-                {read.unannounced > 0 ? `${read.unannounced} of ${read.shown} events have no announced window and are marked “no window”. ` : ''}
-                A total is shown only when every row on the page states a raise — otherwise it says “n of m”, because a partial sum
-                under a “total” label would understate by the rows it skipped. Upstream ships one SSR page and ignores ?page=.
+                {read.unannounced > 0 ? `${t('crypto.breadth.unannouncedNote', { n: read.unannounced, total: read.shown })} ` : ''}
+                {t('crypto.breadth.launchpoolFootnote')}
               </p>
             </>
           );
@@ -516,28 +523,29 @@ function LaunchpoolCard() {
 }
 
 function NodesaleCard() {
+  const t = useT();
   const [variant, setVariant] = useState<BreadthNdKey>(BREADTH_DEFAULT_ND);
   const src = useSource<NodesaleEnvelope>((s) => fetchNodesale(variant, s), `nodesale:${variant}`);
   const nowSec = Math.floor(Date.now() / 1000);
 
   return (
     <Card
-      title="Node sales"
-      subtitle="node tier sales — nodePriceFrom–To is the upstream tier range (never a market price); raise is upstream's own figure"
+      title={t('crypto.breadth.nodesaleTitle')}
+      subtitle={t('crypto.breadth.nodesaleSubtitle')}
       right={<Selector<BreadthNdKey> options={BREADTH_ND_LISTS} value={variant} onChange={setVariant} />}
     >
       {src === null ? (
-        <Loading what="the node-sale list" />
+        <Loading what={t('crypto.breadth.nodesaleLoadingWhat')} />
       ) : src.data === null ? (
-        <ReadFailure title="Could not load the node-sale list" error={src.error} />
+        <ReadFailure title={t('crypto.breadth.nodesaleLoadFailTitle')} error={src.error} />
       ) : (
         (() => {
           const read = readEventList(src.data.nodesaleRows ?? [], nowSec, (r) => r.raiseUsd);
           if (read.shown === 0) {
             return (
               <ErrorState
-                title={`No ${variant} node sales came back`}
-                detail="the upstream answered successfully with no rows — reported as a failure, not an empty calendar"
+                title={t('crypto.breadth.nodesaleEmptyTitle', { variant })}
+                detail={t('crypto.breadth.nodesaleEmptyDetail')}
               />
             );
           }
@@ -545,35 +553,35 @@ function NodesaleCard() {
             <>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
                 <Stat
-                  label="Events shown"
+                  label={t('crypto.breadth.statEventsShown')}
                   value={String(read.shown)}
-                  hint={src.data.upstreamTotal ? `of ${src.data.upstreamTotal} upstream` : 'upstream total not stated'}
+                  hint={src.data.upstreamTotal ? t('crypto.common.ofUpstream', { n: src.data.upstreamTotal }) : t('crypto.common.upstreamTotalNotStated')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
                 />
                 <Stat
-                  label="Raise stated"
+                  label={t('crypto.breadth.statRaiseStated')}
                   value={`${read.raisedStated} / ${read.shown}`}
-                  hint="rows that state a raise"
+                  hint={t('crypto.breadth.hintRowsStateRaise')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
                 />
                 <Stat
-                  label="Total raise"
+                  label={t('crypto.breadth.statTotalRaise')}
                   value={usd(read.raisedTotalUsd)}
-                  hint={read.raisedTotalUsd === null ? 'not totalled — some rows state no raise' : 'every row states a raise'}
+                  hint={read.raisedTotalUsd === null ? t('crypto.breadth.hintNotTotalled') : t('crypto.breadth.hintEveryRowRaise')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
                 />
               </div>
               <DataTable
-                head={['Name', 'Symbol', 'Category', 'Status', 'Starts', 'Ends', 'Node price', 'Raise']}
+                head={[t('crypto.head.name'), t('crypto.coins.headSymbol'), t('crypto.head.category'), t('col.status'), t('crypto.breadth.headStarts'), t('crypto.breadth.headEnds'), t('crypto.breadth.headNodePrice'), t('crypto.breadth.headRaise')]}
                 rows={read.events.map((e) => ({
                   cells: [
                     <span key="n" style={{ fontWeight: fontWeight.semibold }}>{text(e.row.name)}</span>,
                     <span key="s" style={{ color: themeColor.labelTertiary }}>{text(e.row.symbol)}</span>,
                     <span key="c" style={{ color: themeColor.labelTertiary }}>{text(e.row.category)}</span>,
-                    <span key="w" style={{ color: STATUS_COLOR[e.window.status] }}>{STATUS_LABEL[e.window.status]}</span>,
+                    <span key="w" style={{ color: STATUS_COLOR[e.window.status] }}>{t(`crypto.breadth.status${e.window.status === 'upcoming' ? 'Upcoming' : e.window.status === 'active' ? 'Active' : e.window.status === 'past' ? 'Past' : 'Unknown'}` as 'crypto.breadth.statusUpcoming')}</span>,
                     <span key="a">{dateOf(e.row.when)}</span>,
                     <span key="b">{dateOf(e.row.till)}</span>,
                     <span key="p">{priceRange(e.row.nodePriceFromUsd, e.row.nodePriceToUsd)}</span>,
@@ -582,9 +590,8 @@ function NodesaleCard() {
                 }))}
               />
               <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-                {read.unannounced > 0 ? `${read.unannounced} of ${read.shown} events have no announced window and are marked “no window”. ` : ''}
-                Node prices are the upstream tier range in USD, not a market price; a raise is stated only when every row on the
-                page states one. Upstream ships one SSR page and ignores ?page=.
+                {read.unannounced > 0 ? `${t('crypto.breadth.unannouncedNote', { n: read.unannounced, total: read.shown })} ` : ''}
+                {t('crypto.breadth.nodesaleFootnote')}
               </p>
             </>
           );
@@ -607,27 +614,28 @@ function LaunchCalendarSection() {
 // (3) Sector rotation — mode=categories (28-slug selector)
 // ---------------------------------------------------------------------------
 function SectorSection() {
+  const t = useT();
   const [slug, setSlug] = useState<BreadthCategorySlug>(BREADTH_DEFAULT_CATEGORY);
   const src = useSource<CategoriesEnvelope>((s) => fetchCategories(slug, s), `categories:${slug}`);
 
   return (
     <Card
-      title="Sector rotation"
-      subtitle="one sector at a time — the header is CryptoRank's own gainers/losers count; where the change column is absent the board says so"
+      title={t('crypto.breadth.sectorTitle')}
+      subtitle={t('crypto.breadth.sectorSubtitle')}
       right={<Selector<BreadthCategorySlug> options={BREADTH_CATEGORY_SLUGS} value={slug} onChange={setSlug} />}
     >
       {src === null ? (
-        <Loading what="the sector board" />
+        <Loading what={t('crypto.breadth.sectorLoadingWhat')} />
       ) : src.data === null ? (
-        <ReadFailure title="Could not load the sector board" error={src.error} />
+        <ReadFailure title={t('crypto.breadth.sectorLoadFailTitle')} error={src.error} />
       ) : (
         (() => {
           const board = readCategoryBoard(src.data.category ?? null, src.data.rows ?? [], src.data.changeSource);
           if (board.rows.length === 0) {
             return (
               <ErrorState
-                title={`The ${slug} sector came back empty`}
-                detail="the upstream answered successfully with no rows — reported as a failure, not an empty board"
+                title={t('crypto.breadth.sectorEmptyTitle', { slug })}
+                detail={t('crypto.breadth.sectorEmptyDetail')}
               />
             );
           }
@@ -635,32 +643,32 @@ function SectorSection() {
             <>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
                 <Stat
-                  label="Sector"
+                  label={t('crypto.breadth.statSector')}
                   value={text(board.info?.name ?? slug)}
-                  hint={`slug ${slug}`}
+                  hint={t('crypto.breadth.hintSlug', { slug })}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
                 />
                 <Stat
-                  label="Gainers"
+                  label={t('crypto.breadth.statGainers')}
                   value={num(board.breadth?.gainers ?? null)}
                   tone="positive"
-                  hint="CryptoRank's own count"
+                  hint={t('crypto.breadth.hintOwnCount')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 120px' }}
                 />
                 <Stat
-                  label="Losers"
+                  label={t('crypto.breadth.statLosers')}
                   value={num(board.breadth?.losers ?? null)}
                   tone="negative"
-                  hint="CryptoRank's own count"
+                  hint={t('crypto.breadth.hintOwnCount')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 120px' }}
                 />
                 <Stat
-                  label="Breadth"
+                  label={t('crypto.breadth.statBreadth')}
                   value={num(board.breadth?.total ?? null)}
-                  hint={board.breadth === null ? 'gainers/losers not both stated' : 'gainers + losers'}
+                  hint={board.breadth === null ? t('crypto.breadth.hintBreadthMissing') : t('crypto.breadth.hintBreadthSum')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 120px' }}
                 />
@@ -677,7 +685,7 @@ function SectorSection() {
                     lineHeight: lineHeight.normal,
                   }}
                 >
-                  {text(board.change.note)}. The 24h % column below is therefore shown as — for every row, not as 0.
+                  {text(board.change.note)}. {t('crypto.breadth.sectorChangeNote')}
                 </p>
               ) : board.change.note ? (
                 <p style={{ margin: `0 0 ${space[8]}px`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
@@ -687,19 +695,19 @@ function SectorSection() {
 
               <DataTable
                 head={[
-                  'Rank',
-                  'Name',
-                  'Symbol',
-                  'Price (USD)',
-                  board.change.available ? '24h %' : '24h % (unavailable)',
-                  'Market cap',
-                  '24h volume',
+                  t('crypto.head.rank'),
+                  t('crypto.head.name'),
+                  t('crypto.coins.headSymbol'),
+                  t('crypto.head.priceUsd'),
+                  board.change.available ? t('crypto.head.change24h') : t('crypto.sectors.headChangeUnavailable'),
+                  t('crypto.head.marketCap'),
+                  t('crypto.head.volume24h'),
                 ]}
                 rows={board.rows.map((r) => {
                   const changeCell: ReactNode = board.change.available ? (
                     <span style={{ color: changeColor(r.change24h) }}>{fmtPct(r.change24h)}</span>
                   ) : (
-                    <span style={{ color: themeColor.labelTertiary }} title="the upstream change column is unavailable on this surface">
+                    <span style={{ color: themeColor.labelTertiary }} title={t('crypto.sectors.changeUnavailableTitle')}>
                       {dash}
                     </span>
                   );
@@ -717,7 +725,7 @@ function SectorSection() {
                 })}
               />
               <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-                {src.data.count} rows on CryptoRank&apos;s own category page. CryptoRank&apos;s own slice: {text(src.data.slice)}.
+                {t('crypto.breadth.sectorFootnote', { count: src.data.count, slice: text(src.data.slice) })}
               </p>
             </>
           );
@@ -731,13 +739,14 @@ function SectorSection() {
 // (4) Exchange ranking — mode=exchanges (variant selector)
 // ---------------------------------------------------------------------------
 function ExchangeSection() {
+  const t = useT();
   const [variant, setVariant] = useState<BreadthExchangeKey>(BREADTH_DEFAULT_EXCHANGE);
   const src = useSource<ExchangesEnvelope>((s) => fetchExchanges(variant, s), `exchanges:${variant}`);
 
   return (
     <Card
-      title="Exchange ranking"
-      subtitle="venues by CryptoRank's own reported volume — the reserve-transparency variant carries no volume, so those columns render —"
+      title={t('crypto.breadth.exchangeTitle')}
+      subtitle={t('crypto.breadth.exchangeSubtitle')}
       right={
         <Selector<BreadthExchangeKey>
           options={BREADTH_EXCHANGE_LISTS}
@@ -748,17 +757,17 @@ function ExchangeSection() {
       }
     >
       {src === null ? (
-        <Loading what="the exchange ranking" />
+        <Loading what={t('crypto.breadth.exchangeLoadingWhat')} />
       ) : src.data === null ? (
-        <ReadFailure title="Could not load the exchange ranking" error={src.error} />
+        <ReadFailure title={t('crypto.breadth.exchangeLoadFailTitle')} error={src.error} />
       ) : (
         (() => {
           const board = readExchangeBoard(src.data.rows ?? [], variant);
           if (board.rows.length === 0) {
             return (
               <ErrorState
-                title="The exchange ranking came back empty"
-                detail="the upstream answered successfully with no rows — reported as a failure, not an empty board"
+                title={t('crypto.breadth.exchangeEmptyTitle')}
+                detail={t('crypto.breadth.exchangeEmptyDetail')}
               />
             );
           }
@@ -766,30 +775,30 @@ function ExchangeSection() {
             <>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
                 <Stat
-                  label="Venues shown"
+                  label={t('crypto.breadth.statVenuesShown')}
                   value={String(board.rows.length)}
-                  hint="rows on this surface"
+                  hint={t('crypto.breadth.hintRowsOnSurface')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
                 />
                 <Stat
-                  label="24h volume (page)"
+                  label={t('crypto.breadth.statVolumePage')}
                   value={board.volumeAvailable ? usd(board.dayVolumeShownUsd) : dash}
-                  hint={board.volumeAvailable ? 'sum over the rows that state it' : 'this variant publishes no volume'}
+                  hint={board.volumeAvailable ? t('crypto.breadth.hintSumStated') : t('crypto.breadth.hintNoVolume')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 170px' }}
                 />
                 <Stat
-                  label="Pairs stated"
+                  label={t('crypto.breadth.statPairsStated')}
                   value={`${board.pairsStated} / ${board.rows.length}`}
-                  hint="rows that state a pair count"
+                  hint={t('crypto.breadth.hintRowsStatePairs')}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
                 />
               </div>
 
               <DataTable
-                head={['Rank', 'Name', '24h volume', '7d volume', '30d volume', 'Share', 'Pairs']}
+                head={[t('crypto.head.rank'), t('crypto.head.name'), t('crypto.head.volume24h'), t('crypto.breadth.head7dVolume'), t('crypto.breadth.head30dVolume'), t('crypto.breadth.headShare'), t('crypto.breadth.headPairs')]}
                 rows={board.rows.map((r) => ({
                   cells: [
                     <span key="rank" style={{ color: themeColor.labelTertiary }}>{num(r.rank)}</span>,
@@ -803,7 +812,7 @@ function ExchangeSection() {
                 }))}
               />
               <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-                {board.note}. A volume the surface did not publish renders — rather than 0. CryptoRank&apos;s own slice: {text(src.data.slice)}.
+                {t('crypto.breadth.exchangeFootnote', { slice: text(src.data.slice) })}
               </p>
             </>
           );
@@ -817,6 +826,7 @@ function ExchangeSection() {
 // The route surface — four independent boards, one failing read never blanks another.
 // ---------------------------------------------------------------------------
 export default function BreadthBoards() {
+  const t = useT();
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[16] }}>
       <RwaSection />
@@ -825,8 +835,7 @@ export default function BreadthBoards() {
       <SectorSection />
       <ExchangeSection />
       <p style={{ margin: 0, fontSize: fontSize[11], color: themeColor.labelTertiary, letterSpacing: letterSpacing.xs, lineHeight: lineHeight.normal }}>
-        Four upstream tables, one rule: a metric CryptoRank did not publish renders —, never 0. RWA and the event lists are
-        page-1 slices and say so; the sector board names the change column it does not carry; nothing here is a recommendation.
+        {t('crypto.breadth.routeFootnote')}
       </p>
     </div>
   );

@@ -1,7 +1,13 @@
 import HomePage from '@/features/home/ui';
 import { getSession, hasTier } from '@/server/auth';
 import type { Metadata } from 'next';
-
+// Home stays REQUEST-TIME, unlike every other public board (revalidate = 300).
+// Its render reads `cookies()` via `getSession()` to choose the landing call to
+// action — `/team/balance` for a team visitor, `/login` otherwise — and Next
+// spells that `no-store`: a page whose render touches request state can never be
+// a cached shell. The rendered page and the served header agree by construction.
+// (Moving just that CTA to the client would free the page, but it is out of
+// scope here; the honest static/dynamic split is the point of this pass.)
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 

@@ -7,7 +7,7 @@ import {
   type ForexPair,
 } from '@/features/market/forex-pairs';
 import { limitedFetch } from '@/lib/rate-limit';
-import { fail } from '../../_lib/http';
+import { fail, publicJson } from '../../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -60,7 +60,7 @@ export async function GET() {
     return fail('no curated pair could be derived from the upstream rates', 502, `base=${base}`);
   }
 
-  return NextResponse.json(
+  return publicJson(
     {
       pairs,
       count: pairs.length,
@@ -69,6 +69,7 @@ export async function GET() {
       upstream: FOREX_UPSTREAM,
       derived: `curated majors derived locally from ${base} base rates`,
     },
+    FOREX_TTL_MS / 1000,
     { status: 200, headers: { 'X-Cache': res.headers.get('X-Cache') ?? 'MISS' } }
   );
 }

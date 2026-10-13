@@ -22,8 +22,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 300;
 
 /** The trading domain's front door (plan Phase 6). */
 export default function TradePage() {

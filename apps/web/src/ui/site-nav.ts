@@ -135,3 +135,20 @@ export function buildTrail(pathname: string, labels?: Readonly<Record<string, st
   }
   return trail;
 }
+
+/** One child link inside a section's mega-menu panel. */
+export interface MegaMenuEntry {
+  href: string;
+  label: string;
+  /** Optional one-liner for the panel row (title attr). */
+  blurb?: string;
+}
+
+/** The mega-menu model one top-level section carries. Server-computed (it joins
+ *  PUBLIC_ROUTES with these sections), passed down as props — the client navbar
+ *  never imports the server registry. */
+export interface MegaMenuSection {
+  key: string;
+  href: string;
+  entries: MegaMenuEntry[];
+}

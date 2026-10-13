@@ -20,9 +20,6 @@ export async function generateMetadata({ params }: { params: Promise<{ marketTyp
   };
 }
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 /**
  * `/trade/<marketType>` — one board per market type (plan Phase 1).
  *
@@ -31,6 +28,21 @@ export const revalidate = 0;
  * what is traded, and making it structural would force a second copy of every
  * market type under every venue.
  */
+
+/**
+ * ISR, not request-time: the param space is unbounded (every coin, every
+ * market type/instrument, every country/bank/indicator the registry knows),
+ * so this route cannot be pre-rendered to a fixed list. `dynamicParams = true`
+ * lets Next render unknown slugs on demand while still caching the ones it has
+ * already built, and `revalidate = 300` renews them. The shell is static — the
+ * root layout no longer reads the cookie server-side, so the whole public tree
+ * stays cacheable and only this param space is served on demand.
+ */
+export async function generateStaticParams() {
+  return [];
+}
+export const dynamicParams = true;
+export const revalidate = 300;
 export default async function TradeMarketTypeRoute({ params }: { params: Promise<{ marketType: string }> }) {
   const { marketType } = await params;
   const raw = marketType ?? '';

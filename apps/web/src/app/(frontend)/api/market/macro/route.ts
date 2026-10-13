@@ -25,6 +25,7 @@ import { fetchFred } from '@/features/market/fred';
 import { fetchWorldBankSeries, pickLatestAndPrior, type WorldBankPoint } from '@/features/market/worldbank';
 import { limitedFetch } from '@/lib/rate-limit';
 import { mapPool } from '@/app/(frontend)/api/economy/_lib/rows';
+import { publicJson } from '../../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -126,6 +127,7 @@ export async function GET() {
   // all HIT). The BIS/FRED/World Bank helpers return parsed data, not
   // Responses, so they contribute no freshness mark.
   const cacheMarks: string[] = [];
+  const staleAges: number[] = [];
 
   // ---- 1. live quotes (Yahoo) ----------------------------------------------
   const quotes: MacroQuote[] = [];
@@ -142,7 +144,9 @@ export async function GET() {
       return { ok: false, failure: { symbol: spec.symbol, reason: `fetch failed: ${e instanceof Error ? e.message : String(e)}` } };
     }
     const mark = res.headers.get('X-Cache');
-    cacheMarks.push(mark === 'HIT' || mark === 'COALESCED' ? mark : 'MISS');
+    const age = res.headers.get('Age');
+    cacheMarks.push(mark === 'HIT' || mark === 'COALESCED' || mark === 'STALE' ? mark : 'MISS');
+    if (mark === 'STALE' && age) staleAges.push(Number(age));
     if (!res.ok) {
       return { ok: false, failure: { symbol: spec.symbol, reason: `upstream ${res.status}` } };
     }
@@ -334,13 +338,18 @@ export async function GET() {
 
   // HIT only if EVERY upstream call was a HIT; COALESCED if any coalesced
   // and none missed; otherwise MISS.
+  // STALE is the worst case that still served: any stale body must be
+  // VISIBLE as stale (never folded into COALESCED/HIT), with the OLDEST
+  // body's age carried in the Age header.
   const cache =
     cacheMarks.length > 0 && cacheMarks.every((m) => m === 'HIT')
       ? 'HIT'
       : cacheMarks.some((m) => m === 'MISS') || cacheMarks.length === 0
         ? 'MISS'
-        : 'COALESCED';
-  return NextResponse.json(
+        : cacheMarks.some((m) => m === 'STALE')
+          ? 'STALE'
+          : 'COALESCED';
+  return publicJson(
     {
       quotes,
       spreads,
@@ -356,6 +365,7 @@ export async function GET() {
       asOf: Math.floor(Date.now() / 1000),
       derived: `quotes: one Yahoo chart call per symbol; policy rates: BIS WS_CBPOL (daily, 60-day window); indicators: FRED CSV with the transform applied server-side; worldwide board: World Bank annual, ${WORLD_COUNTRIES.length} countries + ${WORLD_AGGREGATES.length} aggregates across ${ECONOMY_INDICATORS.length} series, newest non-null year per cell, each cell compared against its observation ~10 years earlier where the window holds one; budget balance (${BALANCE_ID}) derived here as revenue − expense for a year BOTH legs observe, never across two reference years; ${failed.length} upstream item(s) failed`,
     },
-    { status: 200, headers: { 'X-Cache': cache } }
+    MACRO_TTL_MS / 1000,
+    { status: 200, headers: cache === 'STALE' ? { 'X-Cache': cache, Age: String(Math.max(0, ...staleAges)) } : { 'X-Cache': cache } }
   );
 }

@@ -68,13 +68,25 @@ type THProps = {
   /** For a grouped header: a theme cell spans its columns, the label column spans its rows. */
   colSpan?: number;
   rowSpan?: number;
+  /**
+   * Opt-in: mark this as a SORTABLE column header. Setting it stamps
+   * `scope="col"` and the matching `aria-sort`, which is the only way a screen
+   * reader learns a column is sortable and which direction is active. It is
+   * opt-in rather than unconditional because a `<th>` carrying `rowSpan` is a
+   * ROW header in the grouped-header tables this component also serves, and
+   * `scope="col"` there would be wrong. `undefined` keeps the historical
+   * markup byte-identical for every existing caller.
+   */
+  sort?: 'asc' | 'desc' | 'none';
 };
 
-export function TH({ children, align = 'left', style, colSpan, rowSpan }: THProps) {
+export function TH({ children, align = 'left', style, colSpan, rowSpan, sort }: THProps) {
   return (
     <th
       colSpan={colSpan}
       rowSpan={rowSpan}
+      scope={sort !== undefined ? 'col' : undefined}
+      aria-sort={sort === undefined ? undefined : sort === 'asc' ? 'ascending' : sort === 'desc' ? 'descending' : 'none'}
       style={{ textAlign: align, color: themeColor.labelTertiary, fontWeight: fontWeight.semibold, ...style }}
     >
       {children}

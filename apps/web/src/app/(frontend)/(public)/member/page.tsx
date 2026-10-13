@@ -1,6 +1,8 @@
 import StoreShell from '@/features/overview/store-shell';
 import { requireTier } from '@/server/auth';
 import { themeColor, fontFamily, fontSize, letterSpacing, space } from '@/styles/tokens';
+// Request-time on purpose: `requireTier('member')` reads the session cookie, so
+// the page renders the signed-in user's own name — never a shared snapshot.
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 // Member landing view: login-gated; the shared public market boards plus a

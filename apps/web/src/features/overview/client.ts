@@ -80,19 +80,44 @@ export async function loadOverviewBundle(): Promise<{
   wallets: Wallet[];
   coinsData: CoinsData;
   reconData: ReconData;
+  /**
+   * The endpoints that fell back to an empty payload, by name. Returned so the
+   * shell can SAY SO on screen instead of rendering an empty board that reads
+   * as real data — an empty reconciliation table looks like "everything
+   * reconciles" and a zero coin count looks like "no coins", and both are lies
+   * when the cause is a failed request.
+   */
+  failed: string[];
 }> {
+  const failed: string[] = [];
   const [allData, wallets, coinsData, reconData] = await Promise.all([
     getJSON<AllData>('/api/all', { cache: 'no-store' }),
     getJSON<Wallet[]>('/api/wallets', { cache: 'no-store' }).catch((e): Wallet[] => {
       // An empty list and a broken endpoint must not look the same to an operator: this
       // catch is why a 500 on the wallet list rendered as a calm "Wallets (0)".
       console.warn('[overview] /api/wallets failed; the wallet list renders empty', e);
+      failed.push('/api/wallets');
       return [];
     }),
-    getJSON<CoinsData>('/api/coins', { cache: 'no-store' }).catch(() => ({ coins: [], total: 0 })),
-    getJSON<ReconData>('/api/reconcile', { cache: 'no-store' }).catch(() => ({ rows: [], wallets: [] })),
+    // These two catches are LOUD on purpose. A silent fallback here is the
+    // worst outcome on this surface: `/api/reconcile` failing must never render
+    // Reconciliation as zero rows — an empty diff table reads as "everything
+    // reconciles", which is the fabrication the house refuses and the exact
+    // shape the reconciler's own Rust service guards against with a 500. The
+    // console line keeps the real cause (endpoint, status, body) where an
+    // operator can see it, `failed` puts it on screen, and the board stays up.
+    getJSON<CoinsData>('/api/coins', { cache: 'no-store' }).catch((e): CoinsData => {
+      console.warn('[overview] /api/coins failed; the coin directory renders empty', e);
+      failed.push('/api/coins');
+      return { coins: [], total: 0 };
+    }),
+    getJSON<ReconData>('/api/reconcile', { cache: 'no-store' }).catch((e): ReconData => {
+      console.warn('[overview] /api/reconcile failed; reconciliation renders empty — NOT a clean reconciliation', e);
+      failed.push('/api/reconcile');
+      return { rows: [], wallets: [] };
+    }),
   ]);
-  return { allData, wallets, coinsData, reconData };
+  return { allData, wallets, coinsData, reconData, failed };
 }
 
 export function saveWallet(w: unknown): Promise<unknown> {

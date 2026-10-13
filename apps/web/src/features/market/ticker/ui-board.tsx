@@ -49,6 +49,37 @@ type TickerRow = {
 type Sort = 'symbol' | 'price' | 'change' | 'volume' | 'spread';
 type Order = 'asc' | 'desc';
 
+/**
+ * A sortable column header.
+ *
+ * This was a `<span onClick>` — click-only, not focusable, not reachable by
+ * keyboard, and invisible to assistive tech as a control (WCAG 2.1.1 Keyboard).
+ * A real `<button>` is focusable and Enter/Space-activatable for free; the
+ * `aria-label` says what activating it does ("Sort by Price, currently
+ * descending"), and the `<TH>` around it carries `aria-sort` so the ACTIVE
+ * direction is announced on the column itself rather than inferred from the
+ * ↓/↑ glyph.
+ */
+function SortHeader({ label, dir, onClick, right }: { label: string; dir: Order | null; onClick: () => void; right?: boolean }) {
+  return (
+    <button
+      type="button"
+      className="fc-focusable"
+      onClick={onClick}
+      aria-label={`Sort by ${label}${dir ? `, currently ${dir === 'asc' ? 'ascending' : 'descending'}` : ''}`}
+      style={{
+        background: 'transparent', border: 'none', padding: 0, margin: 0,
+        color: 'inherit', font: 'inherit', cursor: 'pointer',
+        display: 'inline-flex', alignItems: 'center', gap: space[4],
+        justifyContent: right ? 'flex-end' : 'flex-start',
+      }}
+    >
+      {label}
+      {dir ? <span aria-hidden="true">{dir === 'desc' ? '↓' : '↑'}</span> : null}
+    </button>
+  );
+}
+
 
 export default function TickerPage() {
   const [rows, setRows] = useState<TickerRow[]>([]);
@@ -167,7 +198,6 @@ export default function TickerPage() {
     if (key === sort) setOrder(o => (o === 'desc' ? 'asc' : 'desc'));
     else { setSort(key); setOrder(key === 'symbol' ? 'asc' : 'desc'); }
   };
-  const arrow = (key: Sort) => (sort !== key ? '' : order === 'desc' ? ' ↓' : ' ↑');
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: '5px 12px', borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer',
@@ -180,7 +210,16 @@ export default function TickerPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: space[12], flexWrap: 'wrap', gap: space[8] }}>
-        <div>
+        {/* `minWidth: 0` is LOAD-BEARING, not decoration. This is a flex item
+            holding a `white-space: nowrap` sentence, and a flex item's default
+            `min-width: auto` refuses to shrink below its min-content width — so
+            without this the item sized to the FULL ~1100px sentence and the
+            `overflow: hidden`/`textOverflow: ellipsis`/`maxWidth: 100%` on the
+            <p> below never fired. Measured at 390px: document scrollWidth 1306
+            and the board's header box 1286px wide, i.e. the whole page scrolled
+            sideways 916px and the description wrapped silently instead of
+            ellipsising. One declaration removes both. */}
+        <div style={{ minWidth: 0 }}>
           <h3 style={{ color: themeColor.blue, margin: 0 }}>Exchange Ticker</h3>
           {/* ONE LINE, ALWAYS. This line names the venues the board is quoting
               (`venues` is empty until the first response lands), and on a phone
@@ -251,12 +290,12 @@ export default function TickerPage() {
           <Table>
             <THead>
               <TR style={{ borderBottom: `1px solid ${themeColor.separator}`, color: themeColor.labelTertiary }}>
-                <TH style={{ padding: space[8] }}><span onClick={() => toggleSort('symbol')} style={{ cursor: 'pointer' }}>Pair{arrow('symbol')}</span></TH>
+                <TH sort={sort === 'symbol' ? order : 'none'} style={{ padding: space[8] }}><SortHeader label="Pair" dir={sort === 'symbol' ? order : null} onClick={() => toggleSort('symbol')} /></TH>
                 <TH style={{ padding: space[8] }}>Instrument</TH>
-                <TH align="right" style={{ padding: space[8] }}><span onClick={() => toggleSort('price')} style={{ cursor: 'pointer' }}>Price{arrow('price')}</span></TH>
-                <TH align="right" style={{ padding: space[8] }}><span onClick={() => toggleSort('change')} style={{ cursor: 'pointer' }}>24h %{arrow('change')}</span></TH>
-                <TH align="right" style={{ padding: space[8] }}><span onClick={() => toggleSort('volume')} style={{ cursor: 'pointer' }}>Volume{arrow('volume')}</span></TH>
-                <TH align="right" style={{ padding: space[8] }}><span onClick={() => toggleSort('spread')} style={{ cursor: 'pointer' }}>Spread{arrow('spread')}</span></TH>
+                <TH align="right" sort={sort === 'price' ? order : 'none'} style={{ padding: space[8] }}><SortHeader label="Price" dir={sort === 'price' ? order : null} onClick={() => toggleSort('price')} right /></TH>
+                <TH align="right" sort={sort === 'change' ? order : 'none'} style={{ padding: space[8] }}><SortHeader label="24h %" dir={sort === 'change' ? order : null} onClick={() => toggleSort('change')} right /></TH>
+                <TH align="right" sort={sort === 'volume' ? order : 'none'} style={{ padding: space[8] }}><SortHeader label="Volume" dir={sort === 'volume' ? order : null} onClick={() => toggleSort('volume')} right /></TH>
+                <TH align="right" sort={sort === 'spread' ? order : 'none'} style={{ padding: space[8] }}><SortHeader label="Spread" dir={sort === 'spread' ? order : null} onClick={() => toggleSort('spread')} right /></TH>
                 <TH align="right" style={{ padding: space[8] }}>Venues</TH>
               </TR>
             </THead>

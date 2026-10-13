@@ -1,8 +1,7 @@
 import RegimeBoard from '@/features/economy/ui/regime';
 import type { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: 'Macro Regime — Growth, inflation, liquidity, policy | FUDCOURT',

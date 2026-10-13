@@ -261,6 +261,7 @@ for p, name in [("/api/all", "/api/all anon -> 401"),
                 ("/api/transactions?limit=5", "/api/transactions?limit=5 anon -> 401"),
                 ("/api/journal", "/api/journal anon -> 401"),
                 ("/api/plans", "/api/plans anon -> 401"),
+                ("/api/treasury/nfts", "/api/treasury/nfts anon -> 401"),
                 ("/api/admin/members", "/api/admin/members anon -> 401")]:
     st, b = hit(p)
     rec("api", name, st, 401, b)
@@ -427,6 +428,25 @@ if SESSION_OK:
         st if (st == 200 and ok_pairs and ok_resid) else 0, 200, b)
     st, b = hit("/api/treasury?mode=attribution&dimension=total&range=7d", cookie=SESSION)
     rec("api-auth", "/api/treasury?mode=attribution&dimension=total -> 400 (not a dimension)", st, 400, b)
+    # The treasury NFT overlay (DR-057): a session must open it, and the shape
+    # must carry per-wallet portfolio + collections + totals — not merely a 200.
+    st, b = hit("/api/treasury/nfts", cookie=SESSION)
+    ok_nft = False
+    n_w = 0
+    if isinstance(b, dict):
+        ws = b.get("wallets")
+        totals = b.get("totals")
+        if isinstance(ws, list) and isinstance(totals, dict) and isinstance(totals.get("wallets"), int):
+            ok_nft = all(
+                isinstance(w, dict) and "address" in w and "portfolio" in w and "collections" in w
+                for w in ws
+            )
+            n_w = len(ws)
+    rec("api-auth", f"/api/treasury/nfts admin-cookie -> 200 + wallets/totals ({n_w} wallets)", st if (st == 200 and ok_nft) else 0, 200, b)
+    st, b = hit("/api/treasury/nfts?timeframe=BOGUS", cookie=SESSION)
+    rec("api-auth", "/api/treasury/nfts?timeframe=BOGUS -> 400 (strict vocab)", st, 400, b)
+    st, b = hit("/api/treasury/nfts?wallet=nope", cookie=SESSION)
+    rec("api-auth", "/api/treasury/nfts?wallet=nope -> 404 (unknown wallet)", st, 404, b)
 else:
     # ENVIRONMENTAL: this audit target cannot authenticate anyone, so the
     # session-gated path is unexercised rather than broken.
@@ -437,6 +457,26 @@ else:
     rec("api-auth-env", f"/api/plans admin-cookie -> 200 + plans/total [ENV: {SESSION_WHY}]", 0, 200, {})
     rec("api-auth-env", f"/api/treasury?mode=attribution -> 200 + split closes [ENV: {SESSION_WHY}]", 0, 200, {})
     rec("api-auth-env", f"/api/treasury?mode=attribution&dimension=total -> 400 [ENV: {SESSION_WHY}]", 0, 400, {})
+    rec("api-auth-env", f"/api/treasury/nfts admin-cookie -> 200 + wallets/totals [ENV: {SESSION_WHY}]", 0, 200, {})
+    rec("api-auth-env", f"/api/treasury/nfts?timeframe=BOGUS -> 400 [ENV: {SESSION_WHY}]", 0, 400, {})
+    rec("api-auth-env", f"/api/treasury/nfts?wallet=nope -> 404 [ENV: {SESSION_WHY}]", 0, 404, {})
+# The public OpenSea venue (DR-057): keyless shapes answer without a session,
+# strict vocabs 400, and the keyed shapes answer with the deployment key.
+# Top-level on purpose: public probes run whether or not a session minted.
+st, b = hit("/api/nft/opensea?stats=doodles-official")
+ok_stats = isinstance(b, dict) and isinstance(b.get("total"), dict) and "floor_price" in b["total"]
+rec("api", "/api/nft/opensea?stats -> 200 + total/floor_price", st if (st == 200 and ok_stats) else 0, 200, b)
+st, b = hit("/api/nft/opensea?trending&limit=1")
+ok_tr = isinstance(b, dict) and isinstance(b.get("collections"), list)
+rec("api", "/api/nft/opensea?trending -> 200 + collections", st if (st == 200 and ok_tr) else 0, 200, b)
+st, b = hit("/api/nft/opensea?trending&timeframe=BOGUS")
+rec("api", "/api/nft/opensea?trending bad timeframe -> 400", st, 400, b)
+st, b = hit("/api/nft/opensea?events=doodles-official&limit=1")
+ok_ev = isinstance(b, dict) and isinstance(b.get("asset_events"), list)
+rec("api", "/api/nft/opensea?events -> 200 + asset_events", st if (st == 200 and ok_ev) else 0, 200, b)
+st, b = hit("/api/nft/opensea?search=doodle&limit=1")
+ok_se = isinstance(b, dict) and isinstance(b.get("results"), list)
+rec("api", "/api/nft/opensea?search -> 200 + results", st if (st == 200 and ok_se) else 0, 200, b)
 
 print("=== E. cryptorank: 28 modes + contract ===", flush=True)
 CR = [

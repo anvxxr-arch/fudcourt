@@ -5,6 +5,7 @@ import { alpha, themeColor, fontSize, fontWeight, letterSpacing, radius, space }
 import { Banner } from '@/ui/banner';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
 import { fetchLlamaBoards, type LlamaChain, type LlamaProtocol, type LlamaHistoricalPoint } from './defi-tvl-client';
+import { useT } from '@/lib/i18n/t';
 
 /** Big-number USD: $1.23T / $45.6B / $789M. null -> em-dash, never 0. */
 function usdBig(n: number | null | undefined, digits = 2) {
@@ -36,6 +37,7 @@ function pctColor(n: number | null | undefined) {
  * `of N` line says. Reads only.
  */
 export default function LlamaPage() {
+  const t = useT();
   const [chains, setChains] = useState<LlamaChain[] | null>(null);
   const [protos, setProtos] = useState<LlamaProtocol[] | null>(null);
   const [hist, setHist] = useState<LlamaHistoricalPoint[] | null>(null);
@@ -108,35 +110,34 @@ export default function LlamaPage() {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: space[8], flexWrap: 'wrap', marginBottom: space[8] }}>
-        <h3 style={{ color: themeColor.labelPrimary, fontSize: fontSize[17], fontWeight: fontWeight.bold }}>DeFiLlama — TVL board</h3>
+        <h3 style={{ color: themeColor.labelPrimary, fontSize: fontSize[17], fontWeight: fontWeight.bold }}>{t('market.tvlTitle')}</h3>
         <button onClick={load}
           style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: '5px 12px', borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
-          ↻ Refresh
+          {t('common.refresh')}
         </button>
         {fetchedAt != null && !stale && (
           <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{new Date(fetchedAt * 1000).toLocaleTimeString()}</span>
         )}
       </div>
       <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], margin: `0 0 ${space[8]}px` }}>
-        read-only relay of api.llama.fi (chains + protocols head + TVL history) · tables are derived views — the
-        “of N” line is upstream’s own total · em-dash means the field is absent upstream, never zero · CEX
-        deposits sit in the protocols table but not in global TVL — upstream’s accounting, relayed as-is
+        {t('market.tvlBlurb')}
       </p>
 
       {error && (
         <Banner variant="error" style={{ fontWeight: fontWeight.bold, marginBottom: space[8] }}>
-          ⚠ defillama error: {error} — no data faked{stale ? ' · showing last good snapshot below, stamped' : ''}
+          {t('market.tvlError', { error })}
+          {stale ? ` · ${t('market.tvlStaleNote')}` : ''}
         </Banner>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: space[8], marginBottom: space[12] }}>
         {[
-          { k: 'total TVL', v: usdBig(totalTvl) },
-          { k: '24h change', v: pct(change1d), color: pctColor(change1d) },
-          { k: 'chains', v: totals.chains || '—' },
-          { k: 'protocols', v: totals.protocols || '—' },
-          { k: 'top chain', v: chains && chains[0] ? chains[0].name : '—' },
-          { k: 'top protocol', v: protos && protos[0] ? protos[0].name : '—' },
+          { k: t('market.statTotalTvl'), v: usdBig(totalTvl) },
+          { k: t('market.stat24hChange'), v: pct(change1d), color: pctColor(change1d) },
+          { k: t('market.statChains'), v: totals.chains || '—' },
+          { k: t('market.statProtocols'), v: totals.protocols || '—' },
+          { k: t('market.statTopChain'), v: chains && chains[0] ? chains[0].name : '—' },
+          { k: t('market.statTopProtocol'), v: protos && protos[0] ? protos[0].name : '—' },
         ].map((s) => (
           <div key={s.k} style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px` }}>
             <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs }}>{s.k}</div>
@@ -148,7 +149,7 @@ export default function LlamaPage() {
       {spark && (
         <div style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[12]}px`, marginBottom: space[12] }}>
           <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], textTransform: 'uppercase', letterSpacing: letterSpacing.xs, marginBottom: space[8] }}>
-            total TVL · {meta.historical}
+            {t('market.statTotalTvl')} · {meta.historical}
           </div>
           <svg viewBox="0 0 600 60" width="100%" height="60" preserveAspectRatio="none">
             <polyline points={spark} fill="none" stroke={themeColor.blue} strokeWidth="1.5" />
@@ -157,21 +158,21 @@ export default function LlamaPage() {
       )}
 
       {loading ? (
-        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>loading defillama…</p>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>{t('market.tvlLoading')}</p>
       ) : error && !chains ? (
-        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>tables withheld — the request above failed.</p>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>{t('market.tvlWithheld')}</p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: space[12] }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[4] }}>
-              <h4 style={{ color: themeColor.labelPrimary, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>chains by TVL</h4>
-              <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>top 15 of {totals.chains} · {meta.chains}</span>
+              <h4 style={{ color: themeColor.labelPrimary, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>{t('market.chainsByTvl')}</h4>
+              <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{t('market.tvlChainsCaption', { n: totals.chains, meta: meta.chains })}</span>
             </div>
             <Table style={{ fontSize: fontSize[12] }}>
               <THead>
                 <TR style={{ borderBottom: 0 }}>
                   <TH style={{ padding: `${space[4]}px ${space[8]}px`, width: space[32], fontWeight: fontWeight.bold }}>#</TH>
-                  <TH style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>chain</TH>
+                  <TH style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>{t('col.chain')}</TH>
                   <TH align="right" style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>TVL</TH>
                 </TR>
               </THead>
@@ -189,17 +190,17 @@ export default function LlamaPage() {
 
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[4] }}>
-              <h4 style={{ color: themeColor.labelPrimary, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>protocols by TVL</h4>
+              <h4 style={{ color: themeColor.labelPrimary, fontSize: fontSize[12], fontWeight: fontWeight.bold }}>{t('market.protocolsByTvl')}</h4>
               <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{meta.protocols}</span>
             </div>
             <Table style={{ fontSize: fontSize[12] }}>
               <THead>
                 <TR style={{ borderBottom: 0 }}>
                   <TH style={{ padding: `${space[4]}px ${space[8]}px`, width: space[32], fontWeight: fontWeight.bold }}>#</TH>
-                  <TH style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>protocol</TH>
+                  <TH style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>{t('market.protocol')}</TH>
                   <TH align="right" style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>TVL</TH>
                   <TH align="right" style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>1d</TH>
-                  <TH style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>category</TH>
+                  <TH style={{ padding: `${space[4]}px ${space[8]}px`, fontWeight: fontWeight.bold }}>{t('market.category')}</TH>
                 </TR>
               </THead>
               <TBody>
@@ -210,7 +211,9 @@ export default function LlamaPage() {
                       <span
                         style={{ color: themeColor.labelPrimary, textDecoration: 'none', fontWeight: fontWeight.semibold }}>{p.name}</span>
                       <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>
-                        {(p.chains ?? []).length === 1 ? '1 chain' : `${(p.chains ?? []).length} chains`}
+                        {(p.chains ?? []).length === 1
+                          ? t('market.protoChainOne')
+                          : t('market.protoChainsMany', { n: (p.chains ?? []).length })}
                       </div>
                     </TD>
                     <TD align="right" style={{ padding: `${space[8]}px`, color: themeColor.labelPrimary }}>{usdBig(p.tvl)}</TD>

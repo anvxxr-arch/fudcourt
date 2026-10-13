@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useT } from '@/lib/i18n/t';
 import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
 import { fetchCountries, type CountriesEnvelope, type CountrySummary, fetchCountry, formatDate, formatDelta, formatValue, NO_VALUE, type CountryEnvelope } from '@/features/economy/model';
 import { Card } from '@/ui/card';
@@ -24,6 +25,7 @@ import RegimeBoard from '@/features/economy/ui/regime';
  */
 
 export default function NationExplorer() {
+  const t = useT();
   const [data, setData] = useState<CountriesEnvelope | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState('');
@@ -59,8 +61,8 @@ export default function NationExplorer() {
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
       <PageHeader
-        title="Nations"
-        description="Every economy the module covers, grouped by region. A country page is the aggregator for all of its series: growth, inflation, labour, money, fiscal and trade."
+        title={t('economy.nationsTitle')}
+        description={t('economy.nationsDesc')}
         nav={ECONOMY_NAV}
       />
 
@@ -68,8 +70,8 @@ export default function NationExplorer() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search country, ISO code or currency…"
-          aria-label="Search countries"
+          placeholder={t('economy.searchCountries')}
+          aria-label={t('economy.searchCountriesLabel')}
           style={{
             flex: '1 1 280px',
             padding: `${space[8]}px ${space[8]}px`,
@@ -82,13 +84,13 @@ export default function NationExplorer() {
         />
         {data && (
           <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-            {filtered.length} of {data.total} countries
+            {t('economy.countriesCount', { n: filtered.length, total: data.total })}
           </span>
         )}
       </div>
 
-      {error && <ErrorState title="Could not load countries" detail={error} />}
-      {!data && !error && <Loading what="countries" />}
+      {error && <ErrorState title={t('economy.countriesError')} detail={error} />}
+      {!data && !error && <Loading what={t('economy.loadingCountries')} />}
 
       {data && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: space[16] }}>
@@ -96,7 +98,7 @@ export default function NationExplorer() {
             const list = byRegion.get(region);
             if (!list || list.length === 0) return null;
             return (
-              <Card key={region} title={region} subtitle={`${list.length} countries`}>
+              <Card key={region} title={region} subtitle={t('economy.regionCountries', { n: list.length })}>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(200px, 100%), 1fr))', gap: space[8] }}>
                   {list.map((c) => (
                     <li key={c.id}>
@@ -139,6 +141,7 @@ export default function NationExplorer() {
  */
 
 export function NationProfile({ code }: { code: string }) {
+  const t = useT();
   const [data, setData] = useState<CountryEnvelope | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -153,15 +156,15 @@ export function NationProfile({ code }: { code: string }) {
   if (error) {
     return (
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
-        <ErrorState title="Could not load this country" detail={error} />
-        <p style={{ marginTop: space[12] }}><Link href="/economy/nation" style={{ color: themeColor.blue }}>← all nations</Link></p>
+        <ErrorState title={t('economy.countryError')} detail={error} />
+        <p style={{ marginTop: space[12] }}><Link href="/economy/nation" style={{ color: themeColor.blue }}>{t('economy.allNations')}</Link></p>
       </main>
     );
   }
   if (!data) {
     return (
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
-        <Loading what="country profile" />
+        <Loading what={t('economy.loadingCountryProfile')} />
       </main>
     );
   }
@@ -172,15 +175,15 @@ export function NationProfile({ code }: { code: string }) {
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
       <PageHeader
         title={c.name}
-        description={`${c.iso3} · ${c.region} · ${c.currency}${c.timezone ? ` · ${c.timezone}` : ''} — ${c.indicatorCount} series, read from their own upstreams and normalised to one model.`}
+        description={t('economy.countryDesc', { iso3: c.iso3, region: c.region, currency: c.currency, tz: c.timezone ? ` · ${c.timezone}` : '', n: c.indicatorCount })}
         nav={ECONOMY_NAV}
       />
 
-      <Card title="Key Metrics" subtitle="headline series, newest published observation">
+      <Card title={t('economy.keyMetrics')} subtitle={t('economy.keyMetricsSub')}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(150px, 100%), 1fr))', gap: space[12] }}>
           {data.keyMetrics.map((m) => (
             <Link key={m.slug} href={`/economy/indicator/${m.slug}`} style={{ textDecoration: 'none' }}>
-              <Value label={m.label.replace(`${c.name} `, '')} value={m.value === null ? NO_VALUE : formatValue(m.value, m.decimals)} tone={m.value === null ? 'muted' : 'default'} unit={m.value === null ? undefined : m.unit} hint={`${m.date ?? 'no observation'} · ${m.source}`} />
+              <Value label={m.label.replace(`${c.name} `, '')} value={m.value === null ? NO_VALUE : formatValue(m.value, m.decimals)} tone={m.value === null ? 'muted' : 'default'} unit={m.value === null ? undefined : m.unit} hint={`${m.date ?? t('economy.noObservation')} · ${m.source}`} />
             </Link>
           ))}
         </div>
@@ -192,7 +195,7 @@ export function NationProfile({ code }: { code: string }) {
         {data.groups.map((g) => (
           <Card key={g.category} title={g.label}>
             <DataTable
-              head={['Indicator', 'Value', 'Date', 'Δ prior']}
+              head={[t('economy.hIndicator'), t('economy.hValue'), t('col.date'), t('economy.hDeltaPrior')]}
               rows={g.rows.map((r) => ({
                 href: `/economy/indicator/${r.slug}`,
                 cells: [
@@ -209,9 +212,9 @@ export function NationProfile({ code }: { code: string }) {
 
       {data.releases.length > 0 && (
         <div style={{ marginTop: space[12] }}>
-          <Card title="Latest Releases" subtitle="reference periods, newest first — no consensus is published by these sources, so none is shown">
+          <Card title={t('economy.latestReleases')} subtitle={t('economy.latestReleasesSub')}>
             <DataTable
-              head={['Indicator', 'Period', 'Actual', 'Previous', 'Imp.']}
+              head={[t('economy.hIndicator'), t('economy.hPeriod'), t('economy.hActual'), t('economy.hPrevious'), t('economy.hImp')]}
               rows={data.releases.map((r) => ({
                 href: `/economy/indicator/${r.slug}`,
                 cells: [
@@ -229,12 +232,12 @@ export function NationProfile({ code }: { code: string }) {
 
       {data.failed.length > 0 && (
         <div style={{ marginTop: space[12] }}>
-          <ErrorState title={`${data.failed.length} series could not be read`} detail={data.failed.map((f) => `${f.symbol}: ${f.reason}`).join(' · ')} />
+          <ErrorState title={t('economy.seriesUnreadable', { n: data.failed.length })} detail={data.failed.map((f) => `${f.symbol}: ${f.reason}`).join(' · ')} />
         </div>
       )}
 
       <p style={{ marginTop: space[16], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-        <strong style={{ color: themeColor.labelTertiary, fontWeight: fontWeight.medium }}>Sources:</strong> {data.upstream.join(' · ')}
+        <strong style={{ color: themeColor.labelTertiary, fontWeight: fontWeight.medium }}>{t('economy.sourcesLabel')}</strong> {data.upstream.join(' · ')}
       </p>
       <p style={{ marginTop: space[8], fontSize: fontSize[11], color: themeColor.labelTertiary }}>{data.derived}</p>
     </main>

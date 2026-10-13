@@ -12,7 +12,7 @@ import {
   type MarketsSort,
 } from '@/features/market/coingecko-markets';
 import { limitedFetch } from '@/lib/rate-limit';
-import { fail } from '../_lib/http';
+import { fail, publicJson } from '../_lib/http';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -91,7 +91,7 @@ export async function GET(req: Request) {
   // --- upstream: one fixed pool fetch, cached + single-flighted ---
   let res: Response;
   try {
-    res = await limitedFetch(marketsUpstreamUrl(), { signal: AbortSignal.timeout(TIMEOUT_MS) }, { ttlMs: MARKETS_TTL_MS });
+    res = await limitedFetch(marketsUpstreamUrl(), { signal: AbortSignal.timeout(TIMEOUT_MS) }, { ttlMs: MARKETS_TTL_MS, staleMs: 10 * 60_000 });
   } catch (e) {
     return fail('upstream request failed', 502, e instanceof Error ? e.message : String(e));
   }
@@ -179,7 +179,7 @@ export async function GET(req: Request) {
   const offset = (page - 1) * limit;
   const slice = matched.slice(offset, offset + limit);
 
-  return NextResponse.json(
+  return publicJson(
     {
       coins: slice,
       total,
@@ -192,9 +192,19 @@ export async function GET(req: Request) {
       upstream: marketsUpstreamUrl(),
       derived: `local search/sort/pagination over CoinGecko top ${pool} by market cap`,
     },
+    MARKETS_TTL_MS / 1000,
     {
       status: 200,
-      headers: { 'X-Cache': res.headers.get('X-Cache') ?? 'MISS' },
+      headers:
+        res.headers.get('X-Cache') === 'STALE'
+          ? // A stale-serve is VISIBLE: the Age header carries the body's age
+            // in seconds, so a consumer can show "as of Ns ago" rather than
+            // read a past-window body as live.
+            {
+              'X-Cache': 'STALE',
+              Age: res.headers.get('Age') ?? '0',
+            }
+          : { 'X-Cache': res.headers.get('X-Cache') ?? 'MISS' },
     }
   );
 }

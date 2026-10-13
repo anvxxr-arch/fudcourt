@@ -27,7 +27,13 @@ Environment=FUDCOURT_DATA_VALKEY_ADDR=127.0.0.1:6379
 EnvironmentFile=-/home/dwizzy/fudcourt/.env
 ExecStartPre=/usr/bin/go build -C /home/dwizzy/fudcourt/apps/data -o bin/fudcourt-data .
 ExecStart=/home/dwizzy/fudcourt/apps/data/bin/fudcourt-data
-Restart=on-failure
+# `always`, not `on-failure`: this is a long-running daemon, so a CLEAN exit is
+# still an outage. With `on-failure` a status-0 exit left the unit dead
+# indefinitely while the web tier 502'd on every proxy route — the exact failure
+# observed on 2026-10-11, where the service sat inactive for ~20h and
+# `is-enabled` kept reporting `enabled`. The web/reconciled units already use
+# `always`; this brings the daemon in line.
+Restart=always
 RestartSec=3
 LimitNOFILE=65536
 

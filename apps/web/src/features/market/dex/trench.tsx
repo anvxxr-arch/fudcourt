@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { alpha, themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { useT } from '@/lib/i18n/t';
 import { imgSrc } from '@/lib/img';
 import { fetchDexProfiles } from './client';
 
@@ -16,6 +17,7 @@ type Profile = {
 };
 
 export default function TrenchPage() {
+  const t = useT();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -38,16 +40,16 @@ export default function TrenchPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[12] }}>
-        <h3 style={{ color: themeColor.blue, margin: 0 }}>New Listings — DEX Trench</h3>
-        <button onClick={load} style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
-          ↻ Refresh
+        <h3 style={{ color: themeColor.blue, margin: 0 }}>{t('dex.trenchTitle')}</h3>
+        <button type="button" className="fc-focusable" onClick={load} style={{ background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`, padding: `${space[8]}px ${space[12]}px`, borderRadius: radius[8], fontSize: fontSize[11], cursor: 'pointer' }}>
+          {t('common.refresh')}
         </button>
       </div>
 
       {error && <p style={{ color: themeColor.red, fontSize: fontSize[12] }}>{error}</p>}
 
       {loading ? (
-        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>Loading new tokens...</p>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>{t('dex.trenchLoading')}</p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))', gap: space[8] }}>
           {profiles.map((p, i) => (
@@ -96,7 +98,7 @@ export default function TrenchPage() {
             </div>
           ))}
           {profiles.length === 0 && !loading && (
-            <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>No new listings found</p>
+            <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>{t('dex.trenchEmpty')}</p>
           )}
         </div>
       )}
