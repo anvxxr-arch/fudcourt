@@ -4,6 +4,7 @@ import { getAll } from '@/server/db';
 import { groupSum } from '@/lib/format';
 import { Meter } from '@/ui/meter';
 import MemberTable from '@/features/admin/members-table';
+import SettingsPanel from '@/features/admin/settings-panel';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -56,6 +57,14 @@ export default async function AdminPage() {
           Tiers are read live from Discord roles. Grant or revoke here and the next sign-in picks it up.
         </p>
         <MemberTable />
+      </section>
+
+      <section style={{ marginTop: space[32] }}>
+        <h2 style={{ fontSize: fontSize[15], color: themeColor.labelPrimary, margin: `0 0 ${space[4]}px` }}>Discord settings</h2>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
+          The guild and role wiring lives in the database, not .env — change it here and it applies on the next request.
+        </p>
+        <SettingsPanel />
       </section>
 
       <section style={{ marginTop: space[32] }}>

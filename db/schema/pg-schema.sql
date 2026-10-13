@@ -256,3 +256,15 @@ CREATE TABLE IF NOT EXISTS canonical_reference_miss (
   loaded_at     text NOT NULL DEFAULT to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'),
   PRIMARY KEY (provider, provider_id)
 );
+
+-- Admin-editable platform settings, key/value. The site reads live config from
+-- here so an admin changes the Discord wiring (guild + role mapping) from the
+-- panel without editing .env or restarting. The same-named env vars are only the
+-- boot default; the api overlays a stored value on top of them
+-- (apps/api/settings.go, discordClient.effective). Secrets stay in the
+-- environment and are never stored here.
+CREATE TABLE IF NOT EXISTS settings (
+  key        text PRIMARY KEY,
+  value      text NOT NULL,
+  updated_at text NOT NULL DEFAULT to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')
+);

@@ -64,6 +64,7 @@ func newServer(reg *health.Registry) *server {
 		BotToken:     os.Getenv("FUDCOURT_BOT_TOKEN"),
 		RoleTeam:     os.Getenv("FUDCOURT_ROLE_TEAM"),
 		RoleAdmin:    os.Getenv("FUDCOURT_ROLE_ADMIN"),
+		RoleMagang:   os.Getenv("FUDCOURT_ROLE_MAGANG"),
 	})
 	// FUDCOURT_DISCORD_API optionally points the Discord REST client at another
 	// base (hermetic tests and smoke runs); unset keeps the real endpoints.
@@ -99,10 +100,42 @@ func (s *server) handler() http.Handler {
 	mux.HandleFunc("/api/auth/callback", s.handleAuthCallback)
 	mux.HandleFunc("/api/auth/logout", s.handleAuthLogout)
 	mux.HandleFunc("/api/admin/members", s.handleAdminMembers)
+	mux.HandleFunc("/api/admin/settings", s.handleAdminSettings)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, errNotFound)
 	})
-	return httpx.Recover(httpx.RequestID(mux))
+	// Outer to inner: Recover contains a panic from any layer below and
+	// answers on the real writer (past Gzip's buffer); RequestID correlates
+	// every response including that failure; Harden and CacheControl stamp
+	// the shared header map before a body exists; Gzip buffers innermost,
+	// where the final status, Content-Type and size are known.
+	return httpx.Recover(httpx.RequestID(httpx.Harden(httpx.CacheControl(httpx.Gzip(mux)))))
+}
+
+// prewarmMembers fetches the guild-member list once at startup so the first
+// /api/admin/members request after boot is a hot read instead of the
+// 120-400ms Discord round trip. main() runs it detached: it owns its own 2s
+// cap (listGuildMembers' cold path) and must never delay or gate the
+// listener — an unconfigured or unreachable Discord logs one line and leaves
+// the cold-miss inline path as the fallback; failures are never cached.
+//
+// Deliberately NOT registered with the health.Registry behind /readyz:
+// Discord is an optional provider for one admin panel, not a dependency this
+// process needs to serve its own traffic (objective §34 readiness lists
+// required dependencies only) — a provider outage must not flip readiness
+// and get the service restarted. The cold-miss fetch + 503 refusal is the
+// degradation instead.
+func (s *server) prewarmMembers() {
+	if s.discord.env.GuildID == "" || s.discord.env.BotToken == "" {
+		slog.Info("members prewarm skipped-or-failed", "service", "api", "reason", "discord not configured")
+		return
+	}
+	members, ok := s.discord.listGuildMembers(context.Background(), membersListLimit)
+	if !ok {
+		slog.Info("members prewarm skipped-or-failed", "service", "api", "reason", "upstream unavailable; cold-miss fallback remains")
+		return
+	}
+	slog.Info("members prewarm ok", "service", "api", "members", len(members))
 }
 
 func main() {
@@ -114,15 +147,17 @@ func main() {
 	}
 
 	reg := health.NewRegistry()
+	api := newServer(reg)
+	api.attachSettings()
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           newServer(reg).handler(),
+		Handler:           api.handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		// The api handler set is small (auth + admin, request/response JSON), so
 		// the whole request must land well inside a request budget; a slow-body
 		// client is a connection held open, which ReadHeaderTimeout alone does
 		// not bound.
-		ReadTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		// Keep-alive reuse from the web layer is the point; the idle ceiling is
 		// what stops an abandoned keep-alive connection from lingering.
@@ -142,6 +177,9 @@ func main() {
 			os.Exit(1)
 		}
 	}()
+	// Pre-warm fires after the listener goroutine starts and never blocks it:
+	// one detached fetch, one log line, cold-miss fallback on any failure.
+	go api.prewarmMembers()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
