@@ -1,0 +1,14 @@
+{
+  "name": "@fudcourt/discord-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fudzie — the FUD Court Discord bot. Zero-dependency TypeScript on the Bun runtime (DR-007/DR-008): a Sapphire-shaped framework (client + gateway + REST + command/listener/precondition stores) with no framework package.",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "doctor": "bun run src/index.ts doctor",
+    "register": "bun run src/index.ts register",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  }
+}
