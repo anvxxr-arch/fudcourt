@@ -1,23 +1,11 @@
 import { NextResponse } from 'next/server';
 import { publicJson } from '../../_lib/http';
-import { INDICATORS } from '@/features/economy/model';
-import { readObservations } from '@/app/(frontend)/api/economy/_lib/adapters';
-import { mapPool, toReleaseRow } from '@/app/(frontend)/api/economy/_lib/rows';
 import { CATEGORY_BY_ID } from '@/features/economy/model';
+import { CALENDAR_TTL_SECONDS, calendar, calendarWindow } from '@/app/(frontend)/api/economy/_lib/calendar';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
-/**
- * How long the release log may be reused. The events are reference periods of
- * values that already exist, read through FRED/World Bank/BIS memos of 30
- * minutes or more, so a 300s edge window cannot expose a release the source has
- * not published.
- */
-const CALENDAR_TTL_SECONDS = 300;
-
-/** Days of history a calendar request spans by default. */
-const DEFAULT_WINDOW_DAYS = 120;
 
 /** Parse `YYYY-MM-DD`; anything else is null. */
 function parseDay(s: string | null): string | null {
@@ -40,15 +28,17 @@ function parseDay(s: string | null): string | null {
  *
  * The window filters on the REFERENCE PERIOD, so a monthly series' August print
  * falls in an August window regardless of when the agency actually published it.
+ *
+ * The fan-out over the candidate series lives in `_lib/calendar.ts` and is
+ * memoised there, so a warm run (the boot warm, or any earlier request) is
+ * served from cache and this handler only parses, validates and shapes.
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const now = new Date();
-  const defFrom = new Date(now.getTime() - DEFAULT_WINDOW_DAYS * 86_400_000).toISOString().slice(0, 10);
-  const defTo = now.toISOString().slice(0, 10);
+  const def = calendarWindow(new Date());
 
-  const from = parseDay(url.searchParams.get('from')) ?? defFrom;
-  const to = parseDay(url.searchParams.get('to')) ?? defTo;
+  const from = parseDay(url.searchParams.get('from')) ?? def.from;
+  const to = parseDay(url.searchParams.get('to')) ?? def.to;
   if (from > to) {
     return NextResponse.json({ error: 'invalid window', detail: `from (${from}) is after to (${to})` }, { status: 400 });
   }
@@ -64,45 +54,22 @@ export async function GET(req: Request) {
     );
   }
 
-  // Only market-moving series belong on a calendar; a country's whole registry
-  // would drown the events that matter.
-  const candidates = INDICATORS.filter((i) => {
-    if (i.importance < 3) return false;
-    if (country && i.country !== country) return false;
-    if (category && i.category !== category) return false;
-    if (importance && i.importance !== importance) return false;
-    return true;
-  });
+  const payload = await calendar(from, to, country, category, importance);
 
-  const failed: { symbol: string; reason: string }[] = [];
-  const events = await mapPool(candidates, 8, async (ind) => {
-    try {
-      const obs = await readObservations(ind);
-      const row = toReleaseRow(ind, obs);
-      return row.actual !== null && row.releaseAt !== null && row.releaseAt >= from && row.releaseAt <= to ? row : null;
-    } catch (e) {
-      failed.push({ symbol: `${ind.source}:${ind.slug}`, reason: e instanceof Error ? e.message : String(e) });
-      return null;
-    }
-  });
-
-  const out = events.filter((e): e is NonNullable<typeof e> => e !== null);
-  out.sort((a, b) => String(b.releaseAt).localeCompare(String(a.releaseAt)));
-
-  if (out.length === 0 && failed.length === candidates.length && candidates.length > 0) {
+  if (payload.events.length === 0 && payload.failed.length === payload.candidates && payload.candidates > 0) {
     return NextResponse.json(
-      { error: 'no data returned', detail: 'every candidate series failed to read', failed },
+      { error: 'no data returned', detail: 'every candidate series failed to read', failed: payload.failed },
       { status: 502 }
     );
   }
 
   return publicJson({
-    events: out.slice(0, 200),
+    events: payload.events.slice(0, 200),
     window: { from, to },
-    total: out.length,
-    failed,
+    total: payload.total,
+    failed: payload.failed,
     upstream: ['fred.stlouisfed.org graph CSV', 'api.worldbank.org v2', 'stats.bis.org WS_CBPOL'],
-    derived: `a RELEASE LOG, not a forward schedule: no source here publishes a publication calendar or a consensus, so every releaseAt is the REFERENCE PERIOD of a value that exists and every forecast is null; window filters on the reference period; ${out.length} event(s) across ${candidates.length} candidate series, ${failed.length} read(s) failed`,
+    derived: `a RELEASE LOG, not a forward schedule: no source here publishes a publication calendar or a consensus, so every releaseAt is the REFERENCE PERIOD of a value that exists and every forecast is null; window filters on the reference period; ${payload.total} event(s) across ${payload.candidates} candidate series, ${payload.failed.length} read(s) failed`,
     asOf: Math.floor(Date.now() / 1000),
   }, CALENDAR_TTL_SECONDS);
 }

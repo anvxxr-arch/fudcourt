@@ -160,16 +160,26 @@ test('api: the per-route TTLs match the in-process memo they mirror', () => {
     assert.ok(src.includes(used), `${route} must pass ${used} to publicJson`);
     assert.ok(ttlConst.length > 0, `${route} TTL constant is documented`);
   }
-  // The four fixed-window routes state their value as a named constant.
+  // The fixed-window routes state their value as a named constant in the file
+  // that owns the computation.
   for (const [route, constant] of [
     ['proof/route.ts', 'PROOF_TTL_SECONDS'],
     ['economy/regime/route.ts', 'REGIME_TTL_SECONDS'],
     ['economy/liquidity/route.ts', 'LIQUIDITY_TTL_SECONDS'],
-    ['economy/calendar/route.ts', 'CALENDAR_TTL_SECONDS'],
   ] as const) {
     const src = source(route);
     assert.ok(src.includes(`publicJson(`), `${route} must answer through publicJson`);
     assert.ok(new RegExp(`const ${constant} = \\d+;`).test(src), `${route} must name its TTL as ${constant}`);
+  }
+  // The calendar moved its fan-out — and the window constant the route and the
+  // boot warm both read — into the shared compute module, so the route now
+  // imports the constant rather than declaring it.
+  {
+    const route = source('economy/calendar/route.ts');
+    assert.ok(route.includes('publicJson('), 'economy/calendar/route.ts must answer through publicJson');
+    assert.ok(route.includes('CALENDAR_TTL_SECONDS'), 'economy/calendar/route.ts must pass its TTL to publicJson');
+    const lib = source('economy/_lib/calendar.ts');
+    assert.ok(/const CALENDAR_TTL_SECONDS = \d+;/.test(lib), 'economy/_lib/calendar.ts must name the TTL as CALENDAR_TTL_SECONDS');
   }
   assert.ok(source('dex/route.ts').includes("'Cache-Control': `public, max-age=${DEX_TTL_SECONDS}"), 'dex carries the header on its success returns');
   assert.ok(source('signals/route.ts').includes('...cacheControl'), 'signals carries the header on all three success paths');
