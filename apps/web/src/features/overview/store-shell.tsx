@@ -57,6 +57,10 @@ export type ShellInitialPage = string;
 export default function StoreShell({ initialPage = 'ticker', isTeam = false }: { initialPage?: ShellInitialPage; isTeam?: boolean }) {
   const [db, setDb] = useState<DbData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The endpoints that fell back to an empty payload on the last load. Kept in
+  // state so the shell can say so on screen: an empty board that is really a
+  // failed read is the one thing this surface must never present silently.
+  const [failedEndpoints, setFailedEndpoints] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastSync, setLastSync] = useState('');
   const [txRefresh, setTxRefresh] = useState(0);
@@ -79,7 +83,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
     }
     try {
       setLoading(true);
-      const { allData, wallets, coinsData, reconData } = await loadOverviewBundle();
+      const { allData, wallets, coinsData, reconData, failed } = await loadOverviewBundle();
 
       setDb({
         assets: allData.assets || [],
@@ -94,6 +98,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
         reconWallets: reconData.wallets || [],
       });
       setLastSync(new Date().toLocaleTimeString('id-ID', { hour12: false }));
+      setFailedEndpoints(failed);
       setError(null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
@@ -315,6 +320,7 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
             href={viewPath(t.key)}
             onClick={(e) => { e.preventDefault(); setPage(t.key); }}
             data-active={page === t.key ? 'true' : undefined}
+            aria-current={page === t.key ? 'page' : undefined}
             style={{
               background: page === t.key ? themeColor.blue : themeColor.bgSecondary,
               color: page === t.key ? themeColor.labelOnAccent : themeColor.labelPrimary,
@@ -328,6 +334,20 @@ export default function StoreShell({ initialPage = 'ticker', isTeam = false }: {
       </div>
 
       {isTeam && loading && !db && <Loading label="Syncing treasury…" />}
+      {/* A refresh failure used to be INVISIBLE when data was already on screen:
+          `error` was only rendered by the early-return below, and that branch
+          requires `!db`, so a failed 30s refresh left stale figures with no
+          indication. Any `error` now shows, and an endpoint that fell back to
+          an empty payload is named — an empty reconciliation table otherwise
+          reads as "everything reconciles". */}
+      {isTeam && error && db && <div style={{ marginBottom: space[12] }}><Banner>Sync failed: {error} — the figures below are the last good read.</Banner></div>}
+      {isTeam && failedEndpoints.length > 0 && (
+        <div style={{ marginBottom: space[12] }}>
+          <Banner>
+            {failedEndpoints.join(', ')} could not be read — the sections they feed are shown EMPTY, not clean. Real cause in the browser console.
+          </Banner>
+        </div>
+      )}
       {page === 'dashboard' && isTeam && (
         <DashboardPage assets={assets} total={total}
           getAlias={(l) => getAlias(l, walletByLabel)}

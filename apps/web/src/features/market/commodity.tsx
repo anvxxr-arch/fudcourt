@@ -1,5 +1,6 @@
 'use client';
 import QuoteBoard from '@/features/market/quote-board';
+import { useT } from '@/lib/i18n/t';
 /**
  * Commodity board UI (client) — pure symbol data lives in
  * './commodity-symbols' (server-safe; the API route imports from there, never
@@ -14,11 +15,12 @@ export {
 export type { CommodityGroup, CommoditySpec } from './commodity-symbols';
 /** Commodity section: front-month futures (metals, energy, agriculture). */
 export default function CommodityBoard() {
+  const t = useT();
   return (
     <QuoteBoard
       endpoint="/api/market/commodity"
-      title="Commodity — futures"
-      unitHint="front-month · Yahoo Finance"
+      title={t('market.commodityTitle')}
+      unitHint={t('market.commodityHint')}
     />
   );
 }

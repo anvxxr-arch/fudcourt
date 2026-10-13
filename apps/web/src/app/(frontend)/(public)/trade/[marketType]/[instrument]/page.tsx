@@ -23,9 +23,6 @@ export async function generateMetadata({ params }: { params: Promise<{ marketTyp
   };
 }
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 /**
  * `/trade/<marketType>/<instrument>` — the canonical instrument page (plan
  * Phase 1). The market type is the route segment and the instrument its child:
@@ -36,6 +33,21 @@ export const revalidate = 0;
  * empty page for an indexable URL. This is the same rule the ticker detail route
  * keeps.
  */
+
+/**
+ * ISR, not request-time: the param space is unbounded (every coin, every
+ * market type/instrument, every country/bank/indicator the registry knows),
+ * so this route cannot be pre-rendered to a fixed list. `dynamicParams = true`
+ * lets Next render unknown slugs on demand while still caching the ones it has
+ * already built, and `revalidate = 300` renews them. The shell is static — the
+ * root layout no longer reads the cookie server-side, so the whole public tree
+ * stays cacheable and only this param space is served on demand.
+ */
+export async function generateStaticParams() {
+  return [];
+}
+export const dynamicParams = true;
+export const revalidate = 300;
 export default async function TradeInstrumentRoute({ params }: { params: Promise<{ marketType: string; instrument: string }> }) {
   const { marketType, instrument } = await params;
   const rawType = marketType ?? '';

@@ -11,6 +11,7 @@
  */
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useT } from '@/lib/i18n/t';
 import { themeColor, fontSize, radius, space } from '@/styles/tokens';
 import { fetchCompare, formatDate, formatValue, type CompareEnvelope } from '@/features/economy/model';
 import { Card } from '@/ui/card';
@@ -22,12 +23,12 @@ import { Sparkline } from '@/ui/sparkline';
 
 const COUNTRIES = ['us', 'cn', 'de', 'jp', 'gb', 'in', 'id', 'br', 'fr', 'kr'] as const;
 const SERIES = [
-  { id: 'gdp', label: 'GDP growth' },
-  { id: 'cpi', label: 'CPI' },
-  { id: 'unemployment', label: 'Unemployment' },
-  { id: 'm2', label: 'M2' },
-  { id: 'gov-revenue', label: 'Government revenue' },
-  { id: 'deficit', label: 'Budget balance' },
+  { id: 'gdp', labelKey: 'economy.seriesGdp' },
+  { id: 'cpi', labelKey: 'economy.seriesCpi' },
+  { id: 'unemployment', labelKey: 'economy.seriesUnemployment' },
+  { id: 'm2', labelKey: 'economy.seriesM2' },
+  { id: 'gov-revenue', labelKey: 'economy.seriesGovRevenue' },
+  { id: 'deficit', labelKey: 'economy.seriesDeficit' },
 ] as const;
 const PERIODS = ['1y', '2y', '5y', '10y', 'max'] as const;
 
@@ -41,6 +42,7 @@ const FIELD = {
 } as const;
 
 export default function CompareBoard() {
+  const t = useT();
   const [selectedCountries, setSelectedCountries] = useState<string[]>(['us', 'id']);
   const [selectedSeries, setSelectedSeries] = useState<string[]>(['cpi', 'gdp']);
   const [period, setPeriod] = useState<string>('5y');
@@ -74,12 +76,12 @@ export default function CompareBoard() {
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
       <PageHeader
-        title="Compare"
-        description="Put any countries on any measures over one period. The query lives in the URL, so a comparison is shareable without a page per combination. Series keep their own cadence — they are never resampled onto one grid."
+        title={t('economy.compareTitle')}
+        description={t('economy.compareDesc')}
         nav={ECONOMY_NAV}
       />
 
-      <Card title="Countries">
+      <Card title={t('economy.countriesTitle')}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
           {COUNTRIES.map((c) => {
             const on = selectedCountries.includes(c);
@@ -93,29 +95,29 @@ export default function CompareBoard() {
       </Card>
 
       <div style={{ marginTop: space[8] }}>
-        <Card title="Series">
+        <Card title={t('economy.seriesTitle')}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
             {SERIES.map((s) => {
               const on = selectedSeries.includes(s.id);
               return (
                 <button key={s.id} onClick={() => toggle(selectedSeries, setSelectedSeries, s.id)} aria-pressed={on} style={{ ...FIELD, cursor: 'pointer', background: on ? themeColor.blue : themeColor.bgSecondary, color: on ? themeColor.labelOnAccent : themeColor.labelPrimary }}>
-                  {s.label}
+                  {t(s.labelKey as Parameters<typeof t>[0])}
                 </button>
               );
             })}
-            <select value={period} onChange={(e) => setPeriod(e.target.value)} aria-label="Period" style={FIELD}>
+            <select value={period} onChange={(e) => setPeriod(e.target.value)} aria-label={t('economy.hPeriod')} style={FIELD}>
               {PERIODS.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
         </Card>
       </div>
 
-      {error && <div style={{ marginTop: space[12] }}><ErrorState title="Could not compare" detail={error} /></div>}
-      {!data && !error && selectedCountries.length > 0 && selectedSeries.length > 0 && <div style={{ marginTop: space[12] }}><Loading what="comparison" /></div>}
+      {error && <div style={{ marginTop: space[12] }}><ErrorState title={t('economy.compareError')} detail={error} /></div>}
+      {!data && !error && selectedCountries.length > 0 && selectedSeries.length > 0 && <div style={{ marginTop: space[12] }}><Loading what={t('economy.loadingComparison')} /></div>}
 
       {data && (
         <div style={{ marginTop: space[12] }}>
-          <Card title={`${data.series.length} series`} subtitle={`period ${data.period}${data.missing.length ? ` · unresolved: ${data.missing.join(', ')}` : ''}`}>
+          <Card title={t('economy.seriesCount', { n: data.series.length })} subtitle={`${t('economy.comparePeriod', { v: data.period })}${data.missing.length ? ` ${t('economy.compareUnresolved', { list: data.missing.join(', ') })}` : ''}`}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
               {data.series.map((s) => {
                 const latest = [...s.points].reverse().find((p) => p.value !== null);

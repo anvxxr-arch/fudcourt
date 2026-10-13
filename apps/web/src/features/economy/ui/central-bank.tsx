@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useT } from '@/lib/i18n/t';
 import { themeColor, fontSize, space, fontWeight, radius } from '@/styles/tokens';
 import { fetchCentralBanks, formatDate, formatValue, NO_VALUE, type CentralBanksEnvelope, fetchCentralBank, type CentralBankEnvelope } from '@/features/economy/model';
 import { Card } from '@/ui/card';
@@ -21,6 +22,7 @@ import { ECONOMY_NAV } from '@/features/economy/nav';
  */
 
 export default function CentralBankIndex() {
+  const t = useT();
   const [data, setData] = useState<CentralBanksEnvelope | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,20 +47,20 @@ export default function CentralBankIndex() {
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
       <PageHeader
-        title="Central Banks"
-        description="Policy rates from BIS WS_CBPOL, daily. One upstream call for every tracked area; a bank BIS does not carry is shown with an em dash rather than omitted."
+        title={t('economy.centralBanksTitle')}
+        description={t('economy.centralBanksDesc')}
         nav={ECONOMY_NAV}
       />
 
-      {error && <ErrorState title="Could not load central banks" detail={error} />}
-      {!data && !error && <Loading what="central banks" />}
+      {error && <ErrorState title={t('economy.centralBanksError')} detail={error} />}
+      {!data && !error && <Loading what={t('economy.loadingBanks')} />}
 
       {data && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: space[12] }}>
           {[...byRegion.entries()].map(([region, banks]) => (
-            <Card key={region} title={region} subtitle={`${banks.length} authorities`}>
+            <Card key={region} title={region} subtitle={t('economy.authoritiesCount', { n: banks.length })}>
               <DataTable
-                head={['Bank', 'Policy rate', 'As of', 'Area']}
+                head={[t('economy.hBank'), t('economy.hPolicyRate'), t('col.asOf'), t('economy.hArea')]}
                 rows={banks.map((b) => ({
                   href: `/economy/central-bank/${b.slug}`,
                   cells: [
@@ -72,7 +74,7 @@ export default function CentralBankIndex() {
             </Card>
           ))}
           {data.failed.length > 0 && (
-            <ErrorState title={`${data.failed.length} area(s) unresolved`} detail={data.failed.map((f) => `${f.symbol}: ${f.reason}`).join(' · ')} />
+            <ErrorState title={t('economy.areasUnresolved', { n: data.failed.length })} detail={data.failed.map((f) => `${f.symbol}: ${f.reason}`).join(' · ')} />
           )}
           <p style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{data.derived}</p>
         </div>
@@ -93,8 +95,9 @@ const W = 720;
 const H = 180;
 
 function Chart({ points }: { points: { date: string; value: number | null }[] }) {
+  const t = useT();
   const vals = points.map((p) => p.value).filter((v): v is number => v !== null && Number.isFinite(v));
-  if (vals.length < 2) return <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>Not enough observations to chart.</p>;
+  if (vals.length < 2) return <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>{t('economy.notEnoughObs')}</p>;
   const min = Math.min(...vals);
   const max = Math.max(...vals);
   const span = max - min || 1;
@@ -105,7 +108,7 @@ function Chart({ points }: { points: { date: string; value: number | null }[] })
     .join(' ');
   return (
     <div style={{ overflowX: 'auto' }}>
-      <svg width={W} height={H + 22} role="img" aria-label="policy rate history">
+      <svg width={W} height={H + 22} role="img" aria-label={t('economy.policyRateHistoryLabel')}>
         <path d={path} fill="none" stroke={themeColor.blue} strokeWidth={1.6} />
         <text x={0} y={H + 16} fill={themeColor.labelTertiary} fontSize={10}>{points[0]?.date}</text>
         <text x={W} y={H + 16} fill={themeColor.labelTertiary} fontSize={10} textAnchor="end">{points[points.length - 1]?.date}</text>
@@ -117,6 +120,7 @@ function Chart({ points }: { points: { date: string; value: number | null }[] })
 }
 
 export function CentralBankDetail({ bank }: { bank: string }) {
+  const t = useT();
   const [data, setData] = useState<CentralBankEnvelope | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -131,50 +135,50 @@ export function CentralBankDetail({ bank }: { bank: string }) {
   if (error) {
     return (
       <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
-        <ErrorState title="Could not load this central bank" detail={error} />
-        <p style={{ marginTop: space[12] }}><Link href="/economy/central-bank" style={{ color: themeColor.blue }}>← all central banks</Link></p>
+        <ErrorState title={t('economy.centralBankError')} detail={error} />
+        <p style={{ marginTop: space[12] }}><Link href="/economy/central-bank" style={{ color: themeColor.blue }}>{t('economy.allCentralBanks')}</Link></p>
       </main>
     );
   }
-  if (!data) return <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}><Loading what="central bank" /></main>;
+  if (!data) return <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}><Loading what={t('economy.loadingCentralBank')} /></main>;
 
   const b = data.bank;
   const delta = b.rate !== null && b.previousRate !== null ? b.rate - b.previousRate : null;
 
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
-      <PageHeader title={b.name} description={`${b.short} · BIS area ${b.area} · ${b.region}`} nav={ECONOMY_NAV} />
+      <PageHeader title={b.name} description={t('economy.bankDesc', { short: b.short, area: b.area, region: b.region })} nav={ECONOMY_NAV} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: space[12] }}>
         <Card>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(110px, 100%), 1fr))', gap: space[12] }}>
-            <Value label="Policy rate" value={b.rate === null ? NO_VALUE : formatValue(b.rate, 2)} tone={b.rate === null ? 'muted' : 'default'} unit={b.rate === null ? undefined : '%'} />
-            <Value label="Last change" value={delta === null ? NO_VALUE : formatValue(delta, 2)} tone={delta === null ? 'muted' : 'default'} unit={delta === null ? undefined : 'pp'} hint="vs the previous distinct level" />
+            <Value label={t('economy.hPolicyRate')} value={b.rate === null ? NO_VALUE : formatValue(b.rate, 2)} tone={b.rate === null ? 'muted' : 'default'} unit={b.rate === null ? undefined : '%'} />
+            <Value label={t('economy.lastChange')} value={delta === null ? NO_VALUE : formatValue(delta, 2)} tone={delta === null ? 'muted' : 'default'} unit={delta === null ? undefined : 'pp'} hint={t('economy.lastChangeHint')} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: space[4] }}>
-              <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, textTransform: 'uppercase' }}>As of</span>
+              <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, textTransform: 'uppercase' }}>{t('col.asOf')}</span>
               <span style={{ fontSize: fontSize[15], color: themeColor.labelPrimary }}>{formatDate(b.date)}</span>
             </div>
           </div>
           <p style={{ margin: `${space[12]}px 0 0`, fontSize: fontSize[12], color: themeColor.labelTertiary }}>{b.note}</p>
         </Card>
-        <Card title="Rate history" subtitle={`${data.history.length} daily observations`}>
+        <Card title={t('economy.rateHistory')} subtitle={t('economy.dailyObs', { n: data.history.length })}>
           <Chart points={data.history} />
         </Card>
       </div>
 
       <div style={{ marginTop: space[12] }}>
-        <Card title="Decisions" subtitle="each level change, newest first — derived from the rate series itself">
+        <Card title={t('economy.decisionsTitle')} subtitle={t('economy.decisionsSub')}>
           {data.changes.length === 0 ? (
-            <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>No level change in the window.</p>
+            <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>{t('economy.noLevelChange')}</p>
           ) : (
             <DataTable
-              head={['Date', 'From', 'To', 'Move']}
+              head={[t('col.date'), t('economy.fromLabel'), t('economy.toLabel'), t('economy.hMove')]}
               rows={data.changes.map((c) => ({
                 cells: [
                   formatDate(c.date),
                   <span key="f">{formatValue(c.from, 2)}%</span>,
                   <span key="t">{formatValue(c.to, 2)}%</span>,
-                  <span key="m" style={{ color: c.to > c.from ? themeColor.red : themeColor.green }}>{c.to > c.from ? 'hike' : 'cut'} {formatValue(Math.abs(c.to - c.from), 2)}pp</span>,
+                  <span key="m" style={{ color: c.to > c.from ? themeColor.red : themeColor.green }}>{c.to > c.from ? t('economy.hike') : t('economy.cut')} {formatValue(Math.abs(c.to - c.from), 2)}pp</span>,
                 ],
               }))}
             />
@@ -184,7 +188,7 @@ export function CentralBankDetail({ bank }: { bank: string }) {
 
       {data.related.length > 0 && (
         <div style={{ marginTop: space[12] }}>
-          <Card title="Related monetary series">
+          <Card title={t('economy.relatedMonetary')}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
               {data.related.map((r) => (
                 <Link key={r.slug} href={`/economy/indicator/${r.slug}`} style={{ padding: `${space[4]}px ${space[8]}px`, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], color: themeColor.labelPrimary, fontSize: fontSize[11], textDecoration: 'none' }}>{r.name}</Link>
@@ -195,7 +199,7 @@ export function CentralBankDetail({ bank }: { bank: string }) {
       )}
 
       <p style={{ marginTop: space[16], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-        <strong style={{ fontWeight: fontWeight.medium }}>Upstream:</strong> {data.upstream.join(' · ')}
+        <strong style={{ fontWeight: fontWeight.medium }}>{t('economy.upstreamLabel')}</strong> {data.upstream.join(' · ')}
       </p>
       <p style={{ marginTop: space[8], fontSize: fontSize[11], color: themeColor.labelTertiary }}>{data.derived}</p>
     </main>

@@ -102,7 +102,13 @@ export const RISK_SIZING: ReadonlySet<SizingMode> = new Set<SizingMode>(['risk_u
 // ---------------------------------------------------------------------------
 export function LevelEditor({ title, rows, onChange }: { title: string; rows: LevelRow[]; onChange: (rows: LevelRow[]) => void }) {
   return (
-    <div style={{ marginTop: space[8] }}>
+    // `role="group"` + `aria-label` is the honest shape for a title that owns a
+    // SET of controls: a bare `<label>` here named nothing (its sibling is a
+    // row of inputs, and a label without a target is a label in name only).
+    // Each input then carries its own name — "Price, level 1" — because a
+    // screen reader reading three rows otherwise announces "edit, edit, edit"
+    // with the group name only once.
+    <div role="group" aria-label={title} style={{ marginTop: space[8] }}>
       <Label>{title}</Label>
       {rows.map((row, index) => (
         <div key={index} style={{ ...pairStyle, marginBottom: space[8] }}>
@@ -114,6 +120,7 @@ export function LevelEditor({ title, rows, onChange }: { title: string; rows: Le
               onChange(next);
             }}
             placeholder="price"
+            aria-label={`${title} price, level ${index + 1}`}
             type="number"
           />
           <div style={{ display: 'flex', gap: space[8] }}>
@@ -125,6 +132,7 @@ export function LevelEditor({ title, rows, onChange }: { title: string; rows: Le
                 onChange(next);
               }}
               placeholder="fraction 0..1"
+              aria-label={`${title} fraction, level ${index + 1}`}
               type="number"
             />
             <Button onClick={() => onChange(rows.filter((_, i) => i !== index))} variant="danger" disabled={rows.length === 1}>

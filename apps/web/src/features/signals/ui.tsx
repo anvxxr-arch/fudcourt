@@ -109,6 +109,7 @@ export default function SignalsPage() {
               key={c.key}
               onClick={() => allowed && setChain(c.key)}
               disabled={!allowed}
+              aria-pressed={chain === c.key}
               title={allowed ? c.label : `${c.label} is not served by the ${activeMode.label} endpoint`}
               style={{
                 background: chain === c.key ? c.color : themeColor.bgSecondary,
@@ -128,9 +129,11 @@ export default function SignalsPage() {
           value={q}
           onChange={e => setQ(e.target.value)}
           placeholder="filter symbol / name / mint…"
+          aria-label="Filter signals by symbol, name or mint"
+          className="fc-focus-ring"
           style={{
             flex: '1 1 200px', minWidth: 160, background: themeColor.bgSecondary, color: themeColor.labelPrimary,
-            border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[11], outline: 'none',
+            border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: `${space[8]}px ${space[8]}px`, fontSize: fontSize[11],
           }}
         />
 

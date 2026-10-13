@@ -74,6 +74,14 @@ export const ROUTE_COST: Readonly<Record<string, number>> = {
   // same family rule: every executor sub-path inherits the price, so
   // `/api/executor/executions/:id/cancel` is not a cheaper way to trade.
   executor: 8,
+  // The durable data platform surface (`/api/data/*`, forwarded by the gateway
+  // since the subpath fix). Priced as a heavy family: `/ohlcv`, `/trades` and
+  // `/orderbook` each serve up to 1000 rows per call — the same order of
+  // magnitude as `ticker` — and a sub-path must not be a cheaper way into the
+  // store than the board that reads it. The operational sub-paths (`runs`,
+  // `health`) and the mutating `ingest` are not forwarded at all (the gateway
+  // allowlists only the read surface), so this price covers reads only.
+  data: 2,
 };
 
 /** Unit cost of anything not priced above. */

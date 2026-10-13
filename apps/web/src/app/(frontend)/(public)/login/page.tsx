@@ -8,9 +8,11 @@ export const metadata: Metadata = {
   openGraph: { title: 'Sign In with Discord to Open Your Terminal | FUDCOURT', url: '/login', siteName: 'FUDCOURT', type: 'website', images: ['/og-cover.png'] },
   twitter: { card: 'summary_large_image', title: 'Sign In with Discord to Open Your Terminal | FUDCOURT', images: ['/og-cover.png'] },
 };
+// Request-time on purpose: the render reads `searchParams` (`?next=`, `?error=`)
+// that the middleware and the OAuth callback mint per visit. A query-driven page
+// cannot be a cached shell.
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-// Landing page for every 307 the middleware issues: middleware sends anonymous
 // users of /team, /admin and the treasury API here with `?next=<path>`, and the
 // OAuth callback returns failures here with `?error=<code>`.
 export default async function LoginPage({

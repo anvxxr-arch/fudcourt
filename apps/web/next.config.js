@@ -81,6 +81,27 @@ const nextConfig = {
           },
         ],
       },
+      // The crawler files were serving `public, max-age=0, must-revalidate`
+      // despite the sitemap declaring `revalidate = 3600`: Next's default for a
+      // static route with no explicit header. That forced every search-engine
+      // re-crawl back to the origin for a document that changes hourly at most
+      // (the sitemap's own `revalidate`) and never for robots. The windows here
+      // mirror those exports rather than inventing a new cadence: 3600s for the
+      // sitemap, 14400s for robots (which changes only when the crawl policy
+      // does). `stale-while-revalidate` keeps a stale copy answering a crawler
+      // while the refresh runs, so a re-crawl never pays the origin's latency.
+      {
+        source: '/sitemap.xml',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400' },
+        ],
+      },
+      {
+        source: '/robots.txt',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=14400, s-maxage=14400, stale-while-revalidate=86400' },
+        ],
+      },
     ];
   },
   // Pin the workspace root explicitly: the monorepo has two lockfiles, and
@@ -95,4 +116,77 @@ const nextConfig = {
 
 // withPayload injects the Payload webpack/turbopack aliases and the admin route
 // handling; `devBundleServerPackages: false` is the blog's proven setting.
-module.exports = withPayload(nextConfig, { devBundleServerPackages: false });
+const payloadConfig = withPayload(nextConfig, { devBundleServerPackages: false });
+
+// ---------------------------------------------------------------------------
+// Critical-CH removal on the public frontend (DR-018).
+//
+// `withPayload` appends a `/:path*` header group carrying
+// `Accept-CH: Sec-CH-Prefers-Color-Scheme` and `Critical-CH: <same>`. Chrome
+// treats a `Critical-CH` hint it has not yet sent as a reason to RETRY the
+// whole navigation: the first document request is answered with a 307 whose
+// `Vary` includes the hint, the browser re-issues it with
+// `Sec-CH-Prefers-Color-Scheme` attached, and only the second response carries
+// the page. Lighthouse's `redirects` audit scores that 0 (measured: est.
+// savings 610-660 ms on `/` and `/economy`; the 307's URL is identical to the
+// request, which is the retry signature, not a routing bug). The header is
+// only useful to Payload's admin UI, which reads it in `getRequestTheme` to
+// pick the admin colour scheme before paint — so the hint is kept on `/blog`
+// (the admin's whole route tree) and withdrawn everywhere else.
+//
+// This is done here, in the config, because it CANNOT be done in
+// `src/middleware.ts`: `resolve-routes.js` applies the config header group
+// before middleware runs and merges the middleware's own headers with
+// `resHeaders[key] = value`, so a middleware can add or overwrite a header but
+// can never delete one. (The `x-middleware-override-headers` mechanism rewrites
+// the REQUEST only — verified by reading the router source, not assumed.)
+//
+// `poweredByHeader: false` is what keeps the two groups from colliding: the
+// `X-Powered-By` value follows whichever group sets it last, so without it the
+// second group would emit the bare `Next.js` default and silently drop
+// Payload's `Next.js, Payload`. With it, the wrapper stops injecting the group
+// entirely and we carry Payload's exact value plus its own guard.
+/** Payload's X-Powered-By value, re-emitted so `poweredByHeader: false` costs nothing. */
+const POWERED_BY = { key: 'X-Powered-By', value: 'Next.js, Payload' };
+
+/**
+ * Re-scope Payload's single `/:path*` hint group to the admin only:
+ *  - `/:path((?!blog(?:/|$)).*)` is the whole site MINUS `/blog/**`. It carries
+ *    only `X-Powered-By`, so the hint is absent — which is the fix — while the
+ *    route still matches and falls through to the page render;
+ *  - the original group, kept whole, is scoped to `/blog/:path*`.
+ *
+ * Both groups fall through to the render (neither sets a destination), so each
+ * must re-emit `X-Powered-By`; `poweredByHeader: false` means nothing else will.
+ */
+function scopeClientHintToBlog(config) {
+  const original = config.headers;
+  const headers = async () => {
+    const groups = typeof original === 'function' ? await original() : (original ?? []);
+    const split = [];
+    for (const group of groups) {
+      const hasHint = group.headers?.some((h) => h.key === 'Accept-CH');
+      if (!hasHint) {
+        // Every other group (the app's own security headers) is kept verbatim.
+        split.push(group);
+        continue;
+      }
+      // `:path*` cannot express "not /blog", and the `(?!…)` group is the only
+      // way to carve the admin out; the blog scope then re-enables it. Both
+      // groups fall through to the page render, so each must also carry
+      // `X-Powered-By` — `poweredByHeader: false` means nothing else will.
+      split.push({ source: '/:path((?!blog(?:/|$)).*)', headers: [POWERED_BY] });
+      split.push({ source: '/blog/:path*', headers: group.headers });
+    }
+    return split;
+  };
+  return {
+    ...config,
+    // Owned here: Payload's guard replaces the `X-Powered-By` header with the
+    // bare Next.js default, which would drop the `Payload` token off every route.
+    poweredByHeader: false,
+    headers,
+  };
+}
+
+module.exports = scopeClientHintToBlog(payloadConfig);

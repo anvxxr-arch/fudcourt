@@ -24,7 +24,7 @@ export function PageHeader({ title, description, nav, maxWidth = 760 }: PageHead
     <header style={{ marginBottom: space[20] }}>
       <h1 style={{ margin: 0, fontSize: fontSize[22], fontWeight: fontWeight.bold, color: themeColor.labelPrimary }}>{title}</h1>
       <p style={{ margin: `${space[8]}px 0 ${space[12]}px`, fontSize: fontSize[12], color: themeColor.labelTertiary, lineHeight: lineHeight.normal, maxWidth }}>{description}</p>
-      <nav style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
+      <nav aria-label={`${title} sections`} style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         {nav.map((n) => (
           <Link
             key={n.href}

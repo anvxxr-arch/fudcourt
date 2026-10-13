@@ -258,3 +258,20 @@ export async function fetchExposure(country?: string, signal?: AbortSignal): Pro
     return { data: null, unauthorized: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+/**
+ * The macro dashboard's pulse basket — a curated cross-country set, not
+ * "every indicator". Lives here (client-safe) rather than in the dashboard so
+ * the server-side prerender of `/economy` and the client fallback read the SAME
+ * list; two copies would let the static HTML and a client fetch disagree about
+ * which series the board shows.
+ */
+export const PULSE = [
+  'us-gdp',
+  'us-cpi',
+  'us-core-cpi',
+  'us-unemployment',
+  'us-m2',
+  'us-policy-rate',
+  'xm-policy-rate',
+] as const;

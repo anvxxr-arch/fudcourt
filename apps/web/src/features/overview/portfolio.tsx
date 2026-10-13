@@ -3,6 +3,7 @@
 import { themeColor, fontSize, space } from '@/styles/tokens';
 import { Asset, CHAIN_COLOR, groupBy, groupSum } from '@/lib/format';
 import { Card } from '@/ui/primitives';
+import { useT } from '@/lib/i18n/t';
 
 type Props = {
   assets: Asset[];
@@ -10,13 +11,14 @@ type Props = {
 };
 
 export default function PortfolioPage({ assets, getAlias }: Props) {
+  const t = useT();
   const byChain = groupBy(assets, a => a.chain || 'Unknown');
   const chainTotals = groupSum(assets, a => a.chain || 'Unknown', a => a.value_usd);
   const sortedChains = Object.entries(chainTotals).sort((a, b) => b[1] - a[1]);
 
   return (
     <div>
-      <h3 style={{ color: themeColor.blue }}>Portfolio by Chain</h3>
+      <h3 style={{ color: themeColor.blue }}>{t('overview.portfolio.title')}</h3>
       {sortedChains.map(([chain, total]) => (
         <Card key={chain}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>

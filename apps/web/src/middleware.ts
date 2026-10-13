@@ -48,16 +48,25 @@ export async function middleware(request: NextRequest) {
     }
     // `need` is null on the public market routes and 'team' on the treasury
     // ones; hasTier(null, 'public') is true, so one branch covers both.
+    // 401 refusals are never reused: the body names the tier, and a shared cache
+    // replaying an authorisation verdict is the one thing a cache must not do.
     if (!hasTier(session, need ?? 'public')) {
       return NextResponse.json(
         { error: 'unauthorized', detail: `requires ${need} tier` },
-        { status: 401, headers },
+        { status: 401, headers: { ...headers, 'Cache-Control': 'private, no-store' } },
       );
     }
     // Headers are set on the way through, so a caller can see its own budget
     // before a refusal ever happens.
     const pass = NextResponse.next();
     for (const [name, value] of Object.entries(headers)) pass.headers.set(name, value);
+    // Every gate in this app lives in `@/server/auth`, and every gated path is
+    // answered per-session. Marking the pass-through explicitly means a route
+    // that forgets its own header still cannot be stored by a shared cache: the
+    // tier is only known per request, so only `private, no-store` is honest. The
+    // routes that DO set a value (`/api/proof`, the boards) are public and
+    // ungated, so they never reach here.
+    if (need !== null) pass.headers.set('Cache-Control', 'private, no-store');
     return pass;
   }
   if (need === null) return NextResponse.next();

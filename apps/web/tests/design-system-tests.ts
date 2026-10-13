@@ -326,3 +326,29 @@ test('ramps: primitiveTokens is the flat union of every ramp', () => {
   for (const k of Object.keys(marketRamp)) assert.ok(k in primitiveTokens, `primitiveTokens is missing ${k}`);
   for (const k of Object.keys(criticalLight)) assert.ok(k in primitiveTokens, `primitiveTokens is missing ${k}`);
 });
+
+// ---------------------------------------------------------------------------
+// Legibility floor (LH `font-size`). Every rung of the px type scale that is a
+// LEGIBLE size must clear 12px: the audit counts page text under 12px as
+// "illegible" (pinch-to-zoom), and the note/footer rungs carried ~44% of the
+// home page's text at 11px. The 8/10 steps are glyphs (caret, sort indicator),
+// not copy — they are the deliberate exception, named here so a future "just
+// bump everything" edit cannot silently pull the icons to 12 and bloat them.
+// ---------------------------------------------------------------------------
+test('type scale: no legible rung ships below the 12px floor', async () => {
+  const { fontSize } = await import('@/styles/tokens');
+  const GLYPH_RUNGS = [8, 10];
+  for (const [k, v] of Object.entries(fontSize)) {
+    if (GLYPH_RUNGS.includes(Number(k))) continue;
+    assert.ok(v >= 12, `fontSize[${k}] is ${v}px, below the 12px legibility floor`);
+  }
+  assert.equal(fontSize[11], 12, 'the caption2 rung renders at 12px (the floor), not 11');
+});
+
+test('type scale: the semantic data/small styles are at or above the floor', async () => {
+  const { fcType } = await import('@/styles/tokens');
+  for (const [name, t] of Object.entries(fcType)) {
+    if (t.size <= 10) continue; // glyph step, same exception as above
+    assert.ok(t.size >= 12, `fcType['${name}'] renders ${t.size}px, below the 12px floor`);
+  }
+});

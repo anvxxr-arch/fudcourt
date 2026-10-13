@@ -70,7 +70,27 @@ test('cost: every route-level entry above one unit is a measurement, and the tab
   // and (on POST) persist an execution. A flat request counter would let one
   // window buy hundreds of live orders; 8 units makes a window ≈ a handful, and
   // the comment above the table records that reasoning.
-  assert.deepEqual(Object.keys(ROUTE_COST).sort(), ['economy', 'executor', 'market', 'markets', 'signals', 'ticker']);
+  // `data` is 2: its `/ohlcv`, `/trades` and `/orderbook` reads serve up to 1000
+  // rows, the same order of magnitude as `ticker`, and a sub-path must not be a
+  // cheaper way into the store than the board that reads it.
+  assert.deepEqual(Object.keys(ROUTE_COST).sort(), ['data', 'economy', 'executor', 'market', 'markets', 'signals', 'ticker']);
+});
+test('cost: the data-platform family is priced above the default — a 1000-row read is not a scalar', () => {
+  // Every `/api/data/*` sub-path inherits the family price, so `/ohlcv` (1000
+  // bars) is not a cheaper way into the store than the store itself.
+  for (const path of [
+    '/api/data/ohlcv',
+    '/api/data/trades',
+    '/api/data/orderbook',
+    '/api/data/timeseries',
+    '/api/data/metrics',
+    '/api/data/charts/index',
+    '/api/data/news',
+    '/api/data/series',
+  ]) {
+    assert.equal(costForRequest(path, new URLSearchParams()), ROUTE_COST.data, path);
+  }
+  assert.ok(ROUTE_COST.data > DEFAULT_COST, 'the data family must not fall through to the cheapest tier');
 });
 test('cost: the executor family is priced above the default — placing an order is not a cheap read', () => {
   // Every sub-path must inherit the family price, so a nested route can never be
@@ -361,6 +381,64 @@ test('outbound: a caller abort propagates through the composed signal', async ()
       limitedFetch('http://example.test/caller-abort', { signal: AbortSignal.timeout(20) }),
       /abort/i,
     );
+  } finally {
+    globalThis.fetch = realFetch;
+    __resetLimiter();
+  }
+});
+
+test('outbound: serve-stale is OPT-IN — the default keeps hard expiry', async () => {
+  __resetLimiter();
+  let calls = 0;
+  stubFetch((() => {
+    calls++;
+    return Promise.resolve(new Response('{"n":' + calls + '}', { status: 200 }));
+  }) as unknown as typeof fetch);
+  try {
+    // Warm the cache once.
+    const first = await limitedFetch('http://example.test/swr-off', {}, { ttlMs: 30 });
+    assert.equal(first.headers.get('X-Cache'), 'MISS');
+    // Simulate expiry: the body is stored with a real clock, so wait past ttl.
+    await new Promise((r) => setTimeout(r, 40));
+    const second = await limitedFetch('http://example.test/swr-off', {}, { ttlMs: 30 });
+    // Default opts.staleMs = 0: a past-TTL body is a MISS that re-fetches,
+    // exactly the pre-SWR behavior.
+    assert.equal(second.headers.get('X-Cache'), 'MISS');
+    assert.equal(calls, 2);
+  } finally {
+    globalThis.fetch = realFetch;
+    __resetLimiter();
+  }
+});
+
+test('outbound: opt-in stale serves STALE with Age and refreshes in background', async () => {
+  __resetLimiter();
+  let calls = 0;
+  stubFetch((() => {
+    calls++;
+    return Promise.resolve(new Response('{"n":' + calls + '}', { status: 200 }));
+  }) as unknown as typeof fetch);
+  try {
+    const first = await limitedFetch('http://example.test/swr-on', {}, { ttlMs: 30 });
+    assert.equal(first.headers.get('X-Cache'), 'MISS');
+    const freshBody = await first.json();
+    await new Promise((r) => setTimeout(r, 40)); // age past ttl, inside stale window
+    const second = await limitedFetch('http://example.test/swr-on', {}, { ttlMs: 30, staleMs: 60_000 });
+    assert.equal(second.headers.get('X-Cache'), 'STALE', 'a past-TTL in-window body is marked STALE');
+    const age = Number(second.headers.get('Age'));
+    assert.ok(age >= 0 && age < 60, `Age ${age} must be the entry age in seconds`);
+    assert.deepEqual(await second.json(), freshBody, 'the stale body is the last live body');
+    // The background refresh re-populates the cache with a NEW body: the next
+    // call serves the REFRESHED body (the origin pacer allows one upstream
+    // call per 200ms, so the refresh needs at least that long to land). With
+    // a 30ms ttl the next read is past the live window again, so the marker
+    // is STALE — but it must carry the REFRESHED body, never the original,
+    // and exactly one background round trip may have run.
+    await new Promise((r) => setTimeout(r, 250));
+    const third = await limitedFetch('http://example.test/swr-on', {}, { ttlMs: 30, staleMs: 60_000 });
+    assert.equal(calls, 2, 'exactly one background round trip ran');
+    assert.deepEqual(await third.json(), { n: 2 }, 'the refresh must replace the stale body');
+    assert.ok(['HIT', 'STALE'].includes(third.headers.get('X-Cache') ?? ''), 'a served read is HIT or marked STALE, never an unmarked MISS');
   } finally {
     globalThis.fetch = realFetch;
     __resetLimiter();

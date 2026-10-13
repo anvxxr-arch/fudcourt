@@ -1,8 +1,7 @@
 import StoreShell from '@/features/overview/store-shell';
 import type { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: 'Trench — DEX pairs & live trench | FUDCOURT',

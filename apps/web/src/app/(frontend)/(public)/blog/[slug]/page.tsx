@@ -58,7 +58,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 import { themeColor, fontFamily, fontSize, lineHeight, space, fontWeight } from '@/styles/tokens';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 export default async function PostPage({
   params,

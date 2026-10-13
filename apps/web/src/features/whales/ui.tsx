@@ -25,6 +25,7 @@ import { DataTable } from '@/ui/data-table';
 import { EmptyState, ErrorState, Loading, StaleNotice } from '@/ui/feedback';
 import { Stat } from '@/ui/stat';
 import { fmtPrice } from '@/lib/format';
+import { useT } from '@/lib/i18n/t';
 import { setBoardStale } from '@/lib/stale-board';
 import { fetchWhaleSource, type WhaleSources } from './client';
 import { buildWhaleBoard, type WhaleBoard, type WhalePosition, type WhaleSide } from './model';
@@ -71,11 +72,12 @@ function pnlColor(v: number | null): string {
 
 /** One of the two headline blocks: the largest position / the largest loss. */
 function LargestBlock({ title, pos, mode }: { title: string; pos: WhalePosition | null; mode: 'notional' | 'pnl' }) {
+  const t = useT();
   return (
     <div style={{ flex: '1 1 220px', border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], padding: space[12] }}>
       <div style={{ fontSize: fontSize[11], color: themeColor.labelTertiary, letterSpacing: letterSpacing.wide, textTransform: 'uppercase' }}>{title}</div>
       {pos === null ? (
-        <EmptyState>No position on this page carries this metric.</EmptyState>
+        <EmptyState>{t('crypto.whales.noPositionMetric')}</EmptyState>
       ) : (
         <>
           <div style={{ fontSize: fontSize[20], fontWeight: fontWeight.bold, marginTop: space[4], color: mode === 'pnl' ? pnlColor(pos.unrealizedPnl) : themeColor.labelPrimary }}>
@@ -96,6 +98,7 @@ function LargestBlock({ title, pos, mode }: { title: string; pos: WhalePosition 
 }
 
 export default function WhalesPage() {
+  const t = useT();
   const [sources, setSources] = useState<WhaleSources | null>(null);
 
   useEffect(() => {
@@ -119,13 +122,13 @@ export default function WhalesPage() {
     );
   }, [sources]);
 
-  if (sources === null) return <Loading what="the whale positions" />;
+  if (sources === null) return <Loading what={t('crypto.whales.loadingWhat')} />;
 
   if (!board) {
     return (
       <ErrorState
-        title="Could not load the whale positions"
-        detail={sources.error ?? 'the upstream returned no rows and named no reason'}
+        title={t('crypto.whales.loadFailTitle')}
+        detail={sources.error ?? t('crypto.common.upstreamNoRows')}
       />
     );
   }
@@ -135,13 +138,13 @@ export default function WhalesPage() {
   if (board.positions.length === 0) {
     return (
       <ErrorState
-        title="The whale ranking came back empty"
-        detail={`mode=whales answered with no positions while claiming ${board.slice.total.toLocaleString('en-US')} upstream; reported as a failed read, never as an empty board.`}
+        title={t('crypto.whales.emptyTitle')}
+        detail={t('crypto.whales.emptyDetail', { total: board.slice.total.toLocaleString('en-US') })}
       />
     );
   }
 
-  const t = board.totals;
+  const totals = board.totals;
   const pages = board.slice.pageSize > 0 ? Math.ceil(board.slice.total / board.slice.pageSize) : null;
 
   return (
@@ -151,38 +154,38 @@ export default function WhalesPage() {
       ) : null}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
-          label="Positions seen"
-          value={String(t.seen)}
-          hint={`of ${t.upstreamTotal.toLocaleString('en-US')} upstream (pagination.total)`}
+          label={t('crypto.whales.statSeen')}
+          value={String(totals.seen)}
+          hint={t('crypto.whales.hintOfUpstream', { n: totals.upstreamTotal.toLocaleString('en-US') })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Upstream total"
-          value={t.upstreamTotal.toLocaleString('en-US')}
-          hint={`coinank pagination.total — page ${board.slice.current} of ${pages ?? '—'}`}
+          label={t('crypto.whales.statUpstreamTotal')}
+          value={totals.upstreamTotal.toLocaleString('en-US')}
+          hint={t('crypto.whales.hintPagination', { page: board.slice.current, pages: pages ?? '—' })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Total notional"
-          value={usd(t.totalNotional)}
-          hint={t.notionalMissing > 0 ? `${t.notionalMissing} row(s) carried no positionValue — excluded` : `sum of positionValue over the ${t.seen} shown`}
+          label={t('crypto.whales.statTotalNotional')}
+          value={usd(totals.totalNotional)}
+          hint={totals.notionalMissing > 0 ? t('crypto.whales.hintNotionalMissing', { n: totals.notionalMissing }) : t('crypto.whales.hintNotionalSum', { n: totals.seen })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Net unrealized PnL"
-          value={usdSigned(t.netUnrealizedPnl)}
-          tone={t.netUnrealizedPnl >= 0 ? 'positive' : 'negative'}
-          hint={t.pnlMissing > 0 ? `${t.pnlMissing} row(s) carried no unrealizedPnl — excluded` : 'sum of signed unrealizedPnl'}
+          label={t('crypto.whales.statNetPnl')}
+          value={usdSigned(totals.netUnrealizedPnl)}
+          tone={totals.netUnrealizedPnl >= 0 ? 'positive' : 'negative'}
+          hint={totals.pnlMissing > 0 ? t('crypto.whales.hintPnlMissing', { n: totals.pnlMissing }) : t('crypto.whales.hintPnlSum')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Notional long / short"
-          value={`${usd(t.split.long)} / ${usd(t.split.short)}`}
-          hint={t.split.longShare === null ? 'no notional on this page' : `${(t.split.longShare * 100).toFixed(1)}% long / ${((1 - t.split.longShare) * 100).toFixed(1)}% short`}
+          label={t('crypto.whales.statLongShort')}
+          value={`${usd(totals.split.long)} / ${usd(totals.split.short)}`}
+          hint={totals.split.longShare === null ? t('crypto.whales.hintNoNotional') : t('crypto.whales.hintLongShortShare', { long: (totals.split.longShare * 100).toFixed(1), short: ((1 - totals.split.longShare) * 100).toFixed(1) })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
@@ -193,9 +196,9 @@ export default function WhalesPage() {
       </p>
 
       <div style={{ marginTop: space[12] }}>
-        <Card title={`Largest open positions (${board.positions.length})`} subtitle="in the upstream's own ranking order — side is the upstream's label; the signed size (negative = Short) agrees on every row">
+        <Card title={t('crypto.whales.positionsTitle', { n: board.positions.length })} subtitle={t('crypto.whales.positionsSubtitle')}>
           <DataTable
-            head={['Address', 'Coin', 'Side', 'Leverage', 'Notional', 'Unrealized PnL', 'Entry', 'Liquidation', 'To liq.']}
+            head={[t('crypto.whales.headAddress'), t('col.coin'), t('col.side'), t('crypto.whales.headLeverage'), t('crypto.whales.headNotional'), t('crypto.whales.headUnrealizedPnl'), t('crypto.whales.headEntry'), t('crypto.whales.headLiquidation'), t('crypto.whales.headToLiq')]}
             rows={board.positions.map((p) => ({
               cells: [
                 <span key="a" style={{ color: themeColor.labelSecondary }}>{shortAddr(p.address)}</span>,
@@ -214,12 +217,12 @@ export default function WhalesPage() {
       </div>
 
       <div style={{ marginTop: space[12] }}>
-        <Card title="By coin" subtitle="positions collapsed per baseCoin, largest total notional first — net side is which side holds more of that coin's notional">
+        <Card title={t('crypto.whales.byCoinTitle')} subtitle={t('crypto.whales.byCoinSubtitle')}>
           {board.coinGroups.length === 0 ? (
-            <EmptyState>No coin on this page carries a position.</EmptyState>
+            <EmptyState>{t('crypto.whales.noCoinPosition')}</EmptyState>
           ) : (
             <DataTable
-              head={['Coin', 'Positions', 'Notional', 'Net side', 'Net notional', 'Unrealized PnL']}
+              head={[t('col.coin'), t('crypto.whales.headPositions'), t('crypto.whales.headNotional'), t('crypto.whales.headNetSide'), t('crypto.whales.headNetNotional'), t('crypto.whales.headUnrealizedPnl')]}
               rows={board.coinGroups.map((g) => ({
                 cells: [
                   <span key="c" style={{ fontWeight: fontWeight.semibold }}>{g.baseCoin}</span>,
@@ -236,10 +239,10 @@ export default function WhalesPage() {
       </div>
 
       <div style={{ marginTop: space[12] }}>
-        <Card title="The extremes" subtitle="the largest single position and the largest single unrealized loss on this page">
+        <Card title={t('crypto.whales.extremesTitle')} subtitle={t('crypto.whales.extremesSubtitle')}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[12] }}>
-            <LargestBlock title="Largest position (by notional)" pos={board.largest} mode="notional" />
-            <LargestBlock title="Largest unrealized loss" pos={board.largestLoss} mode="pnl" />
+            <LargestBlock title={t('crypto.whales.largestPosition')} pos={board.largest} mode="notional" />
+            <LargestBlock title={t('crypto.whales.largestLoss')} pos={board.largestLoss} mode="pnl" />
           </div>
         </Card>
       </div>

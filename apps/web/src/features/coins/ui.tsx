@@ -26,6 +26,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, radius, space, letterSpacing } from '@/styles/tokens';
 import { dash, fmtPct, fmtPrice } from '@/lib/format';
+import { useT } from '@/lib/i18n/t';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
 import { ErrorState, Loading } from '@/ui/feedback';
@@ -62,9 +63,9 @@ import {
 
 /** Display labels for the three discovery widgets (upstream's own names). */
 const WIDGET_LABEL: Record<ListingsWidgetKey, string> = {
-  recentlyAdded: 'Recently added',
-  mostSearched: 'Most searched',
-  mostVisited: 'Most visited',
+  recentlyAdded: 'crypto.coins.widgetRecentlyAdded',
+  mostSearched: 'crypto.coins.widgetMostSearched',
+  mostVisited: 'crypto.coins.widgetMostVisited',
 };
 
 /** The coin the detail panel is keyed to. */
@@ -102,9 +103,10 @@ function changeColor(v: number | null): string {
 
 /** A change (already a PERCENT-scaled number) with its colour; null -> `—`. */
 function ChangeCell({ value, available }: { value: number | null; available: boolean }): ReactNode {
+  const t = useT();
   if (!available) {
     return (
-      <span style={{ color: themeColor.labelTertiary }} title="the upstream change column is unavailable on this surface">
+      <span style={{ color: themeColor.labelTertiary }} title={t('crypto.coins.changeUnavailableTitle')}>
         {dash}
       </span>
     );
@@ -157,6 +159,7 @@ function ReadFailure({ title, error }: { title: string; error: string | null }) 
 // (1) + (2) The all-coins directory — headline stats, text filter, cap sort.
 // ---------------------------------------------------------------------------
 function DirectoryBoard({ selected, onSelect }: { selected: CoinPick | null; onSelect: (p: CoinPick) => void }) {
+  const t = useT();
   const src = useSource<CoinsEnvelope>((s) => fetchCoins(s), 'coins');
   const [query, setQuery] = useState('');
   const [dir, setDir] = useState<'desc' | 'asc'>('desc');
@@ -168,13 +171,13 @@ function DirectoryBoard({ selected, onSelect }: { selected: CoinPick | null; onS
   );
   const visible = useMemo(() => filterAndSortCoins(board.rows, query, dir), [board.rows, query, dir]);
 
-  if (src === null) return <Loading what="the coin directory" />;
-  if (src.data === null) return <ReadFailure title="Could not load the coin directory" error={src.error} />;
+  if (src === null) return <Loading what={t('crypto.coins.loadingWhat')} />;
+  if (src.data === null) return <ReadFailure title={t('crypto.coins.loadFailTitle')} error={src.error} />;
   if (board.rows.length === 0) {
     return (
       <ErrorState
-        title="The coin directory came back empty"
-        detail="the upstream answered successfully with no rows — an empty board is not a valid read, so this is reported as a failure, not an empty table"
+        title={t('crypto.coins.emptyTitle')}
+        detail={t('crypto.common.emptyBoardFailure')}
       />
     );
   }
@@ -183,39 +186,39 @@ function DirectoryBoard({ selected, onSelect }: { selected: CoinPick | null; onS
 
   return (
     <Card
-      title="Coin directory"
-      subtitle="the ranked all-coins list — filter by name, symbol or category; a metric upstream did not publish renders —"
+      title={t('crypto.coins.cardTitle')}
+      subtitle={t('crypto.coins.cardSubtitle')}
     >
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12] }}>
         <Stat
-          label="Coins listed"
+          label={t('crypto.coins.statListed')}
           value={num(board.listed)}
-          hint={board.upstreamTotal === null ? 'upstream total not stated' : `of ${board.upstreamTotal} upstream`}
+          hint={board.upstreamTotal === null ? t('crypto.common.upstreamTotalNotStated') : t('crypto.common.ofUpstream', { n: board.upstreamTotal })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Total market cap"
+          label={t('crypto.coins.statTotalCap')}
           value={usd(board.totalMarketCapUsd)}
           hint={
             board.totalMarketCapUsd === null
-              ? `not totalled — ${board.marketCapStated} of ${board.listed} rows state a cap`
-              : `every row states a cap (${board.marketCapStated}/${board.listed})`
+              ? t('crypto.coins.hintNotTotalled', { stated: board.marketCapStated, listed: board.listed })
+              : t('crypto.coins.hintEveryRowCap', { stated: board.marketCapStated, listed: board.listed })
           }
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
         />
         <Stat
-          label="Top by market cap"
+          label={t('crypto.coins.statTopCap')}
           value={text(board.topByMarketCap?.name ?? null)}
-          hint={board.topByMarketCap ? `${text(board.topByMarketCap.symbol)} · ${usd(topCap)}` : 'no row states a cap'}
+          hint={board.topByMarketCap ? `${text(board.topByMarketCap.symbol)} · ${usd(topCap)}` : t('crypto.coins.hintNoRowCap')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
         />
         <Stat
-          label="With a 24h change"
+          label={t('crypto.coins.statWithChange')}
           value={board.change.available ? `${board.changeStated} / ${board.listed}` : dash}
-          hint={board.change.available ? 'rows that state a 24h change' : 'this mode carries no change column'}
+          hint={board.change.available ? t('crypto.coins.hintRowsStateChange') : t('crypto.coins.hintNoChangeColumn')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
         />
@@ -226,8 +229,8 @@ function DirectoryBoard({ selected, onSelect }: { selected: CoinPick | null; onS
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter by name, symbol or category…"
-          aria-label="Filter coins"
+          placeholder={t('crypto.coins.filterPlaceholder')}
+          aria-label={t('crypto.coins.filterAria')}
           style={{
             background: themeColor.bgBase,
             color: themeColor.labelPrimary,
@@ -244,18 +247,18 @@ function DirectoryBoard({ selected, onSelect }: { selected: CoinPick | null; onS
           onClick={() => setDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
           style={buttonStyle}
         >
-          Market cap {dir === 'desc' ? '↓' : '↑'}
+          {t('crypto.coins.sortMarketCap')} {dir === 'desc' ? '↓' : '↑'}
         </button>
         <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>
-          showing {visible.length} of {board.listed}
+          {t('crypto.coins.showingCount', { n: visible.length, total: board.listed })}
         </span>
       </div>
 
       {visible.length === 0 ? (
-        <ErrorState title="No coin matches the filter" detail={`no row matches “${query.trim()}” — clear the filter to see all ${board.listed} coins`} />
+        <ErrorState title={t('crypto.common.noCoinMatchTitle')} detail={t('crypto.coins.noMatchDetail', { query: query.trim(), total: board.listed })} />
       ) : (
         <DataTable
-          head={['Rank', 'Name', 'Symbol', 'Price (USD)', 'Market cap', '24h volume', '24h %', 'Category', 'Listed', 'ATH (USD)']}
+          head={[t('crypto.head.rank'), t('crypto.head.name'), t('crypto.coins.headSymbol'), t('crypto.head.priceUsd'), t('crypto.head.marketCap'), t('crypto.head.volume24h'), t('crypto.head.change24h'), t('crypto.head.category'), t('crypto.head.listed'), t('crypto.head.athUsd')]}
           rows={visible.map((r) => {
             const isSel = selected?.key === r.key;
             return {
@@ -275,7 +278,7 @@ function DirectoryBoard({ selected, onSelect }: { selected: CoinPick | null; onS
                     fontWeight: isSel ? fontWeight.bold : fontWeight.semibold,
                     textAlign: 'left',
                   }}
-                  title="Open this coin's detail"
+                  title={t('crypto.coins.openDetailTitle')}
                 >
                   {text(r.name)}
                   {isSel ? ' ●' : ''}
@@ -295,9 +298,7 @@ function DirectoryBoard({ selected, onSelect }: { selected: CoinPick | null; onS
       )}
 
       <p style={footnote}>
-        {board.slice.note}. The 24h % column is rendered — for every row: this mode reports{' '}
-        <code>changeSource: unavailable</code>, so a 0 there would read as a flat market. A price or cap the upstream
-        did not publish is a —, never 0. Click a name to open its detail below.
+        {t('crypto.coins.footnote')}
       </p>
     </Card>
   );
@@ -307,6 +308,7 @@ function DirectoryBoard({ selected, onSelect }: { selected: CoinPick | null; onS
 // (3) The discovery widgets — recently added / most searched / most visited.
 // ---------------------------------------------------------------------------
 function ListingsSection() {
+  const t = useT();
   const src = useSource<ListingsEnvelope>((s) => fetchListings(s), 'listings');
   const nowSec = Math.floor(Date.now() / 1000);
   const board = useMemo(
@@ -315,21 +317,21 @@ function ListingsSection() {
   );
   const changeCol = readChangeColumn(src?.data?.changeSource);
 
-  if (src === null) return <Loading what="the listings widgets" />;
-  if (src.data === null) return <ReadFailure title="Could not load the listings widgets" error={src.error} />;
+  if (src === null) return <Loading what={t('crypto.coins.listingsLoadingWhat')} />;
+  if (src.data === null) return <ReadFailure title={t('crypto.coins.listingsLoadFailTitle')} error={src.error} />;
   if (board.totalShown === 0) {
     return (
       <ErrorState
-        title="The listings widgets came back empty"
-        detail="the upstream answered successfully with no rows — reported as a failure, not an empty board"
+        title={t('crypto.coins.listingsEmptyTitle')}
+        detail={t('crypto.common.emptyTableFailure')}
       />
     );
   }
 
   return (
     <Card
-      title="Listings — new & trending"
-      subtitle="three upstream discovery widgets; change is derived from histPrices anchors where the widget ships one, em-dash otherwise"
+      title={t('crypto.coins.listingsCardTitle')}
+      subtitle={t('crypto.coins.listingsCardSubtitle')}
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[12] }}>
         {board.widgets.map((w) => {
@@ -339,24 +341,24 @@ function ListingsSection() {
             <div key={w.key}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[8] }}>
                 <Stat
-                  label="Rows"
+                  label={t('crypto.coins.statRows')}
                   value={num(w.shown)}
-                  hint={`upstream anchor24h ${num(w.anchor24h)} · anchor7d ${num(w.anchor7d)}`}
+                  hint={t('crypto.coins.hintAnchors', { h24: num(w.anchor24h), d7: num(w.anchor7d) })}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
                 />
                 <Stat
-                  label="24h stated"
+                  label={t('crypto.coins.stat24hStated')}
                   value={`${w.change24hStated} / ${w.shown}`}
-                  hint={w.anchor24hMatch === null ? 'no anchor to check' : w.anchor24hMatch ? 'equals upstream anchor24h' : 'DIFFERS from upstream anchor24h'}
+                  hint={w.anchor24hMatch === null ? t('crypto.coins.hintNoAnchor') : w.anchor24hMatch ? t('crypto.coins.hintEqualsAnchor24h') : t('crypto.coins.hintDiffersAnchor24h')}
                   tone={w.anchor24hMatch === false ? 'negative' : 'neutral'}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
                 />
                 <Stat
-                  label="7d stated"
+                  label={t('crypto.coins.stat7dStated')}
                   value={`${w.change7dStated} / ${w.shown}`}
-                  hint={w.anchor7dMatch === null ? 'no anchor to check' : w.anchor7dMatch ? 'equals upstream anchor7d' : 'DIFFERS from upstream anchor7d'}
+                  hint={w.anchor7dMatch === null ? t('crypto.coins.hintNoAnchor') : w.anchor7dMatch ? t('crypto.coins.hintEqualsAnchor7d') : t('crypto.coins.hintDiffersAnchor7d')}
                   tone={w.anchor7dMatch === false ? 'negative' : 'neutral'}
                   valueSize={fontSize[17]}
                   style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
@@ -364,14 +366,14 @@ function ListingsSection() {
               </div>
 
               <DataTable
-                head={['Rank', 'Name', 'Symbol', 'Price (USD)', 'Market cap', '24h volume', '24h %', '7d %']}
+                head={[t('crypto.head.rank'), t('crypto.head.name'), t('crypto.coins.headSymbol'), t('crypto.head.priceUsd'), t('crypto.head.marketCap'), t('crypto.head.volume24h'), t('crypto.head.change24h'), t('crypto.head.change7d')]}
                 rows={w.rows.map((r: ListingsRow) => ({
                   cells: [
                     <span key="rank" style={{ color: themeColor.labelTertiary }}>{num(r.rank)}</span>,
                     <span key="name" style={{ fontWeight: fontWeight.semibold }}>
                       {text(r.name)}
                       <span style={{ color: themeColor.labelTertiary, fontWeight: fontWeight.regular }}>
-                        {' '}· {WIDGET_LABEL[w.key]}
+                        {' '}· {t(WIDGET_LABEL[w.key] as Parameters<typeof t>[0])}
                       </span>
                     </span>,
                     <span key="sym" style={{ color: themeColor.labelTertiary }}>{text(r.symbol)}</span>,
@@ -385,8 +387,12 @@ function ListingsSection() {
               />
               {w.key === 'recentlyAdded' && newest && newestDays !== null ? (
                 <p style={footnote}>
-                  Newest add: {text(newest.name)} ({text(newest.symbol)}), listed {dateOf(newest.listingDate)} —{' '}
-                  {newestDays < 1 ? 'under a day' : `${Math.floor(newestDays)} day(s)`} ago.
+                  {t('crypto.coins.newestAdd', {
+                    name: text(newest.name),
+                    symbol: text(newest.symbol),
+                    date: dateOf(newest.listingDate),
+                    age: newestDays < 1 ? t('crypto.coins.ageUnderDay') : t('crypto.coins.ageDays', { n: Math.floor(newestDays) }),
+                  })}
                 </p>
               ) : null}
             </div>
@@ -395,9 +401,7 @@ function ListingsSection() {
       </div>
       <p style={footnote}>
         {changeCol.note ? `${changeCol.note}. ` : ''}
-        The anchor24h/anchor7d figures are upstream&apos;s own stated row counts for each histPrices anchor; the board
-        re-counts the non-null changes and flags any widget where the two disagree. A null change renders —, never 0.
-        A rank upstream ships as null renders — too.
+        {t('crypto.coins.listingsFootnote')}
       </p>
     </Card>
   );
@@ -408,43 +412,44 @@ function ListingsSection() {
 //     blanks the other two.
 // ---------------------------------------------------------------------------
 function CoinDetailPanel({ pick }: { pick: CoinPick }) {
+  const t = useT();
   const src = useSource<CoinEnvelope>((s) => fetchCoin(pick.key, s), `coin:${pick.key}`);
-  if (src === null) return <Loading what="the coin detail" />;
-  if (src.data === null) return <ReadFailure title={`Could not load the detail for ${pick.name}`} error={src.error} />;
+  if (src === null) return <Loading what={t('crypto.coins.detailLoadingWhat')} />;
+  if (src.data === null) return <ReadFailure title={t('crypto.coins.detailLoadFailTitle', { name: pick.name })} error={src.error} />;
   const d: CoinDetail | undefined = src.data.detail;
   if (!d) {
     return (
       <ErrorState
-        title={`No detail payload for ${pick.name}`}
-        detail="the upstream answered successfully without a detail object — reported as a failure, not an empty card"
+        title={t('crypto.coins.detailNoPayloadTitle', { name: pick.name })}
+        detail={t('crypto.coins.detailNoPayloadDetail')}
       />
     );
   }
   const change = upstreamChangePercent(d.change24h);
   const rowsList: [string, ReactNode][] = [
-    ['Price (USD)', fmtPrice(d.priceUsd)],
-    ['24h change', <span key="c" style={{ color: changeColor(change) }}>{fmtPct(change)}</span>],
-    ['Market cap', usd(d.marketCap)],
-    ['Fully diluted cap', usd(d.fullyDilutedMarketCap)],
-    ['24h volume', usd(d.volume24h)],
-    ['Rank', num(d.rank)],
-    ['Available supply', num(d.availableSupply)],
-    ['Total supply', num(d.totalSupply)],
-    ['Max supply', num(d.maxSupply)],
-    ['Circulating', d.circulatingPct === null ? dash : `${d.circulatingPct.toFixed(2)}%`],
-    ['ATH (USD)', fmtPrice(d.athUsd)],
-    ['ATH date', text(d.athDate)],
-    ['From ATH', d.fromAthPct === null ? dash : `${d.fromAthPct.toFixed(2)}%`],
-    ['ATL (USD)', fmtPrice(d.atlUsd)],
-    ['ATL date', text(d.atlDate)],
-    ['From ATL', d.fromAtlPct === null ? dash : `${d.fromAtlPct.toFixed(2)}%`],
-    ['Listed', dateOf(d.listingDate)],
-    ['Life cycle', text(d.lifeCycle)],
+    [t('crypto.coins.detailPriceUsd'), fmtPrice(d.priceUsd)],
+    [t('crypto.coins.detailChange24h'), <span key="c" style={{ color: changeColor(change) }}>{fmtPct(change)}</span>],
+    [t('crypto.coins.detailMarketCap'), usd(d.marketCap)],
+    [t('crypto.coins.detailFdv'), usd(d.fullyDilutedMarketCap)],
+    [t('crypto.coins.detailVolume24h'), usd(d.volume24h)],
+    [t('crypto.coins.detailRank'), num(d.rank)],
+    [t('crypto.coins.detailAvailableSupply'), num(d.availableSupply)],
+    [t('crypto.coins.detailTotalSupply'), num(d.totalSupply)],
+    [t('crypto.coins.detailMaxSupply'), num(d.maxSupply)],
+    [t('crypto.coins.detailCirculating'), d.circulatingPct === null ? dash : `${d.circulatingPct.toFixed(2)}%`],
+    [t('crypto.coins.detailAthUsd'), fmtPrice(d.athUsd)],
+    [t('crypto.coins.detailAthDate'), text(d.athDate)],
+    [t('crypto.coins.detailFromAth'), d.fromAthPct === null ? dash : `${d.fromAthPct.toFixed(2)}%`],
+    [t('crypto.coins.detailAtlUsd'), fmtPrice(d.atlUsd)],
+    [t('crypto.coins.detailAtlDate'), text(d.atlDate)],
+    [t('crypto.coins.detailFromAtl'), d.fromAtlPct === null ? dash : `${d.fromAtlPct.toFixed(2)}%`],
+    [t('crypto.coins.detailListed'), dateOf(d.listingDate)],
+    [t('crypto.coins.detailLifeCycle'), text(d.lifeCycle)],
   ];
   return (
     <Card
-      title={`Detail — ${text(d.name)} (${text(d.symbol)})`}
-      subtitle={`mode=coin&key=${pick.key}; change24h is a percent-scaled number upstream ships (see the model's scale note)`}
+      title={t('crypto.coins.detailCardTitle', { name: text(d.name), symbol: text(d.symbol) })}
+      subtitle={t('crypto.coins.detailCardSubtitle', { key: pick.key })}
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(160px, 100%), 1fr))', gap: `${space[8]}px ${space[16]}px` }}>
         {rowsList.map(([label, value]) => (
@@ -455,38 +460,38 @@ function CoinDetailPanel({ pick }: { pick: CoinPick }) {
         ))}
       </div>
       <p style={footnote}>
-        Every field above is upstream&apos;s own; a null renders —, never 0. circulatingPct, fromAthPct and fromAtlPct
-        are percents; change24h is a percent-scaled number (the number is the percent), not a raw ratio.
+        {t('crypto.coins.detailFootnote')}
       </p>
     </Card>
   );
 }
 
 function MarketPairsPanel({ pick }: { pick: CoinPick }) {
+  const t = useT();
   const src = useSource<MarketPairsEnvelope>((s) => fetchMarketPairs(pick.key, s), `pairs:${pick.key}`);
-  if (src === null) return <Loading what="the market pairs" />;
-  if (src.data === null) return <ReadFailure title={`Could not load the market pairs for ${pick.name}`} error={src.error} />;
+  if (src === null) return <Loading what={t('crypto.coins.pairsLoadingWhat')} />;
+  if (src.data === null) return <ReadFailure title={t('crypto.coins.pairsLoadFailTitle', { name: pick.name })} error={src.error} />;
   const read = readMarketPairs(src.data.data ?? null, src.data.limit);
   if (read.shown === 0) {
     return (
       <ErrorState
-        title={`No market pairs for ${pick.name}`}
-        detail="the upstream answered successfully with no pairs — reported as a failure, not an empty table (the slug may be unknown to CoinMarketCap)"
+        title={t('crypto.coins.pairsEmptyTitle', { name: pick.name })}
+        detail={t('crypto.coins.pairsEmptyDetail')}
       />
     );
   }
   return (
-    <Card title={`Market pairs — ${text(read.name)} (${text(read.symbol)})`} subtitle="CoinMarketCap's pair page for this slug; volumes are upstream's own">
+    <Card title={t('crypto.coins.pairsCardTitle', { name: text(read.name), symbol: text(read.symbol) })} subtitle={t('crypto.coins.pairsCardSubtitle')}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[8] }}>
         <Stat
-          label="Pairs (total)"
+          label={t('crypto.coins.statPairsTotal')}
           value={num(read.numMarketPairs)}
-          hint="numMarketPairs upstream"
+          hint={t('crypto.coins.hintNumMarketPairs')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="On this page"
+          label={t('crypto.coins.statOnPage')}
           value={num(read.shown)}
           hint={`of ${num(read.numMarketPairs)}`}
           valueSize={fontSize[17]}
@@ -494,7 +499,7 @@ function MarketPairsPanel({ pick }: { pick: CoinPick }) {
         />
       </div>
       <DataTable
-        head={['Exchange', 'Price (USD)', 'Volume (USD)']}
+        head={[t('crypto.head.exchange'), t('crypto.head.priceUsd'), t('crypto.head.volumeUsd')]}
         rows={(src.data.data?.marketPairs ?? []).map((r: MarketPairRow) => ({
           cells: [
             <span key="ex" style={{ fontWeight: fontWeight.semibold }}>{text(r.exchangeName)}</span>,
@@ -503,38 +508,39 @@ function MarketPairsPanel({ pick }: { pick: CoinPick }) {
           ],
         }))}
       />
-      <p style={footnote}>{read.note}. The table is that first page, not the whole book; a metric the upstream omitted renders —.</p>
+      <p style={footnote}>{t('crypto.coins.pairsFootnote')}</p>
     </Card>
   );
 }
 
 function OpenInterestPanel({ symbol }: { symbol: string }) {
+  const t = useT();
   const upper = symbol.toUpperCase();
   const src = useSource<OpenInterestEnvelope>((s) => fetchOpenInterest(upper, s), `oi:${upper}`);
-  if (src === null) return <Loading what="the open interest" />;
-  if (src.data === null) return <ReadFailure title={`Could not load the open interest for ${upper}`} error={src.error} />;
+  if (src === null) return <Loading what={t('crypto.coins.oiLoadingWhat')} />;
+  if (src.data === null) return <ReadFailure title={t('crypto.coins.oiLoadFailTitle', { symbol: upper })} error={src.error} />;
   const read = readOpenInterest(src.data.data ?? [], upper);
   if (read.shown === 0) {
     return (
       <ErrorState
-        title={`No open-interest rows for ${upper}`}
-        detail="the upstream answered successfully with no rows — reported as a failure, not an empty table"
+        title={t('crypto.coins.oiEmptyTitle', { symbol: upper })}
+        detail={t('crypto.common.emptyTableFailure')}
       />
     );
   }
   return (
-    <Card title={`Open interest — ${upper}`} subtitle="CoinGlass per-exchange open interest for this coin's SYMBOL">
+    <Card title={t('crypto.coins.oiCardTitle', { symbol: upper })} subtitle={t('crypto.coins.oiCardSubtitle')}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[8] }}>
         <Stat
-          label="Exchange rows"
+          label={t('crypto.coins.statExchangeRows')}
           value={num(read.shown)}
-          hint={`CoinGlass symbol ${upper}`}
+          hint={t('crypto.coins.hintCoinGlassSymbol', { symbol: upper })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
         />
       </div>
       <DataTable
-        head={['Exchange', 'Symbol', 'Open interest (USD)', '4h OI %', '1h vol %']}
+        head={[t('crypto.head.exchange'), t('crypto.coins.headSymbol'), t('crypto.coins.headOpenInterestUsd'), t('crypto.coins.headOi4h'), t('crypto.coins.headVol1h')]}
         rows={read.rows.map((r: OpenInterestRow) => ({
           cells: [
             <span key="ex" style={{ fontWeight: fontWeight.semibold }}>{text(r.exchangeName)}</span>,
@@ -546,7 +552,7 @@ function OpenInterestPanel({ symbol }: { symbol: string }) {
         }))}
       />
       <p style={footnote}>
-        {read.note}. A negative OI change is upstream&apos;s own percent, not our estimate; an absent metric renders —.
+        {t('crypto.coins.oiFootnote')}
       </p>
     </Card>
   );
@@ -569,6 +575,7 @@ function CoinDetailSection({ pick }: { pick: CoinPick }) {
 // drill-down. Selecting a coin is the only state they share.
 // ---------------------------------------------------------------------------
 export default function CoinsDirectory() {
+  const t = useT();
   const [selected, setSelected] = useState<CoinPick | null>(null);
 
   return (
@@ -578,17 +585,14 @@ export default function CoinsDirectory() {
       {selected ? (
         <CoinDetailSection pick={selected} />
       ) : (
-        <Card title="Coin detail" subtitle="select a coin above to load its detail, its CoinMarketCap pairs and its CoinGlass open interest">
+        <Card title={t('crypto.coins.detailPlaceholderTitle')} subtitle={t('crypto.coins.detailPlaceholderSubtitle')}>
           <p style={{ margin: 0, fontSize: fontSize[12], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-            No coin selected. The three reads that follow a selection are independent — if one fails it renders its own
-            error and the other two stay up.
+            {t('crypto.coins.detailPlaceholderBody')}
           </p>
         </Card>
       )}
       <p style={{ margin: 0, fontSize: fontSize[11], color: themeColor.labelTertiary, letterSpacing: letterSpacing.xs, lineHeight: lineHeight.normal }}>
-        Three upstream families, one rule: a metric not published renders —, never 0. The directory mode carries no
-        change column and says so; the pair table is a first page of the whole book; CoinGlass keys on the symbol, not
-        the slug. Nothing here is a recommendation.
+        {t('crypto.coins.routeFootnote')}
       </p>
     </div>
   );

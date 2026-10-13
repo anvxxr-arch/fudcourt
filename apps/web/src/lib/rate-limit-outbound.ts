@@ -78,12 +78,27 @@ function takeLive(url: string, ttl: number): Entry | undefined {
   const hit = cache.get(url);
   if (!hit) return undefined;
   if (Date.now() - hit.at >= ttl) {
-    cache.delete(url);
+    // The entry is past TTL but STAYS in the map: an opt-in stale reader
+    // (takeStale) may still serve it inside its window, and a failed refresh
+    // must leave it there for the next caller. Eviction is LRU pressure's
+    // job (store), not expiry's.
     return undefined;
   }
   // Re-insert to move this key to the end (Map preserves insertion order).
   cache.delete(url);
   cache.set(url, hit);
+  return hit;
+}
+
+/** Read a STALE entry (past ttl, inside the SWR window) without dropping it:
+ *  the caller serves it immediately while a background refresh runs. Null
+ *  once past the stale window — an hour-old quote is not "stale but usable",
+ *  it is wrong. */
+function takeStale(url: string, ttl: number, staleMs: number): Entry | undefined {
+  const hit = cache.get(url);
+  if (!hit) return undefined;
+  const age = Date.now() - hit.at;
+  if (age < ttl || age >= ttl + staleMs) return undefined;
   return hit;
 }
 
@@ -123,6 +138,50 @@ function enqueue<T>(url: string, fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
+/** One upstream round trip: compose the caller's signal (if any) with the
+ *  limiter's default deadline, read the body ONCE (a Response body is a
+ *  one-shot stream — the first reader would drain it and every coalesced
+ *  waiter would see empty bytes), cache a JSON 200, and hand back the shared
+ *  record. Both the MISS path and the SWR background refresh run through
+ *  this one implementation, so a stale-serve can never diverge from what a
+ *  live fetch would have produced. */
+function fetchAndStore(url: string, init: RequestInit): Promise<Shared> {
+  // Compose the caller's signal (if any) with a default deadline. Every call
+  // site passes AbortSignal.timeout today, but the limiter must not DEPEND on
+  // that: a future caller that forgets one would hang its origin's serialised
+  // chain and take the whole family down, not just its own request.
+  const ctl = new AbortController();
+  const timer = setTimeout(
+    () => ctl.abort(new Error(`limitedFetch: no response in ${DEFAULT_TIMEOUT_MS}ms`)),
+    DEFAULT_TIMEOUT_MS
+  );
+  const caller = init.signal;
+  if (caller) {
+    if (caller.aborted) ctl.abort(caller.reason);
+    else caller.addEventListener('abort', () => ctl.abort(caller.reason), { once: true });
+  }
+  return (async () => {
+    try {
+      const res = await fetch(url, { ...init, signal: ctl.signal });
+      // Read the body ONCE, here, so the winner and every coalesced waiter all
+      // get real bytes. Leaving it on the Response means the first caller drains
+      // the stream and the rest see an empty body.
+      const text = await res.text();
+      const contentType = res.headers.get('Content-Type') ?? 'application/json';
+      if (res.ok) {
+        try {
+          store(url, { at: Date.now(), body: JSON.parse(text) });
+        } catch {
+          /* a non-JSON 200 is not cacheable; just skip it */
+        }
+      }
+      return { text, status: res.status, contentType };
+    } finally {
+      clearTimeout(timer);
+    }
+  })();
+}
+
 /**
  * Fetch a URL through the limiter, sharing the body for identical calls made
  * within the TTL. Rejections are never cached, so a transient upstream failure
@@ -131,7 +190,7 @@ function enqueue<T>(url: string, fn: () => Promise<T>): Promise<T> {
 export async function limitedFetch(
   url: string,
   init: RequestInit = {},
-  opts: { ttlMs?: number } = {}
+  opts: { ttlMs?: number; staleMs?: number } = {}
 ): Promise<Response> {
   const ttl = opts.ttlMs ?? CACHE_TTL_MS;
   const hit = takeLive(url, ttl);
@@ -139,6 +198,30 @@ export async function limitedFetch(
     return new Response(JSON.stringify(hit.body), {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
+    });
+  }
+
+  // Serve-stale-while-revalidate, OPT-IN: a body inside the caller's stale
+  // window answers IMMEDIATELY and one background refresh runs, so the caller
+  // whose TTL window happens to expire never pays the upstream round trip.
+  // The response is marked STALE with its Age in seconds — staleness is
+  // VISIBLE, never passed off as a live read (X-Cache stays HIT only for
+  // within-TTL bodies). A caller opts in with staleMs > 0; the default (0)
+  // keeps the old hard-expiry behavior for every existing call site. The
+  // refresh shares fetchAndStore with the foreground path, so a stale-serve
+  // can never diverge from what a live fetch would have produced; a failed
+  // refresh stores nothing and the stale body stays for the next caller.
+  const staleMs = opts.staleMs ?? 0;
+  const stale = staleMs > 0 ? takeStale(url, ttl, staleMs) : undefined;
+  if (stale) {
+    void enqueue(url, () => fetchAndStore(url, init)).catch(() => {});
+    return new Response(JSON.stringify(stale.body), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Cache': 'STALE',
+        Age: String(Math.floor((Date.now() - stale.at) / 1000)),
+      },
     });
   }
 
@@ -162,40 +245,7 @@ export async function limitedFetch(
     });
   }
 
-  const run = enqueue(url, async () => {
-    // Compose the caller's signal (if any) with a default deadline. Every call
-    // site passes AbortSignal.timeout today, but the limiter must not DEPEND on
-    // that: a future caller that forgets one would hang its origin's serialised
-    // chain and take the whole family down, not just its own request.
-    const ctl = new AbortController();
-    const timer = setTimeout(
-      () => ctl.abort(new Error(`limitedFetch: no response in ${DEFAULT_TIMEOUT_MS}ms`)),
-      DEFAULT_TIMEOUT_MS
-    );
-    const caller = init.signal;
-    if (caller) {
-      if (caller.aborted) ctl.abort(caller.reason);
-      else caller.addEventListener('abort', () => ctl.abort(caller.reason), { once: true });
-    }
-    try {
-      const res = await fetch(url, { ...init, signal: ctl.signal });
-      // Read the body ONCE, here, so the winner and every coalesced waiter all
-      // get real bytes. Leaving it on the Response means the first caller drains
-      // the stream and the rest see an empty body.
-      const text = await res.text();
-      const contentType = res.headers.get('Content-Type') ?? 'application/json';
-      if (res.ok) {
-        try {
-          store(url, { at: Date.now(), body: JSON.parse(text) });
-        } catch {
-          /* a non-JSON 200 is not cacheable; just skip it */
-        }
-      }
-      return { text, status: res.status, contentType };
-    } finally {
-      clearTimeout(timer);
-    }
-  });
+  const run = enqueue(url, () => fetchAndStore(url, init));
 
   inflight.set(url, run);
   try {

@@ -8,6 +8,7 @@ import { Toolbar } from '@/ui/toolbar';
 import { Sparkline } from '@/ui/sparkline';
 import { dash, fmtCurrency, fmtPct, fmtPrice, fmtVolume, tone } from '@/lib/format';
 import { fetchQuotes, type MarketQuote } from '@/features/market/clients';
+import { useT } from '@/lib/i18n/t';
 
 /**
  * One Yahoo-quote board. The stock and commodity sections render the same
@@ -22,12 +23,12 @@ export default function QuoteBoard({
   title: string;
   unitHint?: string;
 }) {
+  const t = useT();
   const [quotes, setQuotes] = useState<MarketQuote[]>([]);
   const [failed, setFailed] = useState<{ symbol: string; reason: string }[]>([]);
   const [derived, setDerived] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -45,8 +46,8 @@ export default function QuoteBoard({
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 60_000);
-    return () => clearInterval(t);
+    const timer = setInterval(load, 60_000);
+    return () => clearInterval(timer);
   }, [load]);
 
   const toneColor = (v: number | null): string =>
@@ -77,7 +78,7 @@ export default function QuoteBoard({
               cursor: 'pointer',
             }}
           >
-            ↻ Refresh
+            {t('common.refresh')}
           </button>
         }
       >
@@ -101,13 +102,13 @@ export default function QuoteBoard({
         <Table>
           <THead>
             <TR>
-              <TH style={thStyle}>Instrument</TH>
-              <TH align="right" style={thStyle}>Trend</TH>
-              <TH align="right" style={thStyle}>Last</TH>
-              <TH align="right" style={thStyle}>Chg</TH>
-              <TH align="right" style={thStyle}>Chg %</TH>
-              <TH align="right" style={thStyle}>Day range</TH>
-              <TH align="right" style={thStyle}>Volume</TH>
+              <TH style={thStyle}>{t('col.instrument')}</TH>
+              <TH align="right" style={thStyle}>{t('col.trend')}</TH>
+              <TH align="right" style={thStyle}>{t('col.last')}</TH>
+              <TH align="right" style={thStyle}>{t('market.chg')}</TH>
+              <TH align="right" style={thStyle}>{t('col.chg')}</TH>
+              <TH align="right" style={thStyle}>{t('col.dayRange')}</TH>
+              <TH align="right" style={thStyle}>{t('col.volume')}</TH>
             </TR>
           </THead>
           <TBody>
@@ -151,7 +152,7 @@ export default function QuoteBoard({
         {failed.length > 0 && (
           <span style={{ color: themeColor.orange }}>
             {' '}
-            · {failed.length} failed: {failed.map((f) => `${f.symbol} (${f.reason})`).join(', ')}
+            · {t('market.quoteFailed', { n: failed.length, list: failed.map((f) => `${f.symbol} (${f.reason})`).join(', ') })}
           </span>
         )}
       </div>

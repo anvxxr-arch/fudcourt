@@ -28,6 +28,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, radius, space } from '@/styles/tokens';
 import { dash, fmtTime } from '@/lib/format';
+import { useT } from '@/lib/i18n/t';
 import { setBoardStale } from '@/lib/stale-board';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
@@ -165,6 +166,7 @@ function VenueDetail({ row, side, nowSec }: { row: FundingSymbolRow; side: Venue
 }
 
 export default function FundingPage() {
+  const t = useT();
   const [read, setRead] = useState<FundingRead | null>(null);
   const [query, setQuery] = useState('');
   const [dir, setDir] = useState<SortDir>(DEFAULT_SORT_DIR);
@@ -198,17 +200,17 @@ export default function FundingPage() {
     [rows, selected],
   );
 
-  if (read === null) return <Loading what="the funding-rate matrix" />;
+  if (read === null) return <Loading what={t('crypto.funding.loadingWhat')} />;
 
   if (read.error) {
-    return <ErrorState title="Could not read the funding-rate matrix" detail={read.error} />;
+    return <ErrorState title={t('crypto.funding.loadFailTitle')} detail={read.error} />;
   }
 
   if (rows === null || rows.length === 0) {
     return (
       <ErrorState
-        title="The funding-rate matrix returned no symbols"
-        detail="An empty payload that claims success is reported as a failure, not rendered as an empty board."
+        title={t('crypto.funding.emptyTitle')}
+        detail={t('crypto.funding.emptyDetail')}
       />
     );
   }
@@ -224,32 +226,32 @@ export default function FundingPage() {
       ) : null}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
-          label="Symbols tracked"
+          label={t('crypto.funding.statSymbols')}
           value={count(rows.length)}
-          hint="symbols carrying a funding map in this read"
+          hint={t('crypto.funding.hintSymbolsMap')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
         />
         <Stat
-          label="Venues (USDT-margined)"
+          label={t('crypto.funding.statVenues')}
           value={count(venues.length)}
           hint={venues.join(' · ')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 220px' }}
         />
         <Stat
-          label="Highest max funding"
+          label={t('crypto.funding.statHighestMax')}
           value={extremes.highestMax ? extremes.highestMax.symbol : dash}
           tone={signTone(extremes.highestMax?.percent ?? null)}
-          hint={extremes.highestMax ? `${pct(extremes.highestMax.percent)} — its highest cross-venue USDT rate` : 'no finite rate in this read'}
+          hint={extremes.highestMax ? t('crypto.funding.hintHighestRate', { pct: pct(extremes.highestMax.percent) }) : t('crypto.funding.hintNoFiniteRate')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 200px' }}
         />
         <Stat
-          label="Lowest min funding"
+          label={t('crypto.funding.statLowestMin')}
           value={extremes.lowestMin ? extremes.lowestMin.symbol : dash}
           tone={signTone(extremes.lowestMin?.percent ?? null)}
-          hint={extremes.lowestMin ? `${pct(extremes.lowestMin.percent)} — its lowest cross-venue USDT rate` : 'no finite rate in this read'}
+          hint={extremes.lowestMin ? t('crypto.funding.hintLowestRate', { pct: pct(extremes.lowestMin.percent) }) : t('crypto.funding.hintNoFiniteRate')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 200px' }}
         />
@@ -257,8 +259,8 @@ export default function FundingPage() {
 
       <div style={{ marginTop: space[12] }}>
         <Card
-          title="Funding-rate matrix"
-          subtitle="per symbol, across the USDT-margined venues — filter by symbol, sort by cross-venue mean, paged client-side"
+          title={t('crypto.funding.matrixTitle')}
+          subtitle={t('crypto.funding.matrixSubtitle')}
           right={
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[4], alignItems: 'center' }}>
               <input
@@ -268,24 +270,24 @@ export default function FundingPage() {
                   setQuery(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Filter symbol…"
+                placeholder={t('crypto.funding.filterPlaceholder')}
                 style={INPUT_STYLE}
               />
-              <button type="button" onClick={() => { setDir((d) => (d === 'asc' ? 'desc' : 'asc')); setPage(1); }} style={chipStyle(true)}>
-                mean USDT rate {dir === 'asc' ? '↑' : '↓'}
+              <button type="button" className="fc-hit-24" onClick={() => { setDir((d) => (d === 'asc' ? 'desc' : 'asc')); setPage(1); }} style={chipStyle(true)}>
+                {t('crypto.funding.sortMean')} {dir === 'asc' ? '↑' : '↓'}
               </button>
             </div>
           }
         >
           {paged.total === 0 ? (
-            <EmptyState>No symbol matches “{query}”.</EmptyState>
+            <EmptyState>{t('crypto.funding.noSymbolMatch', { query })}</EmptyState>
           ) : (
             <>
               <DataTable
-                head={['Symbol', '# venues', 'Min USDT', 'Max USDT', 'Mean USDT']}
+                head={[t('col.symbol'), t('crypto.funding.headVenues'), t('crypto.funding.headMinUsdt'), t('crypto.funding.headMaxUsdt'), t('crypto.funding.headMeanUsdt')]}
                 rows={paged.rows.map((r) => ({
                   cells: [
-                    <button key="s" type="button" onClick={() => setSelected(r.symbol)} style={LINK_BUTTON}>{r.symbol}</button>,
+                    <button key="s" type="button" className="fc-hit-24" onClick={() => setSelected(r.symbol)} style={LINK_BUTTON}>{r.symbol}</button>,
                     <span key="v" style={{ color: themeColor.labelSecondary }}>{count(r.venueCount)}</span>,
                     <span key="min" style={{ color: signColor(r.min) }}>{pct(r.min)}</span>,
                     <span key="max" style={{ color: signColor(r.max) }}>{pct(r.max)}</span>,
@@ -294,43 +296,45 @@ export default function FundingPage() {
                 }))}
               />
               <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: space[8], marginTop: space[8] }}>
-                <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={paged.page <= 1} style={pagerStyle(paged.page <= 1)}>
-                  ‹ Prev
+                <button type="button" className="fc-hit-24" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={paged.page <= 1} style={pagerStyle(paged.page <= 1)}>
+                  {t('crypto.common.prev')}
                 </button>
                 <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-                  page {paged.page} / {paged.pages} · rows {paged.from}–{paged.to} of {paged.total}
+                  {t('crypto.funding.pageNote', { page: paged.page, pages: paged.pages, from: paged.from, to: paged.to, total: paged.total })}
                 </span>
-                <button type="button" onClick={() => setPage((p) => Math.min(paged.pages, p + 1))} disabled={paged.page >= paged.pages} style={pagerStyle(paged.page >= paged.pages)}>
-                  Next ›
+                <button type="button" className="fc-hit-24" onClick={() => setPage((p) => Math.min(paged.pages, p + 1))} disabled={paged.page >= paged.pages} style={pagerStyle(paged.page >= paged.pages)}>
+                  {t('crypto.common.next')}
                 </button>
               </div>
             </>
           )}
           <p style={FOOTNOTE}>
-            {count(rows.length)} symbols tracked
-            {read.data?.upstreamCount !== undefined && read.data.upstreamCount !== rows.length
-              ? ` (upstream reports ${count(read.data.upstreamCount)})`
-              : ''}
-            {query.trim() !== '' ? `, ${count(filtered.length)} matching “${query.trim()}”` : ''}
-            {' '}— sorted by cross-venue mean USDT rate, paged at {SYMBOLS_PAGE_SIZE} per page; the slice in view is stated
-            above. Every rate is a FRACTION upstream rendered ×100; a missing rate is a dash, never a zero.
+            {t('crypto.funding.matrixFootnote', {
+              count: count(rows.length),
+              upstream:
+                read.data?.upstreamCount !== undefined && read.data.upstreamCount !== rows.length
+                  ? t('crypto.funding.upstreamNote', { n: count(read.data.upstreamCount) })
+                  : '',
+              matching: query.trim() !== '' ? t('crypto.funding.matchingNote', { count: count(filtered.length), query: query.trim() }) : '',
+              pageSize: SYMBOLS_PAGE_SIZE,
+            })}
           </p>
         </Card>
       </div>
 
       <div style={{ marginTop: space[12] }}>
         <Card
-          title="Venue detail"
-          subtitle="one symbol's rates, per venue — read from the same already-fetched data, never refetched"
+          title={t('crypto.funding.venueTitle')}
+          subtitle={t('crypto.funding.venueSubtitle')}
           right={
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[4] }}>
-              <button type="button" onClick={() => setSide('umap')} style={chipStyle(side === 'umap')}>USDT-margined</button>
-              <button type="button" onClick={() => setSide('cmap')} style={chipStyle(side === 'cmap')}>COIN-margined</button>
+              <button type="button" className="fc-hit-24" onClick={() => setSide('umap')} style={chipStyle(side === 'umap')}>{t('crypto.funding.sideUmap')}</button>
+              <button type="button" className="fc-hit-24" onClick={() => setSide('cmap')} style={chipStyle(side === 'cmap')}>{t('crypto.funding.sideCmap')}</button>
             </div>
           }
         >
           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: space[8], marginBottom: space[8] }}>
-            <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>Symbol</span>
+            <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{t('crypto.funding.symbolLabel')}</span>
             <select value={activeSymbol?.symbol ?? ''} onChange={(e) => setSelected(e.target.value)} style={INPUT_STYLE}>
               {sorted.map((s) => (
                 <option key={s.symbol} value={s.symbol}>{s.symbol}</option>
@@ -338,25 +342,20 @@ export default function FundingPage() {
             </select>
           </div>
           {activeSymbol === null ? (
-            <EmptyState>Select a symbol to read its per-venue rates.</EmptyState>
+            <EmptyState>{t('crypto.funding.selectSymbolHint')}</EmptyState>
           ) : (
             <VenueDetail row={activeSymbol} side={side} nowSec={nowSec} />
           )}
           <p style={FOOTNOTE}>
             {activeSymbol === null
-              ? 'No symbol selected.'
-              : `${activeSymbol.symbol}: ${count(venueRows(activeSymbol, side).length)} ${side === 'umap' ? 'USDT-margined' : 'COIN-margined'} venues in this read.`}{' '}
-            fundingRate and estimatedRate are FRACTIONS upstream, rendered ×100 as percents; a venue the upstream does not
-            carry is simply absent, and a null rate is a dash, never a zero.
+              ? t('crypto.funding.noSymbolSelected')
+              : t('crypto.funding.venueFootnote', { symbol: activeSymbol.symbol, count: count(venueRows(activeSymbol, side).length), side: side === 'umap' ? t('crypto.funding.sideUmap') : t('crypto.funding.sideCmap') })}
           </p>
         </Card>
       </div>
 
       <p style={{ marginTop: space[16], fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-        Every figure is read verbatim from CoinAnk&apos;s funding-rate feed — the per-symbol matrix of USDT-margined
-        (umap) and COIN-margined (cmap) venue rates. The board derives only the cross-venue min/max/mean, the distinct
-        venue count, the extremes, the filter/sort and the page slice; it estimates nothing about the market. A missing
-        value renders as a dash, never a zero, and a failed read renders as an error, never an empty board.
+        {t('crypto.funding.routeFootnote')}
       </p>
     </>
   );

@@ -23,6 +23,7 @@ EnvironmentFile=/home/dwizzy/fudcourt/.env
 Environment=FUDCOURT_DATA_URL=http://127.0.0.1:3101
 ExecStartPre=/usr/bin/go build -C /home/dwizzy/fudcourt/apps/bot -o bin/fudcourt-bot .
 ExecStart=/home/dwizzy/fudcourt/apps/bot/bin/fudcourt-bot
+# restart-policy: on-failure -- the Telegram long-poll may be stopped deliberately; a clean exit looping is worse than a dead bot. Promote to `always` only with the operator's explicit sign-off.
 Restart=on-failure
 RestartSec=3
 LimitNOFILE=65536

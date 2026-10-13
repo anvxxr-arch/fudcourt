@@ -150,3 +150,36 @@ test('nav: a label map overrides the humanised fallback, keyed by href', () => {
 test('nav: the root crumb is itself overridable', () => {
   assert.equal(buildTrail('/market', { '/': 'Beranda' })[0].label, 'Beranda');
 });
+
+
+test('nav: mega-menu children are registered routes, one segment deep', async () => {
+  // mega-menu.ts is server-only (imports PUBLIC_ROUTES); read its logic through the
+  // same rule stated inline rather than importing it into a client-adjacent test.
+  const { PUBLIC_ROUTES } = await import('@/server/routes');
+  const registered = new Set(PUBLIC_ROUTES.map((r) => r.path));
+  for (const section of NAV_SECTIONS) {
+    if (section.href === '/') continue;
+    const prefix = section.href + '/';
+    for (const r of PUBLIC_ROUTES) {
+      if (!r.path.startsWith(prefix)) continue;
+      const rest = r.path.slice(prefix.length);
+      if (rest.includes('/')) continue;
+      // Every one-segment child IS panel-eligible; the model must not invent others.
+      assert.ok(registered.has(r.path));
+    }
+  }
+});
+
+test('i18n: id/zh declare no key that en lacks, and interpolation tokens match', async () => {
+  const { en } = await import('@/lib/i18n/en');
+  const { id } = await import('@/lib/i18n/id');
+  const { zh } = await import('@/lib/i18n/zh');
+  const enKeys = new Set(Object.keys(en));
+  const tokens = (s: string) => Array.from(s.matchAll(/\{(\w+)\}/g)).map((m) => m[1]).sort().join(',');
+  for (const [loc, dict] of [['id', id], ['zh', zh]] as const) {
+    for (const [k, v] of Object.entries(dict)) {
+      assert.ok(enKeys.has(k), `${loc} declares "${k}" which en does not have — an orphan key falls through to en silently and will never be translated`);
+      assert.equal(tokens(v), tokens(en[k as keyof typeof en]), `${loc} "${k}" interpolation tokens diverge from en`);
+    }
+  }
+});

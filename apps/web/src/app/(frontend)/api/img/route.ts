@@ -130,13 +130,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'image too large' }, { status: 413 });
     }
   }
-  // All render sites display icons at <=24px: downscale to 64px (2x for DPR)
-  // so a 400-800px upstream file never ships to the browser. On any sharp
-  // failure the original bytes are served rather than an error.
+  // All render sites display icons at <=24px in a SQUARE box (width=16 height=16):
+  // downscale to a 64px square (2x for DPR) so a 400-800px upstream file never
+  // ships to the browser AND every output is 1:1. `fit: 'inside'` kept the source
+  // aspect ratio, so a 400x200 logo shipped 64x32 and the browser squished it into
+  // the 16x16 element (distortion — LH `image-aspect-ratio`). `fit: 'contain'`
+  // letterboxes the scaled image inside the 64px square on a transparent canvas,
+  // so intrinsic size always matches the square the page renders. Quality/size
+  // trade-off unchanged; on any sharp failure the original bytes are served.
   let body: ArrayBuffer | Uint8Array = buf;
   let outCt = ct;
   try {
-    const out = await sharp(Buffer.from(buf)).resize(64, 64, { fit: 'inside', withoutEnlargement: true }).webp({ quality: 70 }).toBuffer();
+    const out = await sharp(Buffer.from(buf))
+      .resize(64, 64, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .webp({ quality: 70 })
+      .toBuffer();
     body = new Uint8Array(out);
     outCt = 'image/webp';
   } catch {

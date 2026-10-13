@@ -3,8 +3,10 @@
 import { useEffect } from 'react';
 import { PagePanel, PagePanelLink } from '@/ui/page-chrome';
 import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { useT } from '@/lib/i18n/t';
 
 export default function FrontendError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const t = useT();
   useEffect(() => {
     // Route errors surface loudly; keep the same console channel the feature
     // banners rely on so an upstream failure is never swallowed silently.
@@ -12,7 +14,7 @@ export default function FrontendError({ error, reset }: { error: Error & { diges
   }, [error]);
   return (
     <PagePanel
-      title="SOMETHING FAILED"
+      title={t('page.error.title')}
       action={
         <button
           onClick={reset}
@@ -27,13 +29,13 @@ export default function FrontendError({ error, reset }: { error: Error & { diges
             cursor: 'pointer',
           }}
         >
-          Try again
+          {t('page.error.retry')}
         </button>
       }
     >
-      {error.message || 'An unexpected error occurred while rendering this route.'}
+      {error.message || t('page.error.body')}
       <div style={{ marginTop: space[8] }}>
-        <PagePanelLink href="/">Back to the landing page</PagePanelLink>
+        <PagePanelLink href="/">{t('page.backHome')}</PagePanelLink>
       </div>
     </PagePanel>
   );

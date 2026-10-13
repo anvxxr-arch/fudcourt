@@ -6,6 +6,7 @@ import { EmptyState } from '@/ui/feedback';
 import { Wallet, groupBy, groupSum } from '@/lib/format';
 import { Card } from '@/ui/primitives';
 import { Table, TBody, TD, TH, THead, TR } from '@/ui/table';
+import { useT } from '@/lib/i18n/t';
 
 type ReconRow = {
   wallet: string;
@@ -23,6 +24,7 @@ type Props = {
 };
 
 export default function ReconciliationPage({ rows, wallets }: Props) {
+  const t = useT();
   const [filter, setFilter] = useState<'all' | 'diff' | 'ok'>('diff');
   const [search, setSearch] = useState('');
 
@@ -60,25 +62,24 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
 
   return (
     <div>
-      <h3 style={{ color: themeColor.blue }}>Reconciliation</h3>
+      <h3 style={{ color: themeColor.blue }}>{t('overview.recon.title')}</h3>
       <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], marginBottom: space[16] }}>
-        Cross-check: <b style={{ color: themeColor.labelPrimary }}>current balance</b> = sum(IN) − sum(OUT) per wallet/asset.
-        Non-zero diff = investigate.
+        {t('overview.recon.descPrefix')}<b style={{ color: themeColor.labelPrimary }}>{t('overview.recon.currentBalance')}</b>{t('overview.recon.descSuffix')}
       </p>
 
       <div style={{ display: 'flex', gap: space[16], marginBottom: space[20], flexWrap: 'wrap' }}>
         <Card style={{ borderLeft: `3px solid ${totalAbsDiff < 0.01 ? themeColor.blue : themeColor.red}` }}>
-          <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>NET DIFF</div>
+          <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{t('overview.recon.netDiff')}</div>
           <div style={{ fontSize: fontSize[22], fontWeight: fontWeight.bold, color: totalAbsDiff < 0.01 ? themeColor.blue : themeColor.red }}>
             ${totalAbsDiff.toFixed(2)}
           </div>
         </Card>
         <Card>
-          <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>TOTAL CURRENT</div>
+          <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{t('overview.recon.totalCurrent')}</div>
           <div style={{ fontSize: fontSize[22], fontWeight: fontWeight.bold, color: themeColor.blue }}>${totals.current.toFixed(2)}</div>
         </Card>
         <Card>
-          <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>TOTAL EXPECTED</div>
+          <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{t('overview.recon.totalExpected')}</div>
           <div style={{ fontSize: fontSize[22], fontWeight: fontWeight.bold, color: themeColor.labelPrimary }}>${totals.expected.toFixed(2)}</div>
         </Card>
       </div>
@@ -87,27 +88,29 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search wallet or asset..."
+          placeholder={t('overview.recon.search')}
+          aria-label={t('overview.recon.searchAria')}
+          className="fc-focus-ring"
           style={{
             background: themeColor.bgSecondary, color: themeColor.labelPrimary, border: `1px solid ${themeColor.separator}`,
-            borderRadius: radius[8], padding: `${space[8]}px ${space[12]}px`, fontSize: fontSize[13], outline: 'none', flex: 1, minWidth: 200,
+            borderRadius: radius[8], padding: `${space[8]}px ${space[12]}px`, fontSize: fontSize[13], flex: 1, minWidth: 200,
           }}
         />
         <FilterBtn active={filter === 'diff'} onClick={() => setFilter('diff')} tone={themeColor.red}>
-          Suspicious ({rows.filter(r => Math.abs(r.diff) >= 0.01).length})
+          {t('overview.recon.suspicious', { n: rows.filter(r => Math.abs(r.diff) >= 0.01).length })}
         </FilterBtn>
         <FilterBtn active={filter === 'ok'} onClick={() => setFilter('ok')} tone={themeColor.blue}>
-          Balanced ({rows.filter(r => Math.abs(r.diff) < 0.01).length})
+          {t('overview.recon.balanced', { n: rows.filter(r => Math.abs(r.diff) < 0.01).length })}
         </FilterBtn>
         <FilterBtn active={filter === 'all'} onClick={() => setFilter('all')} tone={themeColor.blue}>
-          All ({rows.length})
+          {t('overview.recon.all', { n: rows.length })}
         </FilterBtn>
       </div>
 
       {filtered.length === 0 ? (
         <Card>
           <EmptyState style={{ padding: space[20] }}>
-            {filter === 'diff' ? 'No suspicious rows found ✓' : 'No rows found'}
+            {filter === 'diff' ? t('overview.recon.noSuspicious') : t('overview.recon.noRows')}
           </EmptyState>
         </Card>
       ) : (
@@ -115,13 +118,13 @@ export default function ReconciliationPage({ rows, wallets }: Props) {
         <Table style={{ fontSize: fontSize[13] }}>
           <THead>
             <TR>
-              <TH style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>Wallet</TH>
-              <TH style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>Asset</TH>
-              <TH align="right" style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>Current</TH>
-              <TH align="right" style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>Σ IN</TH>
-              <TH align="right" style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>Σ OUT</TH>
-              <TH align="right" style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>Expected</TH>
-              <TH align="right" style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>Diff</TH>
+              <TH style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>{t('overview.recon.wallet')}</TH>
+              <TH style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>{t('overview.recon.asset')}</TH>
+              <TH align="right" style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>{t('overview.recon.current')}</TH>
+              <TH align="right" style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>{t('overview.recon.sumIn')}</TH>
+              <TH align="right" style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>{t('overview.recon.sumOut')}</TH>
+              <TH align="right" style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>{t('overview.recon.expected')}</TH>
+              <TH align="right" style={{ padding: space[8], fontSize: fontSize[11], letterSpacing: letterSpacing.sm }}>{t('overview.recon.diff')}</TH>
             </TR>
           </THead>
           <TBody>
@@ -179,6 +182,7 @@ function FilterBtn({ active, onClick, children, tone }: { active: boolean; onCli
   return (
     <button
       onClick={onClick}
+      aria-pressed={active}
       style={{
         background: active ? tone : themeColor.bgSecondary,
         color: active ? themeColor.labelOnAccent : themeColor.labelPrimary,

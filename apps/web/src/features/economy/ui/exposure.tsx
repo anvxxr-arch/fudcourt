@@ -20,6 +20,7 @@
  * and the rule that produced it cannot drift apart.
  */
 import { useEffect, useState } from 'react';
+import { useT } from '@/lib/i18n/t';
 import { themeColor, fontSize, fontWeight, lineHeight, space } from '@/styles/tokens';
 import { fetchExposure, formatCompact, type ExposureRead } from '@/features/economy/model';
 import { Card } from '@/ui/card';
@@ -46,6 +47,7 @@ function score(n: number): string {
 }
 
 export function ExposureSection({ country }: { country?: string }) {
+  const t = useT();
   const [read, setRead] = useState<ExposureRead | null>(null);
 
   useEffect(() => {
@@ -57,25 +59,24 @@ export function ExposureSection({ country }: { country?: string }) {
 
   const shell = (children: React.ReactNode) => (
     <div style={{ marginTop: space[12] }}>
-      <Card title="Your exposure to this regime" subtitle="the treasury's holdings, classified by the weight table above — a reading, not advice">
+      <Card title={t('economy.exposureTitle')} subtitle={t('economy.exposureSub')}>
         {children}
       </Card>
     </div>
   );
 
-  if (read === null) return shell(<Loading what="treasury exposure" />);
+  if (read === null) return shell(<Loading what={t('economy.loadingExposure')} />);
 
   if (read.unauthorized) {
     return shell(
       <p style={{ margin: 0, fontSize: fontSize[13], color: themeColor.labelSecondary, lineHeight: lineHeight.normal }}>
-        The overlay reads the treasury&apos;s own holdings, so it is visible to signed-in team members only. Sign in to see
-        how the book is positioned against this regime.
+        {t('economy.exposureAuth')}
       </p>
     );
   }
 
   if (read.error) {
-    return shell(<ErrorState title="Could not load the exposure overlay" detail={read.error} />);
+    return shell(<ErrorState title={t('economy.exposureLoadError')} detail={read.error} />);
   }
 
   const data = read.data;
@@ -84,8 +85,8 @@ export function ExposureSection({ country }: { country?: string }) {
     const failures = (data?.failed ?? []).map((f) => `${f.symbol}: ${f.reason}`).join(' · ');
     return shell(
       <ErrorState
-        title="The holdings read failed"
-        detail={failures || 'the exposure overlay was not returned, and no reason was named'}
+        title={t('economy.holdingsReadFailed')}
+        detail={failures || t('economy.exposureNoReason')}
       />
     );
   }
@@ -97,31 +98,31 @@ export function ExposureSection({ country }: { country?: string }) {
     <>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
-          label="Value-weighted alignment"
+          label={t('economy.statAlignment')}
           value={ex.alignment === null ? '—' : score(ex.alignment)}
           tone={ex.alignment === null ? 'neutral' : ex.alignment > 0 ? 'positive' : ex.alignment < 0 ? 'negative' : 'neutral'}
-          hint="mean class score over the valued holdings"
+          hint={t('economy.statAlignmentHint')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 150px' }}
         />
         <Stat
-          label="Coverage"
+          label={t('economy.statCoverage')}
           value={pct(ex.coverage)}
-          hint="share of the book that maps to a scored class"
+          hint={t('economy.statCoverageHint')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 150px' }}
         />
         <Stat
-          label="Book total"
+          label={t('economy.statBookTotal')}
           value={total === null ? '—' : `$${formatCompact(total)}`}
-          hint={total === null ? 'unknown — a holding could not be valued' : 'sum of every valued holding'}
+          hint={total === null ? t('economy.bookTotalUnknown') : t('economy.bookTotalHint')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 150px' }}
         />
         <Stat
-          label="Mapped"
+          label={t('economy.statMapped')}
           value={`$${formatCompact(ex.mapped_usd)}`}
-          hint="value scored by the weight table"
+          hint={t('economy.statMappedHint')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 150px' }}
         />
@@ -129,7 +130,7 @@ export function ExposureSection({ country }: { country?: string }) {
 
       <div style={{ marginTop: space[12] }}>
         <DataTable
-          head={['Asset class', 'Stance', 'Score', 'Value', 'Share', 'Holdings']}
+          head={[t('economy.hAssetClass'), t('economy.hStance'), t('economy.hScore'), t('economy.hValue'), t('economy.hShare'), t('economy.hHoldings')]}
           rows={ex.classes.map((c) => ({
             cells: [
               <span key="l" style={{ fontWeight: fontWeight.semibold }}>{c.label}</span>,
@@ -146,13 +147,13 @@ export function ExposureSection({ country }: { country?: string }) {
       {ex.holdings.length > 0 && (
         <div style={{ marginTop: space[12] }}>
           <DataTable
-            head={['Holding', 'Class', 'Class source', 'Value', 'Stance', 'Score']}
+            head={[t('economy.hHoldings'), t('economy.hClass'), t('economy.hClassSource'), t('economy.hValue'), t('economy.hStance'), t('economy.hScore')]}
             rows={ex.holdings.map((h) => ({
               cells: [
                 <span key="a" style={{ fontWeight: fontWeight.semibold }}>{h.asset}</span>,
                 <span key="c">{h.klassLabel}</span>,
                 <span key="cs" style={{ color: h.assumed ? themeColor.orange : themeColor.labelTertiary }}>
-                  {h.assumed ? 'assumed (fallback rule)' : 'explicit binding'}
+                  {h.assumed ? t('economy.assumedFallback') : t('economy.explicitBinding')}
                 </span>,
                 <span key="v">${formatCompact(h.value_usd)}</span>,
                 <span key="s" style={{ color: STANCE_COLOR[h.stance] ?? themeColor.labelTertiary }}>{h.stance}</span>,
@@ -162,8 +163,7 @@ export function ExposureSection({ country }: { country?: string }) {
           />
           {assumed.length > 0 && (
             <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.orange, lineHeight: lineHeight.normal }}>
-              {assumed.length} holding(s) matched no explicit binding and are scored as the crypto-risk class:{' '}
-              {assumed.map((h) => h.asset).join(', ')}. The class is shown as assumed rather than guessed at.
+              {t('economy.assumedNote', { n: assumed.length, assets: assumed.map((h) => h.asset).join(', ') })}
             </p>
           )}
         </div>
@@ -172,18 +172,17 @@ export function ExposureSection({ country }: { country?: string }) {
       {ex.skipped.length > 0 && (
         <div style={{ marginTop: space[12] }}>
           <ErrorState
-            title={`${ex.skipped.length} holding(s) left out of the maths`}
+            title={t('economy.skippedHoldings', { n: ex.skipped.length })}
             detail={ex.skipped.map((s) => `${s.asset}: ${s.reason}`).join(' · ')}
           />
         </div>
       )}
 
       <p style={{ margin: `${space[12]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-        Classification rule: {ex.rule}
+        {t('economy.classificationRule')} {ex.rule}
       </p>
       <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-        The alignment is the value-weighted mean of the class scores over the holdings that could be valued. It reads the
-        regime against the book — it is not advice, and not a position size.
+        {t('economy.alignmentNote')}
       </p>
     </>
   );

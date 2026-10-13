@@ -11,6 +11,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useT } from '@/lib/i18n/t';
 import { themeColor, fontSize, radius, space } from '@/styles/tokens';
 import { fetchCalendar, formatDate, formatValue, type CalendarEnvelope } from '@/features/economy/model';
 import { Card } from '@/ui/card';
@@ -36,6 +37,7 @@ function daysAgo(n: number): string {
 }
 
 export default function EconomyCalendar() {
+  const t = useT();
   const [data, setData] = useState<CalendarEnvelope | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [from, setFrom] = useState(daysAgo(120));
@@ -61,36 +63,36 @@ export default function EconomyCalendar() {
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: `${space[24]}px ${space[16]}px` }}>
       <PageHeader
-        title="Economic Calendar"
-        description="A release log of market-moving series by reference period. These sources publish no forward schedule and no consensus, so the forecast column is always an em dash — it is not a forward calendar."
+        title={t('economy.calendarTitle')}
+        description={t('economy.calendarDesc')}
         nav={ECONOMY_NAV}
       />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8], marginBottom: space[12], alignItems: 'center' }}>
         <label style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-          From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ ...FIELD, marginLeft: space[8] }} />
+          {t('economy.fromLabel')} <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ ...FIELD, marginLeft: space[8] }} />
         </label>
         <label style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-          To <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ ...FIELD, marginLeft: space[8] }} />
+          {t('economy.toLabel')} <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ ...FIELD, marginLeft: space[8] }} />
         </label>
-        <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Category" style={FIELD}>
-          <option value="">Any category</option>
+        <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label={t('economy.hCategory')} style={FIELD}>
+          <option value="">{t('economy.anyCategory')}</option>
           {['growth', 'labor', 'inflation', 'monetary', 'fiscal', 'trade'].map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <input value={country} onChange={(e) => setCountry(e.target.value.toUpperCase())} placeholder="ISO3 (e.g. USA)" aria-label="Country" style={{ ...FIELD, width: 130 }} />
-        {data && <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{data.total} event(s) in {data.window.from} → {data.window.to}</span>}
+        <input value={country} onChange={(e) => setCountry(e.target.value.toUpperCase())} placeholder="ISO3 (e.g. USA)" aria-label={t('economy.hCountry')} style={{ ...FIELD, width: 130 }} />
+        {data && <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{t('economy.calendarCount', { n: data.total, from: data.window.from, to: data.window.to })}</span>}
       </div>
 
-      {error && <ErrorState title="Could not load the calendar" detail={error} />}
-      {!data && !error && <Loading what="calendar" />}
+      {error && <ErrorState title={t('economy.calendarError')} detail={error} />}
+      {!data && !error && <Loading what={t('economy.loadingCalendar')} />}
 
       {data && (
-        <Card title="Releases" subtitle="reference periods, newest first">
+        <Card title={t('economy.releasesTitle')} subtitle={t('economy.releasesSub')}>
           {data.events.length === 0 ? (
-            <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>No releases in this window. Widen the date range or clear the filters.</p>
+            <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>{t('economy.noReleases')}</p>
           ) : (
             <DataTable
-              head={['Indicator', 'Country', 'Period', 'Actual', 'Previous', 'Imp.']}
+              head={[t('economy.hIndicator'), t('economy.hCountry'), t('economy.hPeriod'), t('economy.hActual'), t('economy.hPrevious'), t('economy.hImp')]}
               rows={data.events.map((e, i) => ({
                 href: `/economy/indicator/${e.slug}`,
                 cells: [
@@ -109,13 +111,13 @@ export default function EconomyCalendar() {
 
       {data && data.failed.length > 0 && (
         <div style={{ marginTop: space[12] }}>
-          <ErrorState title={`${data.failed.length} series could not be read`} detail={data.failed.map((f) => `${f.symbol}: ${f.reason}`).join(' · ')} />
+          <ErrorState title={t('economy.seriesUnreadable', { n: data.failed.length })} detail={data.failed.map((f) => `${f.symbol}: ${f.reason}`).join(' · ')} />
         </div>
       )}
 
       <p style={{ marginTop: space[16], fontSize: fontSize[11], color: themeColor.labelTertiary }}>{data?.derived}</p>
       <p style={{ marginTop: space[8], fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-        Looking for a single series? Open it from the <Link href="/economy/indicator" style={{ color: themeColor.blue }}>indicator explorer</Link>.
+        {t('economy.calendarHintPre')} <Link href="/economy/indicator" style={{ color: themeColor.blue }}>{t('economy.calendarHintLink')}</Link>.
       </p>
     </main>
   );

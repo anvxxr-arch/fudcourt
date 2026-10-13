@@ -7,36 +7,41 @@ export function DetailTable({ data, type }: { data: QuoteEnvelope; type: TickerT
   const quotes = data.quotes ?? [];
   return (
     <>
-      <Table>
-        <THead>
-          <TR style={{ borderBottom: `1px solid ${themeColor.separator}`, color: themeColor.labelTertiary }}>
-            <TH style={{ padding: space[8] }}>Venue</TH>
-            <TH style={{ padding: space[8] }}>Instrument</TH>
-            <TH align="right" style={{ padding: space[8] }}>Last</TH>
-            <TH align="right" style={{ padding: space[8] }}>Bid</TH>
-            <TH align="right" style={{ padding: space[8] }}>Ask</TH>
-            <TH align="right" style={{ padding: space[8] }}>24h %</TH>
-            <TH align="right" style={{ padding: space[8] }}>Volume</TH>
-            {type !== 'spot' && <TH align="right" style={{ padding: space[8] }}>Open interest</TH>}
-            {type === 'swap' && <TH align="right" style={{ padding: space[8] }}>Funding</TH>}
-          </TR>
-        </THead>
-        <TBody>
-          {quotes.map(q => (
-            <TR key={q.exchange} style={{ borderBottom: `1px solid ${themeColor.separator}`, opacity: q.last === null ? 0.55 : 1 }}>
-              <TD style={{ padding: space[8], color: themeColor.labelPrimary, fontWeight: fontWeight.bold }}>{q.exchange}</TD>
-              <TD mono style={{ padding: space[8], color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{q.symbol}</TD>
-              <TD align="right" mono style={{ padding: space[8], color: q.last === null ? themeColor.labelTertiary : themeColor.blue }}>{fmtPrice(q.last, q.settle)}</TD>
-              <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>{fmtPrice(q.bid, q.settle)}</TD>
-              <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>{fmtPrice(q.ask, q.settle)}</TD>
-              <TD align="right" mono style={{ padding: space[8], color: chgColor(q.change24h) }}>{fmtPct(q.change24h)}</TD>
-              <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>{fmtVol(q.quoteVolume)}</TD>
-              {type !== 'spot' && <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>{fmtOi(q.openInterest)}</TD>}
-              {type === 'swap' && <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>{fmtFunding(q.fundingRate)}</TD>}
+      {/* The 9-column swap table cannot shrink below its content width at 390px;
+          the wrapper is the same one DataTable and the ticker board use, so the
+          table scrolls inside its card instead of widening the document. */}
+      <div style={{ overflowX: 'auto' }}>
+        <Table>
+          <THead>
+            <TR style={{ borderBottom: `1px solid ${themeColor.separator}`, color: themeColor.labelTertiary }}>
+              <TH style={{ padding: space[8] }}>Venue</TH>
+              <TH style={{ padding: space[8] }}>Instrument</TH>
+              <TH align="right" style={{ padding: space[8] }}>Last</TH>
+              <TH align="right" style={{ padding: space[8] }}>Bid</TH>
+              <TH align="right" style={{ padding: space[8] }}>Ask</TH>
+              <TH align="right" style={{ padding: space[8] }}>24h %</TH>
+              <TH align="right" style={{ padding: space[8] }}>Volume</TH>
+              {type !== 'spot' && <TH align="right" style={{ padding: space[8] }}>Open interest</TH>}
+              {type === 'swap' && <TH align="right" style={{ padding: space[8] }}>Funding</TH>}
             </TR>
-          ))}
-        </TBody>
-      </Table>
+          </THead>
+          <TBody>
+            {quotes.map(q => (
+              <TR key={q.exchange} style={{ borderBottom: `1px solid ${themeColor.separator}`, opacity: q.last === null ? 0.55 : 1 }}>
+                <TD style={{ padding: space[8], color: themeColor.labelPrimary, fontWeight: fontWeight.bold }}>{q.exchange}</TD>
+                <TD mono style={{ padding: space[8], color: themeColor.labelTertiary, fontSize: fontSize[11] }}>{q.symbol}</TD>
+                <TD align="right" mono style={{ padding: space[8], color: q.last === null ? themeColor.labelTertiary : themeColor.blue }}>{fmtPrice(q.last, q.settle)}</TD>
+                <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>{fmtPrice(q.bid, q.settle)}</TD>
+                <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>{fmtPrice(q.ask, q.settle)}</TD>
+                <TD align="right" mono style={{ padding: space[8], color: chgColor(q.change24h) }}>{fmtPct(q.change24h)}</TD>
+                <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>{fmtVol(q.quoteVolume)}</TD>
+                {type !== 'spot' && <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>{fmtOi(q.openInterest)}</TD>}
+                {type === 'swap' && <TD align="right" mono style={{ padding: space[8], color: themeColor.labelPrimary }}>{fmtFunding(q.fundingRate)}</TD>}
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </div>
       {data.notListed.length > 0 && (
         <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginTop: space[8] }}>
           Not listed on this instrument: {data.notListed.join(', ')}. That is a fact about the market, not a failed venue.

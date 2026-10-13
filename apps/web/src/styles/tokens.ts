@@ -87,8 +87,12 @@ export const themeColor: { [K in keyof typeof color]: string } = Object.fromEntr
 export const space = { 0: 0, 4: 4, 8: 8, 12: 12, 16: 16, 20: 20, 24: 24, 32: 32, 40: 40 } as const;
 /** px continuous corners, plus the `'50%'` keyword for round avatars/dots. */
 export const radius = { 0: 0, 8: 8, 10: 10, 12: 12, 16: 16, 20: 20, circle: '50%' } as const;
-/** px, HIG type scale (largeTitle 34 … caption2 11) plus the two glyph steps (10, 8) the caret and sort-indicator atoms ship with. */
-export const fontSize = { 8: 8, 10: 10, 11: 11, 12: 12, 13: 13, 15: 15, 17: 17, 20: 20, 22: 22, 28: 28, 34: 34 } as const;
+/** px, HIG type scale (largeTitle 34 … caption2) plus the two glyph steps (10, 8) the caret and sort-indicator atoms ship with.
+ *  caption2 (the `11` step) is the audit's legibility floor: the scale keeps a `11` rung as
+ *  the *smallest end of the note/footer range* but renders it at 12px, so the radix-11 name
+ *  stays for the ~381 call sites while nothing ships sub-12px body text (Lighthouse
+ *  `font-size`). The two glyph steps (10, 8) are icons/glyphs, not legible copy. */
+export const fontSize = { 8: 8, 10: 10, 11: 12, 12: 12, 13: 13, 15: 15, 17: 17, 20: 20, 22: 22, 28: 28, 34: 34 } as const;
 export const fontWeight = { regular: 400, medium: 500, semibold: 600, bold: 700 } as const;
 /** unitless CSS ratios (not px). `none` is the single-line box: glyphs get no extra leading. */
 export const lineHeight = { none: 1, tight: 1.3, normal: 1.6, loose: 1.7 } as const;
@@ -401,7 +405,7 @@ export const fcType = {
   'data-lg': { size: 20, line: 28, weight: 550, family: 'mono' },
   'data-md': { size: 14, line: 20, weight: 500, family: 'mono' },
   'data-sm': { size: 12, line: 18, weight: 500, family: 'mono' },
-  'data-xs': { size: 11, line: 16, weight: 500, family: 'mono' },
+  'data-xs': { size: 12, line: 16, weight: 500, family: 'mono' },
 } as const;
 /** Icon sizes (plan §18). 16–20px is the default application size. */
 export const iconSize = {

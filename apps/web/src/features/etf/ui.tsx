@@ -22,6 +22,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, space } from '@/styles/tokens';
+import { useT } from '@/lib/i18n/t';
 import { setBoardStale } from '@/lib/stale-board';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
@@ -70,6 +71,7 @@ function topIssuersText(day: Parameters<typeof topIssuers>[0]): string {
 }
 
 export default function EtfFlowsPage() {
+  const t = useT();
   const [sources, setSources] = useState<EtfSources | null>(null);
 
   useEffect(() => {
@@ -90,17 +92,17 @@ export default function EtfFlowsPage() {
     return buildEtfBoard(rows, { recentDays: RECENT_DAYS });
   }, [sources]);
 
-  if (sources === null) return <Loading what="the ETF flow feed" />;
+  if (sources === null) return <Loading what={t('crypto.etf.loadingWhat')} />;
 
   if (sources.error) {
-    return <ErrorState title="Could not load the ETF flow feed" detail={sources.error} />;
+    return <ErrorState title={t('crypto.etf.loadFailTitle')} detail={sources.error} />;
   }
 
   if (!board) {
     return (
       <ErrorState
-        title="The ETF flow feed returned no rows"
-        detail="An empty payload that claims success is reported as a failure, not rendered as an empty board."
+        title={t('crypto.etf.emptyTitle')}
+        detail={t('crypto.etf.emptyDetail')}
       />
     );
   }
@@ -114,31 +116,31 @@ export default function EtfFlowsPage() {
       ) : null}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
-          label="Latest net flow"
+          label={t('crypto.etf.statLatestFlow')}
           value={signedUsd(latest?.changeUsd)}
           tone={tone(latest?.changeUsd)}
-          hint={latest ? dayLabel(latest.date) : 'no day in the payload'}
+          hint={latest ? dayLabel(latest.date) : t('crypto.etf.hintNoDay')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Latest net BTC"
+          label={t('crypto.etf.statLatestBtc')}
           value={signedBtc(latest?.change)}
           tone={tone(latest?.change)}
-          hint={latest ? `${topIssuers(latest).length} issuer(s) listed` : 'no day in the payload'}
+          hint={latest ? t('crypto.etf.hintIssuersListed', { n: topIssuers(latest).length }) : t('crypto.etf.hintNoDay')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Cumulative net flow"
+          label={t('crypto.etf.statCumulative')}
           value={signedUsd(board.cumulativeChangeUsd)}
           tone={tone(board.cumulativeChangeUsd)}
-          hint={`over ${board.dayCount} day(s)`}
+          hint={t('crypto.etf.hintOverDays', { n: board.dayCount })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 140px' }}
         />
         <Stat
-          label="Days covered"
+          label={t('crypto.etf.statDaysCovered')}
           value={String(board.dayCount)}
           hint={`${board.windowStart ?? '—'} → ${board.windowEnd ?? '—'}`}
           valueSize={fontSize[17]}
@@ -147,9 +149,9 @@ export default function EtfFlowsPage() {
       </div>
 
       <div style={{ marginTop: space[12] }}>
-        <Card title="Recent daily flows" subtitle={`the ${board.recentDays}-day recent window — net creations/redemptions and the largest issuers each day`}>
+        <Card title={t('crypto.etf.recentTitle')} subtitle={t('crypto.etf.recentSubtitle', { n: board.recentDays })}>
           <DataTable
-            head={['Date', 'Net flow (USD)', 'Net BTC', 'Top issuers by |flow|']}
+            head={[t('col.date'), t('crypto.etf.headNetFlowUsd'), t('crypto.etf.headNetBtc'), t('crypto.etf.headTopIssuers')]}
             rows={board.recent.map((day) => ({
               cells: [
                 <span key="d" style={{ fontWeight: fontWeight.semibold }}>{dayLabel(day.date)}</span>,
@@ -160,15 +162,15 @@ export default function EtfFlowsPage() {
             }))}
           />
           <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-            {board.sliceNote}. The latest row is the newest day upstream has published and may be an incomplete session.
+            {board.sliceNote}. {t('crypto.etf.recentFootnote')}
           </p>
         </Card>
       </div>
 
       <div style={{ marginTop: space[12] }}>
-        <Card title="Per-issuer totals" subtitle={`summed across all ${board.dayCount} day(s) the payload covers, ranked by absolute flow`}>
+        <Card title={t('crypto.etf.issuerTitle')} subtitle={t('crypto.etf.issuerSubtitle', { n: board.dayCount })}>
           <DataTable
-            head={['Issuer', 'Net flow (USD)', 'Net BTC', 'Days present']}
+            head={[t('crypto.etf.headIssuer'), t('crypto.etf.headNetFlowUsd'), t('crypto.etf.headNetBtc'), t('crypto.etf.headDaysPresent')]}
             rows={board.tickerTotals.map((t) => ({
               cells: [
                 <span key="k" style={{ fontWeight: fontWeight.semibold, color: t.unlabelled ? themeColor.labelTertiary : themeColor.labelPrimary }}>{t.ticker}</span>,
@@ -179,8 +181,7 @@ export default function EtfFlowsPage() {
             }))}
           />
           <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-            Rows the upstream ships without a ticker are grouped as &ldquo;unlabelled (upstream)&rdquo; — a real
-            absence, never a fabricated name and never a zero.
+            {t('crypto.etf.unlabelledFootnote')}
           </p>
         </Card>
       </div>

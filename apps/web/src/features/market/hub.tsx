@@ -3,6 +3,8 @@
 import { useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { themeColor, fontFamily, fontSize, lineHeight, radius, space } from '@/styles/tokens';
+import { useT } from '@/lib/i18n/t';
+import type { DictKey } from '@/lib/i18n/en';
 import dynamic from 'next/dynamic';
 const TickerPage = dynamic(() => import('@/features/market/ticker/ui'), { ssr: false });
 const TrackerPage = dynamic(() => import('@/features/overview/tracker'), { ssr: false });
@@ -25,55 +27,54 @@ import type { StockRegion } from '@/features/market/stock';
 // section chrome, so the providers' envelopes are untouched.
 export type MarketSection = 'crypto' | 'forex' | 'commodity' | 'stock' | 'trench';
 
-const SECTIONS: { key: MarketSection; label: string; href: string; blurb: string }[] = [
+const SECTIONS: { key: MarketSection; labelKey: DictKey; href: string; blurbKey: DictKey }[] = [
   {
     key: 'crypto',
-    label: 'Crypto',
+    labelKey: 'market.sectionCrypto',
     href: '/market/crypto',
-    blurb:
-      'Centralized-exchange instruments (spot, perpetual, dated future, option) cross-checked across venues, a top-250 market-cap board, and the DeFi TVL board (DeFiLlama).',
+    blurbKey: 'market.sectionCryptoBlurb',
   },
   {
     key: 'forex',
-    label: 'Forex',
+    labelKey: 'market.sectionForex',
     href: '/market/forex',
-    blurb: 'Currency pairs — curated majors + Asia from the exchangerate-api free feed (ECB-fed, republished daily).',
+    blurbKey: 'market.sectionForexBlurb',
   },
   {
     key: 'commodity',
-    label: 'Commodity',
+    labelKey: 'market.sectionCommodity',
     href: '/market/commodity',
-    blurb: 'Metals, energy and agriculture — front-month futures from Yahoo Finance.',
+    blurbKey: 'market.sectionCommodityBlurb',
   },
   {
     key: 'stock',
-    label: 'Stock',
+    labelKey: 'market.sectionStock',
     href: '/market/stock',
-    blurb: 'US, Asia and Europe indices and blue chips from Yahoo Finance.',
+    blurbKey: 'market.sectionStockBlurb',
   },
   {
     key: 'trench',
-    label: 'Trench',
+    labelKey: 'market.sectionTrench',
     href: '/market/trench',
-    blurb: 'On-chain DEX pairs and the live trench, from DexScreener.',
+    blurbKey: 'market.sectionTrenchBlurb',
   },
 ];
 
 const CRYPTO_TABS = [
-  { key: 'instruments', label: 'Instruments' },
-  { key: 'prices', label: 'Prices' },
-  { key: 'defi', label: 'DeFi TVL' },
+  { key: 'instruments', labelKey: 'market.tabInstruments' },
+  { key: 'prices', labelKey: 'market.tabPrices' },
+  { key: 'defi', labelKey: 'market.tabDefi' },
 ] as const;
 
 const TRENCH_TABS = [
-  { key: 'pairs', label: 'Pairs' },
-  { key: 'trench', label: 'Trench' },
+  { key: 'pairs', labelKey: 'market.tabPairs' },
+  { key: 'trench', labelKey: 'market.tabTrench' },
 ] as const;
 
 const STOCK_TABS = [
-  { key: 'us', label: 'US' },
-  { key: 'asia', label: 'Asia' },
-  { key: 'europe', label: 'Europe' },
+  { key: 'us', labelKey: 'market.tabUs' },
+  { key: 'asia', labelKey: 'market.tabAsia' },
+  { key: 'europe', labelKey: 'market.tabEurope' },
 ] as const;
 
 const tabStyle = (active: boolean): CSSProperties => ({
@@ -88,6 +89,7 @@ const tabStyle = (active: boolean): CSSProperties => ({
 });
 
 function Overview() {
+  const t = useT();
   const cardStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -102,11 +104,11 @@ function Overview() {
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[12] }}>
       {SECTIONS.map((s) => (
         <Link key={s.key} href={s.href} style={cardStyle}>
-          <strong style={{ color: themeColor.blue }}>{s.label}</strong>
+          <strong style={{ color: themeColor.blue }}>{t(s.labelKey)}</strong>
           {/* The blurb is prose, not data. It inherits the shell's mono stack, which reads as
               terminal noise at 12px — the sans stack is what the type scale is designed for
               at this size, and it keeps mono meaning "a figure" everywhere else on the board. */}
-          <span style={{ color: themeColor.labelTertiary, fontFamily: fontFamily.sans, fontSize: fontSize[12], lineHeight: lineHeight.normal }}>{s.blurb}</span>
+          <span style={{ color: themeColor.labelTertiary, fontFamily: fontFamily.sans, fontSize: fontSize[12], lineHeight: lineHeight.normal }}>{t(s.blurbKey)}</span>
         </Link>
       ))}
     </div>
@@ -114,13 +116,14 @@ function Overview() {
 }
 
 function CryptoSection() {
+  const t = useT();
   const [tab, setTab] = useState<'instruments' | 'prices' | 'defi'>('instruments');
   return (
     <>
       <div style={{ display: 'flex', gap: space[8], marginBottom: space[12], flexWrap: 'wrap' }}>
-        {CRYPTO_TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={tabStyle(tab === t.key)}>
-            {t.label}
+        {CRYPTO_TABS.map((tb) => (
+          <button key={tb.key} aria-pressed={tab === tb.key} onClick={() => setTab(tb.key)} style={tabStyle(tab === tb.key)}>
+            {t(tb.labelKey)}
           </button>
         ))}
       </div>
@@ -130,13 +133,14 @@ function CryptoSection() {
 }
 
 function TrenchSection() {
+  const t = useT();
   const [tab, setTab] = useState<'pairs' | 'trench'>('pairs');
   return (
     <>
       <div style={{ display: 'flex', gap: space[8], marginBottom: space[12], flexWrap: 'wrap' }}>
-        {TRENCH_TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={tabStyle(tab === t.key)}>
-            {t.label}
+        {TRENCH_TABS.map((tb) => (
+          <button key={tb.key} aria-pressed={tab === tb.key} onClick={() => setTab(tb.key)} style={tabStyle(tab === tb.key)}>
+            {t(tb.labelKey)}
           </button>
         ))}
       </div>
@@ -146,13 +150,14 @@ function TrenchSection() {
 }
 
 function StockSection() {
+  const t = useT();
   const [tab, setTab] = useState<StockRegion>('us');
   return (
     <>
       <div style={{ display: 'flex', gap: space[8], marginBottom: space[12], flexWrap: 'wrap' }}>
-        {STOCK_TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={tabStyle(tab === t.key)}>
-            {t.label}
+        {STOCK_TABS.map((tb) => (
+          <button key={tb.key} aria-pressed={tab === tb.key} onClick={() => setTab(tb.key)} style={tabStyle(tab === tb.key)}>
+            {t(tb.labelKey)}
           </button>
         ))}
       </div>

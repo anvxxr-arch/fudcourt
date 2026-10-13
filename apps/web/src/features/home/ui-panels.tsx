@@ -11,7 +11,7 @@ import {
   type ForexEnvelope,
   type QuotesEnvelope,
 } from './client';
-import { Change, CoinCell, cardStyle, h3Style, listRowStyle, noteStyle, useJson } from './ui-shared';
+import { Change, CoinCell, cardStyle, h3Style, listRowStyle, noteStyle, useJson, NOTE_MIN_HEIGHT, ROW_MIN_HEIGHT } from './ui-shared';
 import { Sparkline } from '@/ui/sparkline';
 
 // ---- sections that need more than a single fetch ----------------------------
@@ -23,7 +23,12 @@ export function MoversColumn({ title, url }: { title: string; url: string }) {
     <div style={cardStyle}>
       <h3 style={h3Style}>{title}</h3>
       {error && <Banner variant="error">{error}</Banner>}
-      {loading && !error && <Loading label={`loading live figures…`} />}
+      {loading && !error && (
+        // Same reservation as a Panel body: 6 single-line rows plus the note.
+        <div style={{ minHeight: 6 * ROW_MIN_HEIGHT + NOTE_MIN_HEIGHT }}>
+          <Loading label={`loading live figures…`} />
+        </div>
+      )}
       {!error && data && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
           {data.rows.slice(0, 6).map((r, i) => (
@@ -47,7 +52,11 @@ export function FxColumn() {
     <div style={cardStyle}>
       <h3 style={h3Style}>FX majors</h3>
       {error && <Banner variant="error">{error}</Banner>}
-      {loading && !error && <Loading label="loading live figures…" />}
+      {loading && !error && (
+        <div style={{ minHeight: 6 * ROW_MIN_HEIGHT + NOTE_MIN_HEIGHT }}>
+          <Loading label="loading live figures…" />
+        </div>
+      )}
       {!error && data && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
           {data.pairs.slice(0, 5).map(p => (

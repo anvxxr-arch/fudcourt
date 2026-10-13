@@ -27,6 +27,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, radius, space } from '@/styles/tokens';
 import { dash, fmtPrice, fmtPct } from '@/lib/format';
+import { useT } from '@/lib/i18n/t';
 import { setBoardStale } from '@/lib/stale-board';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
@@ -125,10 +126,11 @@ function pagerStyle(disabled: boolean): CSSProperties {
 
 /** The funding rows of one extreme, as a small table. */
 function FundingTable({ rows }: { rows: readonly FundingRow[] }) {
-  if (rows.length === 0) return <EmptyState>The upstream served no funding rows for this side.</EmptyState>;
+  const t = useT();
+  if (rows.length === 0) return <EmptyState>{t('crypto.derivatives.noFundingRows')}</EmptyState>;
   return (
     <DataTable
-      head={['Exchange', 'Symbol', 'Funding rate', 'Original symbol']}
+      head={[t('crypto.global.headExchange'), t('col.symbol'), t('crypto.derivatives.headFundingRate'), t('crypto.derivatives.headOriginalSymbol')]}
       rows={rows.map((r) => ({
         cells: [
           <span key="e" style={{ fontWeight: fontWeight.semibold }}>{r.exchangeName}</span>,
@@ -143,10 +145,11 @@ function FundingTable({ rows }: { rows: readonly FundingRow[] }) {
 
 /** The per-venue liquidation table for the selected interval. */
 function LiquidationTable({ rows }: { rows: readonly LiquidationRow[] }) {
-  if (rows.length === 0) return <EmptyState>The upstream served no venue rows for this interval.</EmptyState>;
+  const t = useT();
+  if (rows.length === 0) return <EmptyState>{t('crypto.derivatives.noVenueRows')}</EmptyState>;
   return (
     <DataTable
-      head={['Exchange', 'Total turnover', 'Long turnover', 'Short turnover', 'Long ratio', 'Short ratio']}
+      head={[t('crypto.global.headExchange'), t('crypto.derivatives.headTotalTurnover'), t('crypto.derivatives.headLongTurnover'), t('crypto.derivatives.headShortTurnover'), t('crypto.derivatives.headLongRatio'), t('crypto.derivatives.headShortRatio')]}
       rows={rows.map((r) => ({
         cells: [
           <span key="e" style={{ fontWeight: fontWeight.semibold }}>{r.exchangeName}</span>,
@@ -162,6 +165,7 @@ function LiquidationTable({ rows }: { rows: readonly LiquidationRow[] }) {
 }
 
 export default function DerivativesPage() {
+  const t = useT();
   const [sources, setSources] = useState<DerivativeSources | null>(null);
   const [interval, setInterval] = useState<LiqInterval>(LIQ_DEFAULT_INTERVAL);
   const [liq, setLiq] = useState<LiquidationRead | null>(null);
@@ -197,7 +201,7 @@ export default function DerivativesPage() {
   const fundingMin = useMemo(() => (funding ? orderFunding(funding.min, 'min') : []), [funding]);
   const fundingMax = useMemo(() => (funding ? orderFunding(funding.max, 'max') : []), [funding]);
 
-  if (sources === null) return <Loading what="the derivatives tape" />;
+  if (sources === null) return <Loading what={t('crypto.derivatives.loadingWhat')} />;
 
   const statistics = sources.statistics?.data ?? null;
   const marketRows = sources.markets?.data ?? null;
@@ -207,53 +211,53 @@ export default function DerivativesPage() {
     <>
       {liq?.data?.stale ? (
         <StaleNotice
-          source={`CoinAnk ${interval} liquidations`}
+          source={t('crypto.derivatives.staleLiq', { interval })}
           fetchedAt={liq.data.fetchedAt}
           ageSec={liq.data.staleAgeSec ?? 0}
         />
       ) : null}
       {sources.longShort?.stale ? (
         <StaleNotice
-          source="CoinAnk long/short"
+          source={t('crypto.derivatives.staleLongShort')}
           fetchedAt={sources.longShort.fetchedAt}
           ageSec={sources.longShort.staleAgeSec ?? 0}
         />
       ) : null}
       {statistics === null ? (
         <ErrorState
-          title="Could not read the market statistics"
-          detail={sources.statisticsError ?? 'the upstream returned an empty payload and named no reason'}
+          title={t('crypto.derivatives.statsFailTitle')}
+          detail={sources.statisticsError ?? t('crypto.derivatives.statsFailDetail')}
         />
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
           <Stat
-            label="24h volume"
+            label={t('crypto.derivatives.statVolume24h')}
             value={usd(statistics.volUsd)}
             tone={signTone(statistics.volH24Chain)}
-            hint={`${fmtPct(statistics.volH24Chain)} vs prior 24h`}
+            hint={t('crypto.derivatives.hintVsPrior24h', { pct: fmtPct(statistics.volH24Chain) })}
             valueSize={fontSize[17]}
             style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
           />
           <Stat
-            label="Open interest"
+            label={t('crypto.derivatives.statOpenInterest')}
             value={usd(statistics.openInterest)}
             tone={signTone(statistics.oiH24Chain)}
-            hint={`${fmtPct(statistics.oiH24Chain)} over 24h`}
+            hint={t('crypto.derivatives.hintOver24h', { pct: fmtPct(statistics.oiH24Chain) })}
             valueSize={fontSize[17]}
             style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
           />
           <Stat
-            label="24h liquidations"
+            label={t('crypto.derivatives.statLiquidations24h')}
             value={usd(statistics.liquidationH24VolUsd)}
             tone={signTone(statistics.lqH24Chain)}
-            hint={`${count(statistics.liquidationH24Num)} events · ${fmtPct(statistics.lqH24Chain)} vs prior`}
+            hint={t('crypto.derivatives.hintLiqEvents', { count: count(statistics.liquidationH24Num), pct: fmtPct(statistics.lqH24Chain) })}
             valueSize={fontSize[17]}
             style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
           />
           <Stat
-            label="Long / short split"
+            label={t('crypto.derivatives.statLongShortSplit')}
             value={`${sharePct(statistics.longRate)} / ${sharePct(statistics.shortRate)}`}
-            hint="long share / short share of the book (they sum to 100)"
+            hint={t('crypto.derivatives.hintLongShortShare')}
             valueSize={fontSize[17]}
             style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
           />
@@ -261,15 +265,15 @@ export default function DerivativesPage() {
       )}
 
       <div style={{ marginTop: space[12] }}>
-        <Card title="Perpetual markets" subtitle="the market tape CoinGlass serves — price, open interest, volume, funding and 24h liquidations">
+        <Card title={t('crypto.derivatives.marketsTitle')} subtitle={t('crypto.derivatives.marketsSubtitle')}>
           {marketRows === null || marketRows.length === 0 ? (
             <ErrorState
-              title="Could not read the market tape"
-              detail={sources.marketsError ?? 'the upstream returned no rows and named no reason'}
+              title={t('crypto.derivatives.marketsFailTitle')}
+              detail={sources.marketsError ?? t('crypto.derivatives.marketsFailDetail')}
             />
           ) : (
             <DataTable
-              head={['Symbol', 'Price', '24h %', 'Open interest', 'OI 24h %', '24h volume', 'Avg funding', 'Liq 24h']}
+              head={[t('col.symbol'), t('col.price'), t('crypto.head.change24h'), t('crypto.derivatives.headOpenInterest'), t('crypto.derivatives.headOi24h'), t('crypto.head.volume24h'), t('crypto.derivatives.headAvgFunding'), t('crypto.derivatives.headLiq24h')]}
               rows={marketRows.map((m) => ({
                 cells: [
                   <span key="s" style={{ fontWeight: fontWeight.semibold }}>{m.symbol}</span>,
@@ -286,17 +290,17 @@ export default function DerivativesPage() {
           )}
           <p style={FOOTNOTE}>
             {sources.markets?.upstreamCount !== undefined
-              ? `CoinGlass served ${sources.markets.upstreamCount} rows. `
-              : ''}
-            A missing field renders as a dash, never a zero.
+              ? t('crypto.derivatives.marketsServed', { n: sources.markets.upstreamCount })
+              : ''}{' '}
+            {t('crypto.derivatives.missingFieldNote')}
           </p>
         </Card>
       </div>
 
       <div style={{ marginTop: space[12] }}>
         <Card
-          title="Liquidations by venue"
-          subtitle="total / long / short turnover per exchange for the selected window"
+          title={t('crypto.derivatives.liqTitle')}
+          subtitle={t('crypto.derivatives.liqSubtitle')}
           right={
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[4] }}>
               {LIQ_INTERVALS.map((iv) => (
@@ -308,20 +312,19 @@ export default function DerivativesPage() {
           }
         >
           {liq === null ? (
-            <Loading what={`the ${interval} liquidations`} />
+            <Loading what={t('crypto.derivatives.liqLoadingWhat', { interval })} />
           ) : liq.error ? (
-            <ErrorState title={`Could not read the ${interval} liquidations`} detail={liq.error} />
+            <ErrorState title={t('crypto.derivatives.liqFailTitle', { interval })} detail={liq.error} />
           ) : liqRows === null || liqRows.length === 0 ? (
             <ErrorState
-              title={`The ${interval} liquidations returned no rows`}
-              detail="An empty payload that claims success is reported as a failure, not rendered as an empty board."
+              title={t('crypto.derivatives.liqEmptyTitle', { interval })}
+              detail={t('crypto.derivatives.liqEmptyDetail')}
             />
           ) : (
             <LiquidationTable rows={liqRows} />
           )}
           <p style={FOOTNOTE}>
-            The interval is one of {LIQ_INTERVALS.join(', ')} — the six windows the upstream answers. Any other
-            interval answers a wall of zeros, so the board never asks for one and a zero here is a measurement.
+            {t('crypto.derivatives.liqFootnote', { intervals: LIQ_INTERVALS.join(', ') })}
           </p>
         </Card>
       </div>
@@ -329,18 +332,18 @@ export default function DerivativesPage() {
       <div style={{ marginTop: space[12] }}>
         {funding === null ? (
           <ErrorState
-            title="Could not read the funding-rate extremes"
-            detail={sources.fundingError ?? 'the upstream returned an empty payload and named no reason'}
+            title={t('crypto.derivatives.fundingFailTitle')}
+            detail={sources.fundingError ?? t('crypto.derivatives.fundingFailDetail')}
           />
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[12] }}>
             <div style={{ flex: '1 1 340px', minWidth: 0 }}>
-              <Card title="Funding — most negative" subtitle="the 50 most negative rates upstream serves, most negative first">
+              <Card title={t('crypto.derivatives.fundingNegTitle')} subtitle={t('crypto.derivatives.fundingNegSubtitle')}>
                 <FundingTable rows={fundingMin} />
               </Card>
             </div>
             <div style={{ flex: '1 1 340px', minWidth: 0 }}>
-              <Card title="Funding — most positive" subtitle="the 50 most positive rates upstream serves, most positive first">
+              <Card title={t('crypto.derivatives.fundingPosTitle')} subtitle={t('crypto.derivatives.fundingPosSubtitle')}>
                 <FundingTable rows={fundingMax} />
               </Card>
             </div>
@@ -350,18 +353,18 @@ export default function DerivativesPage() {
 
       <div style={{ marginTop: space[12] }}>
         <Card
-          title="Long / short ratio"
-          subtitle="the book's split per exchange — the columns are the upstream's own ratio families (a*, b*) verbatim"
+          title={t('crypto.derivatives.longShortTitle')}
+          subtitle={t('crypto.derivatives.longShortSubtitle')}
         >
           {sources.longShort === null ? (
             <ErrorState
-              title="Could not read the long/short feed"
-              detail={sources.longShortError ?? 'the upstream returned an empty payload and named no reason'}
+              title={t('crypto.derivatives.longShortFailTitle')}
+              detail={sources.longShortError ?? t('crypto.derivatives.longShortFailDetail')}
             />
           ) : longShortPage === null || longShortPage.total === 0 ? (
             <ErrorState
-              title="The long/short feed returned no rows"
-              detail="An empty payload that claims success is reported as a failure, not rendered as an empty board."
+              title={t('crypto.derivatives.longShortEmptyTitle')}
+              detail={t('crypto.derivatives.longShortEmptyDetail')}
             />
           ) : (
             <>
@@ -380,34 +383,32 @@ export default function DerivativesPage() {
               />
               <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: space[8], marginTop: space[8] }}>
                 <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={longShortPage.page <= 1} style={pagerStyle(longShortPage.page <= 1)}>
-                  ‹ Prev
+                  {t('crypto.common.prev')}
                 </button>
                 <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-                  page {longShortPage.page} / {longShortPage.pages} · rows {longShortPage.from}–{longShortPage.to} of {longShortPage.total}
+                  {t('crypto.derivatives.pageNote', { page: longShortPage.page, pages: longShortPage.pages, from: longShortPage.from, to: longShortPage.to, total: longShortPage.total })}
                 </span>
                 <button type="button" onClick={() => setPage((p) => Math.min(longShortPage.pages, p + 1))} disabled={longShortPage.page >= longShortPage.pages} style={pagerStyle(longShortPage.page >= longShortPage.pages)}>
-                  Next ›
+                  {t('crypto.common.next')}
                 </button>
               </div>
             </>
           )}
           <p style={FOOTNOTE}>
-            The long/short feed is served {longShortPage ? longShortPage.total : dash} rows
-            {sources.longShort.upstreamCount !== undefined && sources.longShort.upstreamCount !== longShortPage?.total
-              ? ` (upstream reports ${sources.longShort.upstreamCount})`
-              : ''}{' '}
-            and paged client-side at {LONGSHORT_PAGE_SIZE} per page; the slice in view is stated above. A dash is a
-            real absence — that exchange does not list that coin — never a zero.
+            {t('crypto.derivatives.longShortFootnote', {
+              total: longShortPage ? longShortPage.total : dash,
+              upstream:
+                sources.longShort.upstreamCount !== undefined && sources.longShort.upstreamCount !== longShortPage?.total
+                  ? t('crypto.derivatives.longShortUpstreamNote', { n: sources.longShort.upstreamCount })
+                  : '',
+              pageSize: LONGSHORT_PAGE_SIZE,
+            })}
           </p>
         </Card>
       </div>
 
       <p style={{ marginTop: space[16], fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-        Every figure is read verbatim from the venue aggregates — CoinGlass for the market tape and the funding
-        extremes, CoinAnk for the per-venue liquidations and the long/short ratio. The board derives only the ORDER
-        of the funding arrays and the long/short page slice; it estimates nothing about the market. A missing value
-        renders as a dash, never a zero, and a failed source renders as an error on its own side, never as an empty
-        table.
+        {t('crypto.derivatives.routeFootnote')}
       </p>
     </>
   );

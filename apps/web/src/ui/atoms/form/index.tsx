@@ -221,8 +221,10 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
           }}
         >
           {/* The tick is drawn with a CSS border rather than a glyph so it inherits the
-              control's colour and needs no icon dependency. */}
-          <span style={{ width: box - 8, height: box - 8, background: 'currentColor', clipPath: 'inset(0 0 0 0)' }} className="fc-checkbox-tick" />
+              control's colour and needs no icon dependency. Its visibility is the
+              `:checked` rule in accessibility.css — painting it here would make every
+              checkbox look ticked. */}
+          <span className="fc-checkbox-tick" style={{ width: box - 8, height: box - 8, clipPath: 'inset(0 0 0 0)' }} />
         </span>
       </span>
       <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
@@ -284,7 +286,7 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(function Radio(
             background: cssVar('surface-primary'),
           }}
         >
-          <span className="fc-radio-dot" style={{ width: box - 8, height: box - 8, borderRadius: 'var(--fc-radius-full)', background: cssVar('brand-primary') }} />
+          <span className="fc-radio-dot" style={{ width: box - 8, height: box - 8, borderRadius: 'var(--fc-radius-full)' }} />
         </span>
       </span>
       <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
@@ -318,12 +320,16 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(function Switch(
   const w = size === 'sm' ? 28 : size === 'lg' ? 44 : 36;
   const h = size === 'sm' ? 16 : size === 'lg' ? 24 : 20;
   const knob = h - 4;
+  // The knob's checked travel: track width minus the knob minus the 2px inset
+  // on each side. Passed as a custom property so the `:checked` rule in
+  // accessibility.css can translate by exactly this much at every size.
+  const travel = w - knob - 4;
   return (
     <label
       className={['fc-switch', disabled ? 'fc-disabled' : '', className].filter(Boolean).join(' ')}
       style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--fc-space-2)', cursor: disabled ? 'not-allowed' : 'pointer', ...style }}
     >
-      <span style={{ position: 'relative', display: 'inline-flex', flex: '0 0 auto', width: w, height: h }}>
+      <span style={{ position: 'relative', display: 'inline-flex', flex: '0 0 auto', width: w, height: h, ['--fc-switch-travel' as string]: `${travel}px` }}>
         <input
           ref={ref}
           type="checkbox"
@@ -343,7 +349,6 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(function Switch(
             boxSizing: 'border-box',
             borderRadius: 'var(--fc-radius-full)',
             border: `1px solid ${cssVar('border-strong')}`,
-            background: cssVar('surface-secondary'),
             transition: 'background-color var(--fc-motion-fast) var(--fc-ease-standard), border-color var(--fc-motion-fast) var(--fc-ease-standard)',
           }}
         />
@@ -357,7 +362,6 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(function Switch(
             width: knob,
             height: knob,
             borderRadius: 'var(--fc-radius-full)',
-            background: cssVar('text-muted'),
             transition: 'transform var(--fc-motion-fast) var(--fc-ease-standard), background-color var(--fc-motion-fast) var(--fc-ease-standard)',
           }}
         />
@@ -421,6 +425,8 @@ type SelectTriggerProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'classNa
   state?: FieldState;
   /** Opens the popover. The popover itself is a Molecule and is NOT implemented here. */
   onOpen?: () => void;
+  /** Whether the popover is open — drives `aria-expanded`. */
+  open?: boolean;
   className?: string;
   style?: React.CSSProperties;
   theme?: 'light' | 'dark';
@@ -435,7 +441,7 @@ type SelectTriggerProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'classNa
  * the popover without reimplementing the control's chrome.
  */
 export const SelectTrigger = forwardRef<HTMLButtonElement, SelectTriggerProps>(function SelectTrigger(
-  { value, placeholder = 'Select…', size = 'md', state = 'default', onOpen, className, style, theme = 'light', disabled, ...rest },
+  { value, placeholder = 'Select…', size = 'md', state = 'default', open = false, onOpen, className, style, theme = 'light', disabled, ...rest },
   ref,
 ) {
   const empty = value === undefined || value === null || value === '';
@@ -445,7 +451,7 @@ export const SelectTrigger = forwardRef<HTMLButtonElement, SelectTriggerProps>(f
       type="button"
       disabled={disabled}
       aria-haspopup="listbox"
-      aria-expanded={false}
+      aria-expanded={open}
       onClick={onOpen}
       className={[focusRingClass, 'fc-select-trigger', className].filter(Boolean).join(' ')}
       style={{

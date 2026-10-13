@@ -21,6 +21,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, space } from '@/styles/tokens';
 import { dash, fmtPct, fmtPrice, fmtVolume } from '@/lib/format';
+import { useT } from '@/lib/i18n/t';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
 import { EmptyState, ErrorState, Loading } from '@/ui/feedback';
@@ -75,6 +76,7 @@ function GasTier({ label, gweiValue, seconds }: { label: string; gweiValue: Read
 }
 
 export default function GlobalPulsePage() {
+  const t = useT();
   const [sources, setSources] = useState<GlobalSources | null>(null);
 
   useEffect(() => {
@@ -94,13 +96,13 @@ export default function GlobalPulsePage() {
     });
   }, [sources]);
 
-  if (sources === null) return <Loading what="the global market pulse" />;
+  if (sources === null) return <Loading what={t('crypto.global.loadingWhat')} />;
 
   if (!board) {
     return (
       <ErrorState
-        title="Could not load the global market read"
-        detail={sources.globalError ?? 'the upstream returned no global object and named no reason'}
+        title={t('crypto.global.loadFailTitle')}
+        detail={sources.globalError ?? t('crypto.common.upstreamNoRows')}
       />
     );
   }
@@ -112,47 +114,47 @@ export default function GlobalPulsePage() {
       {/* ---- 1. whole-market stats ---------------------------------------- */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
-          label="Total market cap"
+          label={t('crypto.global.statTotalCap')}
           value={fmtVolume(g.totalMarketCap)}
-          hint={g.quoteMissing ? 'the quote block was absent upstream' : `24h ${fmtPct(g.marketCap24hChangePct)}`}
+          hint={g.quoteMissing ? t('crypto.global.hintQuoteMissing') : t('crypto.global.hint24h', { pct: fmtPct(g.marketCap24hChangePct) })}
           tone={toneOf(g.marketCap24hChangePct)}
           valueSize={fontSize[17]}
           style={TILE}
         />
         <Stat
-          label="24h volume"
+          label={t('crypto.global.statVolume24h')}
           value={fmtVolume(g.totalVolume24h)}
-          hint={g.quoteMissing ? 'the quote block was absent upstream' : `${count(g.activeMarketPairs)} active market pairs`}
+          hint={g.quoteMissing ? t('crypto.global.hintQuoteMissing') : t('crypto.global.hintActivePairs', { n: count(g.activeMarketPairs) })}
           valueSize={fontSize[17]}
           style={TILE}
         />
         <Stat
-          label="BTC dominance"
+          label={t('crypto.global.statBtcDominance')}
           value={level(g.btcDominance)}
-          hint={`${fmtPct(g.btcDominanceChange24h)} over 24h`}
+          hint={t('crypto.global.hintOver24h', { pct: fmtPct(g.btcDominanceChange24h) })}
           tone={toneOf(g.btcDominanceChange24h)}
           valueSize={fontSize[17]}
           style={TILE}
         />
         <Stat
-          label="ETH dominance"
+          label={t('crypto.global.statEthDominance')}
           value={level(g.ethDominance)}
-          hint={`${fmtPct(g.ethDominanceChange24h)} over 24h`}
+          hint={t('crypto.global.hintOver24h', { pct: fmtPct(g.ethDominanceChange24h) })}
           tone={toneOf(g.ethDominanceChange24h)}
           valueSize={fontSize[17]}
           style={TILE}
         />
         <Stat
-          label="Active exchanges"
+          label={t('crypto.global.statActiveExchanges')}
           value={count(g.activeExchanges)}
-          hint={`of ${count(g.totalExchanges)} tracked`}
+          hint={t('crypto.global.hintOfTracked', { n: count(g.totalExchanges) })}
           valueSize={fontSize[17]}
           style={TILE}
         />
         <Stat
-          label="Active currencies"
+          label={t('crypto.global.statActiveCurrencies')}
           value={count(g.activeCurrencies)}
-          hint={`of ${count(g.totalCurrencies)} tracked`}
+          hint={t('crypto.global.hintOfTracked', { n: count(g.totalCurrencies) })}
           valueSize={fontSize[17]}
           style={TILE}
         />
@@ -161,17 +163,17 @@ export default function GlobalPulsePage() {
       {g.quoteMissing && (
         <div style={{ marginTop: space[8] }}>
           <ErrorState
-            title="The global read carried no USD quote"
-            detail="data.quotes was empty, so total market cap and 24h volume are shown as — rather than as a dollar amount the upstream never stated."
+            title={t('crypto.global.noQuoteTitle')}
+            detail={t('crypto.global.noQuoteDetail')}
           />
         </div>
       )}
 
       {/* ---- 2. segment volumes + the gas oracle --------------------------- */}
       <div style={{ marginTop: space[12] }}>
-        <Card title="Segment volumes" subtitle="DeFi, stablecoins and derivatives — 24h volume beside its change, read verbatim from the global object">
+        <Card title={t('crypto.global.segmentsTitle')} subtitle={t('crypto.global.segmentsSubtitle')}>
           <DataTable
-            head={['Segment', '24h volume', '24h change', 'Market cap']}
+            head={[t('crypto.global.headSegment'), t('crypto.head.volume24h'), t('crypto.global.headChange24h'), t('crypto.head.marketCap')]}
             rows={board.segments.map((s) => ({
               cells: [
                 <span key="s" style={{ fontWeight: fontWeight.semibold }}>{s.label}</span>,
@@ -186,12 +188,12 @@ export default function GlobalPulsePage() {
 
           <div style={{ marginTop: space[12], paddingTop: space[8], borderTop: `1px solid ${themeColor.separator}` }}>
             <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginBottom: space[4] }}>
-              Gas oracle (Etherscan) · block {count(board.gas.block)}
+              {t('crypto.global.gasOracle', { n: count(board.gas.block) })}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
-              <GasTier label="SLOW" gweiValue={board.gas.slowGwei} seconds={board.gas.slowSeconds} />
-              <GasTier label="STANDARD" gweiValue={board.gas.standardGwei} seconds={board.gas.standardSeconds} />
-              <GasTier label="FAST" gweiValue={board.gas.fastGwei} seconds={board.gas.fastSeconds} />
+              <GasTier label={t('crypto.global.gasSlow')} gweiValue={board.gas.slowGwei} seconds={board.gas.slowSeconds} />
+              <GasTier label={t('crypto.global.gasStandard')} gweiValue={board.gas.standardGwei} seconds={board.gas.standardSeconds} />
+              <GasTier label={t('crypto.global.gasFast')} gweiValue={board.gas.fastGwei} seconds={board.gas.fastSeconds} />
             </div>
           </div>
         </Card>
@@ -200,16 +202,16 @@ export default function GlobalPulsePage() {
       {/* ---- 3. the coin ranking ------------------------------------------ */}
       <div style={{ marginTop: space[12] }}>
         <Card
-          title="Coins"
-          subtitle={`the top ${board.slice.listingShown} of the upstream's ranked listing — each row read from its own one-element USD quote`}
+          title={t('crypto.global.coinsTitle')}
+          subtitle={t('crypto.global.coinsSubtitle', { n: board.slice.listingShown })}
         >
           {sources.listingError ? (
-            <ErrorState title="The coin listing read failed" detail={sources.listingError} />
+            <ErrorState title={t('crypto.global.listingFailTitle')} detail={sources.listingError} />
           ) : board.listing.length === 0 ? (
-            <EmptyState>The listing returned no rows — an empty ranked page, not a market with nothing in it.</EmptyState>
+            <EmptyState>{t('crypto.global.listingEmpty')}</EmptyState>
           ) : (
             <DataTable
-              head={['#', 'Coin', 'Price', '24h', 'Market cap', '24h volume', 'Dominance']}
+              head={[t('crypto.head.rank'), t('col.coin'), t('col.price'), t('crypto.head.change24h'), t('crypto.head.marketCap'), t('crypto.head.volume24h'), t('crypto.global.headDominance')]}
               rows={board.listing.map((c) => ({
                 cells: [
                   <span key="r" style={{ color: themeColor.labelTertiary }}>{c.rank}</span>,
@@ -234,16 +236,16 @@ export default function GlobalPulsePage() {
       {/* ---- 4. the venue ranking ----------------------------------------- */}
       <div style={{ marginTop: space[12] }}>
         <Card
-          title="Exchanges"
-          subtitle={`the top ${board.slice.exchangesShown} venues by reported 24h volume — market share, market count and fees read verbatim`}
+          title={t('crypto.global.exchangesTitle')}
+          subtitle={t('crypto.global.exchangesSubtitle', { n: board.slice.exchangesShown })}
         >
           {sources.exchangesError ? (
-            <ErrorState title="The exchange ranking read failed" detail={sources.exchangesError} />
+            <ErrorState title={t('crypto.global.exchangesFailTitle')} detail={sources.exchangesError} />
           ) : board.exchanges.length === 0 ? (
-            <EmptyState>The venue ranking returned no rows — an empty page, not a market with no venues.</EmptyState>
+            <EmptyState>{t('crypto.global.exchangesEmpty')}</EmptyState>
           ) : (
             <DataTable
-              head={['Exchange', '24h volume', 'Market share', 'Markets', 'Score', 'Maker / taker']}
+              head={[t('crypto.global.headExchange'), t('crypto.head.volume24h'), t('crypto.global.headMarketShare'), t('crypto.global.headMarkets'), t('crypto.global.headScore'), t('crypto.global.headMakerTaker')]}
               rows={board.exchanges.map((x) => ({
                 cells: [
                   <span key="n" style={{ fontWeight: fontWeight.semibold }}>{x.name}</span>,

@@ -75,8 +75,8 @@ function HashShell({
           size="xs"
           aria-label={`Copy ${full}`}
           onClick={() => void navigator.clipboard?.writeText(full)}
-          className={focusRingClass}
-          style={{ minHeight: 20, padding: '0 6px', fontSize: 'var(--fc-type-data-xs-size)' }}
+          className={focusRingClass + ' fc-hit-24'}
+          style={{ minHeight: 20, padding: '0 6px', fontSize: 'var(--fc-type-data-xs-size)' /* 12px: the legibility floor; see tokens.ts fontSize */ }}
         >
           Copy
         </Button>

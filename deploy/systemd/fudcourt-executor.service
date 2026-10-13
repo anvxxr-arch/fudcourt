@@ -66,6 +66,7 @@ Environment=FUDCOURT_EXECUTOR_API_ADDR=127.0.0.1:3105
 WorkingDirectory=/home/dwizzy/fudcourt/apps/executor
 ExecStartPre=/usr/bin/go build -C /home/dwizzy/fudcourt/apps/executor -o bin/fudcourt-executor .
 ExecStart=/home/dwizzy/fudcourt/apps/executor/bin/fudcourt-executor
+# restart-policy: on-failure -- a trading runtime whose startup refuses on a bad precondition (e.g. a Valkey lock failure) must not hot-loop; restart is an operator decision after the precondition is fixed.
 Restart=on-failure
 RestartSec=3
 LimitNOFILE=65536

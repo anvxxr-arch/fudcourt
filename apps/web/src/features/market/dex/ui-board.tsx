@@ -1,5 +1,6 @@
 'use client';
 import { themeColor, fontSize, fontWeight, radius, space } from '@/styles/tokens';
+import { useT } from '@/lib/i18n/t';
 import { Table, TBody, THead } from '@/ui/table';
 import type { DexProfile } from './client';
 import { imgSrc } from '@/lib/img';
@@ -8,9 +9,10 @@ import { money, age } from './ui-format';
 export type OrderData = { orders: Record<string, unknown>[]; boosts: Record<string, unknown>[] };
 
 export function ProfilesGrid({ profiles }: { profiles: DexProfile[] }) {
+  const t = useT();
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(230px, 100%), 1fr))', gap: space[8] }}>
-      {profiles.length === 0 && <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>upstream returned no profiles.</p>}
+      {profiles.length === 0 && <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>{t('dex.emptyProfiles')}</p>}
       {profiles.map((p, i) => (
         <div key={p.address + i} style={{ background: themeColor.bgSecondary, border: `1px solid ${themeColor.separator}`, borderRadius: radius[8], overflow: 'hidden' }}>
           {p.header && <div style={{ height: 54, backgroundImage: `url(${imgSrc(p.header)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />}
@@ -22,7 +24,7 @@ export function ProfilesGrid({ profiles }: { profiles: DexProfile[] }) {
             <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginTop: 2, wordBreak: 'break-all' }}>{p.address}</div>
             {(p.amount != null || p.totalAmount != null) && (
               <div style={{ color: themeColor.blue, fontSize: fontSize[11], marginTop: space[4] }}>
-                boost {money(p.amount)}{p.totalAmount != null && ` · total ${money(p.totalAmount)}`}
+                boost {money(p.amount)}{p.totalAmount != null && t('dex.boostTotal', { total: money(p.totalAmount) })}
               </div>
             )}
             {p.links.length > 0 && (
@@ -30,7 +32,7 @@ export function ProfilesGrid({ profiles }: { profiles: DexProfile[] }) {
                 {p.links.slice(0, 3).map((l, j) => (
                   <span key={j}
                     style={{ color: themeColor.blue, fontSize: fontSize[11], textDecoration: 'none' }}>
-                    {l.label || l.type || 'link'}
+                    {l.label || l.type || t('dex.linkFallback')}
                   </span>
                 ))}
               </div>
@@ -43,20 +45,21 @@ export function ProfilesGrid({ profiles }: { profiles: DexProfile[] }) {
 }
 
 export function OrdersTables({ orderData }: { orderData: OrderData }) {
+  const t = useT();
   return (
     <div>
       {orderData.orders.length === 0 && orderData.boosts.length === 0 && (
         <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12] }}>
-          upstream returned no orders and no boosts for this token — genuinely none, nothing faked.
+          {t('dex.emptyOrders')}
         </p>
       )}
       {orderData.orders.length > 0 && (
         <Table style={{ fontSize: fontSize[11], marginBottom: space[8] }}>
           <THead>
             <tr style={{ color: themeColor.labelTertiary, textAlign: 'left' }}>
-              <th style={{ padding: `${space[4]}px ${space[8]}px` }}>order</th>
-              <th style={{ padding: `${space[4]}px ${space[8]}px` }}>status</th>
-              <th style={{ padding: `${space[4]}px ${space[8]}px` }}>paid</th>
+              <th style={{ padding: `${space[4]}px ${space[8]}px` }}>{t('dex.colOrder')}</th>
+              <th style={{ padding: `${space[4]}px ${space[8]}px` }}>{t('col.status')}</th>
+              <th style={{ padding: `${space[4]}px ${space[8]}px` }}>{t('dex.colPaid')}</th>
             </tr>
           </THead>
           <TBody>
@@ -74,9 +77,9 @@ export function OrdersTables({ orderData }: { orderData: OrderData }) {
         <Table style={{ fontSize: fontSize[11] }}>
           <THead>
             <tr style={{ color: themeColor.labelTertiary, textAlign: 'left' }}>
-              <th style={{ padding: `${space[4]}px ${space[8]}px` }}>boost payment</th>
-              <th style={{ padding: `${space[4]}px ${space[8]}px` }}>amount</th>
-              <th style={{ padding: `${space[4]}px ${space[8]}px` }}>paid</th>
+              <th style={{ padding: `${space[4]}px ${space[8]}px` }}>{t('dex.colBoostPayment')}</th>
+              <th style={{ padding: `${space[4]}px ${space[8]}px` }}>{t('col.amount')}</th>
+              <th style={{ padding: `${space[4]}px ${space[8]}px` }}>{t('dex.colPaid')}</th>
             </tr>
           </THead>
           <TBody>

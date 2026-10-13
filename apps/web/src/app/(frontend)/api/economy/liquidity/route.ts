@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { publicJson } from '../../_lib/http';
 import { LIQUIDITY_COMPONENTS, readLiquiditySeries } from '@/app/(frontend)/api/economy/_lib/adapters';
 import { mapPool } from '@/app/(frontend)/api/economy/_lib/rows';
 import { liquidityBreadth } from '@/features/economy/model';
@@ -6,6 +7,12 @@ import type { LiquidityComponent } from '@/features/economy/model';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+/**
+ * How long the basket may be reused. Every component is a FRED series memoised
+ * on a 30-minute clock, so the newest observation in the payload is already at
+ * least that old; 300s of edge reuse cannot outrun the source.
+ */
+const LIQUIDITY_TTL_SECONDS = 300;
 export const runtime = 'nodejs';
 
 /** How far back a component's change is measured, in calendar days. */
@@ -72,14 +79,14 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({
+  return publicJson({
     components,
     index,
     failed,
     upstream: ['fred.stlouisfed.org graph CSV (keyless)'],
     derived: `each component is a named FRED series; change = newest observation vs the newest at least ${CHANGE_WINDOW_DAYS} days older, so a daily and a weekly series are compared over the same span; the index is the share of live components moving in their LOOSENING direction (0–100), weighted equally — a derived position in this basket, not an official gauge; ${live.length} of ${components.length} component(s) had a usable change`,
     asOf: Math.floor(Date.now() / 1000),
-  });
+  }, LIQUIDITY_TTL_SECONDS);
 }
 
 function baseComponent(

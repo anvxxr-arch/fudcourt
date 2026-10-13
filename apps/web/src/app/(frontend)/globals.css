@@ -49,7 +49,7 @@
   --fc-radius-circle: 50%;
   --fc-font-size-8: 8px;
   --fc-font-size-10: 10px;
-  --fc-font-size-11: 11px;
+  --fc-font-size-11: 12px;
   --fc-font-size-12: 12px;
   --fc-font-size-13: 13px;
   --fc-font-size-15: 15px;
@@ -292,7 +292,7 @@
   --fc-type-data-sm-line: 18px;
   --fc-type-data-sm-weight: 500;
   --fc-type-data-sm-family: var(--fc-font-mono);
-  --fc-type-data-xs-size: 11px;
+  --fc-type-data-xs-size: 12px;
   --fc-type-data-xs-line: 16px;
   --fc-type-data-xs-weight: 500;
   --fc-type-data-xs-family: var(--fc-font-mono);
@@ -367,6 +367,37 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .fc-focusable:focus-visible { outline: 2px solid var(--fc-color-blue); outline-offset: 2px; }
-@keyframes fc-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+/* Mega menu: the panel opens on hover OR keyboard focus-within of its host, so
+   pointer and keyboard users get the same affordance. display:none -> block is
+   a paint-only toggle (no layout shift: the panel is absolutely positioned). */
+.fc-mega-panel { display: none; }
+.fc-mega-host:hover .fc-mega-panel,
+.fc-mega-host:focus-within .fc-mega-panel { display: block; }
+/* Opacity-only: the entry animation must not translate a rendered box. When the
+   keyframe travelled `translateY(4px)`, the first frame of the animation MOVED
+   an element that had already been painted, and a moving box mid-viewport is
+   counted as a layout shift by the LayoutShift API. Fades are free; travel is
+   not. Measured contribution here: nil on the pages that carry this class, but
+   the page-level CLS work is server-rendering the boards (/economy) — see
+   `features/economy/server-boards.ts` — and this removes one whole category of
+   self-inflicted shift wherever a card arrives after data. */
+@keyframes fc-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .fc-fade-in { animation: fc-fade-in var(--fc-motion-deliberate) var(--fc-motion-ease); }
 .fc-fade-in-slow { animation: fc-fade-in var(--fc-motion-slow) var(--fc-motion-ease); }
+/* The route wrapper in (frontend)/layout.tsx carries this instead of
+   `.fc-fade-in`. That wrapper holds `{children}`, i.e. every page's whole
+   content INCLUDING the LCP element, and `fc-fade-in` starts at `opacity: 0` —
+   so the animation, not the network or the bundle, decided when the largest
+   element could paint. Measured on `/` 2026-10-09 (Lighthouse, mobile): LCP
+   breakdown was TTFB 486ms (17%) against **Render Delay 2416ms (83%)**, with
+   the LCP element the server-rendered `<h1>`, and `bootup-time` 1.6s /
+   `mainthread-work-breakdown` 3.5s spent before it could appear.
+
+   So the route wrapper keeps its own smaller visual intent but never leaves the
+   document at `opacity: 0`: it slides 2px and fades from 0.72, which is a
+   measurable-but-presenting start. Per-component motion (`.fc-fade-in` on
+   cards, meters, stats) is untouched — that is where the open/arrive feel
+   belongs, and those elements are not on the critical paint path.
+   `prefers-reduced-motion` below already collapses the duration. */
+@keyframes fc-route-enter { from { opacity: 0.72; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+.fc-route-enter { animation: fc-route-enter var(--fc-motion-quick) var(--fc-motion-ease); }

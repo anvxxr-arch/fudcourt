@@ -26,6 +26,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { themeColor, fontSize, fontWeight, lineHeight, radius, space } from '@/styles/tokens';
 import { fmtPrice } from '@/lib/format';
+import { useT } from '@/lib/i18n/t';
 import { Card } from '@/ui/card';
 import { DataTable } from '@/ui/data-table';
 import { ErrorState, Loading } from '@/ui/feedback';
@@ -74,6 +75,7 @@ const footnote: CSSProperties = {
 };
 
 export default function ScreenerPage() {
+  const t = useT();
   const [src, setSrc] = useState<Source<ConverterEnvelope> | null>(null);
   const [query, setQuery] = useState('');
   const [dir, setDir] = useState<ScreenerSortDir>('desc');
@@ -98,13 +100,13 @@ export default function ScreenerPage() {
     [sorted, pageNum],
   );
 
-  if (src === null) return <Loading what="the full price list" />;
+  if (src === null) return <Loading what={t('crypto.screener.loadingWhat')} />;
 
   if (src.data === null) {
     return (
       <ErrorState
-        title="Could not load the full price list"
-        detail={src.error ?? 'the upstream returned no rows and named no reason'}
+        title={t('crypto.screener.loadFailTitle')}
+        detail={src.error ?? t('crypto.common.upstreamNoRows')}
       />
     );
   }
@@ -112,8 +114,8 @@ export default function ScreenerPage() {
   if (board.shown === 0) {
     return (
       <ErrorState
-        title="The full price list came back empty"
-        detail="the upstream answered successfully with no rows — an empty board is not a valid read, so this is reported as a failure, not an empty table"
+        title={t('crypto.screener.emptyTitle')}
+        detail={t('crypto.common.emptyBoardFailure')}
       />
     );
   }
@@ -129,38 +131,38 @@ export default function ScreenerPage() {
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: space[16] }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: space[8] }}>
         <Stat
-          label="Coins with a price"
+          label={t('crypto.screener.statPriced')}
           value={num(board.priced)}
-          hint={`of ${num(board.shown)} rows read`}
+          hint={t('crypto.screener.hintOfRowsRead', { n: num(board.shown) })}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
         />
         <Stat
-          label="Highest priced"
+          label={t('crypto.screener.statHighest')}
           value={board.highest ? board.highest.name : '—'}
-          hint={board.highest ? `${coinLabel(board.highest)} · ${fmtPrice(board.highest.priceUsd)}` : 'no row states a price'}
+          hint={board.highest ? `${coinLabel(board.highest)} · ${fmtPrice(board.highest.priceUsd)}` : t('crypto.screener.hintNoPrice')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 200px' }}
         />
         <Stat
-          label="Lowest priced"
+          label={t('crypto.screener.statLowest')}
           value={board.lowest ? board.lowest.name : '—'}
-          hint={board.lowest ? `${coinLabel(board.lowest)} · ${fmtPrice(board.lowest.priceUsd)}` : 'no row states a price'}
+          hint={board.lowest ? `${coinLabel(board.lowest)} · ${fmtPrice(board.lowest.priceUsd)}` : t('crypto.screener.hintNoPrice')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 200px' }}
         />
         <Stat
-          label="Rows with no price"
+          label={t('crypto.screener.statNoPrice')}
           value={num(board.nullPrice)}
-          hint="rendered —, never 0"
+          hint={t('crypto.screener.hintRenderedDash')}
           valueSize={fontSize[17]}
           style={{ padding: `${space[8]}px ${space[8]}px`, flex: '1 1 160px' }}
         />
       </div>
 
       <Card
-        title="Full price list"
-        subtitle="every coin CryptoRank's converter page prices — filter by name or symbol, sort by price, 100 rows per page"
+        title={t('crypto.screener.cardTitle')}
+        subtitle={t('crypto.screener.cardSubtitle')}
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: space[8], marginBottom: space[8] }}>
           <input
@@ -170,8 +172,8 @@ export default function ScreenerPage() {
               setQuery(e.target.value);
               setPageNum(1);
             }}
-            placeholder="Filter by name or symbol…"
-            aria-label="Filter coins by name or symbol"
+            placeholder={t('crypto.screener.filterPlaceholder')}
+            aria-label={t('crypto.screener.filterAria')}
             style={{
               background: themeColor.bgBase,
               color: themeColor.labelPrimary,
@@ -191,21 +193,21 @@ export default function ScreenerPage() {
             }}
             style={controlStyle(false)}
           >
-            Price {dir === 'desc' ? '↓' : '↑'}
+            {t('crypto.screener.sortPrice')} {dir === 'desc' ? '↓' : '↑'}
           </button>
           <span style={{ color: themeColor.labelTertiary, fontSize: fontSize[11] }}>
-            {filtered.note} · sorted by price {dir === 'desc' ? 'descending' : 'ascending'}
+            {t('crypto.screener.sortedNote', { note: filtered.note, dir: dir === 'desc' ? t('crypto.screener.dirDesc') : t('crypto.screener.dirAsc') })}
           </span>
         </div>
 
         {page.totalRows === 0 ? (
           <ErrorState
-            title="No coin matches the filter"
-            detail={`no row matches “${query.trim()}” — clear the filter to see all ${num(board.shown)} coins`}
+            title={t('crypto.common.noCoinMatchTitle')}
+            detail={t('crypto.screener.noMatchDetail', { query: query.trim(), count: num(board.shown) })}
           />
         ) : (
           <DataTable
-            head={['Rank', 'Name', 'Symbol', 'Price (USD)']}
+            head={[t('crypto.head.rank'), t('crypto.head.name'), t('crypto.coins.headSymbol'), t('crypto.head.priceUsd')]}
             rows={page.pageRows.map((r, i) => ({
               cells: [
                 <span key="rank" style={{ color: themeColor.labelTertiary }}>{num(page.firstIndex + i)}</span>,
@@ -224,7 +226,7 @@ export default function ScreenerPage() {
             onClick={() => setPageNum(page.page - 1)}
             style={controlStyle(page.page <= 1)}
           >
-            ‹ prev
+            {t('crypto.common.prev')}
           </button>
           <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>{page.pageNote}</span>
           <button
@@ -233,21 +235,18 @@ export default function ScreenerPage() {
             onClick={() => setPageNum(page.page + 1)}
             style={controlStyle(page.page >= page.totalPages)}
           >
-            next ›
+            {t('crypto.common.next')}
           </button>
         </div>
 
         <p style={footnote}>
-          {board.slice.note}. The board filters, sorts and paginates client-side at {page.pageSize}/page and renders one
-          page at a time — it never renders all {num(board.shown)} rows. Rank is this row&apos;s 1-based position in the
-          current view (after the filter and sort), not an upstream ranking: the converter mode ships no rank. A price
-          the upstream did not publish is a —, never 0.
+          {t('crypto.screener.footnote', { pageSize: page.pageSize, count: num(board.shown) })}
         </p>
       </Card>
 
       <ErrorState
-        title="No change column on this surface"
-        detail={`${board.change.note}. This board therefore shows no 24h % cell at all — price only.`}
+        title={t('crypto.screener.noChangeTitle')}
+        detail={t('crypto.screener.noChangeDetail', { note: board.change.note })}
       />
     </div>
   );

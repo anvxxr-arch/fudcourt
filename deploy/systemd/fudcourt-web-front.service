@@ -1,0 +1,35 @@
+# FUD Court web — compression front (Caddy) :3100 -> :3110
+#
+# Deployed to ~/.config/systemd/user/fudcourt-web-front.service. Keep this file
+# and the deployed unit identical — it is the only record of why the front runs
+# standalone instead of inside the system caddy.service.
+#
+# The configuration lives in the repo (deploy/caddy/fudcourt-web-internal.caddy)
+# and is passed with --config, so the repo file stays authoritative and
+# /etc/caddy/Caddyfile (the unrelated ai.karepmuwes.my.id host set on :80) is
+# never touched.
+#
+# Why not an `import` from /etc/caddy/Caddyfile: the shipped file declares a
+# file-scope options block (auto_https off / default_bind 127.0.0.1 / admin off
+# / log), and /etc/caddy/Caddyfile already declares one of its own. Caddy allows
+# only one global options block per run, so an import would fail validation, and
+# merging the two would mean editing the existing site blocks — the one thing
+# this deployment must not do. A standalone listener on the unprivileged,
+# loopback-only port 3110 needs no capabilities, so it runs as a user unit.
+#
+# `bun --bun next start` (fudcourt-web.service, :3100) is untouched; the tunnel
+# for fc.dwirijal.my.id points at :3110 and this listener proxies to :3100.
+[Unit]
+Description=FUD Court web compression front (Caddy) :3110
+After=network-online.target fudcourt-web.service
+Wants=network-online.target
+[Service]
+Type=simple
+WorkingDirectory=/home/dwizzy/fudcourt
+ExecStart=/usr/bin/caddy run --config /home/dwizzy/fudcourt/deploy/caddy/fudcourt-web-internal.caddy --adapter caddyfile
+Restart=always
+RestartSec=3
+KillSignal=SIGINT
+TimeoutStopSec=15
+[Install]
+WantedBy=default.target

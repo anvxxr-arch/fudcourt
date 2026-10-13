@@ -150,7 +150,7 @@ export const Tag = forwardRef<HTMLSpanElement, TagProps>(function Tag(
           onClick={onRemove}
           aria-label={removeLabel}
           title={removeLabel}
-          className="fc-focus-ring"
+          className="fc-focus-ring fc-hit-24"
           style={{
             display: 'inline-flex',
             alignItems: 'center',

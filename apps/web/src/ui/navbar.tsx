@@ -2,9 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { NAV_SECTIONS, TERMINAL, activeSection } from '@/ui/site-nav';
+import { useContext } from 'react';
+import { NAV_SECTIONS, TERMINAL, activeSection, type MegaMenuSection } from '@/ui/site-nav';
 import { ThemeToggle } from '@/ui/theme-toggle';
-import { alpha, themeColor, fontFamily, fontSize, fontWeight, letterSpacing, motion, radius, space } from '@/styles/tokens';
+import { alpha, themeColor, fontFamily, fontSize, fontWeight, letterSpacing, motion, radius, space, zIndex } from '@/styles/tokens';
+import { useT, useLocale } from '@/lib/i18n/t';
+import { LOCALES, LOCALE_COOKIE, type Locale } from '@/lib/i18n';
+
 
 /**
  * The site's primary navigation bar — the one chrome element every page shares.
@@ -12,8 +16,7 @@ import { alpha, themeColor, fontFamily, fontSize, fontWeight, letterSpacing, mot
  * It renders `NAV_SECTIONS` from `@/ui/site-nav`, so the bar can
  * never list a destination the site does not have: the section list is the same
  * one `tests/nav-tests.ts` checks against the crawl registry, and the rule that
- * decides which link is lit is unit-tested offline rather than eyeballed in a
- * browser.
+ * decides which link is lit is unit-tested offline rather than browser-eyeballed.
  *
  * A client component only because reading the pathname requires it. It is not a
  * data fetch: Next renders it into the initial HTML, so the bar is present
@@ -22,10 +25,21 @@ import { alpha, themeColor, fontFamily, fontSize, fontWeight, letterSpacing, mot
  *
  * The active link carries `aria-current="page"`. The blue fill alone is a
  * colour-only signal, and a screen reader cannot see it.
+ *
+ * The MEGA MENU: on pointer/focus over a section that has registered children
+ * (server-computed from PUBLIC_ROUTES — see ui/mega-menu.ts), a panel opens
+ * listing them. Keyboard gets the same affordance via focus-within; the panel
+ * is `position: absolute` so opening it never shifts the page (a hover panel
+ * that reflows the bar is the CLS bug the strip comment below already fixed
+ * once).
  */
-export function Navbar() {
+export function Navbar({ mega }: { mega?: MegaMenuSection[] }) {
   const pathname = usePathname();
   const active = activeSection(pathname ?? '/');
+  const t = useT();
+  // NAV_SECTIONS keys are stable; the DictKey cast is the seam between the nav
+  // model (free strings) and the dictionary (typed keys).
+  const tNav = (key: string) => t(`nav.${key}` as Parameters<typeof t>[0]);
 
   return (
     <header style={{ background: themeColor.bgBase, borderBottom: `1px solid ${themeColor.separator}`, fontFamily: fontFamily.mono }}>
@@ -40,7 +54,7 @@ export function Navbar() {
         right, so the two controls a reader reaches for are never scrolled away.
       */}
       <nav
-        aria-label="Primary"
+        aria-label={t('nav.primary')}
         style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: space[8], padding: `${space[8]}px ${space[20]}px` }}
       >
         <Link
@@ -87,27 +101,54 @@ export function Navbar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: space[8], flex: '1 1 160px', minWidth: 0, overflowX: 'auto' }}>
           {NAV_SECTIONS.map((section) => {
             const isActive = section.key === active;
+            const panel = mega?.find((m) => m.key === section.key && m.entries.length > 0);
             return (
-              <Link
-                className="fc-focusable"
-                key={section.key}
-                href={section.href}
-                title={section.blurb}
-                aria-current={isActive ? 'page' : undefined}
-                style={{
-                  color: isActive ? themeColor.labelOnAccent : themeColor.labelPrimary,
-                  background: isActive ? themeColor.blue : 'transparent',
-                  border: `1px solid ${isActive ? themeColor.blue : themeColor.separator}`,
-                  borderRadius: radius[8],
-                  padding: `${space[4]}px ${space[8]}px`,
-                  fontSize: fontSize[11],
-                  textDecoration: 'none',
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {section.label}
-              </Link>
+              <div key={section.key} style={{ position: 'relative', flexShrink: 0 }} className="fc-mega-host">
+                <Link
+                  className="fc-focusable"
+                  href={section.href}
+                  title={section.blurb}
+                  aria-current={isActive ? 'page' : undefined}
+                  aria-haspopup={panel ? 'true' : undefined}
+                  style={{
+                    display: 'inline-block',
+                    color: isActive ? themeColor.labelOnAccent : themeColor.labelPrimary,
+                    background: isActive ? themeColor.blue : 'transparent',
+                    border: `1px solid ${isActive ? themeColor.blue : themeColor.separator}`,
+                    borderRadius: radius[8],
+                    padding: `${space[4]}px ${space[8]}px`,
+                    fontSize: fontSize[11],
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {tNav(section.key)}
+                </Link>
+                {panel && (
+                  <div
+                    className="fc-mega-panel"
+                    role="group"
+                    aria-label={section.label}
+                    style={{
+                      position: 'absolute', top: '100%', left: 0, zIndex: zIndex.tooltip,
+                      minWidth: 260, maxWidth: 340,
+                      background: themeColor.bgBase,
+                      border: `1px solid ${themeColor.separator}`,
+                      borderRadius: radius[8],
+                      padding: space[8],
+                      boxShadow: `0 8px 24px ${alpha(themeColor.bgBase, 0.35)}`,
+                    }}
+                  >
+                    <div style={{ color: themeColor.labelTertiary, fontSize: fontSize[11], marginBottom: space[4] }}>{section.blurb}</div>
+                    {panel.entries.map((e) => (
+                      <Link key={e.href} href={e.href} className="fc-focusable"
+                        style={{ display: 'block', color: themeColor.labelPrimary, fontSize: fontSize[11], textDecoration: 'none', padding: `${space[4]}px ${space[4]}px`, borderRadius: radius[8] }}>
+                        {e.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -118,6 +159,7 @@ export function Navbar() {
             `marginLeft: auto` lives on this WRAPPER, not on the link, so the link and the
             theme toggle form one right-hand cluster instead of two separated islands. */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: space[8], flexShrink: 0 }}>
+          <LocaleSwitcher />
           <Link
             className="fc-focusable"
             href={TERMINAL.href}
@@ -140,5 +182,43 @@ export function Navbar() {
         </div>
       </nav>
     </header>
+  );
+}
+
+/**
+ * The locale switcher: a native select (free keyboard + mobile behavior). Its
+ * change writes the `fc-locale` cookie and updates the shared locale state owned
+ * by `<LocaleProvider>` — every `useT()` surface re-renders in place, no server
+ * round trip, no router.refresh. The root layout is synchronous (it cannot read
+ * the cookie server-side without marking the whole tree dynamic), so the locale
+ * is client state: the first paint is always en, and the inline script in the
+ * root layout rewrites `document.documentElement.lang` before hydration so the
+ * served attribute and the visible chrome agree for a returning visitor.
+ */
+function LocaleSwitcher() {
+  const [current, setLocale] = useLocale();
+  const t = useT();
+  return (
+    <select
+      className="fc-focusable"
+      aria-label={t('lang.label')}
+      value={current}
+      onChange={(e) => setLocale(e.target.value as Locale)}
+      style={{
+        background: themeColor.bgSecondary,
+        color: themeColor.labelPrimary,
+        border: `1px solid ${themeColor.separator}`,
+        borderRadius: radius[8],
+        padding: `${space[4]}px ${space[8]}px`,
+        fontSize: fontSize[11],
+        cursor: 'pointer',
+      }}
+    >
+      {LOCALES.map((l) => (
+        <option key={l} value={l}>
+          {l === 'en' ? 'EN' : l === 'id' ? 'ID' : '中文'}
+        </option>
+      ))}
+    </select>
   );
 }

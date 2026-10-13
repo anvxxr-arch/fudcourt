@@ -11,6 +11,20 @@ import {
   fetchJson,
   toneOf,
 } from './client';
+/**
+ * One reserved line of a list/table row, in px. Sourced from the 11px row type
+ * plus its leading — the figure the CLS fix needs and the only number that
+ * appears in both the loading and the loaded state. Exported so the panels that
+ * size their own containers (the movers columns, the news list) use the SAME
+ * value instead of each inventing one.
+ */
+export const ROW_MIN_HEIGHT = 18;
+/**
+ * The provenance note's reserved height: two wrapped lines at the 11px note
+ * size. Reserved because the note is part of every panel's body and its wrap is
+ * what makes the loaded height differ from a bare row count.
+ */
+export const NOTE_MIN_HEIGHT = 40;
 // ---- shared styles (token-only; the design gate forbids literals here) ------
 
 export const cardStyle: React.CSSProperties = {
@@ -70,6 +84,14 @@ export const listRowStyle: React.CSSProperties = {
   alignItems: 'baseline',
   gap: space[8],
   fontSize: fontSize[11],
+  // Reserve the line box. A row is ~18px tall once it holds figures; without a
+  // floor the loading state (a 49px panel) and the loaded state (up to 727px)
+  // differ, and every panel above the arrival point shifts the ones below it —
+  // measured CLS 0.064 on `/` and 0.235 on `/market/crypto`, all of it these
+  // panels. `minHeight` + the same `lineHeight` in both states means the panel
+  // occupies its final height before the first figure exists.
+  minHeight: ROW_MIN_HEIGHT,
+  lineHeight: `${ROW_MIN_HEIGHT}px`,
 };
 export const theadRowStyle: React.CSSProperties = {
   color: themeColor.labelTertiary,
@@ -102,11 +124,20 @@ export function Panel<T>({
   title,
   url,
   label,
+  rows,
+  rowHeight,
   render,
 }: {
   title: string;
   url: string;
   label?: string;
+  /** How many rows the loaded body renders, so the loading state can reserve
+   *  its exact height. Omit only when the body's height does not depend on a
+   *  row count (a single prose block, a chart). */
+  rows?: number;
+  /** One of those rows' loaded height. Defaults to `ROW_MIN_HEIGHT` (a single
+   *  line of figures); a panel whose rows are cards (news) passes its own. */
+  rowHeight?: number;
   render: (d: T) => React.ReactNode;
 }) {
   const { data, error, loading } = useJson<T>(url);
@@ -118,7 +149,20 @@ export function Panel<T>({
           {title} unavailable — {error}. Section withheld rather than rendered empty.
         </Banner>
       )}
-      {loading && !error && <Loading label={label ?? `loading live figures…`} />}
+      {loading && !error && (
+        // The loading state must already be the height the body will be, or
+        // every panel below it moves when the figures land — measured CLS 0.064
+        // on `/` before this. Two things set that height and BOTH are mirrored
+        // here: the `rows` list rows (each a reserved `ROW_MIN_HEIGHT` line) and
+        // the provenance note, which wraps to two lines on a phone because the
+        // raw upstream URL is one unbreakable 148-character token
+        // (`overflowWrap: 'anywhere'`). Sizing from the panel's own `rows`
+        // contract rather than a per-section magic number is what keeps it
+        // correct when a board changes its row count.
+        <div style={{ minHeight: (rows ?? 0) * (rowHeight ?? ROW_MIN_HEIGHT) + NOTE_MIN_HEIGHT }}>
+          <Loading label={label ?? `loading live figures…`} />
+        </div>
+      )}
       {!error && data != null && render(data)}
     </section>
   );

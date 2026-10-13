@@ -17,6 +17,7 @@
  * audited rather than trusted.
  */
 import { useEffect, useState } from 'react';
+import { useT } from '@/lib/i18n/t';
 import { themeColor, fontSize, fontWeight, lineHeight, radius, space } from '@/styles/tokens';
 import { fetchRegime, formatDate, formatValue, type RegimeEnvelope } from '@/features/economy/model';
 import { Card } from '@/ui/card';
@@ -39,6 +40,7 @@ const STANCE_COLOR: Record<string, string> = {
 const CONFIDENCE_COLOR: Record<string, string> = { high: themeColor.green, medium: themeColor.orange, low: themeColor.red };
 
 export default function RegimeBoard({ country, embedded = false }: { country?: string; embedded?: boolean }) {
+  const t = useT();
   const [data, setData] = useState<RegimeEnvelope | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,36 +58,36 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
 
   if (error) {
     return embedded ? (
-      <ErrorState title="Could not load the macro regime" detail={error} />
+      <ErrorState title={t('economy.regimeLoadError')} detail={error} />
     ) : (
       <main style={pad}>
-        <ErrorState title="Could not load the macro regime" detail={error} />
+        <ErrorState title={t('economy.regimeLoadError')} detail={error} />
       </main>
     );
   }
   if (!data) {
-    return embedded ? <Loading what="regime" /> : <main style={pad}><Loading what="regime" /></main>;
+    return embedded ? <Loading what={t('economy.loadingRegime')} /> : <main style={pad}><Loading what={t('economy.loadingRegime')} /></main>;
   }
 
   const label = data.subject;
   const body = (
     <>
       {data.regime ? (
-        <Card title={data.regime.label} subtitle={`${label} · evidence confidence: ${data.confidence}`}>
+        <Card title={data.regime.label} subtitle={`${label} · ${t('economy.evidenceConfidence')} ${data.confidence}`}>
           <p style={{ margin: 0, fontSize: fontSize[15], color: themeColor.labelPrimary, lineHeight: lineHeight.normal }}>{data.regime.summary}</p>
           <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[12], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>{data.narrative}</p>
         </Card>
       ) : (
-        <Card title="No regime stated" subtitle={`${label} · evidence confidence: ${data.confidence}`}>
+        <Card title={t('economy.noRegime')} subtitle={`${label} · ${t('economy.evidenceConfidence')} ${data.confidence}`}>
           <p style={{ margin: 0, fontSize: fontSize[15], color: themeColor.orange, lineHeight: lineHeight.normal }}>{data.regimeReason}</p>
           <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[12], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>{data.narrative}</p>
         </Card>
       )}
 
       <div style={{ marginTop: space[12] }}>
-        <Card title="Dimensions" subtitle="direction is declared only past each series' own noise floor">
+        <Card title={t('economy.dimensions')} subtitle={t('economy.dimensionsSub')}>
           <DataTable
-            head={['Dimension', 'Reading', 'Latest', 'Compared with', 'Change', 'Signal / noise', 'Series']}
+            head={[t('economy.hDimension'), t('economy.hReading'), t('economy.hLatest'), t('economy.hComparedWith'), t('economy.hChange'), t('economy.hSignalNoise'), t('economy.hSeries')]}
             rows={data.dimensions.map((d) => {
               const dir = d.trend?.direction ?? 'flat';
               const readable = d.trend !== null;
@@ -98,7 +100,7 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
                       {d.word}
                     </span>
                   ) : (
-                    <span key="w" style={{ color: themeColor.labelTertiary }} title={d.reason ?? undefined}>— not readable</span>
+                    <span key="w" style={{ color: themeColor.labelTertiary }} title={d.reason ?? undefined}>{t('economy.notReadable')}</span>
                   ),
                   <span key="v" style={{ color: readable ? themeColor.labelPrimary : themeColor.labelTertiary }}>
                     {d.latest ? `${formatValue(d.latest.value, d.decimals)} ${d.unit}` : '—'}
@@ -119,8 +121,7 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
             })}
           />
           <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-            A dimension is read only when its series published at least four observations. A move smaller than the
-            series&apos; own period-to-period variation is reported as steady, so rounding noise cannot flip a regime.
+            {t('economy.dimensionsNote')}
           </p>
         </Card>
       </div>
@@ -128,16 +129,16 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
       {data.missing.length > 0 && (
         <div style={{ marginTop: space[12] }}>
           <ErrorState
-            title={`${data.missing.length} dimension(s) could not be read`}
-            detail={`${data.missing.join(', ')} — no rule that needs them can fire, and they are left blank rather than filled in.`}
+            title={t('economy.dimsUnreadable', { n: data.missing.length })}
+            detail={t('economy.missingDetail', { list: data.missing.join(', ') })}
           />
         </div>
       )}
 
       <div style={{ marginTop: space[12] }}>
-        <Card title="Potential market impact" subtitle="a stated weight table over the readings above — not a forecast">
+        <Card title={t('economy.impactTitle')} subtitle={t('economy.impactSub')}>
           <DataTable
-            head={['Asset', 'Stance', 'Score', 'Contributions']}
+            head={[t('economy.hAsset'), t('economy.hStance'), t('economy.hScore'), t('economy.hContributions')]}
             rows={data.impacts.map((i) => ({
               cells: [
                 <span key="a" style={{ fontWeight: fontWeight.semibold }}>{i.label}</span>,
@@ -147,16 +148,14 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
                 </span>,
                 <span key="c" style={{ color: themeColor.labelTertiary }}>
                   {i.contributions.length === 0
-                    ? '— no dimension is moving in a scored direction'
+                    ? t('economy.noScoredDim')
                     : i.contributions.map((c) => `${c.dimension} ${c.word} ${c.weight > 0 ? '+' : ''}${c.weight}`).join(' · ')}
                 </span>,
               ],
             }))}
           />
           <p style={{ margin: `${space[8]}px 0 0`, fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-            Weights encode the conventional transmission channel — liquidity and policy dominate risk assets, inflation
-            dominates duration, a stronger dollar tightens global conditions. Every contribution is listed so the sum can
-            be audited.
+            {t('economy.impactNote')}
           </p>
         </Card>
       </div>
@@ -168,7 +167,7 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
       {data.failed.length > 0 && (
         <div style={{ marginTop: space[12] }}>
           <ErrorState
-            title={`${data.failed.length} upstream item(s) failed`}
+            title={t('economy.failedItems', { n: data.failed.length })}
             detail={data.failed.map((f) => `${f.symbol}: ${f.reason}`).join(' · ')}
           />
         </div>
@@ -176,7 +175,7 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
 
       <p style={{ marginTop: space[16], fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>{data.derived}</p>
       <p style={{ marginTop: space[8], fontSize: fontSize[11], color: themeColor.labelTertiary, lineHeight: lineHeight.normal }}>
-        Sources: {data.upstream.join(' · ')} · read {formatDate(new Date(data.asOf * 1000).toISOString().slice(0, 10))}
+        {t('economy.sourcesLabel')} {data.upstream.join(' · ')} · {t('economy.readOn', { date: formatDate(new Date(data.asOf * 1000).toISOString().slice(0, 10)) })}
       </p>
     </>
   );
@@ -185,7 +184,7 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
     return (
       <div style={{ marginTop: space[12] }}>
         <h2 style={{ margin: `0 0 ${space[8]}px`, fontSize: fontSize[20], fontWeight: fontWeight.semibold, color: themeColor.labelPrimary }}>
-          Macro regime
+          {t('economy.macroRegime')}
         </h2>
         {body}
       </div>
@@ -195,18 +194,18 @@ export default function RegimeBoard({ country, embedded = false }: { country?: s
   return (
     <main style={pad}>
       <PageHeader
-        title={`Macro Regime${data.scope.kind === 'country' ? ` — ${data.subject}` : ''}`}
-        description="Growth, inflation, labor, liquidity and policy read from published observations, matched against an explicit rule table. The backend computes; nothing here is inferred from a headline."
+        title={`${t('economy.regimeTitle')}${data.scope.kind === 'country' ? ` — ${data.subject}` : ''}`}
+        description={t('economy.regimeDesc')}
         nav={ECONOMY_NAV}
       />
       {body}
       <div style={{ marginTop: space[12], display: 'flex', gap: space[8] }}>
         <span style={{ fontSize: fontSize[11], color: themeColor.labelTertiary }}>
-          Confidence:{' '}
+          {t('economy.confidenceLabel')}{' '}
           <span style={{ color: CONFIDENCE_COLOR[data.confidence] ?? themeColor.labelTertiary, fontWeight: fontWeight.semibold }}>
             {data.confidence}
           </span>{' '}
-          — evidence confidence, not a probability that the regime is correct.
+          {t('economy.confidenceNote')}
         </span>
       </div>
     </main>

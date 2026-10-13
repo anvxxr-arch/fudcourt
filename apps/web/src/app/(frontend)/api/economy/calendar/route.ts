@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { publicJson } from '../../_lib/http';
 import { INDICATORS } from '@/features/economy/model';
 import { readObservations } from '@/app/(frontend)/api/economy/_lib/adapters';
 import { mapPool, toReleaseRow } from '@/app/(frontend)/api/economy/_lib/rows';
@@ -7,6 +8,13 @@ import { CATEGORY_BY_ID } from '@/features/economy/model';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
+/**
+ * How long the release log may be reused. The events are reference periods of
+ * values that already exist, read through FRED/World Bank/BIS memos of 30
+ * minutes or more, so a 300s edge window cannot expose a release the source has
+ * not published.
+ */
+const CALENDAR_TTL_SECONDS = 300;
 
 /** Days of history a calendar request spans by default. */
 const DEFAULT_WINDOW_DAYS = 120;
@@ -88,7 +96,7 @@ export async function GET(req: Request) {
     );
   }
 
-  return NextResponse.json({
+  return publicJson({
     events: out.slice(0, 200),
     window: { from, to },
     total: out.length,
@@ -96,5 +104,5 @@ export async function GET(req: Request) {
     upstream: ['fred.stlouisfed.org graph CSV', 'api.worldbank.org v2', 'stats.bis.org WS_CBPOL'],
     derived: `a RELEASE LOG, not a forward schedule: no source here publishes a publication calendar or a consensus, so every releaseAt is the REFERENCE PERIOD of a value that exists and every forecast is null; window filters on the reference period; ${out.length} event(s) across ${candidates.length} candidate series, ${failed.length} read(s) failed`,
     asOf: Math.floor(Date.now() / 1000),
-  });
+  }, CALENDAR_TTL_SECONDS);
 }

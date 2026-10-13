@@ -1,0 +1,85 @@
+# FUD Court web — compression front for apps/web (C2).
+#
+# WHY THIS EXISTS
+# ---------------
+# `apps/web` is served by `bun --bun next start` (DR-008, accepted + deployed).
+# Next's `compress: true` is implemented in the NODE server (`router-server.js`
+# wires `next/dist/compiled/compression` only when Node runs the process), so
+# under Bun the gzip middleware is never installed: HTML comes back compressed
+# (Next prerenders/streams it through its own path) while every
+# `application/json`, `text/plain` and `application/xml` response is served
+# identity. Measured on this host 2026-10-09 with
+#   curl -s -H 'Accept-Encoding: gzip, deflate, br' -D - -o /dev/null /api/market/macro
+#   -> no Content-Encoding, 455,054 bytes on the wire
+# and the same probe against `node next start` on the same build
+#   -> Content-Encoding: gzip, 63,337 bytes for `/`.
+# The live path is `Cloudflare edge -> cloudflared -> 127.0.0.1:3100`
+# (`~/.cloudflared/config.yml`: `hostname: fc.dwirijal.my.id -> 127.0.0.1:3100`),
+# so the origin hop is uncompressed; Cloudflare's own `content-encoding: br`
+# masks it at the edge but not on that hop, and not for any direct/local client.
+#
+# WHY NOT JUST SWITCH THE RUNTIME
+# -------------------------------
+# DR-008 pins Bun for `apps/web` as a recorded, accepted, deployed decision with
+# its own measured parity evidence (`docs/records/DECISIONS.md`, G10 in
+# `docs/operations/PLAN.md`). That decision is a maintainer call, so the
+# runtime is left alone and the gap is closed in front instead: one Caddy
+# listener, `encode zstd gzip`, no application change. Reversible by deleting
+# this file and pointing the tunnel back at :3100.
+#
+# HOW TO DEPLOY (not run automatically; the tunnel binding is a host-level file)
+# -----------------------------------------------------------------------------
+#   1. sudo mkdir -p /etc/caddy
+#   2. copy this file to /etc/caddy/fudcourt-web.internal.caddy  (or import it
+#      from /etc/caddy/Caddyfile — see the note below)
+#   3. sudo caddy validate --config /etc/caddy/fudcourt-web.internal.caddy
+#   4. sudo systemctl reload caddy
+#   5. point the tunnel at the front instead of the app:
+#        ~/.cloudflared/config.yml:
+#          - hostname: fc.dwirijal.my.id
+#            service: http://127.0.0.1:3100   # -> http://127.0.0.1:3110
+#        then: systemctl restart cloudflared
+#
+# The port is 3110, NOT 80: `/etc/caddy/Caddyfile` already owns :80 for an
+# unrelated host set (ai.karepmuwes.my.id -> :3002/:8100, fudrouter.local, …)
+# and must not be edited for this. An unprivileged 3110 also means Caddy needs
+# no extra capability, and `default_bind 127.0.0.1` keeps it loopback-only like
+# the cloudflared host it is replacing. If you would rather keep one Caddyfile,
+# add this block to the existing site and skip step 2 — but do not remove that
+# file's existing handlers.
+#
+# `flush_interval -1` disables response buffering so the streaming surfaces
+# (`/api/img`, RSC flight responses) are not held until a chunk boundary.
+#
+# VERIFY (must show a real Content-Encoding; the edge's br does NOT count)
+#   curl -s -H 'Accept-Encoding: gzip, deflate, br' -D - -o /dev/null \
+#     http://127.0.0.1:3110/api/market/macro | grep -i content-encoding
+#   # byte counts: direct :3100 vs front :3110, expect ~80-98% smaller on JSON
+#
+{
+	auto_https off
+	# Loopback-only: the Cloudflare tunnel reaches this listener from the same
+	# host, so binding every interface is not needed.
+	default_bind 127.0.0.1
+	admin off
+	log {
+		output stderr
+		format console
+	}
+}
+
+:3110 {
+	# zstd first (Cloudflare and every current browser negotiate it), gzip as the
+	# fallback. Caddy compresses by negotiated type, so images and already-packed
+	# responses pass through untouched.
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:3100 {
+		# The app is the only origin for this host; keep the app's own Host
+		# expectations intact by forwarding the original host unchanged.
+		header_up X-Forwarded-Proto https
+		# Stream, do not buffer: /api/img and RSC flight responses must not be
+		# held back until a chunk boundary is reached.
+		flush_interval -1
+	}
+}

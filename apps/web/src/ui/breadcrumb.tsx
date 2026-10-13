@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { buildTrail, type Crumb } from '@/ui/site-nav';
+import { useT } from '@/lib/i18n/t';
 import { alpha, themeColor, fontFamily, fontSize, space } from '@/styles/tokens';
 
 /**
@@ -33,11 +34,12 @@ import { alpha, themeColor, fontFamily, fontSize, space } from '@/styles/tokens'
  */
 export function Breadcrumb({ labels, origin }: { labels?: Readonly<Record<string, string>>; origin?: string }) {
   const pathname = usePathname();
+  const t = useT();
   const trail = buildTrail(pathname ?? '/', labels);
   if (trail.length < 2) return null;
 
   return (
-    <nav aria-label="Breadcrumb" style={{ padding: `${space[8]}px ${space[20]}px`, fontFamily: fontFamily.mono }}>
+    <nav aria-label={t('nav.breadcrumb')} style={{ padding: `${space[8]}px ${space[20]}px`, fontFamily: fontFamily.mono }}>
       <ol
         style={{
           display: 'flex',
@@ -61,7 +63,7 @@ export function Breadcrumb({ labels, origin }: { labels?: Readonly<Record<string
               {i > 0 && <span aria-hidden="true" style={{ color: themeColor.labelSecondary }}>/</span>}
               {isCurrent ? (
                 <span aria-current="page" style={{ color: themeColor.labelPrimary }}>
-                  {crumb.label}
+                  {crumb.href === '/' ? t('nav.home') : crumb.label}
                 </span>
               ) : (
                 <Link
@@ -77,7 +79,7 @@ export function Breadcrumb({ labels, origin }: { labels?: Readonly<Record<string
                     minHeight: space[24],
                   }}
                 >
-                  {crumb.label}
+                  {crumb.href === '/' ? t('nav.home') : crumb.label}
                 </Link>
               )}
             </li>

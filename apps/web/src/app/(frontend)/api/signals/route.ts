@@ -161,6 +161,10 @@ function isValidUpstream(mode: string, data: unknown): boolean {
 // payload can never poison another family's cache entry, and so this gate
 // stays reviewable next to the normalizer it protects.
 const VALID_TTL_MS = 30_000;
+/** What a successful screening may be reused for. Tied to the route-local
+ *  store's own VALID_TTL_MS above: the edge may hold a body exactly as long as
+ *  the server would consider it fresh. */
+const cacheControl = { 'Cache-Control': `public, max-age=${VALID_TTL_MS / 1000}, s-maxage=${VALID_TTL_MS / 1000}, stale-while-revalidate=${VALID_TTL_MS / 1000}` };
 const VALID_MAX_ENTRIES = 100;
 type ValidEntry = { at: number; body: unknown };
 const validated = new Map<string, ValidEntry>();
@@ -226,14 +230,14 @@ export async function GET(req: Request) {
   const key = target.toString();
   const cached = takeValid(key);
   if (cached) {
-    return NextResponse.json(cached.body, { headers: { 'X-Cache': 'HIT' } });
+    return NextResponse.json(cached.body, { headers: { ...cacheControl, 'X-Cache': 'HIT' } });
   }
   const pending = validInflight.get(key);
   if (pending) {
     const shared = await pending;
     return NextResponse.json(shared.body, {
       status: shared.status,
-      headers: { 'X-Cache': 'COALESCED' },
+      headers: { ...cacheControl, 'X-Cache': 'COALESCED' },
     });
   }
 
@@ -318,7 +322,7 @@ export async function GET(req: Request) {
     if (winner.status === 200) {
       storeValid(key, { at: Date.now(), body: winner.body });
     }
-    return NextResponse.json(winner.body, { status: winner.status, headers: { 'X-Cache': 'MISS' } });
+    return NextResponse.json(winner.body, { status: winner.status, headers: { ...cacheControl, 'X-Cache': 'MISS' } });
   } finally {
     validInflight.delete(key);
   }

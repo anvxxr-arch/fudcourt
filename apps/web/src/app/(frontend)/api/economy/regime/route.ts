@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server';
+import { publicJson } from '../../_lib/http';
 import { readRegime } from '../_lib/regime';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
+/**
+ * How long a regime may be reused. Its inputs are memoised on 30-minute (FRED,
+ * BIS) and 60-minute (World Bank) clocks, so every dimension the payload carries
+ * is already at least 30 minutes stale — 300s of edge reuse cannot show a figure
+ * the server itself would not have served. A public read: it describes asset
+ * CLASSES, and the treasury-joined sibling (`/api/economy/exposure`) is the
+ * gated one.
+ */
+const REGIME_TTL_SECONDS = 300;
 
 /**
  * The macro regime (plan Phase 13, stages 16–17).
@@ -32,5 +42,5 @@ export async function GET(req: Request) {
   const raw = new URL(req.url).searchParams.get('country');
   const read = await readRegime(raw);
   if (!read.ok) return NextResponse.json(read.body, { status: read.status });
-  return NextResponse.json(read.payload);
+  return publicJson(read.payload, REGIME_TTL_SECONDS);
 }
