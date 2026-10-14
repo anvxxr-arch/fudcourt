@@ -2869,6 +2869,82 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
+  /api/admin/feeds:
+    get:
+      tags: [admin]
+      operationId: getAdminFeeds
+      summary: List the feed sources, their schedule and their health
+      description: |
+        Requires the admin tier. Every row carries both what the operator owns
+        (url, channel, message, filters, cadence, enabled) and what the WORKER
+        owns and the panel only reports: `primed`, `lastStatus`, `lastError`,
+        `consecutiveFailures`, and `owed` — items recorded but not yet announced.
+        The cadence comes from the source's `scheduled_jobs` definition, the same
+        row the worker's tick materializes.
+      responses:
+        '200':
+          description: "`{feeds: [...]}`."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedConfig' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`feeds_unavailable` — the store or the guild is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+    post:
+      tags: [admin]
+      operationId: setAdminFeeds
+      summary: Replace the feed set (one transaction)
+      description: |
+        Requires the admin tier. Each entry is keyed on `name`, so an edit is the
+        SAME feed and the worker-owned columns are preserved: a save can never
+        reset a feed's validators or re-announce its backlog. A source absent
+        from the list is deleted along with its schedule and, by cascade, its
+        item ledger.
+
+        A feed is created together with its `scheduled_jobs` poll definition in
+        the same transaction, so a source can never exist unpolled; the
+        definition's `next_run_at` is set only on insert, so editing a cadence
+        does not reset the feed's rhythm or stampede every feed at once.
+
+        Refused: a name over 64 characters or containing control characters, a
+        duplicate name, a url that is not http(s), carries credentials, uses a
+        non-default port, names a single-label host, or is a private-address
+        literal; an unknown adapter; a non-snowflake channel or role id; a
+        cadence outside 60..604800 seconds; a message over 512 characters; a
+        filter over 128; more than 50 feeds.
+
+        Those url refusals are the PANEL's own, shaped so a typo fails at the
+        point of entry. The authority is the worker's `feeds::guard`, which vets
+        every hop of every poll — including a NAME that resolves into private
+        space. This handler deliberately does not resolve anything, so the API
+        never becomes an internal-network resolver.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [feeds]
+              properties:
+                feeds:
+                  type: array
+                  items: { $ref: '#/components/schemas/FeedSource' }
+      responses:
+        '200':
+          description: "`{feeds: [...]}` — the stored rows, not the request body."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedConfig' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`feeds_unavailable` — the store or the guild is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
   /api/admin/custom-commands:
     get:
       tags: [admin]
@@ -6806,3 +6882,48 @@ components:
         commands:
           type: array
           items: { $ref: '#/components/schemas/CustomCommand' }
+    FeedSource:
+      type: object
+      description: |
+        One feed source. The first fields are the operator's; the rest are the
+        WORKER's, reported so the panel can show health and ignored on write —
+        the store never updates them from a request body.
+      required: [name, url, channelId]
+      properties:
+        id: { type: integer, format: int64, readOnly: true }
+        name:
+          type: string
+          description: "1..64 characters, no control characters. The key: renaming makes a new feed."
+        url:
+          type: string
+          description: "http(s), default port, no credentials, fully-qualified host, not a private literal."
+        adapter: { type: string, enum: [auto, rss, atom, json], description: All four go through the same parser. }
+        channelId: { type: string, description: Discord channel snowflake. }
+        message:
+          type: string
+          description: "Announcement template; {title}, {url} and {link} are substituted. Max 512."
+        mentionRoleId: { type: string, nullable: true, description: Optional role to mention. Never @everyone. }
+        includeText: { type: string, nullable: true, description: Keep only items whose text contains this. }
+        excludeText: { type: string, nullable: true, description: Drop items whose text contains this. }
+        enabled: { type: boolean, description: Disables both the poll and its schedule. }
+        pollIntervalSecs: { type: integer, format: int64, description: "60..604800; stored as the schedule's interval expr." }
+        primed:
+          type: boolean
+          readOnly: true
+          description: False until the first successful poll has absorbed the pre-existing backlog silently.
+        consecutiveFailures: { type: integer, readOnly: true }
+        lastStatus: { type: string, nullable: true, readOnly: true }
+        lastError: { type: string, nullable: true, readOnly: true, description: The last poll's failure, for the operator. }
+        owed:
+          type: integer
+          format: int64
+          readOnly: true
+          description: Items recorded but not yet announced; the same set the poller will queue.
+    FeedConfig:
+      type: object
+      description: The panel's view of the feed set.
+      required: [feeds]
+      properties:
+        feeds:
+          type: array
+          items: { $ref: '#/components/schemas/FeedSource' }
