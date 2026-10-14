@@ -662,8 +662,12 @@ CREATE TABLE IF NOT EXISTS scheduled_jobs (
   CONSTRAINT scheduled_jobs_name_uniq UNIQUE (guild_id, name)
 );
 
--- Only enabled definitions with a due time are ever scanned, so the partial index
--- is the whole access path.
+-- Every scan is `enabled AND (next_run_at IS NULL OR next_run_at <= now())`, so this
+-- partial index covers the due rows. An unanchored row (`next_run_at IS NULL` — a
+-- definition the dashboard has written but no tick has evaluated yet) is NOT in the
+-- index and is found by a small sequential scan: those rows are rare and short-lived
+-- (the first tick after a definition is created anchors it), and widening the index
+-- would cost more than it saves on a one-guild box.
 CREATE INDEX IF NOT EXISTS scheduled_jobs_due_idx
   ON scheduled_jobs (next_run_at) WHERE enabled AND next_run_at IS NOT NULL;
 

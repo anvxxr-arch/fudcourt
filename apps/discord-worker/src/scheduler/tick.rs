@@ -51,6 +51,9 @@ pub struct TickReport {
     pub already_done: u32,
     /// Definitions whose schedule could not be evaluated this tick.
     pub failed: u32,
+    /// Definitions that had no anchor and were given one. Nothing was delivered:
+    /// this is the first occurrence being computed, not an occurrence firing.
+    pub anchored: u32,
 }
 
 pub struct Tick {
@@ -110,6 +113,7 @@ impl Tick {
             match outcome {
                 Ok(Materialized::Fresh) => report.materialized += 1,
                 Ok(Materialized::AlreadyDone) => report.already_done += 1,
+                Ok(Materialized::Anchored) => report.anchored += 1,
                 Err(error) => {
                     report.failed += 1;
                     // Leave `next_run_at` exactly as it was: the definition stays due
@@ -156,9 +160,22 @@ impl Tick {
             &definition.schedule_expr,
             &definition.timezone,
         )?;
-        let occurrence = definition
-            .next_run_at
-            .ok_or_else(|| "definition is due but has no next_run_at".to_string())?;
+        // No anchor yet, so there is no occurrence to materialize: this tick computes
+        // the FIRST one and stores it. The process that writes definitions (the Go api
+        // behind the dashboard) has no timezone database and no cron parser, so it
+        // leaves `next_run_at` NULL rather than growing a second implementation of
+        // "next occurrence" that could disagree with this one — the tick is the only
+        // place a schedule is ever evaluated, which is what makes the dashboard's
+        // "next run" the same answer the worker acts on.
+        let Some(occurrence) = definition.next_run_at else {
+            let next = schedule.next_after(now, timezone)?.ok_or_else(|| {
+                "no future occurrence to anchor: a `once` instant that has already passed is \
+                 skipped, not fired late"
+                    .to_string()
+            })?;
+            store::anchor(client, definition.id, next).await?;
+            return Ok(Materialized::Anchored);
+        };
 
         let key = occurrence_key(definition.id, occurrence);
         let outcome = store::materialize(client, definition, occurrence, &key).await?;
@@ -209,6 +226,7 @@ pub fn handler(tick: Arc<Tick>, guild_id: String) -> Arc<dyn JobHandler> {
                             ("examined", report.examined.into()),
                             ("materialized", report.materialized.into()),
                             ("already_done", report.already_done.into()),
+                            ("anchored", report.anchored.into()),
                             ("failed", report.failed.into()),
                         ]),
                     );

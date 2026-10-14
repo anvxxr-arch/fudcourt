@@ -92,6 +92,22 @@ async fn occurrence_count(pool: &Pool, definition_id: i64) -> i64 {
         .get(0)
 }
 
+/// `last_run_at` is not part of `Definition` — the worker never reads it, only the
+/// dashboard shows it — so "an anchor is not a run" has to be checked against the column
+/// itself: `advance` stamps it, `anchor` must not.
+async fn last_run_at(pool: &Pool, definition_id: i64) -> Option<DateTime<Utc>> {
+    let session = pool.acquire().await.expect("session");
+    session
+        .client()
+        .query_one(
+            "SELECT last_run_at FROM scheduled_jobs WHERE id = $1",
+            &[&definition_id],
+        )
+        .await
+        .expect("read last_run_at")
+        .get(0)
+}
+
 /// Create a definition already due, and return its id.
 #[allow(clippy::too_many_arguments)]
 async fn due_definition(
@@ -462,5 +478,117 @@ async fn enqueueing_the_same_tick_instant_twice_queues_it_once() {
     let later = scheduled_at + Duration::seconds(60);
     assert!(tick.enqueue_tick(&guild, later).await.expect("enqueue"));
     assert_eq!(job_count(&pool, &guild, tick::TICK_KIND).await, 2);
+    cleanup(&pool, &guild).await;
+}
+
+/// The dashboard writes definitions with no anchor: it owns neither a cron parser nor a
+/// timezone database, so the first tick after a definition is written has to give it its
+/// first occurrence. Anchoring is NOT firing — the report counts it separately, no job is
+/// queued, and `last_run_at` stays NULL so the panel cannot claim a run that never
+/// happened. The next tick then materializes the occurrence it just anchored, which is
+/// what makes the first delivery a consequence of the anchor rather than of the save.
+#[tokio::test]
+async fn an_unanchored_definition_is_anchored_not_fired() {
+    let pool = pg!();
+    let guild = scope("anchor");
+    cleanup(&pool, &guild).await;
+    // A fixed instant makes the expected occurrence arithmetic instead of "whatever
+    // tomorrow is": midnight, so 09:00 UTC daily is 09:00 the same day.
+    let now: DateTime<Utc> = "2026-06-01T00:00:00Z".parse().unwrap();
+    let session = pool.acquire().await.expect("session");
+    let id = store::upsert(
+        session.client(),
+        &store::NewDefinition::new(&guild, "daily", ScheduleKind::Cron, "0 9 * * *")
+            .with_job_kind("noop")
+            .in_zone("UTC"),
+    )
+    .await
+    .expect("upsert");
+    drop(session);
+
+    let report = Tick::new(pool.clone(), 60)
+        .run_once(now)
+        .await
+        .expect("tick");
+
+    assert_eq!(
+        report.anchored, 1,
+        "the definition got its first occurrence"
+    );
+    assert_eq!(report.materialized, 0, "anchoring is not firing");
+    assert_eq!(report.failed, 0);
+
+    let after = definition(&pool, id).await;
+    let expected: DateTime<Utc> = "2026-06-01T09:00:00Z".parse().unwrap();
+    assert_eq!(
+        after.next_run_at,
+        Some(expected),
+        "the declaration's own zone decides the occurrence"
+    );
+    assert!(after.enabled, "an anchored cron stays armed");
+    assert_eq!(
+        last_run_at(&pool, id).await,
+        None,
+        "nothing ran, so nothing may claim it did"
+    );
+    assert_eq!(occurrence_count(&pool, id).await, 0);
+    assert_eq!(job_count(&pool, &guild, "noop").await, 0);
+
+    // The next tick, past the anchored occurrence, actually fires it.
+    let second = Tick::new(pool.clone(), 60)
+        .run_once(now + Duration::seconds(9 * 3600))
+        .await
+        .expect("tick");
+    assert_eq!(second.materialized, 1);
+    assert_eq!(second.anchored, 0);
+    assert_eq!(job_count(&pool, &guild, "noop").await, 1);
+    assert!(last_run_at(&pool, id).await.is_some());
+    cleanup(&pool, &guild).await;
+}
+
+/// A `once` whose instant has already passed when the tick first sees it is SKIPPED, and
+/// the definition records why. `next_after` is strictly after `now` — the no-backfill
+/// policy — and a reminder delivered hours late is worse than one never delivered. Silent
+/// skipping would be worse than both, so the failure lands in `last_error` where the panel
+/// shows it, and the definition retries (and then parks) like any other broken schedule
+/// instead of vanishing.
+#[tokio::test]
+async fn an_unanchored_once_in_the_past_is_skipped_not_fired_late() {
+    let pool = pg!();
+    let guild = scope("anchor-past");
+    cleanup(&pool, &guild).await;
+    let now: DateTime<Utc> = "2026-06-02T00:00:00Z".parse().unwrap();
+    let session = pool.acquire().await.expect("session");
+    let id = store::upsert(
+        session.client(),
+        &store::NewDefinition::new(&guild, "missed", ScheduleKind::Once, "2026-06-01T02:00:00Z")
+            .with_job_kind("noop")
+            .in_zone("UTC"),
+    )
+    .await
+    .expect("upsert");
+    drop(session);
+
+    let report = Tick::new(pool.clone(), 60)
+        .run_once(now)
+        .await
+        .expect("tick");
+
+    assert_eq!(report.failed, 1);
+    assert_eq!(report.materialized, 0);
+    assert_eq!(report.anchored, 0);
+
+    let after = definition(&pool, id).await;
+    assert_eq!(after.next_run_at, None, "it was never anchored");
+    assert_eq!(
+        after.attempts, 1,
+        "it retries like any other broken schedule"
+    );
+    assert_eq!(job_count(&pool, &guild, "noop").await, 0);
+    let error = after.last_error.unwrap_or_default();
+    assert!(
+        error.contains("skipped"),
+        "the reason must name the policy, got: {error}"
+    );
     cleanup(&pool, &guild).await;
 }

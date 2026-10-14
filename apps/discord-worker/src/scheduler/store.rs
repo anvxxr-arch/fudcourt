@@ -41,6 +41,9 @@ pub enum Materialized {
     /// restart between materializing and advancing). Not an error: advancing the
     /// definition is exactly what has to happen.
     AlreadyDone,
+    /// The definition had no anchor and this tick gave it one. Nothing was
+    /// delivered, and `last_run_at` is left alone: an anchor is not a run.
+    Anchored,
 }
 
 const DEFINITION_COLUMNS: &str = "id, guild_id, name, job_kind, schedule_kind, schedule_expr, \
@@ -171,7 +174,20 @@ pub async fn upsert(client: &Client, def: &NewDefinition) -> Result<i64, String>
     Ok(row.get(0))
 }
 
-/// The definitions that are due now, oldest first.
+/// The definitions that are due now, unanchored ones first.
+///
+/// A row with `next_run_at IS NULL` is DUE on purpose: it is a definition nobody has
+/// scheduled yet. The process that writes definitions (the Go api behind the
+/// dashboard) owns neither a timezone database nor a cron parser, so computing the
+/// first occurrence of a cron expression there would mean a second implementation of
+/// "next occurrence" — the second source of truth this design exists to avoid. It
+/// stores the definition UNANCHORED instead, this tick computes the first occurrence
+/// with the same parser it will use forever after, and one statement decides when a
+/// definition runs. A NULL row that was never scanned would instead be enabled,
+/// visible in the dashboard, and permanently dead.
+///
+/// `NULLS FIRST` because an unanchored row is a definition an operator just created
+/// and is waiting to see scheduled, while a due row has already been waiting.
 ///
 /// No `FOR UPDATE SKIP LOCKED` here on purpose: outside an explicit transaction the
 /// row lock is released the moment the statement returns, so it would buy nothing
@@ -181,8 +197,8 @@ pub async fn upsert(client: &Client, def: &NewDefinition) -> Result<i64, String>
 pub async fn due(client: &Client, limit: i64) -> Result<Vec<Definition>, String> {
     let sql = format!(
         "SELECT {DEFINITION_COLUMNS} FROM scheduled_jobs
-         WHERE enabled AND next_run_at IS NOT NULL AND next_run_at <= now()
-         ORDER BY next_run_at, id
+         WHERE enabled AND (next_run_at IS NULL OR next_run_at <= now())
+         ORDER BY next_run_at NULLS FIRST, id
          LIMIT $1"
     );
     let rows = client
@@ -294,5 +310,33 @@ pub async fn advance(
         )
         .await
         .map_err(|e| format!("advance scheduled job: {e}"))?;
+    Ok(())
+}
+
+/// Give a definition its first occurrence, without materializing one.
+///
+/// Deliberately NOT [`advance`]: an anchor is not a run. `advance` stamps
+/// `last_run_at`, which the dashboard renders as "last run", and a definition that
+/// has never fired would then claim it had — the operator-facing lie this repo
+/// refuses elsewhere. This statement sets the anchor, clears a stale error and resets
+/// the failure counter, and touches nothing else.
+pub async fn anchor(
+    client: &Client,
+    definition_id: i64,
+    next_run_at: DateTime<Utc>,
+) -> Result<(), String> {
+    client
+        .execute(
+            "UPDATE scheduled_jobs SET
+                 next_run_at = $2,
+                 last_status = 'ok',
+                 last_error  = NULL,
+                 attempts    = 0,
+                 updated_at  = now()
+             WHERE id = $1",
+            &[&definition_id, &next_run_at],
+        )
+        .await
+        .map_err(|e| format!("anchor scheduled job: {e}"))?;
     Ok(())
 }
