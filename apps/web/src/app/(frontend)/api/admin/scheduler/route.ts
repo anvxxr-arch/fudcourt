@@ -4,16 +4,22 @@ import { publicOrigin } from '../../_lib/http';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 /**
- * GET /api/admin/scheduler — THIN PROXY to the Go api (apps/api,
+ * GET|POST /api/admin/scheduler — THIN PROXY to the Go api (apps/api,
  * handleAdminScheduler). The Go service owns everything: the admin tier
- * check from the signed session cookie and the read-only view of the
- * scheduler's job definitions (the `scheduled_jobs` rows, their
- * `job_kind`, and the next due time). Write ownership is derived from
- * `job_kind` server-side, so this route is deliberately GET-only.
+ * check from the signed session cookie, the read view of the scheduler's
+ * job definitions (the `scheduled_jobs` rows, their `job_kind`, the next
+ * due time and the health of the last run), and the validated replace of
+ * THIS panel's own rows.
+ *
+ * Ownership is the Go side's to enforce, not this route's: a definition
+ * named by another panel (`feed.poll`, the feeds') is a 409 there, and a
+ * definition this panel owns but another does not is deleted only if the
+ * `job_kind` says so. The proxy therefore forwards whatever method
+ * arrives and replays the answer; it holds no rule of its own.
  *
  * This route forwards the request and replays the upstream response
  * VERBATIM — status, body and headers — so the dashboard reads the exact
- * wire contract (`{jobs}` on success, `body.detail` on a refusal).
+ * wire contract (`{definitions}` on success, `body.detail` on a refusal).
  *
  * The Cookie header is the ONLY identity input; the proxy holds no auth
  * logic. Unreachable api is a loud 502 (house rule — never a fake 200).
@@ -22,6 +28,7 @@ const FUDCOURT_API = process.env.FUDCOURT_API_URL ?? 'http://127.0.0.1:3103';
 const TIMEOUT_MS = 35_000;
 
 export const GET = proxy;
+export const POST = proxy;
 
 async function proxy(request: Request): Promise<Response> {
   const url = new URL(request.url);
@@ -33,11 +40,13 @@ async function proxy(request: Request): Promise<Response> {
   const { scheme, host } = publicOrigin(url);
   headers.set('x-forwarded-proto', scheme);
   headers.set('x-forwarded-host', host);
+  const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text();
   let upstream: Response;
   try {
     upstream = await fetch(`${FUDCOURT_API}${url.pathname}${url.search}`, {
       method: request.method,
       headers,
+      body,
       redirect: 'manual',
       cache: 'no-store',
       signal: AbortSignal.timeout(TIMEOUT_MS),

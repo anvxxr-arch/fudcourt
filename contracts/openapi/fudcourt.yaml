@@ -2886,15 +2886,15 @@ paths:
         `jobKind`, not stored as a column: the feeds panel writes its `feed.poll`
         definitions inside the same transaction as its source row (a feed can never
         exist unpolled). So every definition carries `owner` (`scheduler` or
-        `feeds`) and `readOnly`. This endpoint is read-only by design: a write path
-        has to carry `ON CONFLICT (guild_id, name) DO UPDATE ... WHERE
-        scheduled_jobs.job_kind <> 'feed.poll'` so that a name collision cannot
-        hijack another panel's row, and it ships with that rule rather than before
-        it.
+        `feeds`) and `readOnly`, and the `POST` on this path carries the matching
+        rule (`ON CONFLICT (guild_id, name) DO UPDATE ... WHERE
+        scheduled_jobs.job_kind <> 'feed.poll'`) so that a name collision cannot
+        hijack another panel's row.
 
         `nextRunAt` is the next occurrence the tick will materialize; it is absent
         on a spent `once` definition, which the scheduler disables in the same
-        statement that clears it.
+        statement that clears it, and absent on a `cron` definition until the first
+        tick after it is written anchors it (the `POST` says why).
       responses:
         '200':
           description: "`{definitions: [...]}` — the panel's own rows first, then the feeds'."
@@ -2902,6 +2902,75 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ScheduleConfig' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`scheduler_unavailable` — the store or the guild is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+    post:
+      tags: [admin]
+      operationId: setAdminScheduler
+      summary: Replace the scheduler's own definitions (one transaction)
+      description: |
+        Requires the admin tier. Each entry is keyed on `name`, so an edit is the
+        SAME definition and its worker-owned columns are preserved. A definition
+        absent from the list is deleted — but only if THIS panel owns it: a
+        `feed.poll` row is never in the request, and deleting it would look like
+        nothing happened while the feed silently stopped updating at the cadence the
+        operator set.
+
+        **A name a feed owns is a `409`, never a save.** The ownership rule lives in
+        the SQL, so an upsert of a name a feed already owns updates no row and
+        returns no row; that is reported as `409 conflict` naming the definition and
+        its owner. "Saved" and "did not save" must never look the same.
+
+        **A cron definition is stored without `nextRunAt`.** Anchoring a schedule
+        means computing its first occurrence, which for a cron expression needs a
+        cron parser, a timezone database and a DST policy — the worker's, not this
+        server's. Rather than grow a second implementation of "next occurrence" that
+        can disagree with the one that actually fires, this endpoint writes NULL and
+        the first tick anchors it with the same parser it will use forever after.
+        `once` and `interval` need no calendar and are anchored here (`once` at its
+        instant; `interval` one interval ahead, NOT immediately). Editing the
+        SCHEDULE re-anchors a definition; editing only the payload or `enabled`
+        leaves the next occurrence alone.
+
+        Refused: an unknown `jobKind` (only `discord.message` and `health.ping` are
+        offered — any other kind materializes into a job that no handler claims), the
+        `feed.poll` kind, a name over 64 characters or containing control
+        characters, a duplicate name, a `once` instant that is not RFC3339 or is
+        already past, an `interval` outside 60..604800 seconds, a cron expression
+        that is not 5/6/7 fields of digits and `*,-/`, an unknown timezone, a
+        `discord.message` payload without a snowflake `channel_id` or with an empty
+        `content` over 1900 characters, and more than 200 definitions.
+
+        The cron SHAPE is checked here; its MEANING is the worker's parser. An
+        expression that passes here and is refused there is recorded against the
+        definition by the tick that evaluates it, where the panel shows it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [definitions]
+              properties:
+                definitions:
+                  type: array
+                  items: { $ref: '#/components/schemas/ScheduleDefinition' }
+      responses:
+        '200':
+          description: "`{definitions: [...]}` — the stored rows, not the request body."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScheduleConfig' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: "`conflict` — the name belongs to another panel (the feeds')."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
         '503':
           description: "`scheduler_unavailable` — the store or the guild is not configured."
           content:
@@ -6996,7 +7065,7 @@ components:
           type: string
           format: date-time
           readOnly: true
-          description: "The next occurrence the tick will materialize; ABSENT on a spent `once` definition, which is disabled in the same statement that clears it."
+          description: "The next occurrence the tick will materialize; ABSENT on a spent `once` definition, which is disabled in the same statement that clears it, and on a `cron` definition until the first tick anchors it."
         lastRunAt: { type: string, format: date-time, readOnly: true }
         lastStatus: { type: string, nullable: true, readOnly: true }
         lastError: { type: string, nullable: true, readOnly: true }
