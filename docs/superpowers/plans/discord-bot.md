@@ -12,7 +12,7 @@ against the real repo — no green-by-disabling. Status is the truth, not the in
 | 2 | Identity / auth / permissions | 🟡 partial | precondition tiers by role **id** + hierarchy checks shipped; DB-backed **capability** engine + Discord OAuth dashboard login pending |
 | 3 | Discord core | ✅ done | gateway v10 state machine, slash + context-menu routers, precondition middleware, error responder |
 | 4 | Moderation | ✅ done | full case lifecycle, case numbers, `/case` `/history`, hierarchy refusals (commit `c84edde`) |
-| 5 | AutoMod / anti-spam | ⬜ next | rule model + Valkey windows + deterministic scoring; **this is the current phase** |
+| 5 | AutoMod / anti-spam | ✅ done | rule engine (13 matchers) + deterministic scoring + window state + service + listeners/intents + `automod_rules` store & loopback read; live E2E proven (commits `15ce98a`,`0c875c7`,`b886fb7`,`5007dcd`) |
 | 6 | Logging / audit | ⬜ todo | Discord activity logs (per-destination) + audit before/after |
 | 7 | Community features | ⬜ todo | welcome/goodbye, autoroles, reaction/button/select role panels |
 | 8 | Custom commands | ⬜ todo | declarative only; no executable scripting |
@@ -31,24 +31,38 @@ against the real repo — no green-by-disabling. Status is the truth, not the in
 Each phase must pass its own tests before a dependent phase starts. When a test
 fails: diagnose root cause → fix → rerun targeted → rerun affected suite → continue.
 
-## Current phase — 5, AutoMod / anti-spam (plan)
+## Phase 5 as delivered — AutoMod / anti-spam
 
-1. **Rule model** — `automod_rules` (JSONB `matchers`/`conditions`/`actions`, validated
-   before store), enabled/priority/exempt_{roles,users,channels}/cooldown. Config lives
-   in Postgres, not code.
-2. **Matchers** — spam, duplicate, mass-mentions, caps, emoji, invites, URLs, blocked
-   domains/words, regex (bounded / safe engine), attachments, new-account, rapid-join.
-3. **Anti-spam state** — Valkey counters/windows per user; deterministic 0–100 score
-   (normal ≤30 / suspicious ≤60 / spam ≤80 / severe >80). No ML.
-4. **Actions** — delete, warn, timeout, kick, ban, log_only, notify_mod, add/remove
-   role — routed through the **existing moderation service** (same path as `/ban`), so
-   AutoMod never forks moderation logic.
+1. **Rule model** — `automod_rules` (jsonb `matchers`/`actions`, `text[]` exemptions),
+   validated on both sides before use; enabled/priority/event are real columns, one
+   composite index covers the bot's "enabled, priority DESC" load.
+2. **Matchers** (13) — mentions, duplicate, caps, emoji, invite, url, blocked_domain,
+   blocked_word, regex (length-capped + ReDoS-shape rejected), attachment,
+   new_account, rapid_join, spam. All pure, all unit-tested.
+3. **Anti-spam state** — injectable `WindowStore` (in-memory default; a Valkey adapter
+   drops in behind the same interface). Deterministic 0–100 score, bounded named terms,
+   normal ≤30 / suspicious ≤60 / spam ≤80 / severe >80. No ML.
+4. **Actions** — delete, warn, timeout, kick, ban, log_only, notify_mod, add_role,
+   remove_role — the four moderation actions route through the **existing
+   ModerationService** with `source="automod"`, so the case log and hierarchy checks
+   are shared; delete/role go through a narrow `DeliveryPort`.
 5. **Exemptions + cooldown** — exempt roles/users/channels short-circuit; per-rule
-   cooldown suppresses re-fire.
-6. **Gateway intents** — add `GUILD_MESSAGES | MESSAGE_CONTENT` (+ `GUILD_MEMBERS`
-   for join matchers); keep GUILDS.
-7. **Tests** — matcher unit tests, scoring determinism, exemption tests, "AutoMod
-   action creates a moderation case" (shared-logic proof), bounded-regex guard.
+   cooldown suppresses re-fire and starts after a fire.
+6. **Gateway intents** — `INTENTS_BOT = GUILDS|GUILD_MEMBERS|GUILD_MESSAGES|MESSAGE_CONTENT`
+   (MESSAGE_CONTENT is privileged — enable it in the app portal).
+7. **Tests** — 12 engine + 11 state + 12 service + 16 wiring/listener (bot) and 6 Go
+   handler tests; live E2E proven (api row → `{"rules":[…]}` → bot `parseRule`, 0 rejects).
+
+**Still open in phase 5:** a dashboard panel to author/enable rules (the api already
+exposes the loopback read; a rule CRUD admin route + panel is the remaining slice),
+and swapping the in-memory window store for a Valkey-backed one if a second process
+ever needs to share the windows.
+
+## Next phase — 6, Logging / audit
+
+Discord activity logs (per-destination) + audit before/after, delivered as a
+JSONB-configured log router (members, messages, moderation, voice), with the
+destination set editable from the dashboard.
 
 ## Guardrails carried through every phase
 
