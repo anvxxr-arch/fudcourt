@@ -332,3 +332,34 @@ export function saveWelcome(config: WelcomeConfig): Promise<WelcomeView> {
   });
 }
 
+/**
+ * One attempted role grant or revoke, INCLUDING failures — an append-only record the bot writes over
+ * loopback (apps/discord-bot/src/community/roles.ts records every attempt, refused or not). `id` is
+ * the api's own row id and, unlike an autorole rule's, it is stable: nothing rewrites this table.
+ *
+ * `error` is absent on a success (`omitempty` on the Go side), and when it is present it is the
+ * recorder's own sentence — a hierarchy refusal, a Discord error, or a failed hierarchy lookup.
+ */
+export type RoleAssignment = {
+  id: number;
+  userId: string;
+  roleId: string;
+  action: 'add' | 'remove';
+  source: string;
+  status: 'ok' | 'failed';
+  error?: string;
+  createdAt: string;
+};
+
+export type RoleAssignmentsView = { assignments?: RoleAssignment[]; detail?: string };
+
+/**
+ * fetchRoleAssignments reads the NEWEST attempts. The api caps `limit` at 200 and silently falls back
+ * to its own default of 50 for a value it does not like (apps/api/community_handlers.go), so the
+ * panel only ever offers values the api accepts and the note above the table says which window is on
+ * screen.
+ */
+export function fetchRoleAssignments(limit: number): Promise<RoleAssignmentsView> {
+  return getJSON<RoleAssignmentsView>(`/api/admin/role-assignments?limit=${limit}`, { cache: 'no-store' });
+}
+

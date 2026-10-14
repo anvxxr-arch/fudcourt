@@ -10,6 +10,7 @@ import SchedulerPanel from '@/features/admin/scheduler-panel';
 import FeedsPanel from '@/features/admin/feeds-panel';
 import WelcomePanel from '@/features/admin/welcome-panel';
 import AutorolesPanel from '@/features/admin/autoroles-panel';
+import RoleAssignmentsPanel from '@/features/admin/role-assignments-panel';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -119,6 +120,16 @@ export default async function AdminPage() {
           one kind nothing triggers yet.
         </p>
         <AutorolesPanel />
+      </section>
+
+      <section style={{ marginTop: space[32] }}>
+        <h2 style={{ fontSize: fontSize[15], color: themeColor.labelPrimary, margin: `0 0 ${space[4]}px` }}>Role assignment log</h2>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
+          Every role grant and revoke the bot attempted, successes included — the only record that
+          answers why a member did not get a role. Nothing here is editable: the bot writes it as it
+          acts.
+        </p>
+        <RoleAssignmentsPanel />
       </section>
 
       <section style={{ marginTop: space[32] }}>
