@@ -23,7 +23,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { writableDefinitions, type ScheduleDefinition } from '@/features/admin/client';
+import { fetchSchedules, saveSchedules, writableDefinitions, type ScheduleDefinition } from '@/features/admin/client';
 import {
   JOB_KINDS,
   PAYLOAD_FIELDS,
@@ -219,4 +219,96 @@ test('scheduler panel: the offered kinds are the ones the contract documents', (
       `${kind} must be documented where the endpoint describes what it accepts`,
     );
   }
+});
+
+/** Run one call against a stubbed fetch: the api client is the only place the panel talks to
+ *  the wire, so this is where "the panel must never send a read-only row" and "a refusal must
+ *  never look like a save" are actually provable — not on the pure helpers alone. */
+async function withStubbedFetch<T>(
+  response: () => Response,
+  run: (calls: { url: string; init?: RequestInit }[]) => Promise<T>,
+): Promise<T> {
+  const calls: { url: string; init?: RequestInit }[] = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = ((url: string | URL | Request, init?: RequestInit) => {
+    calls.push({ url: String(url), init });
+    return Promise.resolve(response());
+  }) as typeof fetch;
+  try {
+    return await run(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+}
+
+test('scheduler panel: the client reads the panel uncached and posts only this panel\'s rows', async () => {
+  await withStubbedFetch(
+    () => new Response(JSON.stringify({ definitions: [] }), { headers: { 'content-type': 'application/json' } }),
+    async (calls) => {
+      await fetchSchedules();
+      assert.equal(calls[0].url, '/api/admin/scheduler');
+      assert.equal(calls[0].init?.cache, 'no-store', 'a cached read would show a next run that has already passed');
+
+      await saveSchedules([
+        row(),
+        row({ id: 8, name: 'news', jobKind: 'feed.poll', owner: 'feeds', readOnly: true }),
+      ]);
+      const post = calls[1];
+      assert.equal(post.url, '/api/admin/scheduler');
+      assert.equal(post.init?.method, 'POST');
+      const body = JSON.parse(String(post.init?.body)) as { definitions: Record<string, unknown>[] };
+      assert.deepEqual(body.definitions.map((d) => d.name), ['standup'], 'the feeds\' row must never be in the body');
+      assert.equal('nextRunAt' in body.definitions[0], false, 'a worker column in the body describes an edit this panel cannot make');
+      assert.equal('readOnly' in body.definitions[0], false);
+      assert.deepEqual(body.definitions[0].payload, { channel_id: '1234567890123456789', content: 'stand up' });
+    },
+  );
+});
+
+test('scheduler panel: a refusal arrives as the server\'s sentence, not as a status code', async () => {
+  // The Go api's envelope.
+  await withStubbedFetch(
+    () => new Response(JSON.stringify({ detail: 'the name "news" is owned by the feeds panel' }), { status: 409 }),
+    async () => {
+      await assert.rejects(
+        () => saveSchedules([row()]),
+        (err: unknown) => {
+          assert.ok(err instanceof HttpError, 'a refusal must be typed so a caller can branch on it');
+          assert.equal(err.status, 409);
+          assert.match(err.detail, /owned by the feeds panel/);
+          assert.match(err.message, /HTTP 409: the name "news" is owned by the feeds panel/);
+          assert.match(describeSaveFailure(err), /rename it/);
+          return true;
+        },
+      );
+    },
+  );
+
+  // The BFF proxy's envelope, for an api that is not running: still a sentence, not "undefined".
+  await withStubbedFetch(
+    () => new Response(JSON.stringify({ error: 'api unreachable: connect ECONNREFUSED' }), { status: 502 }),
+    async () => {
+      await assert.rejects(
+        () => fetchSchedules(),
+        (err: unknown) => {
+          assert.match(describeSaveFailure(err), /api unreachable/);
+          return true;
+        },
+      );
+    },
+  );
+
+  // A body that is not JSON at all must not turn a refusal into an unhandled parse error.
+  await withStubbedFetch(
+    () => new Response('<html>502 Bad Gateway</html>', { status: 502 }),
+    async () => {
+      await assert.rejects(
+        () => fetchSchedules(),
+        (err: unknown) => {
+          assert.match(describeSaveFailure(err), /502 Bad Gateway/);
+          return true;
+        },
+      );
+    },
+  );
 });
