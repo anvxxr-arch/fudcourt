@@ -750,3 +750,13 @@ operator can use. Eight of the twelve admin proxies still have no consumer:
 `role-panels`, `welcome`. (Members, settings, moderation cases and now scheduler are wired.) Feeds
 is the next one worth building, and it is the pair of this panel: its definitions are the
 `readOnly` rows shown here, and its own panel owns them.
+
+**The panel needs one deployment step before it works on the homeserver, and it is NOT a code gap.**
+`apps/api/bin/fudcourt-api` is from `2026-10-14 04:09` while `apps/api/scheduler.go` is from
+`21:29` — the running `fudcourt-api.service` therefore serves a binary that predates the route, and
+`GET /api/admin/scheduler` answers the api's own `404 {"error":{"code":"NOT_FOUND"}}` (not the panel's
+404, and not a 401): a route that exists in the source and 404s from the process is a stale binary, not
+a routing bug. Rebuild the binary and restart the unit
+(`systemctl --user restart fudcourt-api`), and rebuild the web app for the panel page itself
+(`fudcourt-web.service`). Until then the panel reads a 404 through its proxy — which it reports as a
+read failure, loudly, which is the behaviour it was built for.
