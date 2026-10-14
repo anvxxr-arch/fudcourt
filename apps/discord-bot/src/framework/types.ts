@@ -27,6 +27,13 @@ export const ApplicationCommandOptionType = {
   Number: 10,
 } as const;
 
+/** The three application-command kinds Discord registers separately. */
+export const ApplicationCommandType = {
+  ChatInput: 1,
+  User: 2,
+  Message: 3,
+} as const;
+
 export interface DiscordUser {
   id: string;
   username: string;
@@ -39,6 +46,9 @@ export interface GuildMember {
   nick?: string | null;
   roles: string[];
   joined_at?: string;
+  /** Computed guild permissions bitfield (a decimal string) — present on an
+   * interaction's `member`, which is the authoritative source for the actor. */
+  permissions?: string;
 }
 
 export interface GuildRole {
@@ -64,6 +74,8 @@ export interface ApplicationCommand {
   options?: ApplicationCommandOption[];
   default_member_permissions?: string | null;
   dm_permission?: boolean;
+  /** 1 ChatInput (default), 2 User, 3 Message. Omitted for chat-input. */
+  type?: number;
 }
 
 export interface APIEmbedField {
@@ -85,6 +97,8 @@ export interface InteractionData {
   id: string;
   name: string;
   type?: number;
+  /** For USER (2) / MESSAGE (3) context commands: the target's id. */
+  target_id?: string;
   options?: Array<{
     name: string;
     type: number;
@@ -95,6 +109,8 @@ export interface InteractionData {
     users?: Record<string, DiscordUser>;
     members?: Record<string, GuildMember>;
     roles?: Record<string, GuildRole>;
+    /** Present on a MESSAGE context command — the target message + its author. */
+    messages?: Record<string, { id: string; author?: DiscordUser; channel_id?: string; content?: string }>;
   };
 }
 

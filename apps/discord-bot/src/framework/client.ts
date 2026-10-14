@@ -140,6 +140,7 @@ export class FudzieClient {
       member: interaction.member,
       user,
       options,
+      targetId: interaction.data?.target_id,
       reply,
       defer,
       followUp,
@@ -155,7 +156,8 @@ export class FudzieClient {
     if (interaction.type !== InteractionType.ApplicationCommand) return;
 
     const name = interaction.data?.name ?? "";
-    const cmd = this.commands.get(name);
+    const kind = interaction.data?.type ?? 1;
+    const cmd = this.commands.get(name, kind);
     if (!cmd) {
       const ctx = this.buildContext(interaction);
       await ctx.reply({ content: `Unknown command \`/${name}\`.`, ephemeral: true });

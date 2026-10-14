@@ -50,8 +50,11 @@ export class Rest {
     this.userAgent = opts.userAgent ?? "Fudzie (https://fudcourt.my.id, 1.0.0)";
   }
 
-  /** request performs one authed call and normalises the error surface. */
-  async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  /** request performs one authed call and normalises the error surface.
+   * `opts.reason` is sent as X-Audit-Log-Reason (percent-encoded, ≤512 chars),
+   * so every moderation action shows the moderator's stated reason in the
+   * Discord audit log — the same courtesy Dyno/Sapphire bots give. */
+  async request<T>(method: string, path: string, body?: unknown, opts: { reason?: string } = {}): Promise<T> {
     const headers: Record<string, string> = {
       Authorization: `Bot ${this.token}`,
       "User-Agent": this.userAgent,
@@ -61,6 +64,7 @@ export class Rest {
       headers["Content-Type"] = "application/json";
       payload = JSON.stringify(body);
     }
+    if (opts.reason) headers["X-Audit-Log-Reason"] = encodeURIComponent(opts.reason.slice(0, 512));
     const res = await this.fetcher(`${this.apiBase}${path}`, {
       method,
       headers,
@@ -108,8 +112,8 @@ export class Rest {
     return this.request("GET", `/guilds/${guildId}/members/${userId}`);
   }
 
-  /** GET /guilds/{id} — guild metadata (name, owner, member count). */
-  getGuild(guildId: string): Promise<{ id: string; name: string; approximate_member_count?: number }> {
+  /** GET /guilds/{id} — guild metadata (name, owner id, member count). */
+  getGuild(guildId: string): Promise<{ id: string; name: string; owner_id?: string; approximate_member_count?: number }> {
     return this.request("GET", `/guilds/${guildId}`);
   }
 
@@ -138,5 +142,85 @@ export class Rest {
   /** POST /webhooks/{app}/{token} — a followup message after a deferred reply. */
   createFollowup(appId: string, interactionToken: string, data: InteractionCallbackData): Promise<unknown> {
     return this.request("POST", `/webhooks/${appId}/${interactionToken}`, data);
+  }
+
+  // --- Moderation primitives (the shared surface every mod command drives) ---
+  // Each takes an optional audit-log `reason`; the request layer stamps it as
+  // X-Audit-Log-Reason. Discord returns 204 (empty) for most of these, which
+  // request() already turns into `undefined`.
+
+  /** PUT /guilds/{g}/bans/{u} — ban a member. */
+  banMember(
+    guildId: string,
+    userId: string,
+    opts: { deleteMessageSeconds?: number; reason?: string } = {},
+  ): Promise<void> {
+    const body: Record<string, unknown> = {};
+    if (opts.deleteMessageSeconds) body.delete_message_seconds = opts.deleteMessageSeconds;
+    return this.request("PUT", `/guilds/${guildId}/bans/${userId}`, body, { reason: opts.reason });
+  }
+
+  /** DELETE /guilds/{g}/bans/{u} — lift a ban. */
+  unbanMember(guildId: string, userId: string, opts: { reason?: string } = {}): Promise<void> {
+    return this.request("DELETE", `/guilds/${guildId}/bans/${userId}`, undefined, { reason: opts.reason });
+  }
+
+  /** DELETE /guilds/{g}/members/{u} — kick a member. */
+  kickMember(guildId: string, userId: string, opts: { reason?: string } = {}): Promise<void> {
+    return this.request("DELETE", `/guilds/${guildId}/members/${userId}`, undefined, { reason: opts.reason });
+  }
+
+  /** PATCH /guilds/{g}/members/{u} — timeout (communication_disabled_until) or nick. */
+  modifyMember(
+    guildId: string,
+    userId: string,
+    body: { communication_disabled_until?: string | null; nick?: string | null },
+    opts: { reason?: string } = {},
+  ): Promise<unknown> {
+    return this.request("PATCH", `/guilds/${guildId}/members/${userId}`, body, { reason: opts.reason });
+  }
+
+  /** GET /channels/{c}/messages — the most recent messages, newest first (1..100). */
+  listMessages(channelId: string, limit: number): Promise<Array<{ id: string; timestamp?: string }>> {
+    const n = Math.min(Math.max(Math.trunc(limit), 1), 100);
+    return this.request("GET", `/channels/${channelId}/messages?limit=${n}`);
+  }
+
+  /** POST /channels/{c}/messages/bulk-delete — delete 2..100 messages (204). */
+  bulkDeleteMessages(channelId: string, messageIds: string[], opts: { reason?: string } = {}): Promise<void> {
+    return this.request(
+      "POST",
+      `/channels/${channelId}/messages/bulk-delete`,
+      { messages: messageIds },
+      { reason: opts.reason },
+    );
+  }
+
+  /** DELETE /channels/{c}/messages/{m} — delete a single message. */
+  deleteMessage(channelId: string, messageId: string, opts: { reason?: string } = {}): Promise<void> {
+    return this.request("DELETE", `/channels/${channelId}/messages/${messageId}`, undefined, { reason: opts.reason });
+  }
+
+  /** PATCH /channels/{c} — modify a channel (rate_limit_per_user is slowmode seconds). */
+  modifyChannel(
+    channelId: string,
+    body: { rate_limit_per_user?: number },
+    opts: { reason?: string } = {},
+  ): Promise<unknown> {
+    return this.request("PATCH", `/channels/${channelId}`, body, { reason: opts.reason });
+  }
+
+  /**
+   * PUT /channels/{c}/permissions/{overwrite} — write a channel overwrite.
+   * `type` 0 is a role overwrite (the @everyone role id equals the guild id),
+   * 1 a member. `allow`/`deny` are permission bitfield strings.
+   */
+  editChannelPermissions(
+    channelId: string,
+    overwriteId: string,
+    body: { allow?: string; deny?: string; type?: number },
+    opts: { reason?: string } = {},
+  ): Promise<void> {
+    return this.request("PUT", `/channels/${channelId}/permissions/${overwriteId}`, body, { reason: opts.reason });
   }
 }

@@ -7,28 +7,36 @@ import type { Listener } from "./listener.ts";
 import type { Precondition } from "./precondition.ts";
 
 export class CommandStore {
-  private readonly byName = new Map<string, Command>();
+  private readonly byKey = new Map<string, Command>();
   private readonly order: string[] = [];
 
+  /** key namespaces a command by its KIND — a slash `/ban` and a user-context
+   * "Ban" share the name but are different commands, and Discord registers them
+   * separately, so the store must not let one shadow the other. */
+  private static key(name: string, type = 1): string {
+    return `${type}:${name}`;
+  }
+
   add(cmd: Command): void {
-    if (!this.byName.has(cmd.name)) this.order.push(cmd.name);
-    this.byName.set(cmd.name, cmd);
+    const k = CommandStore.key(cmd.name, cmd.type);
+    if (!this.byKey.has(k)) this.order.push(k);
+    this.byKey.set(k, cmd);
   }
 
-  get(name: string): Command | undefined {
-    return this.byName.get(name);
+  get(name: string, type = 1): Command | undefined {
+    return this.byKey.get(CommandStore.key(name, type));
   }
 
-  has(name: string): boolean {
-    return this.byName.has(name);
+  has(name: string, type = 1): boolean {
+    return this.byKey.has(CommandStore.key(name, type));
   }
 
   all(): Command[] {
-    return this.order.map((n) => this.byName.get(n)!).filter(Boolean);
+    return this.order.map((n) => this.byKey.get(n)!).filter(Boolean);
   }
 
   get size(): number {
-    return this.byName.size;
+    return this.byKey.size;
   }
 }
 

@@ -14,7 +14,7 @@ import type {
   InteractionData,
   DiscordUser,
 } from "./types.ts";
-import { EPHEMERAL_FLAG } from "./types.ts";
+import { ApplicationCommandType, EPHEMERAL_FLAG } from "./types.ts";
 
 /** One parsed option value from the interaction, flattened for handlers. */
 export interface ParsedOptions {
@@ -66,6 +66,8 @@ export interface CommandContext {
   readonly member: GuildMember | undefined;
   readonly user: DiscordUser;
   readonly options: ParsedOptions;
+  /** The target of a USER/MESSAGE context command (data.target_id). */
+  readonly targetId: string | undefined;
   /** Reply to the interaction (ephemeral by default, like the Telegram bot's direct replies). */
   reply(data: { content?: string; embeds?: APIEmbed[]; ephemeral?: boolean }): Promise<void>;
   /** Acknowledge with a "thinking…" state for a slow command, then followUp. */
@@ -84,6 +86,8 @@ export interface CommandOptions {
   adminOnly?: boolean;
   /** DM-only or guild-only visibility for the registered command. */
   guildOnly?: boolean;
+  /** Command kind: 1 ChatInput (default), 2 User, 3 Message. */
+  type?: number;
 }
 
 export abstract class Command {
@@ -92,19 +96,27 @@ export abstract class Command {
   readonly options: ApplicationCommandOption[];
   readonly preconditions: string[];
   readonly guildOnly: boolean;
+  readonly type: number;
 
   constructor(opts: CommandOptions) {
     this.name = opts.name;
     this.description = opts.description;
     this.options = opts.options ?? [];
     this.guildOnly = opts.guildOnly ?? true;
+    this.type = opts.type ?? ApplicationCommandType.ChatInput;
     const pre = [...(opts.preconditions ?? [])];
     if (opts.adminOnly && !pre.includes("AdminOnly")) pre.push("AdminOnly");
     this.preconditions = pre;
   }
 
-  /** toJSON renders the Discord registration payload. */
+  /** toJSON renders the Discord registration payload.
+   * A chat-input command carries its description/options; a USER/MESSAGE
+   * context command carries only { name, type } — Discord rejects extra fields
+   * (and a description is meaningless) for context-menu commands. */
   toJSON(): ApplicationCommand {
+    if (this.type !== ApplicationCommandType.ChatInput) {
+      return { name: this.name, description: "", type: this.type };
+    }
     const cmd: ApplicationCommand = { name: this.name, description: this.description };
     if (this.options.length > 0) cmd.options = this.options;
     cmd.dm_permission = !this.guildOnly;
