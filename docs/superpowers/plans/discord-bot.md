@@ -357,6 +357,11 @@ cannot connect.
 
 ## Phase 11 as delivered — Feeds
 
+_Landed as part of `e774d2b` ("feat(data,discord-bot): DEX data platform foundation"): a
+concurrent session committed the working tree while this phase was finishing, so the feeds
+files described below were swept into that commit's message. The files themselves are
+exactly the ones named in this section._
+
 `apps/discord-worker/src/feeds/`: `guard` → `fetch` → `parse` → `store`, with `poll` and
 `deliver` as the two job handlers. A poll is an ordinary `scheduled_jobs` definition
 (`job_kind = 'feed.poll'`, payload `{"source_id": N}`) and an announcement is an ordinary
