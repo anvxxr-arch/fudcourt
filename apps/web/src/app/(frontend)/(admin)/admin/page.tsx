@@ -8,6 +8,7 @@ import SettingsPanel from '@/features/admin/settings-panel';
 import CasesPanel from '@/features/admin/cases-panel';
 import SchedulerPanel from '@/features/admin/scheduler-panel';
 import FeedsPanel from '@/features/admin/feeds-panel';
+import WelcomePanel from '@/features/admin/welcome-panel';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -96,6 +97,17 @@ export default async function AdminPage() {
           and never sends it back.
         </p>
         <FeedsPanel />
+      </section>
+
+      <section style={{ marginTop: space[32] }}>
+        <h2 style={{ fontSize: fontSize[15], color: themeColor.labelPrimary, margin: `0 0 ${space[4]}px` }}>Welcome &amp; goodbye</h2>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
+          The messages the bot posts when a member joins or leaves, previewed with a member you can
+          edit — because a template only means something once it has been rendered. The preview is a
+          mirror of the bot&apos;s own renderer, including the cases where it would send{' '}
+          <em>nothing</em>.
+        </p>
+        <WelcomePanel />
       </section>
 
       <section style={{ marginTop: space[32] }}>

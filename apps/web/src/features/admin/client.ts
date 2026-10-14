@@ -269,3 +269,44 @@ export function saveFeeds(feeds: FeedSource[]): Promise<FeedsView> {
   });
 }
 
+/**
+ * The welcome/goodbye config, mirroring `apps/api/community.go`'s `welcomeConfig` on the wire. One
+ * row per guild; GET answers `{welcome: ... | null}`, and null means "never configured" — the panel
+ * shows an untouched form for that, not an error.
+ *
+ * The embeds are `object | null` HERE and `jsonb` there, and that difference is load-bearing: the
+ * api validates their shape on write (`validateEmbed`), so an object this type accepts is one the
+ * bot's renderer can walk without throwing.
+ */
+export type WelcomeConfig = {
+  joinEnabled: boolean;
+  joinChannelId: string;
+  joinMessage: string;
+  joinEmbed?: Record<string, unknown> | null;
+  joinDm: boolean;
+  joinDmMessage: string;
+  leaveEnabled: boolean;
+  leaveChannelId: string;
+  leaveMessage: string;
+  leaveEmbed?: Record<string, unknown> | null;
+};
+
+export type WelcomeView = { ok?: boolean; welcome?: WelcomeConfig | null; detail?: string };
+
+export function fetchWelcome(): Promise<WelcomeView> {
+  return getJSON<WelcomeView>('/api/admin/welcome', { cache: 'no-store' });
+}
+
+/**
+ * saveWelcome posts the config DIRECTLY, where the scheduler and feeds endpoints wrap their list in
+ * a key. That is the wire, not a slip: wrapping it here would put a second shape between the panel
+ * and the api, and the shape the api documents is the one it validates.
+ */
+export function saveWelcome(config: WelcomeConfig): Promise<WelcomeView> {
+  return getJSON<WelcomeView>('/api/admin/welcome', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  });
+}
+
