@@ -149,4 +149,5 @@ func (s *server) attachStores() {
 	s.discord.settings = newPGSettingsStore(pool)
 	s.cases = newPGCasesStore(pool)
 	s.automod = newPGAutomodStore(pool)
+	s.logging = newPGLoggingStore(pool)
 }

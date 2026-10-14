@@ -7,6 +7,8 @@
 // injected, so the whole flow is testable with fakes and no gateway.
 
 import type { ModAction, ModRequest, ModResult } from "../moderation/service.ts";
+import { automodEvent } from "../logging/events.ts";
+import type { ActivityEvent } from "../logging/types.ts";
 import {
   evaluateRules,
   type AutomodAction,
@@ -20,6 +22,11 @@ import type { SpamTracker } from "./state.ts";
 
 /** The moderation actions AutoMod routes through the shared service. */
 const ROUTED_ACTIONS = new Set<AutomodAction>(["warn", "timeout", "kick", "ban"]);
+
+/** The narrow activity-log port (satisfied by ActivityLogger). */
+export interface ActivityPort {
+  emitEvent(ev: ActivityEvent | null): Promise<boolean>;
+}
 
 export interface ModerationPort {
   run(req: ModRequest): Promise<ModResult>;
@@ -45,6 +52,8 @@ export interface AutomodDeps {
   delivery: DeliveryPort;
   /** The acting identity for moderation actions (the bot itself). */
   actor: () => Promise<ActorIdentity>;
+  /** Optional activity-log port: mirrors each rule firing to the automod channel. */
+  activity?: ActivityPort;
   log: (msg: string) => void;
   now?: () => number;
 }
@@ -172,6 +181,17 @@ export class AutomodService {
       await this.deps.tracker.markFired(t.guildId, f.rule.id, t.targetId, f.rule.cooldownSeconds, now);
       this.deps.log(`automod "${f.rule.name}" fired on ${t.targetId}: ${results.join(", ")}`);
       outcomes.push({ rule: f.rule, actions: f.actions, results });
+      // Mirror the firing to the automod activity-log channel (one embed per
+      // rule, covering delete/log_only which never reach the moderation
+      // service). Best-effort — a log failure never affects the action.
+      await this.deps.activity?.emitEvent(
+        automodEvent({
+          ruleName: f.rule.name,
+          targetId: t.targetId,
+          channelId: t.channelId || undefined,
+          results,
+        }),
+      );
     }
     return outcomes;
   }

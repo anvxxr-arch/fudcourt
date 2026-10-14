@@ -17,6 +17,7 @@ import type { FudzieClient } from "../framework/client.ts";
 import type { GuildMember, GuildRole } from "../framework/types.ts";
 import { caseActionName } from "../lib/cases.ts";
 import { has, Perm } from "../lib/permissions.ts";
+import { moderationEvent } from "../logging/events.ts";
 import { guardTarget, topPosition, type GuardResult } from "./hierarchy.ts";
 
 /** The moderation actions this service can perform. */
@@ -141,6 +142,7 @@ export class ModerationService {
     if (!res.ok || CHANNEL_ACTIONS.has(req.action)) return res;
     const targetId = req.targetId;
     if (!targetId) return res;
+    let caseNumber: number | undefined;
     try {
       const stored = await this.client.cases.record({
         action: caseActionName(req.action),
@@ -150,11 +152,28 @@ export class ModerationService {
         durationSeconds: req.action === "timeout" ? clampInt(req.durationSeconds ?? 600, 1, 28 * 86400) : undefined,
         source: req.source ?? "slash",
       });
-      if (stored) return { ...res, caseNumber: stored.caseNumber };
+      if (stored) caseNumber = stored.caseNumber;
     } catch (err) {
       this.client.log(`case record failed for ${req.action}: ${err instanceof Error ? err.message : String(err)}`);
     }
-    return res;
+    // Mirror the completed action to the moderation activity-log channel.
+    // AutoMod-originated actions are logged by the AutoMod service instead (one
+    // embed per firing, not two), so skip them here. Best-effort: the Discord
+    // action already happened, so a log that cannot be delivered must never turn
+    // it into a failure.
+    if (req.source !== "automod") {
+      await this.client.logger.emitEvent(
+        moderationEvent({
+          action: caseActionName(req.action),
+          actorId: req.actorId,
+          targetId,
+          reason: req.reason?.trim(),
+          source: req.source,
+          caseNumber,
+        }),
+      );
+    }
+    return caseNumber !== undefined ? { ...res, caseNumber } : res;
   }
 
   /**

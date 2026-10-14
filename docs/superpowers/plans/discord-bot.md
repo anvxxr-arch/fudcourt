@@ -13,7 +13,7 @@ against the real repo — no green-by-disabling. Status is the truth, not the in
 | 3 | Discord core | ✅ done | gateway v10 state machine, slash + context-menu routers, precondition middleware, error responder |
 | 4 | Moderation | ✅ done | full case lifecycle, case numbers, `/case` `/history`, hierarchy refusals (commit `c84edde`) |
 | 5 | AutoMod / anti-spam | ✅ done | rule engine (13 matchers) + deterministic scoring + window state + service + listeners/intents + `automod_rules` store & loopback read; live E2E proven (commits `15ce98a`,`0c875c7`,`b886fb7`,`5007dcd`) |
-| 6 | Logging / audit | ⬜ todo | Discord activity logs (per-destination) + audit before/after |
+| 6 | Logging / audit | ✅ done | per-category activity logs (7 categories → routed channels) + audit trail (before/after JSONB); bot mappers + logger + audit client, api store/routes/internal reads; live E2E proven |
 | 7 | Community features | ⬜ todo | welcome/goodbye, autoroles, reaction/button/select role panels |
 | 8 | Custom commands | ⬜ todo | declarative only; no executable scripting |
 | 9 | Worker foundation | ⬜ todo | durable job claim (`FOR UPDATE SKIP LOCKED`), retry/backoff, idempotency |
@@ -58,11 +58,36 @@ exposes the loopback read; a rule CRUD admin route + panel is the remaining slic
 and swapping the in-memory window store for a Valkey-backed one if a second process
 ever needs to share the windows.
 
-## Next phase — 6, Logging / audit
+## Phase 6 as delivered — Logging / audit
 
-Discord activity logs (per-destination) + audit before/after, delivered as a
-JSONB-configured log router (members, messages, moderation, voice), with the
-destination set editable from the dashboard.
+1. **Two trails, deliberately separate.** *Activity* logs mirror Discord events
+   (message delete/edit, member join/leave/update, voice, channel); *audit* records
+   changes to the bot itself. They share no table and no read path.
+2. **Activity routing** — `log_destinations` holds one (guild, category → channel)
+   row; categories are a closed set (`message, member, role, voice, channel,
+   moderation, automod`). The bot loads the ENABLED map over loopback
+   (`GET /api/internal/log-config`) and posts one embed per event; an unrouted
+   category no-ops.
+3. **Pure mappers** — `src/logging/events.ts` turns a raw gateway payload into
+   `{category, embed}` with no client/REST, so the log shape is unit-testable
+   (9 mapper tests). `ActivityLogger` (routing) + `AuditLog` (loopback POST) are
+   tiny and fully injectable.
+4. **Shared action log** — a completed moderation action (Discord **or** dashboard
+   **or** AutoMod) mirrors one embed to the `moderation` channel; AutoMod firings
+   log to `automod` from the AutoMod service (one embed per firing, not two).
+   Best-effort: a log that cannot be delivered never fails the action.
+5. **Audit trail** — `audit_logs` (actor, action, resource_type/id, `before`/`after`
+   JSONB, source ∈ dashboard|discord|automod|system). Both origins write one row:
+   the api records its own mutations (e.g. settings POST captures before/after) and
+   the bot POSTs its changes to `POST /api/internal/audit`. Read back newest-first
+   via `GET /api/admin/logs/audit` (limit/offset + resource filter).
+6. **Tests** — bot: 9 mapper + 4 logger/audit + 4 wiring + 2 moderation-log + 2
+   automod-log; api: 12 Go handler tests (loopback gate, admin gate, envelopes,
+   validation, round-trip). 186 bot tests pass, `tsc` clean, `go build`/`vet`/`test`
+   green. Live E2E: internal read returns the enabled map, an audit POST persists
+   with the configured guild id, an unrouted/disabled category is absent.
+
+## Next phase — 7, Community features
 
 ## Guardrails carried through every phase
 

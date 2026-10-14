@@ -144,6 +144,11 @@ export class Rest {
     return this.request("POST", `/webhooks/${appId}/${interactionToken}`, data);
   }
 
+  /** POST /channels/{c}/messages — post a channel message (activity logs). */
+  createMessage(channelId: string, data: InteractionCallbackData): Promise<{ id: string }> {
+    return this.request("POST", `/channels/${channelId}/messages`, data);
+  }
+
   // --- Moderation primitives (the shared surface every mod command drives) ---
   // Each takes an optional audit-log `reason`; the request layer stamps it as
   // X-Audit-Log-Reason. Discord returns 204 (empty) for most of these, which

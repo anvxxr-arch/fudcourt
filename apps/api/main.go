@@ -55,6 +55,11 @@ type server struct {
 	// set is unavailable (no FUDCOURT_PG_URL): the bot's loader then reads no
 	// rules and AutoMod simply does nothing, rather than crashing.
 	automod automodStore
+	// logging is the activity-log routing + audit store (logging.go). nil means
+	// the log config is unavailable (no FUDCOURT_PG_URL): the bot's router then
+	// reads no destinations and mirrors nothing, and audit writes are dropped —
+	// never a crash.
+	logging loggingStore
 	// secret is the HMAC session key (FUDCOURT_SESSION_SECRET). It is read
 	// through identity.SessionSecret's fail-closed floor: without a usable
 	// secret no session ever verifies and none can be minted — exactly the
@@ -121,6 +126,14 @@ func (s *server) handler() http.Handler {
 	// no Postgres driver), so an operator rule change reaches the bot without a
 	// restart — the same hop, for the same reason.
 	mux.HandleFunc("/api/internal/automod/rules", s.handleInternalAutomodRules)
+	// Internal, loopback-only: the bot reads its activity-log routing map here
+	// and records bot-originated audit entries — the same hop, for the same
+	// reason (no Postgres driver in the bot).
+	mux.HandleFunc("/api/internal/log-config", s.handleInternalLogConfig)
+	mux.HandleFunc("/api/internal/audit", s.handleInternalAudit)
+	// Dashboard: log-routing editor + audit viewer, both behind the admin tier.
+	mux.HandleFunc("/api/admin/logs/destinations", s.handleAdminLogDestinations)
+	mux.HandleFunc("/api/admin/logs/audit", s.handleAdminAuditLogs)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, errNotFound)
 	})

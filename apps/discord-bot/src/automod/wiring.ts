@@ -141,6 +141,7 @@ export function buildAutomod(client: FudzieClient): AutomodService {
       removeRole: (g, u, r) => client.rest.removeGuildMemberRole(g, u, r, { reason: "automod" }),
     },
     actor: makeBotActor(client),
+    activity: client.logger,
     log: (m) => client.log(m),
   };
   return new AutomodService(deps);

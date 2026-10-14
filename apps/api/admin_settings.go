@@ -126,6 +126,13 @@ func (s *server) adminSettingsPost(w http.ResponseWriter, r *http.Request) {
 		writeRefusal(w, r, http.StatusBadGateway, "settings_write_failed", errs.CategoryNetwork, err.Error())
 		return
 	}
+	// Audit the change with a structured before/after, best-effort: the save
+	// stands even if the audit row cannot be written.
+	s.recordAudit(r.Context(), auditInput{
+		ActorID: s.auditActor(r).ID, ActorName: s.auditActor(r).Name,
+		Action: "settings.update", ResourceType: "settings", ResourceID: "discord",
+		Before: marshalOrNil(cur), After: marshalOrNil(next), Source: "dashboard",
+	})
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"ok": true, "config": next})
 }
 

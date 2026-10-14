@@ -2090,6 +2090,193 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
+  /api/internal/log-config:
+    get:
+      tags: [internal]
+      operationId: internalLogConfig
+      summary: Read the activity-log routing map, for the co-located bot (loopback-only)
+      description: |
+        The bot mirrors Discord activity to operator-routed channels but carries
+        no Postgres driver, so it loads the ENABLED category → channel map here
+        over the loopback hop. Only enabled categories with a channel are
+        returned; an unrouted category is simply absent, so the bot's logger
+        no-ops for it. No session: the api listener is loopback-only (DR-002) and
+        the map carries no secret. A non-loopback peer is refused as if the route
+        did not exist (404).
+      responses:
+        '200':
+          description: '`{"destinations": {"message": "<channel_id>", ...}}` — enabled categories only.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogConfigResponse'
+        '404':
+          description: 'The generic not-found envelope for a non-loopback peer.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBasic'
+        '503':
+          description: "`{\"error\": \"logging_unavailable\", ...}` — the log store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+  /api/internal/audit:
+    post:
+      tags: [internal]
+      operationId: internalAuditWrite
+      summary: Record an audit entry, for the co-located bot (loopback-only)
+      description: |
+        The bot records changes it originates (a prefix edit through a command, an
+        AutoMod rule toggle) to the SAME audit trail the dashboard reads, so one
+        change is one row regardless of where it came from. `source` defaults to
+        `discord`; `before`/`after` are arbitrary JSON (a create has no before, a
+        delete no after). No session: loopback-only (DR-002). A non-loopback peer
+        is refused as if the route did not exist (404).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuditWriteRequest'
+      responses:
+        '200':
+          description: The stored entry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEntry'
+        '400':
+          description: "`{\"error\": \"bad_request\", \"detail\": ...}` for a missing/unknown field or a non-object body."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: 'The generic not-found envelope for a non-loopback peer.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBasic'
+        '503':
+          description: "`{\"error\": \"logging_unavailable\", ...}` — the log store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+  /api/admin/logs/destinations:
+    get:
+      tags: [admin]
+      operationId: getAdminLogDestinations
+      summary: Read the activity-log routing (category → channel)
+      description: |
+        The operator-facing view of where the bot sends its Discord activity logs:
+        one row per category, whether it is enabled, and the channel it points at.
+        Categories are a closed set (message, member, role, voice, channel,
+        moderation, automod). Requires the admin tier.
+      responses:
+        '200':
+          description: The routing rows and the closed category set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogDestinationsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '405':
+          description: '`{"error": "method_not_allowed"}` for a non-GET/POST method; `Allow: GET, POST`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '503':
+          description: "`{\"error\": \"logging_unavailable\", ...}` — the log store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+    post:
+      tags: [admin]
+      operationId: setAdminLogDestination
+      summary: Point a category at a channel (or disable it)
+      description: |
+        Upserts one (category → channel) routing row. `enabled: false` keeps the
+        row but stops delivery; an empty `channelId` with `enabled: false` is the
+        way to turn a category off without forgetting its channel. An unknown
+        category or a non-snowflake channel is a 400. The bot reads the change on
+        its next event — no restart. Requires the admin tier.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogDestinationWrite'
+      responses:
+        '200':
+          description: The applied routing row.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogDestinationWriteResponse'
+        '400':
+          description: "`{\"error\": \"bad_request\", \"detail\": ...}` for an unknown category or a non-snowflake channel."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: "`{\"error\": \"logging_unavailable\", ...}` — the log store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+  /api/admin/logs/audit:
+    get:
+      tags: [admin]
+      operationId: getAdminAuditLogs
+      summary: Read the audit trail (bot config changes), newest first
+      description: |
+        The accountable history of changes to the bot itself: who did it, what
+        changed, and the structured before/after. Paginated by `limit`/`offset`;
+        an optional `resourceType` (and `resourceId`) narrows to one resource's
+        history. Requires the admin tier.
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: resourceType
+          in: query
+          schema: { type: string }
+        - name: resourceId
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: The audit page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '405':
+          description: '`{"error": "method_not_allowed"}` for a non-GET method; `Allow: GET`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '503':
+          description: "`{\"error\": \"logging_unavailable\", ...}` — the log store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
 components:
   parameters:
     ExecutionId:
@@ -4980,6 +5167,109 @@ components:
         rules:
           type: array
           items: { $ref: '#/components/schemas/AutomodRule' }
+    LogConfigResponse:
+      type: object
+      additionalProperties: false
+      required: [destinations]
+      description: |
+        The ENABLED activity-log routing the bot loads: a map of category →
+        channel id. A category the operator has not routed (or has disabled) is
+        absent, not null — the bot's logger simply no-ops for it.
+      properties:
+        destinations:
+          type: object
+          additionalProperties: { type: string }
+    LogDestination:
+      type: object
+      additionalProperties: false
+      required: [category, channelId, enabled]
+      description: One (category → channel) activity-log routing row.
+      properties:
+        category: { type: string, enum: [message, member, role, voice, channel, moderation, automod] }
+        channelId: { type: string }
+        enabled: { type: boolean }
+    LogDestinationsResponse:
+      type: object
+      additionalProperties: false
+      required: [destinations, categories]
+      description: |
+        The routing rows the operator has set, plus the closed category set the
+        dashboard renders as a picker (so a category with no row is still
+        shown, as unrouted).
+      properties:
+        destinations:
+          type: array
+          items: { $ref: '#/components/schemas/LogDestination' }
+        categories:
+          type: array
+          items: { type: string, enum: [message, member, role, voice, channel, moderation, automod] }
+    LogDestinationWrite:
+      type: object
+      additionalProperties: false
+      required: [category]
+      description: |
+        An upsert of one routing row. `channelId` is required when `enabled` is
+        true (a routed category needs a channel); an empty channelId with
+        `enabled: false` turns a category off while keeping the row.
+      properties:
+        category: { type: string, enum: [message, member, role, voice, channel, moderation, automod] }
+        channelId: { type: string }
+        enabled: { type: boolean, default: true }
+    LogDestinationWriteResponse:
+      type: object
+      additionalProperties: false
+      required: [ok, destination]
+      properties:
+        ok: { type: boolean }
+        destination: { $ref: '#/components/schemas/LogDestination' }
+    AuditWriteRequest:
+      type: object
+      additionalProperties: false
+      required: [action, resourceType]
+      description: |
+        One audit entry the bot records. `source` defaults to `discord`; `actorId`
+        is the bot id for a bot-originated change. `before`/`after` are arbitrary
+        JSON snapshots (a create has no before, a delete no after).
+      properties:
+        actorId: { type: string }
+        actorName: { type: string }
+        action: { type: string }
+        resourceType: { type: string }
+        resourceId: { type: string }
+        before: {}
+        after: {}
+        source: { type: string, enum: [dashboard, discord, automod, system], default: discord }
+    AuditEntry:
+      type: object
+      additionalProperties: false
+      required: [id, guildId, action, resourceType, source, createdAt]
+      description: One stored audit row (a change to the bot itself).
+      properties:
+        id: { type: integer }
+        guildId: { type: string }
+        actorId: { type: string }
+        actorName: { type: string }
+        action: { type: string }
+        resourceType: { type: string }
+        resourceId: { type: string }
+        before: {}
+        after: {}
+        source: { type: string }
+        createdAt: { type: string }
+    AuditLogsResponse:
+      type: object
+      additionalProperties: false
+      required: [entries, limit, offset, hasMore]
+      description: |
+        One page of the audit trail, newest first. `hasMore` is true when another
+        page exists (the count returned equals `limit`).
+      properties:
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/AuditEntry' }
+        limit: { type: integer }
+        offset: { type: integer }
+        hasMore: { type: boolean }
     # ==================================================================
     # Market data (CoinGecko markets / cross-venue ticker / DexScreener)
     # ==================================================================

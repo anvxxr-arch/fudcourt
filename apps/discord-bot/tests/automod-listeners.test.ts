@@ -16,6 +16,7 @@ function spy(guildId = "g1"): Spy {
   const joins: IncomingJoin[] = [];
   const client = {
     config: { guildId },
+    logger: { async emitEvent() { return true; } },
     automod: {
       async onMessage(m: IncomingMessage) {
         messages.push(m);

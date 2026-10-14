@@ -13,6 +13,9 @@ import { applyRemoteConfig, fetchRemoteConfig, type BotConfig } from "../config.
 import type { AutomodService } from "../automod/service.ts";
 import { buildAutomod } from "../automod/wiring.ts";
 import { CaseLog, type CaseLogLike } from "../lib/cases.ts";
+import { AuditLog } from "../logging/audit.ts";
+import { ActivityLogger } from "../logging/service.ts";
+import { buildAuditLog, buildLogger } from "../logging/wiring.ts";
 import { Command, parseOptions, type CommandContext, type ParsedOptions } from "./command.ts";
 import { Gateway, INTENTS_BOT } from "./gateway.ts";
 import { Listener } from "./listener.ts";
@@ -37,6 +40,10 @@ export interface ClientOptions {
   cases?: CaseLogLike;
   /** Injectable AutoMod service (tests); defaults to the loopback-backed builder. */
   automod?: AutomodService;
+  /** Injectable activity logger (tests); defaults to the loopback-backed builder. */
+  logger?: ActivityLogger;
+  /** Injectable audit client (tests); defaults to the loopback-backed builder. */
+  audit?: AuditLog;
   /** Injectable gateway factory for tests. */
   gatewayFactory?: (token: string, onEvent: (event: string, data: unknown) => void) => Gateway;
 }
@@ -50,6 +57,10 @@ export class FudzieClient {
   readonly cases: CaseLogLike;
   /** AutoMod: rule evaluation + anti-spam windows + action delivery. */
   readonly automod: AutomodService;
+  /** Activity logs: mirrors Discord events to operator-routed channels. */
+  readonly logger: ActivityLogger;
+  /** Audit: records bot-originated config changes to the shared trail. */
+  readonly audit: AuditLog;
   readonly commands = new CommandStore();
   readonly listeners = new ListenerStore();
   readonly preconditions = new PreconditionStore();
@@ -66,6 +77,8 @@ export class FudzieClient {
     this.rest = opts.rest ?? new Rest(opts.config.token);
     this.logFn = opts.log ?? ((m) => console.log(m));
     this.cases = opts.cases ?? new CaseLog(opts.config.apiUrl, this.logFn);
+    this.logger = opts.logger ?? buildLogger(this);
+    this.audit = opts.audit ?? buildAuditLog(this);
     this.automod = opts.automod ?? buildAutomod(this);
     this.gatewayFactory = opts.gatewayFactory;
   }
