@@ -15,7 +15,7 @@ against the real repo — no green-by-disabling. Status is the truth, not the in
 | 5 | AutoMod / anti-spam | ✅ done | rule engine (13 matchers) + deterministic scoring + window state + service + listeners/intents + `automod_rules` store & loopback read; live E2E proven (commits `15ce98a`,`0c875c7`,`b886fb7`,`5007dcd`) |
 | 6 | Logging / audit | ✅ done | per-category activity logs (7 categories → routed channels) + audit trail (before/after JSONB); bot mappers + logger + audit client, api store/routes/internal reads; live E2E proven |
 | 7 | Community features | ✅ done | welcome/goodbye + autoroles + reaction/button/select role panels; `welcome_configs`/`autorole_rules`/`role_panels`/`role_panel_options`/`role_assignments` stores, one loopback read + admin routes, bot services + listeners; live PG round-trip proven (commit `23431fe`) |
-| 8 | Custom commands | ⬜ todo | declarative only; no executable scripting |
+| 8 | Custom commands | ✅ done | declarative only — no executable scripting. `custom_commands` store (jsonb `responses`, shared name/alias trigger namespace, role/channel allow-lists, cooldown, delete-trigger/reply/DM), one loopback read + admin replace-as-a-unit route, bot `customcommands` service, configurable prefix via `discord.prefix`; live PG round-trip + live loopback read proven |
 | 9 | Worker foundation | ⬜ todo | durable job claim (`FOR UPDATE SKIP LOCKED`), retry/backoff, idempotency |
 | 10 | Scheduler | ⬜ todo | one-time / interval / cron, explicit TZ, restart-safe |
 | 11 | Feeds | ⬜ todo | adapter pipeline + dedup + SSRF guard on generic HTTP |
@@ -124,7 +124,49 @@ ever needs to share the windows.
    `role_panel_options` missing `guild_id`/`exclusive_group`) were caught — the
    fake-store tests could not see them.
 
-## Next phase — 8, Custom commands
+## Phase 8 as delivered — Custom commands
+
+1. **Declarative, by construction.** `custom_commands` holds `responses` as a jsonb
+   array of `{text, embed}` variants — DATA, never code. There is no shell, JS, Lua,
+   SQL or template-expression surface anywhere in the path, so a custom command can
+   only render a template and send it. More than one variant is a *random* response
+   (one is picked per invocation), so the fixed and randomized cases share one column.
+2. **Shared trigger namespace.** `name` (lowercase, `^[a-z0-9][a-z0-9_-]{0,31}$`) is
+   unique per guild and `aliases` live in the same namespace: an alias colliding with
+   another command's name or alias is refused, so a typed trigger always resolves to
+   exactly one command. The whole set is edited as a unit and replaced in one
+   transaction (audited `custom-commands.replace`); the api validates names, aliases,
+   response shape, allow-list ids and the cooldown range before storing.
+3. **Configurable prefix.** `discord.prefix` in `settings` (env seed
+   `FUDCOURT_PREFIX`, default `!`) rides the existing `discord-config` loopback read,
+   so a prefix change applies without a restart — proven live: DB `?` beat env `!`.
+4. **Bot service** (`src/customcommands/`) — pure and fully injectable:
+   `parseTrigger` splits `name [args]` without touching Discord, the service gates on
+   the role/channel allow-lists (empty = anyone/anywhere), throttles per
+   (command, member) via an injectable `CooldownStore` (in-memory default; a Valkey
+   adapter drops in behind the same interface), renders `{user} {username}
+   {display_name} {server} {member_count} {created_at} {channel} {args} {mention}`
+   through the SHARED template engine, then sends (channel reply, plain send, or DM)
+   and optionally deletes the trigger. `{server}`/`{member_count}` come from a cached
+   guild-info lookup, so the hot path makes no per-message REST call.
+5. **Wiring** — `messageCreate` runs AutoMod then custom commands; a message that is
+   not a known trigger falls through untouched (returns `false`), and a config-lookup
+   or send failure is swallowed so the listener can never break the event loop.
+6. **Tests** — 30 bot service/parse tests (`tsc` clean; 282 bot tests pass in total)
+   + 13 Go handler tests (loopback gate, admin gate, name/alias/response/allow-list
+   validation, method guard) + a **live** `customcommands_pg_test.go` round-trip
+   against the real schema (arrays, jsonb responses, boolean flags, the cooldown
+   `CHECK`), skipped unless `FUDCOURT_TEST_PG_URL` is set. Live proof: the api served
+   `GET /api/internal/custom-commands` from a real row, `discord-config` returned the
+   DB prefix, and an unauthenticated admin read was a 401.
+
+**Note on schema application.** The schema is applied out-of-band AS the app role
+(`fudcourt`), which owns the tables; applying it as the superuser leaves the new
+table owned by `postgres` and the service then gets `permission denied`. Re-applied
+as the app role the round-trip passes, so the deployment step stays "apply
+`db/schema/pg-schema.sql` as the database owner".
+
+## Next phase — 9, Worker foundation
 
 ## Guardrails carried through every phase
 

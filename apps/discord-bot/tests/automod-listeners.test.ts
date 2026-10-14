@@ -9,13 +9,15 @@ interface Spy {
   client: FudzieClient;
   messages: IncomingMessage[];
   joins: IncomingJoin[];
+  customCommands: unknown[];
 }
 
 function spy(guildId = "g1"): Spy {
   const messages: IncomingMessage[] = [];
   const joins: IncomingJoin[] = [];
+  const customCommands: unknown[] = [];
   const client = {
-    config: { guildId },
+    config: { guildId, prefix: "!" },
     logger: { async emitEvent() { return true; } },
     automod: {
       async onMessage(m: IncomingMessage) {
@@ -29,8 +31,14 @@ function spy(guildId = "g1"): Spy {
     },
     welcome: { async onJoin() {}, async onLeave() {} },
     autorole: { async onJoin() {} },
+    customCommands: {
+      async handleMessage(m: unknown) {
+        customCommands.push(m);
+        return false;
+      },
+    },
   } as unknown as FudzieClient;
-  return { client, messages, joins };
+  return { client, messages, joins, customCommands };
 }
 
 const GUILD_MSG = {
@@ -50,6 +58,12 @@ describe("MessageCreateListener", () => {
     expect(s.messages).toHaveLength(1);
     expect(s.messages[0]?.messageId).toBe("m1");
     expect(s.messages[0]?.authorId).toBe("175928847299117063");
+  });
+
+  test("also routes a guild message to custom commands", async () => {
+    const s = spy();
+    await messageCreate.run(s.client, GUILD_MSG);
+    expect(s.customCommands).toHaveLength(1);
   });
 
   test("ignores a DM (no guild_id)", async () => {

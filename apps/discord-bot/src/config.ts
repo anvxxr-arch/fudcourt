@@ -22,6 +22,12 @@ export interface BotConfig {
   readonly teamRoleIds: readonly string[];
   /** Role ids that grant the intern tier (FUDCOURT_ROLE_MAGANG). */
   readonly magangRoleIds: readonly string[];
+  /**
+   * The message prefix for prefix/custom commands (FUDCOURT_PREFIX, default
+   * "!"). Admin-editable: the DB row `discord.prefix` overrides the env seed,
+   * so a change applies without a restart.
+   */
+  readonly prefix: string;
   /** Loopback base of the Go data sidecar (:3101) for /status probes. */
   readonly dataUrl: string;
   /** Loopback base of the Go api (:3103) — the admin-editable config source. */
@@ -67,6 +73,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     adminRoleIds: splitIds(env.FUDCOURT_ROLE_ADMIN),
     teamRoleIds: splitIds(env.FUDCOURT_ROLE_TEAM),
     magangRoleIds: splitIds(env.FUDCOURT_ROLE_MAGANG),
+    prefix: env.FUDCOURT_PREFIX ?? "!",
     dataUrl: (env.FUDCOURT_DATA_URL ?? "http://127.0.0.1:3101").replace(/\/+$/, ""),
     apiUrl: (env.FUDCOURT_API_URL ?? "http://127.0.0.1:3103").replace(/\/+$/, ""),
     publicOrigin: (env.FUDCOURT_PUBLIC_ORIGIN ?? "https://fudcourt.my.id").replace(/\/+$/, ""),
@@ -92,6 +99,8 @@ export interface RemoteDiscordConfig {
   roleAdmin?: string;
   roleTeam?: string;
   roleMagang?: string;
+  /** The message prefix (settings key `discord.prefix`). */
+  prefix?: string;
 }
 
 /**
@@ -118,6 +127,9 @@ export function applyRemoteConfig(base: BotConfig, remote: RemoteDiscordConfig |
     adminRoleIds: pick(remote.roleAdmin, base.adminRoleIds),
     teamRoleIds: pick(remote.roleTeam, base.teamRoleIds),
     magangRoleIds: pick(remote.roleMagang, base.magangRoleIds),
+    // The prefix has no empty state: a blank remote value keeps the baseline
+    // (env default), so clearing it in the panel never disables prefix commands.
+    prefix: remote.prefix?.trim() || base.prefix,
   };
 }
 

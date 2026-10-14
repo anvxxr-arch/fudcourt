@@ -2551,6 +2551,91 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
+  /api/internal/custom-commands:
+    get:
+      tags: [internal]
+      operationId: getInternalCustomCommands
+      summary: The bot's single read of its declarative custom commands
+      description: |
+        Loopback-only (a non-loopback peer sees a 404). The bot has no Postgres
+        driver, so it reads its command set here once per refresh. Exempt from
+        the dashboard contract gate — this is not a public route.
+      responses:
+        '200':
+          description: "`{commands: [...]}`."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomCommandConfig' }
+        '503':
+          description: "`custom_commands_unavailable` — the store is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+  /api/admin/custom-commands:
+    get:
+      tags: [admin]
+      operationId: getAdminCustomCommands
+      summary: List the declarative custom commands
+      description: Requires the admin tier.
+      responses:
+        '200':
+          description: "`{commands: [...]}`."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomCommandConfig' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`custom_commands_unavailable` — the store is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+    post:
+      tags: [admin]
+      operationId: setAdminCustomCommands
+      summary: Replace the whole custom-command set (one transaction)
+      description: |
+        Requires the admin tier. The list is edited as a unit, so it is replaced
+        as one. The trigger namespace is shared: a duplicate command name, or an
+        alias colliding with another command's name or alias, is refused. A
+        response with neither text nor embed, a non-snowflake allow-list id, an
+        out-of-range cooldown, or an embed that is not a JSON object is refused.
+        Audited as `custom-commands.replace`. Responses stay DECLARATIVE: text
+        plus an optional embed, never code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [commands]
+              properties:
+                commands:
+                  type: array
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/CustomCommand' }
+      responses:
+        '200':
+          description: "`{ok: true, commands: [...]}`."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  commands:
+                    type: array
+                    items: { $ref: '#/components/schemas/CustomCommand' }
+        '400':
+          description: A bad trigger name, a duplicate trigger, a response with neither text nor embed, a bad allow-list id, or a cooldown out of range.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`custom_commands_unavailable` — the store is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
 components:
   parameters:
     ExecutionId:
@@ -6328,3 +6413,62 @@ components:
           type: array
           items: { $ref: '#/components/schemas/RolePanel' }
         welcome: { $ref: '#/components/schemas/WelcomeConfig' }
+    CustomCommandResponse:
+      type: object
+      description: |
+        One response variant of a custom command — DECLARATIVE data, never code.
+        At least one of `text`/`embed` must be present. When a command has more
+        than one variant the bot picks one at random per invocation.
+      properties:
+        text:
+          type: string
+          maxLength: 2000
+          description: 'Plain text body. Template variables: {user} {username} {display_name} {server} {member_count} {created_at} {channel} {args} {mention}.'
+        embed:
+          type: object
+          description: 'A Discord embed object. Its string fields (title, description, footer, author.name) are template-rendered too.'
+    CustomCommand:
+      type: object
+      description: A declarative operator-authored prefix command.
+      required: [name, responses]
+      properties:
+        id: { type: integer, description: 'Server-assigned row id (read-only).' }
+        name:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9_-]{0,31}$'
+          description: 'Trigger WITHOUT the prefix, lowercase (e.g. `rules`). Normalised server-side.'
+        aliases:
+          type: array
+          maxItems: 10
+          items: { type: string, pattern: '^[a-z0-9][a-z0-9_-]{0,31}$' }
+          description: 'Extra triggers. Share the name namespace: an alias may not collide with any command name or another alias.'
+        responses:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: { $ref: '#/components/schemas/CustomCommandResponse' }
+        allowedRoles:
+          type: array
+          items: { type: string, description: 'Discord role id (digits).' }
+          description: 'Allow-list: with any entries the member must hold at least one. Empty = anyone.'
+        allowedChannels:
+          type: array
+          items: { type: string, description: 'Discord channel id (digits).' }
+          description: 'Allow-list: with any entries the message must be in one. Empty = any channel.'
+        cooldownSeconds:
+          type: integer
+          minimum: 0
+          maximum: 86400
+          description: Per-(command, member) throttle; 0 disables it.
+        deleteTrigger: { type: boolean, description: Delete the invoking message after responding. }
+        reply: { type: boolean, description: Post as a reply to the invoking message. }
+        dm: { type: boolean, description: Send the response by direct message instead of to the channel. }
+        enabled: { type: boolean }
+    CustomCommandConfig:
+      type: object
+      description: The bot's single read of its custom-command set.
+      required: [commands]
+      properties:
+        commands:
+          type: array
+          items: { $ref: '#/components/schemas/CustomCommand' }

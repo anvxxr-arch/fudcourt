@@ -33,6 +33,7 @@ func (s *server) handleInternalDiscordConfig(w http.ResponseWriter, r *http.Requ
 		RoleAdmin:  e.RoleAdmin,
 		RoleTeam:   e.RoleTeam,
 		RoleMagang: e.RoleMagang,
+		Prefix:     e.Prefix,
 	})
 }
 

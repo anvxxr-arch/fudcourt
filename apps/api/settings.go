@@ -22,7 +22,14 @@ const (
 	keyRoleAdmin  = "discord.role_admin"
 	keyRoleTeam   = "discord.role_team"
 	keyRoleMagang = "discord.role_magang"
+	// keyPrefix is the message prefix the bot's prefix commands and custom
+	// commands are invoked with (e.g. "!"). It is admin-editable config, so a
+	// change applies without a restart — exactly like the role mappings.
+	keyPrefix = "discord.prefix"
 )
+
+// defaultPrefix is the prefix used when neither the DB nor the env sets one.
+const defaultPrefix = "!"
 
 // discordConfig is the admin-editable Discord wiring: which guild the site
 // tiers against, and which guild role maps to each site tier. An empty field
@@ -32,6 +39,8 @@ type discordConfig struct {
 	RoleAdmin  string `json:"roleAdmin"`
 	RoleTeam   string `json:"roleTeam"`
 	RoleMagang string `json:"roleMagang"`
+	// Prefix is the command prefix the bot reads (settings key `discord.prefix`).
+	Prefix string `json:"prefix"`
 }
 
 // settingsStore reads and writes the admin-editable Discord config. The
@@ -76,7 +85,7 @@ func (s *pgSettingsStore) load(ctx context.Context) (discordConfig, error) {
 func (s *pgSettingsStore) fetch(ctx context.Context) (discordConfig, error) {
 	rows, err := s.pool.Query(ctx,
 		`SELECT key, value FROM settings WHERE key = ANY($1)`,
-		[]string{keyGuildID, keyRoleAdmin, keyRoleTeam, keyRoleMagang})
+		[]string{keyGuildID, keyRoleAdmin, keyRoleTeam, keyRoleMagang, keyPrefix})
 	if err != nil {
 		return discordConfig{}, err
 	}
@@ -96,6 +105,8 @@ func (s *pgSettingsStore) fetch(ctx context.Context) (discordConfig, error) {
 			cfg.RoleTeam = v
 		case keyRoleMagang:
 			cfg.RoleMagang = v
+		case keyPrefix:
+			cfg.Prefix = v
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -106,7 +117,7 @@ func (s *pgSettingsStore) fetch(ctx context.Context) (discordConfig, error) {
 
 func (s *pgSettingsStore) save(ctx context.Context, cfg discordConfig) error {
 	const stmt = `
-		INSERT INTO settings (key, value) VALUES ($1,$2),($3,$4),($5,$6),($7,$8)
+		INSERT INTO settings (key, value) VALUES ($1,$2),($3,$4),($5,$6),($7,$8),($9,$10)
 		ON CONFLICT (key) DO UPDATE
 		  SET value = EXCLUDED.value,
 		      updated_at = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')`
@@ -115,6 +126,7 @@ func (s *pgSettingsStore) save(ctx context.Context, cfg discordConfig) error {
 		keyRoleAdmin, cfg.RoleAdmin,
 		keyRoleTeam, cfg.RoleTeam,
 		keyRoleMagang, cfg.RoleMagang,
+		keyPrefix, cfg.Prefix,
 	); err != nil {
 		return fmt.Errorf("save settings: %w", err)
 	}
@@ -151,4 +163,5 @@ func (s *server) attachStores() {
 	s.automod = newPGAutomodStore(pool)
 	s.logging = newPGLoggingStore(pool)
 	s.community = newPGCommunityStore(pool)
+	s.customCommands = newPGCustomCommandStore(pool)
 }

@@ -17,6 +17,8 @@ import { PanelService } from "../community/panels.ts";
 import { WelcomeService } from "../community/welcome.ts";
 import { buildAutorole, buildPanels, buildWelcome } from "../community/wiring.ts";
 import { CaseLog, type CaseLogLike } from "../lib/cases.ts";
+import { CustomCommandService } from "../customcommands/service.ts";
+import { buildCustomCommands } from "../customcommands/wiring.ts";
 import { AuditLog } from "../logging/audit.ts";
 import { ActivityLogger } from "../logging/service.ts";
 import { buildAuditLog, buildLogger } from "../logging/wiring.ts";
@@ -54,6 +56,8 @@ export interface ClientOptions {
   autorole?: AutoroleService;
   /** Injectable role-panel handler (tests); defaults to the loopback-backed builder. */
   panels?: PanelService;
+  /** Injectable custom-command handler (tests); defaults to the loopback-backed builder. */
+  customCommands?: CustomCommandService;
   /** Injectable gateway factory for tests. */
   gatewayFactory?: (token: string, onEvent: (event: string, data: unknown) => void) => Gateway;
 }
@@ -77,6 +81,8 @@ export class FudzieClient {
   readonly autorole: AutoroleService;
   /** Community: role-panel (reaction/button/select) interaction handler. */
   readonly panels: PanelService;
+  /** Automation: declarative custom commands (prefix-triggered responses). */
+  readonly customCommands: CustomCommandService;
   readonly commands = new CommandStore();
   readonly listeners = new ListenerStore();
   readonly preconditions = new PreconditionStore();
@@ -100,6 +106,7 @@ export class FudzieClient {
     this.welcome = opts.welcome ?? buildWelcome(this);
     this.autorole = opts.autorole ?? buildAutorole(this);
     this.panels = opts.panels ?? buildPanels(this);
+    this.customCommands = opts.customCommands ?? buildCustomCommands(this);
     this.automod = opts.automod ?? buildAutomod(this);
     this.gatewayFactory = opts.gatewayFactory;
   }

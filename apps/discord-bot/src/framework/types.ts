@@ -138,6 +138,8 @@ export interface InteractionCallbackData {
   ephemeral?: boolean;
   flags?: number;
   allowed_mentions?: { parse: string[] };
+  /** Post as a reply to this message (channel messages, not interactions). */
+  message_reference?: { message_id: string };
 }
 
 export interface ReadyPayload {

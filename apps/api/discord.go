@@ -56,6 +56,9 @@ type discordEnv struct {
 	RoleTeam     string // FUDCOURT_ROLE_TEAM
 	RoleAdmin    string // FUDCOURT_ROLE_ADMIN
 	RoleMagang   string // FUDCOURT_ROLE_MAGANG
+	// Prefix is the message prefix the bot's prefix/custom commands use. Env
+	// seed FUDCOURT_PREFIX; the `settings` row `discord.prefix` overrides it.
+	Prefix string // FUDCOURT_PREFIX
 }
 
 // discordUser is the normalised OAuth profile (DiscordUser in callback/route.ts).
@@ -151,6 +154,14 @@ func (d *discordClient) effective(ctx context.Context) discordEnv {
 	}
 	if cfg.RoleMagang != "" {
 		e.RoleMagang = cfg.RoleMagang
+	}
+	if cfg.Prefix != "" {
+		e.Prefix = cfg.Prefix
+	}
+	// The prefix has no empty state: an unset env seed and no DB row still needs
+	// the bot to have a prefix, so it falls back to `!`.
+	if e.Prefix == "" {
+		e.Prefix = defaultPrefix
 	}
 	return e
 }

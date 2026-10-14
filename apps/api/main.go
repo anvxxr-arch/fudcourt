@@ -63,6 +63,9 @@ type server struct {
 	// community is the welcome/autorole/role-panel store (community.go). nil
 	// means those features read no config and simply do nothing.
 	community communityStore
+	// customCommands is the declarative custom-command store (customcommands.go).
+	// nil means the bot reads no custom commands and simply answers none.
+	customCommands customCommandStore
 	// secret is the HMAC session key (FUDCOURT_SESSION_SECRET). It is read
 	// through identity.SessionSecret's fail-closed floor: without a usable
 	// secret no session ever verifies and none can be minted — exactly the
@@ -81,6 +84,7 @@ func newServer(reg *health.Registry) *server {
 		RoleTeam:     os.Getenv("FUDCOURT_ROLE_TEAM"),
 		RoleAdmin:    os.Getenv("FUDCOURT_ROLE_ADMIN"),
 		RoleMagang:   os.Getenv("FUDCOURT_ROLE_MAGANG"),
+		Prefix:       os.Getenv("FUDCOURT_PREFIX"),
 	})
 	// FUDCOURT_DISCORD_API optionally points the Discord REST client at another
 	// base (hermetic tests and smoke runs); unset keeps the real endpoints.
@@ -147,6 +151,11 @@ func (s *server) handler() http.Handler {
 	mux.HandleFunc("/api/admin/autoroles", s.handleAdminAutoroles)
 	mux.HandleFunc("/api/admin/role-panels", s.handleAdminRolePanels)
 	mux.HandleFunc("/api/admin/role-assignments", s.handleAdminRoleAssignments)
+	// Internal, loopback-only: the bot reads its declarative custom-command set
+	// here (it has no Postgres driver) — the same hop, for the same reason.
+	mux.HandleFunc("/api/internal/custom-commands", s.handleInternalCustomCommands)
+	// Dashboard: the custom-command editor, behind the admin tier.
+	mux.HandleFunc("/api/admin/custom-commands", s.handleAdminCustomCommands)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, errNotFound)
 	})
