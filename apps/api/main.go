@@ -66,6 +66,10 @@ type server struct {
 	// customCommands is the declarative custom-command store (customcommands.go).
 	// nil means the bot reads no custom commands and simply answers none.
 	customCommands customCommandStore
+	// feeds is the feed-source panel store (feeds.go). nil means the panel
+	// answers 503: feeds are the worker's, and without a database there is
+	// nothing to show or edit.
+	feeds feedStore
 	// secret is the HMAC session key (FUDCOURT_SESSION_SECRET). It is read
 	// through identity.SessionSecret's fail-closed floor: without a usable
 	// secret no session ever verifies and none can be minted — exactly the
@@ -156,6 +160,7 @@ func (s *server) handler() http.Handler {
 	mux.HandleFunc("/api/internal/custom-commands", s.handleInternalCustomCommands)
 	// Dashboard: the custom-command editor, behind the admin tier.
 	mux.HandleFunc("/api/admin/custom-commands", s.handleAdminCustomCommands)
+	mux.HandleFunc("/api/admin/feeds", s.handleAdminFeeds)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, errNotFound)
 	})
