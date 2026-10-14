@@ -211,6 +211,50 @@ func TestKlinesPerpUsesFapi(t *testing.T) {
 	}
 }
 
+func TestKlinesDailyCursorPersistsAndResumes(t *testing.T) {
+	fd := &fakeDoer{status: 200, body: klinesFixture}
+	c := newClient(fd, 0)
+	w := &spyWriter{}
+	job := ingest.Job{Provider: "binance", Dataset: "ohlcv-daily", Subject: "spot:BTCUSDT", Mode: "poll"}
+	res, err := (&fetcher{dataset: "ohlcv-daily", client: c}).Fetch(context.Background(), job, w)
+	if err != nil {
+		t.Fatalf("daily klines: %v", err)
+	}
+	if !strings.Contains(fd.seen[0], "interval=1d") || !strings.Contains(fd.seen[0], "limit=1000") {
+		t.Fatalf("daily url: %s", fd.seen[0])
+	}
+	// forward backfill anchors the first run at the earliest bar.
+	if !strings.Contains(fd.seen[0], "startTime=0") {
+		t.Fatalf("first run should carry startTime=0: %s", fd.seen[0])
+	}
+	got, ok := res.Next["since_ms"].(float64)
+	if !ok || got != 1697049600000 {
+		t.Fatalf("cursor since_ms: %v", res.Next)
+	}
+	// second run resumes from the stored cursor.
+	job.Cursor = res.Next
+	if _, err := (&fetcher{dataset: "ohlcv-daily", client: c}).Fetch(context.Background(), job, w); err != nil {
+		t.Fatalf("resume klines: %v", err)
+	}
+	if !strings.Contains(fd.seen[1], "startTime=1697049600000") {
+		t.Fatalf("resume url: %s", fd.seen[1])
+	}
+}
+
+func TestKlinesLimitClamped(t *testing.T) {
+	fd := &fakeDoer{status: 200, body: klinesFixture}
+	c := newClient(fd, 0)
+	w := &spyWriter{}
+	job := ingest.Job{Provider: "binance", Dataset: "ohlcv-daily", Subject: "spot:BTCUSDT", Mode: "poll",
+		Cursor: ingest.Cursor{"limit": float64(5000)}}
+	if _, err := (&fetcher{dataset: "ohlcv-daily", client: c}).Fetch(context.Background(), job, w); err != nil {
+		t.Fatalf("clamped klines: %v", err)
+	}
+	if !strings.Contains(fd.seen[0], "limit=1000") {
+		t.Fatalf("limit not clamped: %s", fd.seen[0])
+	}
+}
+
 func TestFundingMapping(t *testing.T) {
 	fd := &fakeDoer{status: 200, body: fundingFixture}
 	c := newClient(fd, 0)
@@ -337,7 +381,7 @@ func TestJobsRegistered(t *testing.T) {
 		t.Fatalf("provider: %s", m.Provider())
 	}
 	fetchers := m.Fetchers()
-	for _, ds := range []string{"ohlcv", "funding", "open-interest", "ticker", "trades", "depth"} {
+	for _, ds := range []string{"ohlcv", "ohlcv-daily", "ohlcv-weekly", "funding", "open-interest", "ticker", "trades", "depth"} {
 		if _, ok := fetchers[ds]; !ok {
 			t.Fatalf("missing fetcher %s", ds)
 		}

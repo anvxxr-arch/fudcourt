@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/canon"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/dexstore"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest"
 )
 
@@ -36,10 +37,13 @@ func assetKind(symbol string) canon.AssetKind {
 }
 
 // fetcher is one dataset's Fetcher implementation. The dataset name is the
-// registry key the engine and /api/data/ingest/run resolve.
+// registry key the engine and /api/data/ingest/run resolve. dw is the DEX
+// writer the `market-snapshots` dataset needs (Fetch can only reach
+// canon.Writer, which cannot write data.dex_* tables).
 type fetcher struct {
 	dataset string
 	client  *client
+	dw      dexstore.Writer
 }
 
 func (f *fetcher) Dataset() string { return f.dataset }
@@ -49,33 +53,42 @@ func (f *fetcher) Dataset() string { return f.dataset }
 // chains, the DEX venues and the pool-side assets.
 func (f *fetcher) Fetch(ctx context.Context, job ingest.Job, w canon.Writer) (ingest.FetchResult, error) {
 	var written, rejected int
+	var next ingest.Cursor
 	var err error
 	switch f.dataset {
 	case "pools":
 		written, rejected, err = f.client.pools(ctx, w, job)
+	case "market-snapshots":
+		written, rejected, next, err = f.client.marketSnapshots(ctx, w, f.dw, job)
 	default:
 		return ingest.FetchResult{}, &HardError{Kind: "shape", Detail: "unknown dataset " + f.dataset}
 	}
 	if err != nil {
 		return ingest.FetchResult{}, err
 	}
+	if next == nil {
+		next = ingest.Cursor{}
+	}
 	return ingest.FetchResult{
 		RowsIn:       written + rejected,
 		RowsWritten:  written,
 		RowsRejected: rejected,
-		Next:         ingest.Cursor{},
+		Next:         next,
 	}, nil
 }
 
 // Module is the dexscreener adapter's registration.
 type Module struct {
 	client *client
+	dw     dexstore.Writer
 }
 
 // NewModule builds the dexscreener module with an optional injected Doer
-// (tests).
-func NewModule(d canon.Doer) *Module {
-	return &Module{client: newClient(d, 0)}
+// (tests). dw is the DEX write port the market-snapshots dataset needs; a nil
+// dw fails that dataset loudly at Fetch time rather than silently writing
+// nothing.
+func NewModule(d canon.Doer, dw dexstore.Writer) *Module {
+	return &Module{client: newClient(d, 0), dw: dw}
 }
 
 func (m *Module) Provider() string { return providerName }
@@ -83,25 +96,33 @@ func (m *Module) Provider() string { return providerName }
 // Fetchers returns one fetcher per dataset, keyed by dataset name.
 func (m *Module) Fetchers() map[string]ingest.Fetcher {
 	return map[string]ingest.Fetcher{
-		"pools": &fetcher{dataset: "pools", client: m.client},
+		"pools":            &fetcher{dataset: "pools", client: m.client, dw: m.dw},
+		"market-snapshots": &fetcher{dataset: "market-snapshots", client: m.client, dw: m.dw},
 	}
 }
 
 // Jobs is the seed registry: one pool poll per configured subject, 5m (the
 // endpoint is a live snapshot and 5m is the freshest the API serves). The
 // subject spelling is chain:address — the seed pins the USDT pair universe
-// on ethereum and solana; more subjects ride the same dataset.
+// on ethereum and solana; more subjects ride the same dataset. Each subject
+// also rides the market-snapshots dataset, which fills the exact-numeric
+// data.dex_market_snapshot (gated off when no DEX writer is wired).
 func (m *Module) Jobs() []ingest.JobSpec {
 	subjects := []string{
 		"ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7", // USDT
 		"ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", // USDC
 		"solana:Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", // USDT
 	}
-	specs := make([]ingest.JobSpec, 0, len(subjects))
+	specs := make([]ingest.JobSpec, 0, len(subjects)*2)
 	for _, s := range subjects {
 		specs = append(specs, ingest.JobSpec{
 			Provider: providerName, Dataset: "pools", Subject: s,
 			Mode: "poll", Schedule: 5 * time.Minute, Priority: 4, Enabled: true,
+		})
+		specs = append(specs, ingest.JobSpec{
+			Provider: providerName, Dataset: "market-snapshots", Subject: s,
+			Mode: "poll", Schedule: 5 * time.Minute, Priority: 5,
+			Enabled: m.dw != nil,
 		})
 	}
 	return specs

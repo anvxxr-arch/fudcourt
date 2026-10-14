@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/canon"
@@ -18,6 +21,20 @@ const (
 	Base = "https://api.geckoterminal.com/api/v2"
 	// UA is the adapter's User-Agent. Public keyless endpoint, no secrets.
 	UA = "fudcourt-data/1.0"
+	// APIKeysEnv holds a COMMA-SEPARATED list of CoinGecko demo API keys.
+	// The CoinGecko family (api.coingecko.com v3 and api.geckoterminal.com)
+	// bills one shared per-IP budget; a demo key authenticates the app and
+	// may earn a better fair share, but does NOT open a parallel bucket —
+	// measured live: two keys still 429 alternately while the family bucket
+	// recovers. Keys are optional: keyless requests keep working. Keys ride
+	// the x-cg-demo-api-key header, never the URL, and live only in the
+	// git-ignored .env.
+	APIKeysEnv = "CG_DEMO_API_KEYS"
+	// APIKeyEnv is the single-key spelling, still honored (and still the
+	// documented name); it is appended to whatever APIKeysEnv holds.
+	APIKeyEnv = "CG_DEMO_API_KEY"
+	// demoKeyHeader is the header name CoinGecko documents for demo keys.
+	demoKeyHeader = "x-cg-demo-api-key"
 	// defaultTimeout bounds one upstream request; the engine's retries own
 	// what happens after.
 	defaultTimeout = 30 * time.Second
@@ -33,10 +50,13 @@ const (
 )
 
 // client is one dataset fetcher's HTTP plumbing: an injected Doer (tests
-// substitute canned responses) and a per-request timeout.
+// substitute canned responses), a per-request timeout and the demo keys it
+// round-robins across.
 type client struct {
 	do      canon.Doer
 	timeout time.Duration
+	apiKeys []string
+	next    atomic.Uint64
 }
 
 // newClient builds the client; a nil Doer gets the shared tuned transport.
@@ -47,7 +67,42 @@ func newClient(d canon.Doer, timeout time.Duration) *client {
 	if d == nil {
 		d = httpx.NewClient(timeout)
 	}
-	return &client{do: d, timeout: timeout}
+	return &client{do: d, timeout: timeout, apiKeys: keysFromEnv()}
+}
+
+// keysFromEnv collects the configured demo keys: APIKeysEnv is a comma-
+// separated list, APIKeyEnv the single-key spelling, and both may be set.
+// Duplicates collapse — otherwise a repeated key would be selected twice in
+// a row and the rotation would silently not rotate.
+func keysFromEnv() []string {
+	var out []string
+	seen := make(map[string]bool, 2)
+	add := func(k string) {
+		k = trimSpace(k)
+		if k == "" || seen[k] {
+			return
+		}
+		seen[k] = true
+		out = append(out, k)
+	}
+	for _, k := range strings.Split(os.Getenv(APIKeysEnv), ",") {
+		add(k)
+	}
+	add(os.Getenv(APIKeyEnv))
+	return out
+}
+
+// pickKey rotates across the configured keys so a burst of pages spreads
+// over several keys instead of draining one.
+func (c *client) pickKey() string {
+	if len(c.apiKeys) == 0 {
+		return ""
+	}
+	if len(c.apiKeys) == 1 {
+		return c.apiKeys[0]
+	}
+	n := c.next.Add(1) - 1
+	return c.apiKeys[int(n%uint64(len(c.apiKeys)))]
 }
 
 // HardError is the typed failure: a non-2xx status or a shape mismatch.
@@ -78,6 +133,9 @@ func (c *client) getJSON(ctx context.Context, url string, v any) error {
 	}
 	req.Header.Set("User-Agent", UA)
 	req.Header.Set("Accept", "application/json")
+	if k := c.pickKey(); k != "" {
+		req.Header.Set(demoKeyHeader, k)
+	}
 	r, err := c.do.Do(req)
 	if err != nil {
 		return &HardError{Kind: "transport", URL: url, Detail: err.Error()}
@@ -117,7 +175,11 @@ type poolAttrs struct {
 	BaseTokenPriceUSD string `json:"base_token_price_usd"`
 	ReserveInUSD      string `json:"reserve_in_usd"`
 	FDVUSD            string `json:"fdv_usd"`
-	VolumeUSD         struct {
+	// PoolCreatedAt is when the pool was created on chain (RFC3339 upstream).
+	// It is pool metadata, not the snapshot's time: parsePoolCreatedAt keeps an
+	// unparseable or absent value nil rather than guessing.
+	PoolCreatedAt string `json:"pool_created_at"`
+	VolumeUSD     struct {
 		H24 string `json:"h24"`
 	} `json:"volume_usd"`
 }
@@ -226,6 +288,17 @@ var networkToChain = map[string]string{
 	"optimism":    "optimism",
 	"base":        "base",
 	"avax":        "avalanche",
+	// The newer EVM L1s and the non-EVM networks this platform serves.
+	// Slugs are GeckoTerminal's own /networks vocabulary (verified live):
+	// "sui-network" is Sui; "hyperliquid", "berachain", "sonic", "plasma"
+	// and "robinhood" are EVM-compatible chains.
+	"hyperliquid": "hyperliquid",
+	"berachain":   "berachain",
+	"sonic":       "sonic",
+	"plasma":      "plasma",
+	"robinhood":   "robinhood",
+	"aptos":       "aptos",
+	"sui-network": "sui",
 }
 
 // chainKind reports the canonical chain kind for a chain name.

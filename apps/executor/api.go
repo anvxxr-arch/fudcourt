@@ -39,7 +39,9 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -136,6 +138,14 @@ func buildAdapter(exchange execution.ExchangeID, marketType execution.MarketType
 // startAPISurface builds and starts the executor HTTP surface. It returns the
 // http.Server so main can shut it down; a construction failure (missing session
 // secret, a bad listener) is returned for the caller to treat as fatal.
+//
+// The listener is BOUND SYNCHRONOUSLY, before this function returns. That is
+// the "fail-visible at startup" rule (§34) stated in the package doc: an
+// address that cannot be bound (port in use, a bad host) is a construction
+// error the caller exits non-zero on, not an async surprise. Binding inside the
+// goroutine and only logging a failure — the previous shape, despite a comment
+// claiming the process would be taken down — would leave the process running
+// with every /api/executor/* route unreachable while health still answered ok.
 func startAPISurface(ctx context.Context, store *repository.Store, key string, getenv func(string) string) (*http.Server, error) {
 	secret := strings.TrimSpace(getenv("FUDCOURT_SESSION_SECRET"))
 	srv, err := api.New(api.Config{
@@ -152,6 +162,10 @@ func startAPISurface(ctx context.Context, store *repository.Store, key string, g
 		return nil, err
 	}
 	addr := apiAddr(getenv)
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("executor: API surface bind %s: %w", addr, err)
+	}
 	httpSrv := &http.Server{
 		Addr:              addr,
 		Handler:           srv.Router(),
@@ -162,10 +176,11 @@ func startAPISurface(ctx context.Context, store *repository.Store, key string, g
 		IdleTimeout:  120 * time.Second,
 	}
 	go func() {
-		slog.Info("executor: API surface listening", "addr", addr, "live", liveEnabled(getenv))
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			// Losing the surface silently would make every /api/executor/* route
-			// look like a 404 to the web tier; take the process down instead.
+		slog.Info("executor: API surface listening", "addr", ln.Addr().String(), "live", liveEnabled(getenv))
+		// Serve on the already-bound listener; a failure HERE is a runtime
+		// fault (the socket died), not a configuration one — log it loudly. The
+		// process-level shutdown path is main's deferred apiSrv.Shutdown.
+		if err := httpSrv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("executor: API surface failed", "addr", addr, "error", err)
 		}
 	}()

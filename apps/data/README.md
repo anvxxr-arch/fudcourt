@@ -271,6 +271,30 @@ data surface answers loud 503s, never fake rows.
   Unknown paths 404, bad params 400, store outages 503 — never an
   empty-but-200 body.
 
+### Envelopes and reliability
+
+Reads answer `{"data": [...]}`. Refusals answer
+`{"error": {"code", "message", "request_id"}}` where `code` is one of
+`bad_request` (400), `not_found` (404), `method_not_allowed` (405),
+`fetch_failed` (503) or `unavailable` (503, a store outage); `request_id`
+matches the `X-Request-Id` response header and the process log line. The
+surface runs one outer middleware chain — correlation id, panic containment,
+JSON-only hardening headers (`X-Content-Type-Options`, `Referrer-Policy`,
+`CSP: default-src 'none'; frame-ancestors 'none'`) — so a new route cannot
+forget them. Every read is bounded by a 15s store timeout: a hung query is
+cancelled and answers the loud 503 rather than pinning one of the 8 pool
+connections (`/api/data/ingest/run` is exempt — one fetch legitimately takes
+minutes).
+
+### Through the web tier
+
+The web gateway (`apps/web/src/app/(frontend)/api/[...path]/route.ts`) forwards
+the `data` family WITH its path remainder, so every read below is reachable at
+`https://<host>/api/data/<sub-path>`. An explicit allowlist refuses the
+operator-only (`runs`, `health`) and mutating (`ingest`) segments at the edge
+with a 404 — they never reach the sidecar. `/api/data/news` also has its own
+dedicated web route (Next resolves it ahead of the catch-all).
+
 | env | default | meaning |
 | --- | --- | --- |
 | `FUDCOURT_DATA_INGEST` | `on` | `off` disables the platform entirely (no engine, no `/api/data`) |
@@ -280,9 +304,15 @@ data surface answers loud 503s, never fake rows.
 | `FUDCOURT_DATA_RETENTION_JSON` | unset | JSON overrides of the per-dataset retention windows |
 
 Provider API keys (`FRED_API_KEY`, `BPS_API_KEY`/`BPS_API_ID`, `BI_API_KEY`,
-`ETHERSCAN_API_KEY`, `DUNE_API_KEY`) are read by the adapters themselves; a
-missing key fails that provider's fetches loudly, it never disables the
-engine.
+`ETHERSCAN_API_KEY`, `DUNE_API_KEY`, `HELIUS_API_KEY`, `THEGRAPH_SUBGRAPH_URL`,
+`BITQUERY_API_KEY`, `EVM_RPC_URL`)
+are read by the adapters themselves; a missing key fails that provider's fetches
+loudly, it never disables the engine. The DEX adapters (`evmrpc`, `thegraph`,
+`bitquery`, `helius`) additionally seed their jobs DISABLED without a
+credential, so a paid endpoint is never polled by accident;
+`THEGRAPH_SUBGRAPH_URL` and `EVM_RPC_URL` are full URLs that include the key, so
+they are treated as secrets — they never appear in a log line, an error string,
+or a stored URL.
 
 ## Layout
 

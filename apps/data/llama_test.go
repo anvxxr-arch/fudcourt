@@ -280,15 +280,18 @@ func TestLlamaNewModesStrictParams(t *testing.T) {
 
 func TestLlamaNewModesServeEnvelopes(t *testing.T) {
 	d := &llamaDoer{body: map[string]string{
-		"https://api.llama.fi/v2/historicalChainTvl/Ethereum": `[{"date":1,"tvl":1},{"date":2,"tvl":2}]`,
-		"https://api.llama.fi/tvl/uniswap":                   `3946415939.48`,
-		"https://coins.llama.fi/prices/current/coingecko:ethereum": `{"coins":{"coingecko:ethereum":{"price":2492.0,"symbol":"ETH","timestamp":1791608096,"confidence":0.99}}}`,
-		"https://stablecoins.llama.fi/stablecoins?includePrices=true": `{"peggedAssets":[{"id":"1","name":"Tether","symbol":"USDT","circulating":{"peggedUSD":184.0},"price":1.0}]}`,
+		"https://api.llama.fi/v2/historicalChainTvl/Ethereum":                                               `[{"date":1,"tvl":1},{"date":2,"tvl":2}]`,
+		"https://api.llama.fi/tvl/uniswap":                                                                  `3946415939.48`,
+		"https://coins.llama.fi/prices/current/coingecko:ethereum":                                          `{"coins":{"coingecko:ethereum":{"price":2492.0,"symbol":"ETH","timestamp":1791608096,"confidence":0.99}}}`,
+		"https://stablecoins.llama.fi/stablecoins?includePrices=true":                                       `{"peggedAssets":[{"id":"1","name":"Tether","symbol":"USDT","circulating":{"peggedUSD":184.0},"price":1.0}]}`,
 		"https://api.llama.fi/overview/dexs?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true": `{"protocols":[{"name":"Curve DEX","slug":"curve-dex","total24h":7,"totalAllTime":352.0,"chains":["Ethereum"]}]}`,
-		"https://api.llama.fi/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true":  `{"protocols":[{"name":"Aave","slug":"aave","total24h":9,"totalAllTime":177.0,"chains":["Ethereum"]}]}`,
-		"https://yields.llama.fi/pools": `{"status":"success","data":[{"pool":"abc","chain":"Ethereum","project":"lido","symbol":"STETH","tvlUsd":241.0,"apy":2.2,"apyBase":2.2,"apyReward":null}]}`,
+		"https://api.llama.fi/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true": `{"protocols":[{"name":"Aave","slug":"aave","total24h":9,"totalAllTime":177.0,"chains":["Ethereum"]}]}`,
+		"https://yields.llama.fi/pools":                                                                     `{"status":"success","data":[{"pool":"abc","chain":"Ethereum","project":"lido","symbol":"STETH","tvlUsd":241.0,"apy":2.2,"apyBase":2.2,"apyReward":null}]}`,
 	}}
-	for _, tc := range []struct{ q, kind, frag string; wantRows int }{
+	for _, tc := range []struct {
+		q, kind, frag string
+		wantRows      int
+	}{
 		{"mode=chainHistory&chain=Ethereum&days=2", "chainHistory", "for chain Ethereum", 2},
 		{"mode=tvl&protocol=uniswap", "tvl", "for protocol uniswap", 1},
 		{"mode=prices&coins=coingecko:ethereum", "prices", "coins object", 1},

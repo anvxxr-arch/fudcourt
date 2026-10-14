@@ -7,6 +7,7 @@ require (
 	github.com/bogdanfinn/tls-client v1.16.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/valkey-io/valkey-go v1.0.78
+	golang.org/x/crypto v0.54.0
 	golang.org/x/net v0.57.0
 )
 
@@ -24,7 +25,6 @@ require (
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5 // indirect
-	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect

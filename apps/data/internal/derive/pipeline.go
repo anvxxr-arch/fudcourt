@@ -181,16 +181,6 @@ func NewPipeline(r canon.Reader, w canon.Writer, reg *Registry, defaultWindow in
 // canon Reader's zero-limit convention) - a backfill computes the whole
 // history, an incremental pass reads its warmup.
 func (p *Pipeline) Run(ctx context.Context, spec MetricSpec, sourceSeriesID string, window int) error {
-	if spec.Domain == "" {
-		return errors.New("derive: spec needs a domain")
-	}
-	if spec.SubjectKey == "" {
-		return errors.New("derive: spec needs a subject key")
-	}
-	proc, ok := p.reg.Lookup(spec.Metric)
-	if !ok {
-		return fmt.Errorf("%w: %q", ErrUnknownProcessor, spec.Metric)
-	}
 	if window <= 0 {
 		window = p.readWindow(spec)
 	}
@@ -201,17 +191,39 @@ func (p *Pipeline) Run(ctx context.Context, spec MetricSpec, sourceSeriesID stri
 	if len(obs) == 0 {
 		return ErrEmptyInput
 	}
-	in := observationsToPoints(obs)
-	ts, err := seriesTimestamps(in)
+	return p.RunPoints(ctx, spec, sourceSeriesID, observationsToPoints(obs))
+}
+
+// RunPoints derives spec.Metric from points the caller already holds and
+// writes the result to DerivedSeriesKey(spec). It is the multi-source entry
+// point: a caller that read the input from somewhere other than
+// data.observation (e.g. data.ohlcv bars, or an aligned pair of series) hands
+// the points here directly, so the compute+write path stays one implementation
+// and no fabricated observation series is minted for the bridge.
+func (p *Pipeline) RunPoints(ctx context.Context, spec MetricSpec, sourceSeriesID string, points []canon.MetricPoint) error {
+	if spec.Domain == "" {
+		return errors.New("derive: spec needs a domain")
+	}
+	if spec.SubjectKey == "" {
+		return errors.New("derive: spec needs a subject key")
+	}
+	proc, ok := p.reg.Lookup(spec.Metric)
+	if !ok {
+		return fmt.Errorf("%w: %q", ErrUnknownProcessor, spec.Metric)
+	}
+	if len(points) == 0 {
+		return ErrEmptyInput
+	}
+	ts, err := seriesTimestamps(points)
 	if err != nil {
 		return err
 	}
-	out, err := proc.Compute(ctx, in)
+	out, err := proc.Compute(ctx, points)
 	if err != nil {
 		return fmt.Errorf("derive: processor %q failed: %w", spec.Metric, err)
 	}
-	if len(out) != len(in) {
-		return fmt.Errorf("derive: processor %q returned %d points for %d inputs", spec.Metric, len(out), len(in))
+	if len(out) != len(points) {
+		return fmt.Errorf("derive: processor %q returned %d points for %d inputs", spec.Metric, len(out), len(points))
 	}
 	// Index alignment: the processor is a pure function over the input
 	// order, so output i belongs to timestamp i.
@@ -226,8 +238,8 @@ func (p *Pipeline) Run(ctx context.Context, spec MetricSpec, sourceSeriesID stri
 	if err := p.ensureSeries(ctx, derivedID, spec, sourceSeriesID, inferFrequency(ts)); err != nil {
 		return err
 	}
-	points := floatsToPoints(ts, x, spec.Metric, spec.Params, sourceSeriesID)
-	if _, err := p.writer.WriteMetric(ctx, derivedID, points); err != nil {
+	pts := floatsToPoints(ts, x, spec.Metric, spec.Params, sourceSeriesID)
+	if _, err := p.writer.WriteMetric(ctx, derivedID, pts); err != nil {
 		return fmt.Errorf("derive: writing metric %s: %w", derivedID, err)
 	}
 	return nil

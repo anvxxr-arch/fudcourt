@@ -3,6 +3,7 @@ package derive
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -133,6 +134,39 @@ func single(name string, params map[string]string, lookback int, fn func(x []flo
 			return fn(x)
 		},
 	}
+}
+
+// atAdapter is a Processor over a pure function of the point's TIMESTAMP (and
+// optionally its value): supply, subsidy, halving countdown, power law and the
+// power-law oscillator all read the calendar, not a rolling window. It shares
+// the single-series contract — same-length output, NaN for a not-yet-computable
+// point — and routes NaN through floatsToPoints so a warmup head becomes NULL.
+type atAdapter struct {
+	name   string
+	params map[string]string
+	fn     func(at time.Time, x float64) float64
+	window int
+}
+
+func (a *atAdapter) Name() string { return a.name }
+
+// Window reports the warmup length baked at construction.
+func (a *atAdapter) Window() int { return a.window }
+
+func (a *atAdapter) Compute(_ context.Context, in []canon.MetricPoint) ([]canon.MetricPoint, error) {
+	vals := pointsToFloats(in)
+	ts := make([]time.Time, len(in))
+	out := make([]float64, len(in))
+	for i := range in {
+		ts[i] = in[i].At
+		out[i] = a.fn(in[i].At, vals[i])
+	}
+	return floatsToPoints(ts, out, a.name, a.params, ""), nil
+}
+
+// singleAt builds a one-output Processor over a pure (at, x) function.
+func singleAt(name string, params map[string]string, lookback int, fn func(at time.Time, x float64) float64) Processor {
+	return &atAdapter{name: name, params: params, window: windowOf(params, lookback), fn: fn}
 }
 
 // NewSMAProcessor registers "sma": params period (default 20).
@@ -363,6 +397,64 @@ func NewMomentumProcessor(params map[string]string) Processor {
 	})
 }
 
+// NewSupplyProcessor registers "supply": the cumulative mined supply in BTC,
+// derived from the point's timestamp via the issuance schedule.
+func NewSupplyProcessor(params map[string]string) Processor {
+	return singleAt("supply", params, 0, func(at time.Time, _ float64) float64 {
+		return SupplyAtHeight(HeightAt(at))
+	})
+}
+
+// NewS2FProcessor registers "s2f": stock-to-flow (supply / annual issuance),
+// derived from the timestamp's height. A zero issuance yields NaN (→NULL).
+func NewS2FProcessor(params map[string]string) Processor {
+	return singleAt("s2f", params, 0, func(at time.Time, _ float64) float64 {
+		h := HeightAt(at)
+		return S2FRatio(SupplyAtHeight(h), AnnualIssuance(SubsidyAtHeight(h)))
+	})
+}
+
+// NewHalvingCountdownProcessor registers "halving": blocks remaining until the
+// next subsidy halving, derived from the timestamp's estimated height.
+func NewHalvingCountdownProcessor(params map[string]string) Processor {
+	return singleAt("halving", params, 0, func(at time.Time, _ float64) float64 {
+		h := HeightAt(at)
+		next := (h/HalvingInterval + 1) * HalvingInterval
+		return float64(next - h)
+	})
+}
+
+// NewPowerLawProcessor registers "power_law": the long-term power-law model
+// price at the point's age. params "a"/"b" override the pinned fit.
+func NewPowerLawProcessor(params map[string]string) Processor {
+	a := floatParam(params, "a", PowerLawA)
+	b := floatParam(params, "b", PowerLawB)
+	return singleAt("power_law", params, 0, func(at time.Time, _ float64) float64 {
+		return PowerLawModel(a, b, DaysSinceGenesis(at))
+	})
+}
+
+// NewPowerLawOscillatorProcessor registers "power_law_osc": ln(price / model)
+// at the point's age — how far the price sits above/below the power law. A
+// non-positive price is absent data, so the point is NaN (→NULL).
+func NewPowerLawOscillatorProcessor(params map[string]string) Processor {
+	a := floatParam(params, "a", PowerLawA)
+	b := floatParam(params, "b", PowerLawB)
+	return singleAt("power_law_osc", params, 0, func(at time.Time, x float64) float64 {
+		model := PowerLawModel(a, b, DaysSinceGenesis(at))
+		if x <= 0 || model <= 0 {
+			return math.NaN()
+		}
+		return math.Log(x) - math.Log(model)
+	})
+}
+
+// NewDrawdownProcessor registers "drawdown": the current price's drawdown from
+// its running all-time high.
+func NewDrawdownProcessor(params map[string]string) Processor {
+	return single("drawdown", params, 0, Drawdown)
+}
+
 // DefaultProcessors returns the full processor set with platform-default
 // parameters. Multi-output metrics register one Processor per output metric
 // (macd, macd_signal, macd_hist; bb_upper, bb_mid, bb_lower; stoch_k,
@@ -400,7 +492,42 @@ func DefaultProcessors() []Processor {
 		NewRollingSharpeProcessor(nil),
 		NewRollingSortinoProcessor(nil),
 		NewMomentumProcessor(nil),
+		NewSupplyProcessor(nil),
+		NewS2FProcessor(nil),
+		NewHalvingCountdownProcessor(nil),
+		NewPowerLawProcessor(nil),
+		NewPowerLawOscillatorProcessor(nil),
+		NewDrawdownProcessor(nil),
+		// DEX Data Platform metrics (plan §26 group A): only the single-input
+		// ones are registered here; the multi-input functions in dex.go are
+		// driven by a DEX-side component that owns both series.
+		NewVolumeVelocityProcessor(nil),
+		NewImpermanentLossProcessor(nil),
 	}
+}
+
+// --- DEX Data Platform metrics (plan §26 group A) ----------------------------
+//
+// Only the genuinely SINGLE-input DEX metrics are registered here. The
+// multi-input ones (BuySellImbalance, PoolHealth, LPAPRPct) live as tested pure
+// functions in dex.go and are driven by a DEX-side component that owns BOTH
+// series — registering them against this pipeline would require inventing the
+// second input, and a processor whose every output is NULL under a real metric
+// name is worse than no processor at all.
+
+// NewVolumeVelocityProcessor registers "volume_velocity": params window
+// (default 1).
+func NewVolumeVelocityProcessor(params map[string]string) Processor {
+	n := intParam(params, "window", 1)
+	return single("volume_velocity", params, n, func(x []float64) []float64 {
+		return VolumeVelocity(x, n)
+	})
+}
+
+// NewImpermanentLossProcessor registers "impermanent_loss" over a price-ratio
+// series (the ratio of the current price to the entry price).
+func NewImpermanentLossProcessor(params map[string]string) Processor {
+	return single("impermanent_loss", params, 0, ImpermanentLossPct)
 }
 
 // NewDefaultRegistry builds a Registry with DefaultProcessors installed.

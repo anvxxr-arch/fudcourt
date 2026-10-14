@@ -79,6 +79,12 @@ type Config struct {
 	Workers int
 	// Once runs every due job once, then returns (scheduler mode).
 	Once bool
+	// ProviderRate overrides the per-provider token-bucket refill rate (rps);
+	// the map key is the provider name. Missing providers use the default
+	// rate (5 rps). Values <= 0 fall back to the default. Use this to hold a
+	// provider to its documented upstream budget (e.g. a 30 req/min free
+	// tier) before the breaker ever has to react to 429s.
+	ProviderRate map[string]float64
 	// ProviderBurst overrides the per-provider token-bucket burst; the map
 	// key is the provider name. Missing providers use the default rate
 	// (5 rps) as their burst. Values <= 0 fall back to the default.
@@ -531,11 +537,15 @@ func (l *limiter) allow(now time.Time) bool {
 func (e *Engine) limiterFor(provider string) *limiter {
 	l, ok := e.limiter[provider]
 	if !ok {
-		burst := 5.0
+		rate := float64(defaultRate)
+		if v, ok := e.cfg.ProviderRate[provider]; ok && v > 0 {
+			rate = v
+		}
+		burst := rate
 		if v, ok := e.cfg.ProviderBurst[provider]; ok && v > 0 {
 			burst = v
 		}
-		l = &limiter{rate: 5, burst: burst, tokens: burst, zeroLast: true}
+		l = &limiter{rate: rate, burst: burst, tokens: burst, zeroLast: true}
 		e.limiter[provider] = l
 	}
 	return l

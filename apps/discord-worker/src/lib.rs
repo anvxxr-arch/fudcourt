@@ -10,6 +10,7 @@
 //! - [`health`]: `/healthz` and `/readyz`.
 
 pub mod config;
+pub mod feeds;
 pub mod handlers;
 pub mod health;
 pub mod jobs;

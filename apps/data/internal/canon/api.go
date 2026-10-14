@@ -100,6 +100,10 @@ type Reader interface {
 	ListInstruments(ctx context.Context, q InstrumentQuery) ([]Instrument, error)
 	ListSeries(ctx context.Context, q SeriesQuery) ([]SeriesMeta, error)
 	ReadTimeseries(ctx context.Context, seriesID string, start, end time.Time, limit int) ([]Observation, error)
+	// ReadMetric reads derived datapoints from data.metric: the read side of
+	// the derive pipeline's WriteMetric. Same window/limit conventions as
+	// ReadTimeseries; a nil Value is an absent reading, never a fake 0.
+	ReadMetric(ctx context.Context, seriesID string, start, end time.Time, limit int) ([]MetricPoint, error)
 	ReadOhlcv(ctx context.Context, instrumentID, venueID, timeframe string, start, end time.Time, limit int) ([]Ohlcv, error)
 	// ReadFunding reads funding rows; asset, when non-empty, joins the
 	// instrument's base symbol so callers can ask by asset instead of id.
@@ -117,6 +121,10 @@ type Reader interface {
 	ReadOrderbook(ctx context.Context, instrumentID, venueID string, start, end time.Time, limit int) ([]OrderbookSnap, error)
 	ListPools(ctx context.Context, q PoolQuery) ([]Pool, error)
 	ListArticles(ctx context.Context, limit int) ([]Article, error)
+	// ListArticlesFiltered is the /api/data/news filtered read: source,
+	// category, asset, free-text search, and a published_at cursor, newest
+	// first. A zero ArticleQuery with Limit 0 behaves like ListArticles.
+	ListArticlesFiltered(ctx context.Context, q ArticleQuery) ([]Article, error)
 	ListPredictionMarkets(ctx context.Context, limit int) ([]PredictionMarket, error)
 	ListChainTVL(ctx context.Context, limit int) ([]ChainTVL, error)
 	ListProtocolTVL(ctx context.Context, limit int) ([]ProtocolTVL, error)

@@ -71,6 +71,7 @@ node tools/fud.ts live [fam]  # the live/network harnesses (list, or run one)
 | trade log | `apps/web/src/features/trade/ui/trades.tsx` — the venue's own fills (`executor.fills`, deduped on `exchangeTradeId`) flattened per execution (DR-048) |
 | alert engine | `scripts/tools/alert-engine.py` — threshold rules over `asset_history`/`price_history`, one Telegram message per transition, state in `alert_state` (DR-049) |
 | signal pipeline | `scripts/tools/signal-pipeline.py` — actionable signals → risk-sized paper plans in `signal_plans`, plan-only, never live (DR-050) |
+| crypto news ingestion | `apps/data/internal/ingest/providers/newsfeed` — sources/parse/normalize/module; durable store read at `/api/data/news`. Docs: [`architecture/news-architecture.md`](architecture/news-architecture.md), [`news-sources.md`](architecture/news-sources.md), [`news-adapters.md`](architecture/news-adapters.md), [`news-api.md`](architecture/news-api.md), [`news-operations.md`](architecture/news-operations.md), [`news-qa-report.md`](architecture/news-qa-report.md) |
 | run everything | `node tools/fud.ts verify` |
 
 ## Decisions that shaped this layout

@@ -32,7 +32,7 @@ type ingestRunRequest struct {
 // never a fabricated empty result.
 func (s *server) handleIngestRun(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErr(w, http.StatusMethodNotAllowed, "method_not_allowed", "ingest/run is POST-only")
+		writeErr(w, r, http.StatusMethodNotAllowed, "method_not_allowed", "ingest/run is POST-only")
 		return
 	}
 	var req ingestRunRequest
@@ -41,7 +41,7 @@ func (s *server) handleIngestRun(w http.ResponseWriter, r *http.Request) {
 	// works too.
 	if r.Body != nil {
 		if err := decodeJSONBody(r, &req); err != nil && !errors.Is(err, errEmptyBody) {
-			badRequest(w, err.Error())
+			badRequest(w, r, err.Error())
 			return
 		}
 	}
@@ -59,13 +59,13 @@ func (s *server) handleIngestRun(w http.ResponseWriter, r *http.Request) {
 		req.Backfill = true
 	}
 	if req.Provider == "" || req.Dataset == "" {
-		badRequest(w, "provider and dataset are required")
+		badRequest(w, r, "provider and dataset are required")
 		return
 	}
 
 	m, fetcher, err := findFetcher(s.modules(), req.Provider, req.Dataset)
 	if err != nil {
-		badRequest(w, err.Error())
+		badRequest(w, r, err.Error())
 		return
 	}
 
@@ -90,7 +90,7 @@ func (s *server) handleIngestRun(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.log.Error("api/data: manual fetch failed", "provider", req.Provider,
 			"dataset", req.Dataset, "subject", req.Subject, "err", err)
-		writeErr(w, http.StatusServiceUnavailable, "fetch_failed", err.Error())
+		writeErr(w, r, http.StatusServiceUnavailable, "fetch_failed", err.Error())
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, res)

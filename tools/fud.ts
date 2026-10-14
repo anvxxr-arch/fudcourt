@@ -109,11 +109,15 @@ const LIVE_HARNESSES: Record<string, string> = {
   reconcile: 'scripts/verify/verify-reconcile.py',
   chainrank: 'scripts/verify/verify-chainrank.py',
   sync: 'scripts/verify/verify-sync.py',
+  // local Postgres EMPTY->LATEST schema apply (no upstreams; needs FUDCOURT_QA_ADMIN_URL + FUDCOURT_PG_URL)
+  dbapply: 'scripts/verify/verify-db-apply.py',
+  // live-vs-file schema drift (catalog diff + ownership; needs FUDCOURT_QA_ADMIN_URL + FUDCOURT_PG_URL)
+  dbdrift: 'scripts/verify/check-live-drift.py',
 };
 
 function live(family?: string): boolean {
   if (family === undefined) {
-    process.stdout.write('live harnesses (network; not part of `verify`):\n');
+    process.stdout.write('live harnesses (network / live infra; not part of `verify`):\n');
     for (const [name, rel] of Object.entries(LIVE_HARNESSES)) {
       process.stdout.write(`  node tools/fud.ts live ${name.padEnd(14)} -> ${rel}\n`);
     }

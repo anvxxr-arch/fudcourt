@@ -39,6 +39,11 @@ func New(r canon.Reader, store ingest.JobStore, modules func() []ingest.Module, 
 	}
 	s := &server{r: r, store: store, modules: modules, log: logger}
 	s.mux = s.routeMux()
+	// The chain is built once, here: correlation id outermost (every error
+	// envelope and log line below it carries it), panic containment next (a
+	// contained panic still gets its request id), hardening innermost (its
+	// headers are set on the real writer before the handler writes).
+	s.inner = withRequestID(withRecover(withHarden(s.mux), logger))
 	return s
 }
 

@@ -6,9 +6,14 @@ package canon
 // a schema behavior change can never happen silently.
 const (
 	// SchemaVersion is the semantic version of the tracked
-	// db/schema/data-schema.sql the sidecar applies at startup.
-	SchemaVersion = "1.1.0"
+	// db/schema/data-schema.sql the sidecar applies at startup. 1.2.0 adds the
+	// additive DEX Data Platform block (17 data.dex_* tables; audit §7): an
+	// ADDITIVE change, so a 1.1.0 database upgrades in place with no rewrite.
+	SchemaVersion = "1.2.0"
 	// NormalizationVersion is the semantic version of the provider→canonical
 	// mapping rules (id minting, market-type spelling, unit conventions).
-	NormalizationVersion = "1.0.0"
+	// 1.1.0 adds the DEX Data Platform natural keys and the exact-numeric
+	// (TokenAmount/Dec) mapping rule — a normalization-rule change, so it is
+	// bumped deliberately (audit §7).
+	NormalizationVersion = "1.1.0"
 )

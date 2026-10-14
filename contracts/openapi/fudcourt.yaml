@@ -1843,6 +1843,304 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SidecarError'
+  /api/data/assets:
+    get:
+      tags: [data]
+      operationId: listAssets
+      summary: Canonical asset list (durable store, apps/data)
+      description: |
+        The durable read surface of the data platform (`apps/data`, schema
+        `data`). Unlike the research families above, this reads the STORE — every
+        row the ingestion engine has written — and is served by a different
+        process (`/api/data/*` on `:3101`), which the `[...path]` gateway
+        forwards WITH its subpath. Store reads are fast and bounded by a 15s
+        per-request store timeout; a store outage is the loud 503 `unavailable`
+        envelope, never an empty-but-200 body. Response headers `X-Request-Id`
+        (correlation, echoed in the error envelope's `request_id`), `X-Cache`
+        and `Cache-Control`.
+      parameters:
+        - name: limit
+          in: query
+          description: "positive integer; absent = 100, capped at 1000. 0/negative/non-numeric is a 400, never clamped silently."
+          schema: { type: integer, default: 100, maximum: 1000 }
+        - name: search
+          in: query
+          description: case-insensitive substring match on symbol or name.
+          schema: { type: string }
+      responses:
+        '200':
+          description: "`{data: [...]}` — asset rows (asset_id, symbol, name, kind, chain_id, decimals, …)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataEnvelope'
+        '400':
+          description: "`{\"error\":{\"code\":\"bad_request\",\"message\":\"limit must be a positive integer\"}}`."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataError'
+        '503':
+          description: "`{\"error\":{\"code\":\"unavailable\",\"message\":<store cause>,\"request_id\":...}}` — the store could not answer."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataError'
+  /api/data/instruments:
+    get:
+      tags: [data]
+      operationId: listInstruments
+      summary: Canonical instrument list
+      description: |
+        Filters narrow, they do not assert: an unknown filter value yields an
+        empty page. `venue`, `market_type`, `base`, `quote` compose with AND.
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+        - { name: venue, in: query, schema: { type: string } }
+        - { name: market_type, in: query, schema: { type: string } }
+        - { name: base, in: query, schema: { type: string } }
+        - { name: quote, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: "`{data: [...]}` — instrument rows."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '503':
+          description: The loud store-unavailable envelope.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+  /api/data/series:
+    get:
+      tags: [data]
+      operationId: listSeries
+      summary: Canonical series list
+      description: |
+        Filters (`domain`, `metric`, `country`, `asset`) compose with AND and
+        never assert. `is_derived` is not a query param here — the chart catalog
+        under `/api/data/charts/index` is the derived-only projection.
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+        - { name: domain, in: query, schema: { type: string } }
+        - { name: metric, in: query, schema: { type: string } }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: asset, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: "`{data: [...]}` — series rows (series_id, domain, metric, subject_key, title, unit, frequency, is_derived, …)."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '503':
+          description: The loud store-unavailable envelope.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+  /api/data/charts/index:
+    get:
+      tags: [data]
+      operationId: listChartsIndex
+      summary: Derived-series chart catalog (is_derived = true)
+      description: |
+        The derived-only projection of `/api/data/series`: the rows the derive
+        pipeline has materialised (a read of `data.series` filtered on
+        `is_derived = true`). Each row carries its Title/Unit/Frequency. This is
+        the catalog a chart index renders, NOT the metric values — those are
+        `/api/data/metrics`.
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+        - { name: domain, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: "`{data: [...]}` — derived series rows."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '503':
+          description: The loud store-unavailable envelope.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+  /api/data/timeseries:
+    get:
+      tags: [data]
+      operationId: readTimeseries
+      summary: Observation window for one series (data.observation)
+      description: |
+        Half-open window `[start, end)`; a zero start/end is unbounded on that
+        side. Rows come back time-ASC (charts' natural order). Because the SQL
+        reads `ORDER BY observed_at DESC LIMIT n`, a limit window keeps the
+        NEWEST `n` rows of the window — backfill must advance the window cursor.
+      parameters:
+        - { name: series_id, in: query, required: true, schema: { type: string } }
+        - { name: start, in: query, description: "RFC3339 or YYYY-MM-DD (midnight UTC).", schema: { type: string } }
+        - { name: end, in: query, description: "RFC3339 or YYYY-MM-DD.", schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+      responses:
+        '200':
+          description: "`{data: [...]}` — observation rows (series_id, period, observed_at, value, revision, vintage, source, …)."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '400':
+          description: "`series_id is required`, `limit must be a positive integer`, or `bad timestamp \"<v>\"`."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+        '503':
+          description: The loud store-unavailable envelope.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+  /api/data/metrics:
+    get:
+      tags: [data]
+      operationId: readMetric
+      summary: Derived datapoints for one series (data.metric)
+      description: |
+        The read side of the derive pipeline's `WriteMetric`: the derived
+        datapoints the engine has computed (SMA/EMA/RSI/MACD/… over a source
+        series). Same window/limit conventions as `/api/data/timeseries` over
+        the `at` column. A nil `value` is an absent reading (a warmup head the
+        pipeline could not compute), never a fake 0. An unknown series_id
+        answers an EMPTY `data` array, never a 404.
+      parameters:
+        - { name: series_id, in: query, required: true, schema: { type: string } }
+        - { name: start, in: query, schema: { type: string } }
+        - { name: end, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+      responses:
+        '200':
+          description: "`{data: [{at, value, meta, source}]}` — `value` may be null (absent reading)."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '400':
+          description: "`series_id is required` or a bad limit/timestamp."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+        '503':
+          description: The loud store-unavailable envelope.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+  /api/data/ohlcv:
+    get:
+      tags: [data]
+      operationId: readOhlcv
+      summary: OHLCV bars for one instrument/venue/timeframe
+      description: |
+        Half-open `[start, end)` window, time-ASC. The limit window keeps the
+        NEWEST `n` bars (`ORDER BY open_time DESC LIMIT n`), so a bulk backfill
+        must page backward through an explicit cursor.
+      parameters:
+        - { name: instrument, in: query, required: true, schema: { type: string } }
+        - { name: venue, in: query, required: true, schema: { type: string } }
+        - { name: timeframe, in: query, required: true, schema: { type: string } }
+        - { name: start, in: query, schema: { type: string } }
+        - { name: end, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+      responses:
+        '200':
+          description: "`{data: [...]}` — bars (instrument_id, venue_id, timeframe, open_time, o/h/l/c, volume_base/quote, vwap, …)."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '400':
+          description: "`instrument is required`, a bad limit, or a bad timestamp."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+        '503':
+          description: The loud store-unavailable envelope.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+  /api/data/derivatives/funding:
+    get:
+      tags: [data]
+      operationId: readFunding
+      summary: Funding-rate history (asset join)
+      description: |
+        `asset`, when given, joins the instrument's base symbol so a caller can
+        ask by asset instead of id. `instrument` OR `asset` is required.
+      parameters:
+        - { name: instrument, in: query, schema: { type: string } }
+        - { name: asset, in: query, schema: { type: string } }
+        - { name: venue, in: query, schema: { type: string } }
+        - { name: start, in: query, schema: { type: string } }
+        - { name: end, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+      responses:
+        '200':
+          description: "`{data: [...]}` — funding rows."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '400':
+          description: "`instrument or asset is required` or a bad limit/timestamp."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+        '503':
+          description: The loud store-unavailable envelope.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+  /api/data/news:
+    get:
+      tags: [data]
+      operationId: listStoredNews
+      summary: Durable news store (data.news_article), keyset-paginated
+      description: |
+        NOT the research `/api/news` relay: this reads every article the
+        newsfeed ingestion adapter has written, across all sources, newest
+        first, with filters and a `published_at` keyset cursor. A full page
+        carries a `Link: </api/data/news?...>; rel="next"` header pointing at the
+        next `before=` cursor. A dedicated route exists at
+        `apps/web/.../api/data/news/route.ts` (Next resolves it ahead of the
+        `[...path]` gateway) and relays `Cache-Control`, `Link` and `ETag`.
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+        - { name: source, in: query, schema: { type: string } }
+        - { name: category, in: query, schema: { type: string } }
+        - { name: asset, in: query, schema: { type: string } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: before, in: query, description: "RFC3339 or YYYY-MM-DD cursor (published_at).", schema: { type: string } }
+      responses:
+        '200':
+          description: "`{data: [...]}` — article rows; a full page sets the `Link` next cursor."
+          headers:
+            Link:
+              description: "`</api/data/news?...&before=<published_at>>; rel=\"next\"` when the page is full."
+              schema: { type: string }
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '400':
+          description: "a bad limit or `before must be an RFC3339 timestamp or YYYY-MM-DD date`."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+        '503':
+          description: The loud store-unavailable envelope.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+  /api/data/dex/pools:
+    get:
+      tags: [data]
+      operationId: listPools
+      summary: DEX liquidity pools
+      description: Filters `chain`, `dex`, `base`, `quote`, `min_liquidity` compose with AND.
+      parameters:
+        - { name: chain, in: query, schema: { type: string } }
+        - { name: dex, in: query, schema: { type: string } }
+        - { name: base, in: query, schema: { type: string } }
+        - { name: quote, in: query, schema: { type: string } }
+        - { name: min_liquidity, in: query, description: "minimum liquidity in USD.", schema: { type: number } }
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+      responses:
+        '200':
+          description: "`{data: [...]}` — pool rows."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '400':
+          description: "`min_liquidity must be a number` or a bad limit."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+        '503':
+          description: The loud store-unavailable envelope.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
+  /api/data/{subpath}:
+    get:
+      tags: [data]
+      operationId: dataSubpath
+      summary: "The remaining public data sub-paths (assets…prediction)"
+      description: |
+        The gateway forwards the `/api/data` family with its path REMAINDER and
+        an explicit allowlist. Any first segment not in this list — including the
+        operator-only `runs`, `health` and the mutating `ingest` — is a loud 404
+        at the gateway, never forwarded to the sidecar. The allowlisted sub-paths
+        mirror the dedicated operations above for `/api/data/{instruments,venues,
+        protocols,chains,series,timeseries,metrics,ohlcv,trades,orderbook,defi/
+        protocols,defi/chains,derivatives/open-interest,derivatives/liquidations,
+        derivatives/options,prediction}` — each returns the same `{data}` / error
+        envelope shape.
+      parameters:
+        - name: subpath
+          in: path
+          required: true
+          schema: { type: string }
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+      responses:
+        '200':
+          description: "`{data: [...]}` — rows for the named sub-path."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '404':
+          description: "`{error: not_found, detail: \"no API route for /api/data/<seg>\"}` — an unlisted segment (e.g. `runs`, `ingest`, `health`)."
+          content: { application/json: { schema: { $ref: '#/components/schemas/SidecarError' } } }
+        '503':
+          description: The loud store-unavailable envelope.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
   /api/admin/settings:
     get:
       tags: [admin]
@@ -4165,6 +4463,42 @@ components:
         upstreamStatus:
           type: integer
           nullable: true
+    # ------------------------------------------------------------------
+    # The durable data platform (/api/data/*) — a different envelope shape from
+    # the research relays above: reads are `{data: [...]}`, refusals are
+    # `{error: {code, message, request_id?}}` (the same normalized model
+    # contracts/schemas/error-envelope.json specifies).
+    DataEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      description: "`{data: <rows>}` — a 200 read of the durable store. `rows` is an array (possibly empty); the row shape is per endpoint."
+      properties:
+        data:
+          description: The rows the read returned (an array; empty when nothing matched — never a substituted payload for an error).
+    DataError:
+      type: object
+      additionalProperties: true
+      required: [error]
+      description: |
+        The data platform's refusal envelope: `{"error": {"code", "message"
+        [, "request_id"]}}`. `code` is one of `bad_request` (400), `not_found`
+        (404), `method_not_allowed` (405), `fetch_failed` (503) or `unavailable`
+        (503, a store outage). `request_id` matches the `X-Request-Id` response
+        header and the process log line that carries the same failure.
+      properties:
+        error:
+          type: object
+          additionalProperties: true
+          required: [code]
+          properties:
+            code:
+              type: string
+              enum: [bad_request, not_found, method_not_allowed, fetch_failed, unavailable, internal]
+            message:
+              type: string
+            request_id:
+              type: string
     # ------------------------------------------------------------------
     # Research read proxies — verbatim sidecar wire shapes
     # (apps/data/internal/research/{cryptorank,khala,llama,chainrank,news}).

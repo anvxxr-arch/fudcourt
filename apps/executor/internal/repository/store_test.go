@@ -113,6 +113,38 @@ func TestStoreNewFailLoud(t *testing.T) {
 	}
 }
 
+// TestEnsureSchemaOnCleanDatabase pins the bootstrap path the DSN-gated tests
+// rely on: EnsureSchema must create the executor.* DDL out of nothing and be
+// safely re-runnable — the executor service calls it at every startup.
+func TestEnsureSchemaOnCleanDatabase(t *testing.T) {
+	u := os.Getenv("FUDCOURT_EXECUTOR_PG_URL")
+	if u == "" {
+		t.Skip("FUDCOURT_EXECUTOR_PG_URL not set")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	s, err := New(ctx, u)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer s.Close()
+	if err := s.EnsureSchema(ctx); err != nil {
+		t.Fatalf("EnsureSchema (clean database, 1st run): %v", err)
+	}
+	if err := s.EnsureSchema(ctx); err != nil {
+		t.Fatalf("EnsureSchema (idempotent re-run): %v", err)
+	}
+	var n int
+	if err := s.pool.QueryRow(ctx,
+		`select count(*) from information_schema.tables where table_schema='executor'`,
+	).Scan(&n); err != nil {
+		t.Fatalf("count executor tables: %v", err)
+	}
+	if n != 10 {
+		t.Fatalf("executor tables: expected 10 after EnsureSchema, got %d", n)
+	}
+}
+
 func TestStoreEndToEnd(t *testing.T) {
 	u := os.Getenv("FUDCOURT_EXECUTOR_PG_URL")
 	if u == "" {
@@ -125,6 +157,13 @@ func TestStoreEndToEnd(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 	defer s.Close()
+
+	// Bootstrap the executor.* DDL like the service does at startup
+	// (main.go ensureExecutorSchema parity); without it a clean-DB DSN run
+	// fails at the very first seed (QA 2026-10-09).
+	if err := s.EnsureSchema(ctx); err != nil {
+		t.Fatalf("EnsureSchema: %v", err)
+	}
 
 	// Seed the exchange account the execution's FK points at
 	// (executions.account_id → exchange_accounts.id). The store has NO

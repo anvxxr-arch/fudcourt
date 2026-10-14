@@ -5,8 +5,10 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/canon"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/dexstore"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest"
 )
 
@@ -242,6 +244,23 @@ func TestPoolMapping(t *testing.T) {
 	if p.QuoteAssetID == nil || *p.QuoteAssetID != wantQuote {
 		t.Fatalf("quote asset %v", p.QuoteAssetID)
 	}
+	// The same included tokens name the pool's sides on the row itself (every
+	// pool read projects these columns; unset, the API reports anonymous pools).
+	if p.BaseSymbol == nil || *p.BaseSymbol != "WETH" {
+		t.Fatalf("base symbol %v, want WETH", p.BaseSymbol)
+	}
+	if p.QuoteSymbol == nil || *p.QuoteSymbol != "USDT" {
+		t.Fatalf("quote symbol %v, want USDT", p.QuoteSymbol)
+	}
+	// pool_created_at is the POOL's age, not the snapshot's time: it must be the
+	// document's value and must not track At (which is the poll's now).
+	wantCreated, _ := time.Parse(time.RFC3339, "2021-12-29T12:35:27Z")
+	if p.PoolCreatedAt == nil || !p.PoolCreatedAt.Equal(wantCreated) {
+		t.Fatalf("pool created_at %v, want %v", p.PoolCreatedAt, wantCreated)
+	}
+	if p.PoolCreatedAt.Equal(p.At) {
+		t.Fatal("pool created_at must not be the snapshot time")
+	}
 	if p.At.IsZero() || p.Source != "geckoterminal" || p.RetrievedAt.IsZero() {
 		t.Fatalf("at %v source %q retrieved %v", p.At, p.Source, p.RetrievedAt)
 	}
@@ -274,6 +293,10 @@ func TestPoolWithoutDexFallsBackToProviderVenue(t *testing.T) {
 	// Fields the document omits stay nil (never-fake).
 	if w.pools[0].Volume24hUSD != nil || w.pools[0].FdvUsd != nil {
 		t.Fatal("absent numerics must stay nil")
+	}
+	// The document dates nothing: age stays nil, never a zero time (1970).
+	if w.pools[0].PoolCreatedAt != nil {
+		t.Fatalf("undated pool must stay nil, got %v", w.pools[0].PoolCreatedAt)
 	}
 }
 
@@ -308,30 +331,227 @@ func TestUnknownDatasetIsHardError(t *testing.T) {
 }
 
 func TestJobsRegistered(t *testing.T) {
-	m := NewModule(nil)
+	// Without a DEX writer the module still builds; only the dex-candles job is
+	// gated off (it has nowhere to write).
+	m := NewModule(nil, nil)
 	if m.Provider() != "geckoterminal" {
 		t.Fatalf("provider %q", m.Provider())
 	}
 	js := m.Jobs()
-	if len(js) != 2 {
-		t.Fatalf("jobs: %+v", js)
+	// 2 single-pool subjects × 2 datasets + 8 tier-A + 7 tier-B network jobs.
+	if len(js) != 19 {
+		t.Fatalf("jobs: %d", len(js))
 	}
+	netPools := 0
 	for _, j := range js {
-		if j.Dataset != "pools" || j.Mode != "poll" || !j.Enabled {
+		if j.Mode != "poll" {
 			t.Fatalf("job %+v", j)
 		}
-		if j.Schedule != 5*60*1e9 {
-			t.Fatalf("schedule %v", j.Schedule)
+		if j.Dataset == "network-pools" {
+			netPools++
+			// Tiering: the 8 high-activity networks ride a 15m cadence, the
+			// 7 newer/smaller ones 60m; both enabled.
+			sched := time.Hour
+			for _, a := range tierA {
+				if j.Subject == a {
+					sched = 15 * time.Minute
+				}
+			}
+			if j.Schedule != sched {
+				t.Fatalf("network-pools %q schedule %v want %v", j.Subject, j.Schedule, sched)
+			}
+			if !j.Enabled {
+				t.Fatalf("network-pools %q must be enabled", j.Subject)
+			}
 		}
-		if !strings.Contains(j.Subject, ":") {
-			t.Fatalf("subject %q does not parse", j.Subject)
+	}
+	if netPools != len(tierA)+len(tierB) {
+		t.Fatalf("network-pools jobs %d, want %d", netPools, len(tierA)+len(tierB))
+	}
+	// With a writer, the candle job flips on.
+	mw := NewModule(nil, &spyDexWriter{})
+	for _, j := range mw.Jobs() {
+		if j.Dataset == "dex-candles" && !j.Enabled {
+			t.Fatal("dex-candles must be enabled with a writer")
 		}
 	}
 	f := m.Fetchers()
-	if len(f) != 1 {
+	if len(f) != 3 {
 		t.Fatalf("fetchers: %v", f)
 	}
-	if _, ok := f["pools"]; !ok {
-		t.Fatal("no pools fetcher")
+	for _, name := range []string{"pools", "network-pools", "dex-candles"} {
+		if _, ok := f[name]; !ok {
+			t.Fatalf("no %s fetcher", name)
+		}
+	}
+}
+
+// spyDexWriter records candle batches; every other method is a no-op so the
+// full dexstore.Writer port is satisfied without a database.
+type spyDexWriter struct {
+	candles [][]canon.DexCandle
+	err     error
+}
+
+func (w *spyDexWriter) WriteDexCandles(_ context.Context, rows []canon.DexCandle) (int, int, error) {
+	if w.err != nil {
+		return 0, 0, w.err
+	}
+	w.candles = append(w.candles, rows)
+	return len(rows), 0, nil
+}
+
+func (w *spyDexWriter) UpsertDexDeployments(context.Context, []canon.DexDeployment) (int, error) {
+	return 0, w.err
+}
+func (w *spyDexWriter) UpsertPoolTokens(context.Context, []canon.PoolToken) (int, error) {
+	return 0, w.err
+}
+func (w *spyDexWriter) WriteDexSwaps(context.Context, []canon.Swap) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteDexLiquiditySnapshots(context.Context, []canon.DexLiquiditySnapshot) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteDexMarketSnapshots(context.Context, []canon.DexMarketSnapshot) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteDexLiquidityPositions(context.Context, []canon.DexLiquidityPosition) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteDexWalletActivity(context.Context, []canon.WalletActivity) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteDexRouteQuotes(context.Context, []canon.RouteQuote) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteDexRiskMetrics(context.Context, []canon.RiskMetric) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteDexMEVEvents(context.Context, []canon.MEVEvent) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteDexPerpMarkets(context.Context, []canon.PerpMarket) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteDexPerpLiquidations(context.Context, []canon.PerpLiquidation) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteDexOrderbookSnapshots(context.Context, []canon.DexOrderbookSnapshot) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteProviderObservations(context.Context, []canon.ProviderObservation) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteProviderHealth(context.Context, []dexstore.ProviderHealth) (int, int, error) {
+	return 0, 0, w.err
+}
+func (w *spyDexWriter) WriteQualityStatus(context.Context, []dexstore.QualityStatus) (int, int, error) {
+	return 0, 0, w.err
+}
+
+var _ dexstore.Writer = (*spyDexWriter)(nil)
+
+// TestDexCandlesExactDecimals drives the dex-candles dataset end to end with a
+// canned OHLCV document and asserts the rows carry exact decimals (never a
+// float64 round-trip) and the plan §15 natural key.
+func TestDexCandlesExactDecimals(t *testing.T) {
+	body := `{"data":{"attributes":{"ohlcv_list":[
+		[1700000000,"4001.20","4010.5","3990.01","4005.75","123456.78"],
+		[1700000300,"4005.75","4020","4000","4018.5","98765.43"],
+		[1700000600,"4018.5","4018.5","4018.5","4018.5","0"]
+	]}}}`
+	c := newClient(&fakeDoer{status: 200, body: body}, 0)
+	dw := &spyDexWriter{}
+	f := &fetcher{dataset: "dex-candles", client: c, dw: dw}
+	res, err := f.Fetch(context.Background(), ingest.Job{
+		Provider: "geckoterminal", Dataset: "dex-candles",
+		Subject: "eth:0xpool",
+		Cursor:  ingest.Cursor{"timeframe": "minute", "aggregate": 5},
+	}, &spyWriter{})
+	if err != nil {
+		t.Fatalf("fetch: %v", err)
+	}
+	if res.RowsWritten != 3 || res.RowsRejected != 0 {
+		t.Fatalf("result %+v", res)
+	}
+	if res.Next["timeframe"] != "minute" {
+		t.Fatalf("next cursor %+v", res.Next)
+	}
+	if len(dw.candles) != 1 || len(dw.candles[0]) != 3 {
+		t.Fatalf("candle batches %+v", dw.candles)
+	}
+	first := dw.candles[0][0]
+	if first.Interval != "5m" {
+		t.Fatalf("interval %q", first.Interval)
+	}
+	if got := first.Open.String(); got != "4001.2" {
+		t.Fatalf("open %q (want 4001.2 exact)", got)
+	}
+	if got := first.Close.String(); got != "4005.75" {
+		t.Fatalf("close %q", got)
+	}
+	if first.VolumeBase == nil || first.VolumeBase.String() != "123456.78" {
+		t.Fatalf("volume %v", first.VolumeBase)
+	}
+	// §15 key: (pool, interval, open_timestamp) — minted, and the natural key
+	// carries the same spelling. The network slug "eth" maps to the canonical
+	// chain name "ethereum".
+	wantKey := canon.CandleKey(canon.MintID(canon.KindPool, canon.PoolKey("ethereum", "0xpool")), "5m", 1700000000)
+	if first.NaturalKey != wantKey {
+		t.Fatalf("natural key %q want %q", first.NaturalKey, wantKey)
+	}
+	if first.CandleID != canon.MintID(canon.KindCandle, wantKey) {
+		t.Fatalf("candle id %q", first.CandleID)
+	}
+	if first.Provenance.SourceProvider != Source {
+		t.Fatalf("provenance %+v", first.Provenance)
+	}
+}
+
+// TestDexCandlesRejectsMalformedBar proves a short/unparseable bar is counted
+// as a rejection, not silently skipped or fabricated.
+func TestDexCandlesRejectsMalformedBar(t *testing.T) {
+	body := `{"data":{"attributes":{"ohlcv_list":[
+		[1700000000,"1.5","2","1","1.9","10"],
+		[1700000300,"1.9","oops","1","1.9","10"],
+		[1700000600,"1.9","2","1"]
+	]}}}`
+	c := newClient(&fakeDoer{status: 200, body: body}, 0)
+	dw := &spyDexWriter{}
+	f := &fetcher{dataset: "dex-candles", client: c, dw: dw}
+	res, err := f.Fetch(context.Background(), ingest.Job{
+		Provider: "geckoterminal", Dataset: "dex-candles", Subject: "eth:0xpool",
+	}, &spyWriter{})
+	if err != nil {
+		t.Fatalf("fetch: %v", err)
+	}
+	if res.RowsWritten != 1 || res.RowsRejected != 2 {
+		t.Fatalf("result %+v (want 1 written, 2 rejected)", res)
+	}
+}
+
+// TestDexCandlesNilWriterFailsLoud proves the dataset refuses to run without a
+// write port rather than silently writing nothing.
+func TestDexCandlesNilWriterFailsLoud(t *testing.T) {
+	c := newClient(&fakeDoer{status: 200, body: `{"data":{"attributes":{"ohlcv_list":[]}}}`}, 0)
+	f := &fetcher{dataset: "dex-candles", client: c}
+	if _, err := f.Fetch(context.Background(), ingest.Job{
+		Provider: "geckoterminal", Dataset: "dex-candles", Subject: "eth:0xpool",
+	}, &spyWriter{}); err == nil {
+		t.Fatal("nil writer must fail loudly")
+	}
+}
+
+// TestUnsupportedTimeframeIsHardError proves an unmappable interval is refused.
+func TestUnsupportedTimeframeIsHardError(t *testing.T) {
+	c := newClient(&fakeDoer{status: 200, body: `{}`}, 0)
+	f := &fetcher{dataset: "dex-candles", client: c, dw: &spyDexWriter{}}
+	_, err := f.Fetch(context.Background(), ingest.Job{
+		Provider: "geckoterminal", Dataset: "dex-candles", Subject: "eth:0xpool",
+		Cursor: ingest.Cursor{"timeframe": "minute", "aggregate": 3},
+	}, &spyWriter{})
+	if err == nil {
+		t.Fatal("unsupported timeframe must fail loudly")
 	}
 }

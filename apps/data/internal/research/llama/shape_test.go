@@ -578,16 +578,16 @@ func TestEmptyListIsDataNotAnError(t *testing.T) {
 
 func TestTTLForPerModeAndFallback(t *testing.T) {
 	cases := map[string]int{
-		UpstreamURL("stablecoins"):                                300,
-		UpstreamURL("dexs"):                                       300,
-		UpstreamURL("fees"):                                       900,
-		UpstreamURL("yields"):                                     300,
-		UpstreamURLFor("chainHistory", "Ethereum", "", ""):       3600,
-		UpstreamURLFor("tvl", "", "uniswap", ""):                 300,
-		UpstreamURLFor("prices", "", "", "coingecko:ethereum"):   60,
-		UpstreamURL("chains"):                                     15,
-		UpstreamURL("protocols"):                                  15,
-		UpstreamURL("historical"):                                 15,
+		UpstreamURL("stablecoins"):                             300,
+		UpstreamURL("dexs"):                                    300,
+		UpstreamURL("fees"):                                    900,
+		UpstreamURL("yields"):                                  300,
+		UpstreamURLFor("chainHistory", "Ethereum", "", ""):     3600,
+		UpstreamURLFor("tvl", "", "uniswap", ""):               300,
+		UpstreamURLFor("prices", "", "", "coingecko:ethereum"): 60,
+		UpstreamURL("chains"):                                  15,
+		UpstreamURL("protocols"):                               15,
+		UpstreamURL("historical"):                              15,
 	}
 	for u, want := range cases {
 		if got := TTLFor(u, 15); got != want {
@@ -658,7 +658,7 @@ func TestParseChainProtocolCoinsMatrix(t *testing.T) {
 
 func TestNewModeEnvelopes(t *testing.T) {
 	d := &fakeDoer{body: map[string]string{
-		UpstreamURLFor("tvl", "", "uniswap", ""): `3946415939.48`,
+		UpstreamURLFor("tvl", "", "uniswap", ""):               `3946415939.48`,
 		UpstreamURLFor("prices", "", "", "coingecko:ethereum"): `{"coins":{"coingecko:ethereum":{"price":2492.0,"symbol":"ETH","timestamp":1791608096,"confidence":0.99}}}`,
 		UpstreamURL("stablecoins"):                             `{"peggedAssets":[{"id":"1","name":"Tether","symbol":"USDT","circulating":{"peggedUSD":184.0},"price":1.0},{"id":"2","name":"Coin","symbol":"C","circulating":{"peggedUSD":73.0},"price":1.0}]}`,
 		UpstreamURL("dexs"):                                    `{"protocols":[{"name":"Curve DEX","slug":"curve-dex","total24h":7,"totalAllTime":352.0,"chains":["Ethereum"]},{"name":"S","slug":"s","total24h":1,"totalAllTime":10.0,"chains":[]}]}`,

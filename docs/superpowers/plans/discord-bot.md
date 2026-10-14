@@ -18,7 +18,7 @@ against the real repo — no green-by-disabling. Status is the truth, not the in
 | 8 | Custom commands | ✅ done | declarative only — no executable scripting. `custom_commands` store (jsonb `responses`, shared name/alias trigger namespace, role/channel allow-lists, cooldown, delete-trigger/reply/DM), one loopback read + admin replace-as-a-unit route, bot `customcommands` service, configurable prefix via `discord.prefix`; live PG round-trip + live loopback read proven |
 | 9 | Worker foundation | ✅ done | `apps/discord-worker` (Rust): durable `jobs` + `job_runs` queue, one-statement atomic claim (`FOR UPDATE SKIP LOCKED`), retry/backoff with dead-lettering, `(guild_id, kind, dedupe_key)` idempotency, stale-claim reaper, graceful drain, loopback `/healthz` + `/readyz`; optional Valkey advisory lock (never the durability mechanism); 41 unit + 12 live-PG tests |
 | 10 | Scheduler | ✅ done | `scheduled_jobs` definitions materialized into ordinary `jobs` (one mechanism, not two); once/interval/cron with an EXPLICIT IANA zone and a stated DST policy; 5-field crontabs accepted; restart-safe via a DB `(definition_id, occurrence_at)` ledger plus the `jobs` unique key; self-scheduling tick chain with a deterministic successor key; 61 unit + 12 live (worker) + 9 live (scheduler) tests |
-| 11 | Feeds | ⬜ todo | adapter pipeline + dedup + SSRF guard on generic HTTP |
+| 11 | Feeds | ✅ done | adapter pipeline + dedup + SSRF guard on generic HTTP |
 | 12 | API surface | 🟡 partial | settings + moderation cases live; remaining resource groups pending |
 | 13 | Dashboard | 🟡 partial | admin panel (config + cases); remaining IA pages pending |
 | 14 | Integration testing | 🟡 partial | moderation E2E smoke proven live; cross-feature flows pending |
@@ -355,9 +355,101 @@ cannot connect.
 - Internal bot routes stay loopback-only and public-proxy-free (contract gate).
 - No per-message DB query on the hot path — config/rules cached, refreshed on change.
 
-## Next phase — 11, Feeds
+## Phase 11 as delivered — Feeds
 
-The Rust worker's remaining responsibility: external feed polling, deduplication, and
-Discord delivery of what survives it. It hangs on the same `Registry` and the same
-`scheduled_jobs` definitions this phase delivered — a feed poll is an interval or cron
-definition, and its dedupe is the same `jobs` unique key.
+`apps/discord-worker/src/feeds/`: `guard` → `fetch` → `parse` → `store`, with `poll` and
+`deliver` as the two job handlers. A poll is an ordinary `scheduled_jobs` definition
+(`job_kind = 'feed.poll'`, payload `{"source_id": N}`) and an announcement is an ordinary
+job (`feed.deliver`, per-item `dedupe_key`) — there is no second scheduling mechanism:
+the interval lives in `feed_sources.poll_interval_secs`, and the existing scheduler
+materializes it.
+
+**The SSRF guard is a rule table, not a URL check.** `guard::vet` refuses anything that is
+not `http`/`https` (so no `file:`, `gopher:`, `data:`), anything with credentials in the
+URL, a percent-encoded host, a non-default port, a **single-label host** (a name like
+`rss` can resolve through a search domain into the LAN — `url` normalises `http:///rss`
+into exactly that), and any address in `BLOCKED_V4` / `BLOCKED_V6` (loopback, private,
+link-local, CGNAT, benchmarking, documentation, multicast, unspecified, plus v6
+ULA/link-local/multicast/6to4/NAT64). A v6 address that *carries* a v4 one is judged by
+that v4 (`judged()`), which is both the right check and the readable log line:
+`[::ffff:127.0.0.1]` is refused as `127.0.0.1`. **Every address a name resolves to must
+pass** — one private answer among public ones is a refusal, which is the only shape that
+cannot be raced.
+
+**The address that was vetted is the address dialled.** After vetting, the client is built
+with `resolve_to_addrs(host, &vetted_addrs)`, so a name whose DNS answer changes between
+the check and the connect cannot move the request; `no_proxy()` keeps an ambient
+`HTTP_PROXY` from bypassing the pin; redirects are manual, one hop at a time, each hop
+re-vetted before the next client is built (a redirect into `169.254.169.254` is refused
+like any other). The body is read as a stream with a 2 MiB cap, and `304` is handled
+*before* the 3xx branch because it sits inside the 3xx range while not being a redirect.
+
+**Deduplication is a database constraint, not a promise.** `feed_items` carries
+`UNIQUE (source_id, item_key)` where `item_key` is the feed's own stable identity
+(`id` → link → title+date, hashed with SHA-256 — `DefaultHasher` is not stable across Rust
+versions and this value is *persisted*). A second guard suppresses an item whose **link**
+was already delivered even when the feed rewrote its id. Polling the same feed again
+inserts nothing, so a restart cannot re-announce; items recorded but never queued (a crash
+between the insert and the enqueue) are picked up by the next poll, which queues the whole
+`pending` backlog. The first poll of a new source **absorbs the existing backlog silently**
+(`primed`), so adding a feed does not dump its twenty most recent posts into the channel.
+
+**Feed text cannot ping anyone.** Summaries are stripped of HTML, decoded, whitespace-
+collapsed and capped by *characters*; `@everyone`, `@here`, `<@id>` and `<@&id>` in
+feed-derived text are broken with a zero-width space, and the delivery payload sets
+`allowed_mentions.parse = []` (or `["roles"]` plus the one configured role id) so even a
+missed case cannot ping. Delivery posts to Discord REST directly — the worker's own
+`reqwest` client and one env var — rather than growing an outbox poller in the bot.
+Delivery is **at-least-once** and says so: the window between Discord accepting a message
+and the ledger recording it is unavoidable without a Discord-side nonce, and the retry
+path checks `delivery_state = 'delivered'` first, so a retry after a successful mark is a
+no-op.
+
+**Four real defects were caught by the tests, not by reading code.** `304` taken as a
+redirect (`is_redirection()` is true for 3xx) meant a conditional poll could never report
+"unchanged"; `truncate_chars` popped twice, so a truncated string was `cap - 1`
+characters; `delivery_by_item` selected `last_error` where the column is `delivery_error`;
+and `owed_count` counted `pending + failed` while `pending_item_ids` — the query that
+actually queues work — counted `pending` only, so the dashboard would have disagreed with
+the worker about what was owed.
+
+**Verification (all actually run).**
+
+- `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`: clean.
+- `cargo test --release --lib`: **102 passed / 0 failed** — the SSRF rule matrix, the legacy
+  IPv4 spellings, the v6 forms including `[::ffff:127.0.0.1]` and 6to4, a name resolving to
+  one private address among public ones refused, RSS/Atom/JSON Feed parsing, key stability
+  and fallback, HTML + entity cleaning, mention neutralisation, character-count truncation,
+  newest-first ordering, and 10 fetch cases against a real loopback HTTP server (validators
+  sent and `304` honoured, redirect chains followed, loops stopped, a redirect with no
+  `Location`, non-2xx, an oversized body, and the request landing on the **vetted** address
+  even when the URL's host does not resolve).
+- Live PostgreSQL, `--test-threads=1`: **feeds_live 8 passed**, **jobs_live 12 passed**,
+  **scheduler_live 9 passed** — dedupe across polls, the same-link guard, the silent prime,
+  the pending backlog and its join, a second mark being harmless, a failure recorded with
+  its reason and its FK to a real `jobs` row, validators round-tripping with the failure
+  streak, and `ON DELETE CASCADE` taking the ledger with the source.
+- `bash scripts/verify/verify-all.sh`: **VERIFY_ALL_OK**. The live suites self-skip inside
+  the gate (it is deliberately database-free), but `--all-targets` compiles and lints them,
+  so the real-DB evidence above is the separate explicit run.
+- The feed tables were applied to the live database as the owning role (`feed_sources`,
+  `feed_items`, three indexes; owner `fudcourt`).
+
+**Environment finding (not a defect).** The live suites failed to connect for three
+attempts with `pool: "DB connect: db error"`: the instance was at **108 connections against
+`max_connections = 100`**, 71 of them idle and held by Hindsight. The same binaries passed
+on the fourth attempt (8 + 12 + 9). Raising `max_connections` or shrinking Hindsight's idle
+pool is an infrastructure decision, not a worker one.
+
+**IMPLEMENTED, unit-tested, not verifiable here.** The actual Discord REST call needs
+`FUDCOURT_BOT_TOKEN` and a real channel: the request body, headers and status handling are
+covered by unit tests and the store path around it by live-PG tests, but no message has
+been posted to a real channel. Without the token the worker does not register the feeds
+kinds at all and says so in the log, so a queued job fails loudly as an unknown kind
+instead of sitting silently.
+
+## Next phase — 12, API
+
+Everything the worker owns now runs through the same durable job queue; what it lacks is
+the HTTP surface the dashboard needs to manage it (`/api/v1/feeds`, `/api/v1/scheduler`,
+and the remaining resource groups), which is the next phase.

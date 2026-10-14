@@ -70,6 +70,8 @@ step "canonical doc-citation gate (cited repo paths resolve)"
 node contracts/scripts/check-doc-citations.mjs || fail doc-citations
 step "markdown table-shape gate (a row must not exceed its header; GFM drops excess cells)"
 node contracts/scripts/check-table-shape.mjs || fail table-shape
+step "schema bootstrap gate (pg-schema EMPTY->LATEST: extension declared first, no destructive DDL, ON CONFLICT arbiters present)"
+python3 scripts/verify/check-schema-bootstrap.py || fail schema-bootstrap
 
 step "canonical reference artifact drift (reference.json is generated)"
 go run ./apps/api/internal/markets/reference/cmd/emit -check || fail reference

@@ -22,7 +22,13 @@ This check is the offline half of that contract (the host half is
      too, so the pair cannot drift apart;
   4. no two unit files declare the same `[Unit]` name unless both are explicitly
      marked as alternates (the two `fudcourt-sync.service` variants: the shipped
-     Python oracle and the Rust replacement).
+     Python oracle and the Rust replacement);
+  5. a `Type=simple` daemon restarts on ANY exit (`Restart=always`), or carries a
+     justified `# restart-policy: on-failure -- <reason>` marker. systemd treats a
+     status-0 exit as success, so `on-failure` leaves a daemon dead indefinitely:
+     on 2026-10-11 `fudcourt-data.service` exited cleanly and stayed inactive ~20h
+     while the web tier 502'd on every proxy route, and `is-enabled` kept saying
+     `enabled` the whole time.
 
 Exits 1 with one line per problem. Offline, no network, no host access.
 """
@@ -140,11 +146,51 @@ def main() -> int:
         if "sync" in svc.name and not (svc.parent / svc.name.replace(".service", ".timer")).exists():
             problems.append(f"{svc.relative_to(REPO)}: sync service has no timer in the same dir")
 
+    # 5. a long-running daemon (Type=simple) must restart on ANY exit, not just
+    # on failure. A status-0 exit with `Restart=on-failure` leaves the unit dead
+    # forever: on 2026-10-11 `fudcourt-data.service` exited cleanly and stayed
+    # inactive ~20h while the web tier 502'd on every proxy route, and
+    # `is-enabled` kept reporting `enabled` the whole time. systemd itself treats
+    # a clean exit as success, so only the unit file can catch this.
+    #
+    # The rule is not absolute: a unit whose clean exit is a DELIBERATE terminal
+    # state may opt out with an explicit, justified marker, so the exception is
+    # visible to a reader instead of being an unexplained `on-failure`:
+    #
+    #     # restart-policy: on-failure -- <reason a clean exit is terminal>
+    #
+    # A bare `Restart=on-failure` with no such marker still fails.
+    for svc in services:
+        txt = svc.read_text(encoding="utf-8")
+        m_type = re.search(r"^\s*Type=(\S+)", txt, re.M)
+        if not m_type or m_type.group(1) != "simple":
+            continue  # oneshot units are timer-driven; a clean finish is success
+        opt_out = re.search(r"^\s*#\s*restart-policy:\s*on-failure\s+--\s*(\S.{11,})", txt, re.M)
+        m_restart = re.search(r"^\s*Restart=(\S+)", txt, re.M)
+        if not m_restart:
+            problems.append(
+                f"{svc.relative_to(REPO)}: Type=simple daemon without Restart= "
+                "-- a clean exit would leave it dead indefinitely"
+            )
+            continue
+        if m_restart.group(1) == "always":
+            continue
+        if opt_out:
+            continue  # explicit, justified exception
+        problems.append(
+            f"{svc.relative_to(REPO)}: Type=simple daemon uses Restart={m_restart.group(1)} "
+            "-- must be `always` so a clean (status 0) exit still restarts it, or carry an "
+            "explicit `# restart-policy: on-failure -- <reason>` marker"
+        )
+
     if problems:
         print("\n".join(f"FAIL {p}" for p in problems))
         print(f"\ncheck-deploy: {len(problems)} problem(s) across {len(UNITS)} unit file(s)")
         return 1
-    print(f"check-deploy: OK ({len(UNITS)} unit files: paths exist, ExecStart absolute, timer pairs present)")
+    print(
+        f"check-deploy: OK ({len(UNITS)} unit files: paths exist, ExecStart absolute, "
+        f"timer pairs present, daemons restart-on-any-exit)"
+    )
     return 0
 
 

@@ -268,19 +268,20 @@ func (r *Repo) WritePools(ctx context.Context, rows []canon.Pool) (written, reje
 			b.Queue(`INSERT INTO data.pool
 				(pool_id, at, chain_id, dex_venue_id, address, base_asset_id, quote_asset_id,
 				 base_symbol, quote_symbol, fee_tier_bps, price, liquidity_usd, volume_24h_usd,
-				 fdv_usd, source, retrieved_at)
-				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+				 fdv_usd, source, retrieved_at, pool_created_at)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
 				ON CONFLICT (pool_id, at) DO UPDATE SET
 					dex_venue_id = EXCLUDED.dex_venue_id, base_asset_id = EXCLUDED.base_asset_id,
 					quote_asset_id = EXCLUDED.quote_asset_id, base_symbol = EXCLUDED.base_symbol,
 					quote_symbol = EXCLUDED.quote_symbol, fee_tier_bps = EXCLUDED.fee_tier_bps,
 					price = EXCLUDED.price, liquidity_usd = EXCLUDED.liquidity_usd,
 					volume_24h_usd = EXCLUDED.volume_24h_usd, fdv_usd = EXCLUDED.fdv_usd,
-					source = EXCLUDED.source, retrieved_at = EXCLUDED.retrieved_at`,
+					source = EXCLUDED.source, retrieved_at = EXCLUDED.retrieved_at,
+					pool_created_at = EXCLUDED.pool_created_at`,
 				row.PoolID, row.At, row.ChainID, nilIfEmpty(row.DEXVenueID), row.Address,
-				row.BaseAssetID, row.QuoteAssetID, nil, nil, row.FeeTierBps, row.Price,
+				row.BaseAssetID, row.QuoteAssetID, row.BaseSymbol, row.QuoteSymbol, row.FeeTierBps, row.Price,
 				row.LiquidityUSD, row.Volume24hUSD, row.FdvUsd, row.Source,
-				nullTime(row.RetrievedAt))
+				nullTime(row.RetrievedAt), nullTimePtr(row.PoolCreatedAt))
 		}
 	})
 	return written, rejected, err
@@ -447,4 +448,14 @@ func nullTime(t time.Time) any {
 		return nil
 	}
 	return t
+}
+
+// nullTimePtr is nullTime for an OPTIONAL timestamp: an absent one writes NULL
+// and never a zero time, which is what separates "the provider did not date
+// this" from "this happened in year 1".
+func nullTimePtr(t *time.Time) any {
+	if t == nil || t.IsZero() {
+		return nil
+	}
+	return *t
 }

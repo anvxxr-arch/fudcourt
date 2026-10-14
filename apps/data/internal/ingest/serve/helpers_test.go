@@ -6,6 +6,7 @@ package serve
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/canon"
@@ -33,6 +34,7 @@ type fakeReader struct {
 	predictions  []canon.PredictionMarket
 	chainTVL     []canon.ChainTVL
 	protocolTVL  []canon.ProtocolTVL
+	metrics      map[string][]canon.MetricPoint
 	runs         []canon.RunRecord
 
 	// err, when non-nil, is returned by every method (store outage).
@@ -115,6 +117,9 @@ func (f *fakeReader) ListSeries(ctx context.Context, q canon.SeriesQuery) ([]can
 		if q.CountryID != "" && (s.CountryID == nil || *s.CountryID != q.CountryID) {
 			continue
 		}
+		if q.IsDerived != nil && s.IsDerived != *q.IsDerived {
+			continue
+		}
 		out = append(out, s)
 	}
 	return clamp(out, q.Limit), nil
@@ -136,6 +141,22 @@ func (f *fakeReader) ReadTimeseries(ctx context.Context, seriesID string, start,
 			continue
 		}
 		out = append(out, o)
+	}
+	return clamp(out, limit), nil
+}
+func (f *fakeReader) ReadMetric(ctx context.Context, seriesID string, start, end time.Time, limit int) ([]canon.MetricPoint, error) {
+	if err := f.fail(); err != nil {
+		return nil, err
+	}
+	out := make([]canon.MetricPoint, 0)
+	for _, m := range f.metrics[seriesID] {
+		if !start.IsZero() && m.At.Before(start) {
+			continue
+		}
+		if !end.IsZero() && !m.At.Before(end) {
+			continue
+		}
+		out = append(out, m)
 	}
 	return clamp(out, limit), nil
 }
@@ -329,6 +350,57 @@ func (f *fakeReader) ListArticles(ctx context.Context, limit int) ([]canon.Artic
 		return nil, err
 	}
 	return clamp(f.articles, limit), nil
+}
+
+// ListArticlesFiltered applies the same source/category/asset/search/before
+// filters the SQL does, in memory, so handler tests exercise real filtering.
+func (f *fakeReader) ListArticlesFiltered(ctx context.Context, q canon.ArticleQuery) ([]canon.Article, error) {
+	if err := f.fail(); err != nil {
+		return nil, err
+	}
+	out := make([]canon.Article, 0, len(f.articles))
+	for _, a := range f.articles {
+		if q.Source != "" {
+			outlet := ""
+			if a.Publisher != nil {
+				outlet = *a.Publisher
+			}
+			if outlet != q.Source && a.Source != q.Source {
+				continue
+			}
+		}
+		if q.Category != "" && !containsFold(a.Topics, q.Category) {
+			continue
+		}
+		if q.Asset != "" && !containsFold(a.Assets, q.Asset) {
+			continue
+		}
+		if q.Search != "" {
+			hay := strings.ToLower(a.Headline)
+			if a.Summary != nil {
+				hay += " " + strings.ToLower(*a.Summary)
+			}
+			if !strings.Contains(hay, strings.ToLower(q.Search)) {
+				continue
+			}
+		}
+		if !q.Before.IsZero() {
+			if a.PublishedAt == nil || !a.PublishedAt.Before(q.Before) {
+				continue
+			}
+		}
+		out = append(out, a)
+	}
+	return clamp(out, q.Limit), nil
+}
+
+func containsFold(xs []string, want string) bool {
+	for _, x := range xs {
+		if strings.EqualFold(x, want) {
+			return true
+		}
+	}
+	return false
 }
 
 func (f *fakeReader) ListPredictionMarkets(ctx context.Context, limit int) ([]canon.PredictionMarket, error) {

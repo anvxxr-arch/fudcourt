@@ -12,7 +12,7 @@ use std::time::Duration;
 /// Loopback by default: the worker is never publicly reachable (DR-002).
 pub const DEFAULT_HEALTH_ADDR: &str = "127.0.0.1:8110";
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Config {
     /// Postgres DSN. `FUDCOURT_PG_URL`, else `DATABASE_URL` (DR-040: loopback).
     pub database_url: String,
@@ -41,6 +41,35 @@ pub struct Config {
     /// How often the scheduler tick runs, in seconds. A tick schedules its own
     /// successor, so this is the whole scheduler's heartbeat.
     pub tick_interval_secs: i64,
+    /// The bot token the worker delivers feed items with. Without it the delivery
+    /// kind is not registered, so a `feed.deliver` job fails loudly as unknown
+    /// rather than sitting in the queue doing nothing.
+    pub bot_token: Option<String>,
+}
+
+/// `Debug` by hand: this struct carries two secrets — the DSN has a password and
+/// the token is the keys to the guild — and a derived `Debug` prints both the
+/// first time anyone writes `?cfg` into a log line.
+impl std::fmt::Debug for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Config")
+            .field("database_url", &"<redacted>")
+            .field(
+                "valkey_url",
+                &self.valkey_url.as_ref().map(|_| "<redacted>"),
+            )
+            .field("bot_token", &self.bot_token.as_ref().map(|_| "<redacted>"))
+            .field("worker_id", &self.worker_id)
+            .field("concurrency", &self.concurrency)
+            .field("poll_interval", &self.poll_interval)
+            .field("stale_claim_secs", &self.stale_claim_secs)
+            .field("reap_interval", &self.reap_interval)
+            .field("shutdown_grace", &self.shutdown_grace)
+            .field("health_addr", &self.health_addr)
+            .field("guild_id", &self.guild_id)
+            .field("tick_interval_secs", &self.tick_interval_secs)
+            .finish()
+    }
 }
 
 impl Config {
@@ -97,6 +126,7 @@ impl Config {
             },
             guild_id: first(&["FUDCOURT_GUILD_ID", "DISCORD_GUILD_ID"]).map(str::to_string),
             tick_interval_secs,
+            bot_token: first(&["FUDCOURT_BOT_TOKEN", "DISCORD_BOT_TOKEN"]).map(str::to_string),
         })
     }
 }
@@ -225,6 +255,35 @@ mod tests {
         ]))
         .unwrap_err();
         assert!(err.contains("SCHEDULER_TICK_SECS"), "got {err}");
+    }
+
+    #[test]
+    fn the_bot_token_is_optional_and_repo_prefixed() {
+        let cfg = Config::from_pairs(&vars(&[
+            ("DATABASE_URL", "host=x"),
+            ("FUDCOURT_BOT_TOKEN", "not-a-real-token"),
+        ]))
+        .unwrap();
+        assert_eq!(cfg.bot_token.as_deref(), Some("not-a-real-token"));
+        let cfg = Config::from_pairs(&vars(&[("DATABASE_URL", "host=x")])).unwrap();
+        assert!(cfg.bot_token.is_none(), "no token is not an error");
+    }
+
+    #[test]
+    fn debug_never_prints_a_secret() {
+        let cfg = Config::from_pairs(&vars(&[
+            ("FUDCOURT_PG_URL", "host=db password=hunter2"),
+            ("FUDCOURT_VALKEY_URL", "redis://:pw@127.0.0.1:6379"),
+            ("FUDCOURT_BOT_TOKEN", "MTIz.not-real"),
+        ]))
+        .unwrap();
+        let printed = format!("{cfg:?}");
+        for secret in ["hunter2", "pw@127.0.0.1", "MTIz.not-real"] {
+            assert!(!printed.contains(secret), "{secret} leaked into {printed}");
+        }
+        // Still a useful debug line: the non-secret knobs are all there.
+        assert!(printed.contains("concurrency"), "{printed}");
+        assert!(printed.contains("<redacted>"), "{printed}");
     }
 
     #[test]

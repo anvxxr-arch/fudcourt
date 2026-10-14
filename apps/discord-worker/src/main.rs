@@ -79,7 +79,12 @@ async fn run() -> Result<(), String> {
         .guild_id
         .is_some()
         .then(|| Tick::new(pool.clone(), cfg.tick_interval_secs));
-    let registry = Arc::new(registry(tick.clone(), cfg.guild_id.clone()));
+    let registry = Arc::new(registry(
+        tick.clone(),
+        cfg.guild_id.clone(),
+        pool.clone(),
+        cfg.bot_token.clone(),
+    ));
 
     // Bootstrap the chain. The key is the scheduled instant, so a restart collides
     // with whatever the previous chain already queued instead of forking a second
@@ -151,8 +156,14 @@ async fn run() -> Result<(), String> {
 ///
 /// The scheduler registers here like anything else: its tick is an ordinary job, so
 /// it is claimed, retried, backed off and dead-lettered by the same runtime that
-/// runs everything else.
-fn registry(tick: Option<Arc<Tick>>, guild_id: Option<String>) -> Registry {
+/// runs everything else. The feeds kinds do the same, which is why there is no
+/// second scheduling mechanism anywhere in this crate.
+fn registry(
+    tick: Option<Arc<Tick>>,
+    guild_id: Option<String>,
+    pool: Pool,
+    bot_token: Option<String>,
+) -> Registry {
     let mut registry = Registry::new();
     let noop: Arc<dyn fudcourt_discord_worker::handlers::JobHandler> = Arc::new(Noop);
     // `health.ping` is the same no-op body under a name that reads as what it is:
@@ -160,7 +171,7 @@ fn registry(tick: Option<Arc<Tick>>, guild_id: Option<String>) -> Registry {
     for kind in KINDS {
         registry.register(*kind, noop.clone());
     }
-    match (tick, guild_id) {
+    match (tick, guild_id.clone()) {
         (Some(tick), Some(guild_id)) => {
             registry.register(
                 TICK_KIND,
@@ -176,6 +187,39 @@ fn registry(tick: Option<Arc<Tick>>, guild_id: Option<String>) -> Registry {
                 "hint",
                 serde_json::Value::from("set FUDCOURT_GUILD_ID to enable it"),
             )]),
+        ),
+    }
+
+    // Feeds: a poll needs an owner (every job carries a guild) and a delivery needs
+    // a token. Missing either leaves BOTH kinds unregistered, so a queued job fails
+    // loudly as an unknown kind rather than quietly never sending.
+    match (guild_id, bot_token) {
+        (Some(guild_id), Some(token)) => {
+            registry.register(
+                fudcourt_discord_worker::feeds::POLL_KIND,
+                fudcourt_discord_worker::feeds::poll::handler(Arc::new(
+                    fudcourt_discord_worker::feeds::poll::Poll::new(pool.clone(), guild_id),
+                )),
+            );
+            registry.register(
+                fudcourt_discord_worker::feeds::DELIVER_KIND,
+                fudcourt_discord_worker::feeds::deliver::handler(Arc::new(
+                    fudcourt_discord_worker::feeds::deliver::Deliver::new(pool, token),
+                )),
+            );
+        }
+        (guild_id, bot_token) => logging::warn(
+            "feeds not registered",
+            fields(vec![
+                ("guild_id", serde_json::Value::from(guild_id.is_some())),
+                ("bot_token", serde_json::Value::from(bot_token.is_some())),
+                (
+                    "hint",
+                    serde_json::Value::from(
+                        "set FUDCOURT_GUILD_ID and FUDCOURT_BOT_TOKEN to enable feeds",
+                    ),
+                ),
+            ]),
         ),
     }
     registry

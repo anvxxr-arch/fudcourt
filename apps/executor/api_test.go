@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"net"
 	"testing"
 )
 
@@ -42,6 +43,45 @@ func TestAPIAddrDefaults(t *testing.T) {
 	}
 	if got := apiAddr(envMap(map[string]string{"FUDCOURT_EXECUTOR_API_ADDR": " 127.0.0.1:9999 "})); got != "127.0.0.1:9999" {
 		t.Fatalf("apiAddr = %q, want the trimmed override", got)
+	}
+}
+
+// TestAPISurfaceRefusesOccupiedAddr pins the fail-visible bind: an address that
+// cannot be bound is a construction ERROR the caller exits non-zero on, not an
+// async surprise logged after the process is already serving health. Before
+// this was synchronous, the surface logged the bind failure and returned a
+// usable-looking server, so every /api/executor/* route 404'd at the web tier
+// while the process stayed up.
+func TestAPISurfaceRefusesOccupiedAddr(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer ln.Close()
+	addr := ln.Addr().String()
+
+	srv, err := startAPISurface(context.Background(), nil, "master-key", envMap(map[string]string{
+		"FUDCOURT_SESSION_SECRET":    "0123456789abcdef0123456789abcdef",
+		"FUDCOURT_EXECUTOR_API_ADDR": addr,
+	}))
+	if err == nil {
+		_ = srv.Shutdown(context.Background())
+		t.Fatalf("startAPISurface bound an occupied address %s (srv=%v)", addr, srv)
+	}
+}
+
+// TestAPISurfaceBindsAndServes pins the happy path the synchronous bind added:
+// a free address yields a live, shuttable surface.
+func TestAPISurfaceBindsAndServes(t *testing.T) {
+	srv, err := startAPISurface(context.Background(), nil, "master-key", envMap(map[string]string{
+		"FUDCOURT_SESSION_SECRET":    "0123456789abcdef0123456789abcdef",
+		"FUDCOURT_EXECUTOR_API_ADDR": "127.0.0.1:0",
+	}))
+	if err != nil {
+		t.Fatalf("startAPISurface: %v", err)
+	}
+	if err := srv.Shutdown(context.Background()); err != nil {
+		t.Fatalf("shutdown: %v", err)
 	}
 }
 

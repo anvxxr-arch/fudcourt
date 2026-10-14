@@ -333,11 +333,11 @@ func projectTVL(rows []json.RawMessage, protocol string) []json.RawMessage {
 // number: the board renders one supply figure, and the per-peg breakdown is
 // not a second number the row must carry.
 type LlamaStablecoin struct {
-	ID          any `json:"id"`
+	ID          any    `json:"id"`
 	Name        string `json:"name"`
 	Symbol      string `json:"symbol"`
-	Circulating any `json:"circulating"`
-	Price       any `json:"price"`
+	Circulating any    `json:"circulating"`
+	Price       any    `json:"price"`
 }
 
 // projectStablecoins maps peggedAssets rows onto the five wire keys.
@@ -372,11 +372,11 @@ func projectStablecoins(rows []json.RawMessage) []json.RawMessage {
 // totals the board ranks by. Both upstreams serve a `protocols` array with
 // the same core keys, so one projection serves both modes.
 type LlamaDexFee struct {
-	Name        string `json:"name"`
-	Slug        string `json:"slug"`
-	Total24h    any    `json:"total24h"`
-	TotalAllTime any   `json:"totalAllTime"`
-	Chains      []any  `json:"chains"`
+	Name         string `json:"name"`
+	Slug         string `json:"slug"`
+	Total24h     any    `json:"total24h"`
+	TotalAllTime any    `json:"totalAllTime"`
+	Chains       []any  `json:"chains"`
 }
 
 // projectDexFees maps dex/fee protocol rows onto the five wire keys.

@@ -211,7 +211,10 @@ type SeriesQuery struct {
 	ChainID      string `json:"chain_id,omitempty"`
 	ProtocolID   string `json:"protocol_id,omitempty"`
 	VenueID      string `json:"venue_id,omitempty"`
-	Limit        int    `json:"limit,omitempty"`
+	// IsDerived, when set, narrows to derived (true) or raw (false) series.
+	// A pointer so an unset value stays a wildcard and false is expressible.
+	IsDerived *bool `json:"is_derived,omitempty"`
+	Limit     int   `json:"limit,omitempty"`
 }
 
 // PoolQuery selects pools by chain, DEX venue, base and/or quote asset symbol.
@@ -247,6 +250,19 @@ type ListQuery struct {
 	Limit  int    `json:"limit,omitempty"`
 	Offset int    `json:"offset,omitempty"`
 	Search string `json:"search,omitempty"`
+}
+
+// ArticleQuery is the filtered news read: every field is optional, and an
+// empty field places no constraint. Before is a keyset cursor — the read
+// returns articles strictly older than the given timestamp, so paging never
+// skips or repeats a row under concurrent writes (unlike OFFSET).
+type ArticleQuery struct {
+	Source   string    `json:"source,omitempty"`
+	Category string    `json:"category,omitempty"`
+	Asset    string    `json:"asset,omitempty"`
+	Search   string    `json:"search,omitempty"`
+	Before   time.Time `json:"before,omitempty"`
+	Limit    int       `json:"limit,omitempty"`
 }
 
 // InstrumentQuery selects instruments by venue and/or market type, optionally
@@ -455,20 +471,31 @@ type ChainTVL struct {
 // Pool is one DEX liquidity pool at one point in time. Optional fields are nil
 // when the provider did not report them (never-fake).
 type Pool struct {
-	PoolID       string    `json:"pool_id"`
-	ChainID      string    `json:"chain_id"`
-	DEXVenueID   string    `json:"dex_venue_id"`
-	Address      string    `json:"address"`
-	BaseAssetID  *string   `json:"base_asset_id"`
-	QuoteAssetID *string   `json:"quote_asset_id"`
-	FeeTierBps   *int      `json:"fee_tier_bps"`
-	Price        *float64  `json:"price"`
-	LiquidityUSD *float64  `json:"liquidity_usd"`
-	Volume24hUSD *float64  `json:"volume_24h_usd"`
-	FdvUsd       *float64  `json:"fdv_usd"`
-	At           time.Time `json:"at"`
-	Source       string    `json:"source"`
-	RetrievedAt  time.Time `json:"retrieved_at"`
+	PoolID       string  `json:"pool_id"`
+	ChainID      string  `json:"chain_id"`
+	DEXVenueID   string  `json:"dex_venue_id"`
+	Address      string  `json:"address"`
+	BaseAssetID  *string `json:"base_asset_id"`
+	QuoteAssetID *string `json:"quote_asset_id"`
+	// BaseSymbol / QuoteSymbol are the pool sides' display symbols. They are
+	// carried so a consumer (and the query layer) can name a pool's sides
+	// without a join; a symbol-less token stays nil (never-fake), never "".
+	BaseSymbol   *string  `json:"base_symbol"`
+	QuoteSymbol  *string  `json:"quote_symbol"`
+	FeeTierBps   *int     `json:"fee_tier_bps"`
+	Price        *float64 `json:"price"`
+	LiquidityUSD *float64 `json:"liquidity_usd"`
+	Volume24hUSD *float64 `json:"volume_24h_usd"`
+	FdvUsd       *float64 `json:"fdv_usd"`
+	// PoolCreatedAt is when the POOL itself came into existence on chain, as
+	// the provider reports it. It is pool metadata, not this row's write time
+	// (that is RetrievedAt) — a consumer reading it as a row timestamp would
+	// read a five-year-old age. Absent stays nil: an unobserved age is not an
+	// age of zero.
+	PoolCreatedAt *time.Time `json:"pool_created_at"`
+	At            time.Time  `json:"at"`
+	Source        string     `json:"source"`
+	RetrievedAt   time.Time  `json:"retrieved_at"`
 }
 
 // SupplySnapshot is one token supply reading for one contract on one chain.

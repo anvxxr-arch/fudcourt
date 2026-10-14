@@ -26,13 +26,27 @@ func (f *fetcher) Dataset() string { return f.dataset }
 func (f *fetcher) Fetch(ctx context.Context, job ingest.Job, w canon.Writer) (ingest.FetchResult, error) {
 	var written, rejected int
 	var err error
+	// next is the checkpoint persisted on success; lastMs is the newest bar's
+	// open time, appended so the next run resumes from it (backfill pagination).
+	var next ingest.Cursor
+	var lastMs int64
+	var forward bool
 	switch f.dataset {
 	case "ohlcv":
 		tf := "1m"
 		if s, ok := job.Cursor["timeframe"].(string); ok && s != "" {
 			tf = s
 		}
-		written, rejected, err = f.client.klines(ctx, w, job, tf, 500)
+		written, rejected, lastMs, err = f.client.klines(ctx, w, job, tf, 500, false)
+		next = ingest.Cursor{"timeframe": tf}
+	case "ohlcv-daily":
+		forward = true
+		written, rejected, lastMs, err = f.client.klines(ctx, w, job, "1d", 1000, true)
+		next = ingest.Cursor{"timeframe": "1d"}
+	case "ohlcv-weekly":
+		forward = true
+		written, rejected, lastMs, err = f.client.klines(ctx, w, job, "1w", 1000, true)
+		next = ingest.Cursor{"timeframe": "1w"}
 	case "funding":
 		written, rejected, err = f.client.funding(ctx, w, job, 100)
 	case "open-interest":
@@ -49,12 +63,28 @@ func (f *fetcher) Fetch(ctx context.Context, job ingest.Job, w canon.Writer) (in
 	if err != nil {
 		return ingest.FetchResult{}, err
 	}
-	return ingest.FetchResult{
+	if next == nil {
+		next = ingest.Cursor{}
+	}
+	// Only the forward-backfill datasets carry a since_ms checkpoint; a live
+	// poll job must not persist one it would never send.
+	if forward && lastMs > 0 {
+		next["since_ms"] = float64(lastMs)
+	}
+	res := ingest.FetchResult{
 		RowsIn:       written + rejected,
 		RowsWritten:  written,
 		RowsRejected: rejected,
-		Next:         ingest.Cursor{},
-	}, nil
+		Next:         next,
+	}
+	// A full page means the backfill window is not exhausted: schedule the next
+	// page promptly instead of waiting the 24h poll cadence, so history fills in
+	// minutes rather than days.
+	if forward && written >= 1000 {
+		hint := 30 * time.Second
+		res.NextRunHint = &hint
+	}
+	return res, nil
 }
 
 // Module is the binance adapter's registration.
@@ -73,6 +103,8 @@ func (m *Module) Provider() string { return providerName }
 func (m *Module) Fetchers() map[string]ingest.Fetcher {
 	return map[string]ingest.Fetcher{
 		"ohlcv":         &fetcher{dataset: "ohlcv", client: m.client},
+		"ohlcv-daily":   &fetcher{dataset: "ohlcv-daily", client: m.client},
+		"ohlcv-weekly":  &fetcher{dataset: "ohlcv-weekly", client: m.client},
 		"funding":       &fetcher{dataset: "funding", client: m.client},
 		"open-interest": &fetcher{dataset: "open-interest", client: m.client},
 		"ticker":        &fetcher{dataset: "ticker", client: m.client},
@@ -94,6 +126,14 @@ func (m *Module) Jobs() []ingest.JobSpec {
 		{
 			Provider: providerName, Dataset: "ohlcv", Subject: "linear_perp:BTCUSDT",
 			Mode: "poll", Schedule: time.Minute, Priority: 3, Enabled: true,
+		},
+		{
+			Provider: providerName, Dataset: "ohlcv-daily", Subject: "spot:BTCUSDT",
+			Mode: "poll", Schedule: 24 * time.Hour, Priority: 3, Enabled: true,
+		},
+		{
+			Provider: providerName, Dataset: "ohlcv-weekly", Subject: "spot:BTCUSDT",
+			Mode: "poll", Schedule: 24 * time.Hour, Priority: 3, Enabled: true,
 		},
 		{
 			Provider: providerName, Dataset: "funding", Subject: "BTCUSDT",

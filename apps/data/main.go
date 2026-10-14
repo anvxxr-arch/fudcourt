@@ -26,21 +26,30 @@ import (
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/bi"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/binance"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/bitquery"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/blockscout"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/bps"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/bybit"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/cftc"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/coingecko"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/coinmetrics"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/defillama"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/derived"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/dexscreener"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/dune"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/etherscan"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/evmrpc"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/fred"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/geckoterminal"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/helius"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/imf"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/jupiter"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/mempool"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/newsfeed"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/oecd"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/okx"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/polymarket"
+	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/thegraph"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/providers/worldbank"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/repo"
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/ingest/serve"
@@ -348,11 +357,47 @@ func buildDataModules() []ingest.Module {
 		bi.NewModule(nil),
 		cftc.NewModule(nil),
 		polymarket.NewModule(nil),
-		dexscreener.NewModule(nil),
-		geckoterminal.NewModule(nil),
+		mempool.NewModule(nil),
+		coinmetrics.NewModule(nil),
 		etherscan.NewModule(nil),
 		blockscout.NewModule(nil),
 		dune.NewModule(nil),
+		newsfeed.NewModule(nil),
+	}
+}
+
+// dataModulesWithDerived returns buildDataModules plus the derived adapter,
+// which needs the canon reader the sidecar owns (so it cannot live in the
+// static buildDataModules list). r is the CONCRETE repo pointer (nil when the
+// pool is down) so the nil check is real — a nil *repo.Repo passed into a
+// canon.Reader parameter would be a non-nil interface holding a nil pointer.
+//
+// The DEX Data Platform providers (plan §41: helius, jupiter) are appended here
+// for the same reason: their fetchers write data.dex_* tables through the
+// dexstore.Writer port, which only the concrete *repo.Repo satisfies. Without a
+// pool they are not registered, and no DEX job is seeded.
+//
+// geckoterminal joins them: its original `pools` dataset still writes canon.Pool
+// through the engine writer, but its new `dex-candles` dataset writes
+// data.dex_candle, so the module needs the DEX writer and cannot live in the
+// static buildDataModules list. dexscreener joins for the same reason with its
+// `market-snapshots` dataset (exact data.dex_market_snapshot rows).
+func dataModulesWithDerived(r *repo.Repo) func() []ingest.Module {
+	return func() []ingest.Module {
+		mods := buildDataModules()
+		if r != nil {
+			mods = append(mods, derived.NewModule(r))
+			mods = append(mods,
+				helius.NewModule(nil, r),
+				jupiter.NewModule(nil, r),
+				geckoterminal.NewModule(nil, r),
+				dexscreener.NewModule(nil, r),
+				thegraph.NewModule(nil, r),
+				bitquery.NewModule(nil, r),
+				evmrpc.NewModule(nil, r),
+			)
+		}
+		return mods
 	}
 }
 
@@ -404,6 +449,10 @@ func (r unavailableReader) ReadTimeseries(ctx context.Context, seriesID string, 
 	return nil, r.err()
 }
 
+func (r unavailableReader) ReadMetric(ctx context.Context, seriesID string, start, end time.Time, limit int) ([]canon.MetricPoint, error) {
+	return nil, r.err()
+}
+
 func (r unavailableReader) ReadOhlcv(ctx context.Context, instrumentID, venueID, timeframe string, start, end time.Time, limit int) ([]canon.Ohlcv, error) {
 	return nil, r.err()
 }
@@ -437,6 +486,10 @@ func (r unavailableReader) ListPools(ctx context.Context, q canon.PoolQuery) ([]
 }
 
 func (r unavailableReader) ListArticles(ctx context.Context, limit int) ([]canon.Article, error) {
+	return nil, r.err()
+}
+
+func (r unavailableReader) ListArticlesFiltered(ctx context.Context, q canon.ArticleQuery) ([]canon.Article, error) {
 	return nil, r.err()
 }
 
@@ -499,9 +552,18 @@ func mountDataPlatform(srv *http.Server, ctx context.Context) {
 		eng := ingest.New(ingest.Config{
 			Workers: workers,
 			Once:    os.Getenv("FUDCOURT_DATA_INGEST_ONCE") != "",
-		}, store, journal, retention, buildDataModules, dlog, r)
+			// GeckoTerminal + CoinGecko v3 are ONE CoinGecko family sharing a
+			// per-IP fair-use budget; measured live the family sustains ~2
+			// req/min while the bucket recovers (a demo key authenticates but
+			// does not open a parallel bucket). 0.033 rps holds this adapter
+			// inside that budget; the coingecko v3 adapter keeps the default
+			// rate and both still land under the family ceiling because the
+			// v3 jobs are sparse (5m/15m schedules).
+			ProviderRate:  map[string]float64{"geckoterminal": 0.033},
+			ProviderBurst: map[string]float64{"geckoterminal": 4},
+		}, store, journal, retention, dataModulesWithDerived(r), dlog, r)
 		go eng.Run(ctx)
-		mods := buildDataModules()
+		mods := dataModulesWithDerived(r)()
 		dlog.Info("fudcourt-data: data ingest engine started",
 			"workers", workers,
 			"once", os.Getenv("FUDCOURT_DATA_INGEST_ONCE") != "",
@@ -516,7 +578,7 @@ func mountDataPlatform(srv *http.Server, ctx context.Context) {
 	// passed for the manual-trigger context; with no pool it is nil and
 	// /ingest/run reports that loudly.
 	families := srv.Handler
-	dataHandler := serve.New(reader, store, buildDataModules, dlog)
+	dataHandler := serve.New(reader, store, dataModulesWithDerived(r), dlog)
 	// Manual /api/data/ingest/run needs a canon.Writer; the store is the
 	// JobStore, not one, so hand serve the repo (the engine's own writer)
 	// when the pool is up. With no pool serve keeps its loud failingWriter.
@@ -525,12 +587,22 @@ func mountDataPlatform(srv *http.Server, ctx context.Context) {
 		manualWriter = r
 	}
 	dataHandler = serve.WithWriter(dataHandler, manualWriter)
+	// DEX Data Platform read port (plan §30). The concrete *repo.Repo is handed
+	// in only when the pool is up; with no pool the port stays unset and every
+	// /api/v1/dex route answers the loud 503.
+	if r != nil {
+		dataHandler = serve.WithDexReader(dataHandler, r)
+	}
 	dataMux := http.NewServeMux()
 	dataMux.Handle("/api/data", dataHandler)
 	dataMux.Handle("/api/data/", dataHandler)
+	// The canonical DEX surface lives under /api/v1/dex/* (plan §2/§30). The
+	// same handler serves it: ServeHTTP's "/api/data" prefix strip is a no-op
+	// for an /api/v1 path, so the mux patterns match verbatim.
+	dataMux.Handle("/api/v1/", dataHandler)
 	dataMux.Handle("/", families)
 	srv.Handler = dataMux
-	dlog.Info("fudcourt-data: /api/data mounted", "db", r != nil)
+	dlog.Info("fudcourt-data: /api/data + /api/v1/dex mounted", "db", r != nil)
 }
 
 func envOr(k, def string) string {
@@ -1311,6 +1383,7 @@ func prewarmLlama(lf *llama.Fetcher) {
 	}
 	log.Printf("llama prewarm ok=%d failed=%d", ok, fail)
 }
+
 // writeLlamaError maps a llama failure onto the TS route's error bodies: the
 // param refusals are written by the caller (they never reach the fetcher), so
 // this covers the upstream arm -- real status kept, real text quoted, never a

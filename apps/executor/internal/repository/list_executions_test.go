@@ -23,6 +23,14 @@ func TestListExecutionsSkipsUnreadableRow(t *testing.T) {
 	}
 	defer s.Close()
 
+	// The executor service bootstraps the schema at startup (main.go calls
+	// EnsureSchema); a DSN-gated run against a clean database must do the
+	// same before its first seed or every INSERT dies at "relation does not
+	// exist" (found 2026-10-09 QA).
+	if err := s.EnsureSchema(ctx); err != nil {
+		t.Fatalf("EnsureSchema: %v", err)
+	}
+
 	// Seed the account the FK points at (executions.account_id →
 	// exchange_accounts.id), exactly as the API service would.
 	if _, err := s.pool.Exec(ctx, `

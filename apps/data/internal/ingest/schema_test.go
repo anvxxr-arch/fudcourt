@@ -66,9 +66,15 @@ func TestSplitStatementsUnterminated(t *testing.T) {
 }
 
 // TestSplitStatementsRealSchema pins the splitter against the embedded DDL:
-// the statement census (1 schema + 30 tables + 14 hypertables + 11 secondary
-// indexes + 1 unique index = 57) and spot-checks that every structural
-// statement survived whole.
+// the statement census and spot-checks that every structural statement survived
+// whole.
+//
+// The counts are the FROZEN INVENTORY (ADDENDUM B: 30 tables, 14 hypertables,
+// 11 secondary indexes, 1 unique index) PLUS the additive DEX Data Platform
+// block appended by docs/dex/audit.md §7: 17 tables, 14 hypertables, 14
+// secondary indexes and 1 conditional-unique index. This test is a drift guard,
+// so the numbers move ONLY when the DDL deliberately moves — never to make a
+// red gate green.
 func TestSplitStatementsRealSchema(t *testing.T) {
 	ddl := MustSchemaSQL()
 	stmts, err := SplitStatements(ddl)
@@ -76,17 +82,21 @@ func TestSplitStatementsRealSchema(t *testing.T) {
 		t.Fatalf("SplitStatements(schema): %v", err)
 	}
 	joined := strings.Join(stmts, "\n;;\n")
-	if got := strings.Count(joined, "CREATE TABLE IF NOT EXISTS data."); got != 30 {
-		t.Errorf("tables: got %d, want 30", got)
+	if got := strings.Count(joined, "CREATE TABLE IF NOT EXISTS data."); got != 47 {
+		t.Errorf("tables: got %d, want 47", got)
 	}
-	if got := strings.Count(joined, "create_hypertable("); got != 14 {
-		t.Errorf("hypertables: got %d, want 14", got)
+	if got := strings.Count(joined, "create_hypertable("); got != 28 {
+		t.Errorf("hypertables: got %d, want 28", got)
 	}
-	if got := strings.Count(joined, "CREATE INDEX IF NOT EXISTS"); got != 11 {
-		t.Errorf("secondary indexes: got %d, want 11", got)
+	if got := strings.Count(joined, "CREATE INDEX IF NOT EXISTS"); got != 25 {
+		t.Errorf("secondary indexes: got %d, want 25", got)
 	}
-	if got := strings.Count(joined, "CREATE UNIQUE INDEX IF NOT EXISTS"); got != 1 {
-		t.Errorf("unique indexes: got %d, want 1", got)
+	if got := strings.Count(joined, "CREATE UNIQUE INDEX IF NOT EXISTS"); got != 2 {
+		t.Errorf("unique indexes: got %d, want 2", got)
+	}
+	// Every DEX table is prefixed dex_; the frozen block above carries none.
+	if got := strings.Count(joined, "CREATE TABLE IF NOT EXISTS data.dex_"); got != 17 {
+		t.Errorf("dex tables: got %d, want 17", got)
 	}
 	// No statement may be empty or contain a stray terminator at the end.
 	for i, s := range stmts {

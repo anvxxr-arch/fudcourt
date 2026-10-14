@@ -19,7 +19,7 @@
 //! re-established on demand (a Postgres restart no longer kills the service).
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio_postgres::NoTls;
 /// `Clone` because the HTTP service hands one per connection: it is one `Arc`.
@@ -29,7 +29,7 @@ pub struct Db {
 }
 struct State {
     cfg: tokio_postgres::Config,
-    current: Mutex<Arc<Conn>>,
+    current: tokio::sync::Mutex<Arc<Conn>>,
 }
 /// One live session: the client plus the death-flag the connection task raises
 /// when the socket fails. A fresh `Conn` (new flag) is swapped in on reconnect,
@@ -59,7 +59,7 @@ impl Db {
         Ok(Self {
             state: Some(Arc::new(State {
                 cfg,
-                current: Mutex::new(conn),
+                current: tokio::sync::Mutex::new(conn),
             })),
         })
     }
@@ -95,25 +95,19 @@ impl Db {
         let Some(state) = &self.state else {
             return Err("DB: no connection (unreachable client)".to_string());
         };
-        {
-            let guard = state
-                .current
-                .lock()
-                .map_err(|_| "DB: connection lock poisoned".to_string())?;
-            if !guard.dead.load(Ordering::SeqCst) && !guard.client.is_closed() {
-                return Ok(Arc::clone(&guard.client));
-            }
-        }
-        let mut guard = state
-            .current
-            .lock()
-            .map_err(|_| "DB: connection lock poisoned".to_string())?;
-        // A concurrent caller may have already reconnected.
+        // Async-aware lock: the guard is held through the reconnect await, so
+        // concurrent callers queue on the same reconnect instead of each
+        // opening a racing connection; the fresh-conn re-check below keeps a
+        // waiter from clobbering a session another caller just swapped in.
+        let mut guard = state.current.lock().await;
         if !guard.dead.load(Ordering::SeqCst) && !guard.client.is_closed() {
             return Ok(Arc::clone(&guard.client));
         }
         eprintln!("postgres reconnecting after connection loss");
         let conn = Self::spawn_conn(&state.cfg).await?;
+        if !guard.dead.load(Ordering::SeqCst) && !guard.client.is_closed() {
+            return Ok(Arc::clone(&guard.client));
+        }
         *guard = conn;
         Ok(Arc::clone(&guard.client))
     }

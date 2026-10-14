@@ -81,6 +81,26 @@ const (
 	KindArticle    EntityKind = "article"
 	KindPool       EntityKind = "pool"
 	KindPrediction EntityKind = "prediction"
+
+	// DEX Data Platform kinds (docs/dex/audit.md §4). These are NEW namespaces,
+	// not reuses: a Swap is pool-keyed (the plan's §15 idempotency key is
+	// chain+tx_hash+log_index), where the existing KindTrade/Trade is
+	// venue+instrument-keyed with a provider-assigned trade id. Same for
+	// KindCandle: a DEX candle is pool-keyed, where Ohlcv is
+	// instrument+venue-keyed. They mint with the same MintID rule and the same
+	// salt, so a DEX entity and a market entity live in ONE id space.
+	KindDeployment     EntityKind = "deployment"
+	KindSwap           EntityKind = "swap"
+	KindCandle         EntityKind = "candle"
+	KindMarketSnapshot EntityKind = "market_snapshot"
+	KindLiquiditySnap  EntityKind = "liquidity_snapshot"
+	KindLiquidityPos   EntityKind = "liquidity_position"
+	KindWalletActivity EntityKind = "wallet_activity"
+	KindRouteQuote     EntityKind = "route_quote"
+	KindRiskMetric     EntityKind = "risk_metric"
+	KindMEVEvent       EntityKind = "mev_event"
+	KindPerpMarket     EntityKind = "perp_market"
+	KindProviderObs    EntityKind = "provider_observation"
 )
 
 // EntityKinds lists every namespace in contract order.
@@ -97,6 +117,18 @@ var EntityKinds = []EntityKind{
 	KindArticle,
 	KindPool,
 	KindPrediction,
+	KindDeployment,
+	KindSwap,
+	KindCandle,
+	KindMarketSnapshot,
+	KindLiquiditySnap,
+	KindLiquidityPos,
+	KindWalletActivity,
+	KindRouteQuote,
+	KindRiskMetric,
+	KindMEVEvent,
+	KindPerpMarket,
+	KindProviderObs,
 }
 
 // Valid reports whether k names a namespace this package mints into.
@@ -215,6 +247,128 @@ func PoolKey(chainName, address string) string {
 // identity, not ours.
 func PredictKey(provider, providerMarketID string) string {
 	return "prediction/" + strings.ToLower(strings.TrimSpace(provider)) + "/" + strings.TrimSpace(providerMarketID)
+}
+
+// --- DEX Data Platform natural keys (docs/dex/audit.md §4, plan §5/§15) -------
+//
+// Every builder composes only STABLE coordinates: a canonical chain name, a
+// protocol slug, a contract address verbatim, or a provider-assigned id. No
+// display name, no symbol, no timestamp enters a key, so two processes mint the
+// same id for the same entity and a renamed token cannot fork its identity.
+//
+// The one coordinate that is a TIMESTAMP - the candle's open time - is spelled
+// as a fixed-width UTC layout so the key is a pure function of the bar it
+// names: a 1m bar opening 2026-10-12T00:00:00Z and one opening 12:00:00Z mint
+// different ids, and re-deriving either mints the same id again.
+
+// candleTimeLayout is the fixed-width UTC spelling of a candle's open time in
+// its natural key. RFC3339 in UTC keeps it lexically sortable and unambiguous.
+const candleTimeLayout = "2006-01-02T15:04:05Z"
+
+// DeploymentKey builds a protocol deployment's natural key: one protocol's
+// contract set on one chain. A protocol with a distinct deployment per chain
+// (every multi-chain DEX) gets one id per chain, so the same protocol on
+// Ethereum and Base never collapse.
+func DeploymentKey(chainName, protocolSlug string) string {
+	return "deployment/" + strings.ToLower(strings.TrimSpace(chainName)) +
+		"/" + strings.ToLower(strings.TrimSpace(protocolSlug))
+}
+
+// SwapKey builds a swap's natural key from the plan's §15 idempotency tuple:
+// the chain, the transaction hash and the in-transaction log/instruction
+// index. The hash is verbatim (a chain's identity for the tx); the index
+// disambiguates the several swaps one transaction legitimately contains.
+func SwapKey(chainName, txHash string, logIndex int) string {
+	return "swap/" + strings.ToLower(strings.TrimSpace(chainName)) +
+		"/" + strings.TrimSpace(txHash) + "/" + strconv.Itoa(logIndex)
+}
+
+// CandleKey builds a pool candle's natural key: the pool id, the interval and
+// the bar's open time (plan §15: pool+interval+open_timestamp). The pool id is
+// already opaque and unique, so the key is unambiguous across chains.
+func CandleKey(poolID, interval string, openUnix int64) string {
+	return "candle/" + strings.TrimSpace(poolID) +
+		"/" + strings.TrimSpace(interval) +
+		"/" + strconv.FormatInt(openUnix, 10)
+}
+
+// MarketSnapshotKey builds a market-state snapshot's natural key: one pool at
+// one instant. It mirrors CandleKey's shape so a snapshot and a candle of the
+// same pool are distinct kinds over the same coordinates.
+func MarketSnapshotKey(poolID string, atUnix int64) string {
+	return "market_snapshot/" + strings.TrimSpace(poolID) + "/" + strconv.FormatInt(atUnix, 10)
+}
+
+// LiquiditySnapshotKey builds a liquidity snapshot's natural key: one pool's
+// reserves/depth at one instant.
+func LiquiditySnapshotKey(poolID string, atUnix int64) string {
+	return "liquidity_snapshot/" + strings.TrimSpace(poolID) + "/" + strconv.FormatInt(atUnix, 10)
+}
+
+// LiquidityPositionKey builds an LP position's natural key: one owner's
+// position in one pool. The owner address is verbatim (checksum case is
+// identity); a position is per (pool, owner), never per token.
+func LiquidityPositionKey(poolID, owner string) string {
+	return "liquidity_position/" + strings.TrimSpace(poolID) + "/" + strings.TrimSpace(owner)
+}
+
+// WalletActivityKey builds a wallet activity's natural key: one provider's
+// record of one wallet event. The provider is lowercased; the provider's own
+// event id is verbatim (same shape as ArticleKey) because it is the provider's
+// identity, not ours.
+func WalletActivityKey(provider, providerEventID string) string {
+	return "wallet_activity/" + strings.ToLower(strings.TrimSpace(provider)) +
+		"/" + strings.TrimSpace(providerEventID)
+}
+
+// RouteQuoteKey builds a route quote's natural key from the quote's own
+// coordinates: the input token id, the output token id, the input amount as an
+// exact decimal string, and the provider. Two quotes for the same pair at
+// different sizes, or from different routers, are different rows - which is
+// what makes "best execution" a query rather than an overwrite.
+func RouteQuoteKey(provider, inTokenID, outTokenID, inAmount string) string {
+	return "route_quote/" + strings.ToLower(strings.TrimSpace(provider)) +
+		"/" + strings.TrimSpace(inTokenID) +
+		"/" + strings.TrimSpace(outTokenID) +
+		"/" + strings.TrimSpace(inAmount)
+}
+
+// RiskMetricKey builds a risk metric's natural key: one named risk metric about
+// one subject (a pool id, a token id, or a chain name) under one algorithm
+// version. Versioning in the key means a changed algorithm mints a new series
+// instead of silently overwriting the old one (plan §26).
+func RiskMetricKey(subjectKey, metric, algorithmVersion string) string {
+	return "risk_metric/" + strings.TrimSpace(subjectKey) +
+		"/" + strings.ToLower(strings.TrimSpace(metric)) +
+		"/" + strings.TrimSpace(algorithmVersion)
+}
+
+// MEVEventKey builds an MEV event's natural key: the chain plus the sandwiching
+// (or otherwise classified) transaction hash. One transaction is classified
+// once; a re-observation of the same tx mints the same id.
+func MEVEventKey(chainName, txHash string) string {
+	return "mev_event/" + strings.ToLower(strings.TrimSpace(chainName)) + "/" + strings.TrimSpace(txHash)
+}
+
+// PerpMarketKey builds a perpetual market's natural key from the venue, the
+// market type and the base/quote symbols - the same coordinate shape as
+// InstrumentKey, but in its own namespace so a perp market and a spot
+// instrument never collide even when they name the same pair.
+func PerpMarketKey(venueID, marketType, baseSymbol, quoteSymbol string) string {
+	return "perp_market/" + strings.ToLower(strings.TrimSpace(venueID)) +
+		"/" + strings.ToLower(strings.TrimSpace(marketType)) +
+		"/" + strings.ToUpper(strings.TrimSpace(baseSymbol)) +
+		"/" + strings.ToUpper(strings.TrimSpace(quoteSymbol))
+}
+
+// ProviderObservationKey builds a raw provider observation's natural key: the
+// provider, the dataset and the provider's own record id. It is the raw-tier
+// identity (plan §6/§13) - one stored upstream payload, retained briefly and
+// never used as a canonical value.
+func ProviderObservationKey(provider, dataset, providerRecordID string) string {
+	return "provider_observation/" + strings.ToLower(strings.TrimSpace(provider)) +
+		"/" + strings.ToLower(strings.TrimSpace(dataset)) +
+		"/" + strings.TrimSpace(providerRecordID)
 }
 
 // InstrumentKey builds an instrument's natural key:

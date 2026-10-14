@@ -18,9 +18,11 @@ type fakeReader struct {
 	obs    []canon.Observation
 	series []canon.SeriesMeta
 	listed int
+	reads  int
 }
 
 func (f *fakeReader) ReadTimeseries(_ context.Context, seriesID string, _, _ time.Time, limit int) ([]canon.Observation, error) {
+	f.reads++
 	out := f.obs
 	if limit > 0 && len(out) > limit {
 		out = out[len(out)-limit:]
@@ -37,6 +39,10 @@ func (f *fakeReader) ListSeries(_ context.Context, _ canon.SeriesQuery) ([]canon
 // satisfy the interface and fail loudly if ever called.
 func (f *fakeReader) unused(method string) error {
 	return fmt.Errorf("fakeReader: unexpected call to %s", method)
+}
+
+func (f *fakeReader) ReadMetric(context.Context, string, time.Time, time.Time, int) ([]canon.MetricPoint, error) {
+	return nil, f.unused("ReadMetric")
 }
 
 func (f *fakeReader) ListAssets(context.Context, canon.ListQuery) ([]canon.Asset, error) {
@@ -93,6 +99,10 @@ func (f *fakeReader) ListPools(context.Context, canon.PoolQuery) ([]canon.Pool, 
 
 func (f *fakeReader) ListArticles(context.Context, int) ([]canon.Article, error) {
 	return nil, f.unused("ListArticles")
+}
+
+func (f *fakeReader) ListArticlesFiltered(context.Context, canon.ArticleQuery) ([]canon.Article, error) {
+	return nil, f.unused("ListArticlesFiltered")
 }
 
 func (f *fakeReader) ListPredictionMarkets(context.Context, int) ([]canon.PredictionMarket, error) {

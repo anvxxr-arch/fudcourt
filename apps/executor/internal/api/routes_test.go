@@ -11,11 +11,12 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/exchanges/paper"
+	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/execution"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/platform/session"
 	"github.com/anvxxr-arch/fudcourt/apps/executor/internal/repository"
 )
@@ -92,6 +93,43 @@ func TestMethodGuardIsAllowHeader(t *testing.T) {
 	}
 }
 
+// TestReadCookiePercentDecodeParity pins the ONE percent-decode apps/api's
+// readCookieValue applies (and next/headers applies) so both services read the
+// same bytes from the same wire value. A token whose payload carries a `%XX`
+// escape must verify identically here and in apps/api; reading the raw value —
+// which this surface did until 2026-10-12 under a comment that claimed it
+// decoded — would make the executor reject a cookie the rest of the system
+// accepts.
+func TestReadCookiePercentDecodeParity(t *testing.T) {
+	// base64url has no `%`, so the escape has to be injected after encoding —
+	// exactly the shape a legal-but-unusual value would take.
+	cases := []struct {
+		name string
+		wire string
+		want string
+		code int // 0 means "no decode expected"
+	}{
+		{name: "plain passthrough", wire: "abc.def-_.123", want: "abc.def-_.123"},
+		{name: "one escape decodes", wire: "a%2Eb.c", want: "a.b.c"},
+		{name: "plus is literal", wire: "a+b.c", want: "a+b.c"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			r.AddCookie(&http.Cookie{Name: session.CookieName, Value: c.wire})
+			if got := readCookie(r, session.CookieName); got != c.want {
+				t.Fatalf("readCookie(%q) = %q, want %q", c.wire, got, c.want)
+			}
+		})
+	}
+	// A replacement that does NOT decode (the pre-fix behavior) must fail the
+	// first escaping case — otherwise this test cannot catch a regression.
+	raw := "a%2Eb.c"
+	if raw == "a.b.c" {
+		t.Fatal("fixture is not escaping anything; the test cannot regress-guard")
+	}
+}
+
 // TestAuthGateDenies ports requireExecutorUser: every path refuses a request
 // with no session, a forged session and a below-tier session with the SAME 401
 // `{ error: 'unauthorized', detail: 'requires team tier (no session)' }`.
@@ -99,8 +137,10 @@ func TestAuthGateDenies(t *testing.T) {
 	h := newHarness(t, instrumentSet())
 	paths := []struct{ method, path string }{
 		{http.MethodGet, "/api/executor/accounts"},
+		{http.MethodGet, "/api/executor/accounts/acc-1"},
 		{http.MethodGet, "/api/executor/settings"},
 		{http.MethodGet, "/api/executor/executions"},
+		{http.MethodGet, "/api/executor/executions/e-1"},
 		{http.MethodPost, "/api/executor/preview"},
 		{http.MethodPost, "/api/executor/emergency"},
 	}

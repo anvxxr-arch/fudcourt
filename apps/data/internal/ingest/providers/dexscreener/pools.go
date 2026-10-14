@@ -131,6 +131,18 @@ func writePairs(ctx context.Context, w canon.Writer, subjectChain string, pairs 
 		if p.QuoteToken.Symbol != "" || p.QuoteToken.Address != "" {
 			pool.QuoteAssetID = assetRef(chain, p.QuoteToken)
 		}
+		// The sides' display symbols. canon.Pool carries them so a consumer can
+		// NAME a pool's sides without a join, and every pool read projects them
+		// — leaving them unset made every pool anonymous in the API even though
+		// baseToken.symbol is right there in the upstream pair payload.
+		// Uppercased like the asset key they accompany; a symbol-less token
+		// stays nil (never-fake), never "".
+		pool.BaseSymbol = tokenSymbol(p.BaseToken)
+		pool.QuoteSymbol = tokenSymbol(p.QuoteToken)
+		// The pair's own creation time (age on a board). Upstream spells it as
+		// milliseconds since the epoch; 0 means the provider did not date it,
+		// which stays nil rather than becoming 1970.
+		pool.PoolCreatedAt = msEpoch(p.PairCreatedAt)
 		pools = append(pools, pool)
 	}
 	if len(chains) > 0 {
@@ -160,6 +172,24 @@ func assetRef(chain string, tok tokenRef) *string {
 	}
 	aid := canon.MintID(canon.KindAsset, canon.AssetKey(assetKind(sym), sym))
 	return &aid
+}
+
+// tokenSymbol is the upper-cased display symbol of one pair side, nil when the
+// side carries no symbol (never-fake, never ""). It spells the symbol exactly
+// as assetRef does, so the pool row and its asset anchor always agree.
+func tokenSymbol(tok tokenRef) *string {
+	return strPtr(upper(strings.TrimSpace(tok.Symbol)))
+}
+
+// msEpoch converts the upstream millisecond timestamp into a time, absent (nil)
+// for the zero the provider uses when it has no date. A zero time here would
+// render as a 1970 age, which is a fabricated value, not a missing one.
+func msEpoch(ms int64) *time.Time {
+	if ms <= 0 {
+		return nil
+	}
+	t := time.UnixMilli(ms).UTC()
+	return &t
 }
 
 // splitSubject splits the job subject into its mode/chain/key triple:

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/canon"
@@ -241,6 +242,9 @@ func (r *Repo) ListSeries(ctx context.Context, q canon.SeriesQuery) ([]canon.Ser
 	if q.VenueID != "" {
 		f.add("venue_id = "+f.nextArg(), q.VenueID)
 	}
+	if q.IsDerived != nil {
+		f.add("is_derived = "+f.nextArg(), *q.IsDerived)
+	}
 	lo := len(f.args) + 1
 	sql := `SELECT series_id, domain, metric, subject_key, title, unit, frequency, country_id,
 		asset_id, instrument_id, chain_id, protocol_id, venue_id, source, provider,
@@ -280,6 +284,37 @@ func (r *Repo) ReadTimeseries(ctx context.Context, seriesID string, start, end t
 		fmt.Sprintf(" ORDER BY observed_at DESC LIMIT $%d", len(f.args)+1)
 	args := append(f.args, clampLimit(limit))
 	return listRowsASC(ctx, r, sql, args, limit, scanObservation)
+}
+
+// ReadMetric implements canon.Reader: the read side of data.metric, mirroring
+// ReadTimeseries' window/limit conventions over the `at` column.
+func (r *Repo) ReadMetric(ctx context.Context, seriesID string, start, end time.Time, limit int) ([]canon.MetricPoint, error) {
+	f := &filter{}
+	if seriesID != "" {
+		f.add("series_id = "+f.nextArg(), seriesID)
+	}
+	f.timeRange("at", start, end)
+	sql := `SELECT at, value, meta, source FROM data.metric` + f.where() +
+		fmt.Sprintf(" ORDER BY at DESC LIMIT $%d", len(f.args)+1)
+	args := append(f.args, clampLimit(limit))
+	return listRowsASC(ctx, r, sql, args, limit, scanMetricPoint)
+}
+
+// scanMetricPoint scans one data.metric row (reader projection order). A NULL
+// value is an absent reading (nil pointer), never a fake 0.
+func scanMetricPoint(row pgx.Rows) (canon.MetricPoint, error) {
+	var p canon.MetricPoint
+	var meta []byte
+	err := row.Scan(&p.At, &p.Value, &meta, &p.Source)
+	if err != nil {
+		return p, fmt.Errorf("repo: scan metric point: %w", err)
+	}
+	if len(meta) > 0 {
+		if err := json.Unmarshal(meta, &p.Meta); err != nil {
+			return p, fmt.Errorf("repo: scan metric point meta: %w", err)
+		}
+	}
+	return p, nil
 }
 
 // scanObservation scans one observation row (reader projection order).
@@ -555,23 +590,33 @@ func (r *Repo) ListPools(ctx context.Context, q canon.PoolQuery) ([]canon.Pool, 
 		f.add("liquidity_usd >= "+f.nextArg(), q.MinLiquidityUSD)
 	}
 	sql := `SELECT pool_id, at, chain_id, dex_venue_id, address, base_asset_id, quote_asset_id,
-		fee_tier_bps, price, liquidity_usd, volume_24h_usd,
-		fdv_usd, source, retrieved_at
+		base_symbol, quote_symbol, fee_tier_bps, price, liquidity_usd, volume_24h_usd,
+		fdv_usd, source, retrieved_at, pool_created_at
 		FROM data.pool` + f.where() +
 		fmt.Sprintf(" ORDER BY at DESC, liquidity_usd DESC NULLS LAST LIMIT $%d", len(f.args)+1)
 	args := append(f.args, clampLimit(q.Limit))
 	return listRows(ctx, r, sql, args, q.Limit, scanPool)
 }
 
-// scanPool scans one pool row (reader projection order).
+// scanPool scans one pool row (reader projection order). retrieved_at is
+// nullable in the DDL and WritePools stores NULL for a zero RetrievedAt, so the
+// column is scanned through a pointer and a NULL stays a zero time (never a
+// fabricated value).
 func scanPool(row pgx.Rows) (canon.Pool, error) {
 	var p canon.Pool
+	var retrieved, created *time.Time
 	err := row.Scan(&p.PoolID, &p.At, &p.ChainID, &p.DEXVenueID, &p.Address, &p.BaseAssetID,
-		&p.QuoteAssetID, &p.FeeTierBps, &p.Price,
-		&p.LiquidityUSD, &p.Volume24hUSD, &p.FdvUsd, &p.Source, &p.RetrievedAt)
+		&p.QuoteAssetID, &p.BaseSymbol, &p.QuoteSymbol, &p.FeeTierBps, &p.Price,
+		&p.LiquidityUSD, &p.Volume24hUSD, &p.FdvUsd, &p.Source, &retrieved, &created)
 	if err != nil {
 		return p, fmt.Errorf("repo: scan pool: %w", err)
 	}
+	if retrieved != nil {
+		p.RetrievedAt = *retrieved
+	}
+	// A pool the provider did not date stays nil rather than zero: zero would
+	// render as a 1970 age.
+	p.PoolCreatedAt = created
 	return p, nil
 }
 
@@ -581,6 +626,64 @@ func (r *Repo) ListArticles(ctx context.Context, limit int) ([]canon.Article, er
 		topics, assets, sentiment, source, retrieved_at
 		FROM data.news_article ORDER BY published_at DESC NULLS LAST LIMIT $1`
 	return listRows(ctx, r, sql, []any{clampLimit(limit)}, limit, func(row pgx.Rows) (canon.Article, error) {
+		var a canon.Article
+		if err := row.Scan(&a.ArticleID, &a.Headline, &a.Summary, &a.URL, &a.Publisher,
+			&a.PublishedAt, &a.Language, &a.Topics, &a.Assets, &a.Sentiment, &a.Source,
+			&a.RetrievedAt); err != nil {
+			return a, fmt.Errorf("repo: scan article: %w", err)
+		}
+		return a, nil
+	})
+}
+
+// ListArticlesFiltered implements canon.Reader: the /api/data/news filtered
+// read. Every filter is optional and composes with AND; the query is built
+// with positional placeholders (never string-interpolated values), so a
+// caller's search text cannot alter the statement. Source matches the
+// provider column; Category matches the topics[] array; Asset matches the
+// assets[] array; Search is a case-insensitive substring over
+// headline/summary. Before is a keyset cursor on published_at (strictly
+// older), pairing with the newest-first order so paging is stable.
+//
+// Rows with a NULL published_at sort LAST (NULLS LAST) and are returned ONLY
+// on an uncursored read: a cursor predicate that admitted NULLs on every page
+// would repeat them forever, so the cursor deliberately covers published rows
+// and the NULL tail is reachable on the first request. Every dispatched
+// newsfeed source carries a feed timestamp, so the tail is empty in practice.
+func (r *Repo) ListArticlesFiltered(ctx context.Context, q canon.ArticleQuery) ([]canon.Article, error) {
+	sb := strings.Builder{}
+	sb.WriteString(`SELECT article_id, headline, summary, url, publisher, published_at, language,
+		topics, assets, sentiment, source, retrieved_at
+		FROM data.news_article WHERE 1=1`)
+	args := make([]any, 0, 5)
+	if q.Source != "" {
+		// Source selects the OUTLET, not the ingestion family. The writer
+		// stores the adapter family in both provider and source ("newsfeed"),
+		// so filtering on source would collapse every publisher into one
+		// bucket; the outlet display name lives in publisher ("The Defiant").
+		// Match either column so a caller passing the family still works.
+		args = append(args, q.Source)
+		fmt.Fprintf(&sb, " AND (publisher = $%d OR source = $%d)", len(args), len(args))
+	}
+	if q.Category != "" {
+		args = append(args, q.Category)
+		fmt.Fprintf(&sb, " AND $%d = ANY(topics)", len(args))
+	}
+	if q.Asset != "" {
+		args = append(args, strings.ToUpper(q.Asset))
+		fmt.Fprintf(&sb, " AND $%d = ANY(assets)", len(args))
+	}
+	if q.Search != "" {
+		args = append(args, "%"+strings.ToLower(q.Search)+"%")
+		fmt.Fprintf(&sb, " AND (lower(headline) LIKE $%d OR lower(coalesce(summary,'')) LIKE $%d)", len(args), len(args))
+	}
+	if !q.Before.IsZero() {
+		args = append(args, q.Before)
+		fmt.Fprintf(&sb, " AND published_at IS NOT NULL AND published_at < $%d", len(args))
+	}
+	args = append(args, clampLimit(q.Limit))
+	fmt.Fprintf(&sb, " ORDER BY published_at DESC NULLS LAST LIMIT $%d", len(args))
+	return listRows(ctx, r, sb.String(), args, q.Limit, func(row pgx.Rows) (canon.Article, error) {
 		var a canon.Article
 		if err := row.Scan(&a.ArticleID, &a.Headline, &a.Summary, &a.URL, &a.Publisher,
 			&a.PublishedAt, &a.Language, &a.Topics, &a.Assets, &a.Sentiment, &a.Source,

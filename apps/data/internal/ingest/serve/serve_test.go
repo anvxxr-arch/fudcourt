@@ -188,6 +188,51 @@ func TestTimeseriesWindowAndParams(t *testing.T) {
 		t.Fatalf("bad start: %d", rec.Code)
 	}
 }
+func TestMetricsWindowAndParams(t *testing.T) {
+	h, r, _ := newTestServer(t)
+	v := 1.5
+	r.metrics = map[string][]canon.MetricPoint{"s1": {
+		{At: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{At: time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), Value: &v, Source: "derived"},
+	}}
+	rec, body := get(t, h, "/api/data/metrics?series_id=s1&start=2026-01-15")
+	if rec.Code != 200 {
+		t.Fatalf("metrics: %d %s", rec.Code, rec.Body.String())
+	}
+	rows := body["data"].([]any)
+	if len(rows) != 1 {
+		t.Fatalf("window: %v", body["data"])
+	}
+	if rows[0].(map[string]any)["value"] != 1.5 {
+		t.Fatalf("value: %v", rows[0])
+	}
+	// missing series_id -> 400
+	rec, _ = get(t, h, "/api/data/metrics")
+	if rec.Code != 400 {
+		t.Fatalf("missing series_id: %d", rec.Code)
+	}
+	// unknown series -> empty data, not 404
+	rec, body = get(t, h, "/api/data/metrics?series_id=nope")
+	if rec.Code != 200 || len(body["data"].([]any)) != 0 {
+		t.Fatalf("unknown series: %d %v", rec.Code, body)
+	}
+}
+
+func TestChartsIndexDerivedOnly(t *testing.T) {
+	h, r, _ := newTestServer(t)
+	r.series = []canon.SeriesMeta{
+		{SeriesID: "s1", Domain: "market", Metric: "sma", IsDerived: true},
+		{SeriesID: "s2", Domain: "market", Metric: "price", IsDerived: false},
+	}
+	rec, body := get(t, h, "/api/data/charts/index")
+	if rec.Code != 200 {
+		t.Fatalf("charts index: %d %s", rec.Code, rec.Body.String())
+	}
+	rows := body["data"].([]any)
+	if len(rows) != 1 || rows[0].(map[string]any)["series_id"] != "s1" {
+		t.Fatalf("derived-only: %v", body["data"])
+	}
+}
 
 func TestOhlcvAndDerivativeParams(t *testing.T) {
 	h, r, _ := newTestServer(t)

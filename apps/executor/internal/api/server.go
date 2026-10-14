@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -184,15 +185,29 @@ func (s *Server) authUser(w http.ResponseWriter, r *http.Request) (string, bool)
 	return claims.ID, true
 }
 
-// readCookie reads one cookie the same way next/headers does: the raw header
-// value with one percent-decode applied. A value that does not decode reads as
-// absent (a tampered cookie is never a session).
+// readCookie reads one cookie the way next/headers does and the way apps/api's
+// readCookieValue does: the raw header value with ONE percent-decode applied.
+// That parity is load-bearing. The web tier writes the session cookie through
+// `jsEncodeURIComponent` (apps/api/cookies.go writeCookie), so the value on the
+// wire is percent-encoded; apps/api decodes it with url.PathUnescape before
+// verifying, and the pipeline panics not on the typical base64url token (whose
+// alphabet has no `%`) but on any token whose payload happens to carry one.
+// Reading the RAW value here — which this function did until 2026-10-12, under
+// a comment that claimed it decoded — would make the executor reject a cookie
+// the rest of the system accepts: the same bytes, verified two different ways.
+//
+// A value that does not decode reads as absent: a tampered cookie is never a
+// session.
 func readCookie(r *http.Request, name string) string {
 	c, err := r.Cookie(name)
+	if err != nil || c.Value == "" {
+		return ""
+	}
+	decoded, err := url.PathUnescape(c.Value)
 	if err != nil {
 		return ""
 	}
-	return c.Value
+	return decoded
 }
 
 // --- response helpers ------------------------------------------------------

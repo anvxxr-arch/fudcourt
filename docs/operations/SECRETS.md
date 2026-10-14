@@ -14,7 +14,7 @@ deploy**; see [DECISIONS.md](../records/DECISIONS.md).
 |------|------------------------|-------------|---------------------|--------------|
 | `FUDCOURT_PG_URL` (Postgres DSN, DR-040) | `apps/web/src/platform/db/client.ts`, `apps/reconciler/src/persistence/db.rs`, `tests/oracle/sync-live.py` | `./.env` (root) + `apps/web/.env.local` (documented in `apps/web/.env.example`) | `fudcourt-web` (:3100) + `fudcourt-sync.timer` + `fudcourt-reconciled` (:3102, `EnvironmentFile` the repo-root `.env`) + `fudcourt-digest.timer` (weekly) | no |
 | `ALCHEMY_KEY` | `tests/oracle/sync-live.py` (live ETH RPC) + the forensic `apps/web/scripts/archive/*.mjs` one-offs (**deleted 2026-09-29**, after the rotation was recorded) | `./.env` (root) | `fudcourt-sync.timer` | no |
-| `OPENSEA_API_KEY` | `apps/web/src/features/nft/opensea.ts` (OpenSea API v2 reads). The contract/account NFT endpoints answer **401** without it; the collection endpoints work keyless (measured 2026-10-09, see DR-056) | `apps/web/.env.local` (documented in `apps/web/.env.example`) | `fudcourt-web` (:3100) — the unit's `EnvironmentFile` | no |
+| `OPENSEA_API_KEY` | `apps/web/src/features/nft/opensea.ts` (OpenSea API v2 reads: 4 keyless + 14 keyed, measured 2026-10-09, see DR-056/057) + `apps/web/src/app/(frontend)/api/treasury/nfts/route.ts` (team overlay) | `apps/web/.env.local` (documented in `apps/web/.env.example`) | `fudcourt-web` (:3100) — the unit's `EnvironmentFile` | no |
 | `FUDCOURT_BOT_TOKEN` | `src/app/(frontend)/api/auth/callback` + `src/app/(frontend)/(admin)` (reads guild member roles with the bot) | `apps/web/.env.local` | `fudcourt-web` | no |
 | `FUDCOURT_CLIENT_SECRET` | `src/app/(frontend)/api/auth/callback` (OAuth code exchange) | `apps/web/.env.local` | `fudcourt-web` | no |
 | `FUDCOURT_SESSION_SECRET` | `src/platform/auth/session.ts` (HMAC key for the `fud_session` cookie) | `apps/web/.env.local` | `fudcourt-web` | no |
@@ -225,6 +225,21 @@ delete the line from `apps/web/.env.local`. Nothing reads it.
    ([bot.md](../architecture/bot.md) §6). A second concurrent `getUpdates` from the
    same token answering `409 Conflict` confirms the restarted bot is polling.
 
+**R8. `OPENSEA_API_KEY` (expanded surface, DR-057).**
+1. Human step: OpenSea dashboard → API Keys → *Create/Rotate* (old key dies
+   immediately; the copy in no file is affected because no value is committed).
+2. Replace the single line in `apps/web/.env.local` (`OPENSEA_API_KEY=…` —
+   edit in a local editor, never `cat`/`grep` it into logs). There is exactly
+   **one** home: `fudcourt-web.service` reads it as its `EnvironmentFile`.
+3. `systemctl --user restart fudcourt-web` — the client reads the key lazily
+   per request, but the running process snapshotted the env at boot, so a
+   restart is required.
+4. Verify (name-only, never print the value):
+   `grep -c '^OPENSEA_API_KEY=' apps/web/.env.local` → **1**;
+   keyless `curl 'http://127.0.0.1:3100/api/nft/opensea?stats=doodles-official'`
+   → **200**; keyed `curl 'http://127.0.0.1:3100/api/nft/opensea?trending&limit=1'`
+   → **200** (proves the new key arrived — a stale process answers 503 here).
+
 ## 6. Production verification checklist (self-hosted)
 
 ```bash
@@ -257,8 +272,8 @@ these checks failing loudly — fix with the matching §5 step (rebuild for ever
 
 | Date | Change | Evidence (no value recorded) |
 |------|--------|------------------------------|
+| 2026-10-09 | **`OPENSEA_API_KEY` surface ×4.5 (DR-057)** — §1 row now names the 14 keyed readers + team overlay; **R8** rotation procedure (dashboard rotate → one line in `apps/web/.env.local` → restart → keyless 200 + keyed 200 as arrival proof). No new home, no new file. | `grep -c '^OPENSEA_API_KEY=' apps/web/.env.local` → 1; `?stats=doodles-official` → 200 keyless; `?trending&limit=1` → 200 keyed; file stays git-ignored (`.gitignore` `.env*`), 0600 (name/length only — no value recorded) |
 | 2026-10-06 | **`FUDCOURT_TELEGRAM_BOT_TOKEN`** added to §1/§3/§5 with the `apps/bot` receiver. The name already lived in `./.env` (the executor's `notify` is the sending half); what is new is a second first-party consumer, so the rotation step now names both units. No new home, no new file. | `grep -c '^FUDCOURT_TELEGRAM_BOT_TOKEN=' ./.env` → 1; `getMe` → `@fudbase_bot`; `getMyCommands` → 8 public commands; `systemctl --user is-active fudcourt-bot.service` → active; `.env` stays git-ignored (`.gitignore` `.env*`), 0600 (name/length only — no value recorded) |
-| 2026-10-05 | **K-11** — `FUDCOURT_SESSION_SECRET` set in `apps/web/.env.local` (§5 R3 step 3): `openssl rand -hex 32`, append-only edit, `systemctl --user restart fudcourt-web`. | `grep -c '^FUDCOURT_SESSION_SECRET='` → 1; listening pid environ shows the name at len 64; sweep now prints `# session: signed admin cookie accepted (secret from listening pid <pid> environ)` and runs the 7 `mut` + 3 `gate-auth` probes (10/10 pass); the fail-closed controls still answer 401. File stays git-ignored (`.gitignore` `.env*`), 0600. |
 
 **Open gap this change does NOT close (tracked as K-12).** `/api/auth/login`
 still answers **500 `auth_unconfigured`**, and it is *not* a session-secret

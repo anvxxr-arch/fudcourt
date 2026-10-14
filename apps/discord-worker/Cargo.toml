@@ -39,5 +39,24 @@ serde_json = "1"
 # release (a plain DEL could delete another worker's lock).
 redis = { version = "0.27", default-features = false, features = ["tokio-comp", "script"] }
 
+# Feeds (phase 11). `reqwest` with rustls and NO default features: the default
+# feature set would pull native-tls/openssl, and this worker only ever speaks
+# HTTPS to two places. `gzip` is not a nicety — most feeds serve compressed
+# bodies and a client that does not ask will be handed one anyway.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "gzip", "json"] }
+# One parser for RSS 2.0/1.0, Atom and JSON Feed rather than three hand-rolled
+# ones; it is the adapter layer's whole job.
+feed-rs = "2.4"
+# CIDR matching for the SSRF guard. Hand-rolling `a.b.c.d/x` comparisons is how
+# the `172.16/12` and `::ffff:` cases get missed.
+ipnet = "2.12"
+# Percent-decoding and host normalization in the guard: `http://127.1`, `%31%32%37.0.0.1`
+# and `http://[::ffff:127.0.0.1]` must all land on the same rejected address.
+url = "2"
+# A stable digest for the item key. `DefaultHasher` is SipHash with
+# implementation-defined keys: it is NOT guaranteed stable across Rust versions,
+# and this digest is PERSISTED — a changed hash silently re-announces every item.
+sha2 = "0.10"
+
 [profile.release]
 strip = true

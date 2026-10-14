@@ -538,8 +538,14 @@ CREATE TABLE IF NOT EXISTS data.pool (
   fdv_usd        double precision,
   source         text NOT NULL,
   retrieved_at   timestamptz,
+  pool_created_at timestamptz,
   PRIMARY KEY (pool_id, at)
 );
+-- Additive migration: CREATE TABLE IF NOT EXISTS above never touches a table
+-- that already exists, so a column added after the first deploy must be
+-- declared here too or the live table silently lacks it (and every write that
+-- names the column fails). Idempotent, so a fresh database runs both.
+ALTER TABLE data.pool ADD COLUMN IF NOT EXISTS pool_created_at timestamptz;
 SELECT create_hypertable('data.pool', 'at', if_not_exists => TRUE);
 DO $$
 BEGIN
@@ -658,3 +664,524 @@ SELECT create_hypertable('data.option_quote', 'at', if_not_exists => TRUE);
 -- events on every poll, so append-only rows need a deterministic dedup key.
 CREATE UNIQUE INDEX IF NOT EXISTS liquidation_natural_key
   ON data.liquidation (venue_id, instrument_id, at, side, price, quantity);
+
+-- ===========================================================================
+-- DEX Data Platform (docs/dex/audit.md, plan §12/§54). Additive to the frozen
+-- inventory above: new numbered sections 31+. See ADDENDUM B for the original
+-- table counts (they are updated here by 13 tables / 8 hypertables / 9 indexes
+-- / 2 conditional-unique indexes).
+--
+-- DELIBERATE NUMERIC DEVIATION FROM THE §2 CONVENTION: the tables above carry
+-- money as double precision because their upstreams are IEEE numbers. The DEX
+-- tables below carry money/price/quantity as NUMERIC and token amounts as the
+-- exact (raw numeric, decimals int) pair. Plan §54 forbids floats for token
+-- balances and §65 lists it as an anti-goal; a DEX swap amount cannot round-trip
+-- through binary64 without losing digits. An adapter reads a provider decimal
+-- with json.Number/UseNumber so it never passes through a float either.
+-- ===========================================================================
+
+-- 31. dex_deployment — one protocol's contract set on one chain (plan §4
+-- "Deployment"). Keyed by (chain, protocol): the same protocol deployed on
+-- several chains has one row per chain.
+CREATE TABLE IF NOT EXISTS data.dex_deployment (
+  deployment_id  text PRIMARY KEY,
+  natural_key    text NOT NULL,
+  protocol_id    text NOT NULL,
+  chain_id       text NOT NULL,
+  factory        text,
+  router         text,
+  other_contracts jsonb,
+  address_kind   text,
+  source         text NOT NULL,
+  retrieved_at   timestamptz
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_deployment_natural_key_key') THEN
+    ALTER TABLE data.dex_deployment
+      ADD CONSTRAINT dex_deployment_natural_key_key UNIQUE (natural_key);
+  END IF;
+END
+$$;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_deployment_chain_protocol_key') THEN
+    ALTER TABLE data.dex_deployment
+      ADD CONSTRAINT dex_deployment_chain_protocol_key UNIQUE (chain_id, protocol_id);
+  END IF;
+END
+$$;
+CREATE INDEX IF NOT EXISTS dex_deployment_protocol_idx ON data.dex_deployment (protocol_id);
+
+-- 32. dex_pool_token — one side of a pool's composition (plan §4 "Pool
+-- composition"). A V2 pool has two rows; a weighted/stable pool can have more,
+-- so composition is a list keyed on the pool's own token ordering.
+CREATE TABLE IF NOT EXISTS data.dex_pool_token (
+  pool_id      text NOT NULL,
+  token_id     text NOT NULL,
+  pool_index   int NOT NULL,
+  reserve_raw  numeric,
+  reserve_decimals int,
+  weight       numeric,
+  is_base      boolean,
+  source       text NOT NULL,
+  at           timestamptz NOT NULL,
+  PRIMARY KEY (pool_id, token_id, at)
+);
+SELECT create_hypertable('data.dex_pool_token', 'at', if_not_exists => TRUE);
+
+-- 33. dex_route_quote — one router's quote for one swap size (plan §4
+-- "Routing", §21). Provider-scoped so best-execution compares rows.
+CREATE TABLE IF NOT EXISTS data.dex_route_quote (
+  quote_id          text PRIMARY KEY,
+  natural_key       text NOT NULL,
+  provider          text NOT NULL,
+  chain_id          text NOT NULL,
+  token_in          text NOT NULL,
+  token_out         text NOT NULL,
+  amount_in_raw     numeric NOT NULL,
+  amount_in_decimals int NOT NULL,
+  amount_out_raw    numeric NOT NULL,
+  amount_out_decimals int NOT NULL,
+  expected_output_usd numeric,
+  gas_estimate_usd  numeric,
+  gas_estimate_raw  numeric,
+  gas_estimate_decimals int,
+  price_impact_pct  numeric,
+  slippage_pct      numeric,
+  legs              jsonb,
+  quoted_at         timestamptz NOT NULL,
+  retrieved_at      timestamptz
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_route_quote_natural_key_key') THEN
+    ALTER TABLE data.dex_route_quote
+      ADD CONSTRAINT dex_route_quote_natural_key_key UNIQUE (natural_key);
+  END IF;
+END
+$$;
+CREATE INDEX IF NOT EXISTS dex_route_quote_pair_idx
+  ON data.dex_route_quote (chain_id, token_in, token_out, quoted_at DESC);
+
+-- 34. dex_provider_health — per-provider reliability facts (plan §34). One row
+-- per provider per window; the reader rolls these up.
+CREATE TABLE IF NOT EXISTS data.dex_provider_health (
+  provider        text NOT NULL,
+  window_start    timestamptz NOT NULL,
+  availability_pct numeric,
+  latency_p50_ms  numeric,
+  latency_p95_ms  numeric,
+  latency_p99_ms  numeric,
+  error_count     bigint NOT NULL DEFAULT 0,
+  success_count   bigint NOT NULL DEFAULT 0,
+  rate_limit_events bigint NOT NULL DEFAULT 0,
+  last_success    timestamptz,
+  last_failure    timestamptz,
+  staleness_seconds numeric,
+  state           text NOT NULL DEFAULT 'unknown',
+  PRIMARY KEY (provider, window_start)
+);
+
+-- 35. dex_quality_status — one quality verdict for one (subject, dataset)
+-- (plan §32). state is the closed healthy|degraded|stale|conflicting|invalid.
+CREATE TABLE IF NOT EXISTS data.dex_quality_status (
+  subject_key  text NOT NULL,
+  dataset      text NOT NULL,
+  at           timestamptz NOT NULL,
+  state        text NOT NULL,
+  reasons      text[],
+  detail       jsonb,
+  PRIMARY KEY (subject_key, dataset, at)
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_quality_status_state_check') THEN
+    ALTER TABLE data.dex_quality_status
+      ADD CONSTRAINT dex_quality_status_state_check
+      CHECK (state IN ('healthy','degraded','stale','conflicting','invalid'));
+  END IF;
+END
+$$;
+SELECT create_hypertable('data.dex_quality_status', 'at', if_not_exists => TRUE);
+
+-- 36. dex_swap — one executed DEX swap (plan §4 "Transaction", §15 identity
+-- chain+tx_hash+log_index). The UNIQUE tuple is the idempotency key: at-least-
+-- once ingestion of the same log upserts the same row.
+CREATE TABLE IF NOT EXISTS data.dex_swap (
+  swap_id        text NOT NULL,
+  natural_key    text NOT NULL,
+  pool_id        text NOT NULL,
+  chain_id       text NOT NULL,
+  tx_hash        text NOT NULL,
+  log_index      int NOT NULL,
+  block_number   bigint,
+  tx_index       int,
+  trader         text,
+  sender         text,
+  token_in       text NOT NULL,
+  token_out      text NOT NULL,
+  amount_in_raw  numeric NOT NULL,
+  amount_in_decimals int NOT NULL,
+  amount_out_raw numeric NOT NULL,
+  amount_out_decimals int NOT NULL,
+  amount_usd     numeric,
+  side           text,
+  source         text NOT NULL,
+  event_time     timestamptz NOT NULL,
+  retrieved_at   timestamptz,
+  PRIMARY KEY (swap_id, event_time)
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_swap_natural_key_key') THEN
+    ALTER TABLE data.dex_swap
+      ADD CONSTRAINT dex_swap_natural_key_key UNIQUE (chain_id, tx_hash, log_index, event_time);
+  END IF;
+END
+$$;
+SELECT create_hypertable('data.dex_swap', 'event_time', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS dex_swap_pool_time_idx ON data.dex_swap (pool_id, event_time DESC);
+
+-- 37. dex_candle — one OHLCV bar for one POOL (plan §4 "Price history", §15
+-- key pool+interval+open_time). Pool-keyed, NOT instrument+venue-keyed like
+-- data.ohlcv, so a candle needs no instrument row.
+CREATE TABLE IF NOT EXISTS data.dex_candle (
+  candle_id      text NOT NULL,
+  natural_key    text NOT NULL,
+  pool_id        text NOT NULL,
+  chain_id       text NOT NULL,
+  interval       text NOT NULL,
+  open_time      timestamptz NOT NULL,
+  close_time     timestamptz,
+  o              numeric NOT NULL,
+  h              numeric NOT NULL,
+  l              numeric NOT NULL,
+  c              numeric NOT NULL,
+  volume_base    numeric,
+  volume_quote   numeric,
+  volume_usd     numeric,
+  trade_count    bigint,
+  vwap           numeric,
+  source         text NOT NULL,
+  retrieved_at   timestamptz,
+  PRIMARY KEY (candle_id, open_time)
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_candle_natural_key_key') THEN
+    ALTER TABLE data.dex_candle
+      ADD CONSTRAINT dex_candle_natural_key_key UNIQUE (pool_id, interval, open_time);
+  END IF;
+END
+$$;
+SELECT create_hypertable('data.dex_candle', 'open_time', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS dex_candle_pool_interval_idx
+  ON data.dex_candle (pool_id, interval, open_time DESC);
+
+-- 38. dex_liquidity_snapshot — one pool's liquidity state at one instant
+-- (plan §4 "Liquidity"): reserves (jsonb array of {token_id,raw,decimals}),
+-- USD value, and the concentrated-liquidity tick range.
+CREATE TABLE IF NOT EXISTS data.dex_liquidity_snapshot (
+  snapshot_id      text NOT NULL,
+  natural_key      text NOT NULL,
+  pool_id          text NOT NULL,
+  chain_id         text NOT NULL,
+  at               timestamptz NOT NULL,
+  reserves         jsonb,
+  liquidity_usd    numeric,
+  tick             int,
+  tick_lower       int,
+  tick_upper       int,
+  active_liquidity numeric,
+  source           text NOT NULL,
+  retrieved_at     timestamptz,
+  PRIMARY KEY (snapshot_id, at)
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_liquidity_snapshot_natural_key_key') THEN
+    ALTER TABLE data.dex_liquidity_snapshot
+      ADD CONSTRAINT dex_liquidity_snapshot_natural_key_key UNIQUE (pool_id, at);
+  END IF;
+END
+$$;
+SELECT create_hypertable('data.dex_liquidity_snapshot', 'at', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS dex_liquidity_snapshot_pool_idx
+  ON data.dex_liquidity_snapshot (pool_id, at DESC);
+
+-- 39. dex_market_snapshot — one pool's market state at one instant (plan §4
+-- "Market state"): price, 24h volume/txn counts, FDV. Separate from the
+-- liquidity snapshot because price and reserves come from different providers.
+CREATE TABLE IF NOT EXISTS data.dex_market_snapshot (
+  snapshot_id        text NOT NULL,
+  natural_key        text NOT NULL,
+  pool_id            text NOT NULL,
+  chain_id           text NOT NULL,
+  at                 timestamptz NOT NULL,
+  price_usd          numeric,
+  price_native       numeric,
+  volume_24h_usd     numeric,
+  txns_24h           bigint,
+  buys_24h           bigint,
+  sells_24h          bigint,
+  price_change_pct_24h numeric,
+  fdv_usd            numeric,
+  market_cap_usd     numeric,
+  fee_tier_bps       int,
+  source             text NOT NULL,
+  retrieved_at       timestamptz,
+  PRIMARY KEY (snapshot_id, at)
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_market_snapshot_natural_key_key') THEN
+    ALTER TABLE data.dex_market_snapshot
+      ADD CONSTRAINT dex_market_snapshot_natural_key_key UNIQUE (pool_id, at);
+  END IF;
+END
+$$;
+SELECT create_hypertable('data.dex_market_snapshot', 'at', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS dex_market_snapshot_pool_idx
+  ON data.dex_market_snapshot (pool_id, at DESC);
+CREATE INDEX IF NOT EXISTS dex_market_snapshot_volume_idx
+  ON data.dex_market_snapshot (chain_id, volume_24h_usd DESC);
+
+-- 40. dex_liquidity_position — one owner's position in one pool (plan §4 "LP").
+-- Keyed (pool, owner); a concentrated-liquidity position additionally carries
+-- the tick range and the L value.
+CREATE TABLE IF NOT EXISTS data.dex_liquidity_position (
+  position_id  text NOT NULL,
+  natural_key  text NOT NULL,
+  pool_id      text NOT NULL,
+  chain_id     text NOT NULL,
+  owner        text NOT NULL,
+  token_id     text,
+  nft_token_id text,
+  amounts      jsonb,
+  tick_lower   int,
+  tick_upper   int,
+  liquidity    numeric,
+  value_usd    numeric,
+  at           timestamptz NOT NULL,
+  source       text NOT NULL,
+  retrieved_at timestamptz,
+  PRIMARY KEY (position_id, at)
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_liquidity_position_natural_key_key') THEN
+    ALTER TABLE data.dex_liquidity_position
+      ADD CONSTRAINT dex_liquidity_position_natural_key_key UNIQUE (pool_id, owner, at);
+  END IF;
+END
+$$;
+SELECT create_hypertable('data.dex_liquidity_position', 'at', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS dex_liquidity_position_owner_idx
+  ON data.dex_liquidity_position (owner, at DESC);
+
+-- 41. dex_wallet_activity — one wallet event from one provider (plan §4
+-- "Trader"). Provider-scoped identity: the provider's own event id.
+CREATE TABLE IF NOT EXISTS data.dex_wallet_activity (
+  activity_id  text NOT NULL,
+  natural_key  text NOT NULL,
+  provider     text NOT NULL,
+  chain_id     text NOT NULL,
+  wallet       text NOT NULL,
+  kind         text NOT NULL,
+  pool_id      text,
+  token_id     text,
+  amount_raw   numeric,
+  amount_decimals int,
+  value_usd    numeric,
+  tx_hash      text,
+  counterparty text,
+  source       text NOT NULL,
+  event_time   timestamptz NOT NULL,
+  retrieved_at timestamptz,
+  PRIMARY KEY (activity_id, event_time)
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_wallet_activity_natural_key_key') THEN
+    ALTER TABLE data.dex_wallet_activity
+      ADD CONSTRAINT dex_wallet_activity_natural_key_key UNIQUE (provider, natural_key, event_time);
+  END IF;
+END
+$$;
+SELECT create_hypertable('data.dex_wallet_activity', 'event_time', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS dex_wallet_activity_wallet_idx
+  ON data.dex_wallet_activity (wallet, event_time DESC);
+
+-- 42. dex_risk_metric — one versioned risk score about one subject (plan §4
+-- "Risk", §26). The algorithm version rides in the key, so a changed algorithm
+-- mints a new series instead of rewriting history.
+CREATE TABLE IF NOT EXISTS data.dex_risk_metric (
+  risk_id       text NOT NULL,
+  natural_key   text NOT NULL,
+  subject_key   text NOT NULL,
+  metric        text NOT NULL,
+  score         numeric NOT NULL,
+  band          text,
+  algorithm_version text NOT NULL,
+  input_sources text[],
+  at            timestamptz NOT NULL,
+  source        text NOT NULL,
+  PRIMARY KEY (risk_id, at)
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_risk_metric_natural_key_key') THEN
+    ALTER TABLE data.dex_risk_metric
+      ADD CONSTRAINT dex_risk_metric_natural_key_key UNIQUE (natural_key, at);
+  END IF;
+END
+$$;
+SELECT create_hypertable('data.dex_risk_metric', 'at', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS dex_risk_metric_subject_idx
+  ON data.dex_risk_metric (subject_key, metric, at DESC);
+
+-- 43. dex_mev_event — one classified MEV event (plan §4 "MEV", §26). Keyed by
+-- (chain, tx_hash): a transaction is classified once.
+CREATE TABLE IF NOT EXISTS data.dex_mev_event (
+  mev_id       text NOT NULL,
+  natural_key  text NOT NULL,
+  chain_id     text NOT NULL,
+  tx_hash      text NOT NULL,
+  block_number bigint,
+  kind         text NOT NULL,
+  pool_id      text,
+  victim       text,
+  attacker     text,
+  profit_usd   numeric,
+  profit_raw   numeric,
+  profit_decimals int,
+  source       text NOT NULL,
+  event_time   timestamptz NOT NULL,
+  retrieved_at timestamptz,
+  PRIMARY KEY (mev_id, event_time)
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_mev_event_chain_tx_key') THEN
+    ALTER TABLE data.dex_mev_event
+      ADD CONSTRAINT dex_mev_event_chain_tx_key UNIQUE (chain_id, tx_hash, event_time);
+  END IF;
+END
+$$;
+SELECT create_hypertable('data.dex_mev_event', 'event_time', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS dex_mev_event_kind_idx ON data.dex_mev_event (kind, event_time DESC);
+
+-- 44. dex_perp_market — one perpetual market on one venue (plan §4
+-- "Perpetual"). Snapshot-shaped: the latest state per market is the highest at.
+CREATE TABLE IF NOT EXISTS data.dex_perp_market (
+  perp_market_id text NOT NULL,
+  natural_key    text NOT NULL,
+  venue_id       text NOT NULL,
+  market_type    text NOT NULL,
+  base_asset_id  text,
+  quote_asset_id text,
+  base_symbol    text NOT NULL,
+  quote_symbol   text NOT NULL,
+  index_price    numeric,
+  mark_price     numeric,
+  open_interest_usd numeric,
+  open_interest_base numeric,
+  funding_rate   numeric,
+  max_leverage   numeric,
+  at             timestamptz NOT NULL,
+  source         text NOT NULL,
+  retrieved_at   timestamptz,
+  PRIMARY KEY (perp_market_id, at)
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_perp_market_natural_key_key') THEN
+    ALTER TABLE data.dex_perp_market
+      ADD CONSTRAINT dex_perp_market_natural_key_key UNIQUE (natural_key, at);
+  END IF;
+END
+$$;
+SELECT create_hypertable('data.dex_perp_market', 'at', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS dex_perp_market_venue_idx ON data.dex_perp_market (venue_id, at DESC);
+
+-- 45. dex_perp_liquidation — one liquidation on a perpetual market (plan §4
+-- "Liquidation"). Append-only events with a natural dedup index.
+CREATE TABLE IF NOT EXISTS data.dex_perp_liquidation (
+  id             bigint GENERATED BY DEFAULT AS IDENTITY,
+  venue_id       text NOT NULL,
+  perp_market_id text NOT NULL,
+  at             timestamptz NOT NULL,
+  side           text,
+  price          numeric NOT NULL,
+  quantity_raw   numeric NOT NULL,
+  quantity_decimals int NOT NULL,
+  value_usd      numeric,
+  wallet         text,
+  tx_hash        text,
+  source         text NOT NULL,
+  retrieved_at   timestamptz,
+  PRIMARY KEY (id, at)
+);
+SELECT create_hypertable('data.dex_perp_liquidation', 'at', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS dex_perp_liquidation_market_idx
+  ON data.dex_perp_liquidation (perp_market_id, at DESC);
+
+-- 46. dex_orderbook_snapshot — one depth snapshot for a pool with an on-chain
+-- orderbook (plan §4 "Orderbook"). Both sides are jsonb arrays of
+-- [price, size] decimal-STRING pairs, so no float is ever involved.
+CREATE TABLE IF NOT EXISTS data.dex_orderbook_snapshot (
+  snapshot_id text NOT NULL,
+  natural_key text NOT NULL,
+  pool_id     text NOT NULL,
+  chain_id    text NOT NULL,
+  at          timestamptz NOT NULL,
+  depth       int NOT NULL,
+  bids        jsonb,
+  asks        jsonb,
+  source      text NOT NULL,
+  PRIMARY KEY (snapshot_id, at)
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_orderbook_snapshot_natural_key_key') THEN
+    ALTER TABLE data.dex_orderbook_snapshot
+      ADD CONSTRAINT dex_orderbook_snapshot_natural_key_key UNIQUE (pool_id, at);
+  END IF;
+END
+$$;
+SELECT create_hypertable('data.dex_orderbook_snapshot', 'at', if_not_exists => TRUE);
+
+-- 47. dex_provider_observation — one stored RAW upstream payload (plan §6/§13).
+-- The cold tier: retained briefly, never canonical, never served as a value.
+-- The payload is bytea so nothing in the canonical layer parses it.
+CREATE TABLE IF NOT EXISTS data.dex_provider_observation (
+  observation_id text NOT NULL,
+  natural_key    text NOT NULL,
+  provider       text NOT NULL,
+  dataset        text NOT NULL,
+  record_id      text NOT NULL,
+  endpoint       text,
+  payload        bytea,
+  payload_bytes  int NOT NULL DEFAULT 0,
+  source         text NOT NULL,
+  observed_at    timestamptz NOT NULL,
+  stored_at      timestamptz NOT NULL DEFAULT now(),
+  expires_at     timestamptz NOT NULL,
+  PRIMARY KEY (observation_id, observed_at)
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dex_provider_observation_natural_key_key') THEN
+    ALTER TABLE data.dex_provider_observation
+      ADD CONSTRAINT dex_provider_observation_natural_key_key UNIQUE (provider, dataset, record_id, observed_at);
+  END IF;
+END
+$$;
+SELECT create_hypertable('data.dex_provider_observation', 'observed_at', if_not_exists => TRUE);
+CREATE INDEX IF NOT EXISTS dex_provider_observation_expiry_idx
+  ON data.dex_provider_observation (expires_at);
+
+-- 47b. MEV natural identity: a re-observed transaction must not double-count.
+CREATE UNIQUE INDEX IF NOT EXISTS dex_mev_event_chain_tx_hash_key
+  ON data.dex_mev_event (chain_id, tx_hash, event_time);

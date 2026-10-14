@@ -1,12 +1,14 @@
 package dexscreener
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/anvxxr-arch/fudcourt/apps/data/internal/canon"
@@ -89,7 +91,12 @@ func (c *client) getJSON(ctx context.Context, url string, v any) error {
 		return &HardError{Kind: "status", URL: url, Status: r.StatusCode,
 			Detail: preview(string(b))}
 	}
-	if err := json.Unmarshal(b, v); err != nil {
+	// Decode with UseNumber so a JSON number keeps its exact digits (a float64
+	// would round them) — the market-snapshot fields are read as json.Number
+	// spellings before being turned into exact canon.Dec values.
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
+	if err := dec.Decode(v); err != nil {
 		return &HardError{Kind: "shape", URL: url, Status: r.StatusCode, Detail: err.Error()}
 	}
 	return nil
@@ -122,17 +129,32 @@ type pairRow struct {
 	BaseToken   tokenRef `json:"baseToken"`
 	QuoteToken  tokenRef `json:"quoteToken"`
 	PriceUSD    any      `json:"priceUsd"`
+	PriceNative any      `json:"priceNative"`
 	Liquidity   struct {
 		USD any `json:"usd"`
 	} `json:"liquidity"`
 	Volume struct {
 		H24 any `json:"h24"`
 	} `json:"volume"`
+	// Txns is the 24h buy/sell split; its h24 object carries buys/sells.
+	Txns struct {
+		H24 struct {
+			Buys  any `json:"buys"`
+			Sells any `json:"sells"`
+		} `json:"h24"`
+	} `json:"txns"`
+	PriceChange struct {
+		H24 any `json:"h24"`
+	} `json:"priceChange"`
 	FDV           any   `json:"fdv"`
+	MarketCap     any   `json:"marketCap"`
 	PairCreatedAt int64 `json:"pairCreatedAt"`
 }
 
 // f64 parses a number-or-string JSON value the wire uses interchangeably.
+// getJSON decodes with UseNumber, so json.Number is the PRODUCTION arm — do not
+// delete it as dead code: doing so silently breaks every float64 pool field.
+// The float64 arm remains for a caller that used plain Unmarshal (tests).
 func f64(v any) (float64, bool) {
 	switch t := v.(type) {
 	case string:
@@ -148,6 +170,37 @@ func f64(v any) (float64, bool) {
 			return 0, false
 		}
 		return x, true
+	default:
+		return 0, false
+	}
+}
+
+// wireString renders a number-or-string wire value as its exact decimal
+// spelling: a string is returned verbatim (the provider already spelled it),
+// a json.Number keeps its digits. ok is false for an absent value.
+func wireString(v any) (string, bool) {
+	switch t := v.(type) {
+	case string:
+		s := strings.TrimSpace(t)
+		return s, s != ""
+	case json.Number:
+		return string(t), true
+	default:
+		return "", false
+	}
+}
+
+// wireInt reads a whole-number count (buys/sells/txns) from a number-or-string.
+func wireInt(v any) (int64, bool) {
+	switch t := v.(type) {
+	case json.Number:
+		n, err := t.Int64()
+		return n, err == nil
+	case string:
+		n, err := strconv.ParseInt(strings.TrimSpace(t), 10, 64)
+		return n, err == nil
+	case float64:
+		return int64(t), true
 	default:
 		return 0, false
 	}
