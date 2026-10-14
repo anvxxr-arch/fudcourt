@@ -231,6 +231,16 @@ only, default `127.0.0.1:8110`.
   hour` job correctly stayed `pending attempts=0`; history recorded
   `succeeded`/`succeeded`/`permanent`; SIGTERM drained to exit 0.
 
+- The optional Valkey lock was verified **live** against the running Valkey at
+  `127.0.0.1:6379`, not just compiled: with `FUDCOURT_VALKEY_URL` set the startup log
+  reports `valkey_lock:true`; with the reap lock held externally the sweep was correctly
+  skipped (a stale `running` job stayed `running`, no closed run); after releasing it the
+  sweep ran and the job was reclaimed and re-executed; and the worker's own release deleted
+  only its token — the key was gone afterwards and an `NX` re-take succeeded, so nothing
+  leaks. The `crashed` run row for an interrupted attempt is asserted by
+  `the_reaper_reclaims_a_job_whose_worker_vanished` (a raw synthetic stale row has no run
+  row to close, which is why the Valkey probe alone shows none).
+
 **Note on the gate.** `scripts/verify/verify-all.sh` gains a
 `cargo fmt/clippy/test (apps/discord-worker)` step after the reconciler step. The file also
 carried a pre-existing uncommitted `check-schema-bootstrap` step (whose script is already
