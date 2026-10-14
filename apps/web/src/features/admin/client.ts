@@ -1,4 +1,6 @@
 import { getJSON } from '@/lib/fetch';
+import type { AutoroleRule } from './autorole-select';
+import type { AutoroleWrite } from './autoroles-draft';
 
 export type MemberRow = {
   id: string;
@@ -291,7 +293,27 @@ export type WelcomeConfig = {
   leaveEmbed?: Record<string, unknown> | null;
 };
 
-export type WelcomeView = { ok?: boolean; welcome?: WelcomeConfig | null; detail?: string };
+export type WelcomeView = { welcome?: WelcomeConfig | null; detail?: string; ok?: boolean };
+
+/**
+ * The autorole set, as the api puts it on the wire: GET answers `{autoroles}`, POST takes
+ * `{autoroles}` and answers `{ok, autoroles}`. The write shape is the rule WITHOUT `id` — the api
+ * deletes and re-inserts every rule, so the id it last reported is gone either way, and sending it
+ * back would imply a column the write path does not read.
+ */
+export type AutoroleView = { autoroles?: AutoroleRule[]; ok?: boolean; detail?: string };
+
+export function fetchAutoroles(): Promise<AutoroleView> {
+  return getJSON<AutoroleView>('/api/admin/autoroles', { cache: 'no-store' });
+}
+
+export function saveAutoroles(rules: AutoroleWrite[]): Promise<AutoroleView> {
+  return getJSON<AutoroleView>('/api/admin/autoroles', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ autoroles: rules }),
+  });
+}
 
 export function fetchWelcome(): Promise<WelcomeView> {
   return getJSON<WelcomeView>('/api/admin/welcome', { cache: 'no-store' });

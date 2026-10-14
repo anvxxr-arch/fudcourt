@@ -9,6 +9,7 @@ import CasesPanel from '@/features/admin/cases-panel';
 import SchedulerPanel from '@/features/admin/scheduler-panel';
 import FeedsPanel from '@/features/admin/feeds-panel';
 import WelcomePanel from '@/features/admin/welcome-panel';
+import AutorolesPanel from '@/features/admin/autoroles-panel';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -108,6 +109,16 @@ export default async function AdminPage() {
           <em>nothing</em>.
         </p>
         <WelcomePanel />
+      </section>
+
+      <section style={{ marginTop: space[32] }}>
+        <h2 style={{ fontSize: fontSize[15], color: themeColor.labelPrimary, margin: `0 0 ${space[4]}px` }}>Join roles (autorole)</h2>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
+          The roles a member is given on the way in. The set is replaced as a whole and the bot reads
+          it on the next join; the preview states the buckets it will compute — now, later, and the
+          one kind nothing triggers yet.
+        </p>
+        <AutorolesPanel />
       </section>
 
       <section style={{ marginTop: space[32] }}>
