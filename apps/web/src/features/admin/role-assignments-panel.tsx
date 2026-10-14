@@ -9,13 +9,13 @@ import {
   LIMITS,
   SOURCE_NOTE,
   failuresOnly,
-  formatWhen,
   groupFailures,
   reasonOf,
   sourceLabel,
   summarize,
   windowNote,
 } from './role-assignments-view';
+import { formatWireTime } from './wire-time';
 
 /**
  * The role-assignment log. READ-ONLY: the api exposes a GET and nothing else, because this table is
@@ -90,7 +90,7 @@ export default function RoleAssignmentsPanel() {
           {groups.slice(0, 5).map((g) => (
             <div key={g.roleId} style={{ fontSize: fontSize[12], color: themeColor.labelSecondary }}>
               <code style={codeStyle}>{g.roleId}</code> — failed {g.count}× · {g.reason || 'no reason recorded'} · last{' '}
-              {formatWhen(g.lastAt)}
+              {formatWireTime(g.lastAt)}
             </div>
           ))}
           <span style={noteStyle}>
@@ -127,7 +127,7 @@ export default function RoleAssignmentsPanel() {
           ) : (
             shown.map((a) => (
               <TR key={a.id}>
-                <TD style={{ color: themeColor.labelSecondary, whiteSpace: 'nowrap' }}>{formatWhen(a.createdAt)}</TD>
+                <TD style={{ color: themeColor.labelSecondary, whiteSpace: 'nowrap' }}>{formatWireTime(a.createdAt)}</TD>
                 <TD>
                   <span
                     style={{

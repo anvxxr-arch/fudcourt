@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { themeColor, fontSize, radius, space } from '@/styles/tokens';
 import { fetchCases, type ModerationCase } from './client';
+import { formatWireTime } from './wire-time';
 
 // CasesPanel is the read-only moderation-case log: the SAME rows a Discord
 // `/history` shows, read through the Go api. It answers the product spec's
@@ -100,7 +101,7 @@ export default function CasesPanel() {
                 <td style={{ padding: '2px 12px 2px 0', color: themeColor.labelTertiary }}>{c.moderatorUserId}</td>
                 <td style={{ padding: '2px 12px 2px 0' }}>{c.reason || '—'}</td>
                 <td style={{ padding: '2px 12px 2px 0', color: themeColor.labelTertiary }}>{c.source}</td>
-                <td style={{ padding: '2px 0', color: themeColor.labelTertiary }}>{c.createdAt}</td>
+                <td style={{ padding: '2px 0', color: themeColor.labelTertiary }}>{formatWireTime(c.createdAt)}</td>
               </tr>
             ))}
           </tbody>

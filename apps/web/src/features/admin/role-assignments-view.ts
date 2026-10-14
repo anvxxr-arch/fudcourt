@@ -81,24 +81,6 @@ export function groupFailures(rows: readonly RoleAssignment[]): FailureGroup[] {
   return [...byRole.values()].sort((a, b) => (b.count !== a.count ? b.count - a.count : a.roleId.localeCompare(b.roleId)));
 }
 
-/**
- * formatWhen renders the api's RFC3339 timestamp. An input this cannot parse is returned VERBATIM
- * rather than swallowed into "Invalid Date" — a timestamp the panel cannot read is a fact worth
- * seeing, not one worth hiding.
- */
-export function formatWhen(iso: string): string {
-  const ms = Date.parse(iso);
-  if (Number.isNaN(ms)) return iso;
-  return new Date(ms).toLocaleString('en-GB', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-}
-
 /** A short label for a source, falling back to the raw string the api sent. */
 export function sourceLabel(source: string): string {
   return SOURCE_LABEL[source] ?? source;

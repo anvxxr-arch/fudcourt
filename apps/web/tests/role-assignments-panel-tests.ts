@@ -18,7 +18,6 @@ import {
   SOURCE_LABEL,
   SOURCE_NOTE,
   failuresOnly,
-  formatWhen,
   groupFailures,
   isFailure,
   reasonOf,
@@ -26,6 +25,7 @@ import {
   summarize,
   windowNote,
 } from '../src/features/admin/role-assignments-view';
+import { formatWireTime } from '../src/features/admin/wire-time';
 
 function row(over: Partial<RoleAssignment> = {}): RoleAssignment {
   return {
@@ -127,12 +127,11 @@ test('role assignments: equal failure counts order by role id, deterministically
 });
 
 test('role assignments: a timestamp it cannot read is shown verbatim, not swallowed', () => {
-  const good = formatWhen('2026-10-14T23:10:00Z');
-  assert.ok(good.includes('2026'));
-  assert.ok(!good.includes('T23:10:00Z'));
-  // No parsing, no pretending: the raw value is the diagnosis.
-  assert.equal(formatWhen('not-a-date'), 'not-a-date');
-  assert.equal(formatWhen(''), '');
+  // The real wire value: the api writes created_at as UTC with no zone marker, and the reader's
+  // clock must not get a say (see wire-time-tests.ts for the timezone proof).
+  assert.equal(formatWireTime('2026-10-14 23:10:00'), '14/10/2026, 23:10:00 UTC');
+  assert.equal(formatWireTime('not-a-date'), 'not-a-date');
+  assert.equal(formatWireTime(''), '');
 });
 
 test('role assignments: a source with no label falls back to the api string', () => {
