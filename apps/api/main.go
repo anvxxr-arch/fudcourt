@@ -60,6 +60,9 @@ type server struct {
 	// reads no destinations and mirrors nothing, and audit writes are dropped —
 	// never a crash.
 	logging loggingStore
+	// community is the welcome/autorole/role-panel store (community.go). nil
+	// means those features read no config and simply do nothing.
+	community communityStore
 	// secret is the HMAC session key (FUDCOURT_SESSION_SECRET). It is read
 	// through identity.SessionSecret's fail-closed floor: without a usable
 	// secret no session ever verifies and none can be minted — exactly the
@@ -134,6 +137,16 @@ func (s *server) handler() http.Handler {
 	// Dashboard: log-routing editor + audit viewer, both behind the admin tier.
 	mux.HandleFunc("/api/admin/logs/destinations", s.handleAdminLogDestinations)
 	mux.HandleFunc("/api/admin/logs/audit", s.handleAdminAuditLogs)
+	// Internal, loopback-only: the bot reads welcome/autorole/panel config here
+	// and records every role grant/revoke it attempts (incl. failures) — the
+	// same hop, for the same reason.
+	mux.HandleFunc("/api/internal/community/config", s.handleInternalCommunityConfig)
+	mux.HandleFunc("/api/internal/role-assignments", s.handleInternalRoleAssignments)
+	// Dashboard: welcome/goodbye, autoroles and role panels, behind the admin tier.
+	mux.HandleFunc("/api/admin/welcome", s.handleAdminWelcome)
+	mux.HandleFunc("/api/admin/autoroles", s.handleAdminAutoroles)
+	mux.HandleFunc("/api/admin/role-panels", s.handleAdminRolePanels)
+	mux.HandleFunc("/api/admin/role-assignments", s.handleAdminRoleAssignments)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, errNotFound)
 	})

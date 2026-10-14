@@ -38,18 +38,21 @@ export const INTENTS_GUILD_MESSAGES = 1 << 9;
 export const INTENTS_GUILD_VOICE_STATES = 1 << 7;
 /** MESSAGE_CONTENT — privileged; required to read message text. Enable it in the app. */
 export const INTENTS_MESSAGE_CONTENT = 1 << 15;
+/** GUILD_MESSAGE_REACTIONS — reaction add/remove (reaction role panels). */
+export const INTENTS_GUILD_MESSAGE_REACTIONS = 1 << 10;
 
 /**
  * INTENTS_BOT is the full intent set the live bot requests: guilds + members +
- * messages + message content + voice states. MESSAGE_CONTENT is privileged — if it
- * is not enabled in the Discord developer portal the gateway closes with 4014
- * (documented in the ops runbook).
+ * messages + message content + voice states + reactions. MESSAGE_CONTENT is
+ * privileged — if it is not enabled in the Discord developer portal the gateway
+ * closes with 4014 (documented in the ops runbook).
  */
 export const INTENTS_BOT =
   INTENTS_GUILDS |
   INTENTS_GUILD_MEMBERS |
   INTENTS_GUILD_MESSAGES |
   INTENTS_GUILD_VOICE_STATES |
+  INTENTS_GUILD_MESSAGE_REACTIONS |
   INTENTS_MESSAGE_CONTENT;
 
 type Handler = (data: unknown) => void;

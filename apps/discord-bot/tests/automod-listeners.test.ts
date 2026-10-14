@@ -27,6 +27,8 @@ function spy(guildId = "g1"): Spy {
         return [];
       },
     },
+    welcome: { async onJoin() {}, async onLeave() {} },
+    autorole: { async onJoin() {} },
   } as unknown as FudzieClient;
   return { client, messages, joins };
 }

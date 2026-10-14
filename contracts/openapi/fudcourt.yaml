@@ -2277,6 +2277,280 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
+  /api/internal/community/config:
+    get:
+      tags: [internal]
+      operationId: getInternalCommunityConfig
+      summary: Loopback-only — the bot's single read of welcome/autorole/panel config
+      description: |
+        The bot carries no Postgres driver, so this loopback hop is how an
+        operator's welcome, autorole and role-panel changes reach it without a
+        restart. A non-loopback caller sees 404 (the route is not on the network).
+        `welcome` is omitted when the guild has no row.
+      responses:
+        '200':
+          description: "`{autoroles, panels, welcome?}`."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommunityConfig' }
+        '404':
+          description: Non-loopback caller.
+        '405':
+          description: '`{"error": "method_not_allowed"}` for a non-GET method; `Allow: GET`.'
+        '503':
+          description: "`community_unavailable` — the store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+  /api/internal/role-assignments:
+    post:
+      tags: [internal]
+      operationId: recordInternalRoleAssignment
+      summary: Loopback-only — record one attempted role grant/revoke (incl. failures)
+      description: |
+        Append-only. Failures are recorded too, which is what makes "why didn't
+        this member get the role?" answerable. The guild is pinned server-side.
+        A non-loopback caller sees 404.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoleAssignmentInput' }
+      responses:
+        '201':
+          description: The stored assignment.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoleAssignment' }
+        '400':
+          description: A non-snowflake id, an unknown action/source/status, or a non-object body.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+        '404':
+          description: Non-loopback caller.
+        '405':
+          description: '`{"error": "method_not_allowed"}` for a non-POST method; `Allow: POST`.'
+        '503':
+          description: "`community_unavailable` — the store is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+  /api/admin/welcome:
+    get:
+      tags: [admin]
+      operationId: getAdminWelcome
+      summary: Read the welcome/goodbye config
+      description: Requires the admin tier. `welcome` is null when unset.
+      responses:
+        '200':
+          description: "`{welcome: {...}|null}`."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  welcome: { $ref: '#/components/schemas/WelcomeConfig' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`community_unavailable` — the store is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+    post:
+      tags: [admin]
+      operationId: setAdminWelcome
+      summary: Replace the welcome/goodbye config
+      description: |
+        Requires the admin tier. A join message with no channel is forced to
+        disabled (a silent no-op otherwise). An embed must be a JSON object.
+        Recorded in the audit trail as `welcome.set`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WelcomeConfig' }
+      responses:
+        '200':
+          description: "`{ok: true, welcome: {...}}`."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  welcome: { $ref: '#/components/schemas/WelcomeConfig' }
+        '400':
+          description: A bad channel id, an over-length message, or a non-object embed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`community_unavailable` — the store is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+  /api/admin/autoroles:
+    get:
+      tags: [admin]
+      operationId: getAdminAutoroles
+      summary: List the autorole rules
+      description: Requires the admin tier.
+      responses:
+        '200':
+          description: "`{autoroles: [...]}`."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  autoroles:
+                    type: array
+                    items: { $ref: '#/components/schemas/AutoroleRule' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`community_unavailable` — the store is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+    post:
+      tags: [admin]
+      operationId: setAdminAutoroles
+      summary: Replace the whole autorole set (one transaction)
+      description: |
+        Requires the admin tier. The list is edited as a unit, so it is replaced
+        as one: a partial apply would leave stale grants. Duplicate role ids,
+        unknown kinds and delays over 30 days are refused. Audited as
+        `autoroles.replace`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [autoroles]
+              properties:
+                autoroles:
+                  type: array
+                  items: { $ref: '#/components/schemas/AutoroleRule' }
+      responses:
+        '200':
+          description: "`{ok: true, autoroles: [...]}`."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  autoroles:
+                    type: array
+                    items: { $ref: '#/components/schemas/AutoroleRule' }
+        '400':
+          description: A duplicate role id, an unknown kind, or a delay out of range.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`community_unavailable` — the store is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+  /api/admin/role-panels:
+    get:
+      tags: [admin]
+      operationId: getAdminRolePanels
+      summary: List the role panels (with options)
+      description: Requires the admin tier.
+      responses:
+        '200':
+          description: "`{panels: [...]}`."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  panels:
+                    type: array
+                    items: { $ref: '#/components/schemas/RolePanel' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`community_unavailable` — the store is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+    post:
+      tags: [admin]
+      operationId: setAdminRolePanels
+      summary: Replace the whole role-panel set (panels + options, one transaction)
+      description: |
+        Requires the admin tier. Replaced as a unit. A panel id is a stable slug
+        (embedded in the Discord custom-id `rp:<id>:<roleId>`); a panel with no
+        options, a duplicate option role, or an unknown kind/mode is refused.
+        Audited as `role_panels.replace`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [panels]
+              properties:
+                panels:
+                  type: array
+                  items: { $ref: '#/components/schemas/RolePanel' }
+      responses:
+        '200':
+          description: "`{ok: true, panels: [...]}`."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  panels:
+                    type: array
+                    items: { $ref: '#/components/schemas/RolePanel' }
+        '400':
+          description: A missing/duplicate panel id, empty options, a duplicate option role, or a bad kind/mode.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`community_unavailable` — the store is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+  /api/admin/role-assignments:
+    get:
+      tags: [admin]
+      operationId: getAdminRoleAssignments
+      summary: List recent role-grant/revoke attempts (incl. failures)
+      description: |
+        Requires the admin tier. Newest first; `limit` defaults to 50 (max 200).
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: "`{assignments: [...]}`."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assignments:
+                    type: array
+                    items: { $ref: '#/components/schemas/RoleAssignment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`community_unavailable` — the store is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
 components:
   parameters:
     ExecutionId:
@@ -5959,3 +6233,98 @@ components:
           enum: [rate_limited]
         detail: { type: string }
         retryAfterSeconds: { type: integer }
+    AutoroleRule:
+      type: object
+      description: One join-time role grant.
+      required: [roleId, kind, appliesTo]
+      properties:
+        id: { type: string, description: 'Server-assigned row id (read-only).' }
+        roleId: { type: string, description: 'Discord role id (digits).' }
+        kind:
+          type: string
+          enum: [on_join, after_duration, after_verification]
+        delaySeconds:
+          type: integer
+          minimum: 0
+          maximum: 2592000
+          description: Wait before granting; only meaningful for after_duration.
+        appliesTo: { type: string, enum: [all, human, bot] }
+        enabled: { type: boolean }
+        priority: { type: integer, description: Higher runs first. }
+    RolePanelOption:
+      type: object
+      description: One selectable role on a panel.
+      required: [roleId]
+      properties:
+        roleId: { type: string, description: 'Discord role id (digits).' }
+        label: { type: string }
+        emoji: { type: string }
+        style: { type: string, enum: [primary, secondary, success, danger] }
+        position: { type: integer }
+        exclusiveGroup: { type: string, description: Options sharing a non-empty group are mutually exclusive. }
+    RolePanel:
+      type: object
+      description: A reaction/button/select self-serve role menu.
+      required: [id, kind, mode, options]
+      properties:
+        id: { type: string, description: 'Operator slug, stable and unique per guild; embedded in the custom-id `rp:<id>:<roleId>`.' }
+        channelId: { type: string }
+        messageId: { type: string }
+        title: { type: string }
+        description: { type: string }
+        kind: { type: string, enum: [reaction, button, select] }
+        mode: { type: string, enum: [toggle, single, multiple, exclusive] }
+        enabled: { type: boolean }
+        options:
+          type: array
+          minItems: 1
+          maxItems: 25
+          items: { $ref: '#/components/schemas/RolePanelOption' }
+    WelcomeConfig:
+      type: object
+      description: The per-guild welcome/goodbye config (one row).
+      properties:
+        joinEnabled: { type: boolean }
+        joinChannelId: { type: string }
+        joinMessage: { type: string, maxLength: 2000 }
+        joinEmbed: { type: object, description: Optional rich embed posted for a join. }
+        joinDm: { type: boolean }
+        joinDmMessage: { type: string, maxLength: 2000 }
+        leaveEnabled: { type: boolean }
+        leaveChannelId: { type: string }
+        leaveMessage: { type: string, maxLength: 2000 }
+        leaveEmbed: { type: object, description: Optional rich embed posted for a leave. }
+    RoleAssignmentInput:
+      type: object
+      required: [userId, roleId, action, source, status]
+      properties:
+        userId: { type: string, description: 'Discord user id (digits).' }
+        roleId: { type: string, description: 'Discord role id (digits).' }
+        action: { type: string, enum: [add, remove] }
+        source: { type: string, enum: [autorole, panel, verification, manual] }
+        status: { type: string, enum: [ok, failed] }
+        error: { type: string, description: 'Refusal reason when failed (truncated to 512).' }
+    RoleAssignment:
+      type: object
+      description: One attempted grant/revoke, including failures.
+      properties:
+        id: { type: integer }
+        userId: { type: string }
+        roleId: { type: string }
+        action: { type: string }
+        source: { type: string }
+        status: { type: string }
+        error: { type: string }
+        createdAt: { type: string }
+    CommunityConfig:
+      type: object
+      description: The bot's single read of its community config.
+      required: [autoroles, panels]
+      properties:
+        autoroles:
+          type: array
+          items: { $ref: '#/components/schemas/AutoroleRule' }
+        panels:
+          type: array
+          items: { $ref: '#/components/schemas/RolePanel' }
+        welcome: { $ref: '#/components/schemas/WelcomeConfig' }

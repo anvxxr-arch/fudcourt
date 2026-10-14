@@ -39,6 +39,7 @@ export interface MessageUpdatePayload {
 export interface MemberRemovePayload {
   guild_id?: string;
   user?: DiscordUser;
+  nick?: string | null;
 }
 
 /** GUILD_MEMBER_UPDATE — the member's new roles/nick (no "before" set). */

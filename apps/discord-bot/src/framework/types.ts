@@ -112,6 +112,12 @@ export interface InteractionData {
     /** Present on a MESSAGE context command — the target message + its author. */
     messages?: Record<string, { id: string; author?: DiscordUser; channel_id?: string; content?: string }>;
   };
+  /** MESSAGE_COMPONENT (3): the clicked component's custom_id (buttons/selects). */
+  custom_id?: string;
+  /** MESSAGE_COMPONENT (3) select menus: the chosen option values. */
+  values?: string[];
+  /** MESSAGE_COMPONENT (3): the component type (2 = button, 3 = select). */
+  component_type?: number;
 }
 
 export interface Interaction {
@@ -162,6 +168,7 @@ export interface DiscordMessage {
 /** The subset of a GUILD_MEMBER_ADD payload AutoMod reads. */
 export interface MemberAddPayload {
   user?: DiscordUser;
+  nick?: string | null;
   roles?: string[];
   joined_at?: string;
   guild_id?: string;

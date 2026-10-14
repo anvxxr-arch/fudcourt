@@ -149,6 +149,16 @@ export class Rest {
     return this.request("POST", `/channels/${channelId}/messages`, data);
   }
 
+  /**
+   * POST /users/@me/channels — open (or reuse) a DM channel with a user, then
+   * POST the message to it. Discord dedupes DM channels, so this is safe to call
+   * per-message. Returns the sent message id.
+   */
+  async sendDirectMessage(userId: string, data: InteractionCallbackData): Promise<{ id: string }> {
+    const dm = await this.request<{ id: string }>("POST", "/users/@me/channels", { recipient_id: userId });
+    return this.request("POST", `/channels/${dm.id}/messages`, data);
+  }
+
   // --- Moderation primitives (the shared surface every mod command drives) ---
   // Each takes an optional audit-log `reason`; the request layer stamps it as
   // X-Audit-Log-Reason. Discord returns 204 (empty) for most of these, which

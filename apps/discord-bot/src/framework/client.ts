@@ -12,6 +12,10 @@ import { pathToFileURL } from "node:url";
 import { applyRemoteConfig, fetchRemoteConfig, type BotConfig } from "../config.ts";
 import type { AutomodService } from "../automod/service.ts";
 import { buildAutomod } from "../automod/wiring.ts";
+import { AutoroleService } from "../community/autorole.ts";
+import { PanelService } from "../community/panels.ts";
+import { WelcomeService } from "../community/welcome.ts";
+import { buildAutorole, buildPanels, buildWelcome } from "../community/wiring.ts";
 import { CaseLog, type CaseLogLike } from "../lib/cases.ts";
 import { AuditLog } from "../logging/audit.ts";
 import { ActivityLogger } from "../logging/service.ts";
@@ -44,6 +48,12 @@ export interface ClientOptions {
   logger?: ActivityLogger;
   /** Injectable audit client (tests); defaults to the loopback-backed builder. */
   audit?: AuditLog;
+  /** Injectable welcome service (tests); defaults to the loopback-backed builder. */
+  welcome?: WelcomeService;
+  /** Injectable autorole service (tests); defaults to the loopback-backed builder. */
+  autorole?: AutoroleService;
+  /** Injectable role-panel handler (tests); defaults to the loopback-backed builder. */
+  panels?: PanelService;
   /** Injectable gateway factory for tests. */
   gatewayFactory?: (token: string, onEvent: (event: string, data: unknown) => void) => Gateway;
 }
@@ -61,11 +71,19 @@ export class FudzieClient {
   readonly logger: ActivityLogger;
   /** Audit: records bot-originated config changes to the shared trail. */
   readonly audit: AuditLog;
+  /** Community: welcome/goodbye messages. */
+  readonly welcome: WelcomeService;
+  /** Community: on-join / delayed / after-verification role grants. */
+  readonly autorole: AutoroleService;
+  /** Community: role-panel (reaction/button/select) interaction handler. */
+  readonly panels: PanelService;
   readonly commands = new CommandStore();
   readonly listeners = new ListenerStore();
   readonly preconditions = new PreconditionStore();
 
   private gateway: Gateway | null = null;
+  /** The MessageComponent interaction currently being handled (for respondComponent). */
+  private activeInteraction: Interaction | undefined;
   private readonly logFn: (msg: string) => void;
   private readonly gatewayFactory: ClientOptions["gatewayFactory"];
   private startedAt = Date.now();
@@ -79,6 +97,9 @@ export class FudzieClient {
     this.cases = opts.cases ?? new CaseLog(opts.config.apiUrl, this.logFn);
     this.logger = opts.logger ?? buildLogger(this);
     this.audit = opts.audit ?? buildAuditLog(this);
+    this.welcome = opts.welcome ?? buildWelcome(this);
+    this.autorole = opts.autorole ?? buildAutorole(this);
+    this.panels = opts.panels ?? buildPanels(this);
     this.automod = opts.automod ?? buildAutomod(this);
     this.gatewayFactory = opts.gatewayFactory;
   }
@@ -173,10 +194,34 @@ export class FudzieClient {
     };
   }
 
+  /** respondComponent answers the active MessageComponent interaction (ephemeral when asked). */
+  async respondComponent(content: string, ephemeral: boolean): Promise<void> {
+    const interaction = this.activeInteraction;
+    if (!interaction) return;
+    const payload: InteractionCallbackData = { content };
+    if (ephemeral) payload.flags = EPHEMERAL_FLAG;
+    await this.rest.createInteractionResponse(interaction.id, interaction.token, 4, payload);
+  }
+
   /** handleInteraction is the command router: resolve → preconditions → run. */
   async handleInteraction(interaction: Interaction): Promise<void> {
     if (interaction.type === InteractionType.Ping) {
       await this.rest.createInteractionResponse(interaction.id, interaction.token, 1);
+      return;
+    }
+    if (interaction.type === InteractionType.MessageComponent) {
+      const userId = interaction.member?.user?.id ?? interaction.user?.id ?? "";
+      const customId = interaction.data?.custom_id ?? "";
+      const values = interaction.data?.values;
+      this.activeInteraction = interaction;
+      try {
+        const handled = await this.panels.handleComponent(customId, values, userId);
+        if (!handled) await this.respondComponent("This button is no longer active.", true);
+      } catch (err) {
+        this.log(`component handler failed: ${err instanceof Error ? err.message : String(err)}`);
+      } finally {
+        this.activeInteraction = undefined;
+      }
       return;
     }
     if (interaction.type !== InteractionType.ApplicationCommand) return;

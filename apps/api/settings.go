@@ -150,4 +150,5 @@ func (s *server) attachStores() {
 	s.cases = newPGCasesStore(pool)
 	s.automod = newPGAutomodStore(pool)
 	s.logging = newPGLoggingStore(pool)
+	s.community = newPGCommunityStore(pool)
 }

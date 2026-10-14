@@ -72,6 +72,8 @@ function spyClient(): { client: FudzieClient; events: Array<ActivityEvent | null
       },
     },
     automod: { async onJoin() { return []; } },
+    welcome: { async onJoin() {}, async onLeave() {} },
+    autorole: { async onJoin() {} },
   } as unknown as FudzieClient;
   return { client, events };
 }
@@ -122,6 +124,8 @@ describe("logging listeners", () => {
       config: { guildId: "g1" },
       logger: { async emitEvent(ev: ActivityEvent | null) { events.push(ev); return true; } },
       automod: { async onJoin(j: unknown) { joins.push(j); return []; } },
+      welcome: { async onJoin() {}, async onLeave() {} },
+      autorole: { async onJoin() {} },
     } as unknown as FudzieClient;
     await guildMemberAdd.run(client, { guild_id: "g1", user: { id: "175928847299117063", username: "new" } });
     expect(events[0]?.category).toBe("member");
