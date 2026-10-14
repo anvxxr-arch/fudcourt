@@ -44,9 +44,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src"
 # Files Next.js itself requires at the `app/` level rather than inside it.
-# `instrumentation.ts` (the boot hook) is the same kind of file: Next resolves it
-# only from the project root or the `src/` root, never from a layer directory.
-NEXT_ROOT_FILES = {"middleware.ts", "instrumentation.ts"}
+# `middleware.ts`, `instrumentation.ts` and `instrumentation-client.ts` are all
+# Next.js file conventions that live at the project root (or `src/` root when a
+# src dir is used) — the framework loads them by that path, so they are not
+# layer drift and must not be flagged.
+NEXT_ROOT_FILES = {"middleware.ts", "instrumentation.ts", "instrumentation-client.ts"}
 
 violations: list[str] = []
 checked = 0
@@ -275,8 +277,9 @@ for f in sources():
     rel = f.relative_to(SRC)
     layer = layer_of(f)
     if layer == "(src root)":
-        # Next.js REQUIRES `middleware.ts` at the same level as `app/` (so
-        # `src/middleware.ts` with `src/app/`), and it is the only such file.
+        # Next.js REQUIRES `middleware.ts`, `instrumentation.ts` and
+        # `instrumentation-client.ts` at the same level as `app/` (so
+        # `src/<file>.ts` with `src/app/`); they are the only such files.
         # Everything else at the src root is drift.
         if rel.name in NEXT_ROOT_FILES:
             continue
