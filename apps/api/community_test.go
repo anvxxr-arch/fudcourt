@@ -141,6 +141,81 @@ func TestAdminWelcomeRejectsBadEmbed(t *testing.T) {
 	}
 }
 
+// The contract declares `maxLength: 2000` on the welcome messages — a count of CHARACTERS. The
+// handler used to count bytes (`len`), so an emoji message was refused at a quarter of Discord's
+// own limit. 2000 runes / 8000 bytes is the case that separates the two rules.
+func TestAdminWelcomeCountsCharactersNotBytes(t *testing.T) {
+	s := communityServer(t, &fakeCommunity{})
+	long := strings.Repeat("\U0001F600", 2000)
+	body := `{"joinEnabled":true,"joinChannelId":"555000000000000005","joinMessage":"` + long + `"}`
+	if rec := do(t, s, "POST", "/api/admin/welcome", adminCookie(t), body); rec.Code != http.StatusOK {
+		t.Fatalf("2000 characters (8000 bytes) status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
+	}
+	over := strings.Repeat("\U0001F600", 2001)
+	body = `{"joinEnabled":true,"joinChannelId":"555000000000000005","joinMessage":"` + over + `"}`
+	if rec := do(t, s, "POST", "/api/admin/welcome", adminCookie(t), body); rec.Code != http.StatusBadRequest {
+		t.Fatalf("2001 characters status = %d, want 400", rec.Code)
+	}
+}
+
+// An embed's string fields reach `renderTemplate`, which calls `.replace` — a number where a string
+// belongs made the bot THROW at join time. The refusal names the path the operator has to fix.
+func TestAdminWelcomeRejectsEmbedFieldOfTheWrongType(t *testing.T) {
+	s := communityServer(t, &fakeCommunity{})
+	cases := []struct{ name, body, want string }{
+		{"title is a number", `{"joinEmbed":{"title":5}}`, "joinEmbed.title must be a string"},
+		{"description is an array", `{"leaveEmbed":{"description":[1]}}`, "leaveEmbed.description must be a string"},
+		{"color is a string", `{"joinEmbed":{"color":"red"}}`, "joinEmbed.color must be a number"},
+		{"color out of range", `{"joinEmbed":{"color":16777216}}`, "joinEmbed.color must be an integer between 0 and 16777215"},
+		{"footer is not an object", `{"joinEmbed":{"footer":"bye"}}`, "joinEmbed.footer must be a JSON object"},
+		{"author name is a number", `{"joinEmbed":{"author":{"name":7}}}`, "joinEmbed.author.name must be a string"},
+		{"fields is not an array", `{"joinEmbed":{"fields":{"name":"a"}}}`, "joinEmbed.fields must be an array of objects"},
+		{"a field value is a number", `{"joinEmbed":{"fields":[{"name":"a","value":9}]}}`, "joinEmbed.fields[0].value must be a string"},
+		{
+			"too many fields",
+			`{"joinEmbed":{"fields":[` + strings.Repeat(`{"name":"a","value":"b"},`, 25) + `{"name":"a","value":"b"}]}}`,
+			"at most 25 fields",
+		},
+	}
+	for _, tc := range cases {
+		rec := do(t, s, "POST", "/api/admin/welcome", adminCookie(t), tc.body)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("%s: status = %d, want 400 (body %s)", tc.name, rec.Code, rec.Body.String())
+			continue
+		}
+		if got := rec.Body.String(); !strings.Contains(got, tc.want) {
+			t.Errorf("%s: body %s does not name %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+// null is not a wrong type: the renderer's falsy guard turns it into an empty string, so a stored
+// null must save rather than be refused.
+func TestAdminWelcomeAcceptsNullEmbedFields(t *testing.T) {
+	s := communityServer(t, &fakeCommunity{})
+	rec := do(t, s, "POST", "/api/admin/welcome", adminCookie(t), `{"joinEmbed":{"title":null,"footer":{"text":null}}}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
+	}
+}
+
+// An embed the renderer fully understands is accepted, INCLUDING keys it does not know: the
+// renderer ignores anything outside its field set by design, so refusing extra keys would invent
+// a rule the consumer does not have.
+func TestAdminWelcomeAcceptsAWellFormedEmbed(t *testing.T) {
+	s := communityServer(t, &fakeCommunity{})
+	body := `{"joinEnabled":true,"joinChannelId":"555000000000000005","joinMessage":"hi {user}",` +
+		`"joinEmbed":{"title":"{server}","description":"welcome {display_name}","color":5793266,` +
+		`"footer":{"text":"{member_count} members","icon_url":"https://cdn.example/f.png"},` +
+		`"author":{"name":"{username}"},"thumbnail":{"url":"https://cdn.example/t.png"},` +
+		`"image":{"url":"https://cdn.example/i.png"},` +
+		`"fields":[{"name":"joined","value":"{created_at}","inline":true}],` +
+		`"url":"https://example.com","timestamp":"2026-01-01T00:00:00Z"}}`
+	if rec := do(t, s, "POST", "/api/admin/welcome", adminCookie(t), body); rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
+	}
+}
+
 func TestAdminAutorolesReplace(t *testing.T) {
 	f := &fakeCommunity{}
 	s := communityServer(t, f)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/httpx"
@@ -173,20 +174,124 @@ func validateWelcome(w *welcomeConfig) string {
 	if w.LeaveChannelID != "" && !isSnowflake(w.LeaveChannelID) {
 		return "leaveChannelId must be a Discord id (digits only)"
 	}
-	if len(w.JoinMessage) > 2000 || len(w.LeaveMessage) > 2000 || len(w.JoinDMMessage) > 2000 {
+	// Runes, not bytes: the contract declares `maxLength: 2000` (code points) and Discord counts
+	// characters, so a 2000-character message of emoji must not be refused for being 8000 bytes
+	// long. Counting runes costs nothing in boundedness — the body is already capped at 32 KiB.
+	if utf8.RuneCountInString(w.JoinMessage) > 2000 || utf8.RuneCountInString(w.LeaveMessage) > 2000 || utf8.RuneCountInString(w.JoinDMMessage) > 2000 {
 		return "welcome messages must be 2000 characters or fewer"
 	}
-	if len(w.JoinEmbed) > 0 {
-		var probe map[string]any
-		if err := json.Unmarshal(w.JoinEmbed, &probe); err != nil {
-			return "joinEmbed must be a JSON object"
+	if msg := validateEmbed("joinEmbed", w.JoinEmbed); msg != "" {
+		return msg
+	}
+	if msg := validateEmbed("leaveEmbed", w.LeaveEmbed); msg != "" {
+		return msg
+	}
+	return ""
+}
+
+// validateEmbed checks an embed's shape against the fields the bot's renderer actually reads.
+//
+// The column is jsonb and jsonb accepts anything, but `renderEmbed`
+// (apps/discord-bot/src/community/templates.ts) calls `renderTemplate` on every string field and
+// that calls `.replace` on its argument — so an embed stored as `{"title": 5}` makes the welcome
+// path THROW at join time instead of failing at save time, which is the wrong end of an
+// operator's day to find a typo. The dashboard is the only writer, so the shape is settled here.
+//
+// Unknown fields are deliberately NOT refused: the renderer ignores anything outside its field
+// set ("rather than forwarded blindly"), so an extra key is harmless. Only the fields it touches
+// are constrained, and only to the types it assumes. `null` is accepted wherever a string is
+// expected — the renderer's falsy guard turns it into an empty string, a deliberate no-op.
+func validateEmbed(name string, raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return name + " must be a JSON object"
+	}
+	for _, key := range []string{"title", "description"} {
+		if msg := embedString(name, key, obj[key]); msg != "" {
+			return msg
 		}
 	}
-	if len(w.LeaveEmbed) > 0 {
-		var probe map[string]any
-		if err := json.Unmarshal(w.LeaveEmbed, &probe); err != nil {
-			return "leaveEmbed must be a JSON object"
+	if color, ok := obj["color"]; ok {
+		var n float64
+		if err := json.Unmarshal(color, &n); err != nil {
+			return name + ".color must be a number"
 		}
+		if n < 0 || n > 0xFFFFFF || n != float64(int64(n)) {
+			return name + ".color must be an integer between 0 and 16777215"
+		}
+	}
+	for _, key := range []string{"footer", "author"} {
+		sub, msg := embedObject(name, key, obj[key])
+		if msg != "" {
+			return msg
+		}
+		field := "text"
+		if key == "author" {
+			field = "name"
+		}
+		if sub != nil {
+			if msg := embedString(name+"."+key, field, sub[field]); msg != "" {
+				return msg
+			}
+		}
+	}
+	for _, key := range []string{"thumbnail", "image"} {
+		sub, msg := embedObject(name, key, obj[key])
+		if msg != "" {
+			return msg
+		}
+		if sub != nil {
+			if msg := embedString(name+"."+key, "url", sub["url"]); msg != "" {
+				return msg
+			}
+		}
+	}
+	if fields, ok := obj["fields"]; ok {
+		var list []map[string]json.RawMessage
+		if err := json.Unmarshal(fields, &list); err != nil {
+			return name + ".fields must be an array of objects"
+		}
+		if len(list) > 25 {
+			return name + ".fields: at most 25 fields"
+		}
+		for i, f := range list {
+			where := fmt.Sprintf("%s.fields[%d]", name, i)
+			if msg := embedString(where, "name", f["name"]); msg != "" {
+				return msg
+			}
+			if msg := embedString(where, "value", f["value"]); msg != "" {
+				return msg
+			}
+		}
+	}
+	return ""
+}
+
+// embedObject decodes a nested embed object (footer, author, thumbnail, image); a nil map with an
+// empty message means the key was absent, which is not an error.
+func embedObject(name, key string, raw json.RawMessage) (map[string]json.RawMessage, string) {
+	if len(raw) == 0 {
+		return nil, ""
+	}
+	var sub map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &sub); err != nil {
+		return nil, name + "." + key + " must be a JSON object"
+	}
+	return sub, ""
+}
+
+// embedString refuses a value that is present and neither a string nor null, naming the path the
+// operator has to fix rather than the field's parent.
+func embedString(where, key string, raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return where + "." + key + " must be a string"
 	}
 	return ""
 }
