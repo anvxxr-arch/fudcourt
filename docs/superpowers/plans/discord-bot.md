@@ -760,3 +760,69 @@ a routing bug. Rebuild the binary and restart the unit
 (`systemctl --user restart fudcourt-api`), and rebuild the web app for the panel page itself
 (`fudcourt-web.service`). Until then the panel reads a 404 through its proxy — which it reports as a
 read failure, loudly, which is the behaviour it was built for.
+
+## Phase 13 (cont.) — the feeds panel, and the pair it forms with the scheduler
+
+**`39878f7` — the second panel, built second on purpose.** The `feed.poll` definitions the scheduler
+panel shows read-only as "owned by the feeds panel" are written HERE, by the panel that owns the
+source they belong to. Same two-table shape as the scheduler (a source and its schedule) read from
+the other end, so the scheduler panel's read-only row now has a home instead of a dead end.
+
+A REPLACE editor for the same reason: the endpoint is one transaction that makes the source set
+match the list — upsert by name, delete the rest — and it writes each source's poll definition in
+that same transaction, so a feed can never exist unpolled. `next_run_at` is set only on insert, so
+editing a cadence does not reset the feed's rhythm or stampede every feed at once.
+
+**`writableFeeds` is a projection, not a filter, and the difference is the whole ownership story.**
+There is no `readOnly` row in this panel: it owns the entire feed set, where the scheduler's
+read-only rows are `feed.poll` DEFINITIONS (a different table) rather than sources. What the body
+does drop is the poller's report — `primed`, `owed`, `lastStatus`, `lastError`,
+`consecutiveFailures` — plus the row `id`, because the store keys the list on `name`: an id in the
+body would name a row this save does not address. The two write rules now sit next to each other in
+one file with the same reasoning, which is how they stay the same rule.
+
+**The url guard is where the panel's restraint actually matters.** It has two owners already: the
+api's `validateFeedSource` shapes the refusal an operator sees at the point of entry, and the
+worker's `feeds::guard` vets EVERY hop of EVERY poll, including a name that resolves into private
+space — and the api deliberately resolves nothing, so it never becomes an internal-network
+resolver. A third copy in the browser could pass what the worker then blocks, so the panel offers
+the shape as a placeholder and shows the server's sentence. Same for the name bound and the cadence
+bounds.
+
+**Two readings the panel owes an operator**, both pure functions in `feeds-draft.ts`:
+`intervalLabel` (900 is a number nobody should have to divide — it reads "every 15 minutes") and
+`healthLine`, including the line that reads like a bug when it is not: until the first successful
+poll has absorbed the pre-existing backlog, a WORKING feed announces nothing. Feed health is not
+readable anywhere else in the system, so the panel shows it and never sends it back.
+
+**One limitation inherited from the wire, documented rather than papered over**: a source whose
+`feed.poll` row carries a CRON expression instead of an interval — reachable only by hand-editing
+the database, since both panels write intervals — is reported by the api as 900 seconds. Its SQL
+guards the cast so one hand-made row cannot break the panel's load, and that guard is right; the
+cost is that the panel cannot tell that 900 from a real one, so a save would make it real. The
+scheduler panel shows the truth about that definition (it is owned by this panel and read-only
+there), which is the only place the discrepant row is visible.
+
+**`3ba8106` — the refusal mechanism, shared at the second call site.** `describeSaveFailure` was
+born in the scheduler's draft module carrying the scheduler's 409 wording; this endpoint has no 409
+at all (400/500/503), so a copy would have put a dead branch in one panel and a second place to fix
+the other. It moved to `save-error.ts` and now takes the conflict wording as an argument: the
+mechanism is shared, the words stay with the panel that knows what its refusals mean. The evidence
+that no sentence changed is that the scheduler's tests needed only their second argument added —
+they pass with every assertion untouched, including the wire-level 409 test.
+
+**`9335c4b` — twelve more tests.** The draft round-trip; the body's exact key set with the poller's
+columns named one by one (so a future field cannot silently join it); the per-field trimming rule
+(name and url trimmed because the api trims them, the message template verbatim because whitespace
+in it may be deliberate); the nullable optionals mapping to the wire's own `null`; the cadence
+sentence; the health line; the client over a stubbed fetch (GET cache-busting, POST sending the
+whole set, the api's `detail` arriving as a typed `HttpError`). Two are drift guards: the adapter
+list must equal the contract's `enum: [auto, rss, atom, json]`, and this endpoint passing no
+conflict hint must not turn a stray 409 into "rename it".
+
+**Remaining.** Five of the twelve admin proxies now have a consumer (members, settings, moderation
+cases, scheduler, feeds); seven do not: `autoroles`, `custom-commands`, `logs/audit`,
+`logs/destinations`, `role-assignments`, `role-panels`, `welcome`. Verification this slice:
+`tsc --noEmit` clean, 511 web tests pass / 0 fail, and the full gate `VERIFY_ALL_OK` — with the same
+deployment caveat as the scheduler panel: the dashboard's api binary is stale until it is rebuilt
+and `fudcourt-api.service` restarted.
