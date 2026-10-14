@@ -23,17 +23,19 @@ func (r *Repo) WriteDexPerpMarkets(ctx context.Context, rows []canon.PerpMarket)
 		for _, m := range good {
 			b.Queue(`INSERT INTO data.dex_perp_market
 				(perp_market_id, natural_key, venue_id, market_type, base_asset_id, quote_asset_id,
-				 base_symbol, quote_symbol, index_price, mark_price, open_interest_usd,
-				 open_interest_base, funding_rate, max_leverage, at, source, retrieved_at)
-				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+				 base_symbol, quote_symbol, index_price, mark_price, open_interest_usd_raw,
+				 open_interest_usd_decimals, open_interest_base, funding_rate, max_leverage, at, source, retrieved_at)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
 				ON CONFLICT (natural_key, at) DO UPDATE SET
 					index_price = EXCLUDED.index_price, mark_price = EXCLUDED.mark_price,
-					open_interest_usd = EXCLUDED.open_interest_usd, open_interest_base = EXCLUDED.open_interest_base,
+					open_interest_usd_raw = EXCLUDED.open_interest_usd_raw,
+					open_interest_usd_decimals = EXCLUDED.open_interest_usd_decimals,
+					open_interest_base = EXCLUDED.open_interest_base,
 					funding_rate = EXCLUDED.funding_rate, max_leverage = EXCLUDED.max_leverage,
 					source = EXCLUDED.source, retrieved_at = EXCLUDED.retrieved_at`,
 				m.PerpMarketID, m.NaturalKey, m.VenueID, m.MarketType, m.BaseAssetID, m.QuoteAssetID,
 				m.BaseSymbol, m.QuoteSymbol, decOrNil(m.IndexPrice), decOrNil(m.MarkPrice),
-				rawOrNil(m.OpenInterestUSD), decOrNil(m.OpenInterestBase), decOrNil(m.FundingRate),
+				rawOrNil(m.OpenInterestUSD), decimalsOrNil(m.OpenInterestUSD), decOrNil(m.OpenInterestBase), decOrNil(m.FundingRate),
 				decOrNil(m.MaxLeverage), m.At, m.Provenance.SourceProvider, nullTime(m.Provenance.NormalizedAt))
 		}
 	})

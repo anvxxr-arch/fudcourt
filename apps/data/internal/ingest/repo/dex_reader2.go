@@ -163,12 +163,14 @@ func (r *Repo) ReadDexPerpMarkets(ctx context.Context, venueID string, limit int
 	if venueID != "" {
 		f.add("venue_id = "+f.nextArg(), venueID)
 	}
-	sql := `SELECT DISTINCT ON (perp_market_id)
-		perp_market_id, natural_key, venue_id, market_type, base_asset_id, quote_asset_id,
-		base_symbol, quote_symbol, index_price, mark_price, open_interest_usd,
-		open_interest_base, funding_rate, max_leverage, at, source, retrieved_at
-		FROM data.dex_perp_market` + f.where() +
-		fmt.Sprintf(" ORDER BY perp_market_id, at DESC LIMIT $%d", len(f.args)+1)
+	sql := `SELECT * FROM (
+			SELECT DISTINCT ON (perp_market_id)
+				perp_market_id, natural_key, venue_id, market_type, base_asset_id, quote_asset_id,
+				base_symbol, quote_symbol, index_price, mark_price, open_interest_usd_raw,
+				open_interest_usd_decimals, open_interest_base, funding_rate, max_leverage, at, source, retrieved_at
+			FROM data.dex_perp_market` + f.where() + `
+			ORDER BY perp_market_id, at DESC
+		) latest ORDER BY at DESC LIMIT $` + fmt.Sprint(len(f.args)+1)
 	args := append(f.args, clampLimit(limit))
 	return listRows(ctx, r, sql, args, limit, scanPerpMarket)
 }
