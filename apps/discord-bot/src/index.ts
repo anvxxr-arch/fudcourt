@@ -7,7 +7,7 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { loadConfig, missingForGateway } from "./config.ts";
+import { applyRemoteConfig, fetchRemoteConfig, loadConfig, missingForGateway } from "./config.ts";
 import { FudzieClient } from "./framework/client.ts";
 import { Rest } from "./framework/rest.ts";
 
@@ -15,10 +15,10 @@ const SRC_DIR = dirname(fileURLToPath(import.meta.url));
 
 async function main(): Promise<number> {
   const sub = (process.argv[2] ?? "run").toLowerCase();
-  const cfg = loadConfig();
+  const envCfg = loadConfig();
 
   if (sub === "list") {
-    const client = new FudzieClient({ config: cfg });
+    const client = new FudzieClient({ config: envCfg });
     await client.loadPieces(SRC_DIR);
     console.log("commands:");
     for (const c of client.commands.all()) console.log(`  /${c.name} — ${c.description}${c.preconditions.length ? ` [${c.preconditions.join(",")}]` : ""}`);
@@ -29,11 +29,17 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  const missing = missingForGateway(cfg);
+  const missing = missingForGateway(envCfg);
   if (missing.length > 0) {
     console.error(`❌ missing required env: ${missing.join(", ")}`);
     return 1;
   }
+
+  // The admin panel owns part of the config (guild + role ids) in Postgres; the
+  // api serves the effective values over loopback. Resolve them up front so
+  // doctor/register see what the panel holds, not just what .env says. An
+  // unreachable api leaves the env baseline untouched.
+  const cfg = applyRemoteConfig(envCfg, await fetchRemoteConfig(envCfg.apiUrl));
 
   if (sub === "doctor") {
     const rest = new Rest(cfg.token);
@@ -53,7 +59,7 @@ async function main(): Promise<number> {
       console.log(`✅ guild — ${g.name} (${g.id})`);
       const roles = await rest.listGuildRoles(cfg.guildId);
       console.log(`   roles in guild: ${roles.length}`);
-      for (const rid of [...cfg.adminRoleIds, ...cfg.teamRoleIds]) {
+      for (const rid of [...cfg.adminRoleIds, ...cfg.teamRoleIds, ...cfg.magangRoleIds]) {
         const found = roles.find((r) => r.id === rid);
         console.log(`   ${found ? "✅" : "❌"} role ${rid}${found ? ` = ${found.name}` : " (not in guild)"}`);
       }
@@ -79,8 +85,13 @@ async function main(): Promise<number> {
     return 2;
   }
 
-  const client = new FudzieClient({ config: cfg });
+  // The client keeps the RAW env baseline, so every refresh re-derives the
+  // effective config from (env, panel) — clearing a role in the panel clears it
+  // here too. Refresh once before opening the gateway, then poll for changes.
+  const client = new FudzieClient({ config: envCfg });
   await client.loadPieces(SRC_DIR);
+  await client.refreshConfig();
+  client.startConfigRefresh();
   await client.login();
   console.log("[fudzie] gateway starting — Ctrl-C to stop");
   // The gateway owns its own reconnect loop and timers, which keep the process

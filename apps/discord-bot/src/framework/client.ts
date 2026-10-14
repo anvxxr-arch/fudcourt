@@ -9,7 +9,7 @@ import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { BotConfig } from "../config.ts";
+import { applyRemoteConfig, fetchRemoteConfig, type BotConfig } from "../config.ts";
 import { Command, parseOptions, type CommandContext, type ParsedOptions } from "./command.ts";
 import { Gateway, INTENTS_GUILDS } from "./gateway.ts";
 import { Listener } from "./listener.ts";
@@ -35,7 +35,9 @@ export interface ClientOptions {
 }
 
 export class FudzieClient {
-  readonly config: BotConfig;
+  private readonly envConfig: BotConfig;
+  private currentConfig: BotConfig;
+  private configTimer: ReturnType<typeof setInterval> | null = null;
   readonly rest: Rest;
   readonly commands = new CommandStore();
   readonly listeners = new ListenerStore();
@@ -48,10 +50,20 @@ export class FudzieClient {
   private me: DiscordUser | null = null;
 
   constructor(opts: ClientOptions) {
-    this.config = opts.config;
+    this.envConfig = opts.config;
+    this.currentConfig = opts.config;
     this.rest = opts.rest ?? new Rest(opts.config.token);
     this.logFn = opts.log ?? ((m) => console.log(m));
     this.gatewayFactory = opts.gatewayFactory;
+  }
+
+  /**
+   * config is the EFFECTIVE config: the env baseline with the admin-editable
+   * values (from the api, over loopback) overlaid. It is read fresh on every
+   * access, so a refresh lands mid-flight — a panel change needs no restart.
+   */
+  get config(): BotConfig {
+    return this.currentConfig;
   }
 
   log(msg: string): void {
@@ -215,10 +227,60 @@ export class FudzieClient {
     }
   }
 
+  /**
+   * refreshConfig re-reads the admin-editable config from the api and overlays
+   * it on the env baseline. It never throws: an unreachable api keeps the last
+   * good values, so the bot degrades to its env config instead of dying.
+   *
+   * A change is logged once (not every poll) so an operator can see the panel
+   * take effect live without tailing the api.
+   */
+  async refreshConfig(): Promise<void> {
+    const remote = await fetchRemoteConfig(this.currentConfig.apiUrl);
+    if (!remote) return;
+    const next = applyRemoteConfig(this.envConfig, remote);
+    if (!sameWiring(this.currentConfig, next)) {
+      this.log(
+        `config changed from the admin panel — guild=${next.guildId || "—"} ` +
+          `admin=[${next.adminRoleIds.join(",")}] team=[${next.teamRoleIds.join(",")}] magang=[${next.magangRoleIds.join(",")}]`,
+      );
+    }
+    this.currentConfig = next;
+  }
+
+  /**
+   * startConfigRefresh polls the api so an admin panel change reaches the bot
+   * with no .env edit and no restart. The first refresh runs immediately; the
+   * interval is unref'd so it never keeps the process alive on its own.
+   */
+  startConfigRefresh(intervalMs = 30_000): void {
+    if (this.configTimer) return;
+    void this.refreshConfig();
+    this.configTimer = setInterval(() => void this.refreshConfig(), intervalMs);
+    // Bun/Node timers expose unref(); the DOM lib types setInterval as number.
+    (this.configTimer as unknown as { unref?: () => void }).unref?.();
+  }
+
   destroy(): void {
+    if (this.configTimer) {
+      clearInterval(this.configTimer);
+      this.configTimer = null;
+    }
     this.gateway?.destroy();
     this.gateway = null;
   }
+}
+
+/** sameWiring reports whether two configs resolve to the same guild + role tiers. */
+function sameWiring(a: BotConfig, b: BotConfig): boolean {
+  const eq = (x: readonly string[], y: readonly string[]): boolean =>
+    x.length === y.length && x.every((v, i) => v === y[i]);
+  return (
+    a.guildId === b.guildId &&
+    eq(a.adminRoleIds, b.adminRoleIds) &&
+    eq(a.teamRoleIds, b.teamRoleIds) &&
+    eq(a.magangRoleIds, b.magangRoleIds)
+  );
 }
 
 /** walk returns every .ts file under a directory, recursively (sorted). */

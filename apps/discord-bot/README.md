@@ -63,16 +63,38 @@ does. There is no central switch to edit.
 | `/status` | — | probe the four loopback services on `/healthz` |
 | `/wallets` | — | the configured FUD wallets |
 | `/balance` | — | native balance of those wallets (needs `EVM_RPC_URL`) |
-| `/whoami` | AdminOnly | the caller's resolved tier (admin > team > member) |
+| `/whoami` | AdminOnly | the caller's resolved tier (admin > team > magang > member) |
+
+## Config from the admin panel (not just .env)
+
+The guild id and the three tier role ids are **admin-editable at runtime**. The
+web dashboard writes them to the Postgres `settings` table
+(`discord.guild_id`, `discord.role_admin`, `discord.role_team`,
+`discord.role_magang`); the Go api serves the effective values (env defaults
+overlaid with the stored rows) on the loopback-only
+`GET /api/internal/discord-config`; the bot polls that endpoint every 30s and
+re-derives its config, so a panel change reaches the bot with **no `.env` edit
+and no restart**.
+
+The env vars below are the **boot defaults** — an unset/blank panel field keeps
+them, and the bot keeps working through an api outage (it falls back to the last
+good config, then to env). A change is logged once when it lands:
+
+```
+[fudzie] config changed from the admin panel — guild=… admin=[…] team=[…] magang=[…]
+```
 
 ## Environment (all already in the repo `.env`)
 
 - `FUDCOURT_BOT_TOKEN` — the bot token (shared with the Go api's OAuth flow)
 - `FUDCOURT_CLIENT_ID` — the application id slash commands register under
 - `FUDCOURT_GUILD_ID` — the guild; commands register **guild-scoped** (instant)
-- `FUDCOURT_ROLE_ADMIN` / `FUDCOURT_ROLE_TEAM` — role ids for the tier resolve
+- `FUDCOURT_ROLE_ADMIN` / `FUDCOURT_ROLE_TEAM` / `FUDCOURT_ROLE_MAGANG` — boot
+  defaults for the tier resolve (overridden by the panel, see above)
 - `FUD_WALLETS`, `EVM_RPC_URL` — optional, for `/wallets` and `/balance`
 - `FUDCOURT_DATA_URL` — the data sidecar base (default `http://127.0.0.1:3101`)
+- `FUDCOURT_API_URL` — the api base the bot polls for the panel config
+  (default `http://127.0.0.1:3103`)
 
 ## Run
 

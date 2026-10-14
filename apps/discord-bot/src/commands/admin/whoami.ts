@@ -3,7 +3,9 @@ import { embed, field } from "../../lib/embed.ts";
 
 /**
  * /whoami — admin-only. Reports the caller's resolved tier from the configured
- * role ids, the same way the web tier resolves a session: admin > team > member.
+ * role ids, the same way the web tier resolves a session: admin > team > magang
+ * > member. The role ids come from the admin panel (Postgres `settings`),
+ * overlaid on the env baseline by the client's config refresh.
  * This is the live exercise of the AdminOnly precondition.
  */
 export class WhoamiCommand extends Command {
@@ -17,6 +19,7 @@ export class WhoamiCommand extends Command {
     let tier = "member";
     if (roles.some((r) => cfg.adminRoleIds.includes(r))) tier = "admin";
     else if (roles.some((r) => cfg.teamRoleIds.includes(r))) tier = "team";
+    else if (roles.some((r) => cfg.magangRoleIds.includes(r))) tier = "magang";
 
     const roleLines = roles.length > 0 ? roles.map((r) => `<@&${r}>`).join(" ") : "—";
     await ctx.reply({

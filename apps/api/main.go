@@ -101,6 +101,10 @@ func (s *server) handler() http.Handler {
 	mux.HandleFunc("/api/auth/logout", s.handleAuthLogout)
 	mux.HandleFunc("/api/admin/members", s.handleAdminMembers)
 	mux.HandleFunc("/api/admin/settings", s.handleAdminSettings)
+	// Internal, loopback-only: the co-located Discord bot reads the effective
+	// Discord wiring here (it has no Postgres driver of its own), so an admin
+	// panel change reaches the bot without an .env edit or a restart.
+	mux.HandleFunc("/api/internal/discord-config", s.handleInternalDiscordConfig)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, errNotFound)
 	})
