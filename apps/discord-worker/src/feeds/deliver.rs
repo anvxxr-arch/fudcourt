@@ -13,6 +13,7 @@
 
 use std::sync::Arc;
 
+use crate::discord::DiscordPoster;
 use crate::feeds::parse;
 use crate::feeds::store::{self, Delivery};
 use crate::handlers::{HandlerFuture, JobHandler};
@@ -20,27 +21,18 @@ use crate::jobs::{ClaimedJob, Disposition};
 use crate::logging::{self, fields as log_fields};
 use crate::storage::Pool;
 
-/// Discord's REST root. Pinned, so there is no URL for a config typo to redirect.
-pub const API_BASE: &str = "https://discord.com/api/v10";
+// The transport and the classification of Discord's answer live in
+// [`crate::discord`], because the scheduler's message delivery posts through the
+// same code and a second copy of "429 means later" is how one of the two ends up
+// wrong. Re-exported so this module's surface reads as it did before the
+// extraction.
+pub use crate::discord::{DeliveryError, API_BASE};
 
 /// Discord rejects an embed title past this.
 pub const MAX_TITLE_CHARS: usize = 256;
 
 /// An embed description cap, well under Discord's 4096.
 pub const MAX_DESCRIPTION_CHARS: usize = 1024;
-
-/// A delivery failure we know is pointless to retry.
-#[derive(Debug)]
-pub enum DeliveryError {
-    Permanent(String),
-    Retryable(String),
-}
-
-impl From<String> for DeliveryError {
-    fn from(e: String) -> Self {
-        DeliveryError::Retryable(e)
-    }
-}
 
 /// Fills the configured message template.
 ///
@@ -94,42 +86,18 @@ pub fn message_body(d: &Delivery, rendered: &str) -> serde_json::Value {
     })
 }
 
-/// Discord's error text, bounded, for the log line. Never the request, so the
-/// token cannot ride along.
-async fn discord_detail(resp: reqwest::Response) -> String {
-    match resp.text().await {
-        Ok(text) => {
-            let trimmed = text.trim();
-            if trimmed.is_empty() {
-                "no body".to_string()
-            } else {
-                parse::truncate_chars(trimmed, 300)
-            }
-        }
-        Err(_) => "unreadable body".to_string(),
-    }
-}
-
 /// Posts announcements to Discord.
 pub struct Deliver {
     pool: Pool,
-    http: reqwest::Client,
-    token: String,
-    api_base: String,
+    poster: DiscordPoster,
 }
 
 impl Deliver {
     /// The production sender: the real API base, the real token.
     pub fn new(pool: Pool, token: String) -> Self {
-        let http = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(20))
-            .build()
-            .unwrap_or_default();
         Self {
             pool,
-            http,
-            token,
-            api_base: API_BASE.to_string(),
+            poster: DiscordPoster::new(token),
         }
     }
 
@@ -153,53 +121,30 @@ impl Deliver {
             return Ok(());
         }
 
-        let url = format!("{}/channels/{}/messages", self.api_base, d.channel_id);
         let body = message_body(&d, &render_message(&d.message, &d));
-        let resp = self
-            .http
-            .post(&url)
-            .header(
-                reqwest::header::AUTHORIZATION,
-                format!("Bot {}", self.token),
-            )
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| DeliveryError::Retryable(format!("posting to Discord failed: {e}")))?;
-
-        let status = resp.status();
-        if status.is_success() {
-            let session = self.pool.acquire().await?;
-            store::mark_delivered(session.client(), item_id, job_id).await?;
-            return Ok(());
+        if let Err(e) = self.poster.post_message(&d.channel_id, &body).await {
+            // A PERMANENT rejection is recorded before it is returned, so the
+            // dashboard shows why a channel went quiet instead of only a dead job.
+            // A retryable one is not recorded: the retry may still succeed, and a
+            // `failed` row takes the item out of `owed` for good.
+            if let DeliveryError::Permanent(note) = &e {
+                if let Ok(session) = self.pool.acquire().await {
+                    if let Err(e) =
+                        store::mark_delivery_failed(session.client(), item_id, job_id, note).await
+                    {
+                        logging::warn(
+                            "could not record a failed delivery",
+                            log_fields(vec![("error", serde_json::Value::from(e))]),
+                        );
+                    }
+                }
+            }
+            return Err(e);
         }
 
-        let detail = discord_detail(resp).await;
-        // 429 and 5xx are the two answers that mean "later"; everything else in
-        // 4xx means the request itself is wrong (bad channel, no permission, bad
-        // token) and repeating it changes nothing.
-        if status.as_u16() == 429 || status.is_server_error() {
-            return Err(DeliveryError::Retryable(format!(
-                "Discord answered {}: {detail}",
-                status.as_u16()
-            )));
-        }
-
-        // Recorded before returning, so the dashboard shows why a channel went
-        // quiet instead of only a dead job.
         let session = self.pool.acquire().await?;
-        let note = format!("{}: {detail}", status.as_u16());
-        if let Err(e) = store::mark_delivery_failed(session.client(), item_id, job_id, &note).await
-        {
-            logging::warn(
-                "could not record a failed delivery",
-                log_fields(vec![("error", serde_json::Value::from(e))]),
-            );
-        }
-        Err(DeliveryError::Permanent(format!(
-            "Discord rejected the message ({}): {detail}",
-            status.as_u16()
-        )))
+        store::mark_delivered(session.client(), item_id, job_id).await?;
+        Ok(())
     }
 }
 

@@ -6,10 +6,12 @@
 //! - [`jobs`]: the lifecycle (status, disposition, retry policy, identity) and
 //!   the runner loop.
 //! - [`handlers`]: the `kind` -> code table.
+//! - [`discord`]: the one Discord REST surface every sender posts through.
 //! - [`locks`]: an OPTIONAL Valkey advisory lock, never a correctness mechanism.
 //! - [`health`]: `/healthz` and `/readyz`.
 
 pub mod config;
+pub mod discord;
 pub mod feeds;
 pub mod handlers;
 pub mod health;

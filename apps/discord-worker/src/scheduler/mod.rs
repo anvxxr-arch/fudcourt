@@ -14,6 +14,7 @@
 //!
 //! The reaper, the drain and the backoff are all the phase-9 runtime's.
 
+pub mod message;
 pub mod schedule;
 pub mod store;
 pub mod tick;

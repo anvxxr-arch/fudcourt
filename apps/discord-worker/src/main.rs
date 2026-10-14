@@ -198,13 +198,23 @@ fn registry(
             registry.register(
                 fudcourt_discord_worker::feeds::POLL_KIND,
                 fudcourt_discord_worker::feeds::poll::handler(Arc::new(
-                    fudcourt_discord_worker::feeds::poll::Poll::new(pool.clone(), guild_id),
+                    fudcourt_discord_worker::feeds::poll::Poll::new(pool.clone(), guild_id.clone()),
                 )),
             );
             registry.register(
                 fudcourt_discord_worker::feeds::DELIVER_KIND,
                 fudcourt_discord_worker::feeds::deliver::handler(Arc::new(
-                    fudcourt_discord_worker::feeds::deliver::Deliver::new(pool, token),
+                    fudcourt_discord_worker::feeds::deliver::Deliver::new(pool, token.clone()),
+                )),
+            );
+            // A scheduled message needs the token to post and the guild to refuse a
+            // job that belongs to somebody else, so it is registered in the same arm:
+            // without either, the kind stays unregistered and a queued message fails
+            // loudly rather than quietly never sending.
+            registry.register(
+                fudcourt_discord_worker::scheduler::message::MESSAGE_KIND,
+                fudcourt_discord_worker::scheduler::message::handler(Arc::new(
+                    fudcourt_discord_worker::scheduler::message::Message::new(token, guild_id),
                 )),
             );
         }
