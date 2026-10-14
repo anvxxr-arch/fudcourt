@@ -20,8 +20,12 @@ export interface BotConfig {
   readonly adminRoleIds: readonly string[];
   /** Role ids that grant the team precondition (FUDCOURT_ROLE_TEAM). */
   readonly teamRoleIds: readonly string[];
+  /** Role ids that grant the intern tier (FUDCOURT_ROLE_MAGANG). */
+  readonly magangRoleIds: readonly string[];
   /** Loopback base of the Go data sidecar (:3101) for /status probes. */
   readonly dataUrl: string;
+  /** Loopback base of the Go api (:3103) — the admin-editable config source. */
+  readonly apiUrl: string;
   /** Public origin (FUDCOURT_PUBLIC_ORIGIN) — linked from /status and /help. */
   readonly publicOrigin: string;
   /** Optional guild id that the member/role commands should read (defaults to guildId). */
@@ -62,7 +66,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     guildId: env.FUDCOURT_GUILD_ID ?? "",
     adminRoleIds: splitIds(env.FUDCOURT_ROLE_ADMIN),
     teamRoleIds: splitIds(env.FUDCOURT_ROLE_TEAM),
+    magangRoleIds: splitIds(env.FUDCOURT_ROLE_MAGANG),
     dataUrl: (env.FUDCOURT_DATA_URL ?? "http://127.0.0.1:3101").replace(/\/+$/, ""),
+    apiUrl: (env.FUDCOURT_API_URL ?? "http://127.0.0.1:3103").replace(/\/+$/, ""),
     publicOrigin: (env.FUDCOURT_PUBLIC_ORIGIN ?? "https://fudcourt.my.id").replace(/\/+$/, ""),
     memberGuildId: env.FUDCOURT_GUILD_ID ?? "",
     wallets: parseWallets(env.FUD_WALLETS ?? env.FUDCOURT_WALLETS),
@@ -76,4 +82,70 @@ export function missingForGateway(cfg: BotConfig): string[] {
   if (!cfg.token) miss.push("FUDCOURT_BOT_TOKEN");
   if (!cfg.applicationId) miss.push("FUDCOURT_CLIENT_ID");
   return miss;
+}
+
+// --- Admin-editable config (Postgres `settings`, read over the api loopback) ---
+
+/** The subset of config the admin panel owns. Blank/absent fields keep the env value. */
+export interface RemoteDiscordConfig {
+  guildId?: string;
+  roleAdmin?: string;
+  roleTeam?: string;
+  roleMagang?: string;
+}
+
+/**
+ * applyRemoteConfig overlays the admin-editable config (served by the api from
+ * the `settings` table) on the env baseline. A blank/absent remote field keeps
+ * the env value, so the bot resolves the right tiers before the panel is ever
+ * used AND keeps working through an api outage.
+ *
+ * It is a pure function of (baseline, remote) — NEVER of the running config —
+ * so clearing a role in the panel actually clears it here instead of the
+ * previously fetched remote value sticking forever.
+ */
+export function applyRemoteConfig(base: BotConfig, remote: RemoteDiscordConfig | null): BotConfig {
+  if (!remote) return base;
+  const pick = (raw: string | undefined, fallback: readonly string[]): readonly string[] => {
+    const ids = splitIds(raw);
+    return ids.length > 0 ? ids : fallback;
+  };
+  const guildId = remote.guildId?.trim() || base.guildId;
+  return {
+    ...base,
+    guildId,
+    memberGuildId: guildId,
+    adminRoleIds: pick(remote.roleAdmin, base.adminRoleIds),
+    teamRoleIds: pick(remote.roleTeam, base.teamRoleIds),
+    magangRoleIds: pick(remote.roleMagang, base.magangRoleIds),
+  };
+}
+
+/**
+ * fetchRemoteConfig reads the api's loopback config endpoint. It never throws:
+ * an unreachable, slow, or garbage api yields null and the caller keeps the env
+ * baseline. The timeout stops a hung api from stalling the refresh loop.
+ */
+export async function fetchRemoteConfig(
+  apiUrl: string,
+  fetchImpl: typeof fetch = fetch,
+  timeoutMs = 3000,
+): Promise<RemoteDiscordConfig | null> {
+  if (!apiUrl) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetchImpl(`${apiUrl}/api/internal/discord-config`, {
+      headers: { Accept: "application/json" },
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as unknown;
+    if (!body || typeof body !== "object") return null;
+    return body as RemoteDiscordConfig;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }

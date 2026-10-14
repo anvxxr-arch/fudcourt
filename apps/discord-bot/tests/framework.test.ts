@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { loadConfig, missingForGateway } from "../src/config.ts";
+import { applyRemoteConfig, fetchRemoteConfig, loadConfig, missingForGateway } from "../src/config.ts";
 import { Command, parseOptions } from "../src/framework/command.ts";
 import { Gateway } from "../src/framework/gateway.ts";
 import { Rest, DiscordAPIError } from "../src/framework/rest.ts";
@@ -37,6 +37,115 @@ describe("config", () => {
   test("missingForGateway names the absent keys", () => {
     const cfg = loadConfig({} as Record<string, string>);
     expect(missingForGateway(cfg)).toEqual(["FUDCOURT_BOT_TOKEN", "FUDCOURT_CLIENT_ID"]);
+  });
+
+  test("loadConfig reads the admin-editable keys and the api loopback default", () => {
+    const cfg = loadConfig({
+      FUDCOURT_ROLE_MAGANG: "m1 m2",
+      FUDCOURT_API_URL: "http://127.0.0.1:9999/",
+    } as Record<string, string>);
+    expect(cfg.magangRoleIds).toEqual(["m1", "m2"]);
+    expect(cfg.apiUrl).toBe("http://127.0.0.1:9999");
+    expect(loadConfig({} as Record<string, string>).apiUrl).toBe("http://127.0.0.1:3103");
+  });
+});
+
+// ------------------------------------------------- admin-editable config
+describe("applyRemoteConfig", () => {
+  const base = loadConfig({
+    FUDCOURT_GUILD_ID: "g1",
+    FUDCOURT_ROLE_ADMIN: "envadmin",
+    FUDCOURT_ROLE_TEAM: "envteam",
+    FUDCOURT_ROLE_MAGANG: "envmagang",
+  } as Record<string, string>);
+
+  test("a null remote keeps the env baseline object untouched", () => {
+    expect(applyRemoteConfig(base, null)).toBe(base);
+  });
+
+  test("a stored value wins; a blank field keeps the env value", () => {
+    const got = applyRemoteConfig(base, { roleAdmin: "dbadmin", roleTeam: "", guildId: "g2" });
+    expect(got.adminRoleIds).toEqual(["dbadmin"]);
+    expect(got.teamRoleIds).toEqual(["envteam"]);
+    expect(got.magangRoleIds).toEqual(["envmagang"]);
+    expect(got.guildId).toBe("g2");
+    expect(got.memberGuildId).toBe("g2");
+  });
+
+  test("re-derives from the baseline, so clearing a role in the panel clears it here", () => {
+    const withDb = applyRemoteConfig(base, { roleAdmin: "dbadmin" });
+    expect(withDb.adminRoleIds).toEqual(["dbadmin"]);
+    // The panel clears the role → blank remote → the ENV value returns, never
+    // the previously fetched db value (the bug a live-config overlay would have).
+    const cleared = applyRemoteConfig(base, { roleAdmin: "" });
+    expect(cleared.adminRoleIds).toEqual(["envadmin"]);
+  });
+});
+
+describe("fetchRemoteConfig", () => {
+  test("parses the loopback payload", async () => {
+    const f = (async () => new Response(JSON.stringify({ roleAdmin: "a" }), { status: 200 })) as unknown as typeof fetch;
+    expect(await fetchRemoteConfig("http://x", f)).toEqual({ roleAdmin: "a" });
+  });
+
+  test("a non-2xx yields null", async () => {
+    const f = (async () => new Response("nope", { status: 500 })) as unknown as typeof fetch;
+    expect(await fetchRemoteConfig("http://x", f)).toBeNull();
+  });
+
+  test("a transport error yields null", async () => {
+    const f = (async () => {
+      throw new Error("down");
+    }) as unknown as typeof fetch;
+    expect(await fetchRemoteConfig("http://x", f)).toBeNull();
+  });
+
+  test("an empty api url yields null without a call", async () => {
+    let called = false;
+    const f = (async () => {
+      called = true;
+      return new Response("{}", { status: 200 });
+    }) as unknown as typeof fetch;
+    expect(await fetchRemoteConfig("", f)).toBeNull();
+    expect(called).toBe(false);
+  });
+});
+
+describe("client config refresh", () => {
+  test("refreshConfig overlays the api config, then falls back to env on clear", async () => {
+    const orig = globalThis.fetch;
+    let payload: unknown = { roleAdmin: "dbadmin", guildId: "g2" };
+    globalThis.fetch = (async () => new Response(JSON.stringify(payload), { status: 200 })) as unknown as typeof fetch;
+    try {
+      const client = new FudzieClient({
+        config: loadConfig({ FUDCOURT_ROLE_ADMIN: "envadmin", FUDCOURT_GUILD_ID: "g1" } as Record<string, string>),
+      });
+      await client.refreshConfig();
+      expect(client.config.adminRoleIds).toEqual(["dbadmin"]);
+      expect(client.config.guildId).toBe("g2");
+
+      // Panel clears the role → the client re-derives from the RAW env baseline.
+      payload = { roleAdmin: "" };
+      await client.refreshConfig();
+      expect(client.config.adminRoleIds).toEqual(["envadmin"]);
+      expect(client.config.guildId).toBe("g1");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  test("an unreachable api keeps the last good config", async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      throw new Error("down");
+    }) as unknown as typeof fetch;
+    try {
+      const client = new FudzieClient({ config: loadConfig({ FUDCOURT_ROLE_ADMIN: "envadmin" } as Record<string, string>) });
+      await client.refreshConfig();
+      expect(client.config.adminRoleIds).toEqual(["envadmin"]);
+    } finally {
+      globalThis.fetch = orig;
+    }
   });
 });
 

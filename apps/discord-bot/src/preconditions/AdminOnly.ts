@@ -15,7 +15,7 @@ export class AdminOnly extends Precondition {
   check(ctx: CommandContext): PreconditionResult {
     const admins = ctx.client.config.adminRoleIds;
     if (admins.length === 0) {
-      return fail("No admin role is configured. Set `FUDCOURT_ROLE_ADMIN` to the guild role id that grants admin.");
+      return fail("No admin role is configured. Set it in the dashboard → Settings, or `FUDCOURT_ROLE_ADMIN`.");
     }
     const roles = ctx.member?.roles ?? [];
     if (roles.some((r) => admins.includes(r))) return PASS;
