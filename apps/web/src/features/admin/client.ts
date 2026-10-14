@@ -97,3 +97,79 @@ export function fetchCases(q: CasesQuery = {}): Promise<{ cases?: ModerationCase
     { cache: 'no-store' },
   );
 }
+
+/**
+ * One scheduler definition, mirroring apps/api's `scheduleDefinition` struct on the wire
+ * (camelCase tags, snowflakes as strings). The WORKER owns `nextRunAt`, `lastRunAt`,
+ * `lastStatus`, `lastError` and `attempts`: the panel reports them and never sends them
+ * back. `nextRunAt` is absent on a spent `once` and on a `cron` nothing has anchored yet.
+ */
+export type ScheduleDefinition = {
+  id: number;
+  name: string;
+  jobKind: string;
+  scheduleKind: string;
+  scheduleExpr: string;
+  timezone: string;
+  payload: Record<string, unknown>;
+  enabled: boolean;
+  nextRunAt?: string;
+  lastRunAt?: string;
+  lastStatus?: string;
+  lastError?: string;
+  attempts: number;
+  maxAttempts: number;
+  /** Which panel writes this row, derived server-side from `jobKind`. */
+  owner: string;
+  /** `owner` in the form a control needs: a read-only row has no edit affordance, and
+   *  sending it back is a guaranteed 409. */
+  readOnly: boolean;
+};
+
+/** The writable subset the POST accepts — an operator's fields, nothing else. */
+export type ScheduleWrite = Pick<
+  ScheduleDefinition,
+  'name' | 'jobKind' | 'scheduleKind' | 'scheduleExpr' | 'timezone' | 'payload' | 'enabled'
+>;
+
+export type SchedulerView = { definitions?: ScheduleDefinition[]; detail?: string };
+
+export function fetchSchedules(): Promise<SchedulerView> {
+  return getJSON<SchedulerView>('/api/admin/scheduler', { cache: 'no-store' });
+}
+
+/**
+ * writableDefinitions is the write body's rule, in ONE place: only this panel's rows are
+ * sent, and only the fields an operator owns.
+ *
+ * Sending a read-only row back would be a guaranteed 409 — the server derives ownership
+ * from `job_kind` and the feeds' rows are not ours to write — and sending a worker column
+ * (`nextRunAt`, `attempts`) would look like an edit this panel cannot make. Both are
+ * dropped here rather than left to the server to ignore, because a body that contains a
+ * field the server ignores is a lie about what the save does.
+ *
+ * `name`, `scheduleExpr` and `timezone` are trimmed: the stored name is trimmed too, so
+ * "news " and "news" must not become two rows that collide on the next save.
+ */
+export function writableDefinitions(defs: ScheduleDefinition[]): ScheduleWrite[] {
+  return defs
+    .filter((d) => !d.readOnly)
+    .map((d) => ({
+      name: d.name.trim(),
+      jobKind: d.jobKind,
+      scheduleKind: d.scheduleKind,
+      scheduleExpr: d.scheduleExpr.trim(),
+      timezone: d.timezone.trim(),
+      payload: d.payload ?? {},
+      enabled: d.enabled,
+    }));
+}
+
+export function saveSchedules(defs: ScheduleDefinition[]): Promise<SchedulerView> {
+  return getJSON<SchedulerView>('/api/admin/scheduler', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ definitions: writableDefinitions(defs) }),
+  });
+}
+
