@@ -958,3 +958,57 @@ across three commits instead of two, and one of the messages describes work it d
 
 **Remaining.** Five admin proxies still have no consumer: `custom-commands`, `logs/audit`,
 `logs/destinations`, `role-assignments`, `role-panels`.
+
+## Phase 13 (cont.) — the role-assignment log, and the bug the recon found first
+
+**`b85ab24` — reaction-role assignments were never recorded.** Reading the api's
+`validateAssignment` to learn the wire is what surfaced it: the bot sends `source: "panel-reaction"`
+(`src/community/panels.ts`) and the api accepted only `autorole | panel | verification | manual`, so
+every reaction grant and revoke was refused with a 400 and never written to `role_assignments` — the
+one table that answers "why didn't this member get the role?". Two things made it silent, and both
+are the interesting part:
+
+- `recordAssignment` never inspected the response. It awaited the fetch and its `catch` covered
+  network errors only, so a 400 was indistinguishable from a 201 **by construction**. Best-effort is
+  the right policy for a record written after the grant already happened (a grant must not fail
+  because the audit trail did) but best-effort must not mean invisible: it now reads the response,
+  logs a refusal with the api's own unwrapped sentence, and the wiring passes the client's logger.
+- The accepted sources were an inline `switch` with a hand-written sentence, so set and text could
+  disagree with nothing to catch it. Now one `assignmentSources` slice, a set built from it, and a
+  sentence GENERATED from it — with a test asserting the sentence names every accepted source (the
+  half that would drift the other way, since adding a source and forgetting the text leaves an
+  operator reading an incomplete list).
+
+The guard that would have caught it is a contract with the two languages on opposite ends:
+`apps/api/community_sources_test.go` scans the bot's source for the source argument of every
+`roles.grant|revoke|apply` call and fails when the api would refuse one. It self-checks first — if the
+extraction stops matching, it FAILS rather than passing on an empty set. The same file pins the other
+vocabulary the bot writes into (`caseSources` must keep accepting `automod`), which is the identical
+bug waiting to happen. `recordAssignment` had no tests at all; it has six now.
+
+**`a31c72b` — the panel.** The sixth and the first read-only one (the api exposes a GET and nothing
+else: this table is evidence the bot writes as it acts, not configuration). It makes the failures
+findable and answers the one question a flat list cannot — whether the **same role keeps failing**,
+because the bot refuses an impossible assignment on every attempt rather than giving up, so a role
+above its own position fails once per join, forever. Failure groups come first, newest reason per
+role with a count, next to what the fix actually is (the role order, or the rule).
+
+Faithful-reading details: the window is the newest `limit` of 25/50/100/200 (the api caps at 200 and
+silently falls back to 50 for anything else, so the selector only offers what the api honours); a
+missing `error` (omitempty) renders as an em dash, not an empty string; an unparseable timestamp is
+shown VERBATIM rather than as "Invalid Date". Row ids appear here **because they are stable** — this
+table is append-only, the exact opposite of an autorole rule's id — and the note says so.
+
+**Verification.** `tsc --noEmit` clean in web and bot; **552 web tests pass / 0 fail** (543 → 552);
+**6 bot tests pass** for the new `community-wiring` file; the api's `go vet` clean, `gofmt -l` clean on
+the touched files, **8/8 targeted Go tests pass** and the full `go test ./...` green; `DESIGN_TOKENS_OK`;
+the full gate **`VERIFY_ALL_OK`**; `bun run build` `EXIT=0`.
+
+**Two of my own mistakes, again caught by the suite.** `isSnowflake` checks LENGTH, not just
+"digits only" — a Go test written with `UserID: "1"` fails with "must be a Discord id (digits only)",
+so fixtures need realistic 18-digit snowflakes. And the design-token checker rejects `lineHeight: 1.5`
+and a raw font stack (`fontFamily: 'ui-monospace, …'`) with `file:line`; the tokens are
+`lineHeight.normal` and `fontFamily.mono`.
+
+**Remaining.** Four admin proxies still have no consumer: `custom-commands`, `logs/audit`,
+`logs/destinations`, `role-panels`.
