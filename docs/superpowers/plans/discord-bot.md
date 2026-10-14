@@ -902,3 +902,59 @@ is one the bot does not need to re-read, since the config reaches it over the sa
 **Remaining.** Six of the twelve admin proxies now have a consumer (members, settings, moderation
 cases, scheduler, feeds, welcome); six do not: `autoroles`, `custom-commands`, `logs/audit`,
 `logs/destinations`, `role-assignments`, `role-panels`.
+
+## Phase 13 (cont.) — the autorole panel, and what a replace does to an id
+
+**`7fa4ac5` + `fb0f0c3` — the panel.** The fourth one, and the second whose subject is a DECISION
+rather than a value. What these rules describe is not readable off the rows: priority decides the
+order, a wait of zero collapses into "immediate", `appliesTo` drops whole rules depending on whether
+the joiner is a bot, and one of the three kinds never fires at all. So the panel states the buckets
+the bot will compute — `autorole-select.ts` mirrors `selectAutoroles`, the tests replay the bot's own
+fixtures, and a guard reads the bot's source for the comparator and the `<= 0` zero-wait rule.
+
+Three wire truths the panel is built around, all found by reading the code rather than the schema:
+
+1. **The row id is output-only, and the array order is not.** `replaceAutoroles`
+   (`apps/api/community.go`) deletes every rule for the guild and re-inserts them in the order it
+   received, letting the identity column hand out new ids. The panel keeps the loaded id for exactly
+   one purpose — the bot's tiebreak for equal priorities is `Number(a.id) - Number(b.id)` — and never
+   sends it, so the write shape is `Omit<AutoroleRule,'id'>` (the contract already calls the field
+   read-only). The consequence is the interesting part: **the array order IS the tiebreak**, because
+   the row ids are assigned in that order, which is why the rules have ↑ ↓ buttons and why
+   `ORDER_NOTE` says what they are for. It also makes the preview agree with the bot before AND after
+   a save: with no id yet `Number("")` is 0, the comparator ties, and a stable sort preserves the
+   operator's arrangement — the same order the api then persists.
+2. `after_verification` never fires. `AutoroleService.onVerified` is implemented and tested and called
+   by NOTHING, so an operator picking that kind would wait for a role that is never coming, with
+   nothing anywhere to say why. `DEFERRED_NOTE` says it — and a test scans the whole bot and FAILS if
+   a caller ever appears, because the note turning into a lie has to be louder than a stale comment.
+3. The api is stricter than its own table on duplicates: it refuses the same role twice whatever the
+   kind (`duplicateRoleId`), while the unique index is per `(guild_id, role_id, kind)`. The panel
+   surfaces that as a note in the api's words before the save, and still sends the request — one
+   authority for what a valid rule is beats two.
+
+**`1e03129` — fourteen tests.** The bot's fixtures replayed (including the two that surprise people:
+a zero or NEGATIVE wait is immediate, and `appliesTo` filters the joiner rather than the rule set),
+the ordering with the numeric id comparison asserted alongside `'10' < '2'` so the lexicographic bug
+has a named opponent, the tie-before-the-first-save case, `delayLabel` across every unit boundary,
+and the write shape pinned by key set with `'id' in body[0] === false`.
+
+**Two of my own mistakes, caught by the suite rather than by review.** `new URL(file, dir)` with a
+base that has no trailing slash silently drops the last path segment — the verification-flow scan
+tried to read `apps/discord-bot/globals.d.ts` instead of `src/globals.d.ts` and failed with ENOENT.
+And `compareAutoroles(id 2, id 10)` is `-8`, not `+8`: I asserted the magnitude and forgot the sign.
+
+**Verification.** `tsc --noEmit` clean; **543 web tests pass / 0 fail** (529 → 543); the design-token
+checker `DESIGN_TOKENS_OK`; the full gate `VERIFY_ALL_OK`; `bun run build` `EXIT=0` with `/admin` in
+the route table. No api or bot change was needed this slice — the panel reads what they already
+expose.
+
+**A note for whoever reads the history.** `7fa4ac5` ("the autoroles panel's draft and role picker")
+contains MY in-progress files and a message I did not write: a repo-side auto-committer (authored
+under the repository identity) swept four of them while the slice was mid-flight, and `.omp/` appears
+as an untracked directory of the same origin. The content is intact — `git status` is clean for those
+paths and the tests above run against exactly what is committed — but the slice is therefore split
+across three commits instead of two, and one of the messages describes work it did not perform.
+
+**Remaining.** Five admin proxies still have no consumer: `custom-commands`, `logs/audit`,
+`logs/destinations`, `role-assignments`, `role-panels`.
