@@ -693,3 +693,60 @@ from the SQL that enforces it.
 **Remaining, revised.** Item (1) above is DONE. Item (3) — the "proxy is GET-only" note — is
 resolved by `eb4a649`. What is left in phase 13 is the dashboard UI for this panel (the editor
 that sends this body) and the other resource groups.
+
+## Phase 13 (cont.) — the panel that writes it
+
+**The scheduler proxy shipped with the api slice and had no consumer.** Precisely: the other admin
+panels (members, settings, cases) read their proxies through `features/admin/client.ts` — a `.ts`
+module, which is why grepping for `api/admin` under `*.tsx` finds nothing and reads like the whole
+admin surface is unwired. The scheduler was nevertheless the only panel you could not touch from
+the dashboard: the Go side could write definitions, the worker could run them, and the operator had
+no UI. This is the UI.
+
+**`c750420` — the client.** `ScheduleDefinition` mirrors the Go struct on the wire (camelCase,
+snowflakes as strings, the worker's columns optional because `omitempty` means absent), plus
+`writableDefinitions`: the write body's rule in ONE place — only this panel's rows (`readOnly` is
+the server saying a feed owns it, and sending one back is a guaranteed 409) and only an operator's
+fields. Posting a worker column back would describe an edit this panel cannot make, so it is
+dropped here rather than left for the server to ignore: a body containing a field the server
+ignores is a lie about what the save does. Names and expressions are trimmed because the stored
+name is trimmed, so "news " and "news" must not collide on the next save.
+
+**`15d490b` — the panel, and the error that made it useful.** A REPLACE editor, because the endpoint
+is a replace: one transaction keyed on name, so the panel holds drafts and Save is the only writer.
+The feeds' poll definitions are SHOWN read-only with the reason — an operator who cannot see them
+cannot understand why a feed is polling — and are never sent. A kind whose payload the panel does
+not edit keeps the payload it read, so a save cannot delete what it cannot display.
+
+The rules the panel does NOT own are the point: snowflake shape, interval bounds, cron fields,
+timezone validity and the ownership predicate stay the server's, and the panel shows its sentence
+instead of keeping a second copy that could drift from the one that stores the row. The cron case
+is the sharpest — the shape is checked server-side and the MEANING is the worker's parser, so a
+third opinion in the browser would be a third thing to keep in sync.
+
+That sentence needed the body, and `getJSON` was throwing it away: every panel showed
+`<url> HTTP 409` where the api had sent "the name "news" is owned by the feeds panel". `HttpError`
+now carries `status` and `detail` (from the api's `detail`, the proxy's `error`, or the raw body if
+it is not JSON at all), the old prefix is kept so `/HTTP 500/` matchers still match, and the panel
+turns a 409 into "rename it, or manage it in the panel that owns it" — a 409 is not a bug and not a
+typo in a field, and that difference decides whether the operator renames a definition or files a
+report.
+
+**`7d88e12` — what the tests pin, and the trap one of them found.** The helpers are covered
+(draft↔wire round-trip, the read-only filter, payload pass-through, anchoring hints, the report
+line), and the WIRE is covered by running the api client against a stubbed fetch — the only place
+"the panel never sends a read-only row" and "a refusal never looks like a save" are provable.
+Asserted on the body after `JSON.stringify`, and across all three refusal shapes (api `{detail}`,
+proxy `{error}`, an HTML body from something that is not the api at all). The first draft of the
+fixture found a real one: `1234567890123456789` held as a JS number is `1234567890123456800`, so a
+numeric `channel_id` round-trips to a channel that does not exist. That is the spec's "never use JS
+numeric types for snowflakes" demonstrated on the panel's own payload field. The panel stringifies
+rather than coercing — it shows what was stored and lets the server refuse what it cannot accept —
+and the test now says so out loud.
+
+**Remaining, revised (again).** The scheduler panel is DONE, DB → worker → api → a control an
+operator can use. Eight of the twelve admin proxies still have no consumer:
+`autoroles`, `custom-commands`, `feeds`, `logs/audit`, `logs/destinations`, `role-assignments`,
+`role-panels`, `welcome`. (Members, settings, moderation cases and now scheduler are wired.) Feeds
+is the next one worth building, and it is the pair of this panel: its definitions are the
+`readOnly` rows shown here, and its own panel owns them.
