@@ -535,3 +535,70 @@ worker) and `/api/auth/*` — so a `/api/v1` prefix would be a migration of the 
 paths, not a new surface, and is worth deciding before the dashboard depends on it further.
 The web proxy for scheduler belongs with the dashboard phase (14 exist today, scheduler not
 among them).
+
+## Phase 12 (cont.) — a scheduled message could not actually be delivered
+
+The panel writes definitions; the worker materializes them. The gap between those two
+sentences was the whole feature: `scheduled_jobs.job_kind` defaults to `discord.message`, the
+tick copies the definition's kind and payload straight onto the materialized job, and NO
+handler was registered for that kind — so every scheduled message would have been parked as a
+permanent `no handler registered` failure. The operator's reward for saving a scheduled message
+would have been a dashboard line saying it was saved, while the messages died one by one. So
+the handler landed first: `apps/discord-worker/src/scheduler/message.rs`.
+
+**Payload contract, two fields wide on purpose.** `{"channel_id": "<snowflake>", "content":
+"..."}`. Everything else a scheduled message could grow (embeds, files, thread targets) is new
+surface in a payload a dashboard writes, and each one is a field an operator can be tricked
+into filling. Validation refuses BY NAME: no `channel_id`, a `channel_id` that is not a 17–20
+digit snowflake, empty or whitespace `content`, and content past 1900 characters each produce
+a PERMANENT failure that says which one — a payload that does not name a channel will not start
+naming one on the third attempt, so retrying it only delays the operator finding out. Unknown
+fields are ignored rather than refused, so the dashboard can write one before the worker learns
+to read it.
+
+**A scheduled message can never ping.** The body goes out with
+`allowed_mentions: {"parse": []}`, so a stored `@everyone` renders as text. That is a property
+of the SENDER, not of the text: stored content outlives whoever wrote it, and a message that
+pings the server at 03:00 is a moderation incident, not a typo.
+
+**One poster, not two.** The feeds delivery already knew the shape of Discord's answer — 429
+and 5xx mean "later", every other 4xx means the request itself is wrong so a retry burns
+attempts until the job is parked — and a second copy of that rule is how one of the two ends up
+wrong. `apps/discord-worker/src/discord.rs` now owns it: the endpoint, the `Bot` header, the 20s
+budget, the bounded error text and the classification. `feeds::deliver` posts through it and
+re-exports `DeliveryError`/`API_BASE`, so the feeds surface reads exactly as it did. The base
+URL stays PINNED rather than configurable: there is no deployment in which pointing the bot
+token at another host is correct, and a redirectable base is a way to leak it.
+
+**Registered where the token is.** `main.rs` registers the kind in the same match arm as the
+feeds kinds, so a worker without a token leaves it UNREGISTERED and a queued message fails
+loudly as an unknown kind instead of quietly never sending. The handler also refuses a job whose
+guild is not the configured one, so a foreign job cannot become a post here.
+
+**Verification (all actually run).** `cargo fmt --check` clean; `cargo clippy --all-targets
+--all-features -- -D warnings` clean; `cargo test --lib` → **119 passed** (102 → 119: +6 in
+`discord.rs`, +11 in `scheduler/message.rs`) covering the classification table, the
+`Bot`-header/path/body actually on the wire against a loopback stub, a 403 carrying Discord's
+own text, a 429 retryable, an unreachable host retryable, the mention policy, every malformed
+payload naming its fault, and the guild guard; the release binary builds. The three live suites
+stayed green against `fudcourt_test` (feeds 8, jobs 12, scheduler 9 = **29/29** with
+`--test-threads=1`) — that is the part that proves the poster extraction did not change
+delivery behaviour.
+
+**Committed as `3795759`** (`feat(discord-worker): deliver feed items through the Discord
+client`). The message describes the feeds half; the commit is the six files of this slice
+verbatim — `src/discord.rs`, `src/scheduler/message.rs` and the four edits that wire them.
+
+**Also `f1c9d7f`.** `KINDS` in `main.rs` read as "every kind this build implements" while
+listing the two phase-9 smoke kinds; the registry adds six more, conditionally. Anyone who
+"fixed" that list would register a real kind against the no-op handler and the job would report
+success while doing nothing. Renamed `NOOP_KINDS`, trap written down.
+
+**Remaining.** (1) The scheduler panel's write path — requirement unchanged: `ON CONFLICT
+(guild_id, name) DO UPDATE ... WHERE scheduled_jobs.job_kind <> 'feed.poll'`, and the write must
+409 when that predicate swallows a name the feeds panel owns, rather than reporting a save that
+did not happen. Now that the kind has a handler, a saved definition is a message that can
+actually be delivered. (2) The `/api/v1` prefix question over the existing 23 paths. (3) The
+"web proxy for scheduler" note above is STALE: the proxy exists (`/api/admin/scheduler` is one
+of the `web_proxies=15` the gate prints), so that first sliver of phase 13 shipped with the
+panel.
