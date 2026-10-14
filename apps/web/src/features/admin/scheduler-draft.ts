@@ -1,4 +1,3 @@
-import { HttpError } from '@/lib/fetch';
 import type { ScheduleDefinition } from './client';
 
 // The scheduler panel's editable projection of one definition: the fields an OPERATOR owns
@@ -193,19 +192,13 @@ export function scheduleHint(kind: string): string {
   }
 }
 
-/** describeSaveFailure turns a refusal into the sentence the operator needs. A 409 is neither
- *  a bug nor a typo in a field: the name belongs to another panel, so the fix is to rename it
- *  — worth saying, because the raw message reads like a crash. */
-export function describeSaveFailure(err: unknown): string {
-  if (err instanceof HttpError) {
-    if (err.status === 409) {
-      const detail = err.detail === '' ? 'the name is owned by another panel' : err.detail;
-      return `refused: ${detail} — rename it, or manage it in the panel that owns it.`;
-    }
-    return err.detail === '' ? `refused (HTTP ${err.status})` : `refused: ${err.detail}`;
-  }
-  return err instanceof Error ? err.message : 'save failed';
-}
+/** The wording a scheduler 409 needs, as the one argument a panel passes to
+ *  `describeSaveFailure` (save-error.ts): the name belongs to another panel, so the fix is to
+ *  rename it — worth saying, because the raw message reads like a crash. */
+export const SCHEDULER_CONFLICT = {
+  detail: 'the name is owned by another panel',
+  hint: 'rename it, or manage it in the panel that owns it.',
+};
 
 /** reportLine is the worker-owned half of a row, as one line of text. It answers the only
  *  question worth asking of a schedule that has not run: why not. */

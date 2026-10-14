@@ -28,7 +28,7 @@ import {
   JOB_KINDS,
   PAYLOAD_FIELDS,
   SCHEDULE_KINDS,
-  describeSaveFailure,
+  SCHEDULER_CONFLICT,
   draftFrom,
   expressionHint,
   newDraft,
@@ -39,6 +39,7 @@ import {
   toDefinition,
   writablePayload,
 } from '@/features/admin/scheduler-draft';
+import { describeSaveFailure } from '@/features/admin/save-error';
 import { HttpError } from '@/lib/fetch';
 
 /** A row as the Go api returns it: worker columns present, `readOnly` derived server-side. */
@@ -193,7 +194,7 @@ test('scheduler panel: every offered kind has a hint and the shape is described,
 
 test('scheduler panel: a refusal is the server\'s sentence, and a 409 says to rename', () => {
   const conflict = new HttpError('/api/admin/scheduler', 409, 'the name "news" is owned by the feeds panel');
-  const told = describeSaveFailure(conflict);
+  const told = describeSaveFailure(conflict, SCHEDULER_CONFLICT);
   assert.match(told, /owned by the feeds panel/, 'the detail names what actually happened');
   assert.match(told, /rename it/, 'a 409 is resolved by renaming, not by retrying or by filing a bug');
 
@@ -277,7 +278,7 @@ test('scheduler panel: a refusal arrives as the server\'s sentence, not as a sta
           assert.equal(err.status, 409);
           assert.match(err.detail, /owned by the feeds panel/);
           assert.match(err.message, /HTTP 409: the name "news" is owned by the feeds panel/);
-          assert.match(describeSaveFailure(err), /rename it/);
+          assert.match(describeSaveFailure(err, SCHEDULER_CONFLICT), /rename it/);
           return true;
         },
       );

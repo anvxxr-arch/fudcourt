@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { themeColor, fontSize, radius, space } from '@/styles/tokens';
 import { fetchSchedules, saveSchedules } from './client';
+import { describeSaveFailure } from './save-error';
 import {
   JOB_KINDS,
   PAYLOAD_FIELDS,
   SCHEDULE_KINDS,
+  SCHEDULER_CONFLICT,
   TIMEZONE_HINTS,
-  describeSaveFailure,
   draftFrom,
   expressionHint,
   newDraft,
@@ -122,7 +123,7 @@ export default function SchedulerPanel() {
     } catch (err) {
       // The refusal is the server's sentence, not a status code: a 409 names the definition
       // and the panel that owns it, a 400 names the field that is wrong.
-      setNote({ ok: false, text: describeSaveFailure(err) });
+      setNote({ ok: false, text: describeSaveFailure(err, SCHEDULER_CONFLICT) });
     } finally {
       setBusy(false);
     }
