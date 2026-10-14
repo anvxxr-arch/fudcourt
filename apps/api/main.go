@@ -47,6 +47,10 @@ const readinessTimeout = 2 * time.Second
 type server struct {
 	health  *health.Registry
 	discord *discordClient
+	// cases is the moderation-case store (moderation_cases.go). nil means the
+	// case log is disabled (no FUDCOURT_PG_URL): moderation still works in
+	// Discord, the record simply is not persisted and the case routes answer 503.
+	cases casesStore
 	// secret is the HMAC session key (FUDCOURT_SESSION_SECRET). It is read
 	// through identity.SessionSecret's fail-closed floor: without a usable
 	// secret no session ever verifies and none can be minted — exactly the
@@ -101,10 +105,14 @@ func (s *server) handler() http.Handler {
 	mux.HandleFunc("/api/auth/logout", s.handleAuthLogout)
 	mux.HandleFunc("/api/admin/members", s.handleAdminMembers)
 	mux.HandleFunc("/api/admin/settings", s.handleAdminSettings)
+	mux.HandleFunc("/api/admin/moderation/cases", s.handleAdminModerationCases)
 	// Internal, loopback-only: the co-located Discord bot reads the effective
 	// Discord wiring here (it has no Postgres driver of its own), so an admin
 	// panel change reaches the bot without an .env edit or a restart.
 	mux.HandleFunc("/api/internal/discord-config", s.handleInternalDiscordConfig)
+	// Internal, loopback-only: the bot records every moderation action here and
+	// reads case history back — the same hop, for the same reason.
+	mux.HandleFunc("/api/internal/moderation/cases", s.handleInternalModerationCases)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, errNotFound)
 	})
@@ -152,7 +160,7 @@ func main() {
 
 	reg := health.NewRegistry()
 	api := newServer(reg)
-	api.attachSettings()
+	api.attachStores()
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           api.handler(),

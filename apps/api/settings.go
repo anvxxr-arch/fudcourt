@@ -122,27 +122,30 @@ func (s *pgSettingsStore) save(ctx context.Context, cfg discordConfig) error {
 	return nil
 }
 
-// attachSettings wires the Postgres-backed settings store into the server's
-// Discord client from FUDCOURT_PG_URL. The pool connects lazily (pgxpool dials
+// attachStores wires the Postgres-backed stores the api owns into the server:
+// the Discord config store (discordClient.settings) and the moderation-case
+// store (s.cases), both on ONE pool. The pool connects lazily (pgxpool dials
 // on first use), so a down database never blocks startup — config reads then
-// degrade to the env defaults (discordClient.effective). An unset or
-// unparseable URL logs and leaves the store nil, i.e. env-only.
-func (s *server) attachSettings() {
+// degrade to the env defaults (discordClient.effective) and case writes answer
+// 503 (cases_unavailable). An unset or unparseable URL logs and leaves both
+// stores nil.
+func (s *server) attachStores() {
 	dsn := os.Getenv("FUDCOURT_PG_URL")
 	if dsn == "" {
-		slog.Info("settings store disabled", "service", "api", "reason", "FUDCOURT_PG_URL unset")
+		slog.Info("stores disabled", "service", "api", "reason", "FUDCOURT_PG_URL unset")
 		return
 	}
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		slog.Error("settings store disabled", "service", "api", "reason", "FUDCOURT_PG_URL unparseable")
+		slog.Error("stores disabled", "service", "api", "reason", "FUDCOURT_PG_URL unparseable")
 		return
 	}
 	cfg.MaxConns = 4
 	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
-		slog.Error("settings store disabled", "service", "api", "error", err)
+		slog.Error("stores disabled", "service", "api", "error", err)
 		return
 	}
 	s.discord.settings = newPGSettingsStore(pool)
+	s.cases = newPGCasesStore(pool)
 }

@@ -12,12 +12,13 @@ export async function modReply(ctx: CommandContext, res: ModResult): Promise<voi
     await ctx.reply({ content: `⚠️ ${res.refusal ?? "that action is not permitted"}`, ephemeral: true });
     return;
   }
+  const footer = res.caseNumber ? `FUD Court · case #${res.caseNumber}` : "FUD Court";
   await ctx.reply({
     embeds: [
       embed({
         title: `${glyph(true)} ${res.action}`,
         description: res.summary ?? "done",
-        footer: "FUD Court",
+        footer,
       }),
     ],
   });

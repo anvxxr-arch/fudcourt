@@ -1843,6 +1843,222 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SidecarError'
+  /api/admin/settings:
+    get:
+      tags: [admin]
+      operationId: getAdminSettings
+      summary: Read the effective Discord wiring and the guild's assignable roles
+      description: |
+        The Discord config an admin tunes from the panel: the guild the site
+        tiers against and the role id per site tier. `config` is the EFFECTIVE
+        value (env defaults overlaid with the stored `settings` rows); `defaults`
+        is the env boot value; `roles` is the guild's role list for a picker;
+        `configured` reports whether the Postgres settings store is attached
+        (false = env-only, changes would not persist). Requires the admin tier.
+      responses:
+        '200':
+          description: The effective config, the env defaults, the guild roles and the store status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSettingsResponse'
+        '401':
+          description: "`{\"error\": \"unauthorized\", \"detail\": \"requires admin tier\"}`."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '405':
+          description: '`{\"error\": \"method_not_allowed\"}` for a non-GET/POST method; `Allow: GET, POST`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags: [admin]
+      operationId: setAdminSettings
+      summary: Persist the Discord wiring (takes effect without a restart)
+      description: |
+        Writes the four snowflake ids into the `settings` table. Each field is
+        optional; an empty string clears it back to the env default. A value
+        that is not a plausible snowflake is a 400. Requires the admin tier.
+        The bot reads the change on its next poll — no restart.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiscordConfig'
+      responses:
+        '200':
+          description: The applied config.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSettingsWriteResponse'
+        '400':
+          description: "`{\"error\": \"bad_request\", \"detail\": ...}` for a non-object body or a non-snowflake id."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          description: "`{\"error\": \"unauthorized\", \"detail\": \"requires admin tier\"}`."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '503':
+          description: "`{\"error\": \"settings_unavailable\", ...}` — the settings store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+  /api/admin/moderation/cases:
+    get:
+      tags: [admin]
+      operationId: listModerationCases
+      summary: The moderation case log (the same rows the bot writes)
+      description: |
+        Reads the `moderation_cases` table behind the admin tier. `target`
+        filters to one member's history; `number` returns a single case; `limit`
+        bounds the page (default 25, max 100). Rows are newest-first.
+      parameters:
+        - { name: target, in: query, description: 'A member snowflake id — that member''s history.', schema: { type: string } }
+        - { name: number, in: query, description: 'A case number — return that one case.', schema: { type: integer } }
+        - { name: limit, in: query, schema: { type: integer, default: 25, maximum: 100 } }
+      responses:
+        '200':
+          description: '`{"cases": [...]}` newest-first, or a single `ModerationCase` for `?number=`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationCasesResponse'
+        '401':
+          description: "`{\"error\": \"unauthorized\", \"detail\": \"requires admin tier\"}`."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: "`{\"error\": \"not_found\"}` — no case with that number."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '503':
+          description: "`{\"error\": \"cases_unavailable\", ...}` — the case store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+  /api/internal/discord-config:
+    get:
+      tags: [internal]
+      operationId: internalDiscordConfig
+      summary: The effective Discord wiring, for the co-located bot (loopback-only)
+      description: |
+        The Discord bot is a zero-dependency Bun program with no Postgres driver,
+        so it reads the SAME effective config the panel edits here, over the
+        loopback hop, instead of the `settings` table directly. No session: the
+        api listener is loopback-only (DR-002) and the payload carries no secret
+        (guild and role ids are public inside the guild). A non-loopback peer is
+        refused as if the route did not exist (404).
+      responses:
+        '200':
+          description: The effective guild id and the role id per tier.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscordConfig'
+        '404':
+          description: 'The generic not-found envelope for a non-loopback peer.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBasic'
+  /api/internal/moderation/cases:
+    get:
+      tags: [internal]
+      operationId: internalListModerationCases
+      summary: Read moderation cases, for the co-located bot (loopback-only)
+      description: |
+        The bot reads a member's history (`?target=`) or one case (`?number=`)
+        here over the loopback hop, so `!case` / `/case` render the same rows
+        the dashboard shows. No session (loopback-only, no secret in the
+        payload); a non-loopback peer is refused as if the route did not exist.
+      parameters:
+        - { name: target, in: query, schema: { type: string } }
+        - { name: number, in: query, schema: { type: integer } }
+        - { name: limit, in: query, schema: { type: integer, default: 25, maximum: 100 } }
+      responses:
+        '200':
+          description: '`{"cases": [...]}` newest-first, or a single `ModerationCase` for `?number=`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationCasesResponse'
+        '400':
+          description: "`{\"error\": \"bad_request\", ...}` for a non-snowflake target or a non-integer number."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: 'The generic not-found envelope for a non-loopback peer, or no case with that number.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '503':
+          description: "`{\"error\": \"cases_unavailable\", ...}` — the case store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+    post:
+      tags: [internal]
+      operationId: internalCreateModerationCase
+      summary: Record a moderation action, from the co-located bot (loopback-only)
+      description: |
+        One row per moderation action the bot performs. The `guildId` is
+        authoritative from the server config — a body cannot log a case into
+        another guild. `action` and `source` are closed enums; `caseNumber`,
+        `status` and the timestamps are server-derived. `expiresAt` is computed
+        in SQL from `durationSeconds` for a timeout. Returns the stored row.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationCaseInput'
+      responses:
+        '201':
+          description: The stored case.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationCase'
+        '400':
+          description: "`{\"error\": \"bad_request\", ...}` for an unknown action/source, a non-snowflake id, or an out-of-range duration."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: 'The generic not-found envelope for a non-loopback peer.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBasic'
+        '503':
+          description: "`{\"error\": \"cases_unavailable\", ...}` — the case store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
 components:
   parameters:
     ExecutionId:
@@ -4590,6 +4806,98 @@ components:
         userId: { type: string }
         role: { type: string }
         action: { type: string }
+    DiscordConfig:
+      type: object
+      additionalProperties: false
+      description: |
+        The admin-editable Discord wiring: which guild the site tiers against
+        and which guild role maps to each site tier. Every id is a snowflake
+        STRING (never a number a JS client could lose precision on). An empty
+        string means "unset" (fall back to the env default).
+      properties:
+        guildId: { type: string }
+        roleAdmin: { type: string }
+        roleTeam: { type: string }
+        roleMagang: { type: string }
+    DiscordRole:
+      type: object
+      additionalProperties: false
+      required: [id, name, color, position, managed]
+      description: One guild role, for the admin pickers.
+      properties:
+        id: { type: string }
+        name: { type: string }
+        color: { type: integer }
+        position: { type: integer }
+        managed: { type: boolean }
+    AdminSettingsResponse:
+      type: object
+      additionalProperties: false
+      required: [config, defaults, roles, configured]
+      properties:
+        config: { $ref: '#/components/schemas/DiscordConfig' }
+        defaults: { $ref: '#/components/schemas/DiscordConfig' }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/DiscordRole' }
+        configured: { type: boolean }
+    AdminSettingsWriteResponse:
+      type: object
+      additionalProperties: false
+      required: [ok, config]
+      properties:
+        ok: { type: boolean, enum: [true] }
+        config: { $ref: '#/components/schemas/DiscordConfig' }
+    ModerationCase:
+      type: object
+      additionalProperties: false
+      required: [id, caseNumber, guildId, action, targetUserId, moderatorUserId, reason, source, status, createdAt, updatedAt]
+      description: |
+        One recorded moderation action. Snowflakes are strings; timestamps are
+        'YYYY-MM-DD HH:MM:SS' UTC strings. `durationSeconds` and `expiresAt`
+        are present only for a timed action (a timeout).
+      properties:
+        id: { type: integer }
+        caseNumber: { type: integer }
+        guildId: { type: string }
+        action: { type: string }
+        targetUserId: { type: string }
+        moderatorUserId: { type: string }
+        reason: { type: string }
+        durationSeconds: { type: integer, nullable: true }
+        source: { type: string }
+        status: { type: string, enum: [active, expired, reversed, closed] }
+        createdAt: { type: string }
+        expiresAt: { type: string, nullable: true }
+        updatedAt: { type: string }
+    ModerationCaseInput:
+      type: object
+      additionalProperties: false
+      required: [action, targetUserId, moderatorUserId]
+      description: |
+        The bot's case write. `guildId` is ignored — the server pins the case to
+        the configured guild. `action` and `source` are closed enums; the case
+        number, status and timestamps are server-derived.
+      properties:
+        guildId: { type: string, description: 'Ignored — the configured guild is authoritative.' }
+        action:
+          type: string
+          enum: [warn, unwarn, timeout, untimeout, kick, ban, unban, purge, nickname, lock, unlock, slowmode]
+        targetUserId: { type: string }
+        moderatorUserId: { type: string }
+        reason: { type: string }
+        durationSeconds: { type: integer, nullable: true }
+        source:
+          type: string
+          enum: [slash, prefix, context_menu, dashboard, automod, system]
+    ModerationCasesResponse:
+      type: object
+      additionalProperties: false
+      required: [cases]
+      properties:
+        cases:
+          type: array
+          items: { $ref: '#/components/schemas/ModerationCase' }
     # ==================================================================
     # Market data (CoinGecko markets / cross-venue ticker / DexScreener)
     # ==================================================================

@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { applyRemoteConfig, fetchRemoteConfig, type BotConfig } from "../config.ts";
+import { CaseLog, type CaseLogLike } from "../lib/cases.ts";
 import { Command, parseOptions, type CommandContext, type ParsedOptions } from "./command.ts";
 import { Gateway, INTENTS_GUILDS } from "./gateway.ts";
 import { Listener } from "./listener.ts";
@@ -30,6 +31,8 @@ export interface ClientOptions {
   config: BotConfig;
   rest?: Rest;
   log?: (msg: string) => void;
+  /** Injectable case store (tests); defaults to a loopback CaseLog on config.apiUrl. */
+  cases?: CaseLogLike;
   /** Injectable gateway factory for tests. */
   gatewayFactory?: (token: string, onEvent: (event: string, data: unknown) => void) => Gateway;
 }
@@ -39,6 +42,8 @@ export class FudzieClient {
   private currentConfig: BotConfig;
   private configTimer: ReturnType<typeof setInterval> | null = null;
   readonly rest: Rest;
+  /** The moderation-case store the api owns; the bot only talks to it over loopback. */
+  readonly cases: CaseLogLike;
   readonly commands = new CommandStore();
   readonly listeners = new ListenerStore();
   readonly preconditions = new PreconditionStore();
@@ -54,6 +59,7 @@ export class FudzieClient {
     this.currentConfig = opts.config;
     this.rest = opts.rest ?? new Rest(opts.config.token);
     this.logFn = opts.log ?? ((m) => console.log(m));
+    this.cases = opts.cases ?? new CaseLog(opts.config.apiUrl, this.logFn);
     this.gatewayFactory = opts.gatewayFactory;
   }
 

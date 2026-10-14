@@ -5,6 +5,7 @@ import { groupSum } from '@/lib/format';
 import { Meter } from '@/ui/meter';
 import MemberTable from '@/features/admin/members-table';
 import SettingsPanel from '@/features/admin/settings-panel';
+import CasesPanel from '@/features/admin/cases-panel';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -65,6 +66,14 @@ export default async function AdminPage() {
           The guild and role wiring lives in the database, not .env — change it here and it applies on the next request.
         </p>
         <SettingsPanel />
+      </section>
+
+      <section style={{ marginTop: space[32] }}>
+        <h2 style={{ fontSize: fontSize[15], color: themeColor.labelPrimary, margin: `0 0 ${space[4]}px` }}>Moderation cases</h2>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
+          The same case log Discord moderation commands write to. Filter by a member id for their history, or a case number.
+        </p>
+        <CasesPanel />
       </section>
 
       <section style={{ marginTop: space[32] }}>

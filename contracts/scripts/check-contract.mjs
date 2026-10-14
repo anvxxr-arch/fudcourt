@@ -175,6 +175,18 @@ try {
 }
 
 const openapiPaths = parseYamlPaths(openapiYaml);
+
+// Loopback-only Go-api routes. apps/api serves these to the co-located Discord
+// bot over 127.0.0.1 (the bot carries no Postgres driver of its own), and they
+// are deliberately NOT re-exported by the public Next tree: a public proxy
+// would let an off-host caller read the Discord wiring or, worse, WRITE a
+// moderation case (the Go api's loopback gate sees the web tier as a loopback
+// peer, so the proxy would defeat it). They are documented in the OpenAPI so
+// the bot's contract is explicit, and this gate both exempts them from the
+// route-handler requirement AND asserts no public handler was ever added for
+// them — the exemption is a security invariant, not a hole.
+const LOOPBACK_ONLY_SEGMENTS = new Set(['internal']);
+
 let pathChecks = 0;
 for (const [openapiPath, methods] of openapiPaths) {
   const routeKey = openapiPath.replace(/^\/api\//, '').replace(/\{([^}]+)\}/g, '[$1]');
@@ -182,6 +194,7 @@ for (const [openapiPath, methods] of openapiPaths) {
   const handler = handlerMap.get(routeKey);
   if (!handler) {
     const firstSeg = routeKey.split('/')[0];
+    if (LOOPBACK_ONLY_SEGMENTS.has(firstSeg)) continue;
     if (gateway && gateway.segments.has(firstSeg)) {
       for (const method of methods) {
         if (!gateway.methods.has(method)) {
@@ -208,6 +221,19 @@ for (const [routeKey, handler] of handlerMap) {
   const openapiPath = `/api/${routeKey.replace(/\[([^\]]+)\]/g, '{$1}')}`;
   if (!openapiPaths.has(openapiPath)) {
     failures.push(`route ${handler.file}: ${openapiPath} is not documented in the OpenAPI`);
+  }
+}
+
+// Loopback-only segments must have NO public Next handler. This is the security
+// half of the exemption above: it fails if someone adds a public proxy for a
+// route the Go api gates on a loopback peer (which the web tier itself is).
+for (const [routeKey, handler] of handlerMap) {
+  const firstSeg = routeKey.split('/')[0];
+  if (LOOPBACK_ONLY_SEGMENTS.has(firstSeg)) {
+    failures.push(
+      `route ${handler.file}: /api/${routeKey} is a loopback-only segment served by ` +
+        `apps/api to the co-located bot; a public Next proxy would defeat its loopback gate`,
+    );
   }
 }
 

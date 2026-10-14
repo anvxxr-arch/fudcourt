@@ -28,6 +28,7 @@ function baseRequest(ctx: CommandContext, action: ModAction, targetId: string) {
     actorPermissions: ctx.member?.permissions,
     targetId,
     reason: `via context menu by ${ctx.user.username}`,
+    source: "context_menu",
   };
 }
 

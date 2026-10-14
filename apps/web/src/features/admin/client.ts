@@ -61,3 +61,39 @@ export function saveSettings(
     body: JSON.stringify(config),
   });
 }
+
+/** One stored moderation case, as the Go api returns it (snowflakes are strings). */
+export type ModerationCase = {
+  id: number;
+  caseNumber: number;
+  guildId: string;
+  action: string;
+  targetUserId: string;
+  moderatorUserId: string;
+  reason: string;
+  durationSeconds?: number;
+  source: string;
+  status: string;
+  createdAt: string;
+  expiresAt?: string;
+  updatedAt: string;
+};
+
+export type CasesQuery = { target?: string; number?: number; limit?: number };
+
+/**
+ * fetchCases reads the moderation-case log through the BFF proxy. The Go api
+ * owns the admin-tier check; a refusal arrives as `detail` on the thrown error
+ * (getJSON rejects on a non-2xx, mirroring the settings panel).
+ */
+export function fetchCases(q: CasesQuery = {}): Promise<{ cases?: ModerationCase[]; detail?: string }> {
+  const params = new URLSearchParams();
+  if (q.target) params.set('target', q.target);
+  if (q.number !== undefined) params.set('number', String(q.number));
+  if (q.limit !== undefined) params.set('limit', String(q.limit));
+  const qs = params.toString();
+  return getJSON<{ cases?: ModerationCase[]; detail?: string }>(
+    `/api/admin/moderation/cases${qs ? `?${qs}` : ''}`,
+    { cache: 'no-store' },
+  );
+}

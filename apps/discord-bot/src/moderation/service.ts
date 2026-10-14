@@ -15,6 +15,7 @@
 
 import type { FudzieClient } from "../framework/client.ts";
 import type { GuildMember, GuildRole } from "../framework/types.ts";
+import { caseActionName } from "../lib/cases.ts";
 import { has, Perm } from "../lib/permissions.ts";
 import { guardTarget, topPosition, type GuardResult } from "./hierarchy.ts";
 
@@ -57,6 +58,8 @@ export interface ModRequest {
   nick?: string;
   /** ban: also delete this many seconds of the target's recent messages. */
   deleteMessageSeconds?: number;
+  /** Which interaction style invoked this (slash | prefix | context_menu | dashboard | automod | system). */
+  source?: string;
 }
 
 /** A moderation outcome. `ok:false` carries a user-facing refusal, never a stack. */
@@ -70,12 +73,17 @@ export interface ModResult {
   summary?: string;
   /** Structured facts for logging/auditing (never contains secrets). */
   detail?: Record<string, string | number | boolean>;
+  /** Present when ok:true — the case number the action was recorded under. */
+  caseNumber?: number;
 }
 
 /** refuse is the one constructor for a declined action. */
 function refuse(action: ModAction, refusal: string): ModResult {
   return { ok: false, action, refusal };
 }
+
+/** Actions that act on a CHANNEL, not a member — they are not user cases. */
+const CHANNEL_ACTIONS = new Set<ModAction>(["purge", "slowmode", "lock", "unlock"]);
 
 /** The permission a simple (member-targeted) action requires from the actor. */
 const ACTION_PERM: Partial<Record<ModAction, bigint>> = {
@@ -114,10 +122,39 @@ export class ModerationService {
     if (!req.actorId) return refuse(req.action, "I could not identify you in this server");
 
     // Channel-scoped actions resolve no target member; everything else does.
-    if (req.action === "purge" || req.action === "slowmode" || req.action === "lock" || req.action === "unlock") {
-      return this.runChannelAction(req);
+    const res = CHANNEL_ACTIONS.has(req.action) ? await this.runChannelAction(req) : await this.runMemberAction(req);
+    // A successful member action is recorded as a case (the shared log the
+    // dashboard reads). Best-effort: a down case store never fails the action.
+    return this.recordCase(req, res);
+  }
+
+  /**
+   * recordCase persists a successful member action to the shared case log and
+   * stamps the case number onto the result. It is best-effort and never throws:
+   * the Discord action already happened, so a failed record must not turn a
+   * success into a failure — it logs and returns the result unchanged.
+   *
+   * Channel actions (purge/lock/unlock/slowmode) are NOT user cases and are not
+   * recorded here.
+   */
+  private async recordCase(req: ModRequest, res: ModResult): Promise<ModResult> {
+    if (!res.ok || CHANNEL_ACTIONS.has(req.action)) return res;
+    const targetId = req.targetId;
+    if (!targetId) return res;
+    try {
+      const stored = await this.client.cases.record({
+        action: caseActionName(req.action),
+        targetUserId: targetId,
+        moderatorUserId: req.actorId,
+        reason: req.reason?.trim() || `action by ${req.actorId}`,
+        durationSeconds: req.action === "timeout" ? clampInt(req.durationSeconds ?? 600, 1, 28 * 86400) : undefined,
+        source: req.source ?? "slash",
+      });
+      if (stored) return { ...res, caseNumber: stored.caseNumber };
+    } catch (err) {
+      this.client.log(`case record failed for ${req.action}: ${err instanceof Error ? err.message : String(err)}`);
     }
-    return this.runMemberAction(req);
+    return res;
   }
 
   /**
