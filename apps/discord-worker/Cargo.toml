@@ -1,0 +1,34 @@
+[package]
+name = "fudcourt-discord-worker"
+version = "0.1.0"
+edition = "2021"
+description = "fudcourt Discord worker: the durable job runtime (apps/discord-worker) — transactional claiming over PostgreSQL, retry with backoff, database-enforced idempotency, an optional Valkey advisory lock, and graceful shutdown"
+
+# Single crate, no workspace, matching apps/reconciler. The durability lives in
+# PostgreSQL (schemas/pg-schema.sql: `jobs`, `job_runs`); Valkey is an optional
+# advisory layer, never the system of record.
+[lib]
+name = "fudcourt_discord_worker"
+path = "src/lib.rs"
+
+[[bin]]
+name = "discord-worker"
+path = "src/main.rs"
+
+[dependencies]
+# `signal` drives the graceful-shutdown path; `sync` is the connection pool and
+# the in-flight task set; `time` is the backoff sleep and the poll interval.
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "signal", "sync"] }
+# The system of record is local Postgres over loopback, so `NoTls` (DR-040).
+# `with-serde_json-1` is what maps `jsonb` <-> `serde_json::Value`; it is not a
+# default feature.
+tokio-postgres = { version = "0.7", features = ["with-serde_json-1"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Optional advisory lock only: `VALKEY_URL` unset means the lock is a no-op and
+# Postgres alone provides correctness. `script` is for the compare-and-delete
+# release (a plain DEL could delete another worker's lock).
+redis = { version = "0.27", default-features = false, features = ["tokio-comp", "script"] }
+
+[profile.release]
+strip = true

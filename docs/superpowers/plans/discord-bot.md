@@ -16,7 +16,7 @@ against the real repo — no green-by-disabling. Status is the truth, not the in
 | 6 | Logging / audit | ✅ done | per-category activity logs (7 categories → routed channels) + audit trail (before/after JSONB); bot mappers + logger + audit client, api store/routes/internal reads; live E2E proven |
 | 7 | Community features | ✅ done | welcome/goodbye + autoroles + reaction/button/select role panels; `welcome_configs`/`autorole_rules`/`role_panels`/`role_panel_options`/`role_assignments` stores, one loopback read + admin routes, bot services + listeners; live PG round-trip proven (commit `23431fe`) |
 | 8 | Custom commands | ✅ done | declarative only — no executable scripting. `custom_commands` store (jsonb `responses`, shared name/alias trigger namespace, role/channel allow-lists, cooldown, delete-trigger/reply/DM), one loopback read + admin replace-as-a-unit route, bot `customcommands` service, configurable prefix via `discord.prefix`; live PG round-trip + live loopback read proven |
-| 9 | Worker foundation | ⬜ todo | durable job claim (`FOR UPDATE SKIP LOCKED`), retry/backoff, idempotency |
+| 9 | Worker foundation | ✅ done | `apps/discord-worker` (Rust): durable `jobs` + `job_runs` queue, one-statement atomic claim (`FOR UPDATE SKIP LOCKED`), retry/backoff with dead-lettering, `(guild_id, kind, dedupe_key)` idempotency, stale-claim reaper, graceful drain, loopback `/healthz` + `/readyz`; optional Valkey advisory lock (never the durability mechanism); 41 unit + 12 live-PG tests |
 | 10 | Scheduler | ⬜ todo | one-time / interval / cron, explicit TZ, restart-safe |
 | 11 | Feeds | ⬜ todo | adapter pipeline + dedup + SSRF guard on generic HTTP |
 | 12 | API surface | 🟡 partial | settings + moderation cases live; remaining resource groups pending |
@@ -166,7 +166,80 @@ table owned by `postgres` and the service then gets `permission denied`. Re-appl
 as the app role the round-trip passes, so the deployment step stays "apply
 `db/schema/pg-schema.sql` as the database owner".
 
-## Next phase — 9, Worker foundation
+## Phase 9 as delivered — Worker foundation
+
+**`apps/discord-worker`** (Rust, `fudcourt-discord-worker`; binary `discord-worker`). One
+process, one crate, mirroring `apps/reconciler`'s shape (tokio + tokio-postgres + `NoTls`
+over loopback, `strip` in release). It is the runtime the scheduler (phase 10) and the feed
+pipeline (phase 11) hang their kinds on.
+
+**Storage.** Two tables in `db/schema/pg-schema.sql`:
+
+- `jobs` — the durable queue. `(guild_id, kind, dedupe_key)` is **UNIQUE**, so idempotency is
+  a database constraint and not an application check; `attempts`/`max_attempts` carry a
+  `CHECK (attempts <= max_attempts)` so a job can never be claimed more times than it is
+  allowed to run. Partial indexes cover the only two scans that exist: `pending` ordered by
+  `run_at`, and `running` by `locked_at` for the reaper.
+- `job_runs` — one row per attempt, `outcome` NULL while in flight. A worker that dies
+  mid-job leaves the row open and the reaper closes it as `crashed`, which is what makes
+  "worker crashed after claiming" visible instead of silent.
+
+**Claiming is one statement.** A data-modifying CTE does
+`UPDATE jobs ... WHERE id = (SELECT ... FOR UPDATE SKIP LOCKED LIMIT 1)` and inserts the
+`job_runs` row in the same statement. Atomic by itself — there is no explicit
+`BEGIN`/`COMMIT` to get wrong and no transaction held across a network call. Proven by
+`concurrent_workers_never_claim_the_same_job` (8 workers, 8 jobs, zero duplicates).
+
+**Retry policy** (`jobs::next_status`, pure and unit-tested): `Done` is terminal; a
+`Permanent` failure dead-letters immediately even with attempts left; a `Retryable` failure
+returns to `pending` with exponential backoff (base 5s, ×2, capped 1h) until
+`attempts >= max_attempts`, then dead-letters. A dead job is parked, never spun on.
+
+**Crash recovery.** The reaper reclaims `running` jobs whose `locked_at` is older than
+`WORKER_STALE_CLAIM_SECS`, closing the orphaned run as `crashed` and returning the job to
+`pending` — or straight to `dead` when it cannot afford another attempt. Fencing is enforced
+in SQL (`WHERE id = $1 AND locked_by = $2`), so a resurrected worker cannot finish a job that
+has since been reclaimed.
+
+**Graceful shutdown.** SIGTERM/SIGINT flip a `watch` channel; the loop stops claiming, waits
+for the in-flight permits to come back inside `WORKER_SHUTDOWN_GRACE_SECS`, then aborts
+whatever is left. Verified live: `SIGTERM received` → `worker stopped` → exit 0.
+
+**Valkey is optional and advisory.** `FUDCOURT_VALKEY_URL` unset means the lock is a no-op
+and Postgres alone provides correctness. When set, it guards the reaper with a
+compare-and-delete `SET NX PX` so two workers do not sweep the same instant; if the lock
+cannot be taken the sweep is skipped, and if Valkey errors the sweep proceeds anyway because
+Postgres is authoritative. The lock is never the only durability mechanism.
+
+**Observability.** One JSON object per line (`level`, `msg`, `ts_unix`, plus fields).
+`/healthz` answers from process state; `/readyz` does one `SELECT 1`, which is cheap enough to
+run per request and is the only check that can actually say "this worker can work". Loopback
+only, default `127.0.0.1:8110`.
+
+**Verification (all actually run).**
+- `cargo build --release` clean; `cargo fmt --check` exit 0; `cargo clippy --all-targets
+  --all-features -- -D warnings` no errors.
+- `cargo test --release`: **41 passed**, 0 failed.
+- `FUDCOURT_TEST_PG_URL=… cargo test --test jobs_live`: **12 passed**, 0 failed, against the
+  real database — exclusive claim, attempts bumped at claim time, a future `run_at` not
+  claimable, permanent-dies-immediately, retryable-returns-with-delay, concurrent workers
+  never colliding, idempotent enqueue, exhausted-attempts-dead, claim fencing, terminal
+  success recorded in history, and three reaper cases.
+- Live end-to-end against the real binary: `/healthz` 200 `{"status":"ok"}`, `/readyz` 200
+  `{"status":"ready"}`, unknown path 404; three claimable jobs ran to `done`/`done`/`dead`
+  (the unregistered kind dead-lettered with the exact reason) while a `run_at = now() + 1
+  hour` job correctly stayed `pending attempts=0`; history recorded
+  `succeeded`/`succeeded`/`permanent`; SIGTERM drained to exit 0.
+
+**Note on the gate.** `scripts/verify/verify-all.sh` gains a
+`cargo fmt/clippy/test (apps/discord-worker)` step after the reconciler step. The file also
+carried a pre-existing uncommitted `check-schema-bootstrap` step (whose script is already
+committed); that hunk was left untouched and is not part of this phase.
+
+**Note on schema application.** Same deploy rule as phase 8 — the new tables must be applied
+AS the app role `fudcourt`, not the superuser, or the service gets `permission denied`.
+
+## Next phase — 10, Scheduler
 
 ## Guardrails carried through every phase
 

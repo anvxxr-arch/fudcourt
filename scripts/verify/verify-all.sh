@@ -80,6 +80,11 @@ go build ./... && go vet ./... && go test ./... || fail go
 step "cargo build/test (apps/reconciler)"
 (cd apps/reconciler && cargo fmt --check && cargo build --release --quiet && cargo test --release --quiet) || fail rust
 
+step "cargo fmt/clippy/test (apps/discord-worker)"
+# --all-targets so the integration tests (tests/jobs_live.rs) are type-checked and linted too;
+# they self-skip without FUDCOURT_TEST_PG_URL, so this step needs no database.
+(cd apps/discord-worker && cargo fmt --check && cargo clippy --all-targets --all-features -- -D warnings && cargo test --release --quiet) || fail rust-worker
+
 # Ordered AFTER the cargo build on purpose: check-deploy requires every ExecStart target to
 # exist, and the two Rust units (fudcourt-sync-rust / fudcourt-reconciled) are NOT
 # self-provisioning the way the Go units are (they carry no ExecStartPre=go build), so
