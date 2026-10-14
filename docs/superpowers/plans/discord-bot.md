@@ -19,7 +19,7 @@ against the real repo — no green-by-disabling. Status is the truth, not the in
 | 9 | Worker foundation | ✅ done | `apps/discord-worker` (Rust): durable `jobs` + `job_runs` queue, one-statement atomic claim (`FOR UPDATE SKIP LOCKED`), retry/backoff with dead-lettering, `(guild_id, kind, dedupe_key)` idempotency, stale-claim reaper, graceful drain, loopback `/healthz` + `/readyz`; optional Valkey advisory lock (never the durability mechanism); 41 unit + 12 live-PG tests |
 | 10 | Scheduler | ✅ done | `scheduled_jobs` definitions materialized into ordinary `jobs` (one mechanism, not two); once/interval/cron with an EXPLICIT IANA zone and a stated DST policy; 5-field crontabs accepted; restart-safe via a DB `(definition_id, occurrence_at)` ledger plus the `jobs` unique key; self-scheduling tick chain with a deterministic successor key; 61 unit + 12 live (worker) + 9 live (scheduler) tests |
 | 11 | Feeds | ✅ done | adapter pipeline + dedup + SSRF guard on generic HTTP |
-| 12 | API surface | 🟡 partial | settings + moderation cases live; remaining resource groups pending |
+| 12 | API surface | 🟡 partial | settings + moderation cases + the feeds panel live; scheduler panel + remaining resource groups pending |
 | 13 | Dashboard | 🟡 partial | admin panel (config + cases); remaining IA pages pending |
 | 14 | Integration testing | 🟡 partial | moderation E2E smoke proven live; cross-feature flows pending |
 | 15 | Security hardening | 🟡 partial | hierarchy, loopback gate, contract gate (no public internal proxy); SSRF/CSRF/regex passes pending per new feature |
@@ -453,8 +453,55 @@ been posted to a real channel. Without the token the worker does not register th
 kinds at all and says so in the log, so a queued job fails loudly as an unknown kind
 instead of sitting silently.
 
-## Next phase — 12, API
+## Phase 12 as delivered (part 1) — the feeds panel
 
-Everything the worker owns now runs through the same durable job queue; what it lacks is
-the HTTP surface the dashboard needs to manage it (`/api/v1/feeds`, `/api/v1/scheduler`,
-and the remaining resource groups), which is the next phase.
+`apps/api/feeds.go`: `GET|POST /api/admin/feeds`, in the house shape (`methodGuard` →
+`requireAdmin` → store-nil 503 → GET list / POST replace), with `pgFeedStore` on the same
+`pgxpool` as every other panel, attached in `settings.go`. A nil store answers
+`503 feeds_unavailable`, never an empty list — an empty list would be a lie.
+
+Two deliberate differences from its siblings:
+
+- **`replace` is keyed on `name` and never writes the worker's columns** (`etag`, `primed`,
+  `last_*`, `consecutive_failures`, the ledger): resetting them would re-announce a feed's
+  backlog on every save. The delete half is real — a source absent from the list goes, with
+  its schedule and, by cascade, its ledger.
+- **A source and its schedule are written in ONE transaction.** Creating a feed inserts its
+  `scheduled_jobs` `feed.poll` definition (interval cadence, `payload.source_id`,
+  `next_run_at=now()` on insert ONLY, so an edit keeps the poll rhythm) in the same
+  transaction: a feed can never exist unpolled, and a schedule can never outlive its source.
+  The cadence shown to the panel is that definition's `schedule_expr`, joined on
+  `payload->>'source_id'` so a rename does not detach it.
+
+Refused with 400 and the field named: a name over 64 chars or a duplicate, a url that is not
+http(s) / carries credentials / uses a non-default port / is a single-label host / is a
+private-address literal, an unknown adapter (absent means `auto` — the worker sniffs the
+format, this column is documentation), a non-snowflake channel or role id, a cadence outside
+60..604800 seconds, a message over 512 chars, a filter over 128, more than 50 feeds. These
+URL rules are the PANEL's and deliberately narrow: the authority is the worker's guard,
+which vets every hop of every poll, and this API never resolves a host, so it cannot become
+an internal resolver.
+
+**Verification (all actually run).** `gofmt` clean on the new files, `go build ./...` and
+`go vet ./...` clean, `go test ./...` green for the whole api module. `feeds_test.go`
+proves: an unconfigured store answers 503 rather than an empty list; a lower tier is refused
+on both verbs without reaching the store (401 is this API's house answer for an insufficient
+tier); a round trip returns the STORED row, not an echo of the request; nine refused inputs
+each come back 400 naming the field; and a body asserting `id`/`primed`/`owed`/
+`consecutiveFailures`/`lastError` is stripped before the store sees it.
+`scripts/verify/verify-all.sh` → `VERIFY_ALL_OK`, `API_CONTRACT_OK go_paths=22
+documented=66`.
+
+**Cross-workstream finding.** `apps/web/src/app/(frontend)/api/admin/feeds/route.ts`
+(untracked, a concurrent session's thin proxy) documents a contract that does not exist —
+response key `{sources}` instead of `{feeds}`, a `feed_schedules` table instead of
+`scheduled_jobs`, cron validation instead of an interval. It passes the gate only because
+the gate checks that a proxied path exists in the Go api. The wire contract is the OpenAPI
+entry, which matches the schema and the live-PG tests.
+
+**Remaining in this phase.** `/api/admin/scheduler` (definitions, next occurrence, the
+`(definition_id, occurrence_at)` ledger) and the rest of the resource groups. Note the
+planes this API actually has — `/api/admin/*` (dashboard), `/api/internal/*` (loopback,
+bot + worker) and `/api/auth/*` — so a `/api/v1` prefix would be a migration of the
+existing 22 paths, not a new surface, and is worth deciding before the dashboard phase
+depends on it further.

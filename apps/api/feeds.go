@@ -164,7 +164,7 @@ func validateFeedSource(src feedSource) string {
 	return ""
 }
 
-// nullIfEmpty keeps an empty optional field as SQL NULL rather than ''.
+// nullIfEmpty keeps an empty optional field as SQL NULL rather than ”.
 func nullIfEmpty(s *string) *string {
 	if s == nil || strings.TrimSpace(*s) == "" {
 		return nil
@@ -340,6 +340,12 @@ func (s *server) handleAdminFeeds(w http.ResponseWriter, r *http.Request) {
 	}
 	seen := make(map[string]bool, len(req.Feeds))
 	for i, src := range req.Feeds {
+		// `adapter` is optional and absent means auto: the worker sniffs the body
+		// with one parser for every feed type, so this column is documentation the
+		// panel fills in, not a switch.
+		if src.Adapter = strings.TrimSpace(src.Adapter); src.Adapter == "" {
+			src.Adapter = "auto"
+		}
 		if msg := validateFeedSource(src); msg != "" {
 			writeRefusal(w, r, http.StatusBadRequest, "bad_request", errs.CategoryValidation,
 				fmt.Sprintf("feeds[%d]: %s", i, msg))
@@ -352,6 +358,18 @@ func (s *server) handleAdminFeeds(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		seen[name] = true
+
+		// The worker's columns are not the client's to set. The SQL never writes
+		// them, but clearing them here too means the store sees exactly the
+		// operator's fields whether the store is a fake or Postgres — and a
+		// hand-made request cannot even LOOK like it set `primed` or `owed`.
+		src.ID = 0
+		src.Primed = false
+		src.ConsecutiveFailures = 0
+		src.LastStatus = nil
+		src.LastError = nil
+		src.Owed = 0
+		req.Feeds[i] = src
 	}
 	if err := s.feeds.replace(r.Context(), guildID, req.Feeds); err != nil {
 		writeRefusal(w, r, http.StatusInternalServerError, "internal_error", errs.CategoryInternal,
@@ -372,4 +390,3 @@ func (s *server) writeFeedList(w http.ResponseWriter, r *http.Request, guildID s
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"feeds": sources})
 }
-
