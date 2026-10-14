@@ -75,7 +75,12 @@ func (s *server) handleDexToken(w http.ResponseWriter, r *http.Request) {
 		s.readFailed(w, r, err)
 		return
 	}
-	_ = rows
+	for _, a := range rows {
+		if a.AssetID == id {
+			writeData(w, a)
+			return
+		}
+	}
 	writeErr(w, r, http.StatusNotFound, "not_found", "unknown token "+id)
 }
 
@@ -313,7 +318,11 @@ func (s *server) handleDexMarkets(w http.ResponseWriter, r *http.Request) {
 		writeData(w, rows)
 		return
 	}
-	rows, err := s.dex.ReadDexMarketSnapshots(r.Context(), q.Get("pool"), time.Time{}, time.Time{}, lim)
+	start, end, ok := d.window()
+	if !ok {
+		return
+	}
+	rows, err := s.dex.ReadDexMarketSnapshots(r.Context(), q.Get("pool"), start, end, lim)
 	if err != nil {
 		s.readFailed(w, r, err)
 		return

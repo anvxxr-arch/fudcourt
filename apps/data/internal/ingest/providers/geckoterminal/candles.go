@@ -2,6 +2,7 @@ package geckoterminal
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -46,7 +47,6 @@ var intervals = map[string]string{
 	"hour:1":    "1h",
 	"hour:4":    "4h",
 	"day:1":     "1d",
-	"week:1":    "1w",
 }
 
 // dexCandles implements the `dex-candles` dataset. The job subject is
@@ -185,12 +185,16 @@ func cursorInt(c ingest.Cursor, key string) int {
 }
 
 // toDec parses a wire value into an exact Dec. GeckoTerminal returns OHLCV
-// prices as decimal STRINGS and the timestamp as a number, so this handles both
-// a string and a float64 (the client decodes without UseNumber).
+// prices as bare JSON numbers (the client decodes with UseNumber, so they
+// arrive as json.Number spellings) and some fields as decimal strings; both
+// are parsed exactly, never through a float64.
 func toDec(v any) (canon.Dec, bool) {
 	switch t := v.(type) {
 	case string:
 		d, err := canon.DecFromString(t)
+		return d, err == nil
+	case json.Number:
+		d, err := canon.DecFromString(string(t))
 		return d, err == nil
 	case float64:
 		d, err := canon.DecFromString(strconv.FormatFloat(t, 'f', -1, 64))
@@ -202,6 +206,9 @@ func toDec(v any) (canon.Dec, bool) {
 // toInt64 reads a unix-seconds value from a wire value.
 func toInt64(v any) (int64, bool) {
 	switch t := v.(type) {
+	case json.Number:
+		n, err := strconv.ParseInt(string(t), 10, 64)
+		return n, err == nil
 	case float64:
 		return int64(t), true
 	case string:

@@ -70,7 +70,10 @@ func listRowsRaw[T any](ctx context.Context, r *Repo, sql string, args []any, li
 func (r *Repo) ListAssets(ctx context.Context, q canon.ListQuery) ([]canon.Asset, error) {
 	f := &filter{}
 	if q.Search != "" {
-		f.add("(symbol ILIKE "+f.nextArg()+" OR name ILIKE "+f.nextArg()+")", "%"+q.Search+"%", "%"+q.Search+"%")
+		// Capture both numbers before add: nextArg is pure, so a second call
+		// inside the same add would repeat the first $N.
+		c1, c2 := f.nextArg(), "$"+itoa(len(f.args)+2)
+		f.add("(symbol ILIKE "+c1+" OR name ILIKE "+c2+")", "%"+q.Search+"%", "%"+q.Search+"%")
 	}
 	lo := len(f.args) + 1
 	sql := `SELECT asset_id, symbol, name, kind, chain_id, decimals, created_at, updated_at
@@ -96,7 +99,8 @@ func (r *Repo) ListAssets(ctx context.Context, q canon.ListQuery) ([]canon.Asset
 func (r *Repo) ListChains(ctx context.Context, q canon.ListQuery) ([]canon.Chain, error) {
 	f := &filter{}
 	if q.Search != "" {
-		f.add("(name ILIKE "+f.nextArg()+" OR display_name ILIKE "+f.nextArg()+")", "%"+q.Search+"%", "%"+q.Search+"%")
+		c1, c2 := f.nextArg(), "$"+itoa(len(f.args)+2)
+		f.add("(name ILIKE "+c1+" OR display_name ILIKE "+c2+")", "%"+q.Search+"%", "%"+q.Search+"%")
 	}
 	lo := len(f.args) + 1
 	sql := `SELECT chain_id, name, display_name, kind, native_asset_id, chain_numeric_id, created_at, updated_at
@@ -148,7 +152,8 @@ func (r *Repo) ListVenues(ctx context.Context, q canon.ListQuery) ([]canon.Venue
 func (r *Repo) ListProtocols(ctx context.Context, q canon.ListQuery) ([]canon.Protocol, error) {
 	f := &filter{}
 	if q.Search != "" {
-		f.add("(slug ILIKE "+f.nextArg()+" OR name ILIKE "+f.nextArg()+")", "%"+q.Search+"%", "%"+q.Search+"%")
+		c1, c2 := f.nextArg(), "$"+itoa(len(f.args)+2)
+		f.add("(slug ILIKE "+c1+" OR name ILIKE "+c2+")", "%"+q.Search+"%", "%"+q.Search+"%")
 	}
 	lo := len(f.args) + 1
 	sql := `SELECT protocol_id, slug, name, category, created_at, updated_at
@@ -574,10 +579,11 @@ func scanOrderbook(row pgx.Rows) (canon.OrderbookSnap, error) {
 	return o, nil
 }
 
-// ListPools implements canon.Reader. Filters: chain, DEX venue and minimum
-// liquidity (the pool table carries no base/quote symbol columns — pool
-// identity is (chain, address), and asset anchoring rides on the asset ids;
-// symbol-shaped pool queries resolve through provider_symbol upstream).
+// ListPools implements canon.Reader. Filters: chain, DEX venue, base/quote
+// symbol and minimum liquidity. The pool table carries base_symbol/quote_symbol
+// (added with the DEX Data Platform block), so a symbol-shaped pool query
+// filters on them directly with the same exact-match convention as
+// ListInstruments; pool identity stays (chain, address).
 func (r *Repo) ListPools(ctx context.Context, q canon.PoolQuery) ([]canon.Pool, error) {
 	f := &filter{}
 	if q.ChainID != "" {
@@ -585,6 +591,12 @@ func (r *Repo) ListPools(ctx context.Context, q canon.PoolQuery) ([]canon.Pool, 
 	}
 	if q.DEXID != "" {
 		f.add("dex_venue_id = "+f.nextArg(), q.DEXID)
+	}
+	if q.Base != "" {
+		f.add("base_symbol = "+f.nextArg(), q.Base)
+	}
+	if q.Quote != "" {
+		f.add("quote_symbol = "+f.nextArg(), q.Quote)
 	}
 	if q.MinLiquidityUSD > 0 {
 		f.add("liquidity_usd >= "+f.nextArg(), q.MinLiquidityUSD)

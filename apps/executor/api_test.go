@@ -1,8 +1,8 @@
 package main
 
 // The executor API surface's wiring contract: fail-visible config (§34) and the
-// documented env surface. These tests never open a listener, so they stay
-// hermetic.
+// documented env surface. The listener-bound tests bind loopback only, so they
+// stay hermetic.
 
 import (
 	"context"

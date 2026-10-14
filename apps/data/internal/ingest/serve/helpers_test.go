@@ -337,6 +337,12 @@ func (f *fakeReader) ListPools(ctx context.Context, q canon.PoolQuery) ([]canon.
 		if q.DEXID != "" && p.DEXVenueID != q.DEXID {
 			continue
 		}
+		if q.Base != "" && (p.BaseSymbol == nil || *p.BaseSymbol != q.Base) {
+			continue
+		}
+		if q.Quote != "" && (p.QuoteSymbol == nil || *p.QuoteSymbol != q.Quote) {
+			continue
+		}
 		if q.MinLiquidityUSD > 0 && (p.LiquidityUSD == nil || *p.LiquidityUSD < q.MinLiquidityUSD) {
 			continue
 		}

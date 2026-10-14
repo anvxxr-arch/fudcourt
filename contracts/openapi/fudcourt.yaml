@@ -1855,9 +1855,8 @@ paths:
         process (`/api/data/*` on `:3101`), which the `[...path]` gateway
         forwards WITH its subpath. Store reads are fast and bounded by a 15s
         per-request store timeout; a store outage is the loud 503 `unavailable`
-        envelope, never an empty-but-200 body. Response headers `X-Request-Id`
-        (correlation, echoed in the error envelope's `request_id`), `X-Cache`
-        and `Cache-Control`.
+        envelope, never an empty-but-200 body. Response header `X-Request-Id`
+        (correlation, echoed in the error envelope's `request_id`).
       parameters:
         - name: limit
           in: query
@@ -1904,6 +1903,9 @@ paths:
         '200':
           description: "`{data: [...]}` — instrument rows."
           content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '400':
+          description: "`{\"error\":{\"code\":\"bad_request\",\"message\":\"limit must be a positive integer\"}}`."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
         '503':
           description: The loud store-unavailable envelope.
           content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
@@ -1926,6 +1928,9 @@ paths:
         '200':
           description: "`{data: [...]}` — series rows (series_id, domain, metric, subject_key, title, unit, frequency, is_derived, …)."
           content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '400':
+          description: "`{\"error\":{\"code\":\"bad_request\",\"message\":\"limit must be a positive integer\"}}`."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
         '503':
           description: The loud store-unavailable envelope.
           content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
@@ -1947,6 +1952,9 @@ paths:
         '200':
           description: "`{data: [...]}` — derived series rows."
           content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '400':
+          description: "`{\"error\":{\"code\":\"bad_request\",\"message\":\"limit must be a positive integer\"}}`."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
         '503':
           description: The loud store-unavailable envelope.
           content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
@@ -2114,17 +2122,15 @@ paths:
     get:
       tags: [data]
       operationId: dataSubpath
-      summary: "The remaining public data sub-paths (assets…prediction)"
+      summary: "The remaining public data sub-paths (venues…prediction)"
       description: |
         The gateway forwards the `/api/data` family with its path REMAINDER and
         an explicit allowlist. Any first segment not in this list — including the
         operator-only `runs`, `health` and the mutating `ingest` — is a loud 404
         at the gateway, never forwarded to the sidecar. The allowlisted sub-paths
-        mirror the dedicated operations above for `/api/data/{instruments,venues,
-        protocols,chains,series,timeseries,metrics,ohlcv,trades,orderbook,defi/
-        protocols,defi/chains,derivatives/open-interest,derivatives/liquidations,
-        derivatives/options,prediction}` — each returns the same `{data}` / error
-        envelope shape.
+        (mirroring `DATA_SUBPATHS` in the gateway) each return the same `{data}` /
+        error envelope shape; `assets`, `instruments`, `series`, `timeseries`,
+        `metrics` and `ohlcv` have their own dedicated operations above.
       parameters:
         - name: subpath
           in: path
@@ -2135,6 +2141,9 @@ paths:
         '200':
           description: "`{data: [...]}` — rows for the named sub-path."
           content: { application/json: { schema: { $ref: '#/components/schemas/DataEnvelope' } } }
+        '400':
+          description: "`{\"error\":{\"code\":\"bad_request\",\"message\":\"limit must be a positive integer\"}}`."
+          content: { application/json: { schema: { $ref: '#/components/schemas/DataError' } } }
         '404':
           description: "`{error: not_found, detail: \"no API route for /api/data/<seg>\"}` — an unlisted segment (e.g. `runs`, `ingest`, `health`)."
           content: { application/json: { schema: { $ref: '#/components/schemas/SidecarError' } } }
@@ -4666,8 +4675,9 @@ components:
       description: |
         The data platform's refusal envelope: `{"error": {"code", "message"
         [, "request_id"]}}`. `code` is one of `bad_request` (400), `not_found`
-        (404), `method_not_allowed` (405), `fetch_failed` (503) or `unavailable`
-        (503, a store outage). `request_id` matches the `X-Request-Id` response
+        (404), `method_not_allowed` (405), `fetch_failed` (503), `unavailable`
+        (503, a store outage) or `internal` (500, a recovered panic).
+        `request_id` matches the `X-Request-Id` response
         header and the process log line that carries the same failure.
       properties:
         error:

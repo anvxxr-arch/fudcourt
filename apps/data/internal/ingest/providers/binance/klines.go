@@ -17,12 +17,12 @@ const venueID = "binance"
 // Perp:  GET /fapi/v1/klines?symbol=&interval=&limit=
 // Row shape: ["1697049600000","27945.01",...,"27945.01","3.566","99829.86",...]
 // — array of arrays of strings, open time ms.
-func (c *client) klines(ctx context.Context, w canon.Writer, job ingest.Job, timeframe string, limit int, forward bool) (written, rejected int, lastOpenMs int64, err error) {
+func (c *client) klines(ctx context.Context, w canon.Writer, job ingest.Job, timeframe string, limit int, forward bool) (written, rejected int, lastOpenMs int64, fetched int, err error) {
 	if timeframe == "" {
 		timeframe = "1m"
 	}
 	if _, ok := intervals[timeframe]; !ok {
-		return 0, 0, 0, &HardError{Kind: "shape", Detail: "unsupported timeframe " + timeframe}
+		return 0, 0, 0, 0, &HardError{Kind: "shape", Detail: "unsupported timeframe " + timeframe}
 	}
 	if limit <= 0 {
 		limit = 500
@@ -60,17 +60,17 @@ func (c *client) klines(ctx context.Context, w canon.Writer, job ingest.Job, tim
 
 	var raw [][]any
 	if err := c.getJSON(ctx, url, &raw); err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 	now := time.Now().UTC()
 	rows := make([]canon.Ohlcv, 0, len(raw))
 	for _, row := range raw {
 		if len(row) < 7 {
-			return 0, 0, 0, &HardError{Kind: "shape", URL: url, Detail: fmt.Sprintf("kline row width %d", len(row))}
+			return 0, 0, 0, 0, &HardError{Kind: "shape", URL: url, Detail: fmt.Sprintf("kline row width %d", len(row))}
 		}
 		open, ok1 := ms(row[0])
 		if !ok1 {
-			return 0, 0, 0, &HardError{Kind: "shape", URL: url, Detail: "kline open time"}
+			return 0, 0, 0, 0, &HardError{Kind: "shape", URL: url, Detail: "kline open time"}
 		}
 		o, ok2 := f64(row[1])
 		h, ok3 := f64(row[2])
@@ -79,11 +79,11 @@ func (c *client) klines(ctx context.Context, w canon.Writer, job ingest.Job, tim
 		vol, ok6 := f64(row[5])
 		qvol, ok7 := f64(row[7])
 		if !ok2 || !ok3 || !ok4 || !ok5 || !ok6 || !ok7 {
-			return 0, 0, 0, &HardError{Kind: "shape", URL: url, Detail: "kline numeric field"}
+			return 0, 0, 0, 0, &HardError{Kind: "shape", URL: url, Detail: "kline numeric field"}
 		}
 		baseSym, quoteSym, ok := splitSymbol(sym)
 		if !ok {
-			return 0, 0, 0, &HardError{Kind: "shape", URL: url, Detail: "unparseable symbol " + sym}
+			return 0, 0, 0, 0, &HardError{Kind: "shape", URL: url, Detail: "unparseable symbol " + sym}
 		}
 		inst := canon.MintID(canon.KindInstrument, canon.InstrumentKey(canon.InstrumentRef{
 			VenueID: venueID, MarketType: market, Base: baseSym, Quote: quoteSym,
@@ -103,11 +103,11 @@ func (c *client) klines(ctx context.Context, w canon.Writer, job ingest.Job, tim
 		})
 	}
 	if len(rows) == 0 {
-		return 0, 0, 0, nil
+		return 0, 0, 0, len(raw), nil
 	}
 	lastOpenMs = rows[len(rows)-1].OpenTime.UnixMilli()
 	n, rej, err := w.WriteOhlcv(ctx, rows)
-	return n, rej, lastOpenMs, err
+	return n, rej, lastOpenMs, len(raw), err
 }
 
 // isPerpSubject reports whether a job subject encodes the perp market. The

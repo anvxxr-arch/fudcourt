@@ -429,3 +429,36 @@ func TestIngestRunWithWriterOverride(t *testing.T) {
 		t.Fatal("nil override must return the handler unchanged")
 	}
 }
+
+// TestPoolsBaseQuoteFilterNarrows pins the documented ?base=/?quote= filters:
+// the pool table carries base_symbol/quote_symbol, so a symbol-shaped query
+// must narrow to the requested sides rather than return every pool.
+func TestPoolsBaseQuoteFilterNarrows(t *testing.T) {
+	h, r, _ := newTestServer(t)
+	weth, usdc, wbtc, dai := "WETH", "USDC", "WBTC", "DAI"
+	r.pools = []canon.Pool{
+		{PoolID: "pool:weth-usdc", ChainID: "eth", BaseSymbol: &weth, QuoteSymbol: &usdc},
+		{PoolID: "pool:wbtc-usdc", ChainID: "eth", BaseSymbol: &wbtc, QuoteSymbol: &usdc},
+		{PoolID: "pool:weth-dai", ChainID: "eth", BaseSymbol: &weth, QuoteSymbol: &dai},
+	}
+	rec, body := get(t, h, "/api/data/dex/pools?base=WETH")
+	if rec.Code != 200 {
+		t.Fatalf("base filter: got %d", rec.Code)
+	}
+	rows, _ := body["data"].([]any)
+	if len(rows) != 2 {
+		t.Fatalf("base=WETH: got %d rows, want 2", len(rows))
+	}
+	rec, body = get(t, h, "/api/data/dex/pools?base=WETH&quote=USDC")
+	if rec.Code != 200 {
+		t.Fatalf("base+quote filter: got %d", rec.Code)
+	}
+	rows, _ = body["data"].([]any)
+	if len(rows) != 1 {
+		t.Fatalf("base=WETH&quote=USDC: got %d rows, want 1", len(rows))
+	}
+	first, _ := rows[0].(map[string]any)
+	if first["pool_id"] != "pool:weth-usdc" {
+		t.Fatalf("base+quote filter: wrong row %v", first["pool_id"])
+	}
+}

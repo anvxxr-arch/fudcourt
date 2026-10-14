@@ -24,7 +24,7 @@ func (f *fetcher) Dataset() string { return f.dataset }
 // rows of every fetch opportunistically upsert the entities they imply:
 // the venue and the instruments the subject symbols mint.
 func (f *fetcher) Fetch(ctx context.Context, job ingest.Job, w canon.Writer) (ingest.FetchResult, error) {
-	var written, rejected int
+	var written, rejected, fetched int
 	var err error
 	// next is the checkpoint persisted on success; lastMs is the newest bar's
 	// open time, appended so the next run resumes from it (backfill pagination).
@@ -37,15 +37,15 @@ func (f *fetcher) Fetch(ctx context.Context, job ingest.Job, w canon.Writer) (in
 		if s, ok := job.Cursor["timeframe"].(string); ok && s != "" {
 			tf = s
 		}
-		written, rejected, lastMs, err = f.client.klines(ctx, w, job, tf, 500, false)
+		written, rejected, lastMs, fetched, err = f.client.klines(ctx, w, job, tf, 500, false)
 		next = ingest.Cursor{"timeframe": tf}
 	case "ohlcv-daily":
 		forward = true
-		written, rejected, lastMs, err = f.client.klines(ctx, w, job, "1d", 1000, true)
+		written, rejected, lastMs, fetched, err = f.client.klines(ctx, w, job, "1d", 1000, true)
 		next = ingest.Cursor{"timeframe": "1d"}
 	case "ohlcv-weekly":
 		forward = true
-		written, rejected, lastMs, err = f.client.klines(ctx, w, job, "1w", 1000, true)
+		written, rejected, lastMs, fetched, err = f.client.klines(ctx, w, job, "1w", 1000, true)
 		next = ingest.Cursor{"timeframe": "1w"}
 	case "funding":
 		written, rejected, err = f.client.funding(ctx, w, job, 100)
@@ -66,6 +66,14 @@ func (f *fetcher) Fetch(ctx context.Context, job ingest.Job, w canon.Writer) (in
 	if next == nil {
 		next = ingest.Cursor{}
 	}
+	// The engine REPLACES the whole cursor column with Next, so any key the
+	// operator set that this dataset does not own (e.g. limit) must be carried
+	// forward or it silently reverts to the hardcoded default after one run.
+	for k, v := range job.Cursor {
+		if _, owned := next[k]; !owned {
+			next[k] = v
+		}
+	}
 	// Only the forward-backfill datasets carry a since_ms checkpoint; a live
 	// poll job must not persist one it would never send.
 	if forward && lastMs > 0 {
@@ -77,10 +85,14 @@ func (f *fetcher) Fetch(ctx context.Context, job ingest.Job, w canon.Writer) (in
 		RowsRejected: rejected,
 		Next:         next,
 	}
-	// A full page means the backfill window is not exhausted: schedule the next
-	// page promptly instead of waiting the 24h poll cadence, so history fills in
-	// minutes rather than days.
-	if forward && written >= 1000 {
+	// A full page means the backfill window is not exhausted. The engine's
+	// NextRunHint only SUPPRESSES a dispatch; it cannot make a job due sooner
+	// than data.job.schedule_seconds (DueJobs gates on last_attempt +
+	// schedule_seconds), so paging is driven by the job's seeded schedule and
+	// the hint is a best-effort nudge, not a guarantee. The full-page test
+	// counts FETCHED rows, not accepted ones: a page with one rejected bar is
+	// still a full page, and counting written would stall the walk.
+	if forward && fetched >= 1000 {
 		hint := 30 * time.Second
 		res.NextRunHint = &hint
 	}

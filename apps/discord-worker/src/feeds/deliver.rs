@@ -159,7 +159,30 @@ pub fn handler(deliver: Arc<Deliver>) -> Arc<dyn JobHandler> {
             match deliver.deliver(job.id, item_id).await {
                 Ok(()) => Disposition::Done,
                 Err(DeliveryError::Permanent(e)) => Disposition::Permanent(e),
-                Err(DeliveryError::Retryable(e)) => Disposition::Retryable(e),
+                Err(DeliveryError::Retryable(e)) => {
+                    // The job is about to be parked `dead`, and a `dead` jobs row
+                    // holds the dedupe key forever — so this item would stay
+                    // `pending`, owed, with no recorded reason. Record it instead.
+                    if job.attempts >= job.max_attempts {
+                        if let Ok(session) = deliver.pool.acquire().await {
+                            let note = format!("attempts exhausted: {e}");
+                            if let Err(err) = store::mark_delivery_failed(
+                                session.client(),
+                                item_id,
+                                job.id,
+                                &note,
+                            )
+                            .await
+                            {
+                                logging::warn(
+                                    "could not record a failed delivery",
+                                    log_fields(vec![("error", serde_json::Value::from(err))]),
+                                );
+                            }
+                        }
+                    }
+                    Disposition::Retryable(e)
+                }
             }
         })
     })

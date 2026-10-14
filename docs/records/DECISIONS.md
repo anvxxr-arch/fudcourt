@@ -2563,7 +2563,7 @@ The class chip's `aria-pressed` flips to the class being shown and the call coun
 
 **Status:** accepted and **verified offline** — `bash scripts/verify/verify-all.sh` ends `VERIFY_ALL_OK`; the data surface was also smoked live on `127.0.0.1:3198` against a deliberately dead Postgres (the `unavailableReader` path). No production deploy was performed.
 
-**Context.** A full audit of every HTTP surface (`apps/data`, `apps/api`, `apps/executor`, `apps/reconciler`, `apps/bot`, and the web gateway) found the `/api/data/*` read surface — 25 routes over the durable store, including the derive pipeline's `/metrics` and `/charts/index` — was **entirely unreachable through the web tier**, and two executor defects. This record captures the fixes and the decisions they encode.
+**Context.** A full audit of every HTTP surface (`apps/data`, `apps/api`, `apps/executor`, `apps/reconciler`, `apps/bot`, and the web gateway) found the `/api/data/*` read surface — 21 routes over the durable store, including the derive pipeline's `/metrics` and `/charts/index` — was **entirely unreachable through the web tier**, and two executor defects. This record captures the fixes and the decisions they encode.
 
 **Decision.**
 
@@ -2574,11 +2574,11 @@ The class chip's `aria-pressed` flips to the class being shown and the call coun
 - THE EXECUTOR API LISTENER IS BOUND SYNCHRONOUSLY. `apps/executor/api.go` claimed in a comment to take the process down on a bind failure but only logged it — so a port conflict left the process answering health while every `/api/executor/*` route 404'd at the web tier. `net.Listen` now runs before `startAPISurface` returns, so an un-bindable address is a construction error `main` exits non-zero on (§34). Pinned by `TestAPISurfaceRefusesOccupiedAddr`.
 - THE EXECUTOR DECODES THE COOKIE ONCE. `readCookie` documented a percent-decode but returned the raw value; `apps/api`'s `readCookieValue` decodes with `url.PathUnescape`. The two are now the same. Measured honestly: for a real base64url token the escape is a **no-op** (`encodeURIComponent` leaves `A–Z a–z 0–9 - _ .` untouched, verified), so this is a parity/doc correction, not a live auth bug — stated that way rather than overstated.
 - NO GZIP ON THE DATA SURFACE (a measured no). A 1000-bar `/ohlcv` body is `274,550 B` identity vs `31,559 B` gzipped (**8.7×**), but the hop is loopback and the parent request is already compressed by Cloudflare at the edge; `BestSpeed` costs ~1.8 ms of p50 CPU to shrink a body nobody pays to move. The figure lives in `apps/data/platform/httpx/bench_json_test.go` so a later change is compared, not guessed.
-- THE SURFACE IS DOCUMENTED. The data platform was absent from `contracts/openapi/fudcourt.yaml` (a blind spot: `check-contract.mjs` only enforced the reverse direction for `executor/` routes). Nine operations and the `DataEnvelope`/`DataError` schemas were added; `openapi_paths` went 37 → 48.
+- THE SURFACE IS DOCUMENTED. The data platform was absent from `contracts/openapi/fudcourt.yaml` (a blind spot: `check-contract.mjs` only enforced the reverse direction for `executor/` routes). Eleven operations and the `DataEnvelope`/`DataError` schemas were added; `openapi_paths` went 54 → 67.
 
 **Evidence (all offline, this session).**
 
-- `verify-all.sh`: `VERIFY_ALL_OK` (all 19 steps; `openapi_paths=48`; `API_CONTRACT_OK documented=48`; `cargo` 17 tests; web typecheck + `test:shapers`).
+- `verify-all.sh`: `VERIFY_ALL_OK` (all 20 steps; `openapi_paths=67`; `API_CONTRACT_OK documented=67`; `cargo` 17 tests; web typecheck + `test:shapers`).
 - Live smoke, `127.0.0.1:3198` with a dead Postgres: `/api/data/assets` → `503 {"error":{"code":"unavailable","message":"data store unavailable: no database pool (research families unaffected)","request_id":"5a49c71d…"}}` with `X-Request-Id` matching the body and `Content-Security-Policy`/`Referrer-Policy`/`X-Content-Type-Options` present; `-H 'X-Request-Id: smoke-abc_123'` adopted verbatim; `POST /api/data/assets` → `405 method_not_allowed`; `/api/data/does-not-exist` → `404 not_found`; `?limit=0` → `400 bad_request`.
 - Benchmarks (`-benchtime=300x`), the new baselines: `BenchmarkHandleOhlcv1000` ~2.87 ms / 1358 KB / 3091 allocs; `BenchmarkHandleList100` ~49 µs; `BenchmarkHandleNotFound` ~6.7 µs; `BenchmarkEncodeIdentity` ~0.42 ms; `BenchmarkGzipRatio` 8.5×/8.7×.
 - Go: `go build ./…`, `go vet ./…`, `go test ./…` all clean.

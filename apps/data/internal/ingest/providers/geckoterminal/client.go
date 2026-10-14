@@ -1,6 +1,7 @@
 package geckoterminal
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -152,7 +153,13 @@ func (c *client) getJSON(ctx context.Context, url string, v any) error {
 		return &HardError{Kind: "status", URL: url, Status: r.StatusCode,
 			Detail: preview(string(b))}
 	}
-	if err := json.Unmarshal(b, v); err != nil {
+	// Decode with UseNumber so a JSON number keeps its exact digits (a float64
+	// would round them): the OHLCV prices arrive as bare JSON numbers and are
+	// read as json.Number spellings before being turned into exact canon.Dec
+	// values.
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
+	if err := dec.Decode(v); err != nil {
 		return &HardError{Kind: "shape", URL: url, Status: r.StatusCode, Detail: err.Error()}
 	}
 	return nil

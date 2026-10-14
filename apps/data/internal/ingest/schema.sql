@@ -668,8 +668,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS liquidation_natural_key
 -- ===========================================================================
 -- DEX Data Platform (docs/dex/audit.md, plan §12/§54). Additive to the frozen
 -- inventory above: new numbered sections 31+. See ADDENDUM B for the original
--- table counts (they are updated here by 13 tables / 8 hypertables / 9 indexes
--- / 2 conditional-unique indexes).
+-- table counts (they are updated here by 17 tables / 14 hypertables / 14
+-- indexes / 1 conditional-unique index).
 --
 -- DELIBERATE NUMERIC DEVIATION FROM THE §2 CONVENTION: the tables above carry
 -- money as double precision because their upstreams are IEEE numbers. The DEX

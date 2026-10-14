@@ -181,6 +181,18 @@ func NewPipeline(r canon.Reader, w canon.Writer, reg *Registry, defaultWindow in
 // canon Reader's zero-limit convention) - a backfill computes the whole
 // history, an incremental pass reads its warmup.
 func (p *Pipeline) Run(ctx context.Context, spec MetricSpec, sourceSeriesID string, window int) error {
+	// Validate the spec BEFORE the read: an invalid spec must fail with its own
+	// error, not with ErrEmptyInput from an empty series (which would mask a
+	// wiring bug as an empty-input condition), and must not cost a read.
+	if spec.Domain == "" {
+		return errors.New("derive: spec needs a domain")
+	}
+	if spec.SubjectKey == "" {
+		return errors.New("derive: spec needs a subject key")
+	}
+	if _, ok := p.reg.Lookup(spec.Metric); !ok {
+		return fmt.Errorf("%w: %q", ErrUnknownProcessor, spec.Metric)
+	}
 	if window <= 0 {
 		window = p.readWindow(spec)
 	}

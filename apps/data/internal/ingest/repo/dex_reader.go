@@ -118,8 +118,12 @@ func (r *Repo) ListDexPools(ctx context.Context, q dexstore.DexPoolQuery) ([]can
 		f.add("volume_24h_usd >= "+f.nextArg(), *q.MinVolume24hUSD)
 	}
 	if !q.BeforeAt.IsZero() || q.BeforePoolID != "" {
-		c1 := f.nextArg()
-		f.add("(at, pool_id) < ("+c1+", "+f.nextArg()+")", q.BeforeAt, q.BeforePoolID)
+		// Both placeholder numbers must be captured BEFORE f.add appends the
+		// args: nextArg is a pure computation over len(f.args), so calling it
+		// twice around one add yields the same $N twice and the second value
+		// binds to the first placeholder.
+		c1, c2 := f.nextArg(), "$"+itoa(len(f.args)+2)
+		f.add("(at, pool_id) < ("+c1+", "+c2+")", q.BeforeAt, q.BeforePoolID)
 	}
 	sql := `SELECT pool_id, at, chain_id, dex_venue_id, address, base_asset_id, quote_asset_id,
 		base_symbol, quote_symbol, fee_tier_bps, price, liquidity_usd, volume_24h_usd,

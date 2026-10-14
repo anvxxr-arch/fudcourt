@@ -152,9 +152,18 @@ fn digest(s: &str) -> String {
 pub fn clean(raw: &str, cap: usize) -> String {
     let mut out = String::with_capacity(raw.len().min(cap * 2));
     let mut in_tag = false;
-    for ch in raw.chars() {
+    let chars: Vec<char> = raw.chars().collect();
+    for (i, ch) in chars.iter().copied().enumerate() {
         match ch {
-            '<' => in_tag = true,
+            '<' => {
+                // Only a tag opener when what follows can start a tag name; a
+                // bare `<` in a title ("5 < 6") is text, not markup.
+                let next = chars.get(i + 1).copied().unwrap_or(' ');
+                in_tag = next.is_ascii_alphabetic() || next == '/' || next == '!' || next == '?';
+                if !in_tag {
+                    out.push(ch);
+                }
+            }
             '>' if in_tag => in_tag = false,
             _ if in_tag => {}
             _ => out.push(ch),

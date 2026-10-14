@@ -84,7 +84,7 @@ const (
 
 	// DEX Data Platform kinds (docs/dex/audit.md §4). These are NEW namespaces,
 	// not reuses: a Swap is pool-keyed (the plan's §15 idempotency key is
-	// chain+tx_hash+log_index), where the existing KindTrade/Trade is
+	// chain+tx_hash+log_index), where the existing Trade entity is
 	// venue+instrument-keyed with a provider-assigned trade id. Same for
 	// KindCandle: a DEX candle is pool-keyed, where Ohlcv is
 	// instrument+venue-keyed. They mint with the same MintID rule and the same
@@ -257,13 +257,9 @@ func PredictKey(provider, providerMarketID string) string {
 // same id for the same entity and a renamed token cannot fork its identity.
 //
 // The one coordinate that is a TIMESTAMP - the candle's open time - is spelled
-// as a fixed-width UTC layout so the key is a pure function of the bar it
-// names: a 1m bar opening 2026-10-12T00:00:00Z and one opening 12:00:00Z mint
-// different ids, and re-deriving either mints the same id again.
-
-// candleTimeLayout is the fixed-width UTC spelling of a candle's open time in
-// its natural key. RFC3339 in UTC keeps it lexically sortable and unambiguous.
-const candleTimeLayout = "2006-01-02T15:04:05Z"
+// as a Unix epoch second so the key is a pure function of the bar it names: a
+// 1m bar opening 2026-10-12T00:00:00Z and one opening 12:00:00Z mint different
+// ids, and re-deriving either mints the same id again.
 
 // DeploymentKey builds a protocol deployment's natural key: one protocol's
 // contract set on one chain. A protocol with a distinct deployment per chain
