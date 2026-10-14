@@ -676,7 +676,13 @@ worker's `cron` crate and this server does not grow a parser to have an opinion;
 that passes here and is refused there is recorded against the definition by the tick that
 evaluates it, where the panel shows it. The shape check is strict and the refusal is named
 (`"must be numbers"` for `JAN`) rather than accepted into a definition that could not be anchored
-here. Go: scheduler 8 → 24 tests.
+here. Go: the scheduler's test functions go 5 → 11 — 29 cases once the validation table's subtests
+are counted, against 146 passing cases in the package — and the write path's SQL gets a live
+Postgres round-trip of its own (`scheduler_pg_test.go`, skipped without `FUDCOURT_TEST_PG_URL`),
+because a fake cannot check a WHERE clause inside an upsert: it pins that a feed's name is
+refused and the feed's row keeps its anchor, that a refusal on the SECOND definition writes
+nothing (the rollback, not an empty transaction), and that dropping a definition removes ours
+while sparing the feed's poll.
 
 **`eb4a649` — the contract and the proxy.** `POST` on `/api/admin/scheduler` in
 `contracts/openapi/fudcourt.yaml` (the refusals, the 409, and why a cron is unanchored), and
