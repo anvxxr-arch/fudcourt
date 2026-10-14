@@ -14,7 +14,7 @@ against the real repo — no green-by-disabling. Status is the truth, not the in
 | 4 | Moderation | ✅ done | full case lifecycle, case numbers, `/case` `/history`, hierarchy refusals (commit `c84edde`) |
 | 5 | AutoMod / anti-spam | ✅ done | rule engine (13 matchers) + deterministic scoring + window state + service + listeners/intents + `automod_rules` store & loopback read; live E2E proven (commits `15ce98a`,`0c875c7`,`b886fb7`,`5007dcd`) |
 | 6 | Logging / audit | ✅ done | per-category activity logs (7 categories → routed channels) + audit trail (before/after JSONB); bot mappers + logger + audit client, api store/routes/internal reads; live E2E proven |
-| 7 | Community features | ⬜ todo | welcome/goodbye, autoroles, reaction/button/select role panels |
+| 7 | Community features | ✅ done | welcome/goodbye + autoroles + reaction/button/select role panels; `welcome_configs`/`autorole_rules`/`role_panels`/`role_panel_options`/`role_assignments` stores, one loopback read + admin routes, bot services + listeners; live PG round-trip proven (commit `23431fe`) |
 | 8 | Custom commands | ⬜ todo | declarative only; no executable scripting |
 | 9 | Worker foundation | ⬜ todo | durable job claim (`FOR UPDATE SKIP LOCKED`), retry/backoff, idempotency |
 | 10 | Scheduler | ⬜ todo | one-time / interval / cron, explicit TZ, restart-safe |
@@ -87,7 +87,44 @@ ever needs to share the windows.
    green. Live E2E: internal read returns the enabled map, an audit POST persists
    with the configured guild id, an unrouted/disabled category is absent.
 
-## Next phase — 7, Community features
+## Phase 7 as delivered — Community features
+
+1. **Welcome / goodbye** — `welcome_configs` (one row per guild): join and leave
+   channels, a plain message or an embed, and a join DM. The bot renders `{user}`,
+   `{mention}`, `{server}`, `{member_count}` and `{created_at}` (the snowflake IS
+   the creation time, so `<t:…:D>` needs no API call). A join message with no
+   channel is forced disabled on write, so a half-configured welcome can never
+   silently no-op.
+2. **Autoroles** — `autorole_rules` (kind ∈ `on_join|after_duration|
+   after_verification`, `appliesTo` ∈ `all|human|bot`, delay ≤ 30 d, priority).
+   Grants are hierarchy-guarded and every attempt — **including a failure** — is
+   written to `role_assignments`; that is what makes "why didn't this member get
+   the role?" answerable after the fact.
+3. **Role panels** — `role_panels` + `role_panel_options`, three kinds (reaction,
+   button, select) and four modes (toggle, single, multiple, exclusive). A panel
+   `id` is an operator slug carried in the Discord custom-id `rp:<id>:<roleId>`, so
+   a button/select needs no message lookup; `exclusive_group` on the option makes a
+   pick clear its siblings. `GUILD_MESSAGE_REACTIONS` + the two reaction listeners
+   cover the reaction kind; `interactionCreate` routes `MessageComponent` to the
+   panel handler for the other two.
+4. **One loopback read** — the bot carries no Postgres driver, so
+   `GET /api/internal/community/config` returns `{autoroles, panels, welcome?}` in
+   a single hop; the admin read/write routes sit behind the admin tier. Both
+   replace-as-a-unit writes (autoroles, panels) run in one transaction and are
+   audited (`welcome.set`, `autoroles.replace`, `role_panels.replace`).
+5. **Dashboard** — thin Next proxies for `/api/admin/{welcome,autoroles,
+   role-panels,role-assignments}` (Cookie in, upstream response replayed
+   verbatim); the phase-6 `/api/admin/logs/{destinations,audit}` proxies the
+   contract gate required were added alongside them.
+6. **Tests** — 6 bot suites (welcome, autorole, panels, panel, roles, templates;
+   241 total pass, `tsc` clean) + Go handler tests + a **live**
+   `community_pg_test.go` round-trip against the real schema, skipped unless
+   `FUDCOURT_TEST_PG_URL` is set. That live test is the reason two schema↔code
+   mismatches (a single welcome-embed column where the code wanted join/leave, and
+   `role_panel_options` missing `guild_id`/`exclusive_group`) were caught — the
+   fake-store tests could not see them.
+
+## Next phase — 8, Custom commands
 
 ## Guardrails carried through every phase
 
