@@ -6,6 +6,7 @@ import { Meter } from '@/ui/meter';
 import MemberTable from '@/features/admin/members-table';
 import SettingsPanel from '@/features/admin/settings-panel';
 import CasesPanel from '@/features/admin/cases-panel';
+import SchedulerPanel from '@/features/admin/scheduler-panel';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -74,6 +75,16 @@ export default async function AdminPage() {
           The same case log Discord moderation commands write to. Filter by a member id for their history, or a case number.
         </p>
         <CasesPanel />
+      </section>
+
+      <section style={{ marginTop: space[32] }}>
+        <h2 style={{ fontSize: fontSize[15], color: themeColor.labelPrimary, margin: `0 0 ${space[4]}px` }}>Scheduler</h2>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
+          The bot&apos;s own scheduled jobs — a message to a channel, or a health ping to prove the
+          pipeline. Saved in one transaction and run by the worker&apos;s tick; the feeds&apos; poll
+          definitions appear here read-only, because they are written together with their feed.
+        </p>
+        <SchedulerPanel />
       </section>
 
       <section style={{ marginTop: space[32] }}>
