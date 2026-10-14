@@ -602,3 +602,26 @@ actually be delivered. (2) The `/api/v1` prefix question over the existing 23 pa
 "web proxy for scheduler" note above is STALE: the proxy exists (`/api/admin/scheduler` is one
 of the `web_proxies=15` the gate prints), so that first sliver of phase 13 shipped with the
 panel.
+
+**Plus `734ef4d` — the gate was not hermetic, and that turned it red.** `verify-all.sh` is
+OFFLINE by contract and says so in its own header, but its worker step inherited
+`FUDCOURT_TEST_PG_URL` from the caller's shell, so following the repo's own instructions
+(`set -a; . ./.env; set +a`) turned that step into a PARALLEL run of the three live suites. They
+share global state — `store::due` scans EVERY definition, and the feeds suite shares one feed
+space — so the gate went red with five db tests failed in 1.08s and a log that named no code
+defect. Two fixes: the step strips the variable itself (`env -u`, with a note printed when the
+caller had it set), and the db suites got their own entry point,
+`scripts/verify/verify-live.sh`, which sets `--test-threads=1` (the flag they require) and
+REFUSES a DSN that does not name a `_test` database: `/fudcourt` is one segment away from
+`/fudcourt_test` and the price of getting it wrong is the live rows. Three guards verified by
+running them — unset → exit 2, production DSN → exit 2, non-`_test` name → exit 2 — then the
+real run → **`LIVE_SUITES_OK`, 29/29**. Gate re-run with the variable deliberately still
+exported: **`VERIFY_ALL_OK`**, worker lib 119, the live suites at 0.00s (skipped),
+`go_paths=23 documented=67 web_proxies=15`.
+
+**And a trap written down at the step itself.** A SKIPPED live suite still reports "8 passed" —
+an early return counts as a pass — and its `skipping:` notice is captured by libtest and printed
+only for a FAILING test. So the only thing in a gate log that separates a real run from a skip
+is the DURATION: 0.00s is the skip, while a real feeds run takes ~1s and the three suites take
+seconds together. Reading "8 passed" as coverage is exactly how the db suites spent a day
+believed-green.
