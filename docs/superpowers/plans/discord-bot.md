@@ -625,3 +625,65 @@ only for a FAILING test. So the only thing in a gate log that separates a real r
 is the DURATION: 0.00s is the skip, while a real feeds run takes ~1s and the three suites take
 seconds together. Reading "8 passed" as coverage is exactly how the db suites spent a day
 believed-green.
+
+## Phase 13 (cont.) — the scheduler panel writes, and the WORKER anchors the cron
+
+**Two commits, and the split is the point: the panel was not allowed to compute a cron's first
+occurrence.**
+
+**`3c6bc58` — `fix(discord-worker): anchor an unanchored definition instead of never running
+it`.** `store::due` required `next_run_at IS NOT NULL`, so a definition written without an anchor
+was enabled, visible in the dashboard, and PERMANENTLY DEAD — nothing would ever set its first
+occurrence. That is exactly the shape the dashboard has to write: the Go api owns neither a cron
+parser nor a timezone database, and computing the first occurrence there would mean a second
+implementation of "next occurrence" that can disagree with the one that fires. So the tick owns
+it — a NULL `next_run_at` is now DUE, and the tick anchors it with the same parser it will use
+forever after. The outcome is a separate `Materialized::Anchored`, counted apart from
+`materialized`, because an ANCHOR IS NOT A RUN: `store::anchor` sets the anchor, clears a stale
+error and resets the failure counter, and deliberately does NOT touch `last_run_at` (`advance`
+does), so the panel cannot claim a run that never happened. An unanchored `once` whose instant
+has already passed is skipped WITH A REASON rather than fired late — the same no-backfill policy
+the tick applies to a due definition — and it retries and parks like any other broken schedule.
+scheduler_live 9 → 11: anchor-then-fire in two ticks, and the past-`once` skip.
+
+**`c08e0da` — `feat(api,scheduler): the write path, guarded by job_kind ownership`.** `POST
+/api/admin/scheduler` replaces this panel's rows in one transaction, keyed on `name`. The
+ownership rule IS the write path: the upsert carries `WHERE scheduled_jobs.job_kind <>
+'feed.poll'` and the delete carries `AND job_kind <> 'feed.poll'`. A wholesale replace without
+them would delete the feeds' polls, and the symptom would not be an error — the feeds panel's
+LEFT JOIN falls back to its default cadence — so the operator would see "my feed stopped
+updating hours ago" long after the save that did it. When the predicate swallows a row nothing is
+returned, and `pgx.ErrNoRows` becomes a **409** naming the definition and its owner: "saved" and
+"did not save" must never look the same.
+
+**Anchoring, restated for the write path.** `once` is its own instant and `interval` is
+arithmetic, so the panel anchors both — `once` AT the instant, `interval` one interval AHEAD
+(deliberately the opposite of the feeds path, which writes `now()`: a feed wants its first poll
+immediately, an operator writing "every 24h" does not expect a message the second they save).
+`cron` is stored NULL and the tick anchors it. Editing the SCHEDULE re-anchors a definition (the
+stored occurrence was computed for the old expression); editing only the payload or `enabled`
+leaves the next occurrence alone.
+
+**What the panel refuses, and what it deliberately does not decide.** `jobKind` is an allow-list
+— `discord.message`, plus `health.ping`, which the worker registers without any configuration
+and which is therefore how you prove schedule → tick → claim → run → history before Discord is
+even reachable — with an explicit refusal of `feed.poll` that names the feeds panel. Names are
+stored trimmed (so `"news "` and `"news"` cannot become two rows under the UNIQUE constraint),
+`interval` is bounded 60..604800 (the feeds' own bounds: both answer "how often may this bot
+act"), and a `discord.message` payload is checked for a snowflake channel and 1..1900 characters.
+Cron is checked for SHAPE only — 5/6/7 fields of `[0-9*,-/]` — because its MEANING is the
+worker's `cron` crate and this server does not grow a parser to have an opinion; an expression
+that passes here and is refused there is recorded against the definition by the tick that
+evaluates it, where the panel shows it. The shape check is strict and the refusal is named
+(`"must be numbers"` for `JAN`) rather than accepted into a definition that could not be anchored
+here. Go: scheduler 8 → 24 tests.
+
+**`eb4a649` — the contract and the proxy.** `POST` on `/api/admin/scheduler` in
+`contracts/openapi/fudcourt.yaml` (the refusals, the 409, and why a cron is unanchored), and
+`POST` plus a body pass-through on the web proxy. The proxy stays rule-free on purpose: a proxy
+that decided which names were writable would be a second place the ownership rule could drift
+from the SQL that enforces it.
+
+**Remaining, revised.** Item (1) above is DONE. Item (3) — the "proxy is GET-only" note — is
+resolved by `eb4a649`. What is left in phase 13 is the dashboard UI for this panel (the editor
+that sends this body) and the other resource groups.
