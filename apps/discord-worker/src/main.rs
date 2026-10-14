@@ -24,12 +24,15 @@ use fudcourt_discord_worker::scheduler::tick::{Tick, TICK_KIND};
 use fudcourt_discord_worker::storage::{jobs, Pool};
 use fudcourt_discord_worker::{health, logging as log};
 
-/// Job kinds this build implements.
+/// The kinds whose body is [`Noop`].
 ///
-/// Phase 9 ships the runtime and two kinds that prove it end to end. The
-/// scheduler (phase 10) and the feeds pipeline (phase 11) register the real kinds
-/// through the same `Registry`, so nothing here has to change when they land.
-const KINDS: &[&str] = &["noop", "health.ping"];
+/// NOT the list of kinds this build implements: the real ones are registered below
+/// and only when the deployment can support them (each needs a guild, and the two
+/// that post need a token). Adding a real kind HERE would register it as a no-op —
+/// the job would report success while doing nothing — so `noop` is the runtime's own
+/// smoke kind and `health.ping` is the same body under a name that reads as what it
+/// is: a job whose only observable effect is a `job_runs` row.
+const NOOP_KINDS: &[&str] = &["noop", "health.ping"];
 
 #[tokio::main]
 async fn main() {
@@ -168,7 +171,7 @@ fn registry(
     let noop: Arc<dyn fudcourt_discord_worker::handlers::JobHandler> = Arc::new(Noop);
     // `health.ping` is the same no-op body under a name that reads as what it is:
     // a job whose only observable effect is a `job_runs` row.
-    for kind in KINDS {
+    for kind in NOOP_KINDS {
         registry.register(*kind, noop.clone());
     }
     match (tick, guild_id.clone()) {
