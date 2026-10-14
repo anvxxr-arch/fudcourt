@@ -143,5 +143,29 @@ export interface ReadyPayload {
   application?: { id: string; flags?: number };
 }
 
+/** The subset of a MESSAGE_CREATE payload AutoMod reads. */
+export interface DiscordMessage {
+  id: string;
+  channel_id: string;
+  guild_id?: string;
+  content?: string;
+  author?: DiscordUser;
+  /** Users mentioned in the message (each carries an id). */
+  mentions?: Array<{ id: string }>;
+  /** Role ids mentioned (for exempt-role evaluation). */
+  mention_roles?: string[];
+  attachments?: unknown[];
+  /** Present on a guild message — the author's member record (roles). */
+  member?: GuildMember;
+}
+
+/** The subset of a GUILD_MEMBER_ADD payload AutoMod reads. */
+export interface MemberAddPayload {
+  user?: DiscordUser;
+  roles?: string[];
+  joined_at?: string;
+  guild_id?: string;
+}
+
 /** Ephemeral flag bit (1 << 6) — used to make a reply visible only to the caller. */
 export const EPHEMERAL_FLAG = 1 << 6;

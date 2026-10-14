@@ -201,6 +201,16 @@ export class Rest {
     return this.request("DELETE", `/channels/${channelId}/messages/${messageId}`, undefined, { reason: opts.reason });
   }
 
+  /** PUT /guilds/{g}/members/{u}/roles/{r} — grant a role (204). */
+  addGuildMemberRole(guildId: string, userId: string, roleId: string, opts: { reason?: string } = {}): Promise<void> {
+    return this.request("PUT", `/guilds/${guildId}/members/${userId}/roles/${roleId}`, undefined, { reason: opts.reason });
+  }
+
+  /** DELETE /guilds/{g}/members/{u}/roles/{r} — revoke a role (204). */
+  removeGuildMemberRole(guildId: string, userId: string, roleId: string, opts: { reason?: string } = {}): Promise<void> {
+    return this.request("DELETE", `/guilds/${guildId}/members/${userId}/roles/${roleId}`, undefined, { reason: opts.reason });
+  }
+
   /** PATCH /channels/{c} — modify a channel (rate_limit_per_user is slowmode seconds). */
   modifyChannel(
     channelId: string,

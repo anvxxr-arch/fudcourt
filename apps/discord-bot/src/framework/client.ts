@@ -10,9 +10,11 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { applyRemoteConfig, fetchRemoteConfig, type BotConfig } from "../config.ts";
+import type { AutomodService } from "../automod/service.ts";
+import { buildAutomod } from "../automod/wiring.ts";
 import { CaseLog, type CaseLogLike } from "../lib/cases.ts";
 import { Command, parseOptions, type CommandContext, type ParsedOptions } from "./command.ts";
-import { Gateway, INTENTS_GUILDS } from "./gateway.ts";
+import { Gateway, INTENTS_BOT } from "./gateway.ts";
 import { Listener } from "./listener.ts";
 import { Precondition } from "./precondition.ts";
 import { Rest } from "./rest.ts";
@@ -33,6 +35,8 @@ export interface ClientOptions {
   log?: (msg: string) => void;
   /** Injectable case store (tests); defaults to a loopback CaseLog on config.apiUrl. */
   cases?: CaseLogLike;
+  /** Injectable AutoMod service (tests); defaults to the loopback-backed builder. */
+  automod?: AutomodService;
   /** Injectable gateway factory for tests. */
   gatewayFactory?: (token: string, onEvent: (event: string, data: unknown) => void) => Gateway;
 }
@@ -44,6 +48,8 @@ export class FudzieClient {
   readonly rest: Rest;
   /** The moderation-case store the api owns; the bot only talks to it over loopback. */
   readonly cases: CaseLogLike;
+  /** AutoMod: rule evaluation + anti-spam windows + action delivery. */
+  readonly automod: AutomodService;
   readonly commands = new CommandStore();
   readonly listeners = new ListenerStore();
   readonly preconditions = new PreconditionStore();
@@ -60,6 +66,7 @@ export class FudzieClient {
     this.rest = opts.rest ?? new Rest(opts.config.token);
     this.logFn = opts.log ?? ((m) => console.log(m));
     this.cases = opts.cases ?? new CaseLog(opts.config.apiUrl, this.logFn);
+    this.automod = opts.automod ?? buildAutomod(this);
     this.gatewayFactory = opts.gatewayFactory;
   }
 
@@ -203,7 +210,7 @@ export class FudzieClient {
       this.gatewayFactory?.(this.config.token, (event, data) => this.dispatch(event, data)) ??
       new Gateway({
         token: this.config.token,
-        intents: INTENTS_GUILDS,
+        intents: INTENTS_BOT,
         gatewayUrl: gw.url,
         log: (m) => this.log(m),
       });
