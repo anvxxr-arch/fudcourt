@@ -34,6 +34,13 @@ pub struct Config {
     /// Loopback address for `/healthz` and `/readyz`. `None` disables the
     /// listener; a bind failure is logged and non-fatal either way.
     pub health_addr: Option<String>,
+    /// The single guild this bot serves. The scheduler needs an owner for the tick
+    /// chain, so without it the worker still runs but the scheduler stays off —
+    /// logged loudly rather than guessed.
+    pub guild_id: Option<String>,
+    /// How often the scheduler tick runs, in seconds. A tick schedules its own
+    /// successor, so this is the whole scheduler's heartbeat.
+    pub tick_interval_secs: i64,
 }
 
 impl Config {
@@ -65,6 +72,13 @@ impl Config {
             .map(str::to_string)
             .unwrap_or_else(default_worker_id);
 
+        let tick_interval_secs = num("SCHEDULER_TICK_SECS", 60)? as i64;
+        if tick_interval_secs < 1 {
+            // A zero interval would make every tick schedule its successor at the
+            // same instant it is running, which is a spin, not a schedule.
+            return Err("SCHEDULER_TICK_SECS must be at least 1".to_string());
+        }
+
         Ok(Self {
             database_url,
             valkey_url: first(&["FUDCOURT_VALKEY_URL", "VALKEY_URL"]).map(str::to_string),
@@ -81,6 +95,8 @@ impl Config {
                 Some(addr) => Some(addr.to_string()),
                 None => Some(DEFAULT_HEALTH_ADDR.to_string()),
             },
+            guild_id: first(&["FUDCOURT_GUILD_ID", "DISCORD_GUILD_ID"]).map(str::to_string),
+            tick_interval_secs,
         })
     }
 }
@@ -147,6 +163,8 @@ mod tests {
         assert_eq!(cfg.stale_claim_secs, 300);
         assert_eq!(cfg.reap_interval, Duration::from_secs(60));
         assert_eq!(cfg.shutdown_grace, Duration::from_secs(25));
+        assert_eq!(cfg.tick_interval_secs, 60);
+        assert!(cfg.guild_id.is_none(), "the guild is never guessed");
         assert!(cfg.valkey_url.is_none());
     }
 
@@ -185,6 +203,38 @@ mod tests {
     #[test]
     fn the_generated_worker_id_is_not_empty() {
         assert!(!default_worker_id().is_empty());
+    }
+
+    #[test]
+    fn the_scheduler_knobs_are_read() {
+        let cfg = Config::from_pairs(&vars(&[
+            ("DATABASE_URL", "host=x"),
+            ("FUDCOURT_GUILD_ID", "123456789"),
+            ("SCHEDULER_TICK_SECS", "15"),
+        ]))
+        .unwrap();
+        assert_eq!(cfg.guild_id.as_deref(), Some("123456789"));
+        assert_eq!(cfg.tick_interval_secs, 15);
+    }
+
+    #[test]
+    fn a_zero_tick_interval_is_rejected_rather_than_spinning() {
+        let err = Config::from_pairs(&vars(&[
+            ("DATABASE_URL", "host=x"),
+            ("SCHEDULER_TICK_SECS", "0"),
+        ]))
+        .unwrap_err();
+        assert!(err.contains("SCHEDULER_TICK_SECS"), "got {err}");
+    }
+
+    #[test]
+    fn the_bare_discord_guild_id_is_accepted() {
+        let cfg = Config::from_pairs(&vars(&[
+            ("DATABASE_URL", "host=x"),
+            ("DISCORD_GUILD_ID", "999"),
+        ]))
+        .unwrap();
+        assert_eq!(cfg.guild_id.as_deref(), Some("999"));
     }
 
     #[test]

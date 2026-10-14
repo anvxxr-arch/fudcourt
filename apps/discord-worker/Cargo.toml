@@ -22,7 +22,16 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "signa
 # The system of record is local Postgres over loopback, so `NoTls` (DR-040).
 # `with-serde_json-1` is what maps `jsonb` <-> `serde_json::Value`; it is not a
 # default feature.
-tokio-postgres = { version = "0.7", features = ["with-serde_json-1"] }
+tokio-postgres = { version = "0.7", features = ["with-serde_json-1", "with-chrono-0_4"] }
+
+# Scheduling. `chrono` + `chrono-tz` because every schedule carries an EXPLICIT
+# timezone (the footer of §20 of the brief) and DST has to be resolved at the
+# boundary, not guessed; `cron` parses the expression only, it has no notion of a
+# zone, so the cron path is resolved by mapping local wall-clock through the zone
+# (see `scheduler::schedule::resolve_local`).
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+chrono-tz = "0.10"
+cron = "0.12"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Optional advisory lock only: `VALKEY_URL` unset means the lock is a no-op and

@@ -20,6 +20,7 @@ use fudcourt_discord_worker::jobs::runner::{Runner, RunnerOptions};
 use fudcourt_discord_worker::jobs::Backoff;
 use fudcourt_discord_worker::locks::Lock;
 use fudcourt_discord_worker::logging::{self, fields};
+use fudcourt_discord_worker::scheduler::tick::{Tick, TICK_KIND};
 use fudcourt_discord_worker::storage::{jobs, Pool};
 use fudcourt_discord_worker::{health, logging as log};
 
@@ -72,7 +73,36 @@ async fn run() -> Result<(), String> {
         );
     }
 
-    let registry = Arc::new(registry());
+    // The scheduler needs an owner for its tick chain; without a guild it stays off
+    // and the reason is logged rather than guessed at.
+    let tick = cfg
+        .guild_id
+        .is_some()
+        .then(|| Tick::new(pool.clone(), cfg.tick_interval_secs));
+    let registry = Arc::new(registry(tick.clone(), cfg.guild_id.clone()));
+
+    // Bootstrap the chain. The key is the scheduled instant, so a restart collides
+    // with whatever the previous chain already queued instead of forking a second
+    // one; a worker that was down past that instant just claims it late.
+    if let (Some(tick), Some(guild_id)) = (tick.as_ref(), cfg.guild_id.as_deref()) {
+        match tick.enqueue_tick(guild_id, chrono::Utc::now()).await {
+            Ok(_) => log::info_map(
+                "scheduler chain ready",
+                fields(vec![
+                    ("guild_id", serde_json::Value::from(guild_id)),
+                    (
+                        "tick_secs",
+                        serde_json::Value::from(cfg.tick_interval_secs as u64),
+                    ),
+                ]),
+            ),
+            Err(e) => log::warn(
+                "the scheduler chain could not be started",
+                fields(vec![("error", serde_json::Value::from(e))]),
+            ),
+        }
+    }
+
     log::info_map(
         "handlers registered",
         fields(vec![(
@@ -118,13 +148,35 @@ async fn run() -> Result<(), String> {
 }
 
 /// The `kind` -> handler table for this build.
-fn registry() -> Registry {
+///
+/// The scheduler registers here like anything else: its tick is an ordinary job, so
+/// it is claimed, retried, backed off and dead-lettered by the same runtime that
+/// runs everything else.
+fn registry(tick: Option<Arc<Tick>>, guild_id: Option<String>) -> Registry {
     let mut registry = Registry::new();
     let noop: Arc<dyn fudcourt_discord_worker::handlers::JobHandler> = Arc::new(Noop);
     // `health.ping` is the same no-op body under a name that reads as what it is:
     // a job whose only observable effect is a `job_runs` row.
     for kind in KINDS {
         registry.register(*kind, noop.clone());
+    }
+    match (tick, guild_id) {
+        (Some(tick), Some(guild_id)) => {
+            registry.register(
+                TICK_KIND,
+                fudcourt_discord_worker::scheduler::tick::handler(tick, guild_id),
+            );
+        }
+        // No guild means no owner for the tick chain, so the kind is left
+        // unregistered: a `scheduler.tick` job would then fail loudly as an unknown
+        // kind instead of silently doing nothing.
+        _ => logging::warn(
+            "scheduler not registered",
+            fields(vec![(
+                "hint",
+                serde_json::Value::from("set FUDCOURT_GUILD_ID to enable it"),
+            )]),
+        ),
     }
     registry
 }

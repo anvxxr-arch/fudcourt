@@ -249,10 +249,115 @@ committed); that hunk was left untouched and is not part of this phase.
 **Note on schema application.** Same deploy rule as phase 8 — the new tables must be applied
 AS the app role `fudcourt`, not the superuser, or the service gets `permission denied`.
 
-## Next phase — 10, Scheduler
+## Phase 10 as delivered — Scheduler
+
+**One mechanism, not two.** A definition is *materialized* into an ordinary `jobs` row.
+That single decision is why restart-safety falls out for free: the claim path is already
+atomic, retry/backoff already exists, a dead job is already parked, and `job_runs` is
+already the execution log. The scheduler adds no second delivery path and no second source
+of truth for status.
+
+**Storage** (`db/schema/pg-schema.sql`), two tables:
+
+- `scheduled_jobs` — one row per schedule the dashboard manages: `schedule_kind`
+  (`once`/`interval`/`cron`, CHECK-constrained), `schedule_expr`, an **explicit IANA
+  `timezone`**, `job_kind`, `payload`, `enabled`, `next_run_at`, `attempts`/`max_attempts`,
+  `last_status`/`last_error`, `UNIQUE (guild_id, name)`. A partial index
+  (`WHERE enabled AND next_run_at IS NOT NULL`) is the entire due scan.
+- `scheduled_job_runs` — the occurrence **ledger**: `(definition_id, occurrence_at)` is
+  **UNIQUE**, which is the outer idempotency backstop. `jobs.(guild_id, kind, dedupe_key)`
+  is the inner guard; the ledger is the one that survives a partial failure.
+
+`last_status`/`last_error` describe the **scheduler's** health (did materialization work),
+not the delivery's. Delivery health is in `job_runs`, reachable via
+`scheduled_job_runs.job_id`. Two counters for one concept is how they drift apart, so each
+level owns exactly one.
+
+**Schedule arithmetic is timezone-first** (`scheduler::schedule`, pure and unit-tested).
+Every definition carries an IANA zone, and the answer is computed *in* that zone: the cron
+path reads the current wall-clock in the zone, feeds it to the parser as though it were UTC,
+takes the next match, then resolves that naive wall-clock back into the zone. Computing in
+UTC and labelling the result would fire `0 9 * * *` at 09:00 UTC — seven hours late for WIB.
+
+DST is a boundary decision, not an accident (`resolve_local`): an unambiguous wall-clock is
+used as-is; an **ambiguous** one (fall-back, the same wall-clock twice) takes the
+**earliest** instant, so the choice is deterministic; a **nonexistent** one (spring-forward
+gap) advances to the first instant at which it exists, so the occurrence is neither dropped
+nor invented.
+
+Cron expressions are accepted in the **5-field crontab form** the dashboard and every
+crontab on the box use (`0 9 * * *`); the seconds field the parser requires is supplied
+internally. A field count that is neither 5 nor 6/7 is rejected by name.
+
+**No backfill, by decision.** `next_after` always returns the next occurrence *strictly
+after* `now`, so a worker that was down for an hour resumes at the next scheduled time
+instead of dumping every missed occurrence at once. For a bot that posts reminders and
+digests, a burst of stale messages is a worse failure than a skipped one.
+
+**Materialization is one statement.** A data-modifying CTE inserts the ledger row, the job
+row, and the link between them. `ON CONFLICT DO NOTHING` on the ledger makes a re-tick, a
+race, or a restart re-materialize nothing, and the tick advances the definition anyway —
+which is exactly what has to happen, so "already done" is a success, not an error.
+
+**The tick schedules its own successor first.** The next tick's identity is derived from
+this tick's own `scheduled_at` (+ interval), **not** from `now`, so a retry produces the same
+key and collides instead of forking a chain. Enqueueing before doing any work means a tick
+that panics, hangs or dead-letters cannot break the chain: the next tick is already queued
+and is claimed as soon as a worker is up. The tick is registered as a handler like any
+other, so it is claimed, retried and dead-lettered by the same runtime.
+
+**A broken schedule is parked, not spun.** A cron the evaluator rejects (or one with no
+future occurrence) leaves `next_run_at` untouched, records `last_error`, and climbs
+`attempts`; at `max_attempts` the definition is set `enabled = false` for a human. Cost is
+one evaluation per tick, not a hot loop. A `once` that has fired retires itself
+(`enabled = false`, `next_run_at = NULL`).
+
+**Configuration is bootstrap-only.** The guild id (`FUDCOURT_GUILD_ID`) and the heartbeat
+(`SCHEDULER_TICK_SECS`, default 60, guarded against 0 so it cannot spin) read the
+environment. Which jobs exist, when they run, in which zone, with which payload — all
+Postgres rows, so changing them never needs a restart. Without a guild id the scheduler is
+left unregistered and says so, rather than registering a tick that cannot work.
+
+**Verification (all actually run).**
+- `cargo build --release` clean; `cargo fmt --check` exit 0;
+  `cargo clippy --all-targets --all-features -- -D warnings` no errors (which is what forced
+  `store::upsert` from eleven positional arguments into a `NewDefinition` struct — at that
+  width a caller can swap two adjacent strings and the compiler cannot tell).
+- `cargo test --release`: **61 passed**, 0 failed (20 new: schedule arithmetic, zone
+  handling, DST boundaries, cron parsing, `ScheduleKind`, the config knobs).
+- `cargo test --test jobs_live`: **12 passed** — unchanged, so phase 9's guarantees still hold
+  on the extended schema.
+- `cargo test --test scheduler_live`: **9 passed**, against the real database — a due
+  definition becoming exactly one job with the definition advanced by one interval; forcing
+  the same occurrence back and re-ticking materializing **nothing new** (the ledger refusing
+  it, and reporting `already_done`); a not-yet-due definition left completely alone; the
+  materialized job carrying the occurrence in `dedupe_key`, the payload, and `run_at`; a
+  `once` retiring itself and staying retired; a cron advancing to **09:00 WIB stored as
+  02:00 UTC**; a disabled definition never even scanned; a broken cron recorded, retried,
+  then parked at `max_attempts` with the reason readable; and the same tick instant
+  enqueued twice queueing once.
+- `bash scripts/verify/verify-all.sh`: **VERIFY_ALL_OK**, with both live suites running
+  inside the gate (12 + 9 passing) alongside the deploy-unit, API-contract, sync-oracle and
+  signal-pipeline checks.
+- DST behaviour is asserted at the exact boundaries: `30 2 * * *` on the 2026-03-08
+  New York spring-forward resolves to the gap end (07:00 UTC), and `30 1 * * *` on the
+  2026-11-01 fall-back takes the first occurrence (05:30 UTC, EDT) rather than the second.
+
+**Environment finding (not a defect).** One scheduler_live run failed with
+`pool: "DB connect: db error"`: the instance was at **103 connections against
+`max_connections = 100`**, 66 of them held by Hindsight — not by these tests. A retry with
+the same code passed 9/9. Worth knowing before blaming the worker when a live DB test
+cannot connect.
 
 ## Guardrails carried through every phase
 
 - No secret in logs; no committed secret; `.env.example` stays the only env contract.
 - Internal bot routes stay loopback-only and public-proxy-free (contract gate).
 - No per-message DB query on the hot path — config/rules cached, refreshed on change.
+
+## Next phase — 11, Feeds
+
+The Rust worker's remaining responsibility: external feed polling, deduplication, and
+Discord delivery of what survives it. It hangs on the same `Registry` and the same
+`scheduled_jobs` definitions this phase delivered — a feed poll is an interval or cron
+definition, and its dedupe is the same `jobs` unique key.

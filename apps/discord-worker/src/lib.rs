@@ -15,4 +15,5 @@ pub mod health;
 pub mod jobs;
 pub mod locks;
 pub mod logging;
+pub mod scheduler;
 pub mod storage;
