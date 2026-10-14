@@ -83,9 +83,26 @@ step "cargo build/test (apps/reconciler)"
 (cd apps/reconciler && cargo fmt --check && cargo build --release --quiet && cargo test --release --quiet) || fail rust
 
 step "cargo fmt/clippy/test (apps/discord-worker)"
-# --all-targets so the integration tests (tests/jobs_live.rs) are type-checked and linted too;
-# they self-skip without FUDCOURT_TEST_PG_URL, so this step needs no database.
-(cd apps/discord-worker && cargo fmt --check && cargo clippy --all-targets --all-features -- -D warnings && cargo test --release --quiet) || fail rust-worker
+# --all-targets so the integration tests (tests/jobs_live.rs) are type-checked and linted too.
+#
+# The three live suites self-skip without FUDCOURT_TEST_PG_URL, and this gate is OFFLINE by
+# contract (see the header), so the variable is STRIPPED rather than inherited. Leaving it in
+# has a failure mode that costs an afternoon: `set -a; . ./.env; set +a` exports it, the live
+# suites then run — in parallel threads, which is exactly what they cannot do, because
+# `store::due` scans every definition and the feeds suite shares one feed space — and the step
+# goes red with half a suite failed in ~0.3s while the log names no code defect. Whoever wants
+# the database suites runs scripts/verify/verify-live.sh, which sets --test-threads=1.
+#
+# And "8 passed" does NOT mean the suite ran: a live test that finds no DSN returns early, and
+# an early return counts as a pass, while its `skipping:` notice lands in libtest's captured
+# output and is only printed for a FAILING test. The one thing in this log that separates a real
+# run from a skip is the DURATION — 0.00s is the skip (a real feeds run is ~1s, and the three
+# suites take seconds together).
+if [ -n "${FUDCOURT_TEST_PG_URL:-}" ]; then
+  echo "note: FUDCOURT_TEST_PG_URL is set; this step still runs the OFFLINE subsets only."
+  echo "      The database-backed suites are scripts/verify/verify-live.sh."
+fi
+(cd apps/discord-worker && cargo fmt --check && cargo clippy --all-targets --all-features -- -D warnings && env -u FUDCOURT_TEST_PG_URL cargo test --release --quiet) || fail rust-worker
 
 # Ordered AFTER the cargo build on purpose: check-deploy requires every ExecStart target to
 # exist, and the two Rust units (fudcourt-sync-rust / fudcourt-reconciled) are NOT
