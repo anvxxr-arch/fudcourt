@@ -19,7 +19,7 @@ against the real repo — no green-by-disabling. Status is the truth, not the in
 | 9 | Worker foundation | ✅ done | `apps/discord-worker` (Rust): durable `jobs` + `job_runs` queue, one-statement atomic claim (`FOR UPDATE SKIP LOCKED`), retry/backoff with dead-lettering, `(guild_id, kind, dedupe_key)` idempotency, stale-claim reaper, graceful drain, loopback `/healthz` + `/readyz`; optional Valkey advisory lock (never the durability mechanism); 41 unit + 12 live-PG tests |
 | 10 | Scheduler | ✅ done | `scheduled_jobs` definitions materialized into ordinary `jobs` (one mechanism, not two); once/interval/cron with an EXPLICIT IANA zone and a stated DST policy; 5-field crontabs accepted; restart-safe via a DB `(definition_id, occurrence_at)` ledger plus the `jobs` unique key; self-scheduling tick chain with a deterministic successor key; 61 unit + 12 live (worker) + 9 live (scheduler) tests |
 | 11 | Feeds | ✅ done | adapter pipeline + dedup + SSRF guard on generic HTTP |
-| 12 | API surface | 🟡 partial | settings + moderation cases + the feeds panel live; scheduler panel + remaining resource groups pending |
+| 12 | API surface | 🟡 partial | settings + moderation cases + the feeds and scheduler panels live; remaining resource groups pending |
 | 13 | Dashboard | 🟡 partial | admin panel (config + cases); remaining IA pages pending |
 | 14 | Integration testing | 🟡 partial | moderation E2E smoke proven live; cross-feature flows pending |
 | 15 | Security hardening | 🟡 partial | hierarchy, loopback gate, contract gate (no public internal proxy); SSRF/CSRF/regex passes pending per new feature |
@@ -499,9 +499,39 @@ response key `{sources}` instead of `{feeds}`, a `feed_schedules` table instead 
 the gate checks that a proxied path exists in the Go api. The wire contract is the OpenAPI
 entry, which matches the schema and the live-PG tests.
 
-**Remaining in this phase.** `/api/admin/scheduler` (definitions, next occurrence, the
-`(definition_id, occurrence_at)` ledger) and the rest of the resource groups. Note the
-planes this API actually has — `/api/admin/*` (dashboard), `/api/internal/*` (loopback,
-bot + worker) and `/api/auth/*` — so a `/api/v1` prefix would be a migration of the
-existing 22 paths, not a new surface, and is worth deciding before the dashboard phase
-depends on it further.
+## Phase 12 as delivered (part 2) — the scheduler panel
+
+`apps/api/scheduler.go`: `GET /api/admin/scheduler`, in the house shape, over
+`scheduled_jobs` — every definition with its schedule, its next occurrence and the health of
+its last run (`lastRunAt`, `lastStatus`, `lastError`, `attempts`), ordered with the
+operator's own rows first. It is the same durable queue the worker's tick materializes into
+`jobs`, so this reports the scheduler rather than being a second one.
+
+**It is READ-ONLY, and that is the point of this part.** `scheduled_jobs` is SHARED: the
+feeds panel writes its `feed.poll` definitions inside the same transaction as the source row
+(a feed can never exist unpolled), and this panel reports them. So ownership is DERIVED from
+`job_kind` — `ownedBy` maps the kind, `annotate` fills `owner` + `readOnly`, and the panel
+never has to be told who owns what. The write path is deliberately deferred: it must carry
+`ON CONFLICT (guild_id, name) DO UPDATE ... WHERE scheduled_jobs.job_kind <> 'feed.poll'`
+so a name collision cannot hijack another panel's row. Without that predicate a wholesale
+replace here would delete every feed's poll on a save and the symptom would not be an error:
+the feeds panel's `LEFT JOIN` falls back to its default cadence, so the operator sees "my
+feed stopped updating hours ago" long after the save that did it.
+
+**Verification (all actually run).** `gofmt` clean, `go build ./...` and `go vet ./...`
+clean, `go test ./...` green, and `scheduler_test.go` covers: the ownership table as a pure
+unit test — `feed.poll` → `feeds`/read-only, `discord.message` and the empty kind →
+`scheduler`/writable, and `feed.polls` (a near-miss) NOT treated as a feed; an unconfigured
+store answers 503 rather than an empty list; a lower tier is refused without reaching the
+store; and a write is refused with 405 BEFORE the admin gate, so the write path cannot be
+reached by accident while it does not exist.
+`scripts/verify/verify-all.sh` → `VERIFY_ALL_OK`, `API_CONTRACT_OK go_paths=23
+documented=67`. Contract: `/api/admin/scheduler` with `ScheduleDefinition`/`ScheduleConfig`.
+
+**Remaining in this phase.** The scheduler panel's write path (with the ownership predicate
+above), the rest of the resource groups, and the `/api/v1` prefix question. Note the planes
+this API actually has — `/api/admin/*` (dashboard), `/api/internal/*` (loopback, bot +
+worker) and `/api/auth/*` — so a `/api/v1` prefix would be a migration of the existing 23
+paths, not a new surface, and is worth deciding before the dashboard depends on it further.
+The web proxy for scheduler belongs with the dashboard phase (14 exist today, scheduler not
+among them).

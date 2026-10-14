@@ -2869,6 +2869,44 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
+  /api/admin/scheduler:
+    get:
+      tags: [admin]
+      operationId: getAdminScheduler
+      summary: List the scheduler's definitions with their next occurrence and last outcome
+      description: |
+        Requires the admin tier. Every `scheduled_jobs` row the worker's tick can
+        materialize, with the health of its last run (`lastRunAt`, `lastStatus`,
+        `lastError`, `attempts`) so an operator can see WHY something scheduled has
+        not run. The worker's tick materializes due definitions into ordinary
+        `jobs`, so this is the same durable queue everything else uses — not a
+        second scheduler.
+
+        **Ownership.** `scheduled_jobs` is SHARED, and ownership is derived from
+        `jobKind`, not stored as a column: the feeds panel writes its `feed.poll`
+        definitions inside the same transaction as its source row (a feed can never
+        exist unpolled). So every definition carries `owner` (`scheduler` or
+        `feeds`) and `readOnly`. This endpoint is read-only by design: a write path
+        has to carry `ON CONFLICT (guild_id, name) DO UPDATE ... WHERE
+        scheduled_jobs.job_kind <> 'feed.poll'` so that a name collision cannot
+        hijack another panel's row, and it ships with that rule rather than before
+        it.
+
+        `nextRunAt` is the next occurrence the tick will materialize; it is absent
+        on a spent `once` definition, which the scheduler disables in the same
+        statement that clears it.
+      responses:
+        '200':
+          description: "`{definitions: [...]}` — the panel's own rows first, then the feeds'."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScheduleConfig' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`scheduler_unavailable` — the store or the guild is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
   /api/admin/feeds:
     get:
       tags: [admin]
@@ -6927,3 +6965,54 @@ components:
         feeds:
           type: array
           items: { $ref: '#/components/schemas/FeedSource' }
+    ScheduleDefinition:
+      type: object
+      description: |
+        One `scheduled_jobs` row. The operator's fields and the worker's reported
+        ones are in one object because the panel shows both; `owner`/`readOnly` say
+        which of them this panel may write.
+      required: [name, jobKind, scheduleKind, scheduleExpr, timezone]
+      properties:
+        id: { type: integer, format: int64, readOnly: true }
+        name:
+          type: string
+          description: "1..64 characters, unique per guild. The key the list is addressed by."
+        jobKind:
+          type: string
+          description: "The handler a materialized job runs — e.g. `discord.message`, or `feed.poll` (which the feeds panel owns)."
+        scheduleKind: { type: string, enum: [once, interval, cron] }
+        scheduleExpr:
+          type: string
+          description: "Meaning depends on the kind: an RFC3339 instant (`once`), a whole number of seconds 60..604800 (`interval`), or a 5-field crontab (`cron`)."
+        timezone:
+          type: string
+          description: "An IANA zone, e.g. `Europe/Amsterdam`. The schedule is evaluated in it EXPLICITLY, never in the host's."
+        payload:
+          type: object
+          additionalProperties: true
+          description: "The JSON handed to the handler."
+        enabled: { type: boolean }
+        nextRunAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: "The next occurrence the tick will materialize; ABSENT on a spent `once` definition, which is disabled in the same statement that clears it."
+        lastRunAt: { type: string, format: date-time, readOnly: true }
+        lastStatus: { type: string, nullable: true, readOnly: true }
+        lastError: { type: string, nullable: true, readOnly: true }
+        attempts: { type: integer, readOnly: true, description: "Retries already spent on the current occurrence." }
+        maxAttempts: { type: integer, readOnly: true }
+        owner:
+          type: string
+          enum: [scheduler, feeds]
+          description: "Which panel writes this row. Derived from `jobKind`, not stored."
+        readOnly:
+          type: boolean
+          description: "True when ANOTHER panel owns the row, so a client can disable editing without knowing the ownership table."
+    ScheduleConfig:
+      type: object
+      required: [definitions]
+      properties:
+        definitions:
+          type: array
+          items: { $ref: '#/components/schemas/ScheduleDefinition' }

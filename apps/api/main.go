@@ -70,6 +70,10 @@ type server struct {
 	// answers 503: feeds are the worker's, and without a database there is
 	// nothing to show or edit.
 	feeds feedStore
+	// schedules is the scheduler panel store (scheduler.go). nil means the panel
+	// answers 503. It is read-only for now; write ownership is derived from
+	// `job_kind` (see scheduler.go).
+	schedules scheduleStore
 	// secret is the HMAC session key (FUDCOURT_SESSION_SECRET). It is read
 	// through identity.SessionSecret's fail-closed floor: without a usable
 	// secret no session ever verifies and none can be minted — exactly the
@@ -161,6 +165,7 @@ func (s *server) handler() http.Handler {
 	// Dashboard: the custom-command editor, behind the admin tier.
 	mux.HandleFunc("/api/admin/custom-commands", s.handleAdminCustomCommands)
 	mux.HandleFunc("/api/admin/feeds", s.handleAdminFeeds)
+	mux.HandleFunc("/api/admin/scheduler", s.handleAdminScheduler)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, errNotFound)
 	})
