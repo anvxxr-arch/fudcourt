@@ -89,6 +89,36 @@ func (s *server) handleInternalRoleAssignments(w http.ResponseWriter, r *http.Re
 	httpx.WriteJSON(w, http.StatusCreated, a)
 }
 
+// assignmentSources is the closed set of origins for a role grant/revoke record.
+//
+// It MUST cover every source the bot passes to RoleService.grant/revoke/apply:
+// the api refuses anything else, and the bot records best-effort, so a missing
+// source means those attempts are silently ABSENT from the audit trail rather
+// than an error anyone sees. That is exactly how reaction-role grants went
+// unrecorded — the bot sent "panel-reaction", this set did not have it, and the
+// 400 was swallowed by a record path that never inspected the response.
+var assignmentSources = []string{"autorole", "panel", "panel-reaction", "verification", "manual"}
+
+// assignmentSourceSet is assignmentSources as a membership test.
+var assignmentSourceSet = func() map[string]bool {
+	m := make(map[string]bool, len(assignmentSources))
+	for _, s := range assignmentSources {
+		m[s] = true
+	}
+	return m
+}()
+
+// assignmentSourceSentence is the refusal text for an unknown source, built from
+// assignmentSources so the list an operator reads cannot drift from the set the
+// handler enforces.
+func assignmentSourceSentence() string {
+	if len(assignmentSources) < 2 {
+		return "source must be " + strings.Join(assignmentSources, "")
+	}
+	return "source must be " + strings.Join(assignmentSources[:len(assignmentSources)-1], ", ") +
+		" or " + assignmentSources[len(assignmentSources)-1]
+}
+
 func validateAssignment(in *roleAssignmentInput) string {
 	in.UserID = strings.TrimSpace(in.UserID)
 	in.RoleID = strings.TrimSpace(in.RoleID)
@@ -101,10 +131,8 @@ func validateAssignment(in *roleAssignmentInput) string {
 	if in.Action != "add" && in.Action != "remove" {
 		return "action must be add or remove"
 	}
-	switch in.Source {
-	case "autorole", "panel", "verification", "manual":
-	default:
-		return "source must be autorole, panel, verification or manual"
+	if !assignmentSourceSet[in.Source] {
+		return assignmentSourceSentence()
 	}
 	switch in.Status {
 	case "ok", "failed":

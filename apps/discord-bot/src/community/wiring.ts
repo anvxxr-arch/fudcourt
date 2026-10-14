@@ -54,28 +54,65 @@ export async function fetchCommunityConfig(
   }
 }
 
-/** recordAssignment POSTs one role-assignment row to the api over loopback. */
+/**
+ * recordAssignment POSTs one role-assignment row to the api over loopback.
+ *
+ * Recording is BEST-EFFORT by design — the grant already happened, so a failure
+ * here must never surface as a failed grant — but "best-effort" is not the same as
+ * "silent". The response is inspected for exactly that reason: a 4xx means this
+ * attempt is now missing from role_assignments, which is the only record that
+ * answers "why didn't this member get the role?", and the log line is the one
+ * place it can still be noticed. (A refused source went unnoticed for long enough
+ * that reaction-role grants were never recorded at all.)
+ */
 export async function recordAssignment(
   apiUrl: string,
   a: RoleAssignment,
   fetchImpl: typeof fetch = fetch,
   timeoutMs = 3000,
+  log?: (msg: string) => void,
 ): Promise<void> {
   if (!apiUrl) return;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    await fetchImpl(`${apiUrl}${ROLE_ASSIGNMENT_PATH}`, {
+    const res = await fetchImpl(`${apiUrl}${ROLE_ASSIGNMENT_PATH}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(a),
       signal: ctrl.signal,
     });
-  } catch {
-    /* recording is best-effort; the grant already happened */
+    if (!res.ok) log?.(`role assignment record refused: ${res.status} ${await refusalText(res)}`);
+  } catch (err) {
+    log?.(`role assignment record failed: ${errText(err)}`);
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * refusalText reads the api's own sentence out of a refusal — the same `detail`
+ * the dashboard shows — and falls back to a bounded slice of the raw body when it
+ * is not the envelope we expect.
+ */
+async function refusalText(res: Response): Promise<string> {
+  let text = "";
+  try {
+    text = await res.text();
+  } catch {
+    return "";
+  }
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (parsed !== null && typeof parsed === "object") {
+      const body = parsed as { detail?: unknown; error?: unknown };
+      if (typeof body.detail === "string" && body.detail) return body.detail;
+      if (typeof body.error === "string" && body.error) return body.error;
+    }
+  } catch {
+    /* not json: fall through to the raw text */
+  }
+  return text.slice(0, 200);
 }
 
 /** buildWelcome assembles the welcome/goodbye service on the loopback config. */
@@ -102,7 +139,7 @@ export function buildRoleService(client: FudzieClient): RoleService {
     },
     addRole: (userId, roleId, reason) => client.rest.addGuildMemberRole(guildId, userId, roleId, { reason }),
     removeRole: (userId, roleId, reason) => client.rest.removeGuildMemberRole(guildId, userId, roleId, { reason }),
-    record: (a) => recordAssignment(client.config.apiUrl, a, fetch),
+    record: (a) => recordAssignment(client.config.apiUrl, a, fetch, 3000, (m) => client.log(m)),
     log: (m) => client.log(m),
   });
 }
