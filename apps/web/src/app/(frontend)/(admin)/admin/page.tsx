@@ -7,6 +7,7 @@ import MemberTable from '@/features/admin/members-table';
 import SettingsPanel from '@/features/admin/settings-panel';
 import CasesPanel from '@/features/admin/cases-panel';
 import SchedulerPanel from '@/features/admin/scheduler-panel';
+import FeedsPanel from '@/features/admin/feeds-panel';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -85,6 +86,16 @@ export default async function AdminPage() {
           definitions appear here read-only, because they are written together with their feed.
         </p>
         <SchedulerPanel />
+      </section>
+
+      <section style={{ marginTop: space[32] }}>
+        <h2 style={{ fontSize: fontSize[15], color: themeColor.labelPrimary, margin: `0 0 ${space[4]}px` }}>Feeds</h2>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
+          The sources the worker polls. Saving a feed also writes its poll definition in the same
+          transaction, so a feed can never exist unpolled; the panel reports each feed&apos;s poll health
+          and never sends it back.
+        </p>
+        <FeedsPanel />
       </section>
 
       <section style={{ marginTop: space[32] }}>

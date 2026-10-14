@@ -173,3 +173,99 @@ export function saveSchedules(defs: ScheduleDefinition[]): Promise<SchedulerView
   });
 }
 
+/**
+ * One feed source, mirroring apps/api's `feedSource` struct on the wire (camelCase,
+ * snowflakes as strings). The WORKER owns `primed`, `owed`, `consecutiveFailures`,
+ * `lastStatus` and `lastError`: the panel reports the health and never sends it back.
+ *
+ * `pollIntervalSecs` is not a column either — the api reads it from the source's `feed.poll`
+ * `scheduled_jobs` row, which is the same definition the SCHEDULER panel shows read-only as
+ * owned by this panel.
+ */
+export type FeedSource = {
+  id: number;
+  name: string;
+  url: string;
+  adapter: string;
+  channelId: string;
+  message: string;
+  mentionRoleId?: string | null;
+  includeText?: string | null;
+  excludeText?: string | null;
+  enabled: boolean;
+  pollIntervalSecs: number;
+  primed: boolean;
+  owed: number;
+  consecutiveFailures: number;
+  lastStatus?: string | null;
+  lastError?: string | null;
+};
+
+/** The writable subset the POST accepts — an operator's fields, nothing else. `id` is not
+ *  among them: the store keys the list on `name`, so an id in the body would name a row this
+ *  save does not address. (The api zeroes it for the same reason.) */
+export type FeedWrite = Pick<
+  FeedSource,
+  | 'name'
+  | 'url'
+  | 'adapter'
+  | 'channelId'
+  | 'message'
+  | 'mentionRoleId'
+  | 'includeText'
+  | 'excludeText'
+  | 'enabled'
+  | 'pollIntervalSecs'
+>;
+
+export type FeedsView = { feeds?: FeedSource[]; detail?: string };
+
+export function fetchFeeds(): Promise<FeedsView> {
+  return getJSON<FeedsView>('/api/admin/feeds', { cache: 'no-store' });
+}
+
+/**
+ * writableFeeds is the write body's rule, in ONE place: an operator's fields only.
+ *
+ * Unlike `writableDefinitions` there is no ownership FILTER here — the feeds panel owns the
+ * whole feed set, and the scheduler's read-only rows are `feed.poll` DEFINITIONS, not sources.
+ * So this is a projection, not a filter. What it does drop is the poller's report (`primed`,
+ * `owed`, `consecutiveFailures`, `lastStatus`, `lastError`), rather than leaving it for the
+ * server to zero: a body carrying the poller's own report is a lie about what the save does.
+ *
+ * `name` and `url` are trimmed because the api trims them before storing, so "news " and
+ * "news" must not collide on the next save. `message` is NOT trimmed: it is a template, the
+ * api stores it verbatim, and whitespace in it may be deliberate. The three optional fields
+ * become `null` rather than "" — that is the wire's own "no value", and the api stores both
+ * as NULL, so the panel sends the honest one.
+ */
+export function writableFeeds(feeds: FeedSource[]): FeedWrite[] {
+  return feeds.map((f) => ({
+    name: f.name.trim(),
+    url: f.url.trim(),
+    adapter: f.adapter,
+    channelId: f.channelId,
+    message: f.message,
+    mentionRoleId: blankToNull(f.mentionRoleId),
+    includeText: blankToNull(f.includeText),
+    excludeText: blankToNull(f.excludeText),
+    enabled: f.enabled,
+    pollIntervalSecs: f.pollIntervalSecs,
+  }));
+}
+
+/** blankToNull is the optional-field mapping: absent, null and whitespace all mean "not set". */
+function blankToNull(value: string | null | undefined): string | null {
+  if (value === undefined || value === null) return null;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
+export function saveFeeds(feeds: FeedSource[]): Promise<FeedsView> {
+  return getJSON<FeedsView>('/api/admin/feeds', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ feeds: writableFeeds(feeds) }),
+  });
+}
+
