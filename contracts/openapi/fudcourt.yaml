@@ -2059,6 +2059,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
+  /api/internal/automod/rules:
+    get:
+      tags: [internal]
+      operationId: internalAutomodRules
+      summary: Read the AutoMod rule set, for the co-located bot (loopback-only)
+      description: |
+        The bot evaluates operator-authored AutoMod rules but carries no Postgres
+        driver, so it loads the ENABLED rules here over the loopback hop, highest
+        priority first. No session: the api listener is loopback-only (DR-002) and
+        the rule set carries no secret. A non-loopback peer is refused as if the
+        route did not exist (404). The bot re-validates every row before it reaches
+        the message hot path, so a malformed row is skipped and logged, never fatal.
+      responses:
+        '200':
+          description: '`{"rules": [...]}` — the enabled rules, highest priority first.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomodRulesResponse'
+        '404':
+          description: 'The generic not-found envelope for a non-loopback peer.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBasic'
+        '503':
+          description: "`{\"error\": \"automod_unavailable\", ...}` — the rule store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
 components:
   parameters:
     ExecutionId:
@@ -4898,6 +4929,57 @@ components:
         cases:
           type: array
           items: { $ref: '#/components/schemas/ModerationCase' }
+    AutomodMatcher:
+      type: object
+      additionalProperties: false
+      required: [type]
+      description: |
+        One matcher. Only the fields the matcher type uses are populated: a count
+        matcher reads `threshold`, `blocked_word`/`blocked_domain` read `values`,
+        `regex` reads `pattern`. The bot re-validates per type.
+      properties:
+        type:
+          type: string
+          enum: [mentions, duplicate, caps, emoji, invite, url, blocked_domain, blocked_word, regex, attachment, new_account, rapid_join, spam]
+        threshold: { type: number }
+        values: { type: array, items: { type: string } }
+        pattern: { type: string }
+    AutomodRule:
+      type: object
+      additionalProperties: false
+      required: [id, guildId, name, enabled, priority, event, matchers, actions, exemptRoles, exemptUsers, exemptChannels, cooldownSeconds, createdAt, updatedAt]
+      description: |
+        One operator-authored rule, in the camelCase shape the bot's `parseRule`
+        validates. A rule is DATA (stored as jsonb for the structured parts) with
+        the listing/sorting fields as real columns. `timeoutSeconds` is present
+        only for a timeout action; `roleId` only for add_role/remove_role.
+      properties:
+        id: { type: integer }
+        guildId: { type: string }
+        name: { type: string }
+        enabled: { type: boolean }
+        priority: { type: integer }
+        event: { type: string, enum: [message, member_join] }
+        matchers: { type: array, items: { $ref: '#/components/schemas/AutomodMatcher' } }
+        actions:
+          type: array
+          items: { type: string, enum: [delete, warn, timeout, kick, ban, log_only, notify_mod, add_role, remove_role] }
+        exemptRoles: { type: array, items: { type: string } }
+        exemptUsers: { type: array, items: { type: string } }
+        exemptChannels: { type: array, items: { type: string } }
+        cooldownSeconds: { type: integer }
+        timeoutSeconds: { type: integer }
+        roleId: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+    AutomodRulesResponse:
+      type: object
+      additionalProperties: false
+      required: [rules]
+      properties:
+        rules:
+          type: array
+          items: { $ref: '#/components/schemas/AutomodRule' }
     # ==================================================================
     # Market data (CoinGecko markets / cross-venue ticker / DexScreener)
     # ==================================================================

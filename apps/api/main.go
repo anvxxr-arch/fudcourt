@@ -51,6 +51,10 @@ type server struct {
 	// case log is disabled (no FUDCOURT_PG_URL): moderation still works in
 	// Discord, the record simply is not persisted and the case routes answer 503.
 	cases casesStore
+	// automod is the AutoMod rule store (automod_rules.go). nil means the rule
+	// set is unavailable (no FUDCOURT_PG_URL): the bot's loader then reads no
+	// rules and AutoMod simply does nothing, rather than crashing.
+	automod automodStore
 	// secret is the HMAC session key (FUDCOURT_SESSION_SECRET). It is read
 	// through identity.SessionSecret's fail-closed floor: without a usable
 	// secret no session ever verifies and none can be minted — exactly the
@@ -113,6 +117,10 @@ func (s *server) handler() http.Handler {
 	// Internal, loopback-only: the bot records every moderation action here and
 	// reads case history back — the same hop, for the same reason.
 	mux.HandleFunc("/api/internal/moderation/cases", s.handleInternalModerationCases)
+	// Internal, loopback-only: the bot loads its AutoMod rule set here (it has
+	// no Postgres driver), so an operator rule change reaches the bot without a
+	// restart — the same hop, for the same reason.
+	mux.HandleFunc("/api/internal/automod/rules", s.handleInternalAutomodRules)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, errNotFound)
 	})
