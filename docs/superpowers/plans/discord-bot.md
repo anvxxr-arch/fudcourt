@@ -826,3 +826,79 @@ cases, scheduler, feeds); seven do not: `autoroles`, `custom-commands`, `logs/au
 `tsc --noEmit` clean, 511 web tests pass / 0 fail, and the full gate `VERIFY_ALL_OK` — with the same
 deployment caveat as the scheduler panel: the dashboard's api binary is stale until it is rebuilt
 and `fudcourt-api.service` restarted.
+
+## Phase 13 (cont.) — the welcome panel, a preview, and two api defects it found
+
+**`d7935cc` — the api, fixed first, because the panel would have mirrored the bug.** Reading the
+welcome write path to build its editor turned up two real defects:
+
+1. `len()` counts BYTES, and the three welcome messages were checked with it. The contract declares
+   `maxLength: 2000` — code points, per JSON Schema — and Discord counts characters, so a
+   2000-character message of emoji (8000 bytes) was refused at a quarter of the limit the operator
+   was reading off the form. Now `utf8.RuneCountInString`; boundedness is unchanged because
+   `MaxBytesReader` already caps the body at 32 KiB.
+2. The embed check asked only whether the jsonb was an object. But `renderEmbed`
+   (`apps/discord-bot/src/community/templates.ts`) calls `renderTemplate` on every string field, and
+   `renderTemplate` calls `.replace` on its argument — so `{"title":5}` saved cleanly and then made
+   the welcome path THROW at a member's join, the worst possible place to discover a typo. §12/§31's
+   "validate JSON structures before storing them" was the requirement that had been read as "valid
+   JSON"; `validateEmbed` now constrains the fields the renderer touches to the types it assumes
+   (strings-or-null, a 24-bit integer for `color`, objects for footer/author/thumbnail/image, at most
+   25 fields with string name/value), and deliberately still accepts unknown keys and `null`, because
+   the renderer ignores the former and its falsy guard turns the latter into an empty string.
+
+**`fd15021` — the panel.** The first panel whose subject is a TEMPLATE, which is what makes §16's
+"preview before saving" load-bearing rather than decorative: a schedule and a feed mean something
+when you read the row, and `"Welcome {user}, you are member #{member_count}"` means nothing until a
+member is substituted into it.
+
+`welcome-template.ts` MIRRORS the bot's renderer — `templates.ts` plus `buildPayload` in
+`welcome.ts` — because the engine lives in the bot's bundle and the dashboard ships its own. A
+mirror is a real drift risk, so it is pinned instead of hoped away: the tests replay the BOT'S OWN
+fixtures (same member, same inputs, same strings), and two guards read the other files and fail if
+either moves (the token grammar and the six variable names in `templates.ts`; the refusal sentences,
+the `validateEmbed` function and the `utf8.RuneCountInString` count in `community_handlers.go`).
+
+What the preview says that the form cannot:
+
+- a blank message plus an embed that rendered to nothing posts NOTHING — the bot skips an empty
+  payload, so "I set a welcome and nothing happened" now has a visible cause;
+- a join DM carries the SAME embed as the channel post (the bot passes one embed to both sends), and
+  a leave has no DM path at all (a member who left cannot be reached);
+- a placeholder with no value stays VERBATIM: `{oops}` stays `{oops}`. That is the bot's own choice,
+  made so a preview shows the typo instead of shipping a silent hole.
+
+The sample member is editable — `{display_name}` behaves differently for a long nickname, and a
+template that only looks right for a two-letter name is one that will ship broken. `{created_at}` is
+derived from the sample's id, which is how the bot does it with no API call: a snowflake carries its
+creation time in its high bits.
+
+Two ownership rules, kept deliberately narrow: the panel validates NOTHING the api validates (the
+one local refusal is JSON syntax, which cannot be sent at all), and Save ADOPTS the config the server
+returns, because the api normalises `joinEnabled` off when the channel is blank. That normalisation
+is a mutation the operator did not perform — `adoptedNote` says so in one sentence rather than
+leaving a checkbox that flips itself off on the next reload.
+
+**`0226da3` — eighteen tests.** The parity group, the trailer cases (an embed keeps only the fields
+the bot renders: `url` and `timestamp` are dropped there, so the preview drops them), the message
+that is only whitespace, the embed that rendered to nothing, the DM sharing the post's embed object,
+and a hand-edited row with a number where a string belongs. Two guards read OTHER files: the bot's
+grammar and variable set, and the api's refusals — including the rune count, so a regression to
+`len(` fails in the dashboard's suite instead of shipping a counter that lies about emoji.
+
+**Two traps worth remembering, both hit here.** The web app's TypeScript target predates BigInt
+LITERALS, so the mirror writes `BigInt(22)` where the bot writes `22n` (raising the app's target for
+a preview would change how the whole dashboard compiles). And the design-token gate is HARD on
+`fontWeight: 600`, `fontFamily: 'monospace'` and `lineHeight: 1.5` — they must be
+`fontWeight.semibold`, `fontFamily.mono`, `lineHeight.normal`; the repo's own fixer rewrites them if
+you forget, and the gate's remaining "soft" report is informational.
+
+**Verification.** `tsc --noEmit` clean; 529 web tests pass / 0 fail (511 → 529); `go vet` +
+the api package green (11 welcome tests); the full gate `VERIFY_ALL_OK`; and `bun run build`
+`EXIT=0` with `/admin` and `/api/admin/welcome` in the route table. Deployment caveat unchanged: the
+api binary is stale until rebuilt and `fudcourt-api.service` restarted — and this slice's api change
+is one the bot does not need to re-read, since the config reaches it over the same loopback hop.
+
+**Remaining.** Six of the twelve admin proxies now have a consumer (members, settings, moderation
+cases, scheduler, feeds, welcome); six do not: `autoroles`, `custom-commands`, `logs/audit`,
+`logs/destinations`, `role-assignments`, `role-panels`.
