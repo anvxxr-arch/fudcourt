@@ -1058,5 +1058,43 @@ was byte-identical and nothing was lost. The lesson is to commit promptly and to
 **Verification.** `tsc --noEmit` clean; **574 web tests pass / 0 fail** (552 → 574: 6 wire-time + 16
 audit); `DESIGN_TOKENS_OK (files=490)`; gate **`VERIFY_ALL_OK`**; `bun run build` `EXIT=0`.
 
-**Remaining.** Three admin proxies still have no consumer: `custom-commands`, `logs/destinations`,
-`role-panels`.
+## Phase 13 (cont.) — custom commands, and the guard that keeps a mirror honest
+
+**`60a7b40` / `b053489` — the custom-commands editor** (MVP §19, the one requirement in the plan phrased
+negatively: no code execution). The panel's real job is to make the property visible where an operator
+will read it. It is a property of the runtime, not a rule the dashboard enforces: the bot renders a
+response through the same pure template engine as welcome messages, and there is no JavaScript/Lua/
+shell/SQL path, no expression evaluation, no function call. Nothing between braces is executed.
+
+The grammar is what makes that provable rather than reassuring: the engine's token is `{name}` with a
+name of `[a-z_]+`, so `{Evil}`, `{a-b}` and a stray `{` are not tokens at all, and an unknown token is
+left exactly as written. The panel copies that grammar verbatim (guarded, below) and flags the tokens
+the bot will send as typed — the TYPOS — rather than implying a threat where there is none. A nested
+`{a{b}}` still yields the inner token `b` because the regex is not brace-aware; the panel sees what the
+engine sees, corner included, and the test says so.
+
+The editor posts the WHOLE set (that is what the api replaces) and adopts the answer, because the api
+normalises: names lowercased, aliases trimmed/lowercased/de-duplicated, two commands answering one word
+refused. A response carrying an embed is preserved byte-for-byte and rendered read-only — an editor
+that cannot read a field must not replace it, and a whole-set replace turns that into a data-loss bug.
+
+**Three guards read the other side of the wire**, so every mirrored fact fails loudly when it drifts:
+the variable table against the bot's `memberVars` keys plus the extras its `vars()` spreads; the token
+grammar against the engine's own `TOKEN` pattern; the limits and the trigger grammar against the api's
+constants and `nameRe`. **Each asserts it extracted something before comparing** — a guard whose anchor
+moved must fail, not pass on an empty set.
+
+**Four mistakes of my own, all caught by these tests.** (1) `triggerProblem` rejected a duplicate alias
+*within* one command, which the api normalises away rather than refusing — a local pre-check stricter
+than the authority it mirrors blocks a save the api accepts. (2) `fromDraft` de-duplicated aliases
+before lowercasing, so `RULE` and `rule` both survived. (3) Two extraction guards used a regex to find
+a regex literal: `/\{` matches the character `{`, not the two characters `\{` the file contains, so the
+match silently failed — extraction is index-of now, with a line-bounded slice because a template
+literal on the same line (`<#${m.channel_id}>`) contains a `}` that truncates a naive cut. (4) The
+schema guard's relative path was one directory short — an ENOENT, not a silent pass, which is the good
+failure mode.
+
+**Verification.** `tsc --noEmit` clean; **585 web tests pass / 0 fail** (574 → 585: +11);
+`DESIGN_TOKENS_OK (files=492)`; gate `VERIFY_ALL_OK`; `bun run build` `EXIT=0`.
+
+**Remaining.** Two admin proxies still have no consumer: `logs/destinations`, `role-panels`.
