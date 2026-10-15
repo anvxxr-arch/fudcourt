@@ -144,9 +144,18 @@ export class Rest {
     return this.request("POST", `/webhooks/${appId}/${interactionToken}`, data);
   }
 
-  /** POST /channels/{c}/messages — post a channel message (activity logs). */
+  /** POST /channels/{c}/messages — post a channel message (activity logs, panels). */
   createMessage(channelId: string, data: InteractionCallbackData): Promise<{ id: string }> {
     return this.request("POST", `/channels/${channelId}/messages`, data);
+  }
+
+  /**
+   * PUT /channels/{c}/messages/{m}/reactions/{emoji}/@me — add one reaction.
+   * The emoji is a unicode emoji or `name:id` for a custom one, percent-encoded
+   * because the colon is not URL-safe in a path segment. Discord answers 204.
+   */
+  addReaction(channelId: string, messageId: string, emoji: string): Promise<void> {
+    return this.request("PUT", `/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}/@me`);
   }
 
   /**

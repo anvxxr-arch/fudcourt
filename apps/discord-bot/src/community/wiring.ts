@@ -7,6 +7,7 @@ import type { FudzieClient } from "../framework/client.ts";
 import { topPosition } from "../moderation/hierarchy.ts";
 import { AutoroleService } from "./autorole.ts";
 import { PanelService } from "./panels.ts";
+import { PanelPoster } from "./posting.ts";
 import { RoleService, type RoleAssignment } from "./roles.ts";
 import { parseAutoroleRules, parseRolePanels, parseWelcomeConfig, type AutoroleRule, type RolePanel, type WelcomeConfig } from "./types.ts";
 import { WelcomeService } from "./welcome.ts";
@@ -15,6 +16,14 @@ import { WelcomeService } from "./welcome.ts";
 export const COMMUNITY_CONFIG_PATH = "/api/internal/community/config";
 /** The loopback route the api stores role-assignment records on. */
 export const ROLE_ASSIGNMENT_PATH = "/api/internal/role-assignments";
+/** The loopback route the api records a posted panel message id on. */
+export const PANEL_POSTED_PATH = "/api/internal/role-panels/posted";
+
+/** Whether the api accepted a record, and its own sentence when it did not. */
+export interface RecordResult {
+  ok: boolean;
+  detail?: string;
+}
 
 export interface CommunityConfig {
   welcome?: WelcomeConfig;
@@ -85,6 +94,46 @@ export async function recordAssignment(
     if (!res.ok) log?.(`role assignment record refused: ${res.status} ${await refusalText(res)}`);
   } catch (err) {
     log?.(`role assignment record failed: ${errText(err)}`);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * recordPanelPosted tells the api which message a panel was posted as. Without
+ * it a REACTION panel cannot be matched: the handler finds the panel by the
+ * message the reaction landed on. It is best-effort like every other record —
+ * the message is already live — but a refusal is logged with the api's own
+ * sentence, because the consequence (a panel nothing can trigger) is invisible
+ * from Discord.
+ */
+export async function recordPanelPosted(
+  apiUrl: string,
+  r: { panelId: string; channelId: string; messageId: string },
+  fetchImpl: typeof fetch = fetch,
+  timeoutMs = 3000,
+  log?: (msg: string) => void,
+): Promise<RecordResult> {
+  if (!apiUrl) return { ok: false, detail: "no api url is configured" };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetchImpl(`${apiUrl}${PANEL_POSTED_PATH}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(r),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      const detail = `${res.status} ${await refusalText(res)}`;
+      log?.(`panel message record refused: ${detail}`);
+      return { ok: false, detail };
+    }
+    return { ok: true };
+  } catch (err) {
+    const detail = errText(err);
+    log?.(`panel message record failed: ${detail}`);
+    return { ok: false, detail };
   } finally {
     clearTimeout(timer);
   }
@@ -167,6 +216,23 @@ export function buildPanels(client: FudzieClient): PanelService {
     roles: buildRoleService(client),
     memberRoles: async (userId) => (await client.rest.getGuildMember(guildId, userId)).roles ?? [],
     reply: (content, ephemeral) => client.respondComponent(content, ephemeral),
+    log: (m) => client.log(m),
+  });
+}
+
+/**
+ * buildPanelPoster assembles the panel poster: it reads the panels over the same
+ * loopback hop, posts through the shared REST client, and records the message id
+ * back so a reaction panel becomes matchable.
+ */
+export function buildPanelPoster(client: FudzieClient): PanelPoster {
+  const apiUrl = client.config.apiUrl;
+  return new PanelPoster({
+    panels: async () => (await fetchCommunityConfig(apiUrl, fetch, 3000, (m) => client.log(m))).panels,
+    post: (channelId, data) => client.rest.createMessage(channelId, data),
+    react: (channelId, messageId, emoji) => client.rest.addReaction(channelId, messageId, emoji),
+    remove: (channelId, messageId) => client.rest.deleteMessage(channelId, messageId, { reason: "panel re-posted" }),
+    record: (r) => recordPanelPosted(apiUrl, r, fetch, 3000, (m) => client.log(m)),
     log: (m) => client.log(m),
   });
 }

@@ -132,6 +132,52 @@ export interface Interaction {
   token: string;
 }
 
+/** A message emoji: `{ name }` for a unicode emoji, `{ name, id }` for a custom one. */
+export interface APIEmoji {
+  name?: string;
+  id?: string;
+}
+
+/**
+ * Message COMPONENT types (not interaction types). A message carries up to five
+ * action rows; a row carries up to five buttons or ONE select menu.
+ */
+export const ComponentType = { ActionRow: 1, Button: 2, StringSelect: 3 } as const;
+
+/** Button styles, as Discord numbers them (the schema stores the names). */
+export const ButtonStyle = { Primary: 1, Secondary: 2, Success: 3, Danger: 4 } as const;
+
+export interface ButtonComponent {
+  type: 2;
+  style: number;
+  custom_id: string;
+  label?: string;
+  emoji?: APIEmoji;
+  disabled?: boolean;
+}
+
+export interface SelectOptionComponent {
+  label: string;
+  value: string;
+  emoji?: APIEmoji;
+  default?: boolean;
+}
+
+export interface StringSelectComponent {
+  type: 3;
+  custom_id: string;
+  options: SelectOptionComponent[];
+  min_values?: number;
+  max_values?: number;
+  placeholder?: string;
+  disabled?: boolean;
+}
+
+export interface ActionRow {
+  type: 1;
+  components: Array<ButtonComponent | StringSelectComponent>;
+}
+
 export interface InteractionCallbackData {
   content?: string;
   embeds?: APIEmbed[];
@@ -140,6 +186,9 @@ export interface InteractionCallbackData {
   allowed_mentions?: { parse: string[] };
   /** Post as a reply to this message (channel messages, not interactions). */
   message_reference?: { message_id: string };
+  /** Buttons and select menus. Without this a role panel could be configured but
+   * never POSTED — the REST layer could only carry text. */
+  components?: ActionRow[];
 }
 
 export interface ReadyPayload {

@@ -11,6 +11,7 @@ declare const process: {
 declare module "node:fs" {
   export function readdirSync(path: string): string[];
   export function statSync(path: string): { isDirectory(): boolean };
+  export function readFileSync(path: string | URL, encoding: "utf8"): string;
 }
 
 declare module "node:path" {
