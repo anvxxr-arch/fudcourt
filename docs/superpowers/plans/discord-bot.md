@@ -1010,5 +1010,53 @@ so fixtures need realistic 18-digit snowflakes. And the design-token checker rej
 and a raw font stack (`fontFamily: 'ui-monospace, …'`) with `file:line`; the tokens are
 `lineHeight.normal` and `fontFamily.mono`.
 
-**Remaining.** Four admin proxies still have no consumer: `custom-commands`, `logs/audit`,
-`logs/destinations`, `role-panels`.
+**Remaining.** Three admin proxies still have no consumer: `custom-commands`, `logs/destinations`,
+`role-panels`.
+
+## Phase 13 (cont.) — the UTC timestamp defect, and the audit log
+
+**`31eaa17` — the panel was lying about the time, and the test agreed with it.** Reading
+`db/schema/pg-schema.sql` for the audit panel is what exposed it: every `created_at` in this database
+is `to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')` — UTC **with no zone marker**.
+`new Date('2026-10-14 23:10:00')` is implementation-defined and every engine reads it as LOCAL, so the
+role-assignment panel's clock was seven hours off for a reader in WIB (and a day off across midnight).
+The homeserver's own clock is UTC, which is exactly why nothing looked wrong: the digits matched there.
+Proved in three zones before touching anything — `TZ=Asia/Jakarta` put the naive reading at
+23:10 against a true 06:10 the next morning, same string.
+
+The old test passed because its fixture (`2026-10-14T23:10:00Z`) was an **invented** RFC3339 string the
+api never sends: the fixture told a different story than the wire. `wire-time.ts` is now the one place
+that reads both the api's format (explicitly as UTC) and a zoned value (as written), renders through
+`toISOString` so the output cannot move with the reader's clock, and says `UTC` out loud. The test with
+teeth runs the real module in a **child process under four zones**, one of them east of UTC — it passes
+on a UTC box either way, which is the entire point. The cases panel was printing the same unlabelled
+UTC string raw and now goes through the same renderer.
+
+**`7c402ed` — the audit log panel** (committed by the sibling session, see below). The second read-only
+panel, and the interesting column is the diff: `before`/`after` are jsonb snapshots, either side may be
+absent (a create has no before, a delete no after), and a configuration replacement (join roles, role
+panels, custom commands) arrives as **two whole arrays** — one change to read, not a synthetic
+element-wise diff, because what an operator needs is that the set was replaced and with what.
+
+Two things the panel refuses to imply, both read out of the api: that the trail is complete
+(`recordAudit` runs after the mutation stands and only logs a failure, so a gap is a lost write as
+easily as a change that never happened), and that the resource-type filter validates anything — unlike
+the audit **source**, which is a closed validated set (`dashboard|discord|automod|system`),
+`resource_type` is free-form (≤64 chars), so the labels are a convenience, an unknown type renders as
+itself, and an unknown filter name returns an empty list that looks like silence. The filter options are
+built from types that actually appeared, accumulated across loads (a filtered page only contains its own
+type). Window selector offers the api's real 25 default / 100 ceiling; the test reads both out of
+`logging.go`, along with the source vocabulary the label table must cover exactly.
+
+**Coordination hazard hit for real.** My `git commit` reported "nothing to commit" while the log showed
+a new commit — another profile in this repo had run a broad `git add` and swept my uncommitted files
+into its own commit. Verified rather than assumed: `git show --stat 7c402ed` (exactly my five files),
+`git status` clean, `git diff HEAD` empty, and the line counts matching what I wrote — so the content
+was byte-identical and nothing was lost. The lesson is to commit promptly and to verify with
+`git show --stat`/`git diff HEAD` when a commit seems to vanish. Never `git add -A` in this repo.
+
+**Verification.** `tsc --noEmit` clean; **574 web tests pass / 0 fail** (552 → 574: 6 wire-time + 16
+audit); `DESIGN_TOKENS_OK (files=490)`; gate **`VERIFY_ALL_OK`**; `bun run build` `EXIT=0`.
+
+**Remaining.** Three admin proxies still have no consumer: `custom-commands`, `logs/destinations`,
+`role-panels`.
