@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/anvxxr-arch/fudcourt/apps/api/internal/access/capability"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/httpx"
 )
@@ -225,7 +226,7 @@ func (s *server) handleAdminWelcome(w http.ResponseWriter, r *http.Request) {
 	if !methodGuard(w, r, http.MethodGet, http.MethodPost) {
 		return
 	}
-	if !s.requireAdmin(w, r) {
+	if !s.allowCapability(w, r, capabilityForMethod(r, capability.WelcomeRead, capability.WelcomeWrite)) {
 		return
 	}
 	if s.community == nil {
@@ -405,7 +406,7 @@ func (s *server) handleAdminAutoroles(w http.ResponseWriter, r *http.Request) {
 	if !methodGuard(w, r, http.MethodGet, http.MethodPost) {
 		return
 	}
-	if !s.requireAdmin(w, r) {
+	if !s.allowCapability(w, r, capabilityForMethod(r, capability.RolesRead, capability.RolesManage)) {
 		return
 	}
 	if s.community == nil {
@@ -480,7 +481,7 @@ func (s *server) handleAdminRolePanels(w http.ResponseWriter, r *http.Request) {
 	if !methodGuard(w, r, http.MethodGet, http.MethodPost) {
 		return
 	}
-	if !s.requireAdmin(w, r) {
+	if !s.allowCapability(w, r, capabilityForMethod(r, capability.RolesRead, capability.RolesManage)) {
 		return
 	}
 	if s.community == nil {
@@ -576,7 +577,7 @@ func (s *server) handleAdminRoleAssignments(w http.ResponseWriter, r *http.Reque
 	if !methodGuard(w, r, http.MethodGet) {
 		return
 	}
-	if !s.requireAdmin(w, r) {
+	if !s.allowCapability(w, r, capability.RolesRead) {
 		return
 	}
 	if s.community == nil {

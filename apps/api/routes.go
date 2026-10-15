@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anvxxr-arch/fudcourt/apps/api/internal/access/capability"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/access/identity"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/httpx"
@@ -244,11 +245,16 @@ func (s *server) handleAdminMembers(w http.ResponseWriter, r *http.Request) {
 	if !methodGuard(w, r, http.MethodGet, http.MethodPost) {
 		return
 	}
-	if !s.requireAdmin(w, r) {
+	if r.Method == http.MethodGet {
+		// Reading the member list has no capability of its own: the admin tier is the gate. Every path
+		// that CHANGES a member's roles needs roles.manage — see allowCapability.
+		if !s.requireAdmin(w, r) {
+			return
+		}
+		s.adminMembersList(w, r)
 		return
 	}
-	if r.Method == http.MethodGet {
-		s.adminMembersList(w, r)
+	if !s.allowCapability(w, r, capability.RolesManage) {
 		return
 	}
 	s.adminMembersMutate(w, r)

@@ -2,9 +2,9 @@ package identity
 
 import (
 	"fmt"
+	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 	"net/url"
 	"strings"
-	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 )
 
 // CodeTierRequired names the wire refusal for a session whose tier is below

@@ -36,6 +36,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anvxxr-arch/fudcourt/apps/api/internal/access/capability"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/httpx"
 	"github.com/jackc/pgx/v5"
@@ -435,7 +436,7 @@ func (s *server) handleAdminScheduler(w http.ResponseWriter, r *http.Request) {
 	if !methodGuard(w, r, http.MethodGet, http.MethodPost) {
 		return
 	}
-	if !s.requireAdmin(w, r) {
+	if !s.allowCapability(w, r, capabilityForMethod(r, capability.SchedulerRead, capability.SchedulerManage)) {
 		return
 	}
 	if s.schedules == nil {

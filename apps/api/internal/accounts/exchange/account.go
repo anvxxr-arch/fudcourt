@@ -105,9 +105,9 @@ type ExchangeAccount struct {
 	UserID string `json:"user_id"`
 	// CredentialID references the sealed credential record; the secrets
 	// themselves live in the vault, never here.
-	CredentialID string `json:"credential_id"`
-	Exchange     string `json:"exchange"`
-	Label        string `json:"label"`
+	CredentialID string      `json:"credential_id"`
+	Exchange     string      `json:"exchange"`
+	Label        string      `json:"label"`
 	AccountType  AccountType `json:"account_type"`
 	Status       Status      `json:"status"`
 	// SupportedMarkets lists the market families this account may trade.
@@ -157,13 +157,13 @@ func New(id, userID, credentialID, exchange, label string, accountType AccountTy
 			fmt.Sprintf("field account_type must be one of spot|futures|both, got %q", accountType))
 	}
 	return ExchangeAccount{
-		ID:          id,
-		UserID:      userID,
+		ID:           id,
+		UserID:       userID,
 		CredentialID: credentialID,
-		Exchange:    exchange,
-		Label:       label,
-		AccountType: accountType,
-		Status:      StatusPending,
+		Exchange:     exchange,
+		Label:        label,
+		AccountType:  accountType,
+		Status:       StatusPending,
 	}, nil
 }
 

@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/anvxxr-arch/fudcourt/apps/api/internal/access/capability"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/httpx"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -307,7 +308,7 @@ func (s *server) handleAdminFeeds(w http.ResponseWriter, r *http.Request) {
 	if !methodGuard(w, r, http.MethodGet, http.MethodPost) {
 		return
 	}
-	if !s.requireAdmin(w, r) {
+	if !s.allowCapability(w, r, capabilityForMethod(r, capability.FeedsRead, capability.FeedsManage)) {
 		return
 	}
 	if s.feeds == nil {

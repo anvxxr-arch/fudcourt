@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/anvxxr-arch/fudcourt/apps/api/internal/access/capability"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/httpx"
 )
@@ -232,7 +233,7 @@ func (s *server) handleAdminModerationCases(w http.ResponseWriter, r *http.Reque
 	if !methodGuard(w, r, http.MethodGet) {
 		return
 	}
-	if !s.requireAdmin(w, r) {
+	if !s.allowCapability(w, r, capability.ModerationRead) {
 		return
 	}
 	if s.cases == nil {

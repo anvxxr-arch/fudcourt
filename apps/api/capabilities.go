@@ -206,6 +206,36 @@ func (s *server) requireCapability(w http.ResponseWriter, r *http.Request, cap s
 	return false
 }
 
+// allowCapability is the admin plane's two-step gate, used by every admin route that CHANGES
+// something: the coarse tier first, then the capability that names what this route touches.
+//
+// The tier comes first because the dashboard is an admin surface — a role granted one capability does
+// not thereby get to enumerate the panel — and the capability second because the tier alone says
+// nothing about WHICH admin may do WHAT. That second step is the whole point of the engine: once an
+// operator maps a role, an admin whose roles hold `welcome.read` is refused a welcome write here,
+// instead of the mapping being decorative.
+//
+// The seeding rule keeps this non-breaking: while no role holds any grant, the admin tier resolves to
+// the full set (see resolveForCapabilities), so an unmapped guild behaves exactly as it did before the
+// engine existed. The guild owner always passes, so a bad mapping can never lock the operator out.
+func (s *server) allowCapability(w http.ResponseWriter, r *http.Request, cap string) bool {
+	if !s.requireAdmin(w, r) {
+		return false
+	}
+	return s.requireCapability(w, r, cap)
+}
+
+// capabilityForMethod picks the read or the write capability for a route that serves both. A write
+// method needs the write capability even when the same path serves its own read: `GET` publishes what
+// is configured, `POST` changes it, and a mapping that grants only the read must not be able to send
+// the change.
+func capabilityForMethod(r *http.Request, read, write string) string {
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		return read
+	}
+	return write
+}
+
 // grantedInOrder returns the capabilities of a resolved set in List order — the order the panel
 // renders, so a caller never has to sort a set to draw it.
 func grantedInOrder(set map[string]bool) []string {

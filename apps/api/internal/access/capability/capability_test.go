@@ -12,7 +12,7 @@ import (
 var wantList = []string{
 	"moderation.read", "moderation.warn", "moderation.timeout", "moderation.kick", "moderation.ban",
 	"automod.read", "automod.write",
-	"logs.read",
+	"logs.read", "logs.write",
 	"welcome.read", "welcome.write",
 	"roles.read", "roles.manage",
 	"custom_commands.read", "custom_commands.manage",

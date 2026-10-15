@@ -110,7 +110,7 @@ func writeCookie(w http.ResponseWriter, name, value string, now time.Time, opts 
 	b.WriteString("; Path=/")
 	if opts.MaxAge > 0 {
 		b.WriteString("; Expires=")
-		b.WriteString(now.Add(time.Duration(opts.MaxAge)*time.Second).UTC().Format(http.TimeFormat))
+		b.WriteString(now.Add(time.Duration(opts.MaxAge) * time.Second).UTC().Format(http.TimeFormat))
 	}
 	b.WriteString("; Max-Age=")
 	b.WriteString(strconv.Itoa(opts.MaxAge))

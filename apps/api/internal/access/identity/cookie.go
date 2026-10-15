@@ -6,9 +6,9 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 	"strings"
 	"time"
-	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 )
 
 // Session cookie signing/verification — the port of the HMAC spine in

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/anvxxr-arch/fudcourt/apps/api/internal/access/capability"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/httpx"
 )
@@ -29,7 +30,7 @@ func (s *server) handleAdminSettings(w http.ResponseWriter, r *http.Request) {
 	if !methodGuard(w, r, http.MethodGet, http.MethodPost) {
 		return
 	}
-	if !s.requireAdmin(w, r) {
+	if !s.allowCapability(w, r, capabilityForMethod(r, capability.SettingsRead, capability.SettingsManage)) {
 		return
 	}
 	if r.Method == http.MethodGet {

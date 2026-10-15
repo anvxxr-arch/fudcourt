@@ -23,8 +23,8 @@ func TestJSCodecVectors(t *testing.T) {
 		}
 	}
 	form := map[string]string{
-		"~!*'() abc":     "%7E%21*%27%28%29+abc", // URLSearchParams keep-set
-		"a./dashboard":   "a.%2Fdashboard",
+		"~!*'() abc":      "%7E%21*%27%28%29+abc", // URLSearchParams keep-set
+		"a./dashboard":    "a.%2Fdashboard",
 		"identify guilds": "identify+guilds",
 	}
 	for in, want := range form {

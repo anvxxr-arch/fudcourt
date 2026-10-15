@@ -362,3 +362,98 @@ func TestPermissionsPutAllowsTheGuildOwnerWithoutAnyMapping(t *testing.T) {
 		t.Fatalf("non-owner admin PUT = %d, want 403 from the engine", rec.Code)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// The admin plane is capability-gated
+//
+// The point of the engine is not that its own editor works; it is that every OTHER admin route is
+// subject to the mapping too. Each route below is driven twice with the SAME admin session: once with
+// a role that holds something else, once with a role that holds what the route needs. Only the first
+// may be refused — and the refusal must NAME the capability, because the operator's next move is to
+// grant it.
+//
+// `automod.read` is the "something else" on purpose: no admin route checks it (the AutoMod rules are
+// reached by the bot, not the panel), so it can never accidentally satisfy a case below.
+
+const gatedRole = "900000000000000001"
+const unrelatedRole = "900000000000000009"
+
+func TestAdminPlaneIsCapabilityGated(t *testing.T) {
+	// A NON-empty mapping is what switches the engine on. While no role holds anything, the admin tier
+	// keeps the full set (the seeding rule), which is why upgrading cannot lock an operator out.
+	denyStore := &fakeCapabilities{byRole: map[string][]string{
+		unrelatedRole: {"automod.read"},
+		gatedRole:     {},
+	}}
+
+	cases := []struct {
+		method, path, capability string
+	}{
+		{"POST", "/api/admin/settings", "settings.manage"},
+		{"GET", "/api/admin/settings", "settings.read"},
+		{"GET", "/api/admin/moderation/cases", "moderation.read"},
+		{"POST", "/api/admin/logs/destinations", "logs.write"},
+		{"GET", "/api/admin/logs/destinations", "logs.read"},
+		{"GET", "/api/admin/logs/audit", "logs.read"},
+		{"POST", "/api/admin/welcome", "welcome.write"},
+		{"GET", "/api/admin/welcome", "welcome.read"},
+		{"POST", "/api/admin/autoroles", "roles.manage"},
+		{"GET", "/api/admin/autoroles", "roles.read"},
+		{"POST", "/api/admin/role-panels", "roles.manage"},
+		{"GET", "/api/admin/role-assignments", "roles.read"},
+		{"POST", "/api/admin/custom-commands", "custom_commands.manage"},
+		{"POST", "/api/admin/feeds", "feeds.manage"},
+		{"GET", "/api/admin/feeds", "feeds.read"},
+		{"POST", "/api/admin/scheduler", "scheduler.manage"},
+		{"GET", "/api/admin/scheduler", "scheduler.read"},
+		{"POST", "/api/admin/members", "roles.manage"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
+			denied, _ := permissionsServer(t, denyStore)
+			rec := do(t, denied, tc.method, tc.path, capCookie(t, "1", identity.TierAdmin, []string{unrelatedRole}), "{}")
+			if rec.Code != http.StatusForbidden {
+				t.Fatalf("an admin whose roles hold something else got %d, want 403 for %s (%s)",
+					rec.Code, tc.capability, rec.Body.String())
+			}
+			if !strings.Contains(rec.Body.String(), tc.capability) {
+				t.Fatalf("the refusal must name %q so the operator knows what to grant: %s", tc.capability, rec.Body.String())
+			}
+
+			// Same session shape, one grant different: the route must get PAST the capability gate. What
+			// it answers afterwards (400 on an empty body, 500 with no store wired) is not this test's
+			// business — only that the gate is not what stopped it.
+			allowed, _ := permissionsServer(t, &fakeCapabilities{byRole: map[string][]string{
+				gatedRole: {tc.capability},
+			}})
+			ok := do(t, allowed, tc.method, tc.path, capCookie(t, "1", identity.TierAdmin, []string{gatedRole}), "{}")
+			if ok.Code == http.StatusForbidden && strings.Contains(ok.Body.String(), "capability") {
+				t.Fatalf("an admin holding %s was refused by the capability gate: %d %s",
+					tc.capability, ok.Code, ok.Body.String())
+			}
+		})
+	}
+}
+
+// The member LIST is deliberately tier-only: reading who is in the guild has no capability of its own
+// in the vocabulary, and inventing one would be a name with no check behind it (§22's rule is that
+// every capability is a line of code that checks it). Its WRITES are gated — that is where the damage
+// would be — and this test pins the distinction so nobody "fixes" it by accident.
+func TestAdminMembersListStaysTierOnly(t *testing.T) {
+	srv, _ := permissionsServer(t, &fakeCapabilities{byRole: map[string][]string{unrelatedRole: {"automod.read"}}})
+	rec := do(t, srv, "GET", "/api/admin/members", capCookie(t, "1", identity.TierAdmin, []string{unrelatedRole}), "")
+	if rec.Code == http.StatusForbidden {
+		t.Fatalf("the member list is tier-gated by design, but the capability gate refused it: %s", rec.Body.String())
+	}
+}
+
+// A member with no session still cannot reach an admin route at all: the tier gate comes FIRST, so the
+// capability layer never has to be the thing standing between the public internet and the panel.
+func TestCapabilityGateStillRequiresTheAdminTier(t *testing.T) {
+	srv, _ := permissionsServer(t, &fakeCapabilities{byRole: map[string][]string{gatedRole: {"settings.manage"}}})
+	rec := do(t, srv, "POST", "/api/admin/settings", capCookie(t, "1", identity.TierMember, []string{gatedRole}), "{}")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("a non-admin holding the capability got %d, want 401 (the dashboard is an admin surface)", rec.Code)
+	}
+}

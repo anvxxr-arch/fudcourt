@@ -29,6 +29,22 @@ info:
     run that creates nothing and cannot be used to create an execution; LIVE
     mode is fail-closed behind the server-side kill switch
     (`FUDCOURT_EXECUTOR_LIVE=1`).
+
+    This document also carries the **Discord management bot's** surface
+    (`/api/auth/**`, `/api/admin/**`, `/api/internal/**`). Two rules there are
+    worth knowing before reading a single admin path:
+
+    * **Admin routes are gated TWICE.** The admin TIER answers first (401 —
+      the refusal names the tier, because the dashboard is an admin surface), and
+      then the CAPABILITY that names what the route changes (`Capability` below).
+      A 403 always names the missing capability in `detail`, because the
+      operator's next move is to grant it. While NO role holds any grant the
+      admin tier keeps the whole vocabulary, so a fresh install cannot lock its
+      own operator out; the guild owner always holds everything.
+    * **`/api/internal/**` is loopback-only.** Those routes are reached by the
+      co-located bot over the loopback hop, carry no session, and answer a
+      non-loopback peer exactly like a path that does not exist (404) — so a
+      scanner cannot even learn that they are real.
   license:
     name: UNLICENSED
 servers:
@@ -6338,7 +6354,7 @@ components:
         capability is a line of code that checks it — a grant outside this list could
         never be honoured, which is why the api refuses to store one.
       enum: [moderation.read, moderation.warn, moderation.timeout, moderation.kick, moderation.ban,
-             automod.read, automod.write, logs.read, welcome.read, welcome.write, roles.read,
+             automod.read, automod.write, logs.read, logs.write, welcome.read, welcome.write, roles.read,
              roles.manage, custom_commands.read, custom_commands.manage, feeds.read, feeds.manage,
              scheduler.read, scheduler.manage, settings.read, settings.manage, permissions.read,
              permissions.manage]

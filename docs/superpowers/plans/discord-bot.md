@@ -1321,3 +1321,50 @@ gate `VERIFY_ALL_OK` (20 steps).
 listed above. Another agent session (`omp`) again swept the seven command files into its own commit
 (`ca04532`) while these were being written; nothing was lost — `64a7aa3` carries the rest, and both are
 in history.
+
+## Phase 15 (cont.) — the admin plane is capability-gated
+
+The engine was enforced on exactly one route: the one that edits it. Every other admin route asked only
+for the admin TIER, so the mapping was decorative — an admin whose roles held `welcome.read` could still
+write the welcome config, and nothing noticed.
+
+**Two steps, in that order.** `allowCapability` asks for the tier first and the capability second. The
+tier comes first because the dashboard is an admin surface: a role granted one capability does not thereby
+get to enumerate the panel. The capability comes second because the tier says nothing about WHICH admin
+may do WHAT — that is the part the mapping actually controls. Reads and writes are split
+(`capabilityForMethod`): `GET` publishes what is configured, `POST` changes it, and a mapping that grants
+only the read must not be able to send the change.
+
+**The seeding rule is what made this shippable.** While NO role holds any grant, the admin tier resolves
+to the full vocabulary, so an unmapped guild behaves exactly as it did before the engine existed — which
+is why the whole existing admin test suite stayed green through this change without a single edit. The
+moment an operator maps one role, the mapping governs. The guild owner always holds everything, so a bad
+mapping can never lock the operator out of their own bot, and the panel that fixes it is itself gated
+only by `permissions.manage` — the owner's.
+
+**One capability was missing, and a guard said so.** The log-destination editor had no write capability
+to check: the vocabulary held `logs.read` only. `logs.write` is now its own entry rather than reusing the
+read, because re-routing the log stream is a different act from reading it — a role that may audit should
+not automatically be able to send the audit somewhere else. Adding it made the contract guard
+(`TestContractCarriesTheVocabularyWeCheck`) fail immediately, naming the exact missing enum entry, and
+`TestListIsTheVocabularyWePublish` fail on the fully-spelled-out list — both working exactly as designed,
+which is the second time this week those two guards paid for themselves.
+
+**Where it is pinned.** 18 route cases, each driven twice with the same admin session: once with a role
+holding something else (`automod.read`, which no admin route checks, so it can never accidentally satisfy
+a case) and must be refused WITH the capability named; once holding what the route needs and must get
+past the gate. Two more tests pin the deliberate gaps: the member LIST stays tier-only (reading who is in
+the guild has no capability of its own, and §22's rule is that every capability is a line of code that
+checks it — inventing a name with no check behind it would be worse), and a non-admin holding the
+capability still gets 401, because the tier is asked first.
+
+**Also in this pass.** Five files under `apps/api` had not been `gofmt`-clean since commit `51e8041`
+(trivial spacing in `cookies.go`, `identity/cookie.go`, `identity/guard.go`, `accounts/exchange/account.go`
+and `cookies_test.go`) — §37 asks for `gofmt`, so they are formatted; `apps/api` is now 0 files. The
+contract's info block now states the bot surface's two rules (the double gate, and that
+`/api/internal/**` answers a non-loopback peer as a path that does not exist), because a reader opening
+this document for the executor has no way to know either.
+
+**Verification.** `gofmt` clean; `go build ./...`, `go vet ./...`, `go test ./...` green (18 new route
+cases + 2 gap tests + the two vocabulary guards); contract parses with `logs.write` in the enum. Full gate
+`VERIFY_ALL_OK` (20 steps).

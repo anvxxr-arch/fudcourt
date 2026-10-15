@@ -27,7 +27,7 @@ import "strings"
 var List = []string{
 	"moderation.read", "moderation.warn", "moderation.timeout", "moderation.kick", "moderation.ban",
 	"automod.read", "automod.write",
-	"logs.read",
+	"logs.read", "logs.write",
 	"welcome.read", "welcome.write",
 	"roles.read", "roles.manage",
 	"custom_commands.read", "custom_commands.manage",
@@ -41,6 +41,32 @@ var List = []string{
 // is a compile error instead of a guard that silently never fires. As more routes adopt the engine,
 // their checks are added here — and TestNamedChecksAreInList keeps them from drifting out of List.
 const (
+	// ModerationRead guards reading the case history from the dashboard.
+	ModerationRead = "moderation.read"
+	// LogsRead guards reading activity-log routing and the audit trail.
+	LogsRead = "logs.read"
+	// LogsWrite guards editing where activity logs are delivered. It is its own capability because
+	// re-routing the log stream is a different act from reading it: a role that may audit should not
+	// automatically be able to send the audit somewhere else.
+	LogsWrite = "logs.write"
+	// WelcomeRead / WelcomeWrite guard the welcome & goodbye editor.
+	WelcomeRead  = "welcome.read"
+	WelcomeWrite = "welcome.write"
+	// RolesRead / RolesManage guard autoroles, role panels and the member role editor.
+	RolesRead   = "roles.read"
+	RolesManage = "roles.manage"
+	// CustomCommandsRead / CustomCommandsManage guard the declarative command editor.
+	CustomCommandsRead   = "custom_commands.read"
+	CustomCommandsManage = "custom_commands.manage"
+	// FeedsRead / FeedsManage guard feed sources.
+	FeedsRead   = "feeds.read"
+	FeedsManage = "feeds.manage"
+	// SchedulerRead / SchedulerManage guard scheduled jobs.
+	SchedulerRead   = "scheduler.read"
+	SchedulerManage = "scheduler.manage"
+	// SettingsRead / SettingsManage guard the bot's own configuration.
+	SettingsRead   = "settings.read"
+	SettingsManage = "settings.manage"
 	// PermissionsManage guards editing this mapping (the permissions panel's writes).
 	PermissionsManage = "permissions.manage"
 )

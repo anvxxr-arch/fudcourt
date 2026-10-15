@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/anvxxr-arch/fudcourt/apps/api/internal/access/capability"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/httpx"
 )
@@ -55,7 +56,7 @@ func (s *server) handleAdminCustomCommands(w http.ResponseWriter, r *http.Reques
 	if !methodGuard(w, r, http.MethodGet, http.MethodPost) {
 		return
 	}
-	if !s.requireAdmin(w, r) {
+	if !s.allowCapability(w, r, capabilityForMethod(r, capability.CustomCommandsRead, capability.CustomCommandsManage)) {
 		return
 	}
 	if s.customCommands == nil {

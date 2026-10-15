@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/anvxxr-arch/fudcourt/apps/api/internal/access/capability"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/errs"
 	"github.com/anvxxr-arch/fudcourt/apps/api/internal/platform/httpx"
 )
@@ -304,7 +305,7 @@ func (s *server) handleAdminLogDestinations(w http.ResponseWriter, r *http.Reque
 	if !methodGuard(w, r, http.MethodGet, http.MethodPost) {
 		return
 	}
-	if !s.requireAdmin(w, r) {
+	if !s.allowCapability(w, r, capabilityForMethod(r, capability.LogsRead, capability.LogsWrite)) {
 		return
 	}
 	if s.logging == nil {
@@ -402,7 +403,7 @@ func (s *server) handleAdminAuditLogs(w http.ResponseWriter, r *http.Request) {
 	if !methodGuard(w, r, http.MethodGet) {
 		return
 	}
-	if !s.requireAdmin(w, r) {
+	if !s.allowCapability(w, r, capability.LogsRead) {
 		return
 	}
 	if s.logging == nil {
