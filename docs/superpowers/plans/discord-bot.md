@@ -1097,4 +1097,44 @@ failure mode.
 **Verification.** `tsc --noEmit` clean; **585 web tests pass / 0 fail** (574 → 585: +11);
 `DESIGN_TOKENS_OK (files=492)`; gate `VERIFY_ALL_OK`; `bun run build` `EXIT=0`.
 
-**Remaining.** Two admin proxies still have no consumer: `logs/destinations`, `role-panels`.
+**Remaining.** One admin proxy still has no consumer: `logs/destinations`.
+
+## Phase 13 (cont.) — role panels: three invisible things, made visible
+
+**`e677bfe` / `ee07b0a` — the role-panels editor** (MVP §18). The wiring was routine; the interesting
+part is that a role panel's behaviour is decided somewhere else entirely, so an editor that just mirrors
+the wire would be confidently wrong. The panel's copy is taken from the bot's code, and guarded.
+
+**1. What a mode does.** `toggle`/`single`/`multiple`/`exclusive` are decided by the bot's pure
+`pickOption`, and the names do not give it away: `single` revokes every OTHER option in the panel,
+`exclusive` revokes only the options sharing the pick's `exclusive_group`, and an empty group is the
+group `""` — not "no group". The editor names the groups and says which of the two it is looking at. A
+select submission is a third behaviour again: `applySelect` makes the chosen set exactly what the member
+holds FOR THIS PANEL, so deselecting revokes. Each claim is asserted against a real branch, so the copy
+cannot drift from the runtime.
+
+**2. What a dead option is.** A reaction panel matches an option by `emojiKey` with an EXACT string
+compare, and `emojiKey` is `${name}:${id}` for a custom emoji — while Discord's clipboard hands you
+`<:name:id>`. So an option with no emoji never fires, and one pasted from Discord never fires either.
+The api's validator is happy with both; the editor flags them and shows the key the bot will use.
+
+**3. Who owns a field.** `position` is inserted verbatim — the api never renumbers — so the array order
+IS the stored order and the client must send the index. `style` is not validated by the api at all; the
+DB CHECK is the only authority, so `""` is a 500 and an unrecognised value is saved as `secondary`.
+`message_id` belongs to the message the bot listens on, not to the editor.
+
+**A real gap, found while reading the runtime:** nothing calls the bot's `customId()` builder. `PanelService`
+handles panel interactions and is wired live, but no command or dashboard action ever posts a panel
+message — so a button/select panel configured here cannot reach Discord yet, and only reaction panels
+work end to end (post the message and its reactions yourself, paste the message id and the emoji keys).
+The panel says so instead of pretending, and posting a panel is the next slice.
+
+**One real bug of mine, caught by these tests:** `panelProblem` compared `p.channelId !== ''`, and
+`undefined !== ''` is TRUE — so a panel read off the wire with the optional fields absent reached
+`isSnowflake(undefined)` and threw instead of answering. Every optional wire field is now normalised
+once, and the regression is locked in.
+
+**Verification.** `tsc --noEmit` clean; **600 web tests pass / 0 fail** (585 → 600: +15);
+`DESIGN_TOKENS_OK (files=494)`; gate `VERIFY_ALL_OK`.
+
+**Remaining.** One admin proxy still has no consumer: `logs/destinations`.
