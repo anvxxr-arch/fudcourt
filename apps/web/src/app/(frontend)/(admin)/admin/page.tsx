@@ -12,6 +12,7 @@ import WelcomePanel from '@/features/admin/welcome-panel';
 import AutorolesPanel from '@/features/admin/autoroles-panel';
 import RoleAssignmentsPanel from '@/features/admin/role-assignments-panel';
 import AuditPanel from '@/features/admin/audit-panel';
+import CommandsPanel from '@/features/admin/commands-panel';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -141,6 +142,18 @@ export default async function AdminPage() {
           this is what happens to the bot.
         </p>
         <AuditPanel />
+      </section>
+
+      <section style={{ marginTop: space[32] }}>
+        <h2 style={{ fontSize: fontSize[15], color: themeColor.labelPrimary, margin: `0 0 ${space[8]}px` }}>
+          Custom commands
+        </h2>
+        <p style={{ color: themeColor.labelSecondary, fontSize: fontSize[12], margin: `0 0 ${space[12]}px` }}>
+          Operator-authored triggers the bot answers with a templated reply. The response is data, never
+          code: it is rendered through the same pure template engine as welcome messages, so nothing
+          between braces is executed. Saving replaces the whole set.
+        </p>
+        <CommandsPanel />
       </section>
 
       <section style={{ marginTop: space[32] }}>
