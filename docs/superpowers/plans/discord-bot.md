@@ -1227,3 +1227,52 @@ panel's labels); `DESIGN_TOKENS_OK (files=496)`; gate `VERIFY_ALL_OK`.
 (capability engine + dashboard OAuth login), Phase 12/13 (remaining resource groups and IA pages),
 Phase 14 (cross-feature flows), Phase 15 (per-feature security passes), Phase 16, and Phase 17 (the
 bot service unit).
+
+## Phase 2 (cont.) — the capability engine: roles, not names
+
+Phase 2's last gap is closed: authorization is capability-based, keyed to ROLE IDS (§22), and the first
+route the engine enforces is the route that edits it.
+
+**Two layers, one authority each.** The VOCABULARY lives in code
+(`apps/api/internal/access/capability`): 22 namespaced capabilities in render order, because every
+capability is a line of code that checks it — and `List` is published in the contract's `Capability`
+enum, with a test that reads the YAML and fails if the two disagree. The MAPPING lives in Postgres
+(`discord_role_capabilities`, one row per guild/role/capability), because it is configuration an admin
+edits. A stored grant the vocabulary does not know is dropped and REPORTED per role (`roles[].unknown`):
+a dead grant that looks active is worse than a visible one.
+
+**Wildcards are one shape.** `moderation.*` expands to that namespace's members and nothing else; a
+bare `*` is REFUSED, because "everything" is what the owner override is for, and the widest possible
+grant must not also be the shortest possible string.
+
+**The seeding rule — and the design I had to throw away.** My first cut gave the admin tier every
+capability unconditionally, and writing the test showed why that is worthless: only admins get past the
+tier gate, so an admin who always holds everything makes `requireCapability` a check that can never
+refuse — the engine would have been enforced by nothing. What ships is a SEEDING rule: an admin holds
+everything only while the mapping is COMPLETELY empty (the state that makes the first row writable),
+and the moment any role holds any grant the admin tier is subject to the mapping like everyone else.
+The guild owner holds everything always, resolved WITHOUT touching the database, so a bad mapping cannot
+lock the owner out of their own bot. An unreadable mapping fails closed.
+
+**Enforcement and accountability.** `GET|PUT /api/admin/permissions`: the read needs only the admin tier
+(an admin who cannot see the mapping can never be told what to grant); the write additionally needs
+`permissions.manage`. The write is a DECLARATION of one role's complete set, validated in full before
+anything is stored (an unknown grant is a 400 that names it, and nothing is written), and every
+accepted write is audited as `permissions.changed` with before/after.
+
+**Live-verified, not just unit-tested.** The new table was applied to the live Postgres (the schema file
+IS the migration), its columns were read back from `information_schema`, and the real-SQL round-trip
+test passes against the live database via `FUDCOURT_TEST_PG_URL` — a fake store cannot catch a column
+that does not exist, which is exactly how two earlier schema↔code mismatches slipped through.
+
+**Verification.** `gofmt` clean; `go build ./...`, `go vet ./...` and `go test ./...` green; 12 tests in
+the `capability` package and 12 across the routes (including the contract guard); live PG round-trip
+PASS; full gate `VERIFY_ALL_OK` (20 steps).
+
+**A note on this tree.** Another agent session (`omp`) shares this working tree: it swept these files
+into commit `36577ad` under its own message and added the thin `/api/admin/permissions` web proxy. My
+remaining delta landed as `d25f089`. Nothing was lost — both are in history.
+
+**Remaining (updated).** The engine is enforced on its own route only. Next: the permissions PANEL in
+the dashboard (the api and its proxy are ready), `requireCapability` on the rest of the admin plane, and
+the bot's Discord-side preconditions resolving capabilities from the same rows (§9, §52).
