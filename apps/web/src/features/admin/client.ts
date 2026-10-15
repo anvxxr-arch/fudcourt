@@ -393,3 +393,47 @@ export function fetchAuditEntries(limit: number, resourceType = ''): Promise<Aud
   return getJSON<AuditView>(`/api/admin/logs/audit?limit=${limit}${filter}`, { cache: 'no-store' });
 }
 
+/**
+ * One possible reply. `embed` is the optional rich embed (jsonb on the wire) and is carried through
+ * untouched — this dashboard edits text, and never rewrites an embed it cannot edit.
+ */
+export type CommandResponse = { text?: string; embed?: unknown };
+
+/**
+ * A custom command. camelCase on the wire (`apps/api/customcommands.go`), snowflake ids as strings.
+ */
+export type CustomCommand = {
+  id?: number;
+  name: string;
+  aliases: string[];
+  responses: CommandResponse[];
+  allowedRoles: string[];
+  allowedChannels: string[];
+  cooldownSeconds: number;
+  deleteTrigger: boolean;
+  reply: boolean;
+  dm: boolean;
+  enabled: boolean;
+};
+
+/** The save answers `{ok:true, commands:[…]}`; the read answers `{commands:[…]}`. */
+export type CommandsView = { ok?: boolean; commands?: CustomCommand[]; detail?: string };
+
+/** fetchCustomCommands reads the whole set; the bot reads the same set over the loopback hop. */
+export function fetchCustomCommands(): Promise<CommandsView> {
+  return getJSON<CommandsView>('/api/admin/custom-commands', { cache: 'no-store' });
+}
+
+/**
+ * saveCustomCommands replaces the WHOLE set in one transaction (the dashboard edits the list as a
+ * unit) and answers with the set the api actually stored — normalised. Adopt the answer: the api
+ * lowercases names and trims/dedupes aliases, so what comes back can differ from what was sent.
+ */
+export function saveCustomCommands(commands: CustomCommand[]): Promise<CommandsView> {
+  return getJSON<CommandsView>('/api/admin/custom-commands', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ commands }),
+  });
+}
+
