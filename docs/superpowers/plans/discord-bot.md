@@ -1180,4 +1180,50 @@ once, and the regression is locked in.
 **Verification.** `tsc --noEmit` clean; **600 web tests pass / 0 fail** (585 → 600: +15);
 `DESIGN_TOKENS_OK (files=494)`; gate `VERIFY_ALL_OK`.
 
-**Remaining.** One admin proxy still has no consumer: `logs/destinations`.
+## Phase 13 (cont.) — the activity-log routing editor, and three drifts in one endpoint
+
+`logs/destinations` was the last admin proxy without a consumer; it has one now, and the proxy is no
+longer thin: the panel is where routing is actually configured.
+
+**The panel** (`log-destinations-panel.tsx` + `log-destinations-draft.ts`) renders one row per
+category: label, what lands there, a channel field, a delivery toggle, save, and `last set <when>`.
+The category set is the api's — it arrives in every read (`categories`), so a category added to the Go
+set shows up without a web deploy. An unlabelled category is REPORTED and rendered as its raw name,
+never dropped.
+
+**The write has two meanings and the panel does not blur them.** An empty `channelId` DELETES the
+routing row — the channel is forgotten (`channel_id` is NOT NULL; there is no row for a destination
+with no destination) — while `enabled: false` keeps the row and stops delivery. So the panel offers
+two different buttons ("save" / "clear (deletes the row)"), prints the deletion warning before it is
+pressed, and the clear body deliberately carries NO `enabled` field: the delete path ignores it, and
+sending it would suggest the request keeps something. A row that did not change sends nothing at all.
+
+**Three drifts, all on this one endpoint, found by reading its own contract against its Go.**
+
+1. `LogDestinationsResponse` requires `destinations` AND `categories`; the api sent only
+   `destinations`. The dashboard cannot render a category that has no row yet, so the closed set has
+   to come from the server — and the api's set lived in a `map[string]bool`, which has no order to
+   send. The fix is structural: one ordered `logCategoryList` is now the single authority and
+   `logCategories` derives from it, so the wire order and the Go vocabulary cannot drift apart.
+2. The `LogDestinationWrite` description claimed an empty `channelId` with `enabled: false`
+   "turns a category off while keeping the row". The api DELETES on an empty `channelId`, and the
+   schema's `channel_id NOT NULL` makes the described row unstorable. The contract now says what the
+   code does, and names the real way to keep the wiring (`enabled: false` with the channel).
+3. `LogDestination` has `additionalProperties: false` and does not list `updatedAt`, yet every row
+   carries it. Documented.
+
+**Verified on the bot's side, not assumed.** `src/logging/service.ts` resolves destinations through
+`GET /api/internal/log-config` on EVERY event (`return false` when the category is unrouted), and the
+api's internal handler filters `enabled && channelId != ""`. That is what makes the panel's copy true:
+the toggle really stops delivery, and a save applies to the next event with no restart.
+
+**Verification.** api: `gofmt` clean, `go test ./...` green — the GET test now asserts the ordered
+closed set and `updatedAt` on the wire; contract gates OK. web: `tsc --noEmit` clean, **612 tests
+pass / 0 fail** (600 → 612: +12, including a three-way guard that reads `logCategoryList` out of
+`apps/api/logging.go` AND the enum out of the OpenAPI file and fails if either disagrees with the
+panel's labels); `DESIGN_TOKENS_OK (files=496)`; gate `VERIFY_ALL_OK`.
+
+**Remaining.** No admin proxy is left without a consumer. The board's oldest gaps are Phase 2
+(capability engine + dashboard OAuth login), Phase 12/13 (remaining resource groups and IA pages),
+Phase 14 (cross-feature flows), Phase 15 (per-feature security passes), Phase 16, and Phase 17 (the
+bot service unit).
