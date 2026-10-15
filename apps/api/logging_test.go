@@ -8,6 +8,11 @@ import (
 	"testing"
 )
 
+// fakeStamp is the timestamp the fake's writes carry: the real store stamps
+// updated_at from the database clock, so a test that reads the row back needs a
+// value the fake can produce deterministically.
+const fakeStamp = "2026-01-01 00:00:00"
+
 // fakeLogging is an in-memory loggingStore: it exercises the handlers (loopback
 // gate, admin gate, envelopes, camelCase shape, validation) without a database.
 // The SQL-specific behaviour (upsert-on-conflict, jsonb NULL for a missing
@@ -33,11 +38,11 @@ func (f *fakeLogging) upsertDestination(_ context.Context, guildID, category, ch
 	}
 	for i := range f.destinations {
 		if f.destinations[i].Category == category {
-			f.destinations[i] = logDestination{Category: category, ChannelID: channelID, Enabled: enabled}
+			f.destinations[i] = logDestination{Category: category, ChannelID: channelID, Enabled: enabled, UpdatedAt: fakeStamp}
 			return nil
 		}
 	}
-	f.destinations = append(f.destinations, logDestination{Category: category, ChannelID: channelID, Enabled: enabled})
+	f.destinations = append(f.destinations, logDestination{Category: category, ChannelID: channelID, Enabled: enabled, UpdatedAt: fakeStamp})
 	return nil
 }
 
@@ -200,10 +205,25 @@ func TestAdminLogDestinationsRoundTrip(t *testing.T) {
 		t.Fatalf("set must be audited with an after snapshot: %+v", lg.audit)
 	}
 
-	// GET shows it.
+	// GET shows it — plus the closed category set, because a category never
+	// routed has no row and the dashboard still has to render it as unrouted.
 	rec = do(t, s, "GET", "/api/admin/logs/destinations", adminCookie(t), "")
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"moderation"`) {
 		t.Fatalf("GET = %d %s", rec.Code, rec.Body.String())
+	}
+	var got struct {
+		Destinations []logDestination `json:"destinations"`
+		Categories   []string         `json:"categories"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("GET body is not the documented shape: %v (%s)", err, rec.Body.String())
+	}
+	want := []string{"message", "member", "role", "voice", "channel", "moderation", "automod"}
+	if strings.Join(got.Categories, ",") != strings.Join(want, ",") {
+		t.Fatalf("categories = %v, want the closed set in picker order %v", got.Categories, want)
+	}
+	if len(got.Destinations) != 1 || got.Destinations[0].UpdatedAt != fakeStamp {
+		t.Fatalf("destinations = %+v, want the routed row carrying its updatedAt", got.Destinations)
 	}
 
 	// Clearing (empty channelId) deletes it.

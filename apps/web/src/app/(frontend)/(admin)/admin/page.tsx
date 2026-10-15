@@ -12,6 +12,7 @@ import WelcomePanel from '@/features/admin/welcome-panel';
 import AutorolesPanel from '@/features/admin/autoroles-panel';
 import RoleAssignmentsPanel from '@/features/admin/role-assignments-panel';
 import AuditPanel from '@/features/admin/audit-panel';
+import LogDestinationsPanel from '@/features/admin/log-destinations-panel';
 import CommandsPanel from '@/features/admin/commands-panel';
 import RolePanelsPanel from '@/features/admin/role-panels-panel';
 export const dynamic = 'force-dynamic';
@@ -133,6 +134,20 @@ export default async function AdminPage() {
           acts.
         </p>
         <RoleAssignmentsPanel />
+      </section>
+
+      <section style={{ marginTop: space[32] }}>
+        <h2 style={{ fontSize: fontSize[15], color: themeColor.labelPrimary, margin: `0 0 ${space[4]}px` }}>
+          Activity log routing
+        </h2>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
+          Where the bot posts what happens in the server — one channel per category, so gameplay
+          noise does not bury an incident. The bot reads this routing on every event, so a save
+          applies to the next one. Two different things look like &ldquo;turn it off&rdquo; here, and
+          they are not the same: the toggle stops delivery and keeps the channel, an empty channel
+          deletes the routing and forgets it.
+        </p>
+        <LogDestinationsPanel />
       </section>
 
       <section style={{ marginTop: space[32] }}>

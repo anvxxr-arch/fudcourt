@@ -9,7 +9,7 @@ export const revalidate = 0;
  * check from the signed session cookie, the `log_destinations` read, and the
  * validated write. This route forwards the request and replays the upstream
  * response VERBATIM — status, body and headers — so the dashboard reads the
- * exact wire contract (`{destinations}` / `{ok, destinations}` on success,
+ * exact wire contract (`{destinations, categories}` / `{ok, destination}` on success,
  * `body.detail` on a refusal).
  *
  * The Cookie header is the ONLY identity input; the proxy holds no auth logic.

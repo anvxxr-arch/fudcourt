@@ -6114,6 +6114,7 @@ components:
         category: { type: string, enum: [message, member, role, voice, channel, moderation, automod] }
         channelId: { type: string }
         enabled: { type: boolean }
+        updatedAt: { type: string, description: 'When the row last changed (UTC, `YYYY-MM-DD HH24:MI:SS`).' }
     LogDestinationsResponse:
       type: object
       additionalProperties: false
@@ -6134,9 +6135,12 @@ components:
       additionalProperties: false
       required: [category]
       description: |
-        An upsert of one routing row. `channelId` is required when `enabled` is
-        true (a routed category needs a channel); an empty channelId with
-        `enabled: false` turns a category off while keeping the row.
+        An upsert of one routing row. `channelId` routes the category and must
+        be a Discord snowflake. An EMPTY `channelId` DELETES the row: the
+        category becomes unrouted and its channel is forgotten — `channel_id`
+        is NOT NULL, so there is no such row as "a destination with no
+        destination". To stop delivery but keep the wiring, send the channel
+        with `enabled: false`.
       properties:
         category: { type: string, enum: [message, member, role, voice, channel, moderation, automod] }
         channelId: { type: string }

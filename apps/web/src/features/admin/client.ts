@@ -478,3 +478,42 @@ export function saveRolePanels(panels: RolePanel[]): Promise<RolePanelsView> {
   });
 }
 
+/**
+ * The activity-log routing (`log_destinations`): where the bot posts what happens in the server.
+ * `categories` is the api's CLOSED set and travels with every read, so the panel never guesses it.
+ * `updatedAt` is the wire's own stamp (`YYYY-MM-DD HH24:MI:SS`, UTC) — see wire-time.ts.
+ */
+export type LogDestination = {
+  category: string;
+  channelId: string;
+  enabled: boolean;
+  updatedAt: string;
+};
+
+export type LogDestinationsView = {
+  destinations?: LogDestination[];
+  categories?: string[];
+  detail?: string;
+};
+
+export function fetchLogDestinations(): Promise<LogDestinationsView> {
+  return getJSON<LogDestinationsView>('/api/admin/logs/destinations', { cache: 'no-store' });
+}
+
+/**
+ * One routing write. `channelId` routes the category and must be a snowflake; an EMPTY channelId
+ * DELETES the row (the channel is forgotten — `channel_id` is NOT NULL). To stop delivery but keep
+ * the wiring, send the channel with `enabled: false`.
+ */
+export function saveLogDestination(body: {
+  category: string;
+  channelId: string;
+  enabled?: boolean;
+}): Promise<{ ok?: boolean; destination?: LogDestination; cleared?: string; detail?: string }> {
+  return getJSON('/api/admin/logs/destinations', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+

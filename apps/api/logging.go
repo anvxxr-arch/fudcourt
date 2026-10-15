@@ -30,13 +30,21 @@ import (
 //
 // Both are the same hop `settings`/`moderation_cases`/`automod_rules` already use.
 
-// logCategories is the closed set of activity classes the bot can route. A
-// category outside this set is a validation error, never a silently-stored typo
-// (the bot's router switches on exactly these names).
-var logCategories = map[string]bool{
-	"message": true, "member": true, "role": true, "voice": true,
-	"channel": true, "moderation": true, "automod": true,
-}
+// logCategoryList is the ONE authority for the closed set of activity classes
+// the bot can route, in the order the dashboard renders them (the contract
+// enumerates exactly this list, in this order). logCategories is the membership
+// test derived from it, so the set the api CHECKS cannot drift from the set it
+// SENDS. A category outside it is a validation error, never a silently-stored
+// typo (the bot's router switches on exactly these names).
+var logCategoryList = []string{"message", "member", "role", "voice", "channel", "moderation", "automod"}
+
+var logCategories = func() map[string]bool {
+	m := make(map[string]bool, len(logCategoryList))
+	for _, c := range logCategoryList {
+		m[c] = true
+	}
+	return m
+}()
 
 // auditSources is the closed set of origins an audit entry may carry. It mirrors
 // the moderation-case sources where they overlap.
@@ -311,7 +319,9 @@ func (s *server) handleAdminLogDestinations(w http.ResponseWriter, r *http.Reque
 			writeRefusal(w, r, http.StatusInternalServerError, "internal_error", errs.CategoryInternal, "log config query failed")
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, map[string]any{"destinations": rows})
+		// The closed set travels with the rows: a category the operator has never
+		// routed has no row, and the dashboard still has to render it (as unrouted).
+		httpx.WriteJSON(w, http.StatusOK, map[string]any{"destinations": rows, "categories": logCategoryList})
 		return
 	}
 	s.adminLogDestinationsPost(w, r, guildID)
