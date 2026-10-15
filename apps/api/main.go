@@ -164,6 +164,12 @@ func (s *server) handler() http.Handler {
 	// panel as (it posted it and only it sees the id), so a reaction panel can be
 	// matched and the dashboard can show which message is live.
 	mux.HandleFunc("/api/internal/role-panels/posted", s.handleInternalPanelPosted)
+	// Internal, loopback-only: the bot asks what a MEMBER may do before a
+	// command acts — resolved by the same engine the dashboard uses, so a slash
+	// command and a panel action cannot disagree (§9). The payload names a
+	// member's role ids (public inside the guild); the listener is unreachable
+	// from the network.
+	mux.HandleFunc("/api/internal/capabilities", s.handleInternalCapabilities)
 	// Dashboard: welcome/goodbye, autoroles and role panels, behind the admin tier.
 	mux.HandleFunc("/api/admin/welcome", s.handleAdminWelcome)
 	mux.HandleFunc("/api/admin/autoroles", s.handleAdminAutoroles)

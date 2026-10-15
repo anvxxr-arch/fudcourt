@@ -118,9 +118,14 @@ func (s *pgCapabilityStore) replaceRole(ctx context.Context, guildID, roleID str
 // may not do this" is only useful if it can also say why, and the three sources are not the same
 // thing to an operator.
 type identityCapabilities struct {
-	set     map[string]bool
-	source  string
+	set    map[string]bool
+	source string
+	// unknown names grants that resolved to nothing (the vocabulary is code's).
 	unknown []string
+	// mappingEmpty reports that NO role holds any grant. The bot's precondition uses it to keep its
+	// existing Discord-permission gate until an operator actually maps something: the same seeding
+	// logic the admin baseline uses, applied where a slash command is about to act.
+	mappingEmpty bool
 }
 
 // resolveCapabilities answers what the caller may do. The ORDER is the design:
@@ -147,28 +152,45 @@ func (s *server) resolveCapabilities(ctx context.Context, r *http.Request) ident
 	if err != nil {
 		return identityCapabilities{set: map[string]bool{}, source: "none"}
 	}
-	if ownerID, ok := s.discord.guildOwnerID(ctx); ok && ownerID != "" && ownerID == claims.ID {
+	return s.resolveForCapabilities(ctx, claims.ID, claims.Roles, claims.Tier)
+}
+
+// resolveForCapabilities is the claims-free core: one identity (a Discord user id and the role ids it
+// holds) → what it may do, and where that came from.
+//
+// It is its own function because TWO callers ask the same question with different credentials: the
+// dashboard's HTTP session (resolveCapabilities, which decodes a signed cookie) and the bot's internal
+// route (a slash command about to act for a member). §9 requires those to reach the same answer, and
+// the only way to guarantee that is one implementation of the mapping rule.
+// The tier is a PARAMETER, not something the core re-derives, because the two callers know it
+// differently: the dashboard's session carries a tier that was signed at login (authoritative — it
+// survives a later settings edit, which is the point of signing it), while the bot has nothing but
+// the role ids Discord just handed it. Resolution ALGORITHM is shared; the credential is the
+// caller's. Re-deriving it from roles would silently downgrade a session whose role set was trimmed.
+func (s *server) resolveForCapabilities(ctx context.Context, userID string, roleIDs []string, tier identity.Tier) identityCapabilities {
+	env := s.discord.effective(ctx)
+	if ownerID, ok := s.discord.guildOwnerID(ctx); ok && ownerID != "" && ownerID == userID {
 		return identityCapabilities{set: capability.All(), source: "owner"}
 	}
-	admin := claims.Tier.AtLeast(identity.TierAdmin)
+	admin := tier.AtLeast(identity.TierAdmin)
 	if s.capabilities == nil {
 		if admin {
-			return identityCapabilities{set: capability.All(), source: "admin_baseline"}
+			return identityCapabilities{set: capability.All(), source: "admin_baseline", mappingEmpty: true}
 		}
-		return identityCapabilities{set: map[string]bool{}, source: "roles"}
+		return identityCapabilities{set: map[string]bool{}, source: "roles", mappingEmpty: true}
 	}
-	byRole, err := s.capabilities.listGrants(ctx, s.discord.effective(ctx).GuildID)
+	byRole, err := s.capabilities.listGrants(ctx, env.GuildID)
 	if err != nil {
 		byRole = map[string][]string{}
 	} else if admin && len(byRole) == 0 {
-		return identityCapabilities{set: capability.All(), source: "admin_baseline"}
+		return identityCapabilities{set: capability.All(), source: "admin_baseline", mappingEmpty: true}
 	}
 	grants := []string{}
-	for _, roleID := range claims.Roles {
+	for _, roleID := range roleIDs {
 		grants = append(grants, byRole[roleID]...)
 	}
 	set, unknown := capability.Resolve(grants, false)
-	return identityCapabilities{set: set, source: "roles", unknown: unknown}
+	return identityCapabilities{set: set, source: "roles", unknown: unknown, mappingEmpty: len(byRole) == 0}
 }
 
 // requireCapability refuses a request whose session does not hold cap, and names what is missing —

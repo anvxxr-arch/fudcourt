@@ -2429,6 +2429,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
+  /api/internal/capabilities:
+    post:
+      tags: [internal]
+      operationId: internalCapabilities
+      summary: Resolve what a guild member may do, for the co-located bot (loopback-only)
+      description: |
+        A slash command and a dashboard action must not disagree about who may do
+        what (§9). Both ask this resolver: the dashboard with a signed session
+        cookie, the bot with the role ids Discord just handed it, which is the only
+        identity a Discord interaction carries. The answer is the same set either
+        way, because the mapping rule exists in one place.
+
+        No session: the api listener is loopback-only (DR-002) and the payload
+        carries no secret (role ids are public inside the guild). A non-loopback
+        peer is refused as if the route did not exist (404).
+
+        The bot must not be fooled by a database outage into refusing every
+        command: with no store configured the answer is still a well-formed
+        `mappingEmpty: true`, which is what keeps its previous gate in charge.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [userId, roles]
+              properties:
+                userId:
+                  type: string
+                  description: The Discord user id of the member the command is about to act for.
+                roles:
+                  type: array
+                  items: { type: string }
+                  description: The role ids that member currently holds, as Discord reported them.
+      responses:
+        '200':
+          description: '`{"capabilities": [...], "source": "roles", "mappingEmpty": false, "unknown": []}`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalCapabilitiesResponse'
+        '400':
+          description: 'The body is not a JSON object, or `userId` is not a Discord id (digits only).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: 'The generic not-found envelope for a non-loopback peer.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBasic'
+        '405':
+          description: '`{"error": "method not allowed"}` for anything but POST; `Allow: POST`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBasic'
   /api/internal/audit:
     post:
       tags: [internal]
@@ -6282,6 +6342,36 @@ components:
              roles.manage, custom_commands.read, custom_commands.manage, feeds.read, feeds.manage,
              scheduler.read, scheduler.manage, settings.read, settings.manage, permissions.read,
              permissions.manage]
+    InternalCapabilitiesResponse:
+      type: object
+      additionalProperties: false
+      required: [capabilities, source, mappingEmpty, unknown]
+      description: |
+        One identity's resolved capabilities, for the co-located bot. `capabilities`
+        is still just the `Capability` vocabulary: this endpoint does not widen
+        what can be granted, it answers which of those a member already holds.
+      properties:
+        capabilities:
+          type: array
+          items: { $ref: '#/components/schemas/Capability' }
+        source:
+          type: string
+          description: |
+            Which rule produced the set: `owner` (the guild owner, resolved without
+            touching the mapping), `admin_baseline` (the admin tier while no role
+            holds any grant), `roles` (the mapping), or `none` (no identity at all).
+          enum: [owner, admin_baseline, roles, none]
+        mappingEmpty:
+          type: boolean
+          description: |
+            True while NO role holds any grant. The bot keeps its pre-existing gate
+            (an admin role, or Discord's Moderate Members permission) in that state,
+            so switching the engine on does not silently disable moderation on a
+            guild whose roles have not been mapped yet.
+        unknown:
+          type: array
+          items: { type: string }
+          description: Grants that are STORED for the member's roles but mean nothing to the vocabulary.
     RoleCapabilities:
       type: object
       additionalProperties: false
