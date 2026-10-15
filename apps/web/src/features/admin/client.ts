@@ -437,3 +437,44 @@ export function saveCustomCommands(commands: CustomCommand[]): Promise<CommandsV
   });
 }
 
+export type RolePanelOption = {
+  roleId: string;
+  label?: string;
+  emoji?: string;
+  style?: string;
+  position?: number;
+  exclusiveGroup?: string;
+};
+
+export type RolePanel = {
+  id: string;
+  channelId?: string;
+  messageId?: string;
+  title?: string;
+  description?: string;
+  kind?: string;
+  mode?: string;
+  enabled?: boolean;
+  options?: RolePanelOption[];
+};
+
+/** The read answers `{panels:[…]}`, the save echoes the submitted set as `{ok:true, panels:[…]}`. */
+export type RolePanelsView = { ok?: boolean; panels?: RolePanel[]; detail?: string };
+
+/** fetchRolePanels reads every panel (with its options) for the one guild. */
+export function fetchRolePanels(): Promise<RolePanelsView> {
+  return getJSON<RolePanelsView>('/api/admin/role-panels', { cache: 'no-store' });
+}
+
+/**
+ * saveRolePanels replaces the whole set in one transaction. The answer is the SUBMITTED set with ids
+ * trimmed (the api does not re-read), so adopting it means adopting this client's own normalisation.
+ */
+export function saveRolePanels(panels: RolePanel[]): Promise<RolePanelsView> {
+  return getJSON<RolePanelsView>('/api/admin/role-panels', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ panels }),
+  });
+}
+
