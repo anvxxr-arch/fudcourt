@@ -1276,3 +1276,48 @@ remaining delta landed as `d25f089`. Nothing was lost — both are in history.
 **Remaining (updated).** The engine is enforced on its own route only. Next: the permissions PANEL in
 the dashboard (the api and its proxy are ready), `requireCapability` on the rest of the admin plane, and
 the bot's Discord-side preconditions resolving capabilities from the same rows (§9, §52).
+
+## Phase 2 (cont. 2) — the bot asks the same question
+
+§9 says a Discord command and a dashboard action must not disagree about who may do what. Until this
+slice only the dashboard could answer it, because only the dashboard had a signed session. A slash
+command has no session — it has a member and the role ids Discord just handed it — so the engine was
+enforced on its own editor and nowhere else.
+
+**One resolver, two credentials.** `resolveForCapabilities(ctx, userID, roleIDs, tier)` is the shared
+core: the dashboard passes the tier from its signed cookie, the bot passes nothing and the api derives
+the tier from the role ids with the same env the login flow uses. The tier is a PARAMETER rather than
+something the core re-derives, and that is not pedantry: re-deriving it silently downgraded a session
+whose role set had been trimmed, and the existing permissions tests caught it before this shipped.
+
+**The gate runs last, and the order is the design.** A command declares `capability: "moderation.ban"`;
+the router checks it AFTER its preconditions. By then the command's own gate — an admin role, or
+Discord's own Moderate Members permission — has already passed, so the two states where the api cannot
+be authoritative fall back to a gate that is KNOWN TO BE CLOSED rather than to "allow anyone":
+`mappingEmpty` (no operator has mapped a role yet) and an unreachable api. Refusing every command while
+a sidecar restarts would make the bot less safe in practice, not more, and both falls-back are logged
+with their reason so the difference is visible to whoever reads the log.
+
+**Two doors to the same ban.** Context-menu commands derive their capability from the action they run
+(`src/moderation/capabilities.ts`) instead of carrying a second hand-written list, because a right-click
+Kick and `/kick` are one action behind two doors and only one of them being locked is exactly the bug
+that produces.
+
+**Gaps left visible.** Purge, lock, unlock, slowmode and nick have no entry in the api's vocabulary yet,
+so they stay guarded by `ModOnly` alone. The api refuses to store a capability outside its vocabulary,
+so coining a name here would produce a grant no operator could ever hand out — a visible gap is worth
+more than a decorative one.
+
+**Verified three ways.** 17 new bot tests (decision table, client failure behaviour, the ROUTER WIRING,
+and two drift guards against the contract's capability enum — a typo would otherwise only surface as
+"the panel will not let me grant this"); `bun test` 338 pass / 0 fail across 24 files and `tsc` clean;
+and a real end-to-end probe: a freshly built api binary on a throwaway port answered the bot's own
+client with `{ok:true, capabilities:[], source:"roles", mappingEmpty:true}` → `unmapped` → the command
+runs, while a dead port answered `unreachable` → the command still runs with the reason logged. Full
+gate `VERIFY_ALL_OK` (20 steps).
+
+**Still owed.** The permissions PANEL in the dashboard (the api and the proxy are ready), adopting
+`requireCapability` on the rest of the admin plane, and vocabulary entries for the moderation actions
+listed above. Another agent session (`omp`) again swept the seven command files into its own commit
+(`ca04532`) while these were being written; nothing was lost — `64a7aa3` carries the rest, and both are
+in history.
