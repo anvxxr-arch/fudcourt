@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -80,6 +82,41 @@ func decodePermissions(t *testing.T, rec *httptest.ResponseRecorder) permissions
 		t.Fatalf("body is not a permissions envelope: %v (%s)", err, rec.Body.String())
 	}
 	return body
+}
+
+// TestContractCarriesTheVocabularyWeCheck keeps the two copies of one vocabulary — this package's List
+// and the contract's Capability enum — from drifting apart. A capability the code checks but the
+// contract omits cannot be discovered by a client; one the contract offers but the code does not know
+// is a grant the panel would let an operator make and nothing would honour.
+func TestContractCarriesTheVocabularyWeCheck(t *testing.T) {
+	raw, err := os.ReadFile("../../contracts/openapi/fudcourt.yaml")
+	if err != nil {
+		t.Fatalf("read the contract: %v", err)
+	}
+	text := string(raw)
+	at := strings.Index(text, "\n    Capability:")
+	if at < 0 {
+		t.Fatal("the contract has no Capability schema")
+	}
+	open := strings.Index(text[at:], "enum: [")
+	if open < 0 {
+		t.Fatal("the Capability schema has no enum")
+	}
+	open += at + len("enum: [")
+	closeIdx := strings.Index(text[open:], "]")
+	if closeIdx < 0 {
+		t.Fatal("the Capability enum is unterminated")
+	}
+	enum := text[open : open+closeIdx]
+	tokens := []string{}
+	for _, part := range strings.Split(enum, ",") {
+		if c := strings.TrimSpace(part); c != "" {
+			tokens = append(tokens, c)
+		}
+	}
+	if want := capability.List; !reflect.DeepEqual(tokens, want) {
+		t.Fatalf("contract enum = %v\nwant the code's List = %v", tokens, want)
+	}
 }
 
 func TestPermissionsRequireASession(t *testing.T) {
