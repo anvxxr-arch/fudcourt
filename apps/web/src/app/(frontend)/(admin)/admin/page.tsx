@@ -11,6 +11,7 @@ import FeedsPanel from '@/features/admin/feeds-panel';
 import WelcomePanel from '@/features/admin/welcome-panel';
 import AutorolesPanel from '@/features/admin/autoroles-panel';
 import RoleAssignmentsPanel from '@/features/admin/role-assignments-panel';
+import AuditPanel from '@/features/admin/audit-panel';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -130,6 +131,16 @@ export default async function AdminPage() {
           acts.
         </p>
         <RoleAssignmentsPanel />
+      </section>
+
+      <section style={{ marginTop: space[32] }}>
+        <h2 style={{ fontSize: fontSize[15], color: themeColor.labelPrimary, margin: `0 0 ${space[4]}px` }}>Audit log</h2>
+        <p style={{ color: themeColor.labelTertiary, fontSize: fontSize[12], margin: `0 0 ${space[8]}px` }}>
+          Every change to the bot itself — dashboard edits, and whatever the bot records on its own —
+          with the before and after of what moved. The activity log is what happens in the server;
+          this is what happens to the bot.
+        </p>
+        <AuditPanel />
       </section>
 
       <section style={{ marginTop: space[32] }}>

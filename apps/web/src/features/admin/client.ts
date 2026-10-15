@@ -363,3 +363,33 @@ export function fetchRoleAssignments(limit: number): Promise<RoleAssignmentsView
   return getJSON<RoleAssignmentsView>(`/api/admin/role-assignments?limit=${limit}`, { cache: 'no-store' });
 }
 
+/**
+ * One recorded change to the bot (bigint-safe: the id is a number, every Discord snowflake in the
+ * row is a string). `before`/`after` are the structured snapshots and are ABSENT when the row has
+ * none — a create has no before, a delete no after.
+ */
+export type AuditEntry = {
+  id: number;
+  guildId: string;
+  actorId: string;
+  actorName: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  before?: unknown;
+  after?: unknown;
+  source: string;
+  createdAt: string;
+};
+
+export type AuditView = { entries?: AuditEntry[]; detail?: string };
+
+/**
+ * fetchAuditEntries reads the audit trail, newest first. `resourceType` is an EXACT match and the api
+ * does not validate it, so an unknown name is an empty list rather than an error; pass '' for all.
+ */
+export function fetchAuditEntries(limit: number, resourceType = ''): Promise<AuditView> {
+  const filter = resourceType === '' ? '' : `&resourceType=${encodeURIComponent(resourceType)}`;
+  return getJSON<AuditView>(`/api/admin/logs/audit?limit=${limit}${filter}`, { cache: 'no-store' });
+}
+
