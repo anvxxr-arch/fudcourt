@@ -10,6 +10,7 @@ export class BanCommand extends Command {
       name: "ban",
       description: "Ban a member from the server",
       preconditions: ["ModOnly"],
+      capability: "moderation.ban",
       options: [
         { name: "user", description: "The member to ban", type: ApplicationCommandOptionType.User, required: true },
         { name: "reason", description: "Why they are being banned", type: ApplicationCommandOptionType.String },

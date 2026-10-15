@@ -10,6 +10,7 @@ export class WarnCommand extends Command {
       name: "warn",
       description: "Warn a member",
       preconditions: ["ModOnly"],
+      capability: "moderation.warn",
       options: [
         { name: "user", description: "The member to warn", type: ApplicationCommandOptionType.User, required: true },
         { name: "reason", description: "Why they are being warned", type: ApplicationCommandOptionType.String, required: true },

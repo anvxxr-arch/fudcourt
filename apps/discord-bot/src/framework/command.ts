@@ -82,6 +82,13 @@ export interface CommandOptions {
   options?: ApplicationCommandOption[];
   /** Named preconditions resolved against the PreconditionStore. */
   preconditions?: string[];
+  /**
+   * The capability this command requires, checked against the role mapping the dashboard edits.
+   * Omitted = the command is not capability-gated. It is enforced AFTER the preconditions, so an
+   * unmapped guild (or an api that cannot answer) keeps the gate above in charge — see
+   * src/lib/capabilities.ts for why that order is the safe one.
+   */
+  capability?: string;
   /** Convenience: registers the "AdminOnly" precondition. */
   adminOnly?: boolean;
   /** DM-only or guild-only visibility for the registered command. */
@@ -97,11 +104,14 @@ export abstract class Command {
   readonly preconditions: string[];
   readonly guildOnly: boolean;
   readonly type: number;
+  /** The capability required to run this command; undefined = not capability-gated. */
+  readonly capability: string | undefined;
 
   constructor(opts: CommandOptions) {
     this.name = opts.name;
     this.description = opts.description;
     this.options = opts.options ?? [];
+    this.capability = opts.capability?.trim() || undefined;
     this.guildOnly = opts.guildOnly ?? true;
     this.type = opts.type ?? ApplicationCommandType.ChatInput;
     const pre = [...(opts.preconditions ?? [])];

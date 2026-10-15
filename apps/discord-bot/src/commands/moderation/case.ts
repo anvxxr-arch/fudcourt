@@ -10,6 +10,7 @@ export class CaseCommand extends Command {
       name: "case",
       description: "Show one moderation case by its number",
       preconditions: ["ModOnly"],
+      capability: "moderation.read",
       options: [
         {
           name: "number",

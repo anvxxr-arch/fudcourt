@@ -17,6 +17,7 @@ import { PanelService } from "../community/panels.ts";
 import { WelcomeService } from "../community/welcome.ts";
 import { buildAutorole, buildPanels, buildWelcome } from "../community/wiring.ts";
 import { CaseLog, type CaseLogLike } from "../lib/cases.ts";
+import { CapabilityClient, decide, type CapabilityReader } from "../lib/capabilities.ts";
 import { CustomCommandService } from "../customcommands/service.ts";
 import { buildCustomCommands } from "../customcommands/wiring.ts";
 import { AuditLog } from "../logging/audit.ts";
@@ -44,6 +45,11 @@ export interface ClientOptions {
   log?: (msg: string) => void;
   /** Injectable case store (tests); defaults to a loopback CaseLog on config.apiUrl. */
   cases?: CaseLogLike;
+  /**
+   * Injectable capability reader (tests); defaults to a loopback client on config.apiUrl. The default
+   * is a network call, which is why every test that reaches the gate supplies its own.
+   */
+  capabilities?: CapabilityReader;
   /** Injectable AutoMod service (tests); defaults to the loopback-backed builder. */
   automod?: AutomodService;
   /** Injectable activity logger (tests); defaults to the loopback-backed builder. */
@@ -69,6 +75,8 @@ export class FudzieClient {
   readonly rest: Rest;
   /** The moderation-case store the api owns; the bot only talks to it over loopback. */
   readonly cases: CaseLogLike;
+  /** What a member may do, resolved by the api. See src/lib/capabilities.ts. */
+  readonly capabilities: CapabilityReader;
   /** AutoMod: rule evaluation + anti-spam windows + action delivery. */
   readonly automod: AutomodService;
   /** Activity logs: mirrors Discord events to operator-routed channels. */
@@ -101,6 +109,7 @@ export class FudzieClient {
     this.rest = opts.rest ?? new Rest(opts.config.token);
     this.logFn = opts.log ?? ((m) => console.log(m));
     this.cases = opts.cases ?? new CaseLog(opts.config.apiUrl, this.logFn);
+    this.capabilities = opts.capabilities ?? new CapabilityClient({ apiUrl: opts.config.apiUrl, log: this.logFn });
     this.logger = opts.logger ?? buildLogger(this);
     this.audit = opts.audit ?? buildAuditLog(this);
     this.welcome = opts.welcome ?? buildWelcome(this);
@@ -249,6 +258,27 @@ export class FudzieClient {
       const result = await pre.check(ctx);
       if (!result.ok) {
         await ctx.reply({ content: result.message ?? "Refused.", ephemeral: true });
+        return;
+      }
+    }
+
+    // The capability gate runs LAST, on purpose: by here the command's own preconditions have already
+    // passed, so an unmapped guild or an unreachable api falls back to a gate that is known to be
+    // closed rather than to "allow anyone". See src/lib/capabilities.ts for the full argument.
+    if (cmd.capability) {
+      const answer = await this.capabilities.read(
+        interaction.member?.user?.id ?? interaction.user?.id ?? "",
+        interaction.member?.roles ?? [],
+      );
+      const verdict = decide(answer, cmd.capability);
+      if (verdict.why !== "granted") {
+        this.log(`/${name}: ${cmd.capability} ${verdict.why} (source=${answer.source})`);
+      }
+      if (!verdict.ok) {
+        await ctx.reply({
+          content: `You need the \`${cmd.capability}\` capability to use \`/${name}\`.`,
+          ephemeral: true,
+        });
         return;
       }
     }

@@ -10,6 +10,7 @@ export class TimeoutCommand extends Command {
       name: "timeout",
       description: "Temporarily time a member out",
       preconditions: ["ModOnly"],
+      capability: "moderation.timeout",
       options: [
         { name: "user", description: "The member to time out", type: ApplicationCommandOptionType.User, required: true },
         {

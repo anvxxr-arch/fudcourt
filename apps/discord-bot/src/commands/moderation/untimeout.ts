@@ -10,6 +10,7 @@ export class UntimeoutCommand extends Command {
       name: "untimeout",
       description: "Remove a member's timeout",
       preconditions: ["ModOnly"],
+      capability: "moderation.timeout",
       options: [
         { name: "user", description: "The member to restore", type: ApplicationCommandOptionType.User, required: true },
         { name: "reason", description: "Why the timeout is being lifted", type: ApplicationCommandOptionType.String },

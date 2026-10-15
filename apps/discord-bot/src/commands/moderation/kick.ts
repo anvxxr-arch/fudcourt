@@ -10,6 +10,7 @@ export class KickCommand extends Command {
       name: "kick",
       description: "Kick a member from the server",
       preconditions: ["ModOnly"],
+      capability: "moderation.kick",
       options: [
         { name: "user", description: "The member to kick", type: ApplicationCommandOptionType.User, required: true },
         { name: "reason", description: "Why they are being kicked", type: ApplicationCommandOptionType.String },

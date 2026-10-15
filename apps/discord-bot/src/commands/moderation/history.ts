@@ -9,6 +9,7 @@ export class HistoryCommand extends Command {
       name: "history",
       description: "Show a member's moderation history",
       preconditions: ["ModOnly"],
+      capability: "moderation.read",
       options: [
         { name: "user", description: "The member whose history to show", type: ApplicationCommandOptionType.User, required: true },
         {
