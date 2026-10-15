@@ -240,6 +240,6 @@ export function summarize(panels: PanelDraft[]): { total: number; disabled: numb
 export const OWNERSHIP_NOTE =
   'Position is stored verbatim by the api, so this list order IS the order members see — the editor sends it as the index. Style must be one of four words or the DB CHECK refuses the write, so an unrecognised value is saved as secondary.';
 export const MESSAGE_ID_NOTE =
-  'messageId is the message the bot listens on for a reaction panel — it belongs to Discord, not to this editor, and is shown read-only.';
-export const POSTER_GAP =
-  'Honest gap: nothing renders button or select panels into Discord yet. The interaction handler (custom id rp:<panelId>:<roleId>) is live and tested, so a panel configured here is honoured the moment it exists — but no command or dashboard action posts the message, so today only reaction panels are reachable end to end.';
+  'messageId is the message the bot listens on for a reaction panel. It belongs to Discord, not to this editor, and is shown read-only: the bot writes it when it posts the panel.';
+export const POSTING_NOTE =
+  'Post it from Discord with /panel id:<the id above> — the bot posts the message itself: the buttons or select menu, or for a reaction panel the message plus every reaction. The message id it gets back is recorded here, and re-posting with force:true deletes the previous message once the new one is live.';

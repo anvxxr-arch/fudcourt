@@ -12,7 +12,7 @@ import {
   OWNERSHIP_NOTE,
   PANEL_KINDS,
   PANEL_MODES,
-  POSTER_GAP,
+  POSTING_NOTE,
   deadReactionOptions,
   describeKind,
   describeMode,
@@ -229,9 +229,7 @@ export default function RolePanelsPanel() {
                 <span style={hintStyle}>{describeMode(row.mode)}</span>
               </div>
 
-              {row.kind === 'button' || row.kind === 'select' ? (
-                <span style={{ ...hintStyle, color: themeColor.orange }}>{POSTER_GAP}</span>
-              ) : null}
+              <span style={{ ...hintStyle, color: themeColor.orange }}>{POSTING_NOTE}</span>
 
               {row.mode === 'exclusive' ? (
                 <span style={hintStyle}>

@@ -2643,6 +2643,46 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
+  /api/internal/role-panels/posted:
+    post:
+      tags: [internal]
+      operationId: recordInternalPanelPosted
+      summary: Loopback-only — record the message a role panel was posted as
+      description: |
+        The bot posts the panel message, so only the bot sees the id Discord
+        returned, and a reaction panel is found by the message its reaction
+        landed on — hence the id comes back here. The guild is pinned
+        server-side. A non-loopback caller sees 404, and a panel that no longer
+        exists is a 404 (`panel_not_found`) rather than a silent no-op: the
+        message is live and nothing can match it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PanelPostedInput' }
+      responses:
+        '201':
+          description: The stored message id, echoed back.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PanelPosted' }
+        '400':
+          description: A non-snowflake channelId/messageId, an empty or over-long panelId, or a non-object body.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+        '404':
+          description: Non-loopback caller, or no such panel in this guild (`panel_not_found`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+        '405':
+          description: '`{"error": "method_not_allowed"}` for a non-POST method; `Allow: POST`.'
+        '503':
+          description: "`community_unavailable` — the store is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
   /api/admin/welcome:
     get:
       tags: [admin]
@@ -6906,6 +6946,22 @@ components:
         leaveChannelId: { type: string }
         leaveMessage: { type: string, maxLength: 2000 }
         leaveEmbed: { type: object, description: Optional rich embed posted for a leave. }
+    PanelPostedInput:
+      type: object
+      required: [panelId, channelId, messageId]
+      properties:
+        panelId: { type: string, description: 'The panel id — trimmed, 1-64 characters.' }
+        channelId: { type: string, description: 'Discord channel id (digits) the panel was posted in.' }
+        messageId: { type: string, description: 'Discord message id (digits) Discord returned for the post.' }
+    PanelPosted:
+      type: object
+      description: What was stored, echoed back so the bot's log line and the dashboard agree.
+      required: [ok, panelId, channelId, messageId]
+      properties:
+        ok: { type: boolean }
+        panelId: { type: string }
+        channelId: { type: string }
+        messageId: { type: string }
     RoleAssignmentInput:
       type: object
       required: [userId, roleId, action, source, status]
@@ -6913,7 +6969,7 @@ components:
         userId: { type: string, description: 'Discord user id (digits).' }
         roleId: { type: string, description: 'Discord role id (digits).' }
         action: { type: string, enum: [add, remove] }
-        source: { type: string, enum: [autorole, panel, verification, manual] }
+        source: { type: string, enum: [autorole, panel, panel-reaction, verification, manual] }
         status: { type: string, enum: [ok, failed] }
         error: { type: string, description: 'Refusal reason when failed (truncated to 512).' }
     RoleAssignment:

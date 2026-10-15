@@ -1099,7 +1099,50 @@ failure mode.
 
 **Remaining.** One admin proxy still has no consumer: `logs/destinations`.
 
-## Phase 13 (cont.) — role panels: three invisible things, made visible
+## Phase 13 (cont.) — the panel poster: the half of §18 that did not exist
+
+**The gap, and why it was structural.** The role-panels editor, the api's validator, the bot's
+interaction handler and its exclusivity rules were all in place — and no panel could ever be posted.
+`customId()` was called by NOTHING, and the reason was one missing field: `InteractionCallbackData` had
+no `components`, so the bot's REST layer could only ever send text. A button/select panel had no way to
+reach Discord at all, and a reaction panel needed a human to post the message by hand and paste its id
+into the config. §18 was half a feature and it looked finished.
+
+**`/panel id:<id> [channel] [force]`** (bot) + `POST /api/internal/role-panels/posted` (api) close it.
+The bot posts the message — the body, the buttons or select menu, and for a reaction panel the reactions
+themselves — then reports the message id over the same loopback hop every other bot fact uses. The api
+stores it against the panel, and from then on a reaction panel is matchable by the message its reaction
+landed on.
+
+**The pieces.** `community/poster.ts` is PURE: it turns a stored panel into `{content, components,
+reactions}` and states why a panel cannot be posted (a Discord limit the api does not know) versus what
+merely makes it bad (a dead option, an invisible button, a switched-off panel — posted anyway, with the
+note). `community/posting.ts` is the service: post, react, replace, record, and report every partial
+failure by its consequence. `commands/admin/panel.ts` is the thin command. `Rest.addReaction` is new, and
+the component types now live in `framework/types.ts` as the single authority for the wire numbers.
+
+**Four decisions the code makes explicitly.** The previous message is deleted only AFTER the new one is
+live, so a refused post never leaves the channel with no panel. A reaction that will not land is reported
+as "those options cannot be picked" rather than swallowed — the panel is live and not as configured. A
+record the api refuses is reported by what was lost, which differs by kind: a reaction panel cannot be
+matched at all, a button panel is simply missing from the dashboard. And an unknown stored button style
+falls back to `secondary` rather than posting a style Discord would reject — the api does not validate
+`style`, so the DB CHECK is the only authority.
+
+**A contract gate caught the api change, exactly as designed.** `check-api-contract.py` failed with
+"apps/api registers paths the contract does not document" — the new route had to be documented in
+`contracts/openapi/fudcourt.yaml`, with its two schemas. Reading the neighbour entry surfaced a real drift
+at the same time: the contract's `RoleAssignmentInput.source` enum listed `[autorole, panel, verification,
+manual]` while the api's closed set has accepted `panel-reaction` since the reaction-role fix — a client
+reading the contract could not produce a value the api takes. Both fixed.
+
+**Verification.** Bot: `tsc --noEmit` clean, **321 tests pass / 0 fail** (304 → 321: +17); api: `go test`
+green with **5 new handler tests** (store update, trim parity with the admin plane, snowflake refusals,
+the 404 for a deleted panel, loopback-only, store-less 503), `gofmt` clean on every file touched; web:
+`tsc` clean, **600 pass / 0 fail**; contract gates: `API_CONTRACT_OK go_paths=24 documented=68`,
+`CONTRACTS_OK`, `SCHEMAS_OK`, `DOCS_OK`, `MDTABLES_OK`; full gate `VERIFY_ALL_OK`.
+
+**Remaining.** One admin proxy still has no consumer: `logs/destinations`.
 
 **`e677bfe` / `ee07b0a` — the role-panels editor** (MVP §18). The wiring was routine; the interesting
 part is that a role panel's behaviour is decided somewhere else entirely, so an editor that just mirrors

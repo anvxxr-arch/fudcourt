@@ -105,6 +105,7 @@ type communityStore interface {
 	replaceAutoroles(ctx context.Context, guildID string, rules []autoroleRule) error
 	listPanels(ctx context.Context, guildID string) ([]rolePanel, error)
 	replacePanels(ctx context.Context, guildID string, panels []rolePanel) error
+	recordPanelMessage(ctx context.Context, guildID, panelID, channelID, messageID string) (bool, error)
 	recordAssignment(ctx context.Context, guildID string, in roleAssignmentInput) (roleAssignment, error)
 	listAssignments(ctx context.Context, guildID string, limit int) ([]roleAssignment, error)
 }
@@ -263,6 +264,24 @@ func (s *pgCommunityStore) replacePanels(ctx context.Context, guildID string, pa
 		}
 	}
 	return tx.Commit(ctx)
+}
+
+// recordPanelMessage stores the message a panel was POSTED as. This id is the
+// bot's fact, not the dashboard's: only the bot sees what Discord returned, and a
+// reaction panel is found by the message its reaction landed on. A missing panel
+// is not an error — false becomes a 404, so a panel deleted in the dashboard
+// while the message was live is visible instead of silently unrecorded.
+func (s *pgCommunityStore) recordPanelMessage(ctx context.Context, guildID, panelID, channelID, messageID string) (bool, error) {
+	tag, err := s.pool.Exec(ctx,
+		`UPDATE role_panels
+		    SET channel_id = $3, message_id = $4,
+		        updated_at = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')
+		  WHERE guild_id = $1 AND id = $2`,
+		guildID, panelID, channelID, messageID)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 func (s *pgCommunityStore) recordAssignment(ctx context.Context, guildID string, in roleAssignmentInput) (roleAssignment, error) {

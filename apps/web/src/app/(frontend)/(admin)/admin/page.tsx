@@ -163,7 +163,8 @@ export default async function AdminPage() {
         </h2>
         <p style={{ color: themeColor.labelSecondary, fontSize: fontSize[12], margin: `0 0 ${space[12]}px` }}>
           Reaction, button and select role menus. The editor sends the whole set, and it owns two fields
-          the api stores verbatim: the option order and a valid button style.
+          the api stores verbatim: the option order and a valid button style. Post one from Discord with{' '}
+          <code>/panel id:&lt;id&gt;</code> — the bot posts the message and records its id back here.
         </p>
         <RolePanelsPanel />
       </section>

@@ -89,6 +89,81 @@ func (s *server) handleInternalRoleAssignments(w http.ResponseWriter, r *http.Re
 	httpx.WriteJSON(w, http.StatusCreated, a)
 }
 
+// panelPostedInput is what the bot reports once a panel message exists.
+type panelPostedInput struct {
+	PanelID   string `json:"panelId"`
+	ChannelID string `json:"channelId"`
+	MessageID string `json:"messageId"`
+}
+
+// panelPostedResponse echoes what was stored, so the bot's log line and the
+// dashboard read the same three values.
+type panelPostedResponse struct {
+	OK        bool   `json:"ok"`
+	PanelID   string `json:"panelId"`
+	ChannelID string `json:"channelId"`
+	MessageID string `json:"messageId"`
+}
+
+// validatePanelPosted mirrors the editor's own loose ends: the panel id is
+// trimmed and bounded like the admin plane trims it, and the two ids are
+// snowflakes — a typo must not be persisted as a message id that can never match.
+func validatePanelPosted(in *panelPostedInput) string {
+	in.PanelID = strings.TrimSpace(in.PanelID)
+	if in.PanelID == "" || len(in.PanelID) > 64 {
+		return "panelId must be 1-64 characters"
+	}
+	if !isSnowflake(in.ChannelID) {
+		return "channelId must be a Discord id"
+	}
+	if !isSnowflake(in.MessageID) {
+		return "messageId must be a Discord id"
+	}
+	return ""
+}
+
+// handleInternalPanelPosted records the message a panel was posted as — the same
+// loopback hop, for the same reason: the bot posts it (it has no Postgres
+// driver), and without this a reaction panel can never be matched, because the
+// handler finds a panel by the message its reaction landed on.
+func (s *server) handleInternalPanelPosted(w http.ResponseWriter, r *http.Request) {
+	if !methodGuard(w, r, http.MethodPost) {
+		return
+	}
+	if !isLoopbackPeer(r.RemoteAddr) {
+		httpx.WriteError(w, r, errNotFound)
+		return
+	}
+	if s.community == nil {
+		writeRefusal(w, r, http.StatusServiceUnavailable, "community_unavailable", errs.CategoryInternal,
+			"community store is not configured (FUDCOURT_PG_URL unset)")
+		return
+	}
+	var in panelPostedInput
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8<<10)).Decode(&in); err != nil {
+		writeRefusal(w, r, http.StatusBadRequest, "bad_request", errs.CategoryValidation, "body must be a JSON object")
+		return
+	}
+	if msg := validatePanelPosted(&in); msg != "" {
+		writeRefusal(w, r, http.StatusBadRequest, "bad_request", errs.CategoryValidation, msg)
+		return
+	}
+	guildID := s.discord.effective(r.Context()).GuildID
+	ok, err := s.community.recordPanelMessage(r.Context(), guildID, in.PanelID, in.ChannelID, in.MessageID)
+	if err != nil {
+		writeRefusal(w, r, http.StatusInternalServerError, "internal_error", errs.CategoryInternal, "panel message update failed")
+		return
+	}
+	if !ok {
+		writeRefusal(w, r, http.StatusNotFound, "panel_not_found", errs.CategoryValidation,
+			fmt.Sprintf("no panel %q in this guild", in.PanelID))
+		return
+	}
+	httpx.WriteJSON(w, http.StatusCreated, panelPostedResponse{
+		OK: true, PanelID: in.PanelID, ChannelID: in.ChannelID, MessageID: in.MessageID,
+	})
+}
+
 // assignmentSources is the closed set of origins for a role grant/revoke record.
 //
 // It MUST cover every source the bot passes to RoleService.grant/revoke/apply:

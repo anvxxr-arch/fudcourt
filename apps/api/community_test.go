@@ -49,6 +49,16 @@ func (f *fakeCommunity) recordAssignment(ctx context.Context, guildID string, in
 func (f *fakeCommunity) listAssignments(ctx context.Context, guildID string, limit int) ([]roleAssignment, error) {
 	return f.assignments, nil
 }
+func (f *fakeCommunity) recordPanelMessage(ctx context.Context, guildID, panelID, channelID, messageID string) (bool, error) {
+	for i := range f.panels {
+		if f.panels[i].ID == panelID {
+			f.panels[i].ChannelID = channelID
+			f.panels[i].MessageID = messageID
+			return true, nil
+		}
+	}
+	return false, nil
+}
 
 func communityServer(t *testing.T, f *fakeCommunity) *server {
 	t.Helper()
@@ -97,6 +107,73 @@ func TestInternalRoleAssignmentValidation(t *testing.T) {
 	rec = doFrom(t, s, "POST", "/api/internal/role-assignments", `{"userId":"100000000000000001","roleId":"200000000000000002","action":"add","source":"hacker","status":"ok"}`, loopback)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("bad source status = %d, want 400", rec.Code)
+	}
+}
+
+func TestInternalPanelPostedRecordsTheMessage(t *testing.T) {
+	f := &fakeCommunity{panels: []rolePanel{{ID: "colors", ChannelID: "100000000000000001"}}}
+	s := communityServer(t, f)
+
+	rec := doFrom(t, s, "POST", "/api/internal/role-panels/posted",
+		`{"panelId":"colors","channelId":"100000000000000002","messageId":"900000000000000001"}`, loopback)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201 (body %s)", rec.Code, rec.Body.String())
+	}
+	if f.panels[0].ChannelID != "100000000000000002" || f.panels[0].MessageID != "900000000000000001" {
+		t.Fatalf("panel not updated: %+v", f.panels[0])
+	}
+}
+
+func TestInternalPanelPostedTrimsLikeTheAdminPlane(t *testing.T) {
+	f := &fakeCommunity{panels: []rolePanel{{ID: "colors"}}}
+	s := communityServer(t, f)
+
+	rec := doFrom(t, s, "POST", "/api/internal/role-panels/posted",
+		`{"panelId":" colors ","channelId":"100000000000000002","messageId":"900000000000000001"}`, loopback)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201 for a padded id (body %s)", rec.Code, rec.Body.String())
+	}
+}
+
+func TestInternalPanelPostedRefusals(t *testing.T) {
+	f := &fakeCommunity{panels: []rolePanel{{ID: "colors"}}}
+	s := communityServer(t, f)
+
+	// a typo'd id must not be persisted as a message id that can never match
+	rec := doFrom(t, s, "POST", "/api/internal/role-panels/posted",
+		`{"panelId":"colors","channelId":"100000000000000002","messageId":"nope"}`, loopback)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400 (body %s)", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "messageId must be a Discord id") {
+		t.Fatalf("body = %s, want the api's own sentence", rec.Body.String())
+	}
+
+	// a panel the dashboard deleted while its message was live
+	rec = doFrom(t, s, "POST", "/api/internal/role-panels/posted",
+		`{"panelId":"gone","channelId":"100000000000000002","messageId":"900000000000000001"}`, loopback)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404 (body %s)", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "panel_not_found") || !strings.Contains(rec.Body.String(), "gone") {
+		t.Fatalf("body = %s, want the panel named", rec.Body.String())
+	}
+}
+
+func TestInternalPanelPostedLoopbackOnly(t *testing.T) {
+	s := communityServer(t, &fakeCommunity{})
+	rec := doFrom(t, s, "POST", "/api/internal/role-panels/posted", `{}`, "203.0.113.9:1234")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("non-loopback = %d, want 404 (route invisible)", rec.Code)
+	}
+}
+
+func TestInternalPanelPostedUnavailableWithoutStore(t *testing.T) {
+	s := newTestServer(t) // community == nil
+	rec := doFrom(t, s, "POST", "/api/internal/role-panels/posted",
+		`{"panelId":"colors","channelId":"100000000000000002","messageId":"900000000000000001"}`, loopback)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503 (body %s)", rec.Code, rec.Body.String())
 	}
 }
 

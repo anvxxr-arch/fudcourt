@@ -154,6 +154,10 @@ func (s *server) handler() http.Handler {
 	// same hop, for the same reason.
 	mux.HandleFunc("/api/internal/community/config", s.handleInternalCommunityConfig)
 	mux.HandleFunc("/api/internal/role-assignments", s.handleInternalRoleAssignments)
+	// Internal, loopback-only: the bot reports the message it just posted a
+	// panel as (it posted it and only it sees the id), so a reaction panel can be
+	// matched and the dashboard can show which message is live.
+	mux.HandleFunc("/api/internal/role-panels/posted", s.handleInternalPanelPosted)
 	// Dashboard: welcome/goodbye, autoroles and role panels, behind the admin tier.
 	mux.HandleFunc("/api/admin/welcome", s.handleAdminWelcome)
 	mux.HandleFunc("/api/admin/autoroles", s.handleAdminAutoroles)
