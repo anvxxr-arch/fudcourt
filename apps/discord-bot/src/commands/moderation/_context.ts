@@ -9,6 +9,7 @@
 import { Command, type CommandContext } from "../../framework/command.ts";
 import { ApplicationCommandType } from "../../framework/types.ts";
 import { ModerationService, type ModAction } from "../../moderation/service.ts";
+import { capabilityFor } from "../../moderation/capabilities.ts";
 import { modReply } from "./_reply.ts";
 
 /** The author id of the message a MESSAGE context command was invoked on. */
@@ -43,7 +44,13 @@ export function userContext(
 ): Command {
   class UserContext extends Command {
     constructor() {
-      super({ name, description: `${name} a user`, type: ApplicationCommandType.User, preconditions: ["ModOnly"] });
+      super({
+        name,
+        description: `${name} a user`,
+        type: ApplicationCommandType.User,
+        preconditions: ["ModOnly"],
+        capability: capabilityFor(action),
+      });
     }
     async run(ctx: CommandContext): Promise<void> {
       const targetId = ctx.targetId;
@@ -72,6 +79,8 @@ export function messageContext(
         description: `${name} on a message`,
         type: ApplicationCommandType.Message,
         preconditions: ["ModOnly"],
+        // delete_message has no entry in the vocabulary: it stays guarded by ModOnly alone.
+        capability: action === "delete_message" ? undefined : capabilityFor(action),
       });
     }
     async run(ctx: CommandContext): Promise<void> {
