@@ -2472,6 +2472,95 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorDetail'
+  /api/admin/permissions:
+    get:
+      tags: [admin]
+      operationId: getAdminPermissions
+      summary: Read the role → capability mapping
+      description: |
+        What each Discord ROLE may do, keyed by role ID and never by role name, so
+        renaming a role changes nobody's access. The response also carries the
+        capability vocabulary (the names a mapping may use, in render order) and
+        the CALLER's own resolved set together with its source: `owner` (the guild
+        owner's implicit full access), `admin_baseline` (an admin while the mapping
+        is still completely empty — the seeding rule that makes the first mapping
+        writable) or `roles` (the union of this session's role grants). Reading the
+        mapping is not a capability: an admin who cannot see it could never be told
+        what to grant. Requires the admin tier.
+      responses:
+        '200':
+          description: The vocabulary, the mapping, and the caller's own resolution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionsView'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '405':
+          description: '`{"error": "method_not_allowed"}` for a non-GET/PUT method; `Allow: GET, PUT`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '503':
+          description: "`{\"error\": \"capabilities_unavailable\", ...}` — the capability store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+    put:
+      tags: [admin]
+      operationId: setAdminRoleCapabilities
+      summary: Declare one role's capabilities
+      description: |
+        REPLACES one role's grants as a unit: the body is a declaration, not a
+        patch, so two admins editing the same role cannot interleave into a merge
+        nobody asked for. An absent or empty list REVOKES the role. Every grant
+        must be a capability from `capabilities`, or a namespace wildcard such as
+        `moderation.*`; a bare `*` is refused (that is what the owner override is
+        for), and so is anything else — a 400 that NAMES the offending grant, with
+        nothing written. Requires the admin tier AND the `permissions.manage`
+        capability, so once any role holds any grant the mapping governs admins
+        too. Every accepted write is audited as `permissions.changed`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionsWrite'
+      responses:
+        '200':
+          description: The stored grants and what they resolve to.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionsSaved'
+        '400':
+          description: "`{\"error\": \"bad_request\", \"detail\": ...}` for a role id that is not a snowflake, or a capability the bot does not check."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: "`{\"error\": \"forbidden\", ...}` — the session does not hold `permissions.manage`; the detail names the capability and where this session's access comes from."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '405':
+          description: '`{"error": "method_not_allowed"}` for a non-GET/PUT method; `Allow: GET, PUT`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '503':
+          description: "`{\"error\": \"capabilities_unavailable\", ...}` — the capability store is not configured (`FUDCOURT_PG_URL` unset)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
   /api/admin/logs/destinations:
     get:
       tags: [admin]
@@ -2509,10 +2598,11 @@ paths:
       summary: Point a category at a channel (or disable it)
       description: |
         Upserts one (category → channel) routing row. `enabled: false` keeps the
-        row but stops delivery; an empty `channelId` with `enabled: false` is the
-        way to turn a category off without forgetting its channel. An unknown
-        category or a non-snowflake channel is a 400. The bot reads the change on
-        its next event — no restart. Requires the admin tier.
+        row and stops delivery — that is how a category is switched off without
+        forgetting its channel. An EMPTY `channelId` is different: it DELETES the
+        row, so the category becomes unrouted and the channel is forgotten. An
+        unknown category or a non-snowflake channel is a 400. The bot reads the
+        change on its next event — no restart. Requires the admin tier.
       requestBody:
         required: true
         content:
@@ -3022,6 +3112,81 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
         '503':
           description: "`scheduler_unavailable` — the store or the guild is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+  /api/admin/permissions:
+    get:
+      tags: [admin]
+      operationId: getAdminPermissions
+      summary: The capability vocabulary and every role's grants
+      description: |
+        Requires the admin tier. The vocabulary lives in CODE
+        (`apps/api/internal/access/capability`), not in the database, so
+        this is the only place a client can learn what a grant means; the
+        mapping is the `role_capabilities` rows. A grant that is STORED
+        but no longer in the vocabulary is reported under `unknown`
+        rather than dropped — a row left behind by a renamed capability
+        must be visible, not look like a working grant.
+
+        The caller's own resolved effect rides along, so the panel can
+        grey out what this identity may not change without a second
+        round trip.
+      responses:
+        '200':
+          description: "`{capabilities, namespaces, roles, actor}`."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PermissionsConfig' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '503':
+          description: "`permissions_unavailable` — the store or the guild is not configured."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+    put:
+      tags: [admin]
+      operationId: setAdminPermissions
+      summary: Replace one role's grants (one transaction)
+      description: |
+        Requires the `permissions.manage` capability — NOT the admin
+        tier. Editing the mapping is itself a capability, so a role can
+        be granted the power to grant without being handed every other
+        panel. The check is the same one the bot makes, resolved from
+        the same rows.
+
+        Every grant is validated BEFORE anything is written: a mapping
+        is a declaration, and a declaration that half-applies is worse
+        than one that is refused. Duplicates collapse, order is kept,
+        and an unknown capability is refused rather than stored — the
+        vocabulary is code, so a typo must not become a permanent row.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roleId, capabilities]
+              properties:
+                roleId: { type: string }
+                capabilities:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: "`{capabilities, namespaces, roles, actor}` — the stored rows."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PermissionsConfig' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: "The caller lacks `permissions.manage`."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorDetail' }
+        '503':
+          description: "`permissions_unavailable` — the store or the guild is not configured."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorDetail' }
@@ -6105,6 +6270,90 @@ components:
         destinations:
           type: object
           additionalProperties: { type: string }
+    Capability:
+      type: string
+      description: |
+        One thing an identity may do, namespaced `<module>.<verb>`. The vocabulary
+        lives in the api's CODE (apps/api/internal/access/capability), because every
+        capability is a line of code that checks it — a grant outside this list could
+        never be honoured, which is why the api refuses to store one.
+      enum: [moderation.read, moderation.warn, moderation.timeout, moderation.kick, moderation.ban,
+             automod.read, automod.write, logs.read, welcome.read, welcome.write, roles.read,
+             roles.manage, custom_commands.read, custom_commands.manage, feeds.read, feeds.manage,
+             scheduler.read, scheduler.manage, settings.read, settings.manage, permissions.read,
+             permissions.manage]
+    RoleCapabilities:
+      type: object
+      additionalProperties: false
+      required: [roleId, capabilities, unknown]
+      description: One role's grants, as the permissions panel reads them.
+      properties:
+        roleId: { type: string, description: 'Discord role id (a snowflake, as text).' }
+        capabilities:
+          type: array
+          items: { type: string }
+          description: |
+            The grants exactly as STORED — a namespace wildcard is stored as
+            written (`moderation.*`), because that is what the operator chose.
+        unknown:
+          type: array
+          items: { type: string }
+          description: |
+            Stored grants the vocabulary does not know — left behind by a renamed
+            capability. Reported per role so drift is visible instead of looking
+            like a grant that works. They grant nothing.
+    ActorCapabilities:
+      type: object
+      additionalProperties: false
+      required: [capabilities, source]
+      description: What the CALLER may do, and which rule gave it to them.
+      properties:
+        capabilities: { type: array, items: { $ref: '#/components/schemas/Capability' } }
+        source:
+          type: string
+          enum: [owner, admin_baseline, roles, none]
+          description: |
+            `owner`: the guild owner's implicit full access. `admin_baseline`: an
+            admin while the mapping is still completely empty — the seeding rule
+            that makes the first mapping writable. `roles`: the union of this
+            session's role grants. `none`: no valid session.
+    PermissionsView:
+      type: object
+      additionalProperties: false
+      required: [capabilities, namespaces, roles, actor]
+      description: The capability vocabulary, the role mapping, and the caller's own resolution.
+      properties:
+        capabilities: { type: array, items: { $ref: '#/components/schemas/Capability' } }
+        namespaces: { type: array, items: { type: string } }
+        roles: { type: array, items: { $ref: '#/components/schemas/RoleCapabilities' } }
+        actor: { $ref: '#/components/schemas/ActorCapabilities' }
+    PermissionsWrite:
+      type: object
+      additionalProperties: false
+      required: [roleId]
+      description: |
+        One role's COMPLETE capability set — a declaration, not a patch. An absent
+        or empty list revokes the role. A grant is a capability from `capabilities`
+        or a namespace wildcard (`moderation.*`); a bare `*` is refused, because
+        "everything" is earned by being the guild owner rather than by typing one
+        character into a role mapping.
+      properties:
+        roleId: { type: string, description: 'Discord role id (a snowflake, as text) — never a role name.' }
+        capabilities:
+          type: array
+          items: { type: string }
+          description: The role's new, complete set of grants. Duplicates collapse; order is kept.
+    PermissionsSaved:
+      type: object
+      additionalProperties: false
+      required: [ok, roleId, capabilities, resolved, unknown]
+      description: What was stored, and what it MEANS — wildcards already expanded.
+      properties:
+        ok: { type: boolean }
+        roleId: { type: string }
+        capabilities: { type: array, items: { type: string }, description: The grants as stored. }
+        resolved: { type: array, items: { $ref: '#/components/schemas/Capability' } }
+        unknown: { type: array, items: { type: string } }
     LogDestination:
       type: object
       additionalProperties: false

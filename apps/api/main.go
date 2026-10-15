@@ -70,6 +70,11 @@ type server struct {
 	// answers 503: feeds are the worker's, and without a database there is
 	// nothing to show or edit.
 	feeds feedStore
+	// capabilities is the role→capability mapping store (capabilities.go), §22.
+	// nil means the permissions panel answers 503; the owner and admin-tier
+	// baselines do not depend on it, so a missing store can never lock an
+	// operator out of the panel.
+	capabilities capabilityStore
 	// schedules is the scheduler panel store (scheduler.go). nil means the panel
 	// answers 503. It is read-only for now; write ownership is derived from
 	// `job_kind` (see scheduler.go).
@@ -147,6 +152,7 @@ func (s *server) handler() http.Handler {
 	mux.HandleFunc("/api/internal/log-config", s.handleInternalLogConfig)
 	mux.HandleFunc("/api/internal/audit", s.handleInternalAudit)
 	// Dashboard: log-routing editor + audit viewer, both behind the admin tier.
+	mux.HandleFunc("/api/admin/permissions", s.handleAdminPermissions)
 	mux.HandleFunc("/api/admin/logs/destinations", s.handleAdminLogDestinations)
 	mux.HandleFunc("/api/admin/logs/audit", s.handleAdminAuditLogs)
 	// Internal, loopback-only: the bot reads welcome/autorole/panel config here

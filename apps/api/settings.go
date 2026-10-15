@@ -166,4 +166,5 @@ func (s *server) attachStores() {
 	s.customCommands = newPGCustomCommandStore(pool)
 	s.feeds = newPGFeedStore(pool)
 	s.schedules = newPGScheduleStore(pool)
+	s.capabilities = newPGCapabilityStore(pool)
 }

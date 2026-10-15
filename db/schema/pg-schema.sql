@@ -390,6 +390,29 @@ CREATE INDEX IF NOT EXISTS audit_logs_recent_idx ON audit_logs (guild_id, id DES
 CREATE INDEX IF NOT EXISTS audit_logs_resource_idx ON audit_logs (guild_id, resource_type, resource_id, id DESC);
 
 --
+-- discord_role_capabilities — §22: what a Discord ROLE may do, keyed by role ID and NEVER by role
+-- name, so renaming a role (or naming a role "Admin" without granting it anything) cannot change who
+-- may ban someone. The vocabulary itself is NOT here: it lives in
+-- apps/api/internal/access/capability/capability.go, because every capability is a line of code that
+-- checks it, and a capability nothing checks would be a decoration. This table is the MAPPING —
+-- configuration an admin edits from the dashboard — and the api refuses any grant the vocabulary
+-- cannot satisfy, so a stored row always means something.
+--
+-- One row per (guild, role, capability). The only read is "every grant for this guild", which the
+-- primary key's prefix already covers, so there is no second index. `granted_by` is the dashboard
+-- actor's Discord id ('' for a row written before there was an actor); the history of the change
+-- itself is `audit_logs` — this table is current state, not history. Snowflakes are text, as
+-- everywhere.
+CREATE TABLE IF NOT EXISTS discord_role_capabilities (
+  guild_id   text NOT NULL,
+  role_id    text NOT NULL,
+  capability text NOT NULL,
+  granted_by text NOT NULL DEFAULT '',
+  granted_at text NOT NULL DEFAULT to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'),
+  PRIMARY KEY (guild_id, role_id, capability)
+);
+
+--
 -- welcome_configs — the welcome/goodbye messages (apps/api/community.go,
 -- apps/discord-bot/src/community/*). One row per guild: the bot reads it over the
 -- loopback hop like every other config, so an operator edit lands with no restart.

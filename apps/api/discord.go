@@ -101,6 +101,10 @@ type discordClient struct {
 	// members caches the guild-member list (stale-while-revalidate, see
 	// listGuildMembers), keyed by this client's own guild id + limit.
 	members *cache.Cache[[]discordMember]
+	// owner caches the guild's owner id (guildOwnerID). One entry per guild, and
+	// ownership changes about never — but the capability resolver asks on every
+	// permissions read, so the answer must not cost a Discord round-trip.
+	owner *cache.Cache[string]
 	// settings is the admin-editable config store (settings.go). nil means
 	// "not configured": every resolution then uses env alone.
 	settings settingsStore
@@ -126,6 +130,7 @@ func newDiscordClient(env discordEnv) *discordClient {
 		apiBase:  discordAPI,
 		tokenURL: discordTokenURL,
 		members:  cache.New[[]discordMember](membersTTL),
+		owner:    cache.New[string](ownerTTL),
 	}
 }
 
@@ -343,6 +348,54 @@ func (d *discordClient) addGuildMember(ctx context.Context, userID, accessToken 
 		return false, message
 	}
 	return res.StatusCode == http.StatusCreated, ""
+}
+
+// ownerTTL is how long a fetched guild-owner id stays fresh. Ownership changes about never, and the
+// capability resolver asks on every permissions read, so this keeps that off the network.
+const ownerTTL = time.Hour
+
+// guildOwnerID answers the guild's owner id — the identity §22 gives implicit full access, and the
+// escape hatch that keeps a broken role mapping from locking the owner out of their own bot.
+//
+// It degrades instead of failing: with no guild id or no bot token there is no owner to name, and any
+// Discord error leaves ok false, which means the caller simply does not apply the override rather
+// than refusing the request (the admin-tier baseline still applies). A client built without the cache
+// — a test's struct literal — fetches uncached instead of panicking on a nil map.
+func (d *discordClient) guildOwnerID(ctx context.Context) (string, bool) {
+	e := d.effective(ctx)
+	if e.GuildID == "" || e.BotToken == "" {
+		return "", false
+	}
+	if d.owner != nil {
+		if v, _, ok := d.owner.Get(e.GuildID); ok {
+			return v, v != ""
+		}
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", d.apiBase+"/guilds/"+url.PathEscape(e.GuildID), nil)
+	if err != nil {
+		return "", false
+	}
+	req.Header.Set("Authorization", "Bot "+e.BotToken)
+	res, err := d.http.Do(req)
+	if err != nil {
+		return "", false
+	}
+	defer res.Body.Close()
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		return "", false
+	}
+	obj, ok := readJSON(res.Body).(map[string]any)
+	if !ok {
+		return "", false
+	}
+	ownerID, _ := obj["owner_id"].(string)
+	if ownerID == "" {
+		return "", false
+	}
+	if d.owner != nil {
+		d.owner.Set(e.GuildID, ownerID)
+	}
+	return ownerID, true
 }
 
 // listGuildMembers answers the members plane (listGuildMembers in the OpenAPI
