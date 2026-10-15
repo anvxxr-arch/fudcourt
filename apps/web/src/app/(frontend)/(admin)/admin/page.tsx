@@ -13,6 +13,7 @@ import AutorolesPanel from '@/features/admin/autoroles-panel';
 import RoleAssignmentsPanel from '@/features/admin/role-assignments-panel';
 import AuditPanel from '@/features/admin/audit-panel';
 import CommandsPanel from '@/features/admin/commands-panel';
+import RolePanelsPanel from '@/features/admin/role-panels-panel';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -154,6 +155,17 @@ export default async function AdminPage() {
           between braces is executed. Saving replaces the whole set.
         </p>
         <CommandsPanel />
+      </section>
+
+      <section style={{ marginTop: space[32] }}>
+        <h2 style={{ fontSize: fontSize[15], color: themeColor.labelPrimary, margin: `0 0 ${space[8]}px` }}>
+          Role panels
+        </h2>
+        <p style={{ color: themeColor.labelSecondary, fontSize: fontSize[12], margin: `0 0 ${space[12]}px` }}>
+          Reaction, button and select role menus. The editor sends the whole set, and it owns two fields
+          the api stores verbatim: the option order and a valid button style.
+        </p>
+        <RolePanelsPanel />
       </section>
 
       <section style={{ marginTop: space[32] }}>
